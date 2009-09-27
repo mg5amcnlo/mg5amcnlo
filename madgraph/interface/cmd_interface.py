@@ -16,7 +16,6 @@
 """A user friendly command line interface to access MadGraph features."""
 
 import cmd
-from . import iolibs
 
 class MadGraphCmd(cmd.Cmd):
     """The command line processor of MadGraph"""
