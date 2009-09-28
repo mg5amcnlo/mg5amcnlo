@@ -23,8 +23,7 @@ class MadGraphCmd(cmd.Cmd):
     prompt = 'mg>'
 
     intro = "************************************************************" + \
-            "*           W E L C O M E  to  M A D G R A P H             *" + \
-            "*                                                          *"
+            "*           W E L C O M E  to  M A D G R A P H             *"
 
 
     def do_EOF(self, line):
