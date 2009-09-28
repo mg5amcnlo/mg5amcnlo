@@ -16,15 +16,16 @@
 """A user friendly command line interface to access MadGraph features."""
 
 import cmd
-import madgraph.core
+import madgraph.iolibs.misc as misc
 
 class MadGraphCmd(cmd.Cmd):
     """The command line processor of MadGraph"""
 
-    prompt = 'mg>'
+    prompt = 'MG5>'
 
     intro = "************************************************************" + \
-            "*           W E L C O M E  to  M A D G R A P H             *"
+            "*           W E L C O M E  to  M A D G R A P H             *" + \
+            "*                                                          *"
 
 
     def do_EOF(self, line):
