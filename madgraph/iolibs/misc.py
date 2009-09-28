@@ -13,22 +13,26 @@
 #
 ##############################################################################
 
-"""A user friendly command line interface to access MadGraph features."""
+"""A set of functions performing routine administrative I/O tasks."""
 
-import cmd
-import madgraph.core
+import madgraph
+import os
 
-class MadGraphCmd(cmd.Cmd):
-    """The command line processor of MadGraph"""
+def get_version():
+    """Returns the current version of the MadGraph package, as written in
+    the VERSION text file. If the file cannot be found, UNKNOWN is 
+    returned"""
 
-    prompt = 'mg>'
+    version = "UNKNOWN"
 
-    intro = "************************************************************" + \
-            "*           W E L C O M E  to  M A D G R A P H             *"
+    try:
+        version_file = fopen(os.path.join(madgraph.__path__, "VERSION"), 'r')
+        try:
+            version = version_file.read()
+        finally:
+            version_file.close()
+    except IOError:
+        pass
 
+    return version
 
-    def do_EOF(self, line):
-        return True
-
-if __name__ == '__main__':
-    MadGraphCmd().cmdloop()
