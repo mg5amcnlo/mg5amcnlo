@@ -16,6 +16,8 @@
 """A user friendly command line interface to access MadGraph features."""
 
 import cmd
+import sys
+
 import madgraph.iolibs.misc as misc
 
 class MadGraphCmd(cmd.Cmd):
@@ -51,9 +53,20 @@ class MadGraphCmd(cmd.Cmd):
                 "*                                                          *\n" + \
                 "************************************************************"
 
+    # Various ways to quit
+
+    def do_quit(self, arg):
+        sys.exit(1)
+
+    def help_quit(self):
+        print "syntax: quit",
+        print "-- terminates the application"
 
     def do_EOF(self, line):
-        return True
+        sys.exit(1)
+
+    # shortcuts
+    do_q = do_quit
 
 if __name__ == '__main__':
     MadGraphCmd().cmdloop()
