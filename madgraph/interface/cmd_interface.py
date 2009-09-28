@@ -21,26 +21,35 @@ import madgraph.iolibs.misc as misc
 class MadGraphCmd(cmd.Cmd):
     """The command line processor of MadGraph"""
 
-    prompt = 'MG5>'
+    def preloop(self):
+        """Initializing before starting the main loop"""
 
-    info = misc.get_pkg_info()
-    info_line = ""
+        self.prompt = 'mg>'
 
-    if info.has_key('version') and  info.has_key('date'):
-        len_version = len(info['version'])
-        len_date = len(info['date'])
-        if len_version + len_date < 30:
-            info_line = "*         VERSION %s %s %s         *\n" % \
-                        (info['version'],
-                        (30 - len_version - len_date) * ' ',
-                        info['date'])
+        # If possible, build an info line with current version number and date, from
+        # the VERSION text file
 
-    intro = "************************************************************\n" + \
-            "*          W E L C O M E  to  M A D G R A P H  5           *\n" + \
-            "*                                                          *\n" + \
-            info_line + \
-            "*                                                          *\n" + \
-            "************************************************************\n"
+        info = misc.get_pkg_info()
+        info_line = ""
+
+        if info.has_key('version') and  info.has_key('date'):
+            len_version = len(info['version'])
+            len_date = len(info['date'])
+            if len_version + len_date < 30:
+                info_line = "*         VERSION %s %s %s         *\n" % \
+                            (info['version'],
+                            (30 - len_version - len_date) * ' ',
+                            info['date'])
+
+        self.intro = "************************************************************\n" + \
+                "*          W E L C O M E  to  M A D G R A P H  5           *\n" + \
+                "*                                                          *\n" + \
+                info_line + \
+                "*                                                          *\n" + \
+                "*    The MadGraph Development Team - Please visit us at    *\n" + \
+                "*              https://launchpad.net/madgraph5             *\n" + \
+                "*                                                          *\n" + \
+                "************************************************************"
 
 
     def do_EOF(self, line):
