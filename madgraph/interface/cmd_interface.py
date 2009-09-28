@@ -23,9 +23,9 @@ class MadGraphCmd(cmd.Cmd):
 
     prompt = 'MG5>'
 
-    intro = "************************************************************" + \
-            "*           W E L C O M E  to  M A D G R A P H             *" + \
-            "*                                                          *"
+    intro = "************************************************************\n" + \
+            "*           W E L C O M E  to  M A D G R A P H             *\n" + \
+            "*                                                          *\n"
 
 
     def do_EOF(self, line):
