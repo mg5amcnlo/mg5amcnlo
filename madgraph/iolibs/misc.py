@@ -17,22 +17,48 @@
 
 import madgraph
 import os
+import re
 
-def get_version():
-    """Returns the current version of the MadGraph package, as written in
-    the VERSION text file. If the file cannot be found, UNKNOWN is 
-    returned"""
+def _parse_info_str(info_str):
+    """Parse a newline separated list of "param=value" as a dictionnary
+    """
 
-    version = "UNKNOWN"
+    info_dict = {}
+    pattern = re.compile("(?P<name>\w*)\s*=\s*(?P<value>.*)",
+                         re.IGNORECASE | re.VERBOSE)
+    entry_list = info_str.split('\n')
+    for entry in entry_list:
+        entry = entry.strip()
+        if len(entry) == 0: continue
+        m = pattern.match(entry)
+        if m is not None:
+            info_dict[m.group('name')] = m.group('value')
+        else:
+            raise IOError, "String %s is not a valid info string" % entry
 
-    try:
-        version_file = fopen(os.path.join(madgraph.__path__, "VERSION"), 'r')
+    return info_dict
+
+
+def get_pkg_info(info_str=None):
+    """Returns the current version information of the MadGraph package, 
+    as written in the VERSION text file. If the file cannot be found, 
+    a dictionnary with empty values is returned. As an option, an info
+    string can be passed to be read instead of the file content.
+    """
+
+    if info_str is None:
         try:
-            version = version_file.read()
-        finally:
-            version_file.close()
-    except IOError:
-        pass
+            # Open the file using the module path as a reference. Notice that 
+            # module.__path__ is a list with only one element
 
-    return version
+            version_file = open(os.path.join(madgraph.__path__[0], "VERSION")
+                                , 'r')
+            try:
+                info_str = version_file.read()
+            finally:
+                version_file.close()
+        except IOError:
+            info_str = ""
+
+    return _parse_info_str(info_str)
 
