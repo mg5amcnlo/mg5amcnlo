@@ -23,9 +23,25 @@ class MadGraphCmd(cmd.Cmd):
 
     prompt = 'MG5>'
 
-    intro = "************************************************************" + \
-            "*           W E L C O M E  to  M A D G R A P H             *" + \
-            "*                                                          *"
+    info = misc.get_pkg_info()
+    info_line = ""
+
+    if info.has_key('version') and  info.has_key('date'):
+        len_version = len(info['version'])
+        len_date = len(info['date'])
+        if len_version + len_date < 30:
+            info_line = "*         VERSION %s %s %s         *\n" % \
+                        (info['version'],
+                        (30 - len_version - len_date) * ' ',
+                        info['date'])
+
+    intro = "************************************************************\n" + \
+            "*          W E L C O M E  to  M A D G R A P H  5           *\n" + \
+            "*                                                          *\n" + \
+            info_line + \
+            "*                                                          *\n" + \
+            "************************************************************\n"
+
 
 
     def do_EOF(self, line):
