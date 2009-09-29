@@ -26,7 +26,7 @@ class MadGraphCmd(cmd.Cmd):
     def preloop(self):
         """Initializing before starting the main loop"""
 
-        self.prompt = 'mg>'
+        self.prompt = 'mg5>'
 
         # If possible, build an info line with current version number and date, from
         # the VERSION text file
@@ -44,6 +44,7 @@ class MadGraphCmd(cmd.Cmd):
                             info['date'])
 
         self.intro = "************************************************************\n" + \
+                "*                                                          *\n" + \
                 "*          W E L C O M E  to  M A D G R A P H  5           *\n" + \
                 "*                                                          *\n" + \
                 info_line + \
@@ -51,21 +52,27 @@ class MadGraphCmd(cmd.Cmd):
                 "*    The MadGraph Development Team - Please visit us at    *\n" + \
                 "*              https://launchpad.net/madgraph5             *\n" + \
                 "*                                                          *\n" + \
+                "*               Type 'help' for in-line help.              *\n" + \
+                "*                                                          *\n" + \
                 "************************************************************"
 
     # Various ways to quit
-
     def do_quit(self, arg):
         sys.exit(1)
-
-    def help_quit(self):
-        print "syntax: quit",
-        print "-- terminates the application"
 
     def do_EOF(self, line):
         sys.exit(1)
 
-    # shortcuts
+    # In-line help
+    def help_quit(self):
+        print "syntax: quit",
+        print "-- terminates the application"
+
+    def help_help(self):
+        print "syntax: help",
+        print "-- access to the in-line help"
+
+    # shortcuts do
     do_q = do_quit
 
 if __name__ == '__main__':
