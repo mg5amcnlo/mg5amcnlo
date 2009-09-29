@@ -63,4 +63,17 @@ class Particle(dict):
                     raise self.ParticleError,
                         "Key %s is not a valid particle property" % item
 
+    def get(self, name):
+        """Get the value of the property name."""
+
+        if not isinstance(name, str):
+            raise ValueError,
+                "Property name %s is not a string" % repr(name)
+
+        if name not in prop_list:
+            raise self.ParticleError,
+                        "Key %s is not a valid particle property" % item
+
+        return self[name]
+
 
