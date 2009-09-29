@@ -1,0 +1,33 @@
+#! /usr/bin/env python
+
+##############################################################################
+#
+# Copyright (c) 2009 The MadGraph Development team and Contributors
+#
+# This file is a part of the MadGraph 5 project, an application which 
+# automatically generates Feynman diagrams and matrix elements for arbitrary
+# high-energy processes in the Standard Model and beyond.
+#
+# It is subject to the MadGraph license which should accompany this 
+# distribution.
+#
+# For more information, please visit: http://madgraph.phys.ucl.ac.be
+#
+##############################################################################
+
+"""This is the main executable, a simple frontend to set up the PYTHONPATH
+and call immediately the command line interface scripts"""
+
+import os.path as path
+import sys
+
+# Get the parent directory (mg root) of the script real path (bin)
+# and add it to the current PYTHONPATH
+
+root_path = path.split(path.dirname(path.realpath( __file__ )))[0]
+sys.path.append(root_path)
+
+import madgraph.interface.cmdinterface as cmdinterface
+
+# Call the cmd interface main loop
+cmdinterface.MadGraphCmd().cmdloop()
