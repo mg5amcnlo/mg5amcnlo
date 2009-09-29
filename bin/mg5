@@ -17,5 +17,3 @@
 
 """This is the main executable, a simple frontend to set up the PYTHONPATH
 and call immediately the command line interface scripts"""
-
-
