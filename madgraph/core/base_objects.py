@@ -16,16 +16,18 @@
 """Definitions of all basic objects used in the core code: particle, 
 vertex, ..."""
 
+import re
+
 ##############################################################################
 ##  Particle
 ##############################################################################
 
 class Particle(dict):
     """The particle object containing the whole set of information required to
-    univokely characterize a given type of physical particle: name, spin, 
+    univocally characterize a given type of physical particle: name, spin, 
     color, mass, width, charge,..."""
 
-    _prop_list = ['name',
+    prop_list = ['name',
                  'antiname',
                  'spin',
                  'color',
@@ -35,9 +37,10 @@ class Particle(dict):
                  'pdg_code',
                  'texname',
                  'antitexname',
-                 'line']
+                 'line',
+                 'propagating']
 
-    def ParticleError(Exception):
+    class ParticleError(Exception):
         """Exception raised if an error occurs in the definition
         of a particle"""
         pass
@@ -47,18 +50,18 @@ class Particle(dict):
         None values to all properties. If a dictionary is given, tries to 
         use it to give values to properties."""
 
-        for prop in self._prop_list:
+        for prop in self.prop_list:
             self[prop] = None
 
         if init_dict is not None:
 
             if not isinstance(init_dict, dict):
-                raise ValueError, \
+                raise self.ParticleError, \
                     "Argument %s is not a dictionary" % repr(init_dict)
 
             for item in init_dict.keys():
-                if item in self._prop_list:
-                    self[item] = init_dict[item]
+                if item in self.prop_list:
+                    self.set(item, init_dict[item])
                 else:
                     raise self.ParticleError, \
                         "Key %s is not a valid particle property" % item
@@ -67,26 +70,90 @@ class Particle(dict):
         """Get the value of the property name."""
 
         if not isinstance(name, str):
-            raise ValueError, \
+            raise self.ParticleError, \
                 "Property name %s is not a string" % repr(name)
 
-        if name not in self._prop_list:
+        if name not in self.prop_list:
             raise self.ParticleError, \
-                        "Key %s is not a valid particle property" % item
+                        "%s is not a valid particle property" % name
 
         return self[name]
 
     def set(self, name, value):
-        """Set the value of the property name."""
+        """Set the value of the property name. First check if value
+        is a valid value for the considered property. Return True if the
+        value has been correctly set."""
 
         if not isinstance(name, str):
-            raise ValueError, \
+            raise self.ParticleError, \
                 "Property name %s is not a string" % repr(name)
 
-        if name not in self._prop_list:
+        if name not in self.prop_list:
             raise self.ParticleError, \
-                        "Key %s is not a valid particle property" % item
+                        "%s is not a valid particle property" % name
+
+        if name in ['name', 'antiname']:
+            # Must start with a letter, followed by letters,  digits,
+            # - and + only
+            p = re.compile('\A[a-zA-Z]+[\w~\-\+]*\Z')
+            if not p.match(value):
+                raise self.ParticleError, \
+                        "%s is not a valid particle name" % value
+
+        if name is 'spin':
+            if not isinstance(value, int):
+                raise self.ParticleError, \
+                    "Spin %s is not an integer" % repr(value)
+            if value < 1 or value > 5:
+                 raise self.ParticleError, \
+                    "Spin %i is smaller than one" % value
+
+        if name is 'color':
+            if not isinstance(value, int):
+                raise self.ParticleError, \
+                    "Color %s is not an integer" % repr(value)
+            if abs(value) not in [1, 3, 6, 8]:
+                 raise self.ParticleError, \
+                    "Color %i is not valid" % value
+
+        if name in ['mass', 'width']:
+            # Must start with a letter, followed by letters, digits or _
+            p = re.compile('\A[a-zA-Z]+[\w\_]*\Z')
+            if not p.match(value):
+                raise self.ParticleError, \
+                        "%s is not a valid name for mass/width variable" % \
+                        value
+
+        if name is 'pdg_code':
+            if not isinstance(value, int):
+                raise self.ParticleError, \
+                    "PDG code %s is not an integer" % repr(value)
+            if value < 0:
+                 raise self.ParticleError, \
+                    "PDG code %i is smaller than one" % value
+
+        if name is 'line':
+            if not isinstance(value, str):
+                raise self.ParticleError, \
+                    "Line type %s is not a string" % repr(value)
+            if value not in ['dashed', 'straight', 'wavy', 'curly']:
+                 raise self.ParticleError, \
+                    "Line type %s is unknown" % value
+
+        if name is 'charge':
+            if not isinstance(value, float):
+                raise self.ParticleError, \
+                    "Charge %s is not a float" % repr(value)
+
+        if name is 'propagating':
+            if not isinstance(value, bool):
+                raise self.ParticleError, \
+                    "Propagating tag %s is not a boolean" % repr(value)
 
         self[name] = value
+
+        return True
+
+
 
 

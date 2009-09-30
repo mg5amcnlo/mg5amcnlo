@@ -18,7 +18,7 @@
 import unittest
 import madgraph.iolibs.misc as misc
 
-class IOLibsMiscTest(unittest.TestCase):
+class IOMiscTest(unittest.TestCase):
 
     def setUp(self):
         pass
@@ -26,7 +26,7 @@ class IOLibsMiscTest(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def testParse_Info_Str_Correct(self):
+    def test_parse_info_str_correct(self):
         "_parse_info_str converts info strings to dictionaries"
 
         mystr = "param1 = value1\n param2=value 2\n \n"
@@ -34,7 +34,7 @@ class IOLibsMiscTest(unittest.TestCase):
 
         self.assertEqual(rightdict, misc._parse_info_str(mystr))
 
-    def testParse_Info_Str_Error(self):
+    def test_parse_info_str_error(self):
         "_parse_info_str raises an error for strings which are not valid"
 
         mystr = "param1 : value1"
