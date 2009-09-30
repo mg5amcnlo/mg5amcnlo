@@ -53,27 +53,40 @@ class Particle(dict):
         if init_dict is not None:
 
             if not isinstance(init_dict, dict):
-                raise ValueError,
+                raise ValueError, \
                     "Argument %s is not a dictionary" % repr(init_dict)
 
             for item in init_dict.keys():
-                if item in prop_list:
+                if item in self._prop_list:
                     self[item] = init_dict[item]
                 else:
-                    raise self.ParticleError,
+                    raise self.ParticleError, \
                         "Key %s is not a valid particle property" % item
 
     def get(self, name):
         """Get the value of the property name."""
 
         if not isinstance(name, str):
-            raise ValueError,
+            raise ValueError, \
                 "Property name %s is not a string" % repr(name)
 
-        if name not in prop_list:
-            raise self.ParticleError,
+        if name not in self._prop_list:
+            raise self.ParticleError, \
                         "Key %s is not a valid particle property" % item
 
         return self[name]
+
+    def set(self, name, value):
+        """Set the value of the property name."""
+
+        if not isinstance(name, str):
+            raise ValueError, \
+                "Property name %s is not a string" % repr(name)
+
+        if name not in self._prop_list:
+            raise self.ParticleError, \
+                        "Key %s is not a valid particle property" % item
+
+        self[name] = value
 
 

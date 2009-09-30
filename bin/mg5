@@ -27,7 +27,7 @@ import sys
 root_path = path.split(path.dirname(path.realpath( __file__ )))[0]
 sys.path.append(root_path)
 
-import madgraph.interface.cmdinterface as cmdinterface
+import madgraph.interface.cmd_interface as cmd_interface
 
 # Call the cmd interface main loop
-cmdinterface.MadGraphCmd().cmdloop()
+cmd_interface.MadGraphCmd().cmdloop()
