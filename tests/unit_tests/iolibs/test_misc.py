@@ -32,14 +32,14 @@ class IOMiscTest(unittest.TestCase):
         mystr = "param1 = value1\n param2=value 2\n \n"
         rightdict = {'param1':'value1', 'param2':'value 2'}
 
-        self.assertEqual(rightdict, misc._parse_info_str(mystr))
+        self.assertEqual(rightdict, misc.get_pkg_info(mystr))
 
     def test_parse_info_str_error(self):
         "_parse_info_str raises an error for strings which are not valid"
 
         mystr = "param1 : value1"
 
-        self.assertRaises(IOError, misc._parse_info_str, mystr)
+        self.assertRaises(IOError, misc.get_pkg_info, mystr)
 
 if __name__ == "__main__":
     unittest.main()

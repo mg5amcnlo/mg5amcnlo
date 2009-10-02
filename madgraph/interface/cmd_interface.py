@@ -76,16 +76,15 @@ class MadGraphCmd(cmd.Cmd):
             self.help_import()
             return False
 
+        print args
         if args[0] is 'v4':
-
             #Try to guess which function to call according to the given path
-
             if os.path.isdir(args[1]):
                 pass
             elif os.path.isfile(args[1]):
                 filename = os.path.basename(args[1])
             else:
-                print "Path %s is not valid" % args[1]
+                print "Path %s is not a valid pathname" % args[1]
 
 
     # Access to shell
