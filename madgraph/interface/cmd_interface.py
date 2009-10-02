@@ -20,10 +20,15 @@ import sys
 import os
 
 import madgraph.iolibs.misc as misc
+import madgraph.iolibs.files as files
 import madgraph.iolibs.import_v4 as import_v4
+
+import madgraph.core.base_objects as base_objects
 
 class MadGraphCmd(cmd.Cmd):
     """The command line processor of MadGraph"""
+
+    _curr_model = base_objects.Model()
 
     def split_arg(self, line):
         """Split a line of arguments"""
@@ -37,8 +42,8 @@ class MadGraphCmd(cmd.Cmd):
 
         self.prompt = 'mg5>'
 
-        # If possible, build an info line with current version number and date, from
-        # the VERSION text file
+        # If possible, build an info line with current version number 
+        # and date, from the VERSION text file
 
         info = misc.get_pkg_info()
         info_line = ""
@@ -71,18 +76,20 @@ class MadGraphCmd(cmd.Cmd):
         """Import files with external formats"""
 
         args = self.split_arg(line)
-
         if len(args) != 2:
             self.help_import()
             return False
 
-        print args
-        if args[0] is 'v4':
+        if args[0] == 'v4':
             #Try to guess which function to call according to the given path
             if os.path.isdir(args[1]):
                 pass
             elif os.path.isfile(args[1]):
                 filename = os.path.basename(args[1])
+                if filename == 'particles.dat':
+                    self._curr_model.set('particles',
+                                         files.act_on_file(args[1],
+                                                import_v4.read_particles_v4))
             else:
                 print "Path %s is not a valid pathname" % args[1]
 

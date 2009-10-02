@@ -44,7 +44,7 @@ class ParticleTest(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_create_particle_correct(self):
+    def test_setget_particle_correct(self):
         "Test correct Particle object __init__, get and set"
 
         mypart2 = base_objects.Particle()
@@ -57,10 +57,10 @@ class ParticleTest(unittest.TestCase):
         self.assertEqual(self.mypart, mypart2)
 
         # Check equality with initial dic using get
-        for prop in self.mypart.prop_list:
+        for prop in self.mypart.keys():
             self.assertEqual(self.mypart.get(prop), self.mydict[prop])
 
-    def test_create_particle_exceptions(self):
+    def test_setget_particle_exceptions(self):
         "Test error raising in Particle __init__, get and set"
 
         wrong_dict = self.mydict
@@ -72,7 +72,6 @@ class ParticleTest(unittest.TestCase):
         self.assertRaises(base_objects.Particle.ParticleError,
                           base_objects.Particle,
                           wrong_dict)
-
         self.assertRaises(base_objects.Particle.ParticleError,
                           base_objects.Particle,
                           a_number)
@@ -81,7 +80,6 @@ class ParticleTest(unittest.TestCase):
         self.assertRaises(base_objects.Particle.ParticleError,
                           self.mypart.get,
                           a_number)
-
         self.assertRaises(base_objects.Particle.ParticleError,
                           self.mypart.get,
                           'wrongparam')
@@ -90,7 +88,6 @@ class ParticleTest(unittest.TestCase):
         self.assertRaises(base_objects.Particle.ParticleError,
                           self.mypart.set,
                           a_number, 0)
-
         self.assertRaises(base_objects.Particle.ParticleError,
                           self.mypart.set,
                           'wrongparam', 0)
@@ -138,7 +135,7 @@ class ParticleTest(unittest.TestCase):
         print ' ',
 
     def test_representation(self):
-        """Test particle object stringrepresentation."""
+        """Test particle object string representation."""
 
         goal = "{\n"
         goal = goal + "    \'name\': \'t\',\n"
@@ -155,6 +152,72 @@ class ParticleTest(unittest.TestCase):
         goal = goal + "    \'propagating\': True\n}"
 
         self.assertEqual(goal, str(self.mypart))
+
+    def test_particle_list(self):
+        """Test particle list initialization"""
+
+        mylist = [self.mypart] * 10
+        mypartlist = base_objects.ParticleList(mylist)
+
+        for part in mypartlist:
+            self.assertEqual(part, self.mypart)
+
+class ModelTest(unittest.TestCase):
+
+    def test_model_initialization(self):
+        """Test the default Model class initialization"""
+        mymodel = base_objects.Model()
+
+        self.assertEqual(mymodel['particles'], base_objects.ParticleList())
+
+    def test_setget_model_correct(self):
+        """Test correct Model object get and set"""
+
+        # Test the particles item
+        mydict = {'name':'t',
+                  'antiname':'t~',
+                  'spin':2,
+                  'color':3,
+                  'mass':'mt',
+                  'width':'wt',
+                  'texname':'t',
+                  'antitexname':'\\overline{t}',
+                  'line':'straight',
+                  'charge':2. / 3.,
+                  'pdg_code':6,
+                  'propagating':True}
+
+        mypart = base_objects.Particle(mydict)
+        mypartlist = base_objects.ParticleList([mypart])
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+
+        self.assertEqual(mymodel.get('particles'), mypartlist)
+
+    def test_setget_model_correct(self):
+        """Test error raising in Model object get and set"""
+
+        mymodel = base_objects.Model()
+        not_a_string = 1.
+
+        # General
+        self.assertRaises(base_objects.Model.ModelError,
+                          mymodel.get,
+                          not_a_string)
+        self.assertRaises(base_objects.Model.ModelError,
+                          mymodel.get,
+                          'wrong_key')
+        self.assertRaises(base_objects.Model.ModelError,
+                          mymodel.set,
+                          not_a_string, None)
+        self.assertRaises(base_objects.Model.ModelError,
+                          mymodel.set,
+                          'wrong_subclass', None)
+
+        # For each subclass
+        self.assertRaises(base_objects.Model.ModelError,
+                          mymodel.set,
+                          'particles', not_a_string)
 
 if __name__ == "__main__":
     unittest.main()

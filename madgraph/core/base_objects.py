@@ -27,22 +27,10 @@ class Particle(dict):
     univocally characterize a given type of physical particle: name, spin, 
     color, mass, width, charge,..."""
 
-    prop_list = ['name',
-                 'antiname',
-                 'spin',
-                 'color',
-                 'charge',
-                 'mass',
-                 'width',
-                 'pdg_code',
-                 'texname',
-                 'antitexname',
-                 'line',
-                 'propagating']
 
     class ParticleError(Exception):
         """Exception raised if an error occurs in the definition
-        of a particle"""
+        or execution of a particle"""
         pass
 
     def __init__(self, init_dict=None):
@@ -52,18 +40,18 @@ class Particle(dict):
 
         dict.__init__(self)
 
-        self.set('name', 'none')
-        self.set('antiname', 'none')
-        self.set('spin', 1)
-        self.set('color', 1)
-        self.set('charge', 1.)
-        self.set('mass', 'zero')
-        self.set('width', 'zero')
-        self.set('pdg_code', 0)
-        self.set('texname', 'none')
-        self.set('antitexname', 'none')
-        self.set('line', 'dashed')
-        self.set('propagating', True)
+        self['name'] = 'none'
+        self['antiname'] = 'none'
+        self['spin'] = 1
+        self['color'] = 1
+        self['charge'] = 1.
+        self['mass'] = 'zero'
+        self['width'] = 'zero'
+        self['pdg_code'] = 0
+        self['texname'] = 'none'
+        self['antitexname'] = 'none'
+        self['line'] = 'dashed'
+        self['propagating'] = True
 
         if init_dict is not None:
 
@@ -72,7 +60,7 @@ class Particle(dict):
                     "Argument %s is not a dictionary" % repr(init_dict)
 
             for item in init_dict.keys():
-                if item in self.prop_list:
+                if item in self.keys():
                     self.set(item, init_dict[item])
                 else:
                     raise self.ParticleError, \
@@ -85,7 +73,7 @@ class Particle(dict):
             raise self.ParticleError, \
                 "Property name %s is not a string" % repr(name)
 
-        if name not in self.prop_list:
+        if name not in self.keys():
             raise self.ParticleError, \
                         "%s is not a valid particle property" % name
 
@@ -100,7 +88,7 @@ class Particle(dict):
             raise self.ParticleError, \
                 "Property name %s is not a string" % repr(name)
 
-        if name not in self.prop_list:
+        if name not in self.keys():
             raise self.ParticleError, \
                         "%s is not a valid particle property" % name
 
@@ -172,13 +160,19 @@ class Particle(dict):
 
         mystr = '{\n'
 
-        for prop in self.prop_list:
+        ordered_prop_list = ['name', 'antiname', 'spin', 'color',
+                           'charge', 'mass', 'width', 'pdg_code',
+                           'texname', 'antitexname', 'line', 'propagating']
+
+        for prop in ordered_prop_list:
             if isinstance(self[prop], str):
-                mystr = mystr + '    \'' + prop + '\': \'' + self[prop] + '\',\n'
+                mystr = mystr + '    \'' + prop + '\': \'' + \
+                        self[prop] + '\',\n'
             elif isinstance(self[prop], float):
                 mystr = mystr + '    \'' + prop + '\': %.2f,\n' % self[prop]
             else:
-                mystr = mystr + '    \'' + prop + '\': ' + repr(self[prop]) + ',\n'
+                mystr = mystr + '    \'' + prop + '\': ' + \
+                        repr(self[prop]) + ',\n'
         mystr = mystr.rstrip(',\n')
         mystr = mystr + '\n}'
 
@@ -195,7 +189,7 @@ class ParticleList(list):
 
     class ParticleListError(Exception):
         """Exception raised if an error occurs in the definition
-        of a particle list."""
+        or execution of a particle list."""
         pass
 
     def __init__(self, init_list=None):
@@ -225,3 +219,62 @@ class ParticleList(list):
 
         return mystr + ']'
 
+##############################################################################
+##  Model
+##############################################################################
+
+class Model(dict):
+    """A class to store all the model information."""
+
+    class ModelError(Exception):
+        """Exception raised if an error occurs in the definition
+        or execution of a particle list."""
+        pass
+
+    def __init__(self):
+        """Creates a new Model object. If no argument is passed, assigns 
+        default value to all keys."""
+
+        dict.__init__(self)
+
+        self['particles'] = ParticleList()
+        self['parameters'] = None
+        self['vertices'] = None
+        self['couplings'] = None
+        self['lorentz'] = None
+
+    def get(self, name):
+        """Get the value of the subclass name."""
+
+        if not isinstance(name, str):
+            raise self.ModelError, \
+                "Object %s is not a string" % repr(name)
+
+        if name not in self.keys():
+            raise self.ModelError, \
+                        "%s is not a valid model key" % name
+
+        return self[name]
+
+    def set(self, name, value):
+        """Set the value of the subclass name. First check if value
+        is a valid value for the considered subclass. Return True if the
+        value has been correctly set."""
+
+        if not isinstance(name, str):
+            raise self.ModelError, \
+                "Object %s is not a string" % repr(name)
+
+        if name not in self.keys():
+            raise self.ModelError, \
+                        "%s is not a valid model key" % name
+
+        if name is 'particles':
+            if not isinstance(value, ParticleList):
+                raise self.ModelError, \
+                    "Object of type %s is not a ParticleList object" % \
+                                                            type(value)
+
+        self[name] = value
+
+        return True
