@@ -16,6 +16,7 @@
 """Unit test library for the various base objects of the core library"""
 
 import unittest
+
 import madgraph.core.base_objects as base_objects
 
 class ParticleTest(unittest.TestCase):
@@ -26,13 +27,13 @@ class ParticleTest(unittest.TestCase):
     def setUp(self):
 
         self.mydict = {'name':'t',
-                      'antiname':'t',
+                      'antiname':'t~',
                       'spin':2,
                       'color':3,
                       'mass':'mt',
                       'width':'wt',
                       'texname':'t',
-                      'antitexname':'\overline{t}',
+                      'antitexname':'\\overline{t}',
                       'line':'straight',
                       'charge':2. / 3.,
                       'pdg_code':6,
@@ -48,9 +49,8 @@ class ParticleTest(unittest.TestCase):
 
         mypart2 = base_objects.Particle()
 
-        # First check mypart2 is None by default and fill it using set
+        # First fill mypart2 it using set
         for prop in self.mydict.keys():
-            self.assertEqual(mypart2.get(prop), None)
             mypart2.set(prop, self.mydict[prop])
 
         # Check equality between Particle objects
@@ -136,6 +136,25 @@ class ParticleTest(unittest.TestCase):
                          test['prop'], x)
 
         print ' ',
+
+    def test_representation(self):
+        """Test particle object stringrepresentation."""
+
+        goal = "{\n"
+        goal = goal + "    \'name\': \'t\',\n"
+        goal = goal + "    \'antiname\': \'t~\',\n"
+        goal = goal + "    \'spin\': 2,\n"
+        goal = goal + "    \'color\': 3,\n"
+        goal = goal + "    \'charge\': 0.67,\n"
+        goal = goal + "    \'mass\': \'mt\',\n"
+        goal = goal + "    \'width\': \'wt\',\n"
+        goal = goal + "    \'pdg_code\': 6,\n"
+        goal = goal + "    \'texname\': \'t\',\n"
+        goal = goal + "    \'antitexname\': \'\\overline{t}\',\n"
+        goal = goal + "    \'line\': \'straight\',\n"
+        goal = goal + "    \'propagating\': True\n}"
+
+        self.assertEqual(goal, str(self.mypart))
 
 if __name__ == "__main__":
     unittest.main()

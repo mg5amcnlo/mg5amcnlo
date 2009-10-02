@@ -17,11 +17,20 @@
 
 import cmd
 import sys
+import os
 
 import madgraph.iolibs.misc as misc
+import madgraph.iolibs.import_v4 as import_v4
 
 class MadGraphCmd(cmd.Cmd):
     """The command line processor of MadGraph"""
+
+    def split_arg(self, line):
+        """Split a line of arguments"""
+        args = line.split()
+        for arg in args:
+            arg = arg.strip()
+        return args
 
     def preloop(self):
         """Initializing before starting the main loop"""
@@ -56,14 +65,56 @@ class MadGraphCmd(cmd.Cmd):
                 "*                                                          *\n" + \
                 "************************************************************"
 
+    # Import files
+
+    def do_import(self, line):
+        """Import files with external formats"""
+
+        args = self.split_arg(line)
+
+        if len(args) != 2:
+            self.help_import()
+            return False
+
+        if args[0] is 'v4':
+
+            #Try to guess which function to call according to the given path
+
+            if os.path.isdir(args[1]):
+                pass
+            elif os.path.isfile(args[1]):
+                filename = os.path.basename(args[1])
+            else:
+                print "Path %s is not valid" % args[1]
+
+
+    # Access to shell
+    def do_shell(self, line):
+        "Run a shell command"
+
+        if line.strip() is '':
+            self.help_shell()
+        else:
+            print "running shell command:", line
+            print os.popen(line).read(),
+
     # Various ways to quit
-    def do_quit(self, arg):
+    def do_quit(self, line):
         sys.exit(1)
 
     def do_EOF(self, line):
         sys.exit(1)
 
     # In-line help
+
+    def help_import(self):
+        print "syntax: import (v4|...) FILENAME",
+        print "-- imports files in various formats"
+
+    def help_shell(self):
+        print "syntax: shell CMD",
+        print "-- run the shell command CMD and catch output"
+
     def help_quit(self):
         print "syntax: quit",
         print "-- terminates the application"
@@ -71,9 +122,6 @@ class MadGraphCmd(cmd.Cmd):
     def help_help(self):
         print "syntax: help",
         print "-- access to the in-line help"
-
-    # shortcuts do
-    do_q = do_quit
 
 if __name__ == '__main__':
     MadGraphCmd().cmdloop()

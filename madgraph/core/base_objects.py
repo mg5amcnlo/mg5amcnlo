@@ -47,11 +47,23 @@ class Particle(dict):
 
     def __init__(self, init_dict=None):
         """Creates a new particle object. If no argument is passed, assigns 
-        None values to all properties. If a dictionary is given, tries to 
+        dummy values to all properties. If a dictionary is given, tries to 
         use it to give values to properties."""
 
-        for prop in self.prop_list:
-            self[prop] = None
+        dict.__init__(self)
+
+        self.set('name', 'none')
+        self.set('antiname', 'none')
+        self.set('spin', 1)
+        self.set('color', 1)
+        self.set('charge', 1.)
+        self.set('mass', 'zero')
+        self.set('width', 'zero')
+        self.set('pdg_code', 0)
+        self.set('texname', 'none')
+        self.set('antitexname', 'none')
+        self.set('line', 'dashed')
+        self.set('propagating', True)
 
         if init_dict is not None:
 
@@ -154,6 +166,62 @@ class Particle(dict):
 
         return True
 
+    def __str__(self):
+        """String representation of the Particle object. Outputs valid Python 
+        with improved format."""
+
+        mystr = '{\n'
+
+        for prop in self.prop_list:
+            if isinstance(self[prop], str):
+                mystr = mystr + '    \'' + prop + '\': \'' + self[prop] + '\',\n'
+            elif isinstance(self[prop], float):
+                mystr = mystr + '    \'' + prop + '\': %.2f,\n' % self[prop]
+            else:
+                mystr = mystr + '    \'' + prop + '\': ' + repr(self[prop]) + ',\n'
+        mystr = mystr.rstrip(',\n')
+        mystr = mystr + '\n}'
+
+        return mystr
 
 
+
+##############################################################################
+##  ParticleList
+##############################################################################
+
+class ParticleList(list):
+    """A class to store lists of particles."""
+
+    class ParticleListError(Exception):
+        """Exception raised if an error occurs in the definition
+        of a particle list."""
+        pass
+
+    def __init__(self, init_list=None):
+        """Creates a new particle list object. If a list of particle is given,
+        add them."""
+
+        list.__init__(self)
+
+        if init_list is not None:
+            for part in init_list:
+                if not isinstance(part, Particle):
+                    raise self.ParticleListError, \
+                        "Object %s is not a particle" % repr(part)
+                else:
+                    self.append(part)
+
+    def __str__(self):
+        """String representation of the particle list object. 
+        Outputs valid Python with improved format."""
+
+        mystr = '['
+
+        for part in self:
+            mystr = mystr + str(part) + ',\n'
+
+        mystr = mystr.rstrip(',\n')
+
+        return mystr + ']'
 
