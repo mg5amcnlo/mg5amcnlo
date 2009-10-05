@@ -294,7 +294,7 @@ class Test_in_module(list):
 ##############################################################################
 if __name__ == "__main__":
 
-    opt=sys.argv()
+    opt=sys.argv
     if len(opt)==1:
         run()
     elif len(opt)==2:
