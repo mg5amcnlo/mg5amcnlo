@@ -30,12 +30,41 @@ class MadGraphCmd(cmd.Cmd):
 
     _curr_model = base_objects.Model()
 
+    _import_formats = ['v4']
+
     def split_arg(self, line):
         """Split a line of arguments"""
         args = line.split()
-        for arg in args:
-            arg = arg.strip()
         return args
+
+    def list_completion(self, text, list):
+        """Propose completions of text in list"""
+        if not text:
+                completions = list
+        else:
+            completions = [ f
+                            for f in list
+                            if f.startswith(text)
+                            ]
+        return completions
+#
+#    def path_completion(self, text, line):
+#        """Propose completions of text to compose a valid path"""
+#        if not text:
+#                completions = []
+#        else:
+#            first = os.path.dirname(text)
+#            last = os.path.basename(text)
+#            completions = [ os.path.join(first, f)
+#                            for f in os.listdir(first)
+#                            if f.startswith(last) and os.path.isfile(first + '/' + f)
+#                            ]
+#            completions = completions + \
+#                            [  os.path.join(first, f) + '/'
+#                            for f in os.listdir(first)
+#                            if f.startswith(last) and os.path.isdir(first + '/' + f)
+#                            ]
+#        return completions
 
     def preloop(self):
         """Initializing before starting the main loop"""
@@ -93,7 +122,6 @@ class MadGraphCmd(cmd.Cmd):
             else:
                 print "Path %s is not a valid pathname" % args[1]
 
-
     # Access to shell
     def do_shell(self, line):
         "Run a shell command"
@@ -112,7 +140,6 @@ class MadGraphCmd(cmd.Cmd):
         sys.exit(1)
 
     # In-line help
-
     def help_import(self):
         print "syntax: import (v4|...) FILENAME",
         print "-- imports files in various formats"

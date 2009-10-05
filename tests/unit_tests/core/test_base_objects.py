@@ -69,26 +69,26 @@ class ParticleTest(unittest.TestCase):
         a_number = 0
 
         # Test init
-        self.assertRaises(base_objects.Particle.ParticleError,
+        self.assertRaises(base_objects.Particle.PhysicsObjectError,
                           base_objects.Particle,
                           wrong_dict)
-        self.assertRaises(base_objects.Particle.ParticleError,
+        self.assertRaises(base_objects.Particle.PhysicsObjectError,
                           base_objects.Particle,
                           a_number)
 
         # Test get
-        self.assertRaises(base_objects.Particle.ParticleError,
+        self.assertRaises(base_objects.Particle.PhysicsObjectError,
                           self.mypart.get,
                           a_number)
-        self.assertRaises(base_objects.Particle.ParticleError,
+        self.assertRaises(base_objects.Particle.PhysicsObjectError,
                           self.mypart.get,
                           'wrongparam')
 
         # Test set
-        self.assertRaises(base_objects.Particle.ParticleError,
+        self.assertRaises(base_objects.Particle.PhysicsObjectError,
                           self.mypart.set,
                           a_number, 0)
-        self.assertRaises(base_objects.Particle.ParticleError,
+        self.assertRaises(base_objects.Particle.PhysicsObjectError,
                           self.mypart.set,
                           'wrongparam', 0)
 
@@ -123,16 +123,13 @@ class ParticleTest(unittest.TestCase):
                         'wrong_list':[1, 'a', 'true', None]}
                        ]
 
-        for test in test_values:
-            print test['prop'],
-            for x in test['right_list']:
-                self.assert_(self.mypart.set(test['prop'], x))
-            for x in test['wrong_list']:
-                self.assertRaises(base_objects.Particle.ParticleError,
-                         self.mypart.set,
-                         test['prop'], x)
+        temp_part = self.mypart
 
-        print ' ',
+        for test in test_values:
+            for x in test['right_list']:
+                self.assert_(temp_part.set(test['prop'], x))
+            for x in test['wrong_list']:
+                self.assertFalse(temp_part.set(test['prop'], x))
 
     def test_representation(self):
         """Test particle object string representation."""
@@ -159,8 +156,145 @@ class ParticleTest(unittest.TestCase):
         mylist = [self.mypart] * 10
         mypartlist = base_objects.ParticleList(mylist)
 
+        not_a_part = 1
+
         for part in mypartlist:
             self.assertEqual(part, self.mypart)
+
+        self.assertRaises(base_objects.ParticleList.PhysicsObjectListError,
+                          mypartlist.append,
+                          not_a_part)
+
+class InteractionTest(unittest.TestCase):
+
+    mydict = {}
+    myinter = None
+
+    def setUp(self):
+
+        self.mydict = {'particles': ['a', 'b', 'c'],
+                       'color': ['C1', 'C2'],
+                       'lorentz':['L1', 'L2'],
+                       'couplings':{(0, 0):'g00',
+                                    (0, 1):'g01',
+                                    (1, 0):'g10',
+                                    (1, 1):'g11'},
+                       'orders':['QCD', 'QED']}
+
+        self.myinter = base_objects.Interaction(self.mydict)
+
+    def test_setget_interaction_correct(self):
+        "Test correct interaction object __init__, get and set"
+
+        myinter2 = base_objects.Interaction()
+
+        # First fill myinter2 it using set
+        for prop in ['particles', 'color', 'lorentz', 'couplings', 'orders']:
+            myinter2.set(prop, self.mydict[prop])
+
+        # Check equality between Interaction objects
+        self.assertEqual(self.myinter, myinter2)
+
+        # Check equality with initial dic using get
+        for prop in self.myinter.keys():
+            self.assertEqual(self.myinter.get(prop), self.mydict[prop])
+
+    def test_setget_interaction_exceptions(self):
+        "Test error raising in Interaction __init__, get and set"
+
+        wrong_dict = self.mydict
+        wrong_dict['wrongparam'] = 'wrongvalue'
+
+        a_number = 0
+
+        # Test init
+        self.assertRaises(base_objects.Interaction.PhysicsObjectError,
+                          base_objects.Interaction,
+                          wrong_dict)
+        self.assertRaises(base_objects.Interaction.PhysicsObjectError,
+                          base_objects.Interaction,
+                          a_number)
+
+        # Test get
+        self.assertRaises(base_objects.Interaction.PhysicsObjectError,
+                          self.myinter.get,
+                          a_number)
+        self.assertRaises(base_objects.Interaction.PhysicsObjectError,
+                          self.myinter.get,
+                          'wrongparam')
+
+        # Test set
+        self.assertRaises(base_objects.Interaction.PhysicsObjectError,
+                          self.myinter.set,
+                          a_number, 0)
+        self.assertRaises(base_objects.Interaction.PhysicsObjectError,
+                          self.myinter.set,
+                          'wrongparam', 0)
+
+    def test_values_for_prop(self):
+        """Test filters for interaction properties"""
+
+        test_values = [
+                       {'prop':'particles',
+                        'right_list':[[], ['a'], ['a+', 'b-']],
+                        'wrong_list':[1, 'x ', ['e?'], ['a', ' ']]},
+                       {'prop':'color',
+                        'right_list':[[], ['C1'], ['C1', 'C2']],
+                        'wrong_list':[1, 'a', ['a', 1]]},
+                       {'prop':'lorentz',
+                        'right_list':[[], ['L1'], ['L1', 'L2']],
+                        'wrong_list':[1, 'a', ['a', 1]]},
+                       {'prop':'orders',
+                        'right_list':[[], ['QCD'], ['QED', 'QCD']],
+                        'wrong_list':[1, 'a', ['a', 1]]},
+                       # WARNING: Valid value should be defined with
+                       # respect to the last status of myinter, i.e.
+                       # the last good color and lorentz lists
+                       {'prop':'couplings',
+                        'right_list':[{(0, 0):'g00', (0, 1):'g01',
+                                       (1, 0):'g10', (1, 1):'g11'}],
+                        'wrong_list':[{(0):'g00', (0, 1):'g01',
+                                       (1, 0):'g10', (1, 2):'g11'},
+                                      {(0, 0):'g00', (0, 1):'g01',
+                                       (1, 0):'g10', (1, 2):'g11'},
+                                      {(0, 0):'g00', (0, 1):'g01',
+                                       (1, 0):'g10'}]}
+                       ]
+
+        mytestinter = self.myinter
+
+        for test in test_values:
+            for x in test['right_list']:
+                self.assert_(mytestinter.set(test['prop'], x))
+            for x in test['wrong_list']:
+                self.assertFalse(mytestinter.set(test['prop'], x))
+
+    def test_representation(self):
+        """Test interaction object string representation."""
+
+        goal = "{\n"
+        goal = goal + "    \'particles\': [\'a\', \'b\', \'c\'],\n"
+        goal = goal + "    \'color\': [\'C1\', \'C2\'],\n"
+        goal = goal + "    \'lorentz\': [\'L1\', \'L2\'],\n"
+        goal = goal + "    \'couplings\': %s,\n" % repr(self.myinter['couplings'])
+        goal = goal + "    \'orders\': [\'QCD\', \'QED\']\n}"
+
+        self.assertEqual(goal, str(self.myinter))
+
+    def test_interaction_list(self):
+        """Test interaction list initialization"""
+
+        mylist = [self.myinter] * 10
+        myinterlist = base_objects.InteractionList(mylist)
+
+        not_a_part = 1
+
+        for part in myinterlist:
+            self.assertEqual(part, self.myinter)
+
+        self.assertRaises(base_objects.InteractionList.PhysicsObjectListError,
+                          myinterlist.append,
+                          not_a_part)
 
 class ModelTest(unittest.TestCase):
 
@@ -201,23 +335,22 @@ class ModelTest(unittest.TestCase):
         not_a_string = 1.
 
         # General
-        self.assertRaises(base_objects.Model.ModelError,
+        self.assertRaises(base_objects.Model.PhysicsObjectError,
                           mymodel.get,
                           not_a_string)
-        self.assertRaises(base_objects.Model.ModelError,
+        self.assertRaises(base_objects.Model.PhysicsObjectError,
                           mymodel.get,
                           'wrong_key')
-        self.assertRaises(base_objects.Model.ModelError,
+        self.assertRaises(base_objects.Model.PhysicsObjectError,
                           mymodel.set,
                           not_a_string, None)
-        self.assertRaises(base_objects.Model.ModelError,
+        self.assertRaises(base_objects.Model.PhysicsObjectError,
                           mymodel.set,
                           'wrong_subclass', None)
 
         # For each subclass
-        self.assertRaises(base_objects.Model.ModelError,
-                          mymodel.set,
-                          'particles', not_a_string)
+        self.assertFalse(mymodel.set('particles', not_a_string))
+        self.assertFalse(mymodel.set('interactions', not_a_string))
 
 if __name__ == "__main__":
     unittest.main()
