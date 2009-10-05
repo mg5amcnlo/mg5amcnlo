@@ -17,6 +17,7 @@
 interaction, model, ..."""
 
 import re
+import logging
 
 ##############################################################################
 ##  PhysicsObject
@@ -86,7 +87,7 @@ class PhysicsObject(dict):
                 self[name] = value
                 return True
             except self.PhysicsObjectError, why:
-                print "Property %s cannot be changed: %s" % (name, why)
+                logging.warning("Property " + name + " cannot be changed:" + str(why))
                 return False
 
     def filter(self, name, value):
@@ -275,9 +276,25 @@ class ParticleList(PhysicsObjectList):
     """A class to store lists of particles."""
 
     def _is_valid_element(self, obj):
-       """Test if object obj is a valid Particle for the list."""
+        """Test if object obj is a valid Particle for the list."""
+        return isinstance(obj, Particle)
 
-       return isinstance(obj, Particle)
+    def find_name(self, name):
+        """Try to find a particle with the given name. Check both name
+        and antiname. If a match is found, return the corresponding
+        particle (first one in the list), None otherwise."""
+
+        if not Particle.filter(Particle(), 'name', name):
+            raise self.PhysicsObjectError, \
+                "%s is not a valid particle name" % str(name)
+
+        for part in self:
+            if part.get('name') == name or \
+                part.get('antiname') == name:
+                return part
+
+        return None
+
 
 ###############################################################################
 ###  Interaction

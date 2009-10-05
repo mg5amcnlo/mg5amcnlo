@@ -16,6 +16,7 @@
 """Methods and classes dealing with file access."""
 
 import os
+import logging
 
 def act_on_file(filename, myfunct, open_mode='r'):
     """Open a file, apply the function myfunct (with sock as an arg) 
@@ -31,7 +32,7 @@ def act_on_file(filename, myfunct, open_mode='r'):
         finally:
             sock.close()
     except IOError, (errno, strerror):
-        print "I/O error (%s): %s" % (errno, strerror)
+        logging.error("I/O error (%s): %s" % (errno, strerror))
         return None
 
     return ret_value

@@ -151,7 +151,7 @@ class ParticleTest(unittest.TestCase):
         self.assertEqual(goal, str(self.mypart))
 
     def test_particle_list(self):
-        """Test particle list initialization"""
+        """Test particle list initialization and search"""
 
         mylist = [self.mypart] * 10
         mypartlist = base_objects.ParticleList(mylist)
@@ -164,6 +164,12 @@ class ParticleTest(unittest.TestCase):
         self.assertRaises(base_objects.ParticleList.PhysicsObjectListError,
                           mypartlist.append,
                           not_a_part)
+        # test particle search
+        self.assertEqual(self.mypart,
+                         mypartlist.find_name(self.mypart['antiname']))
+
+        self.assertEqual(None,
+                         mypartlist.find_name('none'))
 
 class InteractionTest(unittest.TestCase):
 

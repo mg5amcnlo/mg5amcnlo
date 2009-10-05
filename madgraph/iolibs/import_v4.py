@@ -15,8 +15,10 @@
 
 """Methods and classes to import v4 format model files."""
 
-from madgraph.core.base_objects import Particle
-from madgraph.core.base_objects import ParticleList
+import logging
+
+from madgraph.core.base_objects import Particle, ParticleList
+from madgraph.core.base_objects import Interaction, InteractionList
 
 ##############################################################################
 ##  read_particles_v4
@@ -92,11 +94,74 @@ def read_particles_v4(fsock):
                     mypart.set('charge', 0.)
                     mypart.set('antitexname', mypart.get('texname'))
 
-                except (Particle.ParticleError, ValueError), why:
-                        print "Warning:", why, ", particle ignored"
+                except (Particle.PhysicsObjectError, ValueError), why:
+                    logging.warning("Warning: %s, particle ignored" % why)
                 else:
                     mypartlist.append(mypart)
 
     return mypartlist
 
 
+##############################################################################
+##  read_interactions_v4
+##############################################################################
+
+def read_interactions_v4(fsock, ref_part_list):
+    """Read a list of interactions from stream fsock, using the old v4 format.
+    Requires a ParticleList object as an input to recognize particle names."""
+
+    myinterlist = InteractionList()
+
+    if not isinstance(ref_part_list, ParticleList):
+           raise ValueError, \
+               "Object %s is not a valid ParticleList" % repr(part_list)
+
+    for line in fsock:
+        myinter = Interaction()
+
+        line = line.split("#", 2)[0] # remove any comment
+        line = line.strip() # makes the string clean
+
+        if line != "": # skip blank
+            values = line.split()
+            part_list = []
+
+            try:
+                for str_name in values:
+                    curr_part = ref_part_list.find_name(str_name)
+                    if isinstance(curr_part, Particle):
+                        # Look at the total number of strings, stop if 
+                        # anyway not enough, required if a variable name 
+                        # corresponds to a particle! (eg G)
+                        if len(values) >= 2 * len(part_list) + 1:
+                            part_list.append(str_name)
+                        else: break
+                    # also stops if string does not correspond to 
+                    # a particle name
+                    else: break
+
+                if len(part_list) < 3:
+                    raise Interaction.PhysicsObjectError, \
+                        "Vertex with less than 3 known particles found."
+
+                myinter.set('particles', part_list)
+
+                # Give a dummy 'guess' values for color and Lorentz structures
+                # Those will have to be replaced by a proper guess!
+
+                myinter.set('color', ['guess'])
+                myinter.set('lorentz', ['guess'])
+
+                # Use the other strings to fill variable names and tags
+                myinter.set('couplings', {(0, 0):values[len(part_list)]})
+
+                myinter.set('orders',
+                            values[2 * len(part_list) - 2: \
+                                   3 * len(part_list) - 4])
+
+                myinterlist.append(myinter)
+
+            except Interaction.PhysicsObjectError, why:
+                logging.warning("Interaction ignored: %s" % why)
+
+    return myinterlist
