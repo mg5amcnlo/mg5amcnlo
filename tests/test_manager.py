@@ -31,10 +31,13 @@ import re
 import os
 import inspect
 import sys
-sys.path+=['.','..']
+import optparse
+
+root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
+sys.path.append(root_path)
 
 ##############################################################################
-def run(expression='', re_opt=0, package='./tests/'):
+def run(expression='', re_opt=0, package='./tests/', verbosity=1):
     """ running the test associated to expression. By default, this launch all 
     test derivated from TestCase. expression can be the name of directory, 
     module, class, function or event standard regular expression (in re format)
@@ -47,7 +50,7 @@ def run(expression='', re_opt=0, package='./tests/'):
                                    re_opt=re_opt):
         data=collect.loadTestsFromName(test_fct)
         testsuite.addTest(data)
-    unittest.TextTestRunner(verbosity=1).run(testsuite)
+    unittest.TextTestRunner(verbosity=verbosity).run(testsuite)
     
 
 ##############################################################################
@@ -77,7 +80,8 @@ class Test_in_module(list):
         self.package = package
         if self.package[-1] != '/': self.package+='/'
         self.restrict_to(expression, re_opt)
-        
+        self.launch_pos=''
+
     ##########################################################################
     def _check_if_obj_build(self):
         """ Check if a collect is already done 
@@ -101,6 +105,13 @@ class Test_in_module(list):
     ##########################################################################
     def collect_dir(self, directory, checking=True):
         """ Find the file and the subpackage in this package """
+        
+        #ensures that we are at root position
+        move=False
+        if self.launch_pos=='': 
+            move=True
+            self.go_to_root()
+            
 
         for name in os.listdir(directory):
             local_check = checking
@@ -118,6 +129,9 @@ class Test_in_module(list):
             elif status == "module":
                 self.collect_dir(directory + '/' + name, local_check)
         
+        if move:
+            self.go_to_initpos()
+
     ##########################################################################
     def collect_file(self, file, checking=True):
         """ Find the different class instance derivated of TestCase """
@@ -128,7 +142,8 @@ class Test_in_module(list):
         #look at class
         for name in dir(obj):
             exec('class_=obj.'+name)
-            if inspect.isclass(class_) and issubclass(class_,unittest.TestCase):
+            if inspect.isclass(class_) and \
+                    issubclass(class_,unittest.TestCase):
                 if checking:
                     if self.check_valid(name):
                         check_inside=False
@@ -170,12 +185,14 @@ class Test_in_module(list):
 
     ##########################################################################
     def restrict_to(self, expression, re_opt=0):
-        """ store in global the expression to fill in order to be a valid test """
+        """ 
+        store in global the expression to fill in order to be a valid test 
+        """
         
         if isinstance(expression,list):
             pass
         elif isinstance(expression,basestring):
-            if expression=='':
+            if expression in '':
                 expression=['.*'] #made an re authorizing all regular name
             else:
                 expression = [expression]
@@ -286,21 +303,47 @@ class Test_in_module(list):
         new_pos=name.split('.')[-1]
         add_to_possibility(out,new_pos)
 
-
-
-
         return out
+
+    ##########################################################################
+    def go_to_root(self):
+        """ 
+        go to the root directory of the module.
+        This ensures that the script works correctly whatever the position
+        where is launched
+        """
+        self.launch_pos=os.path.realpath(os.getcwd())
+        os.chdir(root_path)
+
+
+    ##########################################################################
+    def go_to_initpos(self):
+        """ 
+        go to the root directory of the module.
+        This ensures that the script works correctly whatever the position
+        where is launched
+        """
+        os.chdir(self.launch_pos)
+        self.launch_pos=''
 
 ##############################################################################
 if __name__ == "__main__":
 
-    opt=sys.argv
-    if len(opt)==1:
-        run()
-    elif len(opt)==2:
-        run(opt[1])
-    else:
-        run(opt[1],re_opt=opt[2])
+
+    usage = "usage: %prog [expression1]... [expressionN] [options] "
+    parser = optparse.OptionParser(usage=usage)
+    parser.add_option("-v", "--verbose", default=1,
+                      help="defined the verbosity level [%default]")
+    parser.add_option("-r", "--reopt", type="int", default=0,
+                  help="regular expression tag [%default]")
+    parser.add_option("-p", "--path", default='./tests/',
+                  help="position to start the search (from root)  [%default]")
+
+    (options, args) = parser.parse_args()
+    if len(args)==0:
+        args=''
+    run(args,re_opt=options.reopt, verbosity=options.verbose, \
+            package=options.path)
 
 #some example
 #    run('iolibs')
