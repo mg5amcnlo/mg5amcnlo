@@ -314,36 +314,7 @@ class Unittest_on_TestinModule(unittest.TestCase):
         name = 'data'
         self.assertFalse(self.testmodule.check_valid(name))
 
-    ##########################################################################
-    def test_status_file_on_file(self):
-        """ Test_in_module.status_file recognizes file """
-
-        status=self.testmodule.status_file(self.test_path+\
-                                               'test_test_manager.py')
-        self.assertEqual(status,'file')
-        status=self.testmodule.status_file(self.test_path+\
-                             '../../../README')
-        self.assertFalse(status)
-        status=self.testmodule.status_file(self.test_path+\
-                             '__init__.py')
-        self.assertFalse(status)
-        status=self.testmodule.status_file(self.test_path+\
-                             '__init__.pyc')
-        self.assertFalse(status)
-
-    ##########################################################################
-    def test_status_file_on_dir(self):
-        """ Test_in_module.status_file  doesn't detect non module dir """
-
-        status=self.testmodule.status_file(self.test_path+\
-                             '../bin')
-        self.assertEqual(status,'module')
-
-        status=self.testmodule.status_file(self.test_path+\
-                             '../../../apidoc')
-        self.assertFalse(status)
-
-    ########################################################################## 
+     ########################################################################## 
     def test_passin_pyformat(self):
         """ convert from linux position format to python include """
 
@@ -374,6 +345,51 @@ class Unittest_on_TestinModule(unittest.TestCase):
         for name in output:
             self.assertEqual(output.count(name),1)
         self.assert_(len(output)>1)
+
+##############################################################################
+class Unittest_on_TestinModule2(unittest.TestCase):
+    #This class test to find it's own property so it need some shortcut
+    test_path='./tests/unit_tests/bin/' 
+    name='test.manager.Unittest_on_TestinModule'
+
+
+    ##########################################################################
+    def setUp(self):
+        """ basic building of the class to test """
+        self.testmodule=test_manager.Test_in_module(package=self.test_path)
+        self.testmodule.go_to_root()
+    ##########################################################################
+    def tearDown(self):
+        self.testmodule.go_to_initpos()
+
+   ##########################################################################
+    def test_status_file_on_file(self):
+        """ Test_in_module.status_file recognizes file """
+        
+        status=self.testmodule.status_file(self.test_path+\
+                                               'test_test_manager.py')
+        self.assertEqual(status,'file')
+        status=self.testmodule.status_file(self.test_path+\
+                             '../../../README')
+        self.assertFalse(status)
+        status=self.testmodule.status_file(self.test_path+\
+                             '__init__.py')
+        self.assertFalse(status)
+        status=self.testmodule.status_file(self.test_path+\
+                             '__init__.pyc')
+        self.assertFalse(status)
+
+    ##########################################################################
+    def test_status_file_on_dir(self):
+        """ Test_in_module.status_file  doesn't detect non module dir """
+
+        status=self.testmodule.status_file(self.test_path+\
+                             '../bin')
+        self.assertEqual(status,'module')
+
+        status=self.testmodule.status_file(self.test_path+\
+                             '../../../apidoc')
+        self.assertFalse(status)
 
 ##############################################################################
 ##############################################################################
