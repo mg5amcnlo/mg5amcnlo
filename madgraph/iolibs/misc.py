@@ -55,7 +55,7 @@ def get_pkg_info(info_str=None):
     """
 
     if info_str is None:
-        info_dict = files.act_on_file(os.path.join(madgraph.__path__[0],
+        info_dict = files.read_from_file(os.path.join(madgraph.__path__[0],
                                                   "VERSION"),
                                                   _parse_info_str)
     else:

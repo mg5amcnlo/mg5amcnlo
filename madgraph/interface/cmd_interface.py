@@ -16,7 +16,9 @@
 """A user friendly command line interface to access MadGraph features."""
 
 import cmd
+import functools
 import os
+import subprocess
 import sys
 
 import madgraph.iolibs.misc as misc
@@ -37,8 +39,7 @@ class MadGraphCmd(cmd.Cmd):
 
     def split_arg(self, line):
         """Split a line of arguments"""
-        args = line.split()
-        return args
+        return line.split()
 
     def list_completion(self, text, list):
         """Propose completions of text in list"""
@@ -50,24 +51,27 @@ class MadGraphCmd(cmd.Cmd):
                             if f.startswith(text)
                             ]
         return completions
-#
-#    def path_completion(self, text, line):
-#        """Propose completions of text to compose a valid path"""
-#        if not text:
-#                completions = []
-#        else:
-#            first = os.path.dirname(text)
-#            last = os.path.basename(text)
-#            completions = [ os.path.join(first, f)
-#                            for f in os.listdir(first)
-#                            if f.startswith(last) and os.path.isfile(first + '/' + f)
-#                            ]
-#            completions = completions + \
-#                            [  os.path.join(first, f) + '/'
-#                            for f in os.listdir(first)
-#                            if f.startswith(last) and os.path.isdir(first + '/' + f)
-#                            ]
-#        return completions
+
+    def path_completion(self, text, base_dir=None):
+        """Propose completions of text to compose a valid path"""
+
+        if base_dir is None:
+            base_dir = os.getcwd()
+
+        completion = [f
+                       for f in os.listdir(base_dir)
+                       if f.startswith(text) and \
+                            os.path.isfile(os.path.join(base_dir, f))
+                       ]
+
+        completion = completion + \
+                     [f + '/'
+                       for f in os.listdir(base_dir)
+                       if f.startswith(text) and \
+                            os.path.isdir(os.path.join(base_dir, f))
+                     ]
+        return completion
+
 
     def preloop(self):
         """Initializing before starting the main loop"""
@@ -89,21 +93,21 @@ class MadGraphCmd(cmd.Cmd):
                             (30 - len_version - len_date) * ' ',
                             info['date'])
 
-        self.intro = "************************************************************\n" + \
-                "*                                                          *\n" + \
-                "*          W E L C O M E  to  M A D G R A P H  5           *\n" + \
-                "*                                                          *\n" + \
-                info_line + \
-                "*                                                          *\n" + \
-                "*    The MadGraph Development Team - Please visit us at    *\n" + \
-                "*              https://launchpad.net/madgraph5             *\n" + \
-                "*                                                          *\n" + \
-                "*               Type 'help' for in-line help.              *\n" + \
-                "*                                                          *\n" + \
-                "************************************************************"
+        self.intro = \
+        "************************************************************\n" + \
+        "*                                                          *\n" + \
+        "*          W E L C O M E  to  M A D G R A P H  5           *\n" + \
+        "*                                                          *\n" + \
+        info_line + \
+        "*                                                          *\n" + \
+        "*    The MadGraph Development Team - Please visit us at    *\n" + \
+        "*              https://launchpad.net/madgraph5             *\n" + \
+        "*                                                          *\n" + \
+        "*               Type 'help' for in-line help.              *\n" + \
+        "*                                                          *\n" + \
+        "************************************************************"
 
     # Import files
-
     def do_import(self, line):
         """Import files with external formats"""
 
@@ -120,10 +124,60 @@ class MadGraphCmd(cmd.Cmd):
                 filename = os.path.basename(args[1])
                 if filename == 'particles.dat':
                     self._curr_model.set('particles',
-                                         files.act_on_file(args[1],
+                                         files.read_from_file(
+                                                args[1],
                                                 import_v4.read_particles_v4))
+                if filename == 'interactions.dat':
+                    self._curr_model.set('interactions',
+                                         files.read_from_file(
+                                                args[1],
+                                                import_v4.read_interactions_v4,
+                                                self._curr_model['particles']))
             else:
                 print "Path %s is not a valid pathname" % args[1]
+
+    def complete_import(self, text, line, begidx, endidx):
+        "Complete the import command"
+
+        # Format
+        if len(self.split_arg(line[0:begidx])) == 1:
+            return self.list_completion(text, ['v4'])
+
+        # Filename if directory is not given
+        if len(self.split_arg(line[0:begidx])) == 2:
+            return self.path_completion(text)
+
+        # Filename if directory is given
+        if len(self.split_arg(line[0:begidx])) == 3:
+            return self.path_completion(text,
+                                        base_dir=\
+                                          self.split_arg(line[0:begidx])[2])
+
+    # Display
+    def do_display(self, line):
+        """Display current internal status"""
+
+        args = self.split_arg(line)
+
+        if args[0] == 'particles':
+            print "Current model contains %i particles:" % \
+                    len(self._curr_model['particles']),
+            for part in self._curr_model['particles']:
+                print part['name'],
+            print ''
+
+        if args[0] == 'interactions':
+            print "Current model contains %i interactions" % \
+                    len(self._curr_model['interactions'])
+
+    def complete_display(self, text, line, begidx, endidx):
+        "Complete the display command"
+
+        display_opts = ['particles',
+                        'interactions']
+        # Format
+        if len(self.split_arg(line[0:begidx])) == 1:
+            return self.list_completion(text, display_opts)
 
     # Access to shell
     def do_shell(self, line):
@@ -133,13 +187,10 @@ class MadGraphCmd(cmd.Cmd):
             self.help_shell()
         else:
             print "running shell command:", line
-            print os.popen(line).read(),
+            subprocess.call(line, shell=True)
 
-    # Various ways to quit
+    # Quit
     def do_quit(self, line):
-        sys.exit(1)
-
-    def do_EOF(self, line):
         sys.exit(1)
 
     # In-line help
@@ -147,8 +198,12 @@ class MadGraphCmd(cmd.Cmd):
         print "syntax: import (v4|...) FILENAME",
         print "-- imports files in various formats"
 
+    def help_display(self):
+        print "syntax: display particles|interactions",
+        print "-- display a the status of various internal state variables"
+
     def help_shell(self):
-        print "syntax: shell CMD",
+        print "syntax: shell CMD (or ! CMD)",
         print "-- run the shell command CMD and catch output"
 
     def help_quit(self):
@@ -158,6 +213,11 @@ class MadGraphCmd(cmd.Cmd):
     def help_help(self):
         print "syntax: help",
         print "-- access to the in-line help"
+
+    # ALiases
+
+    do_EOF = do_quit
+    help_EOF = help_quit
 
 #===============================================================================
 # __main__

@@ -19,19 +19,18 @@ import logging
 import os
 
 #===============================================================================
-# act_on_file
+# read_from_file
 #===============================================================================
-def act_on_file(filename, myfunct, open_mode='r'):
+def read_from_file(filename, myfunct, *args):
     """Open a file, apply the function myfunct (with sock as an arg) 
     on its content and return the result. Deals properly with errors and
-    returns None if something goes wrong. Open mode is r by default but 
-    can be changed.
+    returns None if something goes wrong. 
     """
 
     try:
-        sock = open(filename, open_mode)
+        sock = open(filename, 'r')
         try:
-            ret_value = myfunct(sock)
+            ret_value = myfunct(sock, *args)
         finally:
             sock.close()
     except IOError, (errno, strerror):

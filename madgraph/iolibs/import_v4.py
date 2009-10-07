@@ -113,7 +113,7 @@ def read_interactions_v4(fsock, ref_part_list):
 
     if not isinstance(ref_part_list, ParticleList):
            raise ValueError, \
-               "Object %s is not a valid ParticleList" % repr(part_list)
+               "Object %s is not a valid ParticleList" % repr(ref_part_list)
 
     for line in fsock:
         myinter = Interaction()
