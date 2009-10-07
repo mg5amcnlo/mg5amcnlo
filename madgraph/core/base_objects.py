@@ -1,4 +1,4 @@
-##############################################################################
+################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
 #
@@ -11,18 +11,17 @@
 #
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
-##############################################################################
+################################################################################
 
 """Definitions of all basic objects used in the core code: particle, 
 interaction, model, ..."""
 
-import re
 import logging
+import re
 
-##############################################################################
-##  PhysicsObject
-##############################################################################
-
+#===============================================================================
+# PhysicsObject
+#===============================================================================
 class PhysicsObject(dict):
     """A parent class for all physics objects."""
 
@@ -87,7 +86,8 @@ class PhysicsObject(dict):
                 self[name] = value
                 return True
             except self.PhysicsObjectError, why:
-                logging.warning("Property " + name + " cannot be changed:" + str(why))
+                logging.warning("Property " + name + " cannot be changed:" + \
+                                str(why))
                 return False
 
     def filter(self, name, value):
@@ -124,10 +124,10 @@ class PhysicsObject(dict):
 
     __repr__ = __str__
 
-##############################################################################
-##  PhysicsObjectList
-##############################################################################
 
+#===============================================================================
+# PhysicsObjectList
+#===============================================================================
 class PhysicsObjectList(list):
     """A class to store lists of physics object."""
 
@@ -172,10 +172,9 @@ class PhysicsObjectList(list):
 
         return mystr + ']'
 
-##############################################################################
-##  Particle
-##############################################################################
-
+#===============================================================================
+# Particle
+#===============================================================================
 class Particle(PhysicsObject):
     """The particle object containing the whole set of information required to
     univocally characterize a given type of physical particle: name, spin, 
@@ -267,11 +266,9 @@ class Particle(PhysicsObject):
                 'charge', 'mass', 'width', 'pdg_code',
                 'texname', 'antitexname', 'line', 'propagating']
 
-
-##############################################################################
-##  ParticleList
-##############################################################################
-
+#===============================================================================
+# ParticleList
+#===============================================================================
 class ParticleList(PhysicsObjectList):
     """A class to store lists of particles."""
 
@@ -296,10 +293,9 @@ class ParticleList(PhysicsObjectList):
         return None
 
 
-###############################################################################
-###  Interaction
-###############################################################################
-#
+#===============================================================================
+# Interaction
+#===============================================================================
 class Interaction(PhysicsObject):
     """The interaction object containing the whole set of information 
     required to univocally characterize a given type of physical interaction: 
@@ -361,7 +357,8 @@ class Interaction(PhysicsObject):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid tuple of integer" % str(key)
                 if key[0] < 0 or key[1] < 0 or \
-                   key[0] >= len(self['color']) or key[1] >= len(self['lorentz']):
+                   key[0] >= len(self['color']) or key[1] >= \
+                                                    len(self['lorentz']):
                     raise self.PhysicsObjectError, \
                         "%s is not a tuple with valid range" % str(key)
                 if not isinstance(value[key], str):
@@ -375,10 +372,10 @@ class Interaction(PhysicsObject):
 
         return ['particles', 'color', 'lorentz', 'couplings', 'orders']
 
-##############################################################################
-##  InteractionList
-##############################################################################
 
+#===============================================================================
+# InteractionList
+#===============================================================================
 class InteractionList(PhysicsObjectList):
     """A class to store lists of interactionss."""
 
@@ -387,10 +384,9 @@ class InteractionList(PhysicsObjectList):
 
        return isinstance(obj, Interaction)
 
-##############################################################################
-##  Model
-##############################################################################
-
+#===============================================================================
+# Model
+#===============================================================================
 class Model(PhysicsObject):
     """A class to store all the model information."""
 

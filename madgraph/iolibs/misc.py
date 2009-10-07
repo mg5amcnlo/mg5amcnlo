@@ -1,4 +1,4 @@
-##############################################################################
+################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
 #
@@ -11,7 +11,7 @@
 #
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
-##############################################################################
+################################################################################
 
 """A set of functions performing routine administrative I/O tasks."""
 
@@ -22,6 +22,9 @@ import StringIO
 import madgraph
 import madgraph.iolibs.files as files
 
+#===============================================================================
+# _parse_info_str
+#===============================================================================
 def _parse_info_str(fsock):
     """Parse a newline separated list of "param=value" as a dictionnary
     """
@@ -41,6 +44,9 @@ def _parse_info_str(fsock):
     return info_dict
 
 
+#===============================================================================
+# get_pkg_info
+#===============================================================================
 def get_pkg_info(info_str=None):
     """Returns the current version information of the MadGraph package, 
     as written in the VERSION text file. If the file cannot be found, 

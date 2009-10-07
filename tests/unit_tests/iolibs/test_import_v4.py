@@ -1,4 +1,4 @@
-##############################################################################
+################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
 #
@@ -11,17 +11,21 @@
 #
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
-##############################################################################
+################################################################################
 
 """Unit test library for the import v4 format routines"""
 
-import unittest
 import StringIO
+import unittest
 
 import madgraph.iolibs.import_v4 as import_v4
 import madgraph.core.base_objects as base_objects
 
+#===============================================================================
+# IOImportV4Test
+#===============================================================================
 class IOImportV4Test(unittest.TestCase):
+    """Test class for the import v4 module"""
 
     def setUp(self):
         pass

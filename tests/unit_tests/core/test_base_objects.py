@@ -1,4 +1,4 @@
-##############################################################################
+################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
 #
@@ -11,7 +11,7 @@
 #
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
-##############################################################################
+################################################################################
 
 """Unit test library for the various base objects of the core library"""
 
@@ -19,7 +19,11 @@ import unittest
 
 import madgraph.core.base_objects as base_objects
 
+#===============================================================================
+# ParticleTest
+#===============================================================================
 class ParticleTest(unittest.TestCase):
+    """Test class for the Particle object"""
 
     mydict = {}
     mypart = None
@@ -171,7 +175,11 @@ class ParticleTest(unittest.TestCase):
         self.assertEqual(None,
                          mypartlist.find_name('none'))
 
+#===============================================================================
+# InteractionTest
+#===============================================================================
 class InteractionTest(unittest.TestCase):
+    """Test class for the interaction object."""
 
     mydict = {}
     myinter = None
@@ -302,7 +310,11 @@ class InteractionTest(unittest.TestCase):
                           myinterlist.append,
                           not_a_part)
 
+#===============================================================================
+# ModelTest
+#===============================================================================
 class ModelTest(unittest.TestCase):
+    """Test class for the Model object"""
 
     def test_model_initialization(self):
         """Test the default Model class initialization"""
@@ -357,6 +369,3 @@ class ModelTest(unittest.TestCase):
         # For each subclass
         self.assertFalse(mymodel.set('particles', not_a_string))
         self.assertFalse(mymodel.set('interactions', not_a_string))
-
-if __name__ == "__main__":
-    unittest.main()

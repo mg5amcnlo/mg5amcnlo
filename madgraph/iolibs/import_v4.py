@@ -1,4 +1,4 @@
-##############################################################################
+################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
 #
@@ -11,7 +11,7 @@
 #
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
-##############################################################################
+################################################################################
 
 """Methods and classes to import v4 format model files."""
 
@@ -20,10 +20,10 @@ import logging
 from madgraph.core.base_objects import Particle, ParticleList
 from madgraph.core.base_objects import Interaction, InteractionList
 
-##############################################################################
-##  read_particles_v4
-##############################################################################
 
+#===============================================================================
+# read_particles_v4
+#===============================================================================
 def read_particles_v4(fsock):
     """Read a list of particle from stream fsock, using the old v4 format"""
 
@@ -102,10 +102,9 @@ def read_particles_v4(fsock):
     return mypartlist
 
 
-##############################################################################
-##  read_interactions_v4
-##############################################################################
-
+#===============================================================================
+# read_interactions_v4
+#===============================================================================
 def read_interactions_v4(fsock, ref_part_list):
     """Read a list of interactions from stream fsock, using the old v4 format.
     Requires a ParticleList object as an input to recognize particle names."""

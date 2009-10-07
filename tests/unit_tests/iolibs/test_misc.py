@@ -1,4 +1,4 @@
-##############################################################################
+################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
 #
@@ -11,14 +11,19 @@
 #
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
-##############################################################################
+################################################################################
 
 """Unit test library for the Misc routine library in the I/O package"""
 
 import unittest
+
 import madgraph.iolibs.misc as misc
 
+#===============================================================================
+# IOMiscTest
+#===============================================================================
 class IOMiscTest(unittest.TestCase):
+    """Test class for I/O misc function module."""
 
     def setUp(self):
         pass
@@ -41,5 +46,3 @@ class IOMiscTest(unittest.TestCase):
 
         self.assertRaises(IOError, misc.get_pkg_info, mystr)
 
-if __name__ == "__main__":
-    unittest.main()

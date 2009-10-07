@@ -1,4 +1,4 @@
-##############################################################################
+################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
 #
@@ -11,13 +11,13 @@
 #
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
-##############################################################################
+################################################################################
 
 """A user friendly command line interface to access MadGraph features."""
 
 import cmd
-import sys
 import os
+import sys
 
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.files as files
@@ -25,6 +25,9 @@ import madgraph.iolibs.import_v4 as import_v4
 
 import madgraph.core.base_objects as base_objects
 
+#===============================================================================
+# MadGraphCmd
+#===============================================================================
 class MadGraphCmd(cmd.Cmd):
     """The command line processor of MadGraph"""
 
@@ -155,6 +158,10 @@ class MadGraphCmd(cmd.Cmd):
     def help_help(self):
         print "syntax: help",
         print "-- access to the in-line help"
+
+#===============================================================================
+# __main__
+#===============================================================================
 
 if __name__ == '__main__':
     MadGraphCmd().cmdloop()
