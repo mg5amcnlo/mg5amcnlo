@@ -195,8 +195,8 @@ class MadGraphCmd(cmd.Cmd):
 
     # In-line help
     def help_import(self):
-        print "syntax: import (v4|...) FILENAME",
-        print "-- imports files in various formats"
+        print "syntax: import v4|... FILENAME",
+        print "-- imports file(s) in various formats"
 
     def help_display(self):
         print "syntax: display particles|interactions",
