@@ -154,9 +154,17 @@ def read_interactions_v4(fsock, ref_part_list):
                 # Use the other strings to fill variable names and tags
                 myinter.set('couplings', {(0, 0):values[len(part_list)]})
 
-                myinter.set('orders',
-                            values[2 * len(part_list) - 2: \
-                                   3 * len(part_list) - 4])
+                order_list = values[2 * len(part_list) - 2: \
+                                   3 * len(part_list) - 4]
+
+                def count_duplicates_in_list(dupedList):
+                    uniqueSet = set(item for item in dupedList)
+                    ret_dict = {}
+                    for item in uniqueSet:
+                        ret_dict[item] = dupedList.count(item)
+                    return ret_dict
+
+                myinter.set('orders', count_duplicates_in_list(order_list))
 
                 myinterlist.append(myinter)
 

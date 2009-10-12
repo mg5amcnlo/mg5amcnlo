@@ -130,20 +130,20 @@ class IOImportV4Test(unittest.TestCase):
                                                  'color':['guess'],
                                                  'lorentz':['guess'],
                                                  'couplings':{(0, 0):'MGVX3'},
-                                                 'orders':['QED']}),
+                                                 'orders':{'QED':1}}),
                                  base_objects.Interaction(
                                                 {'particles':['g', 'g', 'T1'],
                                                  'color':['guess'],
                                                  'lorentz':['guess'],
                                                  'couplings':{(0, 0):'MGVX2'},
-                                                 'orders':['QCD']}),
+                                                 'orders':{'QCD':1}}),
                                  base_objects.Interaction(
                                                 {'particles': \
                                                     ['w+', 'w-', 'w+', 'w-'],
                                                  'color':['guess'],
                                                  'lorentz':['guess'],
                                                  'couplings':{(0, 0):'MGVX6'},
-                                                 'orders':['QED', 'QED']})])
+                                                 'orders':{'QED':2}})])
 
         self.assertEqual(import_v4.read_interactions_v4(fsock_inter,
                                                         myparts),

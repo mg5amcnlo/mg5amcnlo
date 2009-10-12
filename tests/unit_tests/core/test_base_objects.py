@@ -103,13 +103,13 @@ class ParticleTest(unittest.TestCase):
                        {'prop':'name',
                         'right_list':['h', 'e+', 'e-', 'u~',
                                       'k++', 'k--', 'T'],
-                        'wrong_list':['', 'x ', 'e?', '{}', '9x']},
+                        'wrong_list':['', 'x ', 'e?', '{}', '9x', 'd~3', 'd+g']},
                        {'prop':'spin',
                         'right_list':[1, 2, 3, 4, 5],
                         'wrong_list':[-1, 0, 'a', 6]},
                        {'prop':'color',
-                        'right_list':[1, -1, 3, -3, 6, -6, 8],
-                        'wrong_list':[2, 0, 'a', 23]},
+                        'right_list':[1, 3, 6, 8],
+                        'wrong_list':[2, 0, 'a', 23, -1, -3, -6]},
                        {'prop':'mass',
                         'right_list':['me', 'zero', 'mm2'],
                         'wrong_list':['m+', '', ' ', 'm~']},
@@ -193,7 +193,7 @@ class InteractionTest(unittest.TestCase):
                                     (0, 1):'g01',
                                     (1, 0):'g10',
                                     (1, 1):'g11'},
-                       'orders':['QCD', 'QED']}
+                       'orders':{'QCD':1, 'QED':1}}
 
         self.myinter = base_objects.Interaction(self.mydict)
 
@@ -259,8 +259,8 @@ class InteractionTest(unittest.TestCase):
                         'right_list':[[], ['L1'], ['L1', 'L2']],
                         'wrong_list':[1, 'a', ['a', 1]]},
                        {'prop':'orders',
-                        'right_list':[[], ['QCD'], ['QED', 'QCD']],
-                        'wrong_list':[1, 'a', ['a', 1]]},
+                        'right_list':[{}, {'QCD':2}, {'QED':1, 'QCD':1}],
+                        'wrong_list':[1, 'a', {1:'a'}]},
                        # WARNING: Valid value should be defined with
                        # respect to the last status of myinter, i.e.
                        # the last good color and lorentz lists
@@ -291,7 +291,7 @@ class InteractionTest(unittest.TestCase):
         goal = goal + "    \'color\': [\'C1\', \'C2\'],\n"
         goal = goal + "    \'lorentz\': [\'L1\', \'L2\'],\n"
         goal = goal + "    \'couplings\': %s,\n" % repr(self.myinter['couplings'])
-        goal = goal + "    \'orders\': [\'QCD\', \'QED\']\n}"
+        goal = goal + "    \'orders\': %s\n}" % repr(self.myinter['orders'])
 
         self.assertEqual(goal, str(self.myinter))
 

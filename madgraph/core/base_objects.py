@@ -30,7 +30,7 @@ class PhysicsObject(dict):
         or the execution of a physics object."""
         pass
 
-    def __init__(self, init_dict=None):
+    def __init__(self, init_dict={}):
         """Creates a new particle object. If a dictionary is given, tries to 
         use it to give values to properties."""
 
@@ -38,18 +38,13 @@ class PhysicsObject(dict):
 
         self.default_setup()
 
-        if init_dict is not None:
-
-           if not isinstance(init_dict, dict):
+        if not isinstance(init_dict, dict):
                raise self.PhysicsObjectError, \
                    "Argument %s is not a dictionary" % repr(init_dict)
 
-           for item in init_dict.keys():
-               if item in self.keys():
-                   self.set(item, init_dict[item])
-               else:
-                   raise self.PhysicsObjectError, \
-                       "Key %s is not a valid particle property" % item
+        for item in init_dict.keys():
+            self.set(item, init_dict[item])
+
 
     def default_setup(self):
         """Function called to create and setup default values for all object
@@ -96,7 +91,7 @@ class PhysicsObject(dict):
 
         return True
 
-    def _get_sorted_keys(self):
+    def get_sorted_keys(self):
         """Returns the object keys sorted in a certain way. By default,
         alphabetical."""
 
@@ -108,7 +103,7 @@ class PhysicsObject(dict):
 
         mystr = '{\n'
 
-        for prop in self._get_sorted_keys():
+        for prop in self.get_sorted_keys():
             if isinstance(self[prop], str):
                 mystr = mystr + '    \'' + prop + '\': \'' + \
                         self[prop] + '\',\n'
@@ -202,7 +197,7 @@ class Particle(PhysicsObject):
         if name in ['name', 'antiname']:
             # Must start with a letter, followed by letters,  digits,
             # - and + only
-            p = re.compile('\A[a-zA-Z]+[\w~\-\+]*\Z')
+            p = re.compile('\A[a-zA-Z]+[\w]*[~\-\+]*\Z')
             if not p.match(value):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid particle name" % value
@@ -219,7 +214,7 @@ class Particle(PhysicsObject):
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                     "Color %s is not an integer" % repr(value)
-            if abs(value) not in [1, 3, 6, 8]:
+            if value not in [1, 3, 6, 8]:
                  raise self.PhysicsObjectError, \
                     "Color %i is not valid" % value
 
@@ -259,7 +254,7 @@ class Particle(PhysicsObject):
 
         return True
 
-    def _get_sorted_keys(self):
+    def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
         return ['name', 'antiname', 'spin', 'color',
@@ -299,8 +294,15 @@ class ParticleList(PhysicsObjectList):
 class Interaction(PhysicsObject):
     """The interaction object containing the whole set of information 
     required to univocally characterize a given type of physical interaction: 
-    particle names, color and Lorentz structure(s), couplings and coupling
-    orders."""
+    
+    particles: a list of particle names
+    color: a list of string describing all the color structures involved
+    lorentz: a list of variable names describing all the Lorentz structure
+             involved
+    couplings: dictionary listing coupling variable names. The key is a
+               2-tuple of integers referring to color and Lorentz structures
+    orders: dictionary listing order names (as keys) with their value
+    """
 
     def default_setup(self):
         """Default values for all properties"""
@@ -309,7 +311,7 @@ class Interaction(PhysicsObject):
         self['color'] = []
         self['lorentz'] = []
         self['couplings'] = { (0, 0):'none'}
-        self['orders'] = []
+        self['orders'] = {}
 
     def filter(self, name, value):
         """Filter for valid interaction property values."""
@@ -324,7 +326,21 @@ class Interaction(PhysicsObject):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid particle name" % str(part)
 
-        if name in ['color', 'lorentz', 'orders']:
+        if name == 'orders':
+            #Should be a dict with valid order names ask keys and int as values
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid dict for coupling orders" % \
+                                                                    str(value)
+            for order in value.keys():
+                if not isinstance(order, str):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid string" % str(order)
+                if not isinstance(value[order], int):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid integer" % str(value[order])
+
+        if name in ['color', 'lorentz']:
             #Should be a list of strings
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
@@ -367,7 +383,7 @@ class Interaction(PhysicsObject):
 
         return True
 
-    def _get_sorted_keys(self):
+    def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
         return ['particles', 'color', 'lorentz', 'couplings', 'orders']
