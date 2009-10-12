@@ -197,7 +197,7 @@ class Particle(PhysicsObject):
         if name in ['name', 'antiname']:
             # Must start with a letter, followed by letters,  digits,
             # - and + only
-            p = re.compile('\A[a-zA-Z]+[\w]*[~\-\+]*\Z')
+            p = re.compile('\A[a-zA-Z]+[\w]*[\-\+]*~?\Z')
             if not p.match(value):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid particle name" % value

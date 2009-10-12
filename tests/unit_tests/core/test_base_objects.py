@@ -102,8 +102,9 @@ class ParticleTest(unittest.TestCase):
         test_values = [
                        {'prop':'name',
                         'right_list':['h', 'e+', 'e-', 'u~',
-                                      'k++', 'k--', 'T'],
-                        'wrong_list':['', 'x ', 'e?', '{}', '9x', 'd~3', 'd+g']},
+                                      'k++', 'k--', 'T', 'u+~'],
+                        'wrong_list':['', 'x ', 'e?', '{}', '9x', 'd~3', 'd+g',
+                                      'u~+', 'u~~']},
                        {'prop':'spin',
                         'right_list':[1, 2, 3, 4, 5],
                         'wrong_list':[-1, 0, 'a', 6]},
