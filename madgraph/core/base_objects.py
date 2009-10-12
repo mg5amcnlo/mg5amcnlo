@@ -51,7 +51,7 @@ class PhysicsObject(dict):
         properties"""
         pass
 
-    def _is_valid_prop(self, name):
+    def is_valid_prop(self, name):
         """Check if a given property name is valid"""
 
         if not isinstance(name, str):
@@ -67,7 +67,7 @@ class PhysicsObject(dict):
     def get(self, name):
         """Get the value of the property name."""
 
-        if self._is_valid_prop(name):
+        if self.is_valid_prop(name):
             return self[name]
 
     def set(self, name, value):
@@ -75,7 +75,7 @@ class PhysicsObject(dict):
         is a valid value for the considered property. Return True if the
         value has been correctly set, False otherwise."""
 
-        if self._is_valid_prop(name):
+        if self.is_valid_prop(name):
             try:
                 self.filter(name, value)
                 self[name] = value
