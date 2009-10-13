@@ -16,7 +16,6 @@
 """A user friendly command line interface to access MadGraph features."""
 
 import cmd
-import functools
 import os
 import subprocess
 import sys
