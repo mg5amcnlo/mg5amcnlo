@@ -1,4 +1,4 @@
-##############################################################################
+################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
 #
@@ -11,23 +11,28 @@
 #
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
-##############################################################################
+################################################################################
 
 """A set of functions performing routine administrative I/O tasks."""
 
-import madgraph
 import os
 import re
+import StringIO
 
-def _parse_info_str(info_str):
+import madgraph
+import madgraph.iolibs.files as files
+
+#===============================================================================
+# _parse_info_str
+#===============================================================================
+def _parse_info_str(fsock):
     """Parse a newline separated list of "param=value" as a dictionnary
     """
 
     info_dict = {}
     pattern = re.compile("(?P<name>\w*)\s*=\s*(?P<value>.*)",
                          re.IGNORECASE | re.VERBOSE)
-    entry_list = info_str.split('\n')
-    for entry in entry_list:
+    for entry in fsock:
         entry = entry.strip()
         if len(entry) == 0: continue
         m = pattern.match(entry)
@@ -39,6 +44,9 @@ def _parse_info_str(info_str):
     return info_dict
 
 
+#===============================================================================
+# get_pkg_info
+#===============================================================================
 def get_pkg_info(info_str=None):
     """Returns the current version information of the MadGraph package, 
     as written in the VERSION text file. If the file cannot be found, 
@@ -47,18 +55,11 @@ def get_pkg_info(info_str=None):
     """
 
     if info_str is None:
-        try:
-            # Open the file using the module path as a reference. Notice that 
-            # module.__path__ is a list with only one element
+        info_dict = files.read_from_file(os.path.join(madgraph.__path__[0],
+                                                  "VERSION"),
+                                                  _parse_info_str)
+    else:
+        info_dict = _parse_info_str(StringIO.StringIO(info_str))
 
-            version_file = open(os.path.join(madgraph.__path__[0], "VERSION")
-                                , 'r')
-            try:
-                info_str = version_file.read()
-            finally:
-                version_file.close()
-        except IOError:
-            info_str = ""
-
-    return _parse_info_str(info_str)
+    return info_dict
 
