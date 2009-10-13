@@ -143,14 +143,14 @@ class PhysicsObjectList(list):
 
     def append(self, object):
         """Appends an element, but test if valid before."""
-        if not self._is_valid_element(object):
+        if not self.is_valid_element(object):
             raise self.PhysicsObjectListError, \
                 "Object %s is not a valid object for the current list" % \
                                                              repr(object)
         else:
             list.append(self, object)
 
-    def _is_valid_element(self, obj):
+    def is_valid_element(self, obj):
         """Test if object obj is a valid element for the list."""
         return True
 
@@ -267,7 +267,7 @@ class Particle(PhysicsObject):
 class ParticleList(PhysicsObjectList):
     """A class to store lists of particles."""
 
-    def _is_valid_element(self, obj):
+    def is_valid_element(self, obj):
         """Test if object obj is a valid Particle for the list."""
         return isinstance(obj, Particle)
 
@@ -395,7 +395,7 @@ class Interaction(PhysicsObject):
 class InteractionList(PhysicsObjectList):
     """A class to store lists of interactionss."""
 
-    def _is_valid_element(self, obj):
+    def is_valid_element(self, obj):
        """Test if object obj is a valid Interaction for the list."""
 
        return isinstance(obj, Interaction)
