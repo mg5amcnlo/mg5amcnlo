@@ -134,6 +134,16 @@ def read_interactions_v4(fsock, ref_part_list):
                         # corresponds to a particle! (eg G)
                         if len(values) >= 2 * len(part_list) + 1:
                             part_list.append(curr_part)
+                            # Comment by Johan: Note that here (or
+                            # slightly later) we need to add a kinda
+                            # elaborate check to harmonize the old MG
+                            # standard for interaction, where FFS/FFV
+                            # and VVV/SSS/etc interactions are treated
+                            # differently in terms of
+                            # particles/antiparticles. Alternatively
+                            # (which I like less, but is also
+                            # possible) we need to keep track of this
+                            # during generation of the dictionnaries
                         else: break
                     # also stops if string does not correspond to 
                     # a particle name

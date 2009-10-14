@@ -430,7 +430,11 @@ class Interaction(PhysicsObject):
             else:
                 ref_dict[permut_tuple] = [None]
 
-        # Create n-1>1 entries
+        # Create n-1>1 entries Comment by Johan: Note that, in the n-1
+        # > 1 dictionnary, the 1 entry should have opposite sign as
+        # compared to the n > 0 dictionnary, since this should replace
+        # the n-1 particles. I prefer to keep track of the sign
+        # (part/antipart) here rather than in the diagram generation.
         for part in part_list:
             short_part_list = copy.copy(part_list)
             short_part_list.remove(part)
