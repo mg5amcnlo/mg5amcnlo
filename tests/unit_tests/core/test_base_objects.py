@@ -15,6 +15,7 @@
 
 """Unit test library for the various base objects of the core library"""
 
+import copy
 import unittest
 
 import madgraph.core.base_objects as base_objects
@@ -41,12 +42,10 @@ class ParticleTest(unittest.TestCase):
                       'line':'straight',
                       'charge':2. / 3.,
                       'pdg_code':6,
-                      'propagating':True}
+                      'propagating':True,
+                      'is_part':True}
 
         self.mypart = base_objects.Particle(self.mydict)
-
-    def tearDown(self):
-        pass
 
     def test_setget_particle_correct(self):
         "Test correct Particle object __init__, get and set"
@@ -125,6 +124,9 @@ class ParticleTest(unittest.TestCase):
                         'wrong_list':[1, 'a']},
                        {'prop':'propagating',
                         'right_list':[True, False],
+                        'wrong_list':[1, 'a', 'true', None]},
+                       {'prop':'is_part',
+                        'right_list':[True, False],
                         'wrong_list':[1, 'a', 'true', None]}
                        ]
 
@@ -151,7 +153,8 @@ class ParticleTest(unittest.TestCase):
         goal = goal + "    \'texname\': \'t\',\n"
         goal = goal + "    \'antitexname\': \'\\overline{t}\',\n"
         goal = goal + "    \'line\': \'straight\',\n"
-        goal = goal + "    \'propagating\': True\n}"
+        goal = goal + "    \'propagating\': True,\n"
+        goal = goal + "    \'is_part\': True\n}"
 
         self.assertEqual(goal, str(self.mypart))
 
@@ -171,8 +174,11 @@ class ParticleTest(unittest.TestCase):
                           not_a_part)
         # test particle search
         self.assertEqual(self.mypart,
+                         mypartlist.find_name(self.mypart['name']))
+        anti_part = copy.copy(self.mypart)
+        anti_part.set('is_part', False)
+        self.assertEqual(anti_part,
                          mypartlist.find_name(self.mypart['antiname']))
-
         self.assertEqual(None,
                          mypartlist.find_name('none'))
 
@@ -184,10 +190,25 @@ class InteractionTest(unittest.TestCase):
 
     mydict = {}
     myinter = None
+    mypart = None
 
     def setUp(self):
 
-        self.mydict = {'particles': ['a', 'b', 'c'],
+        self.mypart = base_objects.Particle({'name':'t',
+                      'antiname':'t~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'mt',
+                      'width':'wt',
+                      'texname':'t',
+                      'antitexname':'\\overline{t}',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':6,
+                      'propagating':True,
+                      'is_part':True})
+
+        self.mydict = {'particles': base_objects.ParticleList([self.mypart] * 4),
                        'color': ['C1', 'C2'],
                        'lorentz':['L1', 'L2'],
                        'couplings':{(0, 0):'g00',
@@ -251,8 +272,9 @@ class InteractionTest(unittest.TestCase):
 
         test_values = [
                        {'prop':'particles',
-                        'right_list':[[], ['a'], ['a+', 'b-']],
-                        'wrong_list':[1, 'x ', ['e?'], ['a', ' ']]},
+                        'right_list':[base_objects.ParticleList([]),
+                                      base_objects.ParticleList([self.mypart] * 3)],
+                        'wrong_list':[1, 'x ', [self.mypart, 1], [1, 2]]},
                        {'prop':'color',
                         'right_list':[[], ['C1'], ['C1', 'C2']],
                         'wrong_list':[1, 'a', ['a', 1]]},
@@ -288,13 +310,114 @@ class InteractionTest(unittest.TestCase):
         """Test interaction object string representation."""
 
         goal = "{\n"
-        goal = goal + "    \'particles\': [\'a\', \'b\', \'c\'],\n"
+        goal = goal + "    \'particles\': %s,\n" % \
+                            repr(base_objects.ParticleList([self.mypart] * 4))
         goal = goal + "    \'color\': [\'C1\', \'C2\'],\n"
         goal = goal + "    \'lorentz\': [\'L1\', \'L2\'],\n"
-        goal = goal + "    \'couplings\': %s,\n" % repr(self.myinter['couplings'])
+        goal = goal + "    \'couplings\': %s,\n" % \
+                                    repr(self.myinter['couplings'])
         goal = goal + "    \'orders\': %s\n}" % repr(self.myinter['orders'])
 
         self.assertEqual(goal, str(self.myinter))
+
+    def test_generating_dict(self):
+        """Test the dictionary generation routine"""
+
+        # Create a non trivial interaction
+        part1 = base_objects.Particle()
+        part1.set('pdg_code', 1)
+        part2 = base_objects.Particle()
+        part2.set('pdg_code', 2)
+        part2.set('is_part', False)
+        part3 = base_objects.Particle()
+        part3.set('pdg_code', 3)
+        part4 = base_objects.Particle()
+        part4.set('pdg_code', 4)
+        part4.set('is_part', False)
+
+        myinter = base_objects.Interaction()
+        myinter.set('particles', base_objects.ParticleList([part1,
+                                                           part2,
+                                                           part3,
+                                                           part4]))
+        ref_dict = {}
+
+        myinter.generate_dict_entries(ref_dict)
+
+        goal_ref_dict = { (1, -2, 3, -4):[None],
+                          (1, -2, -4, 3):[None],
+                          (1, 3, -2, -4):[None],
+                          (1, 3, -4, -2):[None],
+                          (1, -4, -2, 3):[None],
+                          (1, -4, 3, -2):[None],
+                          (-2, 1, 3, -4):[None],
+                          (-2, 1, -4, 3):[None],
+                          (-2, 3, 1, -4):[None],
+                          (-2, 3, -4, 1):[None],
+                          (-2, -4, 1, 3):[None],
+                          (-2, -4, 3, 1):[None],
+                          (3, 1, -2, -4):[None],
+                          (3, 1, -4, -2):[None],
+                          (3, -2, 1, -4):[None],
+                          (3, -2, -4, 1):[None],
+                          (3, -4, 1, -2):[None],
+                          (3, -4, -2, 1):[None],
+                          (-4, 1, -2, 3):[None],
+                          (-4, 1, 3, -2):[None],
+                          (-4, -2, 1, 3):[None],
+                          (-4, -2, 3, 1):[None],
+                          (-4, 3, 1, -2):[None],
+                          (-4, 3, -2, 1):[None],
+                          (-2, 3, -4):[1],
+                          (-2, -4, 3):[1],
+                          (3, -2, -4):[1],
+                          (3, -4, -2):[1],
+                          (-4, -2, 3):[1],
+                          (-4, 3, -2):[1],
+                          (1, 3, -4):[-2],
+                          (1, -4, 3):[-2],
+                          (3, 1, -4):[-2],
+                          (3, -4, 1):[-2],
+                          (-4, 1, 3):[-2],
+                          (-4, 3, 1):[-2],
+                          (1, -2, -4):[3],
+                          (1, -4, -2):[3],
+                          (-2, 1, -4):[3],
+                          (-2, -4, 1):[3],
+                          (-4, 1, -2):[3],
+                          (-4, -2, 1):[3],
+                          (1, -2, 3):[-4],
+                          (1, 3, -2):[-4],
+                          (-2, 1, 3):[-4],
+                          (-2, 3, 1):[-4],
+                          (3, 1, -2):[-4],
+                          (3, -2, 1):[-4]}
+
+        self.assertEqual(ref_dict, goal_ref_dict)
+
+        myinterlist = base_objects.InteractionList([myinter] * 10)
+
+        add_inter = base_objects.Interaction()
+        add_inter.set('particles', base_objects.ParticleList([part1,
+                                                              part2,
+                                                              part3]))
+        myinterlist.append(add_inter)
+
+        goal_ref_dict[(1, -2, 3)].append(None)
+        goal_ref_dict[(1, 3, -2)].append(None)
+        goal_ref_dict[(-2, 1, 3)].append(None)
+        goal_ref_dict[(-2, 3, 1)].append(None)
+        goal_ref_dict[(3, 1, -2)].append(None)
+        goal_ref_dict[(3, -2, 1)].append(None)
+
+        goal_ref_dict[(1, -2)] = [3]
+        goal_ref_dict[(1, 3)] = [-2]
+        goal_ref_dict[(-2, 1)] = [3]
+        goal_ref_dict[(-2, 3)] = [1]
+        goal_ref_dict[(3, 1)] = [-2]
+        goal_ref_dict[(3, -2)] = [1]
+
+        self.assertEqual(myinterlist.generate_ref_dict(), goal_ref_dict)
 
     def test_interaction_list(self):
         """Test interaction list initialization"""
@@ -370,3 +493,424 @@ class ModelTest(unittest.TestCase):
         # For each subclass
         self.assertFalse(mymodel.set('particles', not_a_string))
         self.assertFalse(mymodel.set('interactions', not_a_string))
+
+#===============================================================================
+# LegTest
+#===============================================================================
+class LegTest(unittest.TestCase):
+    """Test class for the Leg object"""
+
+    mydict = {}
+    myleg = None
+
+    def setUp(self):
+
+        self.mydict = {'id':3,
+                      'number':5,
+                      'state':'final',
+                      'from_group':False}
+
+        self.myleg = base_objects.Leg(self.mydict)
+
+    def test_setget_leg_correct(self):
+        "Test correct Leg object __init__, get and set"
+
+        myleg2 = base_objects.Leg()
+
+        for prop in self.mydict.keys():
+            myleg2.set(prop, self.mydict[prop])
+
+        self.assertEqual(self.myleg, myleg2)
+
+        for prop in self.myleg.keys():
+            self.assertEqual(self.myleg.get(prop), self.mydict[prop])
+
+    def test_setget_leg_exceptions(self):
+        "Test error raising in Leg __init__, get and set"
+
+        wrong_dict = self.mydict
+        wrong_dict['wrongparam'] = 'wrongvalue'
+
+        a_number = 0
+
+        # Test init
+        self.assertRaises(base_objects.Leg.PhysicsObjectError,
+                          base_objects.Leg,
+                          wrong_dict)
+        self.assertRaises(base_objects.Leg.PhysicsObjectError,
+                          base_objects.Leg,
+                          a_number)
+
+        # Test get
+        self.assertRaises(base_objects.Leg.PhysicsObjectError,
+                          self.myleg.get,
+                          a_number)
+        self.assertRaises(base_objects.Leg.PhysicsObjectError,
+                          self.myleg.get,
+                          'wrongparam')
+
+        # Test set
+        self.assertRaises(base_objects.Leg.PhysicsObjectError,
+                          self.myleg.set,
+                          a_number, 0)
+        self.assertRaises(base_objects.Leg.PhysicsObjectError,
+                          self.myleg.set,
+                          'wrongparam', 0)
+
+    def test_values_for_prop(self):
+        """Test filters for leg properties"""
+
+        test_values = [
+                       {'prop':'id',
+                        'right_list':[0, 3],
+                        'wrong_list':['', 0.0]},
+                       {'prop':'number',
+                        'right_list':[1, 2, 3, 4, 5],
+                        'wrong_list':['a', {}]},
+                       {'prop':'state',
+                        'right_list':['initial', 'final'],
+                        'wrong_list':[0, 'wrong']}
+                       ]
+
+        temp_leg = self.myleg
+
+        for test in test_values:
+            for x in test['right_list']:
+                self.assert_(temp_leg.set(test['prop'], x))
+            for x in test['wrong_list']:
+                self.assertFalse(temp_leg.set(test['prop'], x))
+
+    def test_representation(self):
+        """Test leg object string representation."""
+
+        goal = "{\n"
+        goal = goal + "    \'id\': 3,\n"
+        goal = goal + "    \'number\': 5,\n"
+        goal = goal + "    \'state\': \'final\',\n"
+        goal = goal + "    \'from_group\': False\n}"
+
+        self.assertEqual(goal, str(self.myleg))
+
+    def test_leg_list(self):
+        """Test leg list initialization"""
+
+        mylist = [self.myleg] * 10
+        myleglist = base_objects.LegList(mylist)
+
+        not_a_leg = 1
+
+        for leg in myleglist:
+            self.assertEqual(leg, self.myleg)
+
+        self.assertRaises(base_objects.LegList.PhysicsObjectListError,
+                          myleglist.append,
+                          not_a_leg)
+
+#===============================================================================
+# VertexTest
+#===============================================================================
+class VertexTest(unittest.TestCase):
+    """Test class for the Vertex object"""
+
+    mydict = {}
+    myvertex = None
+    myleglist = base_objects.LegList([base_objects.Leg({'id':3,
+                                      'number':5,
+                                      'state':'final',
+                                      'from_group':False})] * 10)
+
+    def setUp(self):
+
+        self.mydict = {'id':3,
+                      'legs':self.myleglist}
+
+        self.myvertex = base_objects.Vertex(self.mydict)
+
+    def test_setget_vertex_correct(self):
+        "Test correct Vertex object __init__, get and set"
+
+        myvertex2 = base_objects.Vertex()
+
+        for prop in self.mydict.keys():
+            myvertex2.set(prop, self.mydict[prop])
+
+        self.assertEqual(self.myvertex, myvertex2)
+
+        for prop in self.myvertex.keys():
+            self.assertEqual(self.myvertex.get(prop), self.mydict[prop])
+
+    def test_setget_vertex_exceptions(self):
+        "Test error raising in Vertex __init__, get and set"
+
+        wrong_dict = self.mydict
+        wrong_dict['wrongparam'] = 'wrongvalue'
+
+        a_number = 0
+
+        # Test init
+        self.assertRaises(base_objects.Vertex.PhysicsObjectError,
+                          base_objects.Vertex,
+                          wrong_dict)
+        self.assertRaises(base_objects.Vertex.PhysicsObjectError,
+                          base_objects.Vertex,
+                          a_number)
+
+        # Test get
+        self.assertRaises(base_objects.Vertex.PhysicsObjectError,
+                          self.myvertex.get,
+                          a_number)
+        self.assertRaises(base_objects.Vertex.PhysicsObjectError,
+                          self.myvertex.get,
+                          'wrongparam')
+
+        # Test set
+        self.assertRaises(base_objects.Vertex.PhysicsObjectError,
+                          self.myvertex.set,
+                          a_number, 0)
+        self.assertRaises(base_objects.Vertex.PhysicsObjectError,
+                          self.myvertex.set,
+                          'wrongparam', 0)
+
+    def test_values_for_prop(self):
+        """Test filters for vertex properties"""
+
+        test_values = [
+                       {'prop':'id',
+                        'right_list':[0, 3],
+                        'wrong_list':['', 0.0]},
+                       {'prop':'legs',
+                        'right_list':[self.myleglist],
+                        'wrong_list':['a', {}]}
+                       ]
+
+        temp_vertex = self.myvertex
+
+        for test in test_values:
+            for x in test['right_list']:
+                self.assert_(temp_vertex.set(test['prop'], x))
+            for x in test['wrong_list']:
+                self.assertFalse(temp_vertex.set(test['prop'], x))
+
+    def test_representation(self):
+        """Test vertex object string representation."""
+
+        goal = "{\n"
+        goal = goal + "    \'id\': 3,\n"
+        goal = goal + "    \'legs\': %s\n}" % repr(self.myleglist)
+
+        self.assertEqual(goal, str(self.myvertex))
+
+    def test_vertex_list(self):
+        """Test vertex list initialization"""
+
+        mylist = [self.myvertex] * 10
+        myvertexlist = base_objects.VertexList(mylist)
+
+        not_a_vertex = 1
+
+        for vertex in myvertexlist:
+            self.assertEqual(vertex, self.myvertex)
+
+        self.assertRaises(base_objects.VertexList.PhysicsObjectListError,
+                          myvertexlist.append,
+                          not_a_vertex)
+
+#===============================================================================
+# DiagramTest
+#===============================================================================
+class DiagramTest(unittest.TestCase):
+    """Test class for the Diagram object"""
+
+    mydict = {}
+    mydiagram = None
+    myleglist = base_objects.LegList([base_objects.Leg({'id':3,
+                                      'number':5,
+                                      'state':'final',
+                                      'from_group':False})] * 10)
+    myvertexlist = base_objects.VertexList([base_objects.Vertex({'id':3,
+                                      'legs':myleglist})] * 10)
+
+    def setUp(self):
+
+        self.mydict = {'vertices':self.myvertexlist}
+
+        self.mydiagram = base_objects.Diagram(self.mydict)
+
+    def test_setget_diagram_correct(self):
+        "Test correct Diagram object __init__, get and set"
+
+        mydiagram2 = base_objects.Diagram()
+
+        for prop in self.mydict.keys():
+            mydiagram2.set(prop, self.mydict[prop])
+
+        self.assertEqual(self.mydiagram, mydiagram2)
+
+        for prop in self.mydiagram.keys():
+            self.assertEqual(self.mydiagram.get(prop), self.mydict[prop])
+
+    def test_setget_diagram_exceptions(self):
+        "Test error raising in Diagram __init__, get and set"
+
+        wrong_dict = self.mydict
+        wrong_dict['wrongparam'] = 'wrongvalue'
+
+        a_number = 0
+
+        # Test init
+        self.assertRaises(base_objects.Diagram.PhysicsObjectError,
+                          base_objects.Diagram,
+                          wrong_dict)
+        self.assertRaises(base_objects.Diagram.PhysicsObjectError,
+                          base_objects.Diagram,
+                          a_number)
+
+        # Test get
+        self.assertRaises(base_objects.Diagram.PhysicsObjectError,
+                          self.mydiagram.get,
+                          a_number)
+        self.assertRaises(base_objects.Diagram.PhysicsObjectError,
+                          self.mydiagram.get,
+                          'wrongparam')
+
+        # Test set
+        self.assertRaises(base_objects.Diagram.PhysicsObjectError,
+                          self.mydiagram.set,
+                          a_number, 0)
+        self.assertRaises(base_objects.Diagram.PhysicsObjectError,
+                          self.mydiagram.set,
+                          'wrongparam', 0)
+
+    def test_values_for_prop(self):
+        """Test filters for diagram properties"""
+
+        test_values = [{'prop':'vertices',
+                        'right_list':[self.myvertexlist],
+                        'wrong_list':['a', {}]}
+                       ]
+
+        temp_diagram = self.mydiagram
+
+        for test in test_values:
+            for x in test['right_list']:
+                self.assert_(temp_diagram.set(test['prop'], x))
+            for x in test['wrong_list']:
+                self.assertFalse(temp_diagram.set(test['prop'], x))
+
+    def test_representation(self):
+        """Test diagram object string representation."""
+
+        goal = "{\n"
+        goal = goal + "    \'vertices\': %s\n}" % repr(self.myvertexlist)
+
+        self.assertEqual(goal, str(self.mydiagram))
+
+    def test_diagram_list(self):
+        """Test Diagram list initialization"""
+
+        mylist = [self.mydiagram] * 10
+        mydiagramlist = base_objects.DiagramList(mylist)
+
+        not_a_diagram = 1
+
+        for diagram in mydiagramlist:
+            self.assertEqual(diagram, self.mydiagram)
+
+        self.assertRaises(base_objects.DiagramList.PhysicsObjectListError,
+                          mydiagramlist.append,
+                          not_a_diagram)
+
+#===============================================================================
+# AmplitudeTest
+#===============================================================================
+class AmplitudeTest(unittest.TestCase):
+    """Test class for the Amplitude object"""
+
+    mydict = {}
+    myamplitude = None
+    myleglist = base_objects.LegList([base_objects.Leg({'id':3,
+                                      'number':5,
+                                      'state':'final',
+                                      'from_group':False})] * 10)
+    myvertexlist = base_objects.VertexList([base_objects.Vertex({'id':3,
+                                      'legs':myleglist})] * 10)
+
+
+    mydiaglist = base_objects.DiagramList([base_objects.Diagram(\
+                                        {'vertices':myvertexlist})] * 100)
+
+    def setUp(self):
+
+        self.mydict = {'diagrams':self.mydiaglist}
+
+        self.myamplitude = base_objects.Amplitude(self.mydict)
+
+    def test_setget_amplitude_correct(self):
+        "Test correct Amplitude object __init__, get and set"
+
+        myamplitude2 = base_objects.Amplitude()
+
+        for prop in self.mydict.keys():
+            myamplitude2.set(prop, self.mydict[prop])
+
+        self.assertEqual(self.myamplitude, myamplitude2)
+
+        for prop in self.myamplitude.keys():
+            self.assertEqual(self.myamplitude.get(prop), self.mydict[prop])
+
+    def test_setget_amplitude_exceptions(self):
+        "Test error raising in Amplitude __init__, get and set"
+
+        wrong_dict = self.mydict
+        wrong_dict['wrongparam'] = 'wrongvalue'
+
+        a_number = 0
+
+        # Test init
+        self.assertRaises(base_objects.Amplitude.PhysicsObjectError,
+                          base_objects.Amplitude,
+                          wrong_dict)
+        self.assertRaises(base_objects.Amplitude.PhysicsObjectError,
+                          base_objects.Amplitude,
+                          a_number)
+
+        # Test get
+        self.assertRaises(base_objects.Amplitude.PhysicsObjectError,
+                          self.myamplitude.get,
+                          a_number)
+        self.assertRaises(base_objects.Amplitude.PhysicsObjectError,
+                          self.myamplitude.get,
+                          'wrongparam')
+
+        # Test set
+        self.assertRaises(base_objects.Amplitude.PhysicsObjectError,
+                          self.myamplitude.set,
+                          a_number, 0)
+        self.assertRaises(base_objects.Amplitude.PhysicsObjectError,
+                          self.myamplitude.set,
+                          'wrongparam', 0)
+
+    def test_values_for_prop(self):
+        """Test filters for amplitude properties"""
+
+        test_values = [{'prop':'diagrams',
+                        'right_list':[self.mydiaglist],
+                        'wrong_list':['a', {}]}
+                       ]
+
+        temp_amplitude = self.myamplitude
+
+        for test in test_values:
+            for x in test['right_list']:
+                self.assert_(temp_amplitude.set(test['prop'], x))
+            for x in test['wrong_list']:
+                self.assertFalse(temp_amplitude.set(test['prop'], x))
+
+    def test_representation(self):
+        """Test amplitude object string representation."""
+
+        goal = "{\n"
+        goal = goal + "    \'diagrams\': %s\n}" % repr(self.mydiaglist)
+
+        self.assertEqual(goal, str(self.myamplitude))
+

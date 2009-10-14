@@ -18,6 +18,7 @@ interaction, model, ..."""
 
 import logging
 import re
+import copy
 
 #===============================================================================
 # PhysicsObject
@@ -173,7 +174,8 @@ class PhysicsObjectList(list):
 class Particle(PhysicsObject):
     """The particle object containing the whole set of information required to
     univocally characterize a given type of physical particle: name, spin, 
-    color, mass, width, charge,..."""
+    color, mass, width, charge,... The is_part flag tells if the considered
+    particle object is a particle or an antiparticle."""
 
     def default_setup(self):
         """Default values for all properties"""
@@ -190,6 +192,7 @@ class Particle(PhysicsObject):
         self['antitexname'] = 'none'
         self['line'] = 'dashed'
         self['propagating'] = True
+        self['is_part'] = True
 
     def filter(self, name, value):
         """Filter for valid particle property values."""
@@ -252,6 +255,11 @@ class Particle(PhysicsObject):
                 raise self.PhysicsObjectError, \
                     "Propagating tag %s is not a boolean" % repr(value)
 
+        if name is 'is_part':
+            if not isinstance(value, bool):
+                raise self.PhysicsObjectError, \
+                    "is_part tag %s is not a boolean" % repr(value)
+
         return True
 
     def get_sorted_keys(self):
@@ -259,7 +267,7 @@ class Particle(PhysicsObject):
 
         return ['name', 'antiname', 'spin', 'color',
                 'charge', 'mass', 'width', 'pdg_code',
-                'texname', 'antitexname', 'line', 'propagating']
+                'texname', 'antitexname', 'line', 'propagating', 'is_part']
 
 #===============================================================================
 # ParticleList
@@ -273,17 +281,22 @@ class ParticleList(PhysicsObjectList):
 
     def find_name(self, name):
         """Try to find a particle with the given name. Check both name
-        and antiname. If a match is found, return the corresponding
-        particle (first one in the list), None otherwise."""
+        and antiname. If a match is found, return the a copy of the corresponding
+        particle (first one in the list), with the is_part flag set
+        accordingly. None otherwise."""
 
         if not Particle.filter(Particle(), 'name', name):
             raise self.PhysicsObjectError, \
                 "%s is not a valid particle name" % str(name)
 
         for part in self:
-            if part.get('name') == name or \
-                part.get('antiname') == name:
-                return part
+            mypart = copy.copy(part)
+            if part.get('name') == name:
+                mypart.set('is_part', True)
+                return mypart
+            elif part.get('antiname') == name:
+                mypart.set('is_part', False)
+                return mypart
 
         return None
 
@@ -295,7 +308,7 @@ class Interaction(PhysicsObject):
     """The interaction object containing the whole set of information 
     required to univocally characterize a given type of physical interaction: 
     
-    particles: a list of particle names
+    particles: a list of particle ids
     color: a list of string describing all the color structures involved
     lorentz: a list of variable names describing all the Lorentz structure
              involved
@@ -318,13 +331,9 @@ class Interaction(PhysicsObject):
 
         if name == 'particles':
             #Should be a list of valid particle names
-            if not isinstance(value, list):
+            if not isinstance(value, ParticleList):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid list of particle names" % str(value)
-            for part in value:
-                if not Particle.filter(Particle(), 'name', part):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a valid particle name" % str(part)
+                        "%s is not a valid list of particles" % str(value)
 
         if name == 'orders':
             #Should be a dict with valid order names ask keys and int as values
@@ -388,6 +397,51 @@ class Interaction(PhysicsObject):
 
         return ['particles', 'color', 'lorentz', 'couplings', 'orders']
 
+    def __permutate(self, seq):
+        """permutate a sequence and return a list of all permutations"""
+        if not seq:
+            return [seq] # is an empty sequence
+        else:
+            temp = []
+            for k in range(len(seq)):
+                part = seq[:k] + seq[k + 1:]
+                for m in self.__permutate(part):
+                    temp.append(seq[k:k + 1] + m)
+            return temp
+
+    def generate_dict_entries(self, ref_dict):
+        """Add entries corresponding to the current interactions to 
+        the reference dictionary (for n>0 and n-1>1)"""
+
+        # Create a list of particle ids (pdg code)
+        part_list = []
+        for part in self['particles']:
+            if part['is_part']:
+                part_list.append(part['pdg_code'])
+            else:
+                part_list.append(-part['pdg_code'])
+
+        # Create n>0 entries
+        for permut in self.__permutate(part_list):
+            permut_tuple = tuple(permut)
+            if permut_tuple in ref_dict.keys():
+                if None not in ref_dict[permut_tuple]:
+                    ref_dict[permut_tuple].append(None)
+            else:
+                ref_dict[permut_tuple] = [None]
+
+        # Create n-1>1 entries
+        for part in part_list:
+            short_part_list = copy.copy(part_list)
+            short_part_list.remove(part)
+            for permut in self.__permutate(short_part_list):
+                permut_tuple = tuple(permut)
+                if permut_tuple in ref_dict.keys():
+                    if part not in  ref_dict[permut_tuple]:
+                        ref_dict[permut_tuple].append(part)
+                else:
+                    ref_dict[permut_tuple] = [part]
+
 
 #===============================================================================
 # InteractionList
@@ -396,9 +450,21 @@ class InteractionList(PhysicsObjectList):
     """A class to store lists of interactionss."""
 
     def is_valid_element(self, obj):
-       """Test if object obj is a valid Interaction for the list."""
+        """Test if object obj is a valid Interaction for the list."""
 
-       return isinstance(obj, Interaction)
+        return isinstance(obj, Interaction)
+
+    def generate_ref_dict(self):
+        """Generate the reference dictionary from interaction list."""
+
+        ref_dict = {}
+
+        for inter in self:
+            inter.generate_dict_entries(ref_dict)
+
+        return ref_dict
+
+
 
 #===============================================================================
 # Model
@@ -429,3 +495,177 @@ class Model(PhysicsObject):
                                                            type(value)
 
         return True
+
+#===============================================================================
+# Leg
+#===============================================================================
+class Leg(PhysicsObject):
+    """Leg object: id (Particle), number, I/F state, flag from_group
+    """
+
+    def default_setup(self):
+        """Default values for all properties"""
+
+        self['id'] = 0
+        self['number'] = 0
+        self['state'] = 'initial'
+        self['from_group'] = True
+
+    def filter(self, name, value):
+        """Filter for valid leg property values."""
+
+        if name in ['id', 'number']:
+            if not isinstance(value, int):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid integer for leg id" % str(value)
+
+        if name == 'state':
+            if not isinstance(value, str):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid string for leg state" % \
+                                                                    str(value)
+            if value not in ['initial', 'final']:
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid leg state (initial|final)" % \
+                                                                    str(value)
+
+        if name == 'from_group':
+           if not isinstance(value, bool):
+               raise self.PhysicsObjectError, \
+                       "%s is not a valid boolean for leg flagr from_group" % \
+                                                                   str(value)
+
+        return True
+
+    def get_sorted_keys(self):
+        """Return particle property names as a nicely sorted list."""
+
+        return ['id', 'number', 'state', 'from_group']
+
+#===============================================================================
+# LegList
+#===============================================================================
+class LegList(PhysicsObjectList):
+    """List of Leg objects
+    """
+
+    def is_valid_element(self, obj):
+       """Test if object obj is a valid Leg for the list."""
+
+       return isinstance(obj, Leg)
+
+#===============================================================================
+# Vertex
+#===============================================================================
+class Vertex(PhysicsObject):
+    """Vertex: list of legs (ordered), id (Interaction)
+    """
+
+    def default_setup(self):
+        """Default values for all properties"""
+
+        self['id'] = 0
+        self['legs'] = LegList()
+
+    def filter(self, name, value):
+        """Filter for valid vertex property values."""
+
+        if name == 'id':
+            if not isinstance(value, int):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid integer for vertex id" % str(value)
+
+        if name == 'legs':
+            if not isinstance(value, LegList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid LegList object" % str(value)
+
+        return True
+
+    def get_sorted_keys(self):
+        """Return particle property names as a nicely sorted list."""
+
+        return ['id', 'legs']
+
+
+#===============================================================================
+# VertexList
+#===============================================================================
+class VertexList(PhysicsObjectList):
+    """List of Vertex objects
+    """
+
+    def is_valid_element(self, obj):
+       """Test if object obj is a valid Vertex for the list."""
+
+       return isinstance(obj, Vertex)
+
+
+#===============================================================================
+# Diagram
+#===============================================================================
+class Diagram(PhysicsObject):
+    """Diagram: list of vertices (ordered)
+    """
+
+    def default_setup(self):
+        """Default values for all properties"""
+
+        self['vertices'] = VertexList()
+
+    def filter(self, name, value):
+        """Filter for valid diagram property values."""
+
+        if name == 'vertices':
+            if not isinstance(value, VertexList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid VertexList object" % str(value)
+
+        return True
+
+    def get_sorted_keys(self):
+        """Return particle property names as a nicely sorted list."""
+
+        return ['vertices']
+
+#===============================================================================
+# DiagramList
+#===============================================================================
+class DiagramList(PhysicsObjectList):
+    """List of Diagram objects
+    """
+
+    def is_valid_element(self, obj):
+       """Test if object obj is a valid Diagram for the list."""
+
+       return isinstance(obj, Diagram)
+
+
+#===============================================================================
+# Amplitude
+#===============================================================================
+class Amplitude(PhysicsObject):
+    """Amplitude: list of diagrams (ordered)
+    """
+
+    def default_setup(self):
+        """Default values for all properties"""
+
+        self['diagrams'] = DiagramList()
+
+    def filter(self, name, value):
+        """Filter for valid amplitude property values."""
+
+        if name == 'diagrams':
+            if not isinstance(value, DiagramList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid DiagramList object" % str(value)
+
+        return True
+
+    def get_sorted_keys(self):
+        """Return diagram property names as a nicely sorted list."""
+
+        return ['diagrams']
+
+

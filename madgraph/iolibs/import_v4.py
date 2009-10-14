@@ -123,7 +123,7 @@ def read_interactions_v4(fsock, ref_part_list):
 
         if line != "": # skip blank
             values = line.split()
-            part_list = []
+            part_list = ParticleList()
 
             try:
                 for str_name in values:
@@ -133,7 +133,7 @@ def read_interactions_v4(fsock, ref_part_list):
                         # anyway not enough, required if a variable name 
                         # corresponds to a particle! (eg G)
                         if len(values) >= 2 * len(part_list) + 1:
-                            part_list.append(str_name)
+                            part_list.append(curr_part)
                         else: break
                     # also stops if string does not correspond to 
                     # a particle name
