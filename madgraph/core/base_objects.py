@@ -281,6 +281,15 @@ class Particle(PhysicsObject):
         else:
             return self['pdg_code']
 
+    def get_anti_pdg_code(self):
+        """Return the PDG code of the antiparticle with a correct minus sign 
+        if the particle is its own antiparticle"""
+
+        if not self['self_antipart']:
+            return - self.get_pdg_code()
+        else:
+            return self['pdg_code']
+
 #===============================================================================
 # ParticleList
 #===============================================================================
@@ -441,9 +450,7 @@ class Interaction(PhysicsObject):
             short_part_list.remove(part)
             for permut in self.__permutate(short_part_list):
                 pdg_tuple = tuple([p.get_pdg_code() for p in permut])
-                pdg_part = part.get_pdg_code()
-                if not part['self_antipart']:
-                    pdg_part = -pdg_part
+                pdg_part = part.get_anti_pdg_code()
                 if pdg_tuple in ref_dict_to1.keys():
                     if pdg_part not in  ref_dict_to1[pdg_tuple]:
                         ref_dict_to1[pdg_tuple].append(pdg_part)
@@ -679,4 +686,34 @@ class Amplitude(PhysicsObject):
 
         return ['diagrams']
 
+#===============================================================================
+# Process
+#===============================================================================
+class Process(PhysicsObject):
+    """Process: list of legs (ordered)
+                dictionary of orders
+    """
 
+    def default_setup(self):
+        """Default values for all properties"""
+
+        self['orders'] = {}
+        self['legs'] = LegList()
+
+    def filter(self, name, value):
+        """Filter for valid process property values."""
+
+        if name == 'orders':
+            Interaction.filter(Interaction(), 'orders', value)
+
+        if name == 'legs':
+            if not isinstance(value, LegList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid LegList object" % str(value)
+
+        return True
+
+    def get_sorted_keys(self):
+        """Return process property names as a nicely sorted list."""
+
+        return ['legs', 'orders']

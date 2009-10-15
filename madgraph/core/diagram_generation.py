@@ -13,6 +13,31 @@
 #
 ################################################################################
 
+import itertools
+
 """Main diagram generation algorithm
 """
+
+def generate_diagrams(proc, ref_dict_to0, ref_dict_to1):
+
+    for leg in proc['legs']:
+        leg.set('from_group', True)
+
+    max_multi_to1 = max([len(key) for key in ref_dict_to1.keys()])
+
+#def combine_legs(leg_list, ref_dict_to1, max_multi_to1):
+#    """Take a LegList as an input, with the reference dictionary n-1>1,
+#    and output a list of list of LegLists (allowed combination) 
+#    and Legs (rest).
+#    """
+#
+#    res = []
+#    for comb_length in range(2, max_multi_to1 + 1):
+#        for comb in itertools.combinations(leg_list,comb_length):
+#            if comb in ref_dict_to1.keys():
+
+
+
+
+
 

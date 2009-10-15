@@ -173,6 +173,16 @@ class ParticleTest(unittest.TestCase):
         test_part.set('self_antipart', True)
         self.assertEqual(test_part.get_pdg_code(), 6)
 
+    def test_get_anti_pdg_code(self):
+        """Test the get_anti_pdg_code function of Particle"""
+
+        test_part = copy.copy(self.mypart)
+        self.assertEqual(test_part.get_anti_pdg_code(), -6)
+        test_part.set('is_part', False)
+        self.assertEqual(test_part.get_anti_pdg_code(), 6)
+        test_part.set('self_antipart', True)
+        self.assertEqual(test_part.get_pdg_code(), 6)
+
     def test_particle_list(self):
         """Test particle list initialization and search"""
 
