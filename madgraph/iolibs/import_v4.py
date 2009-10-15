@@ -64,6 +64,9 @@ def read_particles_v4(fsock):
                     mypart.set('name', values[0])
                     mypart.set('antiname', values[1])
 
+                    if mypart['name'] == mypart['antiname']:
+                        mypart['self_antipart'] = True
+
                     if values[2].lower() in spin_equiv.keys():
                         mypart.set('spin',
                                    spin_equiv[values[2].lower()])

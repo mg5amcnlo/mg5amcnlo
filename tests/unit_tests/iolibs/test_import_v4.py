@@ -62,7 +62,8 @@ class IOImportV4Test(unittest.TestCase):
                                                       'charge': 0.,
                                                       'pdg_code':12,
                                                       'propagating':True,
-                                                      'is_part':True}),
+                                                      'is_part':True,
+                                                      'self_antipart':False}),
                                  base_objects.Particle({'name':'w+',
                                                       'antiname':'w-',
                                                       'spin':3,
@@ -75,7 +76,8 @@ class IOImportV4Test(unittest.TestCase):
                                                       'charge':0.,
                                                       'pdg_code':24,
                                                       'propagating':True,
-                                                      'is_part':True}),
+                                                      'is_part':True,
+                                                      'self_antipart':False}),
                                  base_objects.Particle({'name':'T1',
                                                       'antiname':'T1',
                                                       'spin':5,
@@ -88,7 +90,8 @@ class IOImportV4Test(unittest.TestCase):
                                                       'charge': 0.,
                                                       'pdg_code':8000002,
                                                       'propagating':True,
-                                                      'is_part':True})])
+                                                      'is_part':True,
+                                                      'self_antipart':True})])
 
         self.assertEqual(import_v4.read_particles_v4(fsock), goal_part_list)
 

@@ -175,7 +175,8 @@ class Particle(PhysicsObject):
     """The particle object containing the whole set of information required to
     univocally characterize a given type of physical particle: name, spin, 
     color, mass, width, charge,... The is_part flag tells if the considered
-    particle object is a particle or an antiparticle."""
+    particle object is a particle or an antiparticle. The self_antipart flag
+    tells if the particle is its own antiparticle."""
 
     def default_setup(self):
         """Default values for all properties"""
@@ -193,6 +194,7 @@ class Particle(PhysicsObject):
         self['line'] = 'dashed'
         self['propagating'] = True
         self['is_part'] = True
+        self['self_antipart'] = False
 
     def filter(self, name, value):
         """Filter for valid particle property values."""
@@ -255,10 +257,10 @@ class Particle(PhysicsObject):
                 raise self.PhysicsObjectError, \
                     "Propagating tag %s is not a boolean" % repr(value)
 
-        if name is 'is_part':
+        if name in ['is_part', 'self_antipart']:
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError, \
-                    "is_part tag %s is not a boolean" % repr(value)
+                    "%s tag %s is not a boolean" % (name, repr(value))
 
         return True
 
@@ -267,7 +269,17 @@ class Particle(PhysicsObject):
 
         return ['name', 'antiname', 'spin', 'color',
                 'charge', 'mass', 'width', 'pdg_code',
-                'texname', 'antitexname', 'line', 'propagating', 'is_part']
+                'texname', 'antitexname', 'line', 'propagating',
+                'is_part', 'self_antipart']
+
+    def get_pdg_code(self):
+        """Return the PDG code with a correct minus sign if the particle is its
+        own antiparticle"""
+
+        if not self['is_part'] and not self['self_antipart']:
+            return - self['pdg_code']
+        else:
+            return self['pdg_code']
 
 #===============================================================================
 # ParticleList
@@ -409,42 +421,34 @@ class Interaction(PhysicsObject):
                     temp.append(seq[k:k + 1] + m)
             return temp
 
-    def generate_dict_entries(self, ref_dict):
+    def generate_dict_entries(self, ref_dict_to0, ref_dict_to1):
         """Add entries corresponding to the current interactions to 
-        the reference dictionary (for n>0 and n-1>1)"""
-
-        # Create a list of particle ids (pdg code)
-        part_list = []
-        for part in self['particles']:
-            if part['is_part']:
-                part_list.append(part['pdg_code'])
-            else:
-                part_list.append(-part['pdg_code'])
+        the reference dictionaries (for n>0 and n-1>1)"""
 
         # Create n>0 entries
-        for permut in self.__permutate(part_list):
-            permut_tuple = tuple(permut)
-            if permut_tuple in ref_dict.keys():
-                if None not in ref_dict[permut_tuple]:
-                    ref_dict[permut_tuple].append(None)
-            else:
-                ref_dict[permut_tuple] = [None]
+        for permut in self.__permutate(self['particles']):
+            pdg_tuple = tuple([p.get_pdg_code() for p in permut])
+            if pdg_tuple not in ref_dict_to0.keys():
+                ref_dict_to0[pdg_tuple] = None
 
         # Create n-1>1 entries Comment by Johan: Note that, in the n-1
         # > 1 dictionnary, the 1 entry should have opposite sign as
         # compared to the n > 0 dictionnary, since this should replace
         # the n-1 particles. I prefer to keep track of the sign
         # (part/antipart) here rather than in the diagram generation.
-        for part in part_list:
-            short_part_list = copy.copy(part_list)
+        for part in self['particles']:
+            short_part_list = copy.copy(self['particles'])
             short_part_list.remove(part)
             for permut in self.__permutate(short_part_list):
-                permut_tuple = tuple(permut)
-                if permut_tuple in ref_dict.keys():
-                    if part not in  ref_dict[permut_tuple]:
-                        ref_dict[permut_tuple].append(part)
+                pdg_tuple = tuple([p.get_pdg_code() for p in permut])
+                pdg_part = part.get_pdg_code()
+                if not part['self_antipart']:
+                    pdg_part = -pdg_part
+                if pdg_tuple in ref_dict_to1.keys():
+                    if pdg_part not in  ref_dict_to1[pdg_tuple]:
+                        ref_dict_to1[pdg_tuple].append(pdg_part)
                 else:
-                    ref_dict[permut_tuple] = [part]
+                    ref_dict_to1[pdg_tuple] = [pdg_part]
 
 
 #===============================================================================
@@ -459,14 +463,17 @@ class InteractionList(PhysicsObjectList):
         return isinstance(obj, Interaction)
 
     def generate_ref_dict(self):
-        """Generate the reference dictionary from interaction list."""
+        """Generate the reference dictionaries from interaction list.
+        Return a list where the first element is the n>0 dictionary and
+        the second one is n-1>1."""
 
-        ref_dict = {}
+        ref_dict_to0 = {}
+        ref_dict_to1 = {}
 
         for inter in self:
-            inter.generate_dict_entries(ref_dict)
+            inter.generate_dict_entries(ref_dict_to0, ref_dict_to1)
 
-        return ref_dict
+        return [ref_dict_to0, ref_dict_to1]
 
 
 

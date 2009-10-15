@@ -43,7 +43,8 @@ class ParticleTest(unittest.TestCase):
                       'charge':2. / 3.,
                       'pdg_code':6,
                       'propagating':True,
-                      'is_part':True}
+                      'is_part':True,
+                      'self_antipart':False}
 
         self.mypart = base_objects.Particle(self.mydict)
 
@@ -127,6 +128,9 @@ class ParticleTest(unittest.TestCase):
                         'wrong_list':[1, 'a', 'true', None]},
                        {'prop':'is_part',
                         'right_list':[True, False],
+                        'wrong_list':[1, 'a', 'true', None]},
+                       {'prop':'self_antipart',
+                        'right_list':[True, False],
                         'wrong_list':[1, 'a', 'true', None]}
                        ]
 
@@ -154,9 +158,20 @@ class ParticleTest(unittest.TestCase):
         goal = goal + "    \'antitexname\': \'\\overline{t}\',\n"
         goal = goal + "    \'line\': \'straight\',\n"
         goal = goal + "    \'propagating\': True,\n"
-        goal = goal + "    \'is_part\': True\n}"
+        goal = goal + "    \'is_part\': True,\n"
+        goal = goal + "    \'self_antipart\': False\n}"
 
         self.assertEqual(goal, str(self.mypart))
+
+    def test_get_pdg_code(self):
+        """Test the get_pdg_code function of Particle"""
+
+        test_part = copy.copy(self.mypart)
+        self.assertEqual(test_part.get_pdg_code(), 6)
+        test_part.set('is_part', False)
+        self.assertEqual(test_part.get_pdg_code(), -6)
+        test_part.set('self_antipart', True)
+        self.assertEqual(test_part.get_pdg_code(), 6)
 
     def test_particle_list(self):
         """Test particle list initialization and search"""
@@ -334,66 +349,70 @@ class InteractionTest(unittest.TestCase):
         part4 = base_objects.Particle()
         part4.set('pdg_code', 4)
         part4.set('is_part', False)
+        part4.set('self_antipart', True)
 
         myinter = base_objects.Interaction()
         myinter.set('particles', base_objects.ParticleList([part1,
                                                            part2,
                                                            part3,
                                                            part4]))
-        ref_dict = {}
+        ref_dict_to0 = {}
+        ref_dict_to1 = {}
 
-        myinter.generate_dict_entries(ref_dict)
+        myinter.generate_dict_entries(ref_dict_to0, ref_dict_to1)
 
-        goal_ref_dict = { (1, -2, 3, -4):[None],
-                          (1, -2, -4, 3):[None],
-                          (1, 3, -2, -4):[None],
-                          (1, 3, -4, -2):[None],
-                          (1, -4, -2, 3):[None],
-                          (1, -4, 3, -2):[None],
-                          (-2, 1, 3, -4):[None],
-                          (-2, 1, -4, 3):[None],
-                          (-2, 3, 1, -4):[None],
-                          (-2, 3, -4, 1):[None],
-                          (-2, -4, 1, 3):[None],
-                          (-2, -4, 3, 1):[None],
-                          (3, 1, -2, -4):[None],
-                          (3, 1, -4, -2):[None],
-                          (3, -2, 1, -4):[None],
-                          (3, -2, -4, 1):[None],
-                          (3, -4, 1, -2):[None],
-                          (3, -4, -2, 1):[None],
-                          (-4, 1, -2, 3):[None],
-                          (-4, 1, 3, -2):[None],
-                          (-4, -2, 1, 3):[None],
-                          (-4, -2, 3, 1):[None],
-                          (-4, 3, 1, -2):[None],
-                          (-4, 3, -2, 1):[None],
-                          (-2, 3, -4):[1],
-                          (-2, -4, 3):[1],
-                          (3, -2, -4):[1],
-                          (3, -4, -2):[1],
-                          (-4, -2, 3):[1],
-                          (-4, 3, -2):[1],
-                          (1, 3, -4):[-2],
-                          (1, -4, 3):[-2],
-                          (3, 1, -4):[-2],
-                          (3, -4, 1):[-2],
-                          (-4, 1, 3):[-2],
-                          (-4, 3, 1):[-2],
-                          (1, -2, -4):[3],
-                          (1, -4, -2):[3],
-                          (-2, 1, -4):[3],
-                          (-2, -4, 1):[3],
-                          (-4, 1, -2):[3],
-                          (-4, -2, 1):[3],
-                          (1, -2, 3):[-4],
-                          (1, 3, -2):[-4],
-                          (-2, 1, 3):[-4],
-                          (-2, 3, 1):[-4],
-                          (3, 1, -2):[-4],
-                          (3, -2, 1):[-4]}
+        goal_ref_dict_to0 = { (1, -2, 3, 4):None,
+                          (1, -2, 4, 3):None,
+                          (1, 3, -2, 4):None,
+                          (1, 3, 4, -2):None,
+                          (1, 4, -2, 3):None,
+                          (1, 4, 3, -2):None,
+                          (-2, 1, 3, 4):None,
+                          (-2, 1, 4, 3):None,
+                          (-2, 3, 1, 4):None,
+                          (-2, 3, 4, 1):None,
+                          (-2, 4, 1, 3):None,
+                          (-2, 4, 3, 1):None,
+                          (3, 1, -2, 4):None,
+                          (3, 1, 4, -2):None,
+                          (3, -2, 1, 4):None,
+                          (3, -2, 4, 1):None,
+                          (3, 4, 1, -2):None,
+                          (3, 4, -2, 1):None,
+                          (4, 1, -2, 3):None,
+                          (4, 1, 3, -2):None,
+                          (4, -2, 1, 3):None,
+                          (4, -2, 3, 1):None,
+                          (4, 3, 1, -2):None,
+                          (4, 3, -2, 1):None}
 
-        self.assertEqual(ref_dict, goal_ref_dict)
+        goal_ref_dict_to1 = {(-2, 3, 4):[-1],
+                            (-2, 4, 3):[-1],
+                            (3, -2, 4):[-1],
+                            (3, 4, -2):[-1],
+                            (4, -2, 3):[-1],
+                            (4, 3, -2):[-1],
+                            (1, 3, 4):[2],
+                            (1, 4, 3):[2],
+                            (3, 1, 4):[2],
+                            (3, 4, 1):[2],
+                            (4, 1, 3):[2],
+                            (4, 3, 1):[2],
+                            (1, -2, 4):[-3],
+                            (1, 4, -2):[-3],
+                            (-2, 1, 4):[-3],
+                            (-2, 4, 1):[-3],
+                            (4, 1, -2):[-3],
+                            (4, -2, 1):[-3],
+                            (1, -2, 3):[4],
+                            (1, 3, -2):[4],
+                            (-2, 1, 3):[4],
+                            (-2, 3, 1):[4],
+                            (3, 1, -2):[4],
+                            (3, -2, 1):[4]}
+
+        self.assertEqual(ref_dict_to0, goal_ref_dict_to0)
+        self.assertEqual(ref_dict_to1, goal_ref_dict_to1)
 
         myinterlist = base_objects.InteractionList([myinter] * 10)
 
@@ -403,21 +422,22 @@ class InteractionTest(unittest.TestCase):
                                                               part3]))
         myinterlist.append(add_inter)
 
-        goal_ref_dict[(1, -2, 3)].append(None)
-        goal_ref_dict[(1, 3, -2)].append(None)
-        goal_ref_dict[(-2, 1, 3)].append(None)
-        goal_ref_dict[(-2, 3, 1)].append(None)
-        goal_ref_dict[(3, 1, -2)].append(None)
-        goal_ref_dict[(3, -2, 1)].append(None)
+        goal_ref_dict_to0[(1, -2, 3)] = None
+        goal_ref_dict_to0[(1, 3, -2)] = None
+        goal_ref_dict_to0[(-2, 1, 3)] = None
+        goal_ref_dict_to0[(-2, 3, 1)] = None
+        goal_ref_dict_to0[(3, 1, -2)] = None
+        goal_ref_dict_to0[(3, -2, 1)] = None
 
-        goal_ref_dict[(1, -2)] = [3]
-        goal_ref_dict[(1, 3)] = [-2]
-        goal_ref_dict[(-2, 1)] = [3]
-        goal_ref_dict[(-2, 3)] = [1]
-        goal_ref_dict[(3, 1)] = [-2]
-        goal_ref_dict[(3, -2)] = [1]
+        goal_ref_dict_to1[(1, -2)] = [-3]
+        goal_ref_dict_to1[(1, 3)] = [2]
+        goal_ref_dict_to1[(-2, 1)] = [-3]
+        goal_ref_dict_to1[(-2, 3)] = [-1]
+        goal_ref_dict_to1[(3, 1)] = [2]
+        goal_ref_dict_to1[(3, -2)] = [-1]
 
-        self.assertEqual(myinterlist.generate_ref_dict(), goal_ref_dict)
+        self.assertEqual(myinterlist.generate_ref_dict()[0], goal_ref_dict_to0)
+        self.assertEqual(myinterlist.generate_ref_dict()[1], goal_ref_dict_to1)
 
     def test_interaction_list(self):
         """Test interaction list initialization"""
