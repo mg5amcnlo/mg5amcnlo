@@ -584,6 +584,18 @@ class LegList(PhysicsObjectList):
 
        return isinstance(obj, Leg)
 
+    def from_group_elements(self):
+       """Return all elements which have 'from_group' True"""
+       return filter(lambda leg: leg.get('from_group'), self)
+
+    def minimum_one_from_group(self):
+       """Return True if at least one element has 'from_group' True"""
+       return len(self.from_group_elements()) > 0
+
+    def minimum_two_from_group(self):
+       """Return True if at least two elements have 'from_group' True"""
+       return len(self.from_group_elements()) > 1
+
 #===============================================================================
 # Vertex
 #===============================================================================

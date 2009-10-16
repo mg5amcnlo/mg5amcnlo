@@ -86,8 +86,7 @@ class DiagramGenerationTest(unittest.TestCase):
             myproc = base_objects.Process({'legs':myleglist,
                                            'orders':{'QCD':ngluon}})
 
-
-
+            print "Number of diagrams for %d gluons: %d" % (ngluon,len(diagram_generation.generate_diagrams(myproc,self.ref_dict_to0,self.ref_dict_to1)))
 
 
 

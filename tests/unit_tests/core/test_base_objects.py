@@ -684,7 +684,7 @@ class LegTest(unittest.TestCase):
     def test_leg_list(self):
         """Test leg list initialization"""
 
-        mylist = [self.myleg] * 10
+        mylist = [copy.copy(self.myleg) for item in range(1,10)]
         myleglist = base_objects.LegList(mylist)
 
         not_a_leg = 1
@@ -695,6 +695,15 @@ class LegTest(unittest.TestCase):
         self.assertRaises(base_objects.LegList.PhysicsObjectListError,
                           myleglist.append,
                           not_a_leg)
+
+        # Test counting functions for number of from_group elements
+        # that are True
+        self.assertFalse(myleglist.minimum_one_from_group())
+        myleglist[0].set('from_group',True)
+        self.assertTrue(myleglist.minimum_one_from_group())
+        self.assertFalse(myleglist.minimum_two_from_group())
+        myleglist[1].set('from_group',True)
+        self.assertTrue(myleglist.minimum_two_from_group())
 
 #===============================================================================
 # VertexTest
