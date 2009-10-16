@@ -439,6 +439,9 @@ class Interaction(PhysicsObject):
             pdg_tuple = tuple([p.get_pdg_code() for p in permut])
             if pdg_tuple not in ref_dict_to0.keys():
                 ref_dict_to0[pdg_tuple] = None
+            pdg_tuple = tuple([p.get_anti_pdg_code() for p in permut])
+            if pdg_tuple not in ref_dict_to0.keys():
+                ref_dict_to0[pdg_tuple] = None
 
         # Create n-1>1 entries Comment by Johan: Note that, in the n-1
         # > 1 dictionnary, the 1 entry should have opposite sign as
@@ -449,8 +452,17 @@ class Interaction(PhysicsObject):
             short_part_list = copy.copy(self['particles'])
             short_part_list.remove(part)
             for permut in self.__permutate(short_part_list):
+                # Add interaction permutation
                 pdg_tuple = tuple([p.get_pdg_code() for p in permut])
                 pdg_part = part.get_anti_pdg_code()
+                if pdg_tuple in ref_dict_to1.keys():
+                    if pdg_part not in  ref_dict_to1[pdg_tuple]:
+                        ref_dict_to1[pdg_tuple].append(pdg_part)
+                else:
+                    ref_dict_to1[pdg_tuple] = [pdg_part]
+                # Add hermitian conjugate
+                pdg_tuple = tuple([p.get_anti_pdg_code() for p in permut])
+                pdg_part = part.get_pdg_code()
                 if pdg_tuple in ref_dict_to1.keys():
                     if pdg_part not in  ref_dict_to1[pdg_tuple]:
                         ref_dict_to1[pdg_tuple].append(pdg_part)

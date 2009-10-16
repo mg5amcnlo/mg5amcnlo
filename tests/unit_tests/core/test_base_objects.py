@@ -394,7 +394,31 @@ class InteractionTest(unittest.TestCase):
                           (4, -2, 1, 3):None,
                           (4, -2, 3, 1):None,
                           (4, 3, 1, -2):None,
-                          (4, 3, -2, 1):None}
+                          (4, 3, -2, 1):None,
+                          (-1, 2, -3, 4):None,
+                          (-1, 2, 4, -3):None,
+                          (-1, -3, 2, 4):None,
+                          (-1, -3, 4, 2):None,
+                          (-1, 4, 2, -3):None,
+                          (-1, 4, -3, 2):None,
+                          (2, -1, -3, 4):None,
+                          (2, -1, 4, -3):None,
+                          (2, -3, -1, 4):None,
+                          (2, -3, 4, -1):None,
+                          (2, 4, -1, -3):None,
+                          (2, 4, -3, -1):None,
+                          (-3, -1, 2, 4):None,
+                          (-3, -1, 4, 2):None,
+                          (-3, 2, -1, 4):None,
+                          (-3, 2, 4, -1):None,
+                          (-3, 4, -1, 2):None,
+                          (-3, 4, 2, -1):None,
+                          (4, -1, 2, -3):None,
+                          (4, -1, -3, 2):None,
+                          (4, 2, -1, -3):None,
+                          (4, 2, -3, -1):None,
+                          (4, -3, -1, 2):None,
+                          (4, -3, 2, -1):None}
 
         goal_ref_dict_to1 = {(-2, 3, 4):[-1],
                             (-2, 4, 3):[-1],
@@ -419,7 +443,31 @@ class InteractionTest(unittest.TestCase):
                             (-2, 1, 3):[4],
                             (-2, 3, 1):[4],
                             (3, 1, -2):[4],
-                            (3, -2, 1):[4]}
+                            (3, -2, 1):[4],
+                            (2, -3, 4):[1],
+                            (2, 4, -3):[1],
+                            (-3, 2, 4):[1],
+                            (-3, 4, 2):[1],
+                            (4, 2, -3):[1],
+                            (4, -3, 2):[1],
+                            (-1, -3, 4):[-2],
+                            (-1, 4, -3):[-2],
+                            (-3, -1, 4):[-2],
+                            (-3, 4, -1):[-2],
+                            (4, -1, -3):[-2],
+                            (4, -3, -1):[-2],
+                            (-1, 2, 4):[3],
+                            (-1, 4, 2):[3],
+                            (2, -1, 4):[3],
+                            (2, 4, -1):[3],
+                            (4, -1, 2):[3],
+                            (4, 2, -1):[3],
+                            (-1, 2, -3):[4],
+                            (-1, -3, 2):[4],
+                            (2, -1, -3):[4],
+                            (2, -3, -1):[4],
+                            (-3, -1, 2):[4],
+                            (-3, 2, -1):[4]}
 
         self.assertEqual(ref_dict_to0, goal_ref_dict_to0)
         self.assertEqual(ref_dict_to1, goal_ref_dict_to1)
@@ -438,6 +486,12 @@ class InteractionTest(unittest.TestCase):
         goal_ref_dict_to0[(-2, 3, 1)] = None
         goal_ref_dict_to0[(3, 1, -2)] = None
         goal_ref_dict_to0[(3, -2, 1)] = None
+        goal_ref_dict_to0[(-1, 2, -3)] = None
+        goal_ref_dict_to0[(-1, -3, 2)] = None
+        goal_ref_dict_to0[(2, -1, -3)] = None
+        goal_ref_dict_to0[(2, -3, -1)] = None
+        goal_ref_dict_to0[(-3, -1, 2)] = None
+        goal_ref_dict_to0[(-3, 2, -1)] = None
 
         goal_ref_dict_to1[(1, -2)] = [-3]
         goal_ref_dict_to1[(1, 3)] = [2]
@@ -445,6 +499,12 @@ class InteractionTest(unittest.TestCase):
         goal_ref_dict_to1[(-2, 3)] = [-1]
         goal_ref_dict_to1[(3, 1)] = [2]
         goal_ref_dict_to1[(3, -2)] = [-1]
+        goal_ref_dict_to1[(-1, 2)] = [3]
+        goal_ref_dict_to1[(-1, -3)] = [-2]
+        goal_ref_dict_to1[(2, -1)] = [3]
+        goal_ref_dict_to1[(2, -3)] = [1]
+        goal_ref_dict_to1[(-3, -1)] = [-2]
+        goal_ref_dict_to1[(-3, 2)] = [1]
 
         self.assertEqual(myinterlist.generate_ref_dict()[0], goal_ref_dict_to0)
         self.assertEqual(myinterlist.generate_ref_dict()[1], goal_ref_dict_to1)
@@ -943,4 +1003,94 @@ class AmplitudeTest(unittest.TestCase):
         goal = goal + "    \'diagrams\': %s\n}" % repr(self.mydiaglist)
 
         self.assertEqual(goal, str(self.myamplitude))
+
+#===============================================================================
+# ProcessTest
+#===============================================================================
+class ProcessTest(unittest.TestCase):
+    """Test class for the Process object"""
+
+    mydict = {}
+    myprocess = None
+    myleglist = base_objects.LegList([base_objects.Leg({'id':3,
+                                      'number':5,
+                                      'state':'final',
+                                      'from_group':False})] * 5)
+    
+    def setUp(self):
+
+        self.mydict = {'legs':self.myleglist,
+                       'orders':{'QCD':5, 'QED':1}}
+
+        self.myprocess = base_objects.Process(self.mydict)
+
+    def test_setget_process_correct(self):
+        "Test correct Process object __init__, get and set"
+
+        myprocess2 = base_objects.Process()
+
+        for prop in self.mydict.keys():
+            myprocess2.set(prop, self.mydict[prop])
+
+        self.assertEqual(self.myprocess, myprocess2)
+
+        for prop in self.myprocess.keys():
+            self.assertEqual(self.myprocess.get(prop), self.mydict[prop])
+
+    def test_setget_process_exceptions(self):
+        "Test error raising in Process __init__, get and set"
+
+        wrong_dict = self.mydict
+        wrong_dict['wrongparam'] = 'wrongvalue'
+
+        a_number = 0
+
+        # Test init
+        self.assertRaises(base_objects.Process.PhysicsObjectError,
+                          base_objects.Process,
+                          wrong_dict)
+        self.assertRaises(base_objects.Process.PhysicsObjectError,
+                          base_objects.Process,
+                          a_number)
+
+        # Test get
+        self.assertRaises(base_objects.Process.PhysicsObjectError,
+                          self.myprocess.get,
+                          a_number)
+        self.assertRaises(base_objects.Process.PhysicsObjectError,
+                          self.myprocess.get,
+                          'wrongparam')
+
+        # Test set
+        self.assertRaises(base_objects.Process.PhysicsObjectError,
+                          self.myprocess.set,
+                          a_number, 0)
+        self.assertRaises(base_objects.Process.PhysicsObjectError,
+                          self.myprocess.set,
+                          'wrongparam', 0)
+
+    def test_values_for_prop(self):
+        """Test filters for process properties"""
+
+        test_values = [{'prop':'legs',
+                        'right_list':[self.myleglist],
+                        'wrong_list':['a', {}]}
+                       ]
+
+        temp_process = self.myprocess
+
+        for test in test_values:
+            for x in test['right_list']:
+                self.assert_(temp_process.set(test['prop'], x))
+            for x in test['wrong_list']:
+                self.assertFalse(temp_process.set(test['prop'], x))
+
+    def test_representation(self):
+        """Test process object string representation."""
+
+        goal = "{\n"
+        goal = goal + "    \'legs\': %s,\n" % repr(self.myleglist)
+        goal = goal + "    \'orders\': %s\n}" % repr(self.myprocess['orders'])
+
+        self.assertEqual(goal, str(self.myprocess))
 
