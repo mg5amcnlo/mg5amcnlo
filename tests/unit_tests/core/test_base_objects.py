@@ -684,7 +684,7 @@ class LegTest(unittest.TestCase):
     def test_leg_list(self):
         """Test leg list initialization"""
 
-        mylist = [copy.copy(self.myleg) for item in range(1,10)]
+        mylist = [copy.copy(self.myleg) for item in range(1,4)]
         myleglist = base_objects.LegList(mylist)
 
         not_a_leg = 1
@@ -705,6 +705,15 @@ class LegTest(unittest.TestCase):
         myleglist[1].set('from_group',True)
         self.assertTrue(myleglist.minimum_two_from_group())
 
+        # Test passesTo1
+        ref_dict_to1 = {}
+        self.assertFalse(myleglist.passesTo1(ref_dict_to1))
+        ref_dict_to1={(3,3,3):[3]}
+        self.assertEqual(myleglist.passesTo1(ref_dict_to1),[3])
+        myleglist[0].set('from_group',False)
+        myleglist[1].set('from_group',False)
+        self.assertFalse(myleglist.passesTo1(ref_dict_to1))
+        
 #===============================================================================
 # VertexTest
 #===============================================================================

@@ -584,18 +584,35 @@ class LegList(PhysicsObjectList):
 
        return isinstance(obj, Leg)
 
+   # Helper methods for diagram generation
+
     def from_group_elements(self):
        """Return all elements which have 'from_group' True"""
+
        return filter(lambda leg: leg.get('from_group'), self)
 
     def minimum_one_from_group(self):
        """Return True if at least one element has 'from_group' True"""
+
        return len(self.from_group_elements()) > 0
 
     def minimum_two_from_group(self):
        """Return True if at least two elements have 'from_group' True"""
+
        return len(self.from_group_elements()) > 1
 
+    def passesTo1(self,ref_dict_to1):
+       """If has at least one 'from_group' True and in ref_dict_to1,
+          return the return list from ref_dict_to1, otherwise return None"""
+       if self.minimum_one_from_group():
+           try:
+               return ref_dict_to1[tuple([leg.get('id') for leg in self])]
+           except KeyError:
+               return None
+       else:
+           return None
+    
+   
 #===============================================================================
 # Vertex
 #===============================================================================

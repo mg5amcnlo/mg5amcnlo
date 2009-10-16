@@ -50,6 +50,23 @@ class DiagramGenerationTest(unittest.TestCase):
                       'is_part':True,
                       'self_antipart':True}))
 
+        self.mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2./3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        antiu = copy.copy(self.mypartlist[1])
+        antiu.set('is_part',False)
+
         self.myinterlist.append(base_objects.Interaction({
                       'particles': base_objects.ParticleList(\
                                             [self.mypartlist[0]] * 3),
@@ -66,13 +83,138 @@ class DiagramGenerationTest(unittest.TestCase):
                       'couplings':{(0, 0):'G^2'},
                       'orders':{'QCD':2}}))
 
+        self.myinterlist.append(base_objects.Interaction({
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[1],\
+                                             antiu,\
+                                             self.mypartlist[0]]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
         self.ref_dict_to0 = self.myinterlist.generate_ref_dict()[0]
         self.ref_dict_to1 = self.myinterlist.generate_ref_dict()[1]
 
 
+    def test_combine_legs(self):
+
+        # Test gluon interactions
+        
+        myleglist = base_objects.LegList([base_objects.Leg({'id':21,
+                                              'number':num,
+                                              'state':'final'}) \
+                                              for num in range(1, 5)])
+        
+        myleglist[0].set('state', 'initial')
+        myleglist[1].set('state', 'initial')
+        
+        l1=myleglist[0]
+        l2=myleglist[1]
+        l3=myleglist[2]
+        l4=myleglist[3]
+        
+        my_combined_legs = [\
+                [(l1,l2),l3,l4],[(l1,l2),(l3,l4)],\
+                [(l1,l3),l2,l4],[(l1,l3),(l2,l4)],\
+                [(l1,l4),l2,l3],[(l1,l4),(l2,l3)],\
+                [(l2,l3),l1,l4],[(l2,l4),l1,l3],[(l3,l4),l1,l2],\
+                [(l1,l2,l3),l4],[(l1,l2,l4),l3],\
+                [(l1,l3,l4),l2],[(l2,l3,l4),l1]\
+                ]
+        
+        combined_legs = diagram_generation.combine_legs([leg for leg in myleglist],\
+                                                        self.ref_dict_to1,\
+                                                        3)
+        self.assertEqual(combined_legs,my_combined_legs)
+        
+        myleglist = base_objects.LegList([base_objects.Leg({'id':21,
+                                                            'number':num,
+                                                            'state':'final'}) \
+                                          for num in range(1, 5)])
+        
+        myleglist[0].set('state', 'initial')
+        myleglist[1].set('state', 'initial')
+        
+        l1=myleglist[0]
+        l2=myleglist[1]
+        l3=myleglist[2]
+        l4=myleglist[3]
+        
+        my_combined_legs = [\
+                [(l1,l2),l3,l4],[(l1,l2),(l3,l4)],\
+                [(l1,l3),l2,l4],[(l1,l3),(l2,l4)],\
+                [(l1,l4),l2,l3],[(l1,l4),(l2,l3)],\
+                [(l2,l3),l1,l4],[(l2,l4),l1,l3],[(l3,l4),l1,l2],\
+                [(l1,l2,l3),l4],[(l1,l2,l4),l3],\
+                [(l1,l3,l4),l2],[(l2,l3,l4),l1]\
+                ]
+
+        combined_legs = diagram_generation.combine_legs([leg for leg in myleglist],\
+                                                        self.ref_dict_to1,\
+                                                        3)
+        self.assertEqual(combined_legs,my_combined_legs)
+
+        # Now test with 3 quarks+3 antiquarks (already flipped sign for IS)
+
+        myleglist[0] = base_objects.Leg({'id':-2,
+                                         'number':1,
+                                         'state':'initial'})
+        myleglist[1] = base_objects.Leg({'id':2,
+                                         'number':2,
+                                         'state':'initial'})
+        myleglist[2] = base_objects.Leg({'id':2,
+                                         'number':3,
+                                         'state':'final'})
+        myleglist[3] = base_objects.Leg({'id':-2,
+                                         'number':4,
+                                         'state':'final'})
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'number':5,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'number':6,
+                                         'state':'final'}))
+        l1=myleglist[0]
+        l2=myleglist[1]
+        l3=myleglist[2]
+        l4=myleglist[3]
+        l5=myleglist[4]
+        l6=myleglist[5]
+        
+        my_combined_legs = [\
+                [(l1,l2),l3,l4,l5,l6],[(l1,l2),(l3,l4),l5,l6],\
+                [(l1,l2),(l3,l4),(l5,l6)],[(l1,l2),(l3,l6),l4,l5],\
+                [(l1,l2),(l3,l6),(l4,l5)],[(l1,l2),(l4,l5),l3,l6],\
+                [(l1,l2),(l5,l6),l3,l4],\
+                [(l1,l3),l2,l4,l5,l6],[(l1,l3),(l2,l4),l5,l6],\
+                [(l1,l3),(l2,l4),(l5,l6)],[(l1,l3),(l2,l6),l4,l5],\
+                [(l1,l3),(l2,l6),(l4,l5)],[(l1,l3),(l4,l5),l2,l6],\
+                [(l1,l3),(l5,l6),l2,l4],\
+                [(l1,l5),l2,l3,l4,l6],[(l1,l5),(l2,l4),l3,l6],\
+                [(l1,l5),(l2,l4),(l3,l6)],[(l1,l5),(l2,l6),l3,l4],\
+                [(l1,l5),(l2,l6),(l3,l4)],[(l1,l5),(l3,l4),l2,l6],\
+                [(l1,l5),(l3,l6),l2,l4],\
+                [(l2,l4),l1,l3,l5,l6],[(l2,l4),l1,(l3,l6),l5],\
+                [(l2,l4),l1,(l5,l6),l3],\
+                [(l2,l6),l1,l3,l4,l5],[(l2,l6),l1,(l3,l4),l5],\
+                [(l2,l6),l1,(l4,l5),l3],\
+                [(l3,l4),l1,l2,l5,l6],[(l3,l4),l1,l2,(l5,l6)],\
+                [(l3,l6),l1,l2,l4,l5],[(l3,l6),l1,l2,(l4,l5)],\
+                [(l4,l5),l1,l2,l3,l6],\
+                [(l5,l6),l1,l2,l3,l4]
+                ]
+
+        combined_legs = diagram_generation.combine_legs([leg for leg in myleglist],\
+                                                        self.ref_dict_to1,\
+                                                        3)
+        self.assertEqual(combined_legs,my_combined_legs)
+
 
     def test_diagram_generation(self):
 
+        print
+        
         for ngluon in range (2, 5):
 
             myleglist = base_objects.LegList([base_objects.Leg({'id':21,
@@ -86,7 +228,10 @@ class DiagramGenerationTest(unittest.TestCase):
             myproc = base_objects.Process({'legs':myleglist,
                                            'orders':{'QCD':ngluon}})
 
-            print "Number of diagrams for %d gluons: %d" % (ngluon,len(diagram_generation.generate_diagrams(myproc,self.ref_dict_to0,self.ref_dict_to1)))
+            print "Number of diagrams for %d gluons: %d" % (ngluon,\
+                len(diagram_generation.generate_diagrams(myproc,\
+                                                         self.ref_dict_to0,\
+                                                         self.ref_dict_to1)))
 
 
 
