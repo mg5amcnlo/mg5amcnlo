@@ -43,15 +43,6 @@ def combine_legs(list_legs, ref_dict_to1, max_multi_to1):
     and Legs (rest). For algorithm, see wiki page.
     """
 
-    # I suggest that we change return format to be a list of pairs of lists:
-    # [[tuples of Legs + Legs],[lists of vertices, same number as tuples]]
-    # to make substitution trivial in the next step
-    # (otherwise need to check dictionary again for the tuples)
-    # I have prepared for this by letting LegList.passesTo1 return id
-    # of new particle
-    # We also need to add interaction id (i.e., number in InteractionList)
-    # in the ref_dict:s.
-
     res = []
 
     for comb_length in range(2, max_multi_to1 + 1):
@@ -78,8 +69,11 @@ def combine_legs(list_legs, ref_dict_to1, max_multi_to1):
 
 
 def reduce_legs(comb_lists, ref_dict_to1):
-    """Takes a list of allowed leg combinations as an input and returns the same
-    list where combinations have been properly replaced."""
+    """Takes a list of allowed leg combinations as an input and returns
+    a set of lists where combinations have been properly replaced
+    (one list per element in the ref_dict, so that all possible intermediate
+    particles are included).
+    """
 
     res = []
 
@@ -113,33 +107,38 @@ def reduce_legs(comb_lists, ref_dict_to1):
                 entry.set('from_group', False)
                 reduced_list.append(entry)
 
-        final_reduced_lists = []
-        final_vertex_lists = []
-
-        res.append((reduced_list, vertex_list))
+        flat_red_lists = expand_list(reduced_list)
+        flat_vx_lists = expand_list(vertex_list)
+        for i in range(0,len(flat_vx_lists)):
+            res.append((base_objects.LegList(flat_red_lists[i]),\
+                        base_objects.VertexList(flat_vx_lists[i])))
 
     return res
 
 def expand_list(mylist):
-
+    """Takes a list of lists and elements and returns a list of flat lists.
+    Example: [[1,2], 3, [4,5]] -> [[1,3,4], [1,3,5], [2,3,4], [2,3,5]]
+    """
+    
     res = []
-    print mylist
-
-    if not mylist:
-        return []
 
     if len(mylist) == 1:
         if isinstance(mylist[0], list):
-            return mylist[0]
+            return [[item] for item in mylist[0]]
         else:
-            return mylist
-
+            return [[mylist[0]]]
+        
     if isinstance(mylist[0], list):
         for item in mylist[0]:
+            # Here recursion happens
             for rest in expand_list(mylist[1:]):
-                res.append([item].extend(rest))
+                reslist=[item]
+                reslist.extend(rest)
+                res.append(reslist)
     else:
+        # Here recursion happens
         for rest in expand_list(mylist[1:]):
-            res.append([mylist[0]].extend(rest))
-
+            reslist=[mylist[0]]
+            reslist.extend(rest)
+            res.append(reslist)
     return res

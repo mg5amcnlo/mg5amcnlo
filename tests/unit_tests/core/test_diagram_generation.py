@@ -67,6 +67,38 @@ class DiagramGenerationTest(unittest.TestCase):
         antiu = copy.copy(self.mypartlist[1])
         antiu.set('is_part', False)
 
+        self.mypartlist.append(base_objects.Particle({'name':'d',
+                      'antiname':'d~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'d',
+                      'antitexname':'\bar d',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':1,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        antid = copy.copy(self.mypartlist[2])
+        antid.set('is_part', False)
+
+        self.mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':0,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'waivy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
         self.myinterlist.append(base_objects.Interaction({
                       'particles': base_objects.ParticleList(\
                                             [self.mypartlist[0]] * 3),
@@ -92,6 +124,36 @@ class DiagramGenerationTest(unittest.TestCase):
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
+
+        self.myinterlist.append(base_objects.Interaction({
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[1], \
+                                             antiu, \
+                                             self.mypartlist[3]]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        self.myinterlist.append(base_objects.Interaction({
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[2], \
+                                             antid, \
+                                             self.mypartlist[0]]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        self.myinterlist.append(base_objects.Interaction({
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[2], \
+                                             antid, \
+                                             self.mypartlist[3]]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
 
         self.ref_dict_to0 = self.myinterlist.generate_ref_dict()[0]
         self.ref_dict_to1 = self.myinterlist.generate_ref_dict()[1]
@@ -128,25 +190,167 @@ class DiagramGenerationTest(unittest.TestCase):
                                                         3)
         self.assertEqual(combined_legs, my_combined_legs)
 
-        myleglist = base_objects.LegList([base_objects.Leg({'id':21,
-                                                            'number':num,
-                                                            'state':'final'}) \
-                                          for num in range(1, 5)])
+        # Now test the reduction of legs for this
+
+        reduced_list = diagram_generation.reduce_legs(combined_legs,self.ref_dict_to1)
+
+        l1.set('from_group',False)
+        l2.set('from_group',False)
+        l3.set('from_group',False)
+        l4.set('from_group',False)
+
+        l12 = base_objects.Leg({'id':21,
+                                'number':1,
+                                'state':'final'})
+        l13 = base_objects.Leg({'id':21,
+                                'number':1,
+                                'state':'initial'})
+        l14 = base_objects.Leg({'id':21,
+                                'number':1,
+                                'state':'initial'})
+        l23 = base_objects.Leg({'id':21,
+                                'number':2,
+                                'state':'initial'})
+        l24 = base_objects.Leg({'id':21,
+                                'number':2,
+                                'state':'initial'})
+        l34 = base_objects.Leg({'id':21,
+                                'number':3,
+                                'state':'final'})
+        l123 = base_objects.Leg({'id':21,
+                                'number':1,
+                                'state':'final'})
+        l124 = base_objects.Leg({'id':21,
+                                'number':1,
+                                'state':'final'})
+        l134 = base_objects.Leg({'id':21,
+                                'number':1,
+                                'state':'initial'})
+        l234 = base_objects.Leg({'id':21,
+                                'number':2,
+                                'state':'initial'})
+
+        my_reduced_list = [\
+                (base_objects.LegList([(l12),l3,l4]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1,l2,l12])})])),\
+                (base_objects.LegList([(l12), (l34)]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1,l2,l12])}),\
+                                          base_objects.Vertex({'legs':base_objects.LegList([l3,l4,l34])})])),\
+                (base_objects.LegList([(l13), l2, l4]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1,l3,l13])})])),\
+                (base_objects.LegList([(l13), (l24)]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1,l3,l13])}),\
+                                          base_objects.Vertex({'legs':base_objects.LegList([l2,l4,l24])})])),\
+                (base_objects.LegList([(l14), l2, l3]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1,l4,l14])})])),\
+                (base_objects.LegList([(l14), (l23)]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1,l4,l14])}),\
+                                          base_objects.Vertex({'legs':base_objects.LegList([l2,l3,l23])})])),\
+                (base_objects.LegList([(l23), l1, l4]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l2,l3,l23])})])),\
+                (base_objects.LegList([(l24), l1, l3]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l2,l4,l24])})])),\
+                (base_objects.LegList([(l34), l1, l2]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l3,l4,l34])})])),\
+                (base_objects.LegList([(l123), l4]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1,l2,l3,l123])})])),\
+                (base_objects.LegList([(l124), l3]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1,l2,l4,l124])})])),\
+                (base_objects.LegList([(l134), l2]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1,l3,l4,l134])})])),\
+                (base_objects.LegList([(l234), l1]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l2,l3,l4,l234])})])),\
+                ]
+        self.assertEqual(reduced_list.__str__(),my_reduced_list.__str__())
+
+        # Test with 2 quarks+2 antiquarks (already flipped sign for IS)
+
+        myleglist = base_objects.LegList()
+        
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'number':1,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'number':2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'number':3,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'number':4,
+                                         'state':'final'}))
+        l1 = myleglist[0]
+        l2 = myleglist[1]
+        l3 = myleglist[2]
+        l4 = myleglist[3]
+
+        my_combined_legs = [\
+                [(l1, l2), l3, l4], [(l1, l2), (l3, l4)], \
+                [(l3, l4), l1, l2] \
+                ]
+        
+        combined_legs = diagram_generation.combine_legs([leg for leg in myleglist], \
+                                                        self.ref_dict_to1, \
+                                                        3)
+        self.assertEqual(combined_legs,my_combined_legs)
+
+        # Now test the reduction of legs for this
+
+        reduced_list = diagram_generation.reduce_legs(combined_legs,self.ref_dict_to1)
+        
+        l1.set('from_group',False)
+        l2.set('from_group',False)
+        l3.set('from_group',False)
+        l4.set('from_group',False)
+
+        l12glue = base_objects.Leg({'id':21,
+                                'number':1,
+                                'state':'final'})
+        l12phot = base_objects.Leg({'id':22,
+                                'number':1,
+                                'state':'final'})
+        l34glue = base_objects.Leg({'id':21,
+                                'number':3,
+                                'state':'final'})
+        l34phot = base_objects.Leg({'id':22,
+                                'number':3,
+                                'state':'final'})
+        my_reduced_list = [\
+                (base_objects.LegList([l12glue, l3, l4]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1,l2,l12glue])})])), \
+                (base_objects.LegList([l12phot, l3, l4]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1,l2,l12phot])})])), \
+                (base_objects.LegList([l12glue, l34glue]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1,l2,l12glue])}),base_objects.Vertex({'legs':base_objects.LegList([l3,l4,l34glue])})])), \
+                (base_objects.LegList([l12glue, l34phot]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1,l2,l12glue])}),base_objects.Vertex({'legs':base_objects.LegList([l3,l4,l34phot])})])), \
+                (base_objects.LegList([l12phot, l34glue]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1,l2,l12phot])}),base_objects.Vertex({'legs':base_objects.LegList([l3,l4,l34glue])})])), \
+                (base_objects.LegList([l12phot, l34phot]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1,l2,l12phot])}),base_objects.Vertex({'legs':base_objects.LegList([l3,l4,l34phot])})])), \
+                (base_objects.LegList([l34glue, l1, l2]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l3,l4,l34glue])})])), \
+                (base_objects.LegList([l34phot, l1, l2]),\
+                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l3,l4,l34phot])})])), \
+                ]
+
+        self.assertEqual(reduced_list.__str__(),my_reduced_list.__str__())
 
         # Now test with 3 quarks+3 antiquarks (already flipped sign for IS)
-
-        myleglist[0] = base_objects.Leg({'id':-2,
+        myleglist = base_objects.LegList()
+        
+        myleglist.append(base_objects.Leg({'id':-2,
                                          'number':1,
-                                         'state':'initial'})
-        myleglist[1] = base_objects.Leg({'id':2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':2,
                                          'number':2,
-                                         'state':'initial'})
-        myleglist[2] = base_objects.Leg({'id':2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':2,
                                          'number':3,
-                                         'state':'final'})
-        myleglist[3] = base_objects.Leg({'id':-2,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-2,
                                          'number':4,
-                                         'state':'final'})
+                                         'state':'final'}))
         myleglist.append(base_objects.Leg({'id':2,
                                          'number':5,
                                          'state':'final'}))
