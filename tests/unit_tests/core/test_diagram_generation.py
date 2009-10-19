@@ -133,28 +133,6 @@ class DiagramGenerationTest(unittest.TestCase):
                                                             'state':'final'}) \
                                           for num in range(1, 5)])
         
-        myleglist[0].set('state', 'initial')
-        myleglist[1].set('state', 'initial')
-        
-        l1=myleglist[0]
-        l2=myleglist[1]
-        l3=myleglist[2]
-        l4=myleglist[3]
-        
-        my_combined_legs = [\
-                [(l1,l2),l3,l4],[(l1,l2),(l3,l4)],\
-                [(l1,l3),l2,l4],[(l1,l3),(l2,l4)],\
-                [(l1,l4),l2,l3],[(l1,l4),(l2,l3)],\
-                [(l2,l3),l1,l4],[(l2,l4),l1,l3],[(l3,l4),l1,l2],\
-                [(l1,l2,l3),l4],[(l1,l2,l4),l3],\
-                [(l1,l3,l4),l2],[(l2,l3,l4),l1]\
-                ]
-
-        combined_legs = diagram_generation.combine_legs([leg for leg in myleglist],\
-                                                        self.ref_dict_to1,\
-                                                        3)
-        self.assertEqual(combined_legs,my_combined_legs)
-
         # Now test with 3 quarks+3 antiquarks (already flipped sign for IS)
 
         myleglist[0] = base_objects.Leg({'id':-2,
