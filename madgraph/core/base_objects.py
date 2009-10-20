@@ -438,10 +438,10 @@ class Interaction(PhysicsObject):
         for permut in self.__permutate(self['particles']):
             pdg_tuple = tuple([p.get_pdg_code() for p in permut])
             if pdg_tuple not in ref_dict_to0.keys():
-                ref_dict_to0[pdg_tuple] = None
+                ref_dict_to0[pdg_tuple] = 0
             pdg_tuple = tuple([p.get_anti_pdg_code() for p in permut])
             if pdg_tuple not in ref_dict_to0.keys():
-                ref_dict_to0[pdg_tuple] = None
+                ref_dict_to0[pdg_tuple] = 0
 
         # Create n-1>1 entries Comment by Johan: Note that, in the n-1
         # > 1 dictionnary, the 1 entry should have opposite sign as
@@ -601,7 +601,7 @@ class LegList(PhysicsObjectList):
 
        return len(self.from_group_elements()) > 1
 
-    def passesTo1(self,ref_dict_to1):
+    def passesTo1(self, ref_dict_to1):
        """If has at least one 'from_group' True and in ref_dict_to1,
           return the return list from ref_dict_to1, otherwise return None"""
        if self.minimum_one_from_group():
@@ -611,8 +611,21 @@ class LegList(PhysicsObjectList):
                return None
        else:
            return None
-    
-   
+
+    def passesTo0(self, ref_dict_to0):
+       """If has at least two 'from_group' True and in ref_dict_to0,
+          return the vertex (with id from ref_dict_to0), otherwise return None"""
+       if self.minimum_two_from_group():
+           try:
+               return Vertex({'legs':self,
+                              'id':ref_dict_to0[tuple([leg.get('id') for \
+                                                          leg in self])]})
+           except KeyError:
+               return None
+       else:
+           return None
+
+
 #===============================================================================
 # Vertex
 #===============================================================================

@@ -25,17 +25,53 @@ def generate_diagrams(proc, ref_dict_to0, ref_dict_to1):
     """Generate diagrams. For algorithm, see wiki page
     """
 
-#    for leg in proc['legs']:
-#        leg.set('from_group', True)
+    for leg in proc['legs']:
+        leg.set('from_group', True)
 
     max_multi_to1 = max([len(key) for key in ref_dict_to1.keys()])
 
-    comb_lists = combine_legs([leg for leg in proc['legs']],
+    return reduce_diagram(proc.get('legs'), ref_dict_to0, ref_dict_to1, max_multi_to1)
+
+
+def reduce_diagram(curr_proc, ref_dict_to0, ref_dict_to1, max_multi_to1):
+    """Recursive function to reduce N diagrams to N-1
+    """
+    res = []
+
+    if curr_proc is None:
+        return None
+
+    if len(curr_proc) == 2:
+        if curr_proc[0].get('id') == curr_proc[1].get('id') and \
+            curr_proc[0].get('from_group') and \
+            curr_proc[1].get('from_group'):
+            return [[base_objects.Vertex({'legs':curr_proc,
+                                          'id':0})]]
+        else:
+            return None
+
+    final_vertex = curr_proc.passesTo0(ref_dict_to0)
+    if final_vertex:
+        res.append([final_vertex])
+
+    comb_lists = combine_legs(curr_proc,
                              ref_dict_to1, max_multi_to1)
 
-    reduce_legs(comb_lists, ref_dict_to1)
+    leg_vertex_list = reduce_legs(comb_lists, ref_dict_to1)
 
-    return []
+    for leg_vertex_tuple in leg_vertex_list:
+        # print 'vertex=', leg_vertex_tuple[1]
+        reduced_diagram = reduce_diagram(leg_vertex_tuple[0],
+                                               ref_dict_to0,
+                                               ref_dict_to1,
+                                               max_multi_to1)
+        if reduced_diagram:
+            vertex_list = list(leg_vertex_tuple[1])
+            vertex_list.append(reduced_diagram)
+            res.extend(expand_list(vertex_list))
+
+    return res
+
 
 def combine_legs(list_legs, ref_dict_to1, max_multi_to1):
     """Take a list of legs as an input, with the reference dictionary n-1>1,
@@ -109,8 +145,8 @@ def reduce_legs(comb_lists, ref_dict_to1):
 
         flat_red_lists = expand_list(reduced_list)
         flat_vx_lists = expand_list(vertex_list)
-        for i in range(0,len(flat_vx_lists)):
-            res.append((base_objects.LegList(flat_red_lists[i]),\
+        for i in range(0, len(flat_vx_lists)):
+            res.append((base_objects.LegList(flat_red_lists[i]), \
                         base_objects.VertexList(flat_vx_lists[i])))
 
     return res
@@ -119,7 +155,7 @@ def expand_list(mylist):
     """Takes a list of lists and elements and returns a list of flat lists.
     Example: [[1,2], 3, [4,5]] -> [[1,3,4], [1,3,5], [2,3,4], [2,3,5]]
     """
-    
+
     res = []
 
     if len(mylist) == 1:
@@ -127,18 +163,18 @@ def expand_list(mylist):
             return [[item] for item in mylist[0]]
         else:
             return [[mylist[0]]]
-        
+
     if isinstance(mylist[0], list):
         for item in mylist[0]:
             # Here recursion happens
             for rest in expand_list(mylist[1:]):
-                reslist=[item]
+                reslist = [item]
                 reslist.extend(rest)
                 res.append(reslist)
     else:
         # Here recursion happens
         for rest in expand_list(mylist[1:]):
-            reslist=[mylist[0]]
+            reslist = [mylist[0]]
             reslist.extend(rest)
             res.append(reslist)
     return res

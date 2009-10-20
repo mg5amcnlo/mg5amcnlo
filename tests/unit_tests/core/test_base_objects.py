@@ -371,54 +371,54 @@ class InteractionTest(unittest.TestCase):
 
         myinter.generate_dict_entries(ref_dict_to0, ref_dict_to1)
 
-        goal_ref_dict_to0 = { (1, -2, 3, 4):None,
-                          (1, -2, 4, 3):None,
-                          (1, 3, -2, 4):None,
-                          (1, 3, 4, -2):None,
-                          (1, 4, -2, 3):None,
-                          (1, 4, 3, -2):None,
-                          (-2, 1, 3, 4):None,
-                          (-2, 1, 4, 3):None,
-                          (-2, 3, 1, 4):None,
-                          (-2, 3, 4, 1):None,
-                          (-2, 4, 1, 3):None,
-                          (-2, 4, 3, 1):None,
-                          (3, 1, -2, 4):None,
-                          (3, 1, 4, -2):None,
-                          (3, -2, 1, 4):None,
-                          (3, -2, 4, 1):None,
-                          (3, 4, 1, -2):None,
-                          (3, 4, -2, 1):None,
-                          (4, 1, -2, 3):None,
-                          (4, 1, 3, -2):None,
-                          (4, -2, 1, 3):None,
-                          (4, -2, 3, 1):None,
-                          (4, 3, 1, -2):None,
-                          (4, 3, -2, 1):None,
-                          (-1, 2, -3, 4):None,
-                          (-1, 2, 4, -3):None,
-                          (-1, -3, 2, 4):None,
-                          (-1, -3, 4, 2):None,
-                          (-1, 4, 2, -3):None,
-                          (-1, 4, -3, 2):None,
-                          (2, -1, -3, 4):None,
-                          (2, -1, 4, -3):None,
-                          (2, -3, -1, 4):None,
-                          (2, -3, 4, -1):None,
-                          (2, 4, -1, -3):None,
-                          (2, 4, -3, -1):None,
-                          (-3, -1, 2, 4):None,
-                          (-3, -1, 4, 2):None,
-                          (-3, 2, -1, 4):None,
-                          (-3, 2, 4, -1):None,
-                          (-3, 4, -1, 2):None,
-                          (-3, 4, 2, -1):None,
-                          (4, -1, 2, -3):None,
-                          (4, -1, -3, 2):None,
-                          (4, 2, -1, -3):None,
-                          (4, 2, -3, -1):None,
-                          (4, -3, -1, 2):None,
-                          (4, -3, 2, -1):None}
+        goal_ref_dict_to0 = { (1, -2, 3, 4):0,
+                          (1, -2, 4, 3):0,
+                          (1, 3, -2, 4):0,
+                          (1, 3, 4, -2):0,
+                          (1, 4, -2, 3):0,
+                          (1, 4, 3, -2):0,
+                          (-2, 1, 3, 4):0,
+                          (-2, 1, 4, 3):0,
+                          (-2, 3, 1, 4):0,
+                          (-2, 3, 4, 1):0,
+                          (-2, 4, 1, 3):0,
+                          (-2, 4, 3, 1):0,
+                          (3, 1, -2, 4):0,
+                          (3, 1, 4, -2):0,
+                          (3, -2, 1, 4):0,
+                          (3, -2, 4, 1):0,
+                          (3, 4, 1, -2):0,
+                          (3, 4, -2, 1):0,
+                          (4, 1, -2, 3):0,
+                          (4, 1, 3, -2):0,
+                          (4, -2, 1, 3):0,
+                          (4, -2, 3, 1):0,
+                          (4, 3, 1, -2):0,
+                          (4, 3, -2, 1):0,
+                          (-1, 2, -3, 4):0,
+                          (-1, 2, 4, -3):0,
+                          (-1, -3, 2, 4):0,
+                          (-1, -3, 4, 2):0,
+                          (-1, 4, 2, -3):0,
+                          (-1, 4, -3, 2):0,
+                          (2, -1, -3, 4):0,
+                          (2, -1, 4, -3):0,
+                          (2, -3, -1, 4):0,
+                          (2, -3, 4, -1):0,
+                          (2, 4, -1, -3):0,
+                          (2, 4, -3, -1):0,
+                          (-3, -1, 2, 4):0,
+                          (-3, -1, 4, 2):0,
+                          (-3, 2, -1, 4):0,
+                          (-3, 2, 4, -1):0,
+                          (-3, 4, -1, 2):0,
+                          (-3, 4, 2, -1):0,
+                          (4, -1, 2, -3):0,
+                          (4, -1, -3, 2):0,
+                          (4, 2, -1, -3):0,
+                          (4, 2, -3, -1):0,
+                          (4, -3, -1, 2):0,
+                          (4, -3, 2, -1):0}
 
         goal_ref_dict_to1 = {(-2, 3, 4):[-1],
                             (-2, 4, 3):[-1],
@@ -480,18 +480,18 @@ class InteractionTest(unittest.TestCase):
                                                               part3]))
         myinterlist.append(add_inter)
 
-        goal_ref_dict_to0[(1, -2, 3)] = None
-        goal_ref_dict_to0[(1, 3, -2)] = None
-        goal_ref_dict_to0[(-2, 1, 3)] = None
-        goal_ref_dict_to0[(-2, 3, 1)] = None
-        goal_ref_dict_to0[(3, 1, -2)] = None
-        goal_ref_dict_to0[(3, -2, 1)] = None
-        goal_ref_dict_to0[(-1, 2, -3)] = None
-        goal_ref_dict_to0[(-1, -3, 2)] = None
-        goal_ref_dict_to0[(2, -1, -3)] = None
-        goal_ref_dict_to0[(2, -3, -1)] = None
-        goal_ref_dict_to0[(-3, -1, 2)] = None
-        goal_ref_dict_to0[(-3, 2, -1)] = None
+        goal_ref_dict_to0[(1, -2, 3)] = 0
+        goal_ref_dict_to0[(1, 3, -2)] = 0
+        goal_ref_dict_to0[(-2, 1, 3)] = 0
+        goal_ref_dict_to0[(-2, 3, 1)] = 0
+        goal_ref_dict_to0[(3, 1, -2)] = 0
+        goal_ref_dict_to0[(3, -2, 1)] = 0
+        goal_ref_dict_to0[(-1, 2, -3)] = 0
+        goal_ref_dict_to0[(-1, -3, 2)] = 0
+        goal_ref_dict_to0[(2, -1, -3)] = 0
+        goal_ref_dict_to0[(2, -3, -1)] = 0
+        goal_ref_dict_to0[(-3, -1, 2)] = 0
+        goal_ref_dict_to0[(-3, 2, -1)] = 0
 
         goal_ref_dict_to1[(1, -2)] = [-3]
         goal_ref_dict_to1[(1, 3)] = [2]
@@ -684,7 +684,7 @@ class LegTest(unittest.TestCase):
     def test_leg_list(self):
         """Test leg list initialization"""
 
-        mylist = [copy.copy(self.myleg) for item in range(1,4)]
+        mylist = [copy.copy(self.myleg) for item in range(1, 4)]
         myleglist = base_objects.LegList(mylist)
 
         not_a_leg = 1
@@ -699,21 +699,21 @@ class LegTest(unittest.TestCase):
         # Test counting functions for number of from_group elements
         # that are True
         self.assertFalse(myleglist.minimum_one_from_group())
-        myleglist[0].set('from_group',True)
+        myleglist[0].set('from_group', True)
         self.assertTrue(myleglist.minimum_one_from_group())
         self.assertFalse(myleglist.minimum_two_from_group())
-        myleglist[1].set('from_group',True)
+        myleglist[1].set('from_group', True)
         self.assertTrue(myleglist.minimum_two_from_group())
 
         # Test passesTo1
         ref_dict_to1 = {}
         self.assertFalse(myleglist.passesTo1(ref_dict_to1))
-        ref_dict_to1={(3,3,3):[3]}
-        self.assertEqual(myleglist.passesTo1(ref_dict_to1),[3])
-        myleglist[0].set('from_group',False)
-        myleglist[1].set('from_group',False)
+        ref_dict_to1 = {(3, 3, 3):[3]}
+        self.assertEqual(myleglist.passesTo1(ref_dict_to1), [3])
+        myleglist[0].set('from_group', False)
+        myleglist[1].set('from_group', False)
         self.assertFalse(myleglist.passesTo1(ref_dict_to1))
-        
+
 #===============================================================================
 # VertexTest
 #===============================================================================
@@ -1034,7 +1034,7 @@ class ProcessTest(unittest.TestCase):
                                       'number':5,
                                       'state':'final',
                                       'from_group':False})] * 5)
-    
+
     def setUp(self):
 
         self.mydict = {'legs':self.myleglist,
