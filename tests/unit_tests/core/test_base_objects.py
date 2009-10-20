@@ -788,7 +788,7 @@ class LegTest(unittest.TestCase):
         ref_dict_to1 = {}
         self.assertFalse(myleglist.can_combine_to_1(ref_dict_to1))
         ref_dict_to1 = {(3, 3, 3):[3]}
-        self.assertEqual(myleglist.can_combine_to_1(ref_dict_to1), [3])
+        self.assertTrue(myleglist.can_combine_to_1(ref_dict_to1))
         myleglist[0].set('from_group', False)
         myleglist[1].set('from_group', False)
         self.assertFalse(myleglist.can_combine_to_1(ref_dict_to1))
