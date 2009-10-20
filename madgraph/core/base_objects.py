@@ -329,7 +329,11 @@ class ParticleList(PhysicsObjectList):
 
         for particle in self:
             particle_dict[particle.get('pdg_code')] = particle
-
+            if not particle.get('self_antipart'):
+                antipart = copy.copy(particle)
+                antipart.set('is_part', False)
+                particle_dict[antipart.get_pdg_code()] = antipart
+                
         return particle_dict
 
 
@@ -532,6 +536,7 @@ class Model(PhysicsObject):
 
     def default_setup(self):
 
+        self['name'] = ""
         self['particles'] = ParticleList()
         self['parameters'] = None
         self['interactions'] = InteractionList()
@@ -545,6 +550,11 @@ class Model(PhysicsObject):
     def filter(self, name, value):
         """Filter for model property values"""
 
+        if name == 'name':
+            if not isinstance(value, String):
+                raise self.PhysicsObjectError, \
+                    "Object of type %s is not a string" % \
+                                                            type(value)
         if name == 'particles':
             if not isinstance(value, ParticleList):
                 raise self.PhysicsObjectError, \
@@ -597,6 +607,11 @@ class Model(PhysicsObject):
             
         return super(Model,self).get(name)
 
+    def get_sorted_keys(self):
+        """Return process property names as a nicely sorted list."""
+
+        return ['name', 'particles', 'parameters', 'interactions', 'couplings',
+                'lorentz']
 
 
 #===============================================================================
@@ -791,30 +806,37 @@ class DiagramList(PhysicsObjectList):
 class Process(PhysicsObject):
     """Process: list of legs (ordered)
                 dictionary of orders
+                model
     """
 
     def default_setup(self):
         """Default values for all properties"""
 
-        self['orders'] = {}
         self['legs'] = LegList()
+        self['orders'] = {}
+        self['model'] = Model()
 
     def filter(self, name, value):
         """Filter for valid process property values."""
-
-        if name == 'orders':
-            Interaction.filter(Interaction(), 'orders', value)
 
         if name == 'legs':
             if not isinstance(value, LegList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid LegList object" % str(value)
+        if name == 'orders':
+            Interaction.filter(Interaction(), 'orders', value)
+
+        if name == 'model':
+            if not isinstance(value, Model):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid Model object" % str(value)
+
 
         return True
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return ['legs', 'orders']
+        return ['legs', 'orders', 'model']
 
 

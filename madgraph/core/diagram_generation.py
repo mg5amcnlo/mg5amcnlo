@@ -17,6 +17,8 @@ import itertools
 import copy
 
 import madgraph.core.base_objects as base_objects
+from base_objects import PhysicsObject
+
 
 """Amplitude object, which is what does the job for the diagram
 generation algorithm
@@ -25,7 +27,7 @@ generation algorithm
 #===============================================================================
 # Amplitude
 #===============================================================================
-class Amplitude(base_objects.PhysicsObject):
+class Amplitude(PhysicsObject):
     """Amplitude: process + list of diagrams (ordered)
     Initialize with a process, then call generate_diagrams() to
     generate the diagrams for the amplitude
@@ -55,19 +57,37 @@ class Amplitude(base_objects.PhysicsObject):
 
         return ['diagrams']
 
-    def generate_diagrams(self,proc, ref_dict_to0, ref_dict_to1):
+    def generate_diagrams(self):
         """Generate diagrams. For algorithm, see wiki page
         """
 
+        proc = self['process']
+        model = proc.get('model')
+
         for leg in proc['legs']:
             leg.set('from_group', True)
+            # Need to flip part-antipart for incoming particles, so they are all outgoing
+            if leg.get('state') == 'initial':
+                part = model.get('particle_dict')[leg.get('id')]
+                leg.set('id', part.get_anti_pdg_code())
 
-        max_multi_to1 = max([len(key) for key in ref_dict_to1.keys()])
+        max_multi_to1 = max([len(key) for key in model.get('ref_dict_to1').keys()])
 
-        return self.reduce_diagram(proc.get('legs'), ref_dict_to0, ref_dict_to1, max_multi_to1)
+        reduced_diagrams = self.reduce_diagram(proc.get('legs'),
+                                               max_multi_to1)
+        #        diagrams = [base_objects.Diagram(\
+        #                          {'vertices':base_objects.VertexList(entry)})\
+        #                           for entry in reduced_diagrams]
+        #        self.set('diagrams',
+        #                 base_objects.DiagramList())
+        #        return self.get('diagrams')
+        
+        return reduced_diagrams
 
+    def get_particle(self,id):
+        return self['process'].get('model').get('particle_dict')[id]
 
-    def reduce_diagram(self,curr_proc, ref_dict_to0, ref_dict_to1, max_multi_to1):
+    def reduce_diagram(self, curr_proc, max_multi_to1):
         """Recursive function to reduce N diagrams to N-1
         """
         res = []
@@ -75,8 +95,13 @@ class Amplitude(base_objects.PhysicsObject):
         if curr_proc is None:
             return None
 
+        model = self['process'].get('model')
+        ref_dict_to0 = model.get('ref_dict_to0')
+        ref_dict_to1 = model.get('ref_dict_to1')
+
         if len(curr_proc) == 2:
-            if curr_proc[0].get('id') == curr_proc[1].get('id') and \
+            anti_id = self.get_particle(curr_proc[1].get('id')).get_anti_pdg_code()
+            if curr_proc[0].get('id') == anti_id and \
                    curr_proc[0].get('from_group') and \
                    curr_proc[1].get('from_group'):
                 return [[base_objects.Vertex({'legs':curr_proc,
@@ -94,11 +119,9 @@ class Amplitude(base_objects.PhysicsObject):
         leg_vertex_list = self.reduce_legs(comb_lists, ref_dict_to1)
 
         for leg_vertex_tuple in leg_vertex_list:
-            # print 'vertex=', leg_vertex_tuple[1]
+            # This is where recursion happens
             reduced_diagram = self.reduce_diagram(leg_vertex_tuple[0],
-                                             ref_dict_to0,
-                                             ref_dict_to1,
-                                             max_multi_to1)
+                                                  max_multi_to1)
             if reduced_diagram:
                 vertex_list = list(leg_vertex_tuple[1])
                 vertex_list.append(reduced_diagram)
@@ -212,3 +235,4 @@ class Amplitude(base_objects.PhysicsObject):
                 reslist.extend(rest)
                 res.append(reslist)
         return res
+

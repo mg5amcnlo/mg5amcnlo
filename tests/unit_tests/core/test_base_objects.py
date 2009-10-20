@@ -207,7 +207,8 @@ class ParticleTest(unittest.TestCase):
         self.assertEqual(None,
                          mypartlist.find_name('none'))
 
-        mydict={6:self.mypart}
+        mydict={6:self.mypart,-6:anti_part}
+
         self.assertEqual(mydict,mypartlist.generate_dict())
         
 
@@ -543,6 +544,56 @@ class InteractionTest(unittest.TestCase):
 class ModelTest(unittest.TestCase):
     """Test class for the Model object"""
 
+    mymodel = base_objects.Model()
+    myinterlist = base_objects.InteractionList()
+    mypartlist = base_objects.ParticleList()
+
+    def setUp(self):
+        self.mypartlist.append(base_objects.Particle({'name':'t',
+                  'antiname':'t~',
+                  'spin':2,
+                  'color':3,
+                  'mass':'mt',
+                  'width':'wt',
+                  'texname':'t',
+                  'antitexname':'\\overline{t}',
+                  'line':'straight',
+                  'charge':2. / 3.,
+                  'pdg_code':6,
+                  'propagating':True,
+                  'self_antipart':False}))
+        self.mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        antit = copy.copy(self.mypartlist[0])
+        antit.set('is_part', False)
+
+        self.myinterlist.append(base_objects.Interaction({
+                      'id':1,
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[0], \
+                                             antit, \
+                                             self.mypartlist[1]]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))        
+
+        self.mymodel.set('interactions',self.myinterlist)
+        self.mymodel.set('particles',self.mypartlist)
+
     def test_model_initialization(self):
         """Test the default Model class initialization"""
         mymodel = base_objects.Model()
@@ -599,26 +650,14 @@ class ModelTest(unittest.TestCase):
 
     def test_dictionaries(self):
         # Test the particles item
-        mydict = {'name':'t',
-                  'antiname':'t~',
-                  'spin':2,
-                  'color':3,
-                  'mass':'mt',
-                  'width':'wt',
-                  'texname':'t',
-                  'antitexname':'\\overline{t}',
-                  'line':'straight',
-                  'charge':2. / 3.,
-                  'pdg_code':6,
-                  'propagating':True}
 
-        mypart = base_objects.Particle(mydict)
-        mypartlist = base_objects.ParticleList([mypart])
-        mymodel = base_objects.Model()
-        mymodel.set('particles', mypartlist)
-        mypartdict = {6:mypart}
-        self.assertEqual(mypartdict,mymodel.get('particle_dict'))
+        antitop = copy.copy(self.mypartlist[0])
+        antitop.set('is_part', False)
+        mypartdict = {6:self.mypartlist[0],-6:antitop,21:self.mypartlist[1]}
+        self.assertEqual(mypartdict,self.mymodel.get('particle_dict'))
     
+        myinterdict = {1:self.myinterlist[0]}
+        self.assertEqual(myinterdict,self.mymodel.get('interaction_dict'))
 
 #===============================================================================
 # LegTest
@@ -976,11 +1015,13 @@ class ProcessTest(unittest.TestCase):
                                       'number':5,
                                       'state':'final',
                                       'from_group':False})] * 5)
+    mymodel = base_objects.Model()
 
     def setUp(self):
 
         self.mydict = {'legs':self.myleglist,
-                       'orders':{'QCD':5, 'QED':1}}
+                       'orders':{'QCD':5, 'QED':1},
+                       'model':self.mymodel}
 
         self.myprocess = base_objects.Process(self.mydict)
 
@@ -1050,7 +1091,8 @@ class ProcessTest(unittest.TestCase):
 
         goal = "{\n"
         goal = goal + "    \'legs\': %s,\n" % repr(self.myleglist)
-        goal = goal + "    \'orders\': %s\n}" % repr(self.myprocess['orders'])
+        goal = goal + "    \'orders\': %s,\n" % repr(self.myprocess['orders'])
+        goal = goal + "    \'model\': %s\n}" % repr(self.myprocess['model'])
 
         self.assertEqual(goal, str(self.myprocess))
 

@@ -125,6 +125,8 @@ class DiagramGenerationTest(unittest.TestCase):
 
     mypartlist = base_objects.ParticleList()
     myinterlist = base_objects.InteractionList()
+    mymodel = base_objects.Model()
+    myprocess = base_objects.Process()
 
     ref_dict_to0 = {}
     ref_dict_to1 = {}
@@ -253,11 +255,14 @@ class DiagramGenerationTest(unittest.TestCase):
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
 
+        self.mymodel.set('particles',self.mypartlist)
+        self.mymodel.set('interactions',self.myinterlist)
+
         self.ref_dict_to0 = self.myinterlist.generate_ref_dict()[0]
         self.ref_dict_to1 = self.myinterlist.generate_ref_dict()[1]
 
 
-    def test_combine_legs(self):
+    def test_combine_legs_gluons(self):
 
         # Test gluon interactions
 
@@ -328,40 +333,53 @@ class DiagramGenerationTest(unittest.TestCase):
                                 'number':2,
                                 'state':'initial'})
 
+        vx12 = base_objects.Vertex({'legs':base_objects.LegList([l1, l2, l12])})
+        vx13 = base_objects.Vertex({'legs':base_objects.LegList([l1, l3, l13])})
+        vx14 = base_objects.Vertex({'legs':base_objects.LegList([l1, l4, l14])})
+        vx23 = base_objects.Vertex({'legs':base_objects.LegList([l2, l3, l23])})
+        vx24 = base_objects.Vertex({'legs':base_objects.LegList([l2, l4, l24])})
+        vx34 = base_objects.Vertex({'legs':base_objects.LegList([l3, l4, l34])})
+        vx123 = base_objects.Vertex({'legs':base_objects.LegList([l1, l2, l3, l123])})
+        vx124 = base_objects.Vertex({'legs':base_objects.LegList([l1, l2, l4, l124])})
+        vx134 = base_objects.Vertex({'legs':base_objects.LegList([l1, l3, l4, l134])})
+        vx234 = base_objects.Vertex({'legs':base_objects.LegList([l2, l3, l4, l234])})
         my_reduced_list = [\
-                (base_objects.LegList([(l12), l3, l4]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1, l2, l12])})])), \
-                (base_objects.LegList([(l12), (l34)]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1, l2, l12])}), \
-                                          base_objects.Vertex({'legs':base_objects.LegList([l3, l4, l34])})])), \
-                (base_objects.LegList([(l13), l2, l4]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1, l3, l13])})])), \
-                (base_objects.LegList([(l13), (l24)]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1, l3, l13])}), \
-                                          base_objects.Vertex({'legs':base_objects.LegList([l2, l4, l24])})])), \
-                (base_objects.LegList([(l14), l2, l3]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1, l4, l14])})])), \
-                (base_objects.LegList([(l14), (l23)]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1, l4, l14])}), \
-                                          base_objects.Vertex({'legs':base_objects.LegList([l2, l3, l23])})])), \
-                (base_objects.LegList([(l23), l1, l4]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l2, l3, l23])})])), \
-                (base_objects.LegList([(l24), l1, l3]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l2, l4, l24])})])), \
-                (base_objects.LegList([(l34), l1, l2]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l3, l4, l34])})])), \
-                (base_objects.LegList([(l123), l4]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1, l2, l3, l123])})])), \
-                (base_objects.LegList([(l124), l3]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1, l2, l4, l124])})])), \
-                (base_objects.LegList([(l134), l2]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1, l3, l4, l134])})])), \
-                (base_objects.LegList([(l234), l1]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l2, l3, l4, l234])})])), \
+                (base_objects.LegList([l12, l3, l4]), \
+                 base_objects.VertexList([vx12])), \
+                (base_objects.LegList([l12, l34]), \
+                 base_objects.VertexList([vx12, \
+                                          vx34])), \
+                (base_objects.LegList([l13, l2, l4]), \
+                 base_objects.VertexList([vx13])), \
+                (base_objects.LegList([l13, l24]), \
+                 base_objects.VertexList([vx13, \
+                                          vx24])), \
+                (base_objects.LegList([l14, l2, l3]), \
+                 base_objects.VertexList([vx14])), \
+                (base_objects.LegList([l14, l23]), \
+                 base_objects.VertexList([vx14, \
+                                          vx23])), \
+                (base_objects.LegList([l23, l1, l4]), \
+                 base_objects.VertexList([vx23])), \
+                (base_objects.LegList([l24, l1, l3]), \
+                 base_objects.VertexList([vx24])), \
+                (base_objects.LegList([l34, l1, l2]), \
+                 base_objects.VertexList([vx34])), \
+                (base_objects.LegList([l123, l4]), \
+                 base_objects.VertexList([vx123])), \
+                (base_objects.LegList([l124, l3]), \
+                 base_objects.VertexList([vx124])), \
+                (base_objects.LegList([l134, l2]), \
+                 base_objects.VertexList([vx134])), \
+                (base_objects.LegList([l234, l1]), \
+                 base_objects.VertexList([vx234])), \
                 ]
+
         self.assertEqual(reduced_list.__str__(), my_reduced_list.__str__())
 
-        # Test with 2 quarks+2 antiquarks (already flipped sign for IS)
+    def test_combine_legs_uux_ddx(self):
+        
+        # Test with 2 quarks+2 antiquarks
 
         myleglist = base_objects.LegList()
 
@@ -413,28 +431,35 @@ class DiagramGenerationTest(unittest.TestCase):
         l34phot = base_objects.Leg({'id':22,
                                 'number':3,
                                 'state':'final'})
+        vx12glue = base_objects.Vertex({'legs':base_objects.LegList([l1, l2, l12glue])})
+        vx12phot = base_objects.Vertex({'legs':base_objects.LegList([l1, l2, l12phot])})
+        vx34glue = base_objects.Vertex({'legs':base_objects.LegList([l3, l4, l34glue])})
+        vx34phot = base_objects.Vertex({'legs':base_objects.LegList([l3, l4, l34phot])})
+
         my_reduced_list = [\
                 (base_objects.LegList([l12glue, l3, l4]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1, l2, l12glue])})])), \
+                 base_objects.VertexList([vx12glue])), \
                 (base_objects.LegList([l12phot, l3, l4]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1, l2, l12phot])})])), \
+                 base_objects.VertexList([vx12phot])), \
                 (base_objects.LegList([l12glue, l34glue]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1, l2, l12glue])}), base_objects.Vertex({'legs':base_objects.LegList([l3, l4, l34glue])})])), \
+                 base_objects.VertexList([vx12glue, vx34glue])), \
                 (base_objects.LegList([l12glue, l34phot]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1, l2, l12glue])}), base_objects.Vertex({'legs':base_objects.LegList([l3, l4, l34phot])})])), \
+                 base_objects.VertexList([vx12glue, vx34phot])), \
                 (base_objects.LegList([l12phot, l34glue]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1, l2, l12phot])}), base_objects.Vertex({'legs':base_objects.LegList([l3, l4, l34glue])})])), \
+                 base_objects.VertexList([vx12phot, vx34glue])), \
                 (base_objects.LegList([l12phot, l34phot]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l1, l2, l12phot])}), base_objects.Vertex({'legs':base_objects.LegList([l3, l4, l34phot])})])), \
+                 base_objects.VertexList([vx12phot, vx34phot])), \
                 (base_objects.LegList([l34glue, l1, l2]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l3, l4, l34glue])})])), \
+                 base_objects.VertexList([vx34glue])), \
                 (base_objects.LegList([l34phot, l1, l2]), \
-                 base_objects.VertexList([base_objects.Vertex({'legs':base_objects.LegList([l3, l4, l34phot])})])), \
+                 base_objects.VertexList([vx34phot])), \
                 ]
 
         self.assertEqual(reduced_list.__str__(), my_reduced_list.__str__())
 
-        # Now test with 3 quarks+3 antiquarks (already flipped sign for IS)
+    def test_combine_legs_uux_uuxuux(self):
+
+        # Now test with 3 quarks+3 antiquarks
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':-2,
@@ -491,9 +516,9 @@ class DiagramGenerationTest(unittest.TestCase):
         self.assertEqual(combined_legs, my_combined_legs)
 
 
-    def test_diagram_generation(self):
+    def test_diagram_generation_gluons(self):
 
-        for ngluon in range (2, 4):
+        for ngluon in range (2, 5):
 
             myleglist = base_objects.LegList([base_objects.Leg({'id':21,
                                               'number':num,
@@ -504,14 +529,15 @@ class DiagramGenerationTest(unittest.TestCase):
             myleglist[1].set('state', 'initial')
 
             myproc = base_objects.Process({'legs':myleglist,
-                                           'orders':{'QCD':ngluon}})
+                                                'orders':{'QCD':ngluon},
+                                                'model':self.mymodel})
+
+            self.myamplitude.set('process',myproc)
 
             print "Number of diagrams for %d gluons: %d" % (ngluon, \
-                len(self.myamplitude.generate_diagrams(myproc, \
-                                                         self.ref_dict_to0, \
-                                                         self.ref_dict_to1)))
+                len(self.myamplitude.generate_diagrams()))
 
-    def test_diagram_generation2(self):
+    def test_diagram_generation_uux_ddx(self):
 
         # Test with 2 quarks+2 antiquarks (already flipped sign for IS)
 
@@ -534,11 +560,12 @@ class DiagramGenerationTest(unittest.TestCase):
         l3 = myleglist[2]
         l4 = myleglist[3]
 
-        myproc = base_objects.Process({'legs':myleglist})
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
 
-        self.assertEqual(len(self.myamplitude.generate_diagrams(myproc,
-                                                     self.ref_dict_to0,
-                                                     self.ref_dict_to1)), 3)
+        self.myamplitude.set('process',myproc)
+
+        self.assertEqual(len(self.myamplitude.generate_diagrams()),3)
 
     def test_expand_list(self):
 
