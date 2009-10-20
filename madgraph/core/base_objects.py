@@ -321,6 +321,17 @@ class ParticleList(PhysicsObjectList):
 
         return None
 
+    def generate_dict(self):
+        """Generate a dictionary from particle id to particle.
+        """
+
+        particle_dict = {}
+
+        for particle in self:
+            particle_dict[particle.get('pdg_code')] = particle
+
+        return particle_dict
+
 
 #===============================================================================
 # Interaction
@@ -341,6 +352,7 @@ class Interaction(PhysicsObject):
     def default_setup(self):
         """Default values for all properties"""
 
+        self['id'] = 0
         self['particles'] = []
         self['color'] = []
         self['lorentz'] = []
@@ -349,6 +361,12 @@ class Interaction(PhysicsObject):
 
     def filter(self, name, value):
         """Filter for valid interaction property values."""
+
+        if name == 'id':
+            #Should be a list of valid particle names
+            if not isinstance(value, int):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid integer" % str(value)
 
         if name == 'particles':
             #Should be a list of valid particle names
@@ -494,6 +512,16 @@ class InteractionList(PhysicsObjectList):
 
         return [ref_dict_to0, ref_dict_to1]
 
+    def generate_dict(self):
+        """Generate a dictionary from interaction id to interaction.
+        """
+
+        interaction_dict = {}
+
+        for inter in self:
+            interaction_dict[inter.get('id')] = inter
+
+        return interaction_dict
 
 
 #===============================================================================
@@ -509,6 +537,10 @@ class Model(PhysicsObject):
         self['interactions'] = InteractionList()
         self['couplings'] = None
         self['lorentz'] = None
+        self['particle_dict'] = {}
+        self['interaction_dict'] = {}
+        self['ref_dict_to0'] = {}
+        self['ref_dict_to1'] = {}
 
     def filter(self, name, value):
         """Filter for model property values"""
@@ -523,8 +555,49 @@ class Model(PhysicsObject):
                raise self.PhysicsObjectError, \
                    "Object of type %s is not a InteractionList object" % \
                                                            type(value)
+        if name == 'particle_dict':
+            if not isinstance(value, dictionary):
+                raise self.PhysicsObjectError, \
+                    "Object of type %s is not a dictionary" % \
+                                                        type(value)
+        if name == 'interaction_dict':
+            if not isinstance(value, dictionary):
+                raise self.PhysicsObjectError, \
+                    "Object of type %s is not a dictionary" % \
+                                                        type(value)
+
+        if name == 'ref_dict_to0':
+            if not isinstance(value, dictionary):
+                raise self.PhysicsObjectError, \
+                    "Object of type %s is not a dictionary" % \
+                                                        type(value)
+        if name == 'ref_dict_to1':
+            if not isinstance(value, dictionary):
+                raise self.PhysicsObjectError, \
+                    "Object of type %s is not a dictionary" % \
+                                                        type(value)
 
         return True
+
+    def get(self, name):
+        """Get the value of the property name."""
+        
+        if (name == 'ref_dict_to0' or name == 'ref_dict_to1') and not self[name]:
+            if self['interactions']:
+                [self['ref_dict_to0'],self['ref_dict_to1']] = \
+                                      self['interactions'].generate_ref_dict()
+            
+        if (name == 'particle_dict') and not self[name]:
+            if self['particles']:
+                self['particle_dict'] = self['particles'].generate_dict()
+            
+        if (name == 'interaction_dict') and not self[name]:
+            if self['interactions']:
+                self['interaction_dict'] = self['interactions'].generate_dict()
+            
+        return super(Model,self).get(name)
+
+
 
 #===============================================================================
 # Leg
@@ -712,34 +785,6 @@ class DiagramList(PhysicsObjectList):
 
        return isinstance(obj, Diagram)
 
-
-#===============================================================================
-# Amplitude
-#===============================================================================
-class Amplitude(PhysicsObject):
-    """Amplitude: list of diagrams (ordered)
-    """
-
-    def default_setup(self):
-        """Default values for all properties"""
-
-        self['diagrams'] = DiagramList()
-
-    def filter(self, name, value):
-        """Filter for valid amplitude property values."""
-
-        if name == 'diagrams':
-            if not isinstance(value, DiagramList):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid DiagramList object" % str(value)
-
-        return True
-
-    def get_sorted_keys(self):
-        """Return diagram property names as a nicely sorted list."""
-
-        return ['diagrams']
-
 #===============================================================================
 # Process
 #===============================================================================
@@ -771,3 +816,5 @@ class Process(PhysicsObject):
         """Return process property names as a nicely sorted list."""
 
         return ['legs', 'orders']
+
+

@@ -178,6 +178,7 @@ def read_interactions_v4(fsock, ref_part_list):
                     return ret_dict
 
                 myinter.set('orders', count_duplicates_in_list(order_list))
+                myinter.set('id',len(myinterlist)+1)
 
                 myinterlist.append(myinter)
 

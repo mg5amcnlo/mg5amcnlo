@@ -140,7 +140,8 @@ class IOImportV4Test(unittest.TestCase):
 
         goal_inter_list = base_objects.InteractionList([ \
                     base_objects.Interaction(
-                                    {'particles':base_objects.ParticleList([
+                                    {'id':1,
+                                     'particles':base_objects.ParticleList([
                                                                 wplus,
                                                                 wmin,
                                                                 photon]),
@@ -149,7 +150,8 @@ class IOImportV4Test(unittest.TestCase):
                                      'couplings':{(0, 0):'MGVX3'},
                                      'orders':{'QED':1}}),
                      base_objects.Interaction(
-                                    {'particles':base_objects.ParticleList([
+                                    {'id':2,
+                                     'particles':base_objects.ParticleList([
                                                                 gluon,
                                                                 gluon,
                                                                 t1]),
@@ -158,7 +160,8 @@ class IOImportV4Test(unittest.TestCase):
                                      'couplings':{(0, 0):'MGVX2'},
                                      'orders':{'QCD':1}}),
                      base_objects.Interaction(
-                                    {'particles':base_objects.ParticleList([
+                                    {'id':3,
+                                     'particles':base_objects.ParticleList([
                                                                 wplus,
                                                                 wmin,
                                                                 wplus,

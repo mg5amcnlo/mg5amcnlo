@@ -22,6 +22,102 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 
 #===============================================================================
+# AmplitudeTest
+#===============================================================================
+class AmplitudeTest(unittest.TestCase):
+    """Test class for the Amplitude object"""
+
+    mydict = {}
+    myamplitude = None
+    myleglist = base_objects.LegList([base_objects.Leg({'id':3,
+                                      'number':5,
+                                      'state':'final',
+                                      'from_group':False})] * 10)
+    myvertexlist = base_objects.VertexList([base_objects.Vertex({'id':3,
+                                      'legs':myleglist})] * 10)
+
+
+    mydiaglist = base_objects.DiagramList([base_objects.Diagram(\
+                                        {'vertices':myvertexlist})] * 100)
+
+    myprocess = base_objects.Process()
+
+    def setUp(self):
+
+        self.mydict = {'diagrams':self.mydiaglist,'process':self.myprocess}
+
+        self.myamplitude = diagram_generation.Amplitude(self.mydict)
+
+    def test_setget_amplitude_correct(self):
+        "Test correct Amplitude object __init__, get and set"
+
+        myamplitude2 = diagram_generation.Amplitude()
+
+        for prop in self.mydict.keys():
+            myamplitude2.set(prop, self.mydict[prop])
+
+        self.assertEqual(self.myamplitude, myamplitude2)
+
+        for prop in self.myamplitude.keys():
+            self.assertEqual(self.myamplitude.get(prop), self.mydict[prop])
+
+    def test_setget_amplitude_exceptions(self):
+        "Test error raising in Amplitude __init__, get and set"
+
+        wrong_dict = self.mydict
+        wrong_dict['wrongparam'] = 'wrongvalue'
+
+        a_number = 0
+
+        # Test init
+        self.assertRaises(diagram_generation.Amplitude.PhysicsObjectError,
+                          diagram_generation.Amplitude,
+                          wrong_dict)
+        self.assertRaises(diagram_generation.Amplitude.PhysicsObjectError,
+                          diagram_generation.Amplitude,
+                          a_number)
+
+        # Test get
+        self.assertRaises(diagram_generation.Amplitude.PhysicsObjectError,
+                          self.myamplitude.get,
+                          a_number)
+        self.assertRaises(diagram_generation.Amplitude.PhysicsObjectError,
+                          self.myamplitude.get,
+                          'wrongparam')
+
+        # Test set
+        self.assertRaises(diagram_generation.Amplitude.PhysicsObjectError,
+                          self.myamplitude.set,
+                          a_number, 0)
+        self.assertRaises(diagram_generation.Amplitude.PhysicsObjectError,
+                          self.myamplitude.set,
+                          'wrongparam', 0)
+
+    def test_values_for_prop(self):
+        """Test filters for amplitude properties"""
+
+        test_values = [{'prop':'diagrams',
+                        'right_list':[self.mydiaglist],
+                        'wrong_list':['a', {}]}
+                       ]
+
+        temp_amplitude = self.myamplitude
+
+        for test in test_values:
+            for x in test['right_list']:
+                self.assert_(temp_amplitude.set(test['prop'], x))
+            for x in test['wrong_list']:
+                self.assertFalse(temp_amplitude.set(test['prop'], x))
+
+    def test_representation(self):
+        """Test amplitude object string representation."""
+
+        goal = "{\n"
+        goal = goal + "    \'diagrams\': %s\n}" % repr(self.mydiaglist)
+
+        self.assertEqual(goal, str(self.myamplitude))
+
+#===============================================================================
 # DiagramGenerationTest
 #===============================================================================
 class DiagramGenerationTest(unittest.TestCase):
@@ -32,6 +128,8 @@ class DiagramGenerationTest(unittest.TestCase):
 
     ref_dict_to0 = {}
     ref_dict_to1 = {}
+
+    myamplitude = diagram_generation.Amplitude()
 
     def setUp(self):
 
@@ -185,14 +283,14 @@ class DiagramGenerationTest(unittest.TestCase):
                 [(l1, l3, l4), l2], [(l2, l3, l4), l1]\
                 ]
 
-        combined_legs = diagram_generation.combine_legs([leg for leg in myleglist], \
+        combined_legs = self.myamplitude.combine_legs([leg for leg in myleglist], \
                                                         self.ref_dict_to1, \
                                                         3)
         self.assertEqual(combined_legs, my_combined_legs)
 
         # Now test the reduction of legs for this
 
-        reduced_list = diagram_generation.reduce_legs(combined_legs, self.ref_dict_to1)
+        reduced_list = self.myamplitude.reduce_legs(combined_legs, self.ref_dict_to1)
 
         l1.set('from_group', False)
         l2.set('from_group', False)
@@ -289,14 +387,14 @@ class DiagramGenerationTest(unittest.TestCase):
                 [(l3, l4), l1, l2] \
                 ]
 
-        combined_legs = diagram_generation.combine_legs([leg for leg in myleglist], \
+        combined_legs = self.myamplitude.combine_legs([leg for leg in myleglist], \
                                                         self.ref_dict_to1, \
                                                         3)
         self.assertEqual(combined_legs, my_combined_legs)
 
         # Now test the reduction of legs for this
 
-        reduced_list = diagram_generation.reduce_legs(combined_legs, self.ref_dict_to1)
+        reduced_list = self.myamplitude.reduce_legs(combined_legs, self.ref_dict_to1)
 
         l1.set('from_group', False)
         l2.set('from_group', False)
@@ -387,7 +485,7 @@ class DiagramGenerationTest(unittest.TestCase):
                 [(l5, l6), l1, l2, l3, l4]
                 ]
 
-        combined_legs = diagram_generation.combine_legs([leg for leg in myleglist], \
+        combined_legs = self.myamplitude.combine_legs([leg for leg in myleglist], \
                                                         self.ref_dict_to1, \
                                                         3)
         self.assertEqual(combined_legs, my_combined_legs)
@@ -395,7 +493,7 @@ class DiagramGenerationTest(unittest.TestCase):
 
     def test_diagram_generation(self):
 
-        for ngluon in range (2, 7):
+        for ngluon in range (2, 4):
 
             myleglist = base_objects.LegList([base_objects.Leg({'id':21,
                                               'number':num,
@@ -409,7 +507,7 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'orders':{'QCD':ngluon}})
 
             print "Number of diagrams for %d gluons: %d" % (ngluon, \
-                len(diagram_generation.generate_diagrams(myproc, \
+                len(self.myamplitude.generate_diagrams(myproc, \
                                                          self.ref_dict_to0, \
                                                          self.ref_dict_to1)))
 
@@ -438,7 +536,7 @@ class DiagramGenerationTest(unittest.TestCase):
 
         myproc = base_objects.Process({'legs':myleglist})
 
-        self.assertEqual(len(diagram_generation.generate_diagrams(myproc,
+        self.assertEqual(len(self.myamplitude.generate_diagrams(myproc,
                                                      self.ref_dict_to0,
                                                      self.ref_dict_to1)), 3)
 
@@ -448,5 +546,5 @@ class DiagramGenerationTest(unittest.TestCase):
 
         goal_list = [[1, 3, 4], [1, 3, 5], [2, 3, 4], [2, 3, 5]]
 
-        self.assertEqual(diagram_generation.expand_list(mylist), goal_list)
+        self.assertEqual(self.myamplitude.expand_list(mylist), goal_list)
 
