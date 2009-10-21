@@ -99,19 +99,17 @@ class Amplitude(PhysicsObject):
         ref_dict_to0 = model.get('ref_dict_to0')
         ref_dict_to1 = model.get('ref_dict_to1')
 
+        final_index = curr_proc.can_combine_to_0(ref_dict_to0)
+        if final_index != None:
+            res.append([base_objects.Vertex({'legs':curr_proc,
+                                             'id':final_index})])
+
         if len(curr_proc) == 2:
-            anti_id = self.get_particle(curr_proc[1].get('id')).get_anti_pdg_code()
-            if curr_proc[0].get('id') == anti_id and \
-                   curr_proc[0].get('from_group') and \
-                   curr_proc[1].get('from_group'):
-                return [[base_objects.Vertex({'legs':curr_proc,
-                                              'id':0})]]
+            if res:
+                return res
             else:
                 return None
 
-        final_vertex = curr_proc.passesTo0(ref_dict_to0)
-        if final_vertex:
-            res.append([final_vertex])
 
         comb_lists = self.combine_legs(curr_proc,
                                        ref_dict_to1, max_multi_to1)
@@ -140,8 +138,7 @@ class Amplitude(PhysicsObject):
 
         for comb_length in range(2, max_multi_to1 + 1):
             for comb in itertools.combinations(list_legs, comb_length):
-                newleg = base_objects.LegList(comb).passesTo1(ref_dict_to1)
-                if newleg:
+                if base_objects.LegList(comb).can_combine_to_1(ref_dict_to1):
                     res_list = copy.copy(list_legs)
                     for leg in comb:
                         res_list.remove(leg)
@@ -192,8 +189,8 @@ class Amplitude(PhysicsObject):
                     for myleg in mylegs:
                         myleglist = base_objects.LegList(list(entry))
                         myleglist.append(myleg)
-                        vlist.append(base_objects.Vertex({'legs':myleglist,
                         # Change id here
+                        vlist.append(base_objects.Vertex({'legs':myleglist,
                                                           'id':0}))
                     vertex_list.append(vlist)
                 else:

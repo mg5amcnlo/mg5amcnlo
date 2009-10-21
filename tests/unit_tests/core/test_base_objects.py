@@ -211,6 +211,10 @@ class ParticleTest(unittest.TestCase):
 
         self.assertEqual(mydict,mypartlist.generate_dict())
         
+        my_ref_dict={(6,-6):0, (-6,6):0}
+
+        self.assertEqual(my_ref_dict,mypartlist.generate_ref_dict())
+                
 
 #===============================================================================
 # InteractionTest
@@ -780,14 +784,14 @@ class LegTest(unittest.TestCase):
         myleglist[1].set('from_group', True)
         self.assertTrue(myleglist.minimum_two_from_group())
 
-        # Test passesTo1
+        # Test can_combine_to_1
         ref_dict_to1 = {}
-        self.assertFalse(myleglist.passesTo1(ref_dict_to1))
+        self.assertFalse(myleglist.can_combine_to_1(ref_dict_to1))
         ref_dict_to1 = {(3, 3, 3):[3]}
-        self.assertEqual(myleglist.passesTo1(ref_dict_to1), [3])
+        self.assertEqual(myleglist.can_combine_to_1(ref_dict_to1), [3])
         myleglist[0].set('from_group', False)
         myleglist[1].set('from_group', False)
-        self.assertFalse(myleglist.passesTo1(ref_dict_to1))
+        self.assertFalse(myleglist.can_combine_to_1(ref_dict_to1))
 
 #===============================================================================
 # VertexTest

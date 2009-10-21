@@ -518,6 +518,10 @@ class DiagramGenerationTest(unittest.TestCase):
 
     def test_diagram_generation_gluons(self):
 
+        goal_ndiags = [4,25,220]
+
+        print # to get nicer output
+        
         for ngluon in range (2, 5):
 
             myleglist = base_objects.LegList([base_objects.Leg({'id':21,
@@ -534,8 +538,12 @@ class DiagramGenerationTest(unittest.TestCase):
 
             self.myamplitude.set('process',myproc)
 
+            ndiags = len(self.myamplitude.generate_diagrams())
+
             print "Number of diagrams for %d gluons: %d" % (ngluon, \
-                len(self.myamplitude.generate_diagrams()))
+                                                            ndiags)
+
+            self.assertEqual(ndiags,goal_ndiags[ngluon-2])
 
     def test_diagram_generation_uux_ddx(self):
 

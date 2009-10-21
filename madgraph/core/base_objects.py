@@ -321,6 +321,19 @@ class ParticleList(PhysicsObjectList):
 
         return None
 
+    def generate_ref_dict(self):
+        """Generate the reference dictionaries from interaction list.
+        Return a list where the first element is the n>0 dictionary and
+        the second one is n-1>1."""
+
+        ref_dict_to0 = {}
+
+        for part in self:
+            ref_dict_to0[(part.get_pdg_code(),part.get_anti_pdg_code())]=0
+            ref_dict_to0[(part.get_anti_pdg_code(),part.get_pdg_code())]=0
+
+        return ref_dict_to0
+
     def generate_dict(self):
         """Generate a dictionary from particle id to particle.
         """
@@ -460,10 +473,10 @@ class Interaction(PhysicsObject):
         for permut in self.__permutate(self['particles']):
             pdg_tuple = tuple([p.get_pdg_code() for p in permut])
             if pdg_tuple not in ref_dict_to0.keys():
-                ref_dict_to0[pdg_tuple] = 0
+                ref_dict_to0[pdg_tuple] = self['id']
             pdg_tuple = tuple([p.get_anti_pdg_code() for p in permut])
             if pdg_tuple not in ref_dict_to0.keys():
-                ref_dict_to0[pdg_tuple] = 0
+                ref_dict_to0[pdg_tuple] = self['id']
 
         # Create n-1>1 entries Comment by Johan: Note that, in the n-1
         # > 1 dictionnary, the 1 entry should have opposite sign as
@@ -596,6 +609,7 @@ class Model(PhysicsObject):
             if self['interactions']:
                 [self['ref_dict_to0'],self['ref_dict_to1']] = \
                                       self['interactions'].generate_ref_dict()
+                self['ref_dict_to0'].update(self['particles'].generate_ref_dict())
             
         if (name == 'particle_dict') and not self[name]:
             if self['particles']:
@@ -689,18 +703,15 @@ class LegList(PhysicsObjectList):
 
        return len(self.from_group_elements()) > 1
 
-    def passesTo1(self, ref_dict_to1):
+    def can_combine_to_1(self, ref_dict_to1):
        """If has at least one 'from_group' True and in ref_dict_to1,
           return the return list from ref_dict_to1, otherwise return None"""
        if self.minimum_one_from_group():
-           try:
-               return ref_dict_to1[tuple([leg.get('id') for leg in self])]
-           except KeyError:
-               return None
+           return ref_dict_to1.has_key(tuple([leg.get('id') for leg in self]))
        else:
-           return None
+           return False
 
-    def passesTo0(self, ref_dict_to0):
+    def can_combine_to_0(self, ref_dict_to0):
        """If has at least two 'from_group' True and in ref_dict_to0,
           return the vertex (with id from ref_dict_to0), otherwise return None"""
        if self.minimum_two_from_group():
