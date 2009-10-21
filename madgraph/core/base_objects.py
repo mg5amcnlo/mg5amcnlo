@@ -496,18 +496,18 @@ class Interaction(PhysicsObject):
                 pdg_tuple = tuple([p.get_pdg_code() for p in permut])
                 pdg_part = part.get_anti_pdg_code()
                 if pdg_tuple in ref_dict_to1.keys():
-                    if pdg_part not in  ref_dict_to1[pdg_tuple]:
-                        ref_dict_to1[pdg_tuple].append(pdg_part)
+                    if (pdg_part, self['id']) not in  ref_dict_to1[pdg_tuple]:
+                        ref_dict_to1[pdg_tuple].append((pdg_part, self['id']))
                 else:
-                    ref_dict_to1[pdg_tuple] = [pdg_part]
+                    ref_dict_to1[pdg_tuple] = [(pdg_part, self['id'])]
                 # Add hermitian conjugate
                 pdg_tuple = tuple([p.get_anti_pdg_code() for p in permut])
                 pdg_part = part.get_pdg_code()
                 if pdg_tuple in ref_dict_to1.keys():
-                    if pdg_part not in  ref_dict_to1[pdg_tuple]:
-                        ref_dict_to1[pdg_tuple].append(pdg_part)
+                    if (pdg_part, self['id']) not in  ref_dict_to1[pdg_tuple]:
+                        ref_dict_to1[pdg_tuple].append((pdg_part, self['id']))
                 else:
-                    ref_dict_to1[pdg_tuple] = [pdg_part]
+                    ref_dict_to1[pdg_tuple] = [(pdg_part, self['id'])]
 
 
 #===============================================================================

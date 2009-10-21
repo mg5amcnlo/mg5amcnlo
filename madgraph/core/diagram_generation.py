@@ -210,8 +210,10 @@ class Amplitude(base_objects.PhysicsObject):
                 if isinstance(entry, tuple):
 
                     # Build the leg object which will replace the combination:
-                    # 1) Id is as given in the ref_dict
-                    ids = ref_dict_to1[tuple([leg.get('id') for leg in entry])]
+                    # 1) leg ids is as given in the ref_dict
+                    leg_ids = [elem[0] for elem in \
+                           ref_dict_to1[tuple([leg.get('id') \
+                                               for leg in entry])]]
                     # 2) number is the minimum of leg numbers involved in the
                     # combination
                     number = min([leg.get('number') for leg in entry])
@@ -226,22 +228,29 @@ class Amplitude(base_objects.PhysicsObject):
                     from_group = True
                     # Create and add the object
                     mylegs = base_objects.LegList([base_objects.Leg(
-                                    {'id':id,
+                                    {'id':leg_id,
                                      'number':number,
                                      'state':state,
-                                     'from_group':from_group}) for id in ids])
+                                     'from_group':from_group}) \
+                                    for leg_id in leg_ids])
                     reduced_list.append(mylegs)
                     vlist = base_objects.VertexList()
 
                     # Create and add the corresponding vertex
+                    # Extract vertex ids corresponding to the various legs
+                    # in mylegs
+                    vert_ids = [elem[1] for elem in \
+                           ref_dict_to1[tuple([leg.get('id') \
+                                               for leg in entry])]]
                     for myleg in mylegs:
                         # Start with the considered combination...
                         myleglist = base_objects.LegList(list(entry))
                         # ... and complete with legs after reducing
                         myleglist.append(myleg)
-                        # CHANGE ID HERE
-                        vlist.append(base_objects.Vertex({'legs':myleglist,
-                                                          'id':0}))
+                        # ... and consider the correct vertex id
+                        vlist.append(base_objects.Vertex(
+                                         {'legs':myleglist,
+                                          'id':vert_ids[mylegs.index(myleg)]}))
                     vertex_list.append(vlist)
 
                 # If entry is not a combination, switch the from_group flag
