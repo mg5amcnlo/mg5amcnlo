@@ -184,7 +184,8 @@ class ParticleTest(unittest.TestCase):
         self.assertEqual(test_part.get_pdg_code(), 6)
 
     def test_particle_list(self):
-        """Test particle list initialization and search"""
+        """Test particle list initialization, search and dict generation
+        functions."""
 
         mylist = [self.mypart] * 10
         mypartlist = base_objects.ParticleList(mylist)
@@ -207,14 +208,14 @@ class ParticleTest(unittest.TestCase):
         self.assertEqual(None,
                          mypartlist.find_name('none'))
 
-        mydict={6:self.mypart,-6:anti_part}
+        mydict = {6:self.mypart, -6:anti_part}
 
-        self.assertEqual(mydict,mypartlist.generate_dict())
-        
-        my_ref_dict={(6,-6):0, (-6,6):0}
+        self.assertEqual(mydict, mypartlist.generate_dict())
 
-        self.assertEqual(my_ref_dict,mypartlist.generate_ref_dict())
-                
+        my_ref_dict = {(6, -6):0, (-6, 6):0}
+
+        self.assertEqual(my_ref_dict, mypartlist.generate_ref_dict())
+
 
 #===============================================================================
 # InteractionTest
@@ -358,7 +359,7 @@ class InteractionTest(unittest.TestCase):
     def test_generating_dict(self):
         """Test the dictionary generation routine"""
 
-        # Create a non trivial interaction
+        # Create a non trivial 4-interaction
         part1 = base_objects.Particle()
         part1.set('pdg_code', 1)
         part2 = base_objects.Particle()
@@ -482,6 +483,8 @@ class InteractionTest(unittest.TestCase):
         self.assertEqual(ref_dict_to0, goal_ref_dict_to0)
         self.assertEqual(ref_dict_to1, goal_ref_dict_to1)
 
+        # Check it still work if I add a 3-interaction
+
         myinterlist = base_objects.InteractionList([myinter] * 10)
 
         add_inter = base_objects.Interaction()
@@ -522,24 +525,23 @@ class InteractionTest(unittest.TestCase):
     def test_interaction_list(self):
         """Test interaction list initialization"""
 
+        # Create a dummy list of interactions with ids
         mylist = [copy.copy(inter) for inter in [self.myinter] * 3]
-
-        for i in range(1,4):
-            mylist[i-1].set('id',i)
-            
+        for i in range(1, 4):
+            mylist[i - 1].set('id', i)
         myinterlist = base_objects.InteractionList(mylist)
 
+        # Check error raising
         not_a_inter = 1
-
         self.assertRaises(base_objects.InteractionList.PhysicsObjectListError,
                           myinterlist.append,
                           not_a_inter)
-        mydict = {}
-        
-        for i in range(1,4):
-            mydict[i]=myinterlist[i-1]
 
-        self.assertEqual(mydict,myinterlist.generate_dict())
+        # Check reference dict
+        mydict = {}
+        for i in range(1, 4):
+            mydict[i] = myinterlist[i - 1]
+        self.assertEqual(mydict, myinterlist.generate_dict())
 
 
 #===============================================================================
@@ -553,6 +555,8 @@ class ModelTest(unittest.TestCase):
     mypartlist = base_objects.ParticleList()
 
     def setUp(self):
+
+        # Create a model with gluon and top quark + a single interaction
         self.mypartlist.append(base_objects.Particle({'name':'t',
                   'antiname':'t~',
                   'spin':2,
@@ -593,16 +597,19 @@ class ModelTest(unittest.TestCase):
                       'color': ['C1'],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':1}}))        
+                      'orders':{'QCD':1}}))
 
-        self.mymodel.set('interactions',self.myinterlist)
-        self.mymodel.set('particles',self.mypartlist)
+        self.mymodel.set('interactions', self.myinterlist)
+        self.mymodel.set('particles', self.mypartlist)
 
     def test_model_initialization(self):
         """Test the default Model class initialization"""
         mymodel = base_objects.Model()
 
-        self.assertEqual(mymodel['particles'], base_objects.ParticleList())
+        self.assertEqual(mymodel['particles'],
+                         base_objects.ParticleList())
+        self.assertEqual(mymodel['interactions'],
+                         base_objects.InteractionList())
 
     def test_setget_model_correct(self):
         """Test correct Model object get and set"""
@@ -653,15 +660,15 @@ class ModelTest(unittest.TestCase):
         self.assertFalse(mymodel.set('interactions', not_a_string))
 
     def test_dictionaries(self):
-        # Test the particles item
+        """Test particle dictionary in Model"""
 
         antitop = copy.copy(self.mypartlist[0])
         antitop.set('is_part', False)
-        mypartdict = {6:self.mypartlist[0],-6:antitop,21:self.mypartlist[1]}
-        self.assertEqual(mypartdict,self.mymodel.get('particle_dict'))
-    
+        mypartdict = {6:self.mypartlist[0], -6:antitop, 21:self.mypartlist[1]}
+        self.assertEqual(mypartdict, self.mymodel.get('particle_dict'))
+
         myinterdict = {1:self.myinterlist[0]}
-        self.assertEqual(myinterdict,self.mymodel.get('interaction_dict'))
+        self.assertEqual(myinterdict, self.mymodel.get('interaction_dict'))
 
 #===============================================================================
 # LegTest
@@ -761,7 +768,8 @@ class LegTest(unittest.TestCase):
         self.assertEqual(goal, str(self.myleg))
 
     def test_leg_list(self):
-        """Test leg list initialization"""
+        """Test leg list initialization and counting functions
+        for legs with 'from_group' = True"""
 
         mylist = [copy.copy(self.myleg) for item in range(1, 4)]
         myleglist = base_objects.LegList(mylist)
@@ -792,6 +800,20 @@ class LegTest(unittest.TestCase):
         myleglist[0].set('from_group', False)
         myleglist[1].set('from_group', False)
         self.assertFalse(myleglist.can_combine_to_1(ref_dict_to1))
+
+        # Test can_combine_to_0
+        ref_dict_to0 = {}
+        myleglist[0].set('from_group', True)
+        myleglist[1].set('from_group', True)
+        myleglist[2].set('from_group', True)
+        self.assertFalse(myleglist.can_combine_to_0(ref_dict_to0))
+        ref_dict_to0 = {(3, 3, 3):0}
+        self.assertTrue(myleglist.can_combine_to_0(ref_dict_to0))
+        myleglist[0].set('from_group', False)
+        myleglist[1].set('from_group', False)
+        self.assertFalse(myleglist.can_combine_to_0(ref_dict_to0))
+        myleglist[0].set('from_group', True)
+        self.assertTrue(myleglist.can_combine_to_0(ref_dict_to0))
 
 #===============================================================================
 # VertexTest

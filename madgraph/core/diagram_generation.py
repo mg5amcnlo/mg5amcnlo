@@ -55,7 +55,7 @@ class Amplitude(PhysicsObject):
     def get_sorted_keys(self):
         """Return diagram property names as a nicely sorted list."""
 
-        return ['diagrams']
+        return ['process', 'diagrams']
 
     def generate_diagrams(self):
         """Generate diagrams. For algorithm, see wiki page
@@ -81,10 +81,10 @@ class Amplitude(PhysicsObject):
         #        self.set('diagrams',
         #                 base_objects.DiagramList())
         #        return self.get('diagrams')
-        
+
         return reduced_diagrams
 
-    def get_particle(self,id):
+    def get_particle(self, id):
         return self['process'].get('model').get('particle_dict')[id]
 
     def reduce_diagram(self, curr_proc, max_multi_to1):
@@ -99,10 +99,12 @@ class Amplitude(PhysicsObject):
         ref_dict_to0 = model.get('ref_dict_to0')
         ref_dict_to1 = model.get('ref_dict_to1')
 
-        final_index = curr_proc.can_combine_to_0(ref_dict_to0)
-        if final_index != None:
-            res.append([base_objects.Vertex({'legs':curr_proc,
-                                             'id':final_index})])
+        if curr_proc.can_combine_to_0(ref_dict_to0):
+            final_vertex = base_objects.Vertex({'legs':copy.copy(curr_proc),
+                                                'id':ref_dict_to0[tuple(\
+                                                        [leg.get('id') for \
+                                                         leg in curr_proc])]})
+            res.append([final_vertex])
 
         if len(curr_proc) == 2:
             if res:
@@ -128,7 +130,7 @@ class Amplitude(PhysicsObject):
         return res
 
 
-    def combine_legs(self,list_legs, ref_dict_to1, max_multi_to1):
+    def combine_legs(self, list_legs, ref_dict_to1, max_multi_to1):
         """Take a list of legs as an input, with the reference dictionary n-1>1,
         and output a list of list of tuples of Legs (allowed combinations) 
         and Legs (rest). For algorithm, see wiki page.
@@ -158,7 +160,7 @@ class Amplitude(PhysicsObject):
         return res
 
 
-    def reduce_legs(self,comb_lists, ref_dict_to1):
+    def reduce_legs(self, comb_lists, ref_dict_to1):
         """Takes a list of allowed leg combinations as an input and returns
         a set of lists where combinations have been properly replaced
         (one list per element in the ref_dict, so that all possible intermediate
@@ -205,7 +207,7 @@ class Amplitude(PhysicsObject):
 
         return res
 
-    def expand_list(self,mylist):
+    def expand_list(self, mylist):
         """Takes a list of lists and elements and returns a list of flat lists.
         Example: [[1,2], 3, [4,5]] -> [[1,3,4], [1,3,5], [2,3,4], [2,3,5]]
         """

@@ -44,7 +44,7 @@ class AmplitudeTest(unittest.TestCase):
 
     def setUp(self):
 
-        self.mydict = {'diagrams':self.mydiaglist,'process':self.myprocess}
+        self.mydict = {'diagrams':self.mydiaglist, 'process':self.myprocess}
 
         self.myamplitude = diagram_generation.Amplitude(self.mydict)
 
@@ -113,6 +113,7 @@ class AmplitudeTest(unittest.TestCase):
         """Test amplitude object string representation."""
 
         goal = "{\n"
+        goal = goal + "    \'process\': %s,\n" % repr(self.myprocess)
         goal = goal + "    \'diagrams\': %s\n}" % repr(self.mydiaglist)
 
         self.assertEqual(goal, str(self.myamplitude))
@@ -187,12 +188,12 @@ class DiagramGenerationTest(unittest.TestCase):
         self.mypartlist.append(base_objects.Particle({'name':'a',
                       'antiname':'a',
                       'spin':3,
-                      'color':0,
+                      'color':1,
                       'mass':'zero',
                       'width':'zero',
                       'texname':'\gamma',
                       'antitexname':'\gamma',
-                      'line':'waivy',
+                      'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
                       'propagating':True,
@@ -255,8 +256,8 @@ class DiagramGenerationTest(unittest.TestCase):
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
 
-        self.mymodel.set('particles',self.mypartlist)
-        self.mymodel.set('interactions',self.myinterlist)
+        self.mymodel.set('particles', self.mypartlist)
+        self.mymodel.set('interactions', self.myinterlist)
 
         self.ref_dict_to0 = self.myinterlist.generate_ref_dict()[0]
         self.ref_dict_to1 = self.myinterlist.generate_ref_dict()[1]
@@ -378,7 +379,7 @@ class DiagramGenerationTest(unittest.TestCase):
         self.assertEqual(reduced_list.__str__(), my_reduced_list.__str__())
 
     def test_combine_legs_uux_ddx(self):
-        
+
         # Test with 2 quarks+2 antiquarks
 
         myleglist = base_objects.LegList()
@@ -518,10 +519,10 @@ class DiagramGenerationTest(unittest.TestCase):
 
     def test_diagram_generation_gluons(self):
 
-        goal_ndiags = [4,25,220]
+        goal_ndiags = [4, 25, 220]
 
         print # to get nicer output
-        
+
         for ngluon in range (2, 5):
 
             myleglist = base_objects.LegList([base_objects.Leg({'id':21,
@@ -536,14 +537,14 @@ class DiagramGenerationTest(unittest.TestCase):
                                                 'orders':{'QCD':ngluon},
                                                 'model':self.mymodel})
 
-            self.myamplitude.set('process',myproc)
+            self.myamplitude.set('process', myproc)
 
             ndiags = len(self.myamplitude.generate_diagrams())
 
             print "Number of diagrams for %d gluons: %d" % (ngluon, \
                                                             ndiags)
 
-            self.assertEqual(ndiags,goal_ndiags[ngluon-2])
+            self.assertEqual(ndiags, goal_ndiags[ngluon - 2])
 
     def test_diagram_generation_uux_ddx(self):
 
@@ -571,9 +572,9 @@ class DiagramGenerationTest(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
 
-        self.myamplitude.set('process',myproc)
+        self.myamplitude.set('process', myproc)
 
-        self.assertEqual(len(self.myamplitude.generate_diagrams()),3)
+        self.assertEqual(len(self.myamplitude.generate_diagrams()), 3)
 
     def test_expand_list(self):
 

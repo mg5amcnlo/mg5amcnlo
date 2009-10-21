@@ -14,11 +14,11 @@
 ################################################################################
 
 """Definitions of all basic objects used in the core code: particle, 
-interaction, model, ..."""
+interaction, model, leg, vertex, process, ..."""
 
+import copy
 import logging
 import re
-import copy
 
 #===============================================================================
 # PhysicsObject
@@ -302,9 +302,9 @@ class ParticleList(PhysicsObjectList):
 
     def find_name(self, name):
         """Try to find a particle with the given name. Check both name
-        and antiname. If a match is found, return the a copy of the corresponding
-        particle (first one in the list), with the is_part flag set
-        accordingly. None otherwise."""
+        and antiname. If a match is found, return the a copy of the 
+        corresponding particle (first one in the list), with the 
+        is_part flag set accordingly. None otherwise."""
 
         if not Particle.filter(Particle(), 'name', name):
             raise self.PhysicsObjectError, \
@@ -322,20 +322,20 @@ class ParticleList(PhysicsObjectList):
         return None
 
     def generate_ref_dict(self):
-        """Generate the reference dictionaries from interaction list.
-        Return a list where the first element is the n>0 dictionary and
-        the second one is n-1>1."""
+        """Generate a dictionary of part/antipart pairs (as keys) and
+        0 (as value)"""
 
         ref_dict_to0 = {}
 
         for part in self:
-            ref_dict_to0[(part.get_pdg_code(),part.get_anti_pdg_code())]=0
-            ref_dict_to0[(part.get_anti_pdg_code(),part.get_pdg_code())]=0
+            ref_dict_to0[(part.get_pdg_code(), part.get_anti_pdg_code())] = 0
+            ref_dict_to0[(part.get_anti_pdg_code(), part.get_pdg_code())] = 0
 
         return ref_dict_to0
 
     def generate_dict(self):
         """Generate a dictionary from particle id to particle.
+        Include antiparticles.
         """
 
         particle_dict = {}
@@ -346,7 +346,7 @@ class ParticleList(PhysicsObjectList):
                 antipart = copy.copy(particle)
                 antipart.set('is_part', False)
                 particle_dict[antipart.get_pdg_code()] = antipart
-                
+
         return particle_dict
 
 
@@ -454,7 +454,7 @@ class Interaction(PhysicsObject):
         return ['particles', 'color', 'lorentz', 'couplings', 'orders']
 
     def __permutate(self, seq):
-        """permutate a sequence and return a list of all permutations"""
+        """Permutate a sequence and return a list of all permutations"""
         if not seq:
             return [seq] # is an empty sequence
         else:
@@ -469,7 +469,7 @@ class Interaction(PhysicsObject):
         """Add entries corresponding to the current interactions to 
         the reference dictionaries (for n>0 and n-1>1)"""
 
-        # Create n>0 entries
+        # Create n>0 entries. Format is (p1,p2,p3,...):interaction_id.
         for permut in self.__permutate(self['particles']):
             pdg_tuple = tuple([p.get_pdg_code() for p in permut])
             if pdg_tuple not in ref_dict_to0.keys():
@@ -478,14 +478,19 @@ class Interaction(PhysicsObject):
             if pdg_tuple not in ref_dict_to0.keys():
                 ref_dict_to0[pdg_tuple] = self['id']
 
-        # Create n-1>1 entries Comment by Johan: Note that, in the n-1
-        # > 1 dictionnary, the 1 entry should have opposite sign as
-        # compared to the n > 0 dictionnary, since this should replace
-        # the n-1 particles. I prefer to keep track of the sign
+        # Create n-1>1 entries. Note that, in the n-1
+        # > 1 dictionary, the 1 entry should have opposite sign as
+        # compared to the n > 0 dictionary, since this should replace
+        # the n-1 particles. We prefer to keep track of the sign
         # (part/antipart) here rather than in the diagram generation.
+
         for part in self['particles']:
+
+            # Create a list w/o part
             short_part_list = copy.copy(self['particles'])
             short_part_list.remove(part)
+
+            # Add all permutations
             for permut in self.__permutate(short_part_list):
                 # Add interaction permutation
                 pdg_tuple = tuple([p.get_pdg_code() for p in permut])
@@ -604,22 +609,22 @@ class Model(PhysicsObject):
 
     def get(self, name):
         """Get the value of the property name."""
-        
+
         if (name == 'ref_dict_to0' or name == 'ref_dict_to1') and not self[name]:
             if self['interactions']:
-                [self['ref_dict_to0'],self['ref_dict_to1']] = \
+                [self['ref_dict_to0'], self['ref_dict_to1']] = \
                                       self['interactions'].generate_ref_dict()
                 self['ref_dict_to0'].update(self['particles'].generate_ref_dict())
-            
+
         if (name == 'particle_dict') and not self[name]:
             if self['particles']:
                 self['particle_dict'] = self['particles'].generate_dict()
-            
+
         if (name == 'interaction_dict') and not self[name]:
             if self['interactions']:
                 self['interaction_dict'] = self['interactions'].generate_dict()
-            
-        return super(Model,self).get(name)
+
+        return super(Model, self).get(name)
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
@@ -705,7 +710,7 @@ class LegList(PhysicsObjectList):
 
     def can_combine_to_1(self, ref_dict_to1):
        """If has at least one 'from_group' True and in ref_dict_to1,
-          return the return list from ref_dict_to1, otherwise return None"""
+          return the return list from ref_dict_to1, otherwise return False"""
        if self.minimum_one_from_group():
            return ref_dict_to1.has_key(tuple([leg.get('id') for leg in self]))
        else:
@@ -713,16 +718,12 @@ class LegList(PhysicsObjectList):
 
     def can_combine_to_0(self, ref_dict_to0):
        """If has at least two 'from_group' True and in ref_dict_to0,
-          return the vertex (with id from ref_dict_to0), otherwise return None"""
+          return the vertex (with id from ref_dict_to0), otherwise return None
+          """
        if self.minimum_two_from_group():
-           try:
-               return Vertex({'legs':self,
-                              'id':ref_dict_to0[tuple([leg.get('id') for \
-                                                          leg in self])]})
-           except KeyError:
-               return None
+           return ref_dict_to0.has_key(tuple([leg.get('id') for leg in self]))
        else:
-           return None
+           return False
 
 
 #===============================================================================
