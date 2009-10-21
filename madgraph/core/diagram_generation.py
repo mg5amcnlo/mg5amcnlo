@@ -13,21 +13,19 @@
 #
 ################################################################################
 
-import itertools
 import copy
+import itertools
 
 import madgraph.core.base_objects as base_objects
-from base_objects import PhysicsObject
-
 
 """Amplitude object, which is what does the job for the diagram
-generation algorithm
+generation algorithm.
 """
 
 #===============================================================================
 # Amplitude
 #===============================================================================
-class Amplitude(PhysicsObject):
+class Amplitude(base_objects.PhysicsObject):
     """Amplitude: process + list of diagrams (ordered)
     Initialize with a process, then call generate_diagrams() to
     generate the diagrams for the amplitude
@@ -58,69 +56,78 @@ class Amplitude(PhysicsObject):
         return ['process', 'diagrams']
 
     def generate_diagrams(self):
-        """Generate diagrams. For algorithm, see wiki page
+        """Generate diagrams. For algorithm explanation, see documentation.
         """
+        model = self['process'].get('model')
 
-        proc = self['process']
-        model = proc.get('model')
-
-        for leg in proc['legs']:
+        for leg in self['process'].get('legs'):
+            # For the first step, ensure the tag from_group 
+            # is true for all legs
             leg.set('from_group', True)
-            # Need to flip part-antipart for incoming particles, so they are all outgoing
+
+            # Need to flip part-antipart for incoming particles, 
+            # so they are all outgoing
             if leg.get('state') == 'initial':
                 part = model.get('particle_dict')[leg.get('id')]
                 leg.set('id', part.get_anti_pdg_code())
 
-        max_multi_to1 = max([len(key) for key in model.get('ref_dict_to1').keys()])
+        # Calculate the maximal multiplicity of n-1>1 configurations
+        # to restrict possible leg combinations
+        max_multi_to1 = max([len(key) for key in \
+                             model.get('ref_dict_to1').keys()])
 
-        reduced_diagrams = self.reduce_diagram(proc.get('legs'),
+
+        # Reduce the leg list and return the corresponding
+        # list of vertices
+        return self.reduce_leglist(self['process'].get('legs'),
                                                max_multi_to1)
-        #        diagrams = [base_objects.Diagram(\
-        #                          {'vertices':base_objects.VertexList(entry)})\
-        #                           for entry in reduced_diagrams]
-        #        self.set('diagrams',
-        #                 base_objects.DiagramList())
-        #        return self.get('diagrams')
 
-        return reduced_diagrams
-
-    def get_particle(self, id):
-        return self['process'].get('model').get('particle_dict')[id]
-
-    def reduce_diagram(self, curr_proc, max_multi_to1):
-        """Recursive function to reduce N diagrams to N-1
+    def reduce_leglist(self, curr_leglist, max_multi_to1):
+        """Recursive function to reduce N LegList to N-1
         """
+
+        # Result variable which is a list of lists of vertices
+        # to be added
         res = []
 
-        if curr_proc is None:
+        # Stop condition. If LegList is None, that means that this
+        # diagram must be discarded
+        if curr_leglist is None:
             return None
 
-        model = self['process'].get('model')
-        ref_dict_to0 = model.get('ref_dict_to0')
-        ref_dict_to1 = model.get('ref_dict_to1')
+        # Extract ref dict information
+        ref_dict_to0 = self['process'].get('model').get('ref_dict_to0')
+        ref_dict_to1 = self['process'].get('model').get('ref_dict_to1')
 
-        if curr_proc.can_combine_to_0(ref_dict_to0):
-            final_vertex = base_objects.Vertex({'legs':copy.copy(curr_proc),
-                                                'id':ref_dict_to0[tuple(\
-                                                        [leg.get('id') for \
-                                                         leg in curr_proc])]})
+        # If all legs can be combined in one single vertex, add this
+        # vertex to res and continue
+        if curr_leglist.can_combine_to_0(ref_dict_to0):
+            # Extract the interaction id associated to the vertex 
+            vertex_id = ref_dict_to0[tuple([leg.get('id') for \
+                                                         leg in curr_leglist])]
+
+            final_vertex = base_objects.Vertex({'legs':curr_leglist,
+                                                'id':vertex_id})
             res.append([final_vertex])
 
-        if len(curr_proc) == 2:
+        # Stop condition 2: if the leglist contained exactly two particles,
+        # return the result, if any, and stop.
+        if len(curr_leglist) == 2:
             if res:
                 return res
             else:
                 return None
 
-
-        comb_lists = self.combine_legs(curr_proc,
+        # Create a list of all valid combinations of legs
+        comb_lists = self.combine_legs(curr_leglist,
                                        ref_dict_to1, max_multi_to1)
 
-        leg_vertex_list = self.reduce_legs(comb_lists, ref_dict_to1)
+        # Create a list of leglists/vertices by merging combinations
+        leg_vertex_list = self.merge_comb_legs(comb_lists, ref_dict_to1)
 
         for leg_vertex_tuple in leg_vertex_list:
             # This is where recursion happens
-            reduced_diagram = self.reduce_diagram(leg_vertex_tuple[0],
+            reduced_diagram = self.reduce_leglist(leg_vertex_tuple[0],
                                                   max_multi_to1)
             if reduced_diagram:
                 vertex_list = list(leg_vertex_tuple[1])
@@ -133,74 +140,121 @@ class Amplitude(PhysicsObject):
     def combine_legs(self, list_legs, ref_dict_to1, max_multi_to1):
         """Take a list of legs as an input, with the reference dictionary n-1>1,
         and output a list of list of tuples of Legs (allowed combinations) 
-        and Legs (rest). For algorithm, see wiki page.
+        and Legs (rest). For algorithm, see documentation.
         """
 
         res = []
 
+        # loop over possible combination lengths (+1 is for range convention!)
         for comb_length in range(2, max_multi_to1 + 1):
+
+            # itertools.combinations returns all possible combinations
+            # of comb_length elements from list_legs
             for comb in itertools.combinations(list_legs, comb_length):
+
+                # Check if the combination is valid
                 if base_objects.LegList(comb).can_combine_to_1(ref_dict_to1):
+
+                    # Identify the rest, create a list [comb,rest] and
+                    # add it to res
+                    # TO BE CHANGED TO CONSERVE ORDERING ?
                     res_list = copy.copy(list_legs)
                     for leg in comb:
                         res_list.remove(leg)
                     res_list.insert(0, comb)
                     res.append(res_list)
+
+                    # Now, deal with cases with more than 1 combination
+                    # TO BE CHANGED TO CONSERVE ORDERING ?
+
+                    # First, split the list into two, according to the
+                    # position of the first element in comb, and remove
+                    # all elements form comb
                     res_list1 = list_legs[0:list_legs.index(comb[0])]
                     res_list2 = list_legs[list_legs.index(comb[0]) + 1:]
                     for leg in comb[1:]:
                         res_list2.remove(leg)
+
+                    # Create a list of type [comb,rest1,rest2(combined)]
                     res_list = [comb]
                     res_list.extend(res_list1)
-                    # This is where recursion happens
-                    for item in self.combine_legs(res_list2, ref_dict_to1, max_multi_to1):
-                        res_list3 = copy.copy(res_list)
-                        res_list3.extend(item)
-                        res.append(res_list3)
+                    # This is where recursion actually happens, 
+                    # on the second part
+                    for item in self.combine_legs(res_list2,
+                                                  ref_dict_to1,
+                                                  max_multi_to1):
+                        final_res_list = copy.copy(res_list)
+                        final_res_list.extend(item)
+                        res.append(final_res_list)
+
         return res
 
 
-    def reduce_legs(self, comb_lists, ref_dict_to1):
+    def merge_comb_legs(self, comb_lists, ref_dict_to1):
         """Takes a list of allowed leg combinations as an input and returns
         a set of lists where combinations have been properly replaced
         (one list per element in the ref_dict, so that all possible intermediate
-        particles are included).
+        particles are included). For each list, give the list of vertices
+        corresponding to the executed merging, group the two as a tuple.
         """
-
         res = []
 
         for comb_list in comb_lists:
+
             reduced_list = []
             vertex_list = []
+
             for entry in comb_list:
+
+                # Act on all leg combinations
                 if isinstance(entry, tuple):
+
+                    # Build the leg object which will replace the combination:
+                    # 1) Id is as given in the ref_dict
                     ids = ref_dict_to1[tuple([leg.get('id') for leg in entry])]
+                    # 2) number is the minimum of leg numbers involved in the
+                    # combination
                     number = min([leg.get('number') for leg in entry])
+                    # 3) state is final, unless there is exactly one initial 
+                    # state particle involved in the combination -> t-channel
                     if len(filter(lambda leg: leg.get('state') == 'initial',
                                   entry)) == 1:
                         state = 'initial'
                     else:
                         state = 'final'
+                    # 4) from_group is True, by definition
                     from_group = True
-                    mylegs = base_objects.LegList([base_objects.Leg({'id':id,
-                                                                     'number':number,
-                                                                     'state':state,
-                                                                     'from_group':from_group}) for id in ids])
+                    # Create and add the object
+                    mylegs = base_objects.LegList([base_objects.Leg(
+                                    {'id':id,
+                                     'number':number,
+                                     'state':state,
+                                     'from_group':from_group}) for id in ids])
                     reduced_list.append(mylegs)
                     vlist = base_objects.VertexList()
+
+                    # Create and add the corresponding vertex
                     for myleg in mylegs:
+                        # Start with the considered combination...
                         myleglist = base_objects.LegList(list(entry))
+                        # ... and complete with legs after reducing
                         myleglist.append(myleg)
-                        # Change id here
+                        # CHANGE ID HERE
                         vlist.append(base_objects.Vertex({'legs':myleglist,
                                                           'id':0}))
                     vertex_list.append(vlist)
+
+                # If entry is not a combination, switch the from_group flag
+                # and add it
                 else:
                     entry.set('from_group', False)
                     reduced_list.append(entry)
 
+            # Flatten the obtained leg and vertex lists
             flat_red_lists = self.expand_list(reduced_list)
             flat_vx_lists = self.expand_list(vertex_list)
+
+            # Combine the two lists in a list of tuple
             for i in range(0, len(flat_vx_lists)):
                 res.append((base_objects.LegList(flat_red_lists[i]), \
                             base_objects.VertexList(flat_vx_lists[i])))
@@ -213,25 +267,24 @@ class Amplitude(PhysicsObject):
         """
 
         res = []
+        # Make things such the first element is always a list
+        # to simplify the algorithm
+        if not isinstance(mylist[0], list):
+            mylist[0] = [mylist[0]]
 
+        # Recursion stop condition, one single element
         if len(mylist) == 1:
-            if isinstance(mylist[0], list):
-                return [[item] for item in mylist[0]]
-            else:
-                return [[mylist[0]]]
+            # [[1,2,3]] should give [[1],[2],[3]]
+            return [[item] for item in mylist[0]]
 
-        if isinstance(mylist[0], list):
-            for item in mylist[0]:
-                # Here recursion happens
-                for rest in self.expand_list(mylist[1:]):
-                    reslist = [item]
-                    reslist.extend(rest)
-                    res.append(reslist)
-        else:
-            # Here recursion happens
+        for item in mylist[0]:
+            # Here the recursion happens, create lists starting with
+            # each element of the first item and completed with 
+            # the rest expanded
             for rest in self.expand_list(mylist[1:]):
-                reslist = [mylist[0]]
+                reslist = [item]
                 reslist.extend(rest)
                 res.append(reslist)
+
         return res
 
