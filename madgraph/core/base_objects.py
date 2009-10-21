@@ -610,11 +610,13 @@ class Model(PhysicsObject):
     def get(self, name):
         """Get the value of the property name."""
 
-        if (name == 'ref_dict_to0' or name == 'ref_dict_to1') and not self[name]:
+        if (name == 'ref_dict_to0' or name == 'ref_dict_to1') and \
+                                                                not self[name]:
             if self['interactions']:
                 [self['ref_dict_to0'], self['ref_dict_to1']] = \
-                                      self['interactions'].generate_ref_dict()
-                self['ref_dict_to0'].update(self['particles'].generate_ref_dict())
+                            self['interactions'].generate_ref_dict()
+                self['ref_dict_to0'].update(
+                                self['particles'].generate_ref_dict())
 
         if (name == 'particle_dict') and not self[name]:
             if self['particles']:

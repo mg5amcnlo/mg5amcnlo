@@ -607,3 +607,18 @@ class DiagramGenerationTest(unittest.TestCase):
 
         self.assertEqual(self.myamplitude.expand_list(mylist), goal_list)
 
+        # Also test behavior with singlets like [1]
+        mylist = [1, [2]]
+        goal_list = [[1, 2]]
+
+        self.assertEqual(self.myamplitude.expand_list(mylist), goal_list)
+
+        mylist = [[1]]
+
+        self.assertEqual(self.myamplitude.expand_list(mylist), mylist)
+
+        mylist = [[1, 2], [3]]
+        goal_list = [[1, 3], [2, 3]]
+
+        self.assertEqual(self.myamplitude.expand_list(mylist), goal_list)
+

@@ -50,6 +50,15 @@ class Amplitude(base_objects.PhysicsObject):
                         "%s is not a valid DiagramList object" % str(value)
         return True
 
+    def get(self, name):
+        """Get the value of the property name."""
+
+        if name == 'diagrams' and not self[name]:
+            if self['process']:
+                self['diagrams'] = self.generate_diagrams()
+
+        return super(Amplitude, self).get(name)
+
     def get_sorted_keys(self):
         """Return diagram property names as a nicely sorted list."""
 
@@ -79,8 +88,16 @@ class Amplitude(base_objects.PhysicsObject):
 
         # Reduce the leg list and return the corresponding
         # list of vertices
-        return self.reduce_leglist(self['process'].get('legs'),
-                                               max_multi_to1)
+
+        reduced_leglist = self.reduce_leglist(self['process'].get('legs'),
+                                           max_multi_to1)
+        res = base_objects.DiagramList()
+
+        for vertex_list in reduced_leglist:
+            print [item for item in vertex_list]
+            res.append(base_objects.Diagram(
+                            {'vertices':base_objects.VertexList(vertex_list)}))
+        return res
 
     def reduce_leglist(self, curr_leglist, max_multi_to1):
         """Recursive function to reduce N LegList to N-1
@@ -125,10 +142,13 @@ class Amplitude(base_objects.PhysicsObject):
         # Create a list of leglists/vertices by merging combinations
         leg_vertex_list = self.merge_comb_legs(comb_lists, ref_dict_to1)
 
+        # Consider all the pairs
         for leg_vertex_tuple in leg_vertex_list:
             # This is where recursion happens
+            # First, reduce again the leg part
             reduced_diagram = self.reduce_leglist(leg_vertex_tuple[0],
                                                   max_multi_to1)
+            # If there is a reduce diagram
             if reduced_diagram:
                 vertex_list = list(leg_vertex_tuple[1])
                 vertex_list.append(reduced_diagram)
