@@ -207,6 +207,24 @@ class DiagramGenerationTest(unittest.TestCase):
                       'is_part':True,
                       'self_antipart':True}))
 
+        # A electron and positron
+        self.mypartlist.append(base_objects.Particle({'name':'e+',
+                      'antiname':'e-',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'e^+',
+                      'antitexname':'e^-',
+                      'line':'straight',
+                      'charge':-1.,
+                      'pdg_code':11,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        antie = copy.copy(self.mypartlist[4])
+        antie.set('is_part', False)
+
         # 3 gluon vertiex
         self.myinterlist.append(base_objects.Interaction({
                       'particles': base_objects.ParticleList(\
@@ -260,6 +278,18 @@ class DiagramGenerationTest(unittest.TestCase):
                       'particles': base_objects.ParticleList(\
                                             [self.mypartlist[2], \
                                              antid, \
+                                             self.mypartlist[3]]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of e to gamma
+
+        self.myinterlist.append(base_objects.Interaction({
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[4], \
+                                             antie, \
                                              self.mypartlist[3]]),
                       'color': ['C1'],
                       'lorentz':['L1'],
@@ -630,8 +660,71 @@ class DiagramGenerationTest(unittest.TestCase):
             self.assertEqual(len(self.myamplitude.generate_diagrams()),
                              goal_ndiags[ngluons])
 
+    def test_diagram_generation_uux_ddxng(self):
+        """Test the number of diagram generated for uu~>dd~+ng with n up to 2
+        """
+        goal_ndiags = [2, 9, 60, 537, 6060]
 
+        for ngluons in range(0, 3):
 
+            myleglist = base_objects.LegList()
+
+            myleglist.append(base_objects.Leg({'id':-1,
+                                             'number':1,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'number':2,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':-2,
+                                             'number':3,
+                                             'state':'final'}))
+            myleglist.append(base_objects.Leg({'id':2,
+                                             'number':4,
+                                             'state':'final'}))
+            for i in range(0, ngluons):
+                myleglist.append(base_objects.Leg({'id':21,
+                                                 'number':5 + i,
+                                                 'state':'final'}))
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel})
+
+            self.myamplitude.set('process', myproc)
+
+            self.assertEqual(len(self.myamplitude.generate_diagrams()),
+                             goal_ndiags[ngluons])
+
+    def test_diagram_generation_nodiag(self):
+        """Test charge violating processes give 0 diagram
+        """
+
+        for nquarks in range(1, 5):
+
+            myleglist = base_objects.LegList()
+
+            myleglist.append(base_objects.Leg({'id':-1,
+                                             'number':1,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'number':2,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':-2,
+                                             'number':3,
+                                             'state':'final'}))
+            myleglist.append(base_objects.Leg({'id':2,
+                                             'number':4,
+                                             'state':'final'}))
+            for i in range(0, nquarks):
+                myleglist.append(base_objects.Leg({'id':1,
+                                                 'number':5 + i,
+                                                 'state':'final'}))
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel})
+
+            self.myamplitude.set('process', myproc)
+
+            self.assertEqual(len(self.myamplitude.generate_diagrams()), 0)
 
     def test_diagram_generation_photons(self):
         """Test the number of diagram generated for uu~>na with n up to 5"""
@@ -667,6 +760,45 @@ class DiagramGenerationTest(unittest.TestCase):
                                                             ndiags))
 
             self.assertEqual(ndiags, math.factorial(nphot))
+
+    def test_diagram_generation_electrons(self):
+        """Test the number of diagram generated for e+e->n(e+e-) with n up to 3
+        """
+
+        goal_ndiags = [2, 36, 1728]
+        for npairs in range (1, 4):
+
+            # Create the amplitude
+            myleglist = base_objects.LegList()
+
+            myleglist.append(base_objects.Leg({'id':-11,
+                                             'number':1,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':11,
+                                             'number':2,
+                                             'state':'initial'}))
+
+            for i in range(1, npairs + 1):
+                myleglist.append(base_objects.Leg({'id':11,
+                                                  'number':(i - 1) * 2 + i + 2,
+                                                  'state':'final'}))
+                myleglist.append(base_objects.Leg({'id':-11,
+                                                  'number':(i - 1) * 2 + i + 3,
+                                                  'state':'final'}))
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                            'orders':{'QED':npairs * 2},
+                                            'model':self.mymodel})
+
+            self.myamplitude.set('process', myproc)
+
+            # Call generate_diagram and output number of diagrams
+            ndiags = len(self.myamplitude.generate_diagrams())
+
+            logging.debug("Number of diagrams for %d electron pairs: %d" % \
+                          (npairs, ndiags))
+
+            self.assertEqual(ndiags, goal_ndiags[npairs - 1])
 
     def test_expand_list(self):
         """Test the expand_list function"""
@@ -708,6 +840,7 @@ class DiagramGenerationTest(unittest.TestCase):
         self.assertEqual(self.myamplitude.expand_list_list(mylist), goal_list)
 
         mylist = [ [[1, 2], [3, 4]], [5], [[6, 7], [8, 9]] ]
-        goal_list = [[1, 2, 5, 6, 7], [1, 2, 5, 8, 9], [3, 4, 5, 6, 7], [3, 4, 5, 8, 9]]
+        goal_list = [[1, 2, 5, 6, 7], [1, 2, 5, 8, 9], [3, 4, 5, 6, 7],
+                     [3, 4, 5, 8, 9]]
         self.assertEqual(self.myamplitude.expand_list_list(mylist), goal_list)
 
