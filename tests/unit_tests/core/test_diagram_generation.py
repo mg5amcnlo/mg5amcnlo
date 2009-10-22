@@ -17,6 +17,7 @@
 
 import copy
 import logging
+import math
 import unittest
 
 import madgraph.core.base_objects as base_objects
@@ -539,12 +540,12 @@ class DiagramGenerationTest(unittest.TestCase):
 
 
     def test_diagram_generation_gluons(self):
-        """Test the number of diagram generated for gg>ng with n=2,3 and 4"""
+        """Test the number of diagram generated for gg>ng with n up to 4"""
 
-        goal_ndiags = [4, 25, 220]
+        goal_ndiags = [1, 4, 25, 220]
 
-        # Test 2,3 and 4 gluons in the final state
-        for ngluon in range (2, 5):
+        # Test 1,2,3 and 4 gluons in the final state
+        for ngluon in range (1, 5):
 
             # Create the amplitude
             myleglist = base_objects.LegList([base_objects.Leg({'id':21,
@@ -567,7 +568,7 @@ class DiagramGenerationTest(unittest.TestCase):
             logging.debug("Number of diagrams for %d gluons: %d" % (ngluon,
                                                             ndiags))
 
-            self.assertEqual(ndiags, goal_ndiags[ngluon - 2])
+            self.assertEqual(ndiags, goal_ndiags[ngluon - 1])
 
     def test_diagram_generation_uux_gg(self):
         """Test the number of diagram generated for uu~>gg (s, t and u channels)
@@ -587,10 +588,6 @@ class DiagramGenerationTest(unittest.TestCase):
         myleglist.append(base_objects.Leg({'id':21,
                                          'number':4,
                                          'state':'final'}))
-        l1 = myleglist[0]
-        l2 = myleglist[1]
-        l3 = myleglist[2]
-        l4 = myleglist[3]
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -598,6 +595,78 @@ class DiagramGenerationTest(unittest.TestCase):
         self.myamplitude.set('process', myproc)
 
         self.assertEqual(len(self.myamplitude.generate_diagrams()), 3)
+
+    def test_diagram_generation_uux_uuxng(self):
+        """Test the number of diagram generated for uu~>uu~+ng with n up to 2
+        """
+        goal_ndiags = [4, 18, 120, 1074, 12120]
+
+        for ngluons in range(0, 3):
+
+            myleglist = base_objects.LegList()
+
+            myleglist.append(base_objects.Leg({'id':-1,
+                                             'number':1,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'number':2,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':-1,
+                                             'number':3,
+                                             'state':'final'}))
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'number':4,
+                                             'state':'final'}))
+            for i in range(0, ngluons):
+                myleglist.append(base_objects.Leg({'id':21,
+                                                 'number':5 + i,
+                                                 'state':'final'}))
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel})
+
+            self.myamplitude.set('process', myproc)
+
+            self.assertEqual(len(self.myamplitude.generate_diagrams()),
+                             goal_ndiags[ngluons])
+
+
+
+
+    def test_diagram_generation_photons(self):
+        """Test the number of diagram generated for uu~>na with n up to 5"""
+
+        # Test up to 5 photons in the final state
+        for nphot in range (1, 6):
+
+            # Create the amplitude
+            myleglist = base_objects.LegList()
+
+            myleglist.append(base_objects.Leg({'id':-1,
+                                             'number':1,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'number':2,
+                                             'state':'initial'}))
+
+            for i in range(1, nphot + 1):
+                myleglist.append(base_objects.Leg({'id':22,
+                                                  'number':i + 2,
+                                                  'state':'final'}))
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                            'orders':{'QED':nphot},
+                                            'model':self.mymodel})
+
+            self.myamplitude.set('process', myproc)
+
+            # Call generate_diagram and output number of diagrams
+            ndiags = len(self.myamplitude.generate_diagrams())
+
+            logging.debug("Number of diagrams for %d photons: %d" % (nphot,
+                                                            ndiags))
+
+            self.assertEqual(ndiags, math.factorial(nphot))
 
     def test_expand_list(self):
         """Test the expand_list function"""
@@ -626,19 +695,19 @@ class DiagramGenerationTest(unittest.TestCase):
     def test_expand_list_list(self):
         """Test the expand_list_list function"""
 
-        mylist = [ [1,2],[[3,4],[5,6]] ]
-        goal_list = [[1,2,3,4], [1,2,5,6]]
+        mylist = [ [1, 2], [[3, 4], [5, 6]] ]
+        goal_list = [[1, 2, 3, 4], [1, 2, 5, 6]]
         self.assertEqual(self.myamplitude.expand_list_list(mylist), goal_list)
 
-        mylist = [ [[1,2],[3,4]],[5] ]
-        goal_list = [[1,2,5],[3,4,5]]
+        mylist = [ [[1, 2], [3, 4]], [5] ]
+        goal_list = [[1, 2, 5], [3, 4, 5]]
         self.assertEqual(self.myamplitude.expand_list_list(mylist), goal_list)
 
-        mylist = [ [[1,2],[3,4]],[[6,7],[8,9]] ]
-        goal_list = [[1,2,6,7],[1,2,8,9],[3,4,6,7],[3,4,8,9]]
+        mylist = [ [[1, 2], [3, 4]], [[6, 7], [8, 9]] ]
+        goal_list = [[1, 2, 6, 7], [1, 2, 8, 9], [3, 4, 6, 7], [3, 4, 8, 9]]
         self.assertEqual(self.myamplitude.expand_list_list(mylist), goal_list)
-        
-        mylist = [ [[1,2],[3,4]],[5],[[6,7],[8,9]] ]
-        goal_list = [[1,2,5,6,7],[1,2,5,8,9],[3,4,5,6,7],[3,4,5,8,9]]
+
+        mylist = [ [[1, 2], [3, 4]], [5], [[6, 7], [8, 9]] ]
+        goal_list = [[1, 2, 5, 6, 7], [1, 2, 5, 8, 9], [3, 4, 5, 6, 7], [3, 4, 5, 8, 9]]
         self.assertEqual(self.myamplitude.expand_list_list(mylist), goal_list)
-        
+

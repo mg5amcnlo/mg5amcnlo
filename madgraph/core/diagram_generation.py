@@ -99,7 +99,7 @@ class Amplitude(base_objects.PhysicsObject):
 
         self['diagrams'] = res
         return res
-    
+
     def reduce_leglist(self, curr_leglist, max_multi_to1):
         """Recursive function to reduce N LegList to N-1
         """
@@ -127,7 +127,6 @@ class Amplitude(base_objects.PhysicsObject):
             final_vertex = base_objects.Vertex({'legs':curr_leglist,
                                                 'id':vertex_id})
             res.append([final_vertex])
-
         # Stop condition 2: if the leglist contained exactly two particles,
         # return the result, if any, and stop.
         if len(curr_leglist) == 2:
@@ -152,7 +151,6 @@ class Amplitude(base_objects.PhysicsObject):
             # If there is a reduced diagram
             if reduced_diagram:
                 vertex_list_list = [list(leg_vertex_tuple[1])]
-#                print 'vxlist1: ',vertex_list
                 vertex_list_list.append(reduced_diagram)
                 expanded_list = self.expand_list_list(vertex_list_list)
                 res.extend(expanded_list)
@@ -248,16 +246,16 @@ class Amplitude(base_objects.PhysicsObject):
                     else:
                         state = 'final'
                     # 4) from_group is True, by definition
-                    from_group = True
+
                     # Create and add the object
-                    mylegs = base_objects.LegList([base_objects.Leg(
+                    mylegs = [base_objects.Leg(
                                     {'id':leg_id,
                                      'number':number,
                                      'state':state,
-                                     'from_group':from_group}) \
-                                    for leg_id in leg_ids])
+                                     'from_group':True}) \
+                                    for leg_id in leg_ids]
                     reduced_list.append(mylegs)
-                    vlist = base_objects.VertexList()
+
 
                     # Create and add the corresponding vertex
                     # Extract vertex ids corresponding to the various legs
@@ -265,6 +263,7 @@ class Amplitude(base_objects.PhysicsObject):
                     vert_ids = [elem[1] for elem in \
                            ref_dict_to1[tuple([leg.get('id') \
                                                for leg in entry])]]
+                    vlist = base_objects.VertexList()
                     for myleg in mylegs:
                         # Start with the considered combination...
                         myleglist = base_objects.LegList(list(entry))
@@ -279,10 +278,12 @@ class Amplitude(base_objects.PhysicsObject):
                 # If entry is not a combination, switch the from_group flag
                 # and add it
                 else:
-                    entry.set('from_group', False)
-                    reduced_list.append(entry)
+                    cp_entry = copy.copy(entry)
+                    cp_entry.set('from_group', False)
+                    reduced_list.append(cp_entry)
 
             # Flatten the obtained leg and vertex lists
+
             flat_red_lists = self.expand_list(reduced_list)
             flat_vx_lists = self.expand_list(vertex_list)
 
@@ -321,27 +322,25 @@ class Amplitude(base_objects.PhysicsObject):
         return res
 
     def expand_list_list(self, mylist):
-        """Takes a list of lists and lists of lists and returns a list of flat lists.
+        """Takes a list of lists and lists of lists and returns a list of 
+        flat lists.
         Example: [[1,2],[[4,5],[6,7]]] -> [[1,2,4,5], [1,2,6,7]]
         """
 
         res = []
-        # Make things such the first element is always a list
-        # to simplify the algorithm
+        # Check the first element is at least a list
         if not isinstance(mylist[0], list):
             raise self.PhysicsObjectError, \
                   "Expand_list_list needs a list of lists and lists of lists"
 
         # Recursion stop condition, one single element
         if len(mylist) == 1:
-            if isinstance(mylist[0][0],list):
+            if isinstance(mylist[0][0], list):
                 return mylist[0]
-            #[[1,2],[3,4]]
             else:
                 return mylist
-            #[[1,2]]
-            
-        if isinstance(mylist[0][0],list):
+
+        if isinstance(mylist[0][0], list):
             for item in mylist[0]:
                 # Here the recursion happens, create lists starting with
                 # each element of the first item and completed with 
@@ -351,14 +350,11 @@ class Amplitude(base_objects.PhysicsObject):
                     reslist.extend(rest)
                     res.append(reslist)
         else:
-            # Here the recursion happens, create lists starting with
-            # each element of the first item and completed with 
-            # the rest expanded
             for rest in self.expand_list_list(mylist[1:]):
                 reslist = copy.copy(mylist[0])
                 reslist.extend(rest)
                 res.append(reslist)
-        
+
 
         return res
 
