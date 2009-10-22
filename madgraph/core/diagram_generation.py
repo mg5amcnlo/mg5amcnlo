@@ -94,11 +94,12 @@ class Amplitude(base_objects.PhysicsObject):
         res = base_objects.DiagramList()
 
         for vertex_list in reduced_leglist:
-            print [item for item in vertex_list]
             res.append(base_objects.Diagram(
                             {'vertices':base_objects.VertexList(vertex_list)}))
-        return res
 
+        self['diagrams'] = res
+        return res
+    
     def reduce_leglist(self, curr_leglist, max_multi_to1):
         """Recursive function to reduce N LegList to N-1
         """
@@ -148,11 +149,13 @@ class Amplitude(base_objects.PhysicsObject):
             # First, reduce again the leg part
             reduced_diagram = self.reduce_leglist(leg_vertex_tuple[0],
                                                   max_multi_to1)
-            # If there is a reduce diagram
+            # If there is a reduced diagram
             if reduced_diagram:
-                vertex_list = list(leg_vertex_tuple[1])
-                vertex_list.append(reduced_diagram)
-                res.extend(self.expand_list(vertex_list))
+                vertex_list_list = [list(leg_vertex_tuple[1])]
+#                print 'vxlist1: ',vertex_list
+                vertex_list_list.append(reduced_diagram)
+                expanded_list = self.expand_list_list(vertex_list_list)
+                res.extend(expanded_list)
 
         return res
 
@@ -314,6 +317,48 @@ class Amplitude(base_objects.PhysicsObject):
                 reslist = [item]
                 reslist.extend(rest)
                 res.append(reslist)
+
+        return res
+
+    def expand_list_list(self, mylist):
+        """Takes a list of lists and lists of lists and returns a list of flat lists.
+        Example: [[1,2],[[4,5],[6,7]]] -> [[1,2,4,5], [1,2,6,7]]
+        """
+
+        res = []
+        # Make things such the first element is always a list
+        # to simplify the algorithm
+        if not isinstance(mylist[0], list):
+            raise self.PhysicsObjectError, \
+                  "Expand_list_list needs a list of lists and lists of lists"
+
+        # Recursion stop condition, one single element
+        if len(mylist) == 1:
+            if isinstance(mylist[0][0],list):
+                return mylist[0]
+            #[[1,2],[3,4]]
+            else:
+                return mylist
+            #[[1,2]]
+            
+        if isinstance(mylist[0][0],list):
+            for item in mylist[0]:
+                # Here the recursion happens, create lists starting with
+                # each element of the first item and completed with 
+                # the rest expanded
+                for rest in self.expand_list_list(mylist[1:]):
+                    reslist = copy.copy(item)
+                    reslist.extend(rest)
+                    res.append(reslist)
+        else:
+            # Here the recursion happens, create lists starting with
+            # each element of the first item and completed with 
+            # the rest expanded
+            for rest in self.expand_list_list(mylist[1:]):
+                reslist = copy.copy(mylist[0])
+                reslist.extend(rest)
+                res.append(reslist)
+        
 
         return res
 

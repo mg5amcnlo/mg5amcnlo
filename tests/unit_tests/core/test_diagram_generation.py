@@ -622,3 +622,23 @@ class DiagramGenerationTest(unittest.TestCase):
 
         self.assertEqual(self.myamplitude.expand_list(mylist), goal_list)
 
+
+    def test_expand_list_list(self):
+        """Test the expand_list_list function"""
+
+        mylist = [ [1,2],[[3,4],[5,6]] ]
+        goal_list = [[1,2,3,4], [1,2,5,6]]
+        self.assertEqual(self.myamplitude.expand_list_list(mylist), goal_list)
+
+        mylist = [ [[1,2],[3,4]],[5] ]
+        goal_list = [[1,2,5],[3,4,5]]
+        self.assertEqual(self.myamplitude.expand_list_list(mylist), goal_list)
+
+        mylist = [ [[1,2],[3,4]],[[6,7],[8,9]] ]
+        goal_list = [[1,2,6,7],[1,2,8,9],[3,4,6,7],[3,4,8,9]]
+        self.assertEqual(self.myamplitude.expand_list_list(mylist), goal_list)
+        
+        mylist = [ [[1,2],[3,4]],[5],[[6,7],[8,9]] ]
+        goal_list = [[1,2,5,6,7],[1,2,5,8,9],[3,4,5,6,7],[3,4,5,8,9]]
+        self.assertEqual(self.myamplitude.expand_list_list(mylist), goal_list)
+        
