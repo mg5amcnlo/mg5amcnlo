@@ -311,24 +311,16 @@ def expand_list(mylist):
     """
 
     res = []
-    # Make things such the first element is always a list
-    # to simplify the algorithm
-    if not isinstance(mylist[0], list):
-        mylist[0] = [copy.copy(mylist[0])]
 
-    # Recursion stop condition, one single element
-    if len(mylist) == 1:
-        # [[1,2,3]] should give [[1],[2],[3]]
-        return [[copy.copy(item)] for item in mylist[0]]
+    tmplist = []
+    for item in mylist:
+        if isinstance(item, list):
+            tmplist.append(item)
+        else:
+            tmplist.append([item])
 
-    for item in mylist[0]:
-        # Here the recursion happens, create lists starting with
-        # each element of the first item and completed with 
-        # the rest expanded
-        for rest in expand_list(mylist[1:]):
-            reslist = [copy.copy(item)]
-            reslist.extend(rest)
-            res.append(reslist)
+    for item in apply(itertools.product,tmplist):
+        res.append(list(item))
 
     return res
 
