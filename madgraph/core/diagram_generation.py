@@ -333,7 +333,7 @@ def expand_list_list(mylist):
     res = []
     # Check the first element is at least a list
     if not isinstance(mylist[0], list):
-        raise self.PhysicsObjectError, \
+        raise base_objects.PhysicsObject.PhysicsObjectError, \
               "Expand_list_list needs a list of lists and lists of lists"
 
     # Recursion stop condition, one single element
