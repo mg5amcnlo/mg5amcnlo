@@ -97,6 +97,12 @@ class Amplitude(base_objects.PhysicsObject):
             res.append(base_objects.Diagram(
                             {'vertices':base_objects.VertexList(vertex_list)}))
 
+        for leg in self['process'].get('legs'):
+            # Flip back part-antipart for incoming particles, 
+            if leg.get('state') == 'initial':
+                part = model.get('particle_dict')[leg.get('id')]
+                leg.set('id', part.get_anti_pdg_code())
+
         self['diagrams'] = res
         return res
 
@@ -152,7 +158,7 @@ class Amplitude(base_objects.PhysicsObject):
             if reduced_diagram:
                 vertex_list_list = [list(leg_vertex_tuple[1])]
                 vertex_list_list.append(reduced_diagram)
-                expanded_list = self.expand_list_list(vertex_list_list)
+                expanded_list = expand_list_list(vertex_list_list)
                 res.extend(expanded_list)
 
         return res
@@ -284,8 +290,8 @@ class Amplitude(base_objects.PhysicsObject):
 
             # Flatten the obtained leg and vertex lists
 
-            flat_red_lists = self.expand_list(reduced_list)
-            flat_vx_lists = self.expand_list(vertex_list)
+            flat_red_lists = expand_list(reduced_list)
+            flat_vx_lists = expand_list(vertex_list)
 
             # Combine the two lists in a list of tuple
             for i in range(0, len(flat_vx_lists)):
@@ -294,67 +300,72 @@ class Amplitude(base_objects.PhysicsObject):
 
         return res
 
-    def expand_list(self, mylist):
-        """Takes a list of lists and elements and returns a list of flat lists.
-        Example: [[1,2], 3, [4,5]] -> [[1,3,4], [1,3,5], [2,3,4], [2,3,5]]
-        """
 
-        res = []
-        # Make things such the first element is always a list
-        # to simplify the algorithm
-        if not isinstance(mylist[0], list):
-            mylist[0] = [mylist[0]]
+#===============================================================================
+# Global helper methods
+#===============================================================================
 
-        # Recursion stop condition, one single element
-        if len(mylist) == 1:
-            # [[1,2,3]] should give [[1],[2],[3]]
-            return [[item] for item in mylist[0]]
+def expand_list(mylist):
+    """Takes a list of lists and elements and returns a list of flat lists.
+    Example: [[1,2], 3, [4,5]] -> [[1,3,4], [1,3,5], [2,3,4], [2,3,5]]
+    """
 
+    res = []
+    # Make things such the first element is always a list
+    # to simplify the algorithm
+    if not isinstance(mylist[0], list):
+        mylist[0] = [copy.copy(mylist[0])]
+
+    # Recursion stop condition, one single element
+    if len(mylist) == 1:
+        # [[1,2,3]] should give [[1],[2],[3]]
+        return [[copy.copy(item)] for item in mylist[0]]
+
+    for item in mylist[0]:
+        # Here the recursion happens, create lists starting with
+        # each element of the first item and completed with 
+        # the rest expanded
+        for rest in expand_list(mylist[1:]):
+            reslist = [copy.copy(item)]
+            reslist.extend(rest)
+            res.append(reslist)
+
+    return res
+
+def expand_list_list(mylist):
+    """Takes a list of lists and lists of lists and returns a list of 
+    flat lists.
+    Example: [[1,2],[[4,5],[6,7]]] -> [[1,2,4,5], [1,2,6,7]]
+    """
+
+    res = []
+    # Check the first element is at least a list
+    if not isinstance(mylist[0], list):
+        raise self.PhysicsObjectError, \
+              "Expand_list_list needs a list of lists and lists of lists"
+
+    # Recursion stop condition, one single element
+    if len(mylist) == 1:
+        if isinstance(mylist[0][0], list):
+            return mylist[0]
+        else:
+            return mylist
+
+    if isinstance(mylist[0][0], list):
         for item in mylist[0]:
             # Here the recursion happens, create lists starting with
             # each element of the first item and completed with 
             # the rest expanded
-            for rest in self.expand_list(mylist[1:]):
-                reslist = [item]
+            for rest in expand_list_list(mylist[1:]):
+                reslist = copy.copy(item)
                 reslist.extend(rest)
                 res.append(reslist)
-
-        return res
-
-    def expand_list_list(self, mylist):
-        """Takes a list of lists and lists of lists and returns a list of 
-        flat lists.
-        Example: [[1,2],[[4,5],[6,7]]] -> [[1,2,4,5], [1,2,6,7]]
-        """
-
-        res = []
-        # Check the first element is at least a list
-        if not isinstance(mylist[0], list):
-            raise self.PhysicsObjectError, \
-                  "Expand_list_list needs a list of lists and lists of lists"
-
-        # Recursion stop condition, one single element
-        if len(mylist) == 1:
-            if isinstance(mylist[0][0], list):
-                return mylist[0]
-            else:
-                return mylist
-
-        if isinstance(mylist[0][0], list):
-            for item in mylist[0]:
-                # Here the recursion happens, create lists starting with
-                # each element of the first item and completed with 
-                # the rest expanded
-                for rest in self.expand_list_list(mylist[1:]):
-                    reslist = copy.copy(item)
-                    reslist.extend(rest)
-                    res.append(reslist)
-        else:
-            for rest in self.expand_list_list(mylist[1:]):
-                reslist = copy.copy(mylist[0])
-                reslist.extend(rest)
-                res.append(reslist)
+    else:
+        for rest in expand_list_list(mylist[1:]):
+            reslist = copy.copy(mylist[0])
+            reslist.extend(rest)
+            res.append(reslist)
 
 
-        return res
+    return res
 

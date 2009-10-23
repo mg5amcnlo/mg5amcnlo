@@ -19,6 +19,7 @@ import copy
 import logging
 import math
 import unittest
+import itertools
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -572,7 +573,7 @@ class DiagramGenerationTest(unittest.TestCase):
     def test_diagram_generation_gluons(self):
         """Test the number of diagram generated for gg>ng with n up to 4"""
 
-        goal_ndiags = [1, 4, 25, 220]
+        goal_ndiags = [1, 4, 25, 220, 2485, 34300]
 
         # Test 1,2,3 and 4 gluons in the final state
         for ngluon in range (1, 5):
@@ -806,22 +807,22 @@ class DiagramGenerationTest(unittest.TestCase):
         mylist = [[1, 2], 3, [4, 5]]
         goal_list = [[1, 3, 4], [1, 3, 5], [2, 3, 4], [2, 3, 5]]
 
-        self.assertEqual(self.myamplitude.expand_list(mylist), goal_list)
+        self.assertEqual(diagram_generation.expand_list(mylist), goal_list)
 
         # Also test behavior with singlets like [1]
         mylist = [1, [2]]
         goal_list = [[1, 2]]
 
-        self.assertEqual(self.myamplitude.expand_list(mylist), goal_list)
+        self.assertEqual(diagram_generation.expand_list(mylist), goal_list)
 
         mylist = [[1]]
 
-        self.assertEqual(self.myamplitude.expand_list(mylist), mylist)
+        self.assertEqual(diagram_generation.expand_list(mylist), mylist)
 
         mylist = [[1, 2], [3]]
         goal_list = [[1, 3], [2, 3]]
 
-        self.assertEqual(self.myamplitude.expand_list(mylist), goal_list)
+        self.assertEqual(diagram_generation.expand_list(mylist), goal_list)
 
 
     def test_expand_list_list(self):
@@ -829,18 +830,351 @@ class DiagramGenerationTest(unittest.TestCase):
 
         mylist = [ [1, 2], [[3, 4], [5, 6]] ]
         goal_list = [[1, 2, 3, 4], [1, 2, 5, 6]]
-        self.assertEqual(self.myamplitude.expand_list_list(mylist), goal_list)
+        self.assertEqual(diagram_generation.expand_list_list(mylist), goal_list)
 
         mylist = [ [[1, 2], [3, 4]], [5] ]
         goal_list = [[1, 2, 5], [3, 4, 5]]
-        self.assertEqual(self.myamplitude.expand_list_list(mylist), goal_list)
+        self.assertEqual(diagram_generation.expand_list_list(mylist), goal_list)
 
         mylist = [ [[1, 2], [3, 4]], [[6, 7], [8, 9]] ]
         goal_list = [[1, 2, 6, 7], [1, 2, 8, 9], [3, 4, 6, 7], [3, 4, 8, 9]]
-        self.assertEqual(self.myamplitude.expand_list_list(mylist), goal_list)
+        self.assertEqual(diagram_generation.expand_list_list(mylist), goal_list)
 
         mylist = [ [[1, 2], [3, 4]], [5], [[6, 7], [8, 9]] ]
         goal_list = [[1, 2, 5, 6, 7], [1, 2, 5, 8, 9], [3, 4, 5, 6, 7],
                      [3, 4, 5, 8, 9]]
-        self.assertEqual(self.myamplitude.expand_list_list(mylist), goal_list)
+        self.assertEqual(diagram_generation.expand_list_list(mylist), goal_list)
 
+#===============================================================================
+# Muliparticle test
+#===============================================================================
+class MultiparticleTest(unittest.TestCase):
+    """Test class for processes with multiparticle labels"""
+
+    mypartlist = base_objects.ParticleList()
+    myinterlist = base_objects.InteractionList()
+    mymodel = base_objects.Model()
+    myprocess = base_objects.Process()
+
+    def setUp(self):
+
+        # A gluon
+        self.mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        # A quark U and its antiparticle
+        self.mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        antiu = copy.copy(self.mypartlist[1])
+        antiu.set('is_part', False)
+
+        # A quark D and its antiparticle
+        self.mypartlist.append(base_objects.Particle({'name':'d',
+                      'antiname':'d~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'d',
+                      'antitexname':'\bar d',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':1,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        antid = copy.copy(self.mypartlist[2])
+        antid.set('is_part', False)
+
+        # A photon
+        self.mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        # A electron and positron
+        self.mypartlist.append(base_objects.Particle({'name':'e+',
+                      'antiname':'e-',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'e^+',
+                      'antitexname':'e^-',
+                      'line':'straight',
+                      'charge':-1.,
+                      'pdg_code':11,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        antie = copy.copy(self.mypartlist[4])
+        antie.set('is_part', False)
+
+        # 3 gluon vertiex
+        self.myinterlist.append(base_objects.Interaction({
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[0]] * 3),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'G'},
+                      'orders':{'QCD':1}}))
+
+        # 4 gluon vertex
+        self.myinterlist.append(base_objects.Interaction({
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[0]] * 4),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'G^2'},
+                      'orders':{'QCD':2}}))
+
+        # Gluon and photon couplings to quarks
+        self.myinterlist.append(base_objects.Interaction({
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[1], \
+                                             antiu, \
+                                             self.mypartlist[0]]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        self.myinterlist.append(base_objects.Interaction({
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[1], \
+                                             antiu, \
+                                             self.mypartlist[3]]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        self.myinterlist.append(base_objects.Interaction({
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[2], \
+                                             antid, \
+                                             self.mypartlist[0]]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        self.myinterlist.append(base_objects.Interaction({
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[2], \
+                                             antid, \
+                                             self.mypartlist[3]]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of e to gamma
+
+        self.myinterlist.append(base_objects.Interaction({
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[4], \
+                                             antie, \
+                                             self.mypartlist[3]]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        self.mymodel.set('particles', self.mypartlist)
+        self.mymodel.set('interactions', self.myinterlist)
+
+        self.ref_dict_to0 = self.myinterlist.generate_ref_dict()[0]
+        self.ref_dict_to1 = self.myinterlist.generate_ref_dict()[1]
+
+    def test_multiparticle_pp_nj(self):
+        """Setting up and testing pp > nj based on multiparticle lists"""
+
+        max_fs = 2 # 3
+
+        p = [1,-1,2,-2,21]
+
+        multiparticle = base_objects.LegList([base_objects.Leg({'id':id,'number':1,'state':'initial'}) for id in p ])
+
+        islist = []
+        # Following equivalent to diagram_generation.expand_list([multiparticle,multiparticle])
+        for prod in itertools.product(multiparticle,multiparticle):
+            islist.append(base_objects.LegList([copy.copy(leg) \
+                                                for leg in prod]))
+
+        for leg in multiparticle:
+            leg.set('state','final')
+
+        goal_valid_procs = []
+        goal_valid_procs.append([([1, 1, 1, 1], 4),
+                                 ([1, -1, 1, -1], 4),
+                                 ([1, -1, 2, -2], 2),
+                                 ([1, -1, 21, 21], 3),
+                                 ([1, 2, 1, 2], 2),
+                                 ([1, -2, 1, -2], 2),
+                                 ([1, 21, 1, 21], 3),
+                                 ([-1, 1, 1, -1], 4),
+                                 ([-1, 1, 2, -2], 2),
+                                 ([-1, 1, 21, 21], 3),
+                                 ([-1, -1, -1, -1], 4),
+                                 ([-1, 2, -1, 2], 2),
+                                 ([-1, -2, -1, -2], 2),
+                                 ([-1, 21, -1, 21], 3),
+                                 ([2, 1, 1, 2], 2),
+                                 ([2, -1, -1, 2], 2),
+                                 ([2, 2, 2, 2], 4),
+                                 ([2, -2, 1, -1], 2),
+                                 ([2, -2, 2, -2], 4),
+                                 ([2, -2, 21, 21], 3),
+                                 ([2, 21, 2, 21], 3),
+                                 ([-2, 1, 1, -2], 2),
+                                 ([-2, -1, -1, -2], 2),
+                                 ([-2, 2, 1, -1], 2),
+                                 ([-2, 2, 2, -2], 4),
+                                 ([-2, 2, 21, 21], 3),
+                                 ([-2, -2, -2, -2], 4),
+                                 ([-2, 21, -2, 21], 3),
+                                 ([21, 1, 1, 21], 3),
+                                 ([21, -1, -1, 21], 3),
+                                 ([21, 2, 2, 21], 3),
+                                 ([21, -2, -2, 21], 3),
+                                 ([21, 21, 1, -1], 3),
+                                 ([21, 21, 2, -2], 3),
+                                 ([21, 21, 21, 21], 4)] )
+        goal_valid_procs.append([([1, 1, 1, 1, 21], 18),
+                                 ([1, -1, 1, -1, 21], 18),
+                                 ([1, -1, 2, -2, 21], 9),
+                                 ([1, -1, 21, 21, 21], 16),
+                                 ([1, 2, 1, 2, 21], 9),
+                                 ([1, -2, 1, -2, 21], 9),
+                                 ([1, 21, 1, 1, -1], 18),
+                                 ([1, 21, 1, 2, -2], 9),
+                                 ([1, 21, 1, 21, 21], 16),
+                                 ([-1, 1, 1, -1, 21], 18),
+                                 ([-1, 1, 2, -2, 21], 9),
+                                 ([-1, 1, 21, 21, 21], 16),
+                                 ([-1, -1, -1, -1, 21], 18),
+                                 ([-1, 2, -1, 2, 21], 9),
+                                 ([-1, -2, -1, -2, 21], 9),
+                                 ([-1, 21, 1, -1, -1], 18),
+                                 ([-1, 21, -1, 2, -2], 9),
+                                 ([-1, 21, -1, 21, 21], 16),
+                                 ([2, 1, 1, 2, 21], 9),
+                                 ([2, -1, -1, 2, 21], 9),
+                                 ([2, 2, 2, 2, 21], 18),
+                                 ([2, -2, 1, -1, 21], 9),
+                                 ([2, -2, 2, -2, 21], 18),
+                                 ([2, -2, 21, 21, 21], 16),
+                                 ([2, 21, 1, -1, 2], 9),
+                                 ([2, 21, 2, 2, -2], 18),
+                                 ([2, 21, 2, 21, 21], 16),
+                                 ([-2, 1, 1, -2, 21], 9),
+                                 ([-2, -1, -1, -2, 21], 9),
+                                 ([-2, 2, 1, -1, 21], 9),
+                                 ([-2, 2, 2, -2, 21], 18),
+                                 ([-2, 2, 21, 21, 21], 16),
+                                 ([-2, -2, -2, -2, 21], 18),
+                                 ([-2, 21, 1, -1, -2], 9),
+                                 ([-2, 21, 2, -2, -2], 18),
+                                 ([-2, 21, -2, 21, 21], 16),
+                                 ([21, 1, 1, 1, -1], 18),
+                                 ([21, 1, 1, 2, -2], 9),
+                                 ([21, 1, 1, 21, 21], 16),
+                                 ([21, -1, 1, -1, -1], 18),
+                                 ([21, -1, -1, 2, -2], 9),
+                                 ([21, -1, -1, 21, 21], 16),
+                                 ([21, 2, 1, -1, 2], 9),
+                                 ([21, 2, 2, 2, -2], 18),
+                                 ([21, 2, 2, 21, 21], 16),
+                                 ([21, -2, 1, -1, -2], 9),
+                                 ([21, -2, 2, -2, -2], 18),
+                                 ([21, -2, -2, 21, 21], 16),
+                                 ([21, 21, 1, -1, 21], 16),
+                                 ([21, 21, 2, -2, 21], 16),
+                                 ([21, 21, 21, 21, 21], 25)])
+
+
+        for nfs in range(2,max_fs+1):
+
+            # Generate all combinations of final state particles
+            fsall = []
+            for legs in itertools.product(multiparticle,repeat=nfs):
+                fsall.append(base_objects.LegList([copy.copy(leg) for leg in legs]))
+            # Now remove all double counting - this is kinda slow (but not
+            # compared to diagram generation of course)
+            fslist = []
+            for legs in fsall:
+                if legs.not_in_unordered_lists(fslist):
+                    fslist.append(legs)
+
+            # Combine IS and FS particles
+            leg_lists = []
+            for islegs in islist:
+                for fslegs in fslist:
+                    leg_list = [copy.copy(leg) for leg in islegs]
+                    leg_list.extend([copy.copy(leg) for leg in fslegs])
+                    leg_lists.append(base_objects.LegList(leg_list))
+
+            for leg_list in leg_lists:
+                for i in range(0,len(leg_list)):
+                    leg_list[i].set('number',i+1)
+
+            # Setup processes
+            processes = base_objects.ProcessList([base_objects.Process({'legs':legs,'model':self.mymodel}) for legs in leg_lists])
+            # Setup amplitudes
+            amplitudes = [diagram_generation.Amplitude({'process':process}) for process in processes]
+
+            nproc=0
+
+            # Calculate diagrams for all processes
+            valid_procs = []
+            for amplitude in amplitudes:
+                if len(amplitude.get('diagrams')) > 0:
+                    nproc = nproc + 1
+                    valid_procs.append(([leg.get('id') for leg in \
+                                         amplitude.get('process').get('legs')],
+                                        len(amplitude.get('diagrams'))))
+
+            # Check process/number of diagrams
+            self.assertEqual(valid_procs,goal_valid_procs[nfs-2])
+
+            # print 'pp > ',nfs,'j:'
+            # print 'Valid processes: ',nproc
+            # print 'Attempted processes: ',len(amplitudes)
+            # print 'Total parton combinations (before accounting for FS ordering: ',\
+            #       len(islist)*len(fsall)
+            

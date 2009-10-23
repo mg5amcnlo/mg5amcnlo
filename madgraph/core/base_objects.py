@@ -19,6 +19,7 @@ interaction, model, leg, vertex, process, ..."""
 import copy
 import logging
 import re
+import itertools
 
 #===============================================================================
 # PhysicsObject
@@ -634,6 +635,23 @@ class Model(PhysicsObject):
         return ['name', 'particles', 'parameters', 'interactions', 'couplings',
                 'lorentz']
 
+    def get_particle(self,id):
+        """Return the particle corresponding to the id"""
+
+        if id in self.get("particle_dict").keys():
+            return self["particle_dict"][id]
+        else:
+            return None
+
+    def get_interaction(self,id):
+        """Return the interaction corresponding to the id"""
+
+        if id in self.get("interaction_dict").keys():
+            return self["interaction_dict"][id]
+        else:
+            return None
+
+
 
 #===============================================================================
 # Leg
@@ -726,6 +744,27 @@ class LegList(PhysicsObjectList):
            return ref_dict_to0.has_key(tuple([leg.get('id') for leg in self]))
        else:
            return False
+
+    def not_in_unordered_lists(self, leg_list_list):
+        """Returns true if the leglists is not in the list of leg lists,
+        ignoring ordering of elements"""
+
+        if not isinstance(leg_list_list,list):
+            raise self.PhysicsObjectError, \
+                  "Not a valid list in LegList.not_in_unordered_list"
+
+        leg_list_ids = []
+        for leg_list in leg_list_list:
+            if not isinstance(leg_list,LegList):
+                raise self.PhysicsObjectError, \
+                      "Not a valid list of leglists in LegList.not_in_unordered_list"
+            leg_list_ids.append(tuple([leg.get('id') for leg in leg_list]))
+
+        for perm in itertools.permutations([leg.get('id') for leg in self]):
+            if perm in leg_list_ids:
+                return False
+
+        return True
 
 
 #===============================================================================
@@ -853,4 +892,16 @@ class Process(PhysicsObject):
 
         return ['legs', 'orders', 'model']
 
+
+#===============================================================================
+# ProcessList
+#===============================================================================
+class ProcessList(PhysicsObjectList):
+    """List of Process objects
+    """
+
+    def is_valid_element(self, obj):
+       """Test if object obj is a valid Process for the list."""
+
+       return isinstance(obj, Process)
 
