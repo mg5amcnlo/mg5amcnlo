@@ -174,9 +174,10 @@ class Amplitude(base_objects.PhysicsObject):
 
 
     def combine_legs(self, list_legs, ref_dict_to1, max_multi_to1):
-        """Take a list of legs as an input, with the reference dictionary n-1>1,
-        and output a list of list of tuples of Legs (allowed combinations) 
-        and Legs (rest). For algorithm, see documentation.
+        """Recursive function. Take a list of legs as an input, with
+        the reference dictionary n-1->1, and output a list of list of
+        tuples of Legs (allowed combinations) and Legs (rest). For
+        algorithm, see documentation.
         """
 
         res = []
@@ -318,6 +319,11 @@ def expand_list(mylist):
     """Takes a list of lists and elements and returns a list of flat lists.
     Example: [[1,2], 3, [4,5]] -> [[1,3,4], [1,3,5], [2,3,4], [2,3,5]]
     """
+
+    # Check that argument is a list
+    if not isinstance(mylist, list):
+        raise base_objects.PhysicsObject.PhysicsObjectError, \
+              "Expand_list argument must be a list"
 
     res = []
 
