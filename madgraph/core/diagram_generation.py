@@ -194,15 +194,13 @@ class Amplitude(base_objects.PhysicsObject):
 
                     # Identify the rest, create a list [comb,rest] and
                     # add it to res
-                    # TO BE CHANGED TO CONSERVE ORDERING ?
                     res_list = copy.copy(list_legs)
                     for leg in comb:
                         res_list.remove(leg)
-                    res_list.insert(0, comb)
+                    res_list.insert(list_legs.index(comb[0]), comb)
                     res.append(res_list)
 
                     # Now, deal with cases with more than 1 combination
-                    # TO BE CHANGED TO CONSERVE ORDERING ?
 
                     # First, split the list into two, according to the
                     # position of the first element in comb, and remove
@@ -213,8 +211,8 @@ class Amplitude(base_objects.PhysicsObject):
                         res_list2.remove(leg)
 
                     # Create a list of type [comb,rest1,rest2(combined)]
-                    res_list = [comb]
-                    res_list.extend(res_list1)
+                    res_list = res_list1
+                    res_list.append(comb)
                     # This is where recursion actually happens, 
                     # on the second part
                     for item in self.combine_legs(res_list2,
