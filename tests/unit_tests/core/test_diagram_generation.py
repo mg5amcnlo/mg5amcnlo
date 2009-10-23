@@ -427,7 +427,7 @@ class DiagramGenerationTest(unittest.TestCase):
                  base_objects.VertexList([vx234])), \
                 ]
 
-        self.assertEqual(reduced_list.__str__(), goal_reduced_list.__str__())
+        self.assertEqual(reduced_list, goal_reduced_list)
 
     def test_combine_legs_uux_ddx(self):
         """Test combine_legs and merge_comb_legs: uu~>dd~"""
@@ -509,66 +509,7 @@ class DiagramGenerationTest(unittest.TestCase):
                  base_objects.VertexList([vx34phot])),
                 ]
 
-        self.assertEqual(reduced_list.__str__(), my_reduced_list.__str__())
-
-    def test_combine_legs_uux_uuxuux(self):
-        """Test combine_legs: uu~>uu~uu~"""
-
-        myleglist = base_objects.LegList()
-
-        myleglist.append(base_objects.Leg({'id':-2,
-                                         'number':1,
-                                         'state':'initial'}))
-        myleglist.append(base_objects.Leg({'id':2,
-                                         'number':2,
-                                         'state':'initial'}))
-        myleglist.append(base_objects.Leg({'id':2,
-                                         'number':3,
-                                         'state':'final'}))
-        myleglist.append(base_objects.Leg({'id':-2,
-                                         'number':4,
-                                         'state':'final'}))
-        myleglist.append(base_objects.Leg({'id':2,
-                                         'number':5,
-                                         'state':'final'}))
-        myleglist.append(base_objects.Leg({'id':-2,
-                                         'number':6,
-                                         'state':'final'}))
-        l1 = myleglist[0]
-        l2 = myleglist[1]
-        l3 = myleglist[2]
-        l4 = myleglist[3]
-        l5 = myleglist[4]
-        l6 = myleglist[5]
-
-        my_combined_legs = [\
-                [(l1, l2), l3, l4, l5, l6], [(l1, l2), (l3, l4), l5, l6],
-                [(l1, l2), (l3, l4), (l5, l6)], [(l1, l2), (l3, l6), l4, l5],
-                [(l1, l2), (l3, l6), (l4, l5)], [(l1, l2), (l4, l5), l3, l6],
-                [(l1, l2), (l5, l6), l3, l4],
-                [(l1, l3), l2, l4, l5, l6], [(l1, l3), (l2, l4), l5, l6],
-                [(l1, l3), (l2, l4), (l5, l6)], [(l1, l3), (l2, l6), l4, l5],
-                [(l1, l3), (l2, l6), (l4, l5)], [(l1, l3), (l4, l5), l2, l6],
-                [(l1, l3), (l5, l6), l2, l4],
-                [(l1, l5), l2, l3, l4, l6], [(l1, l5), (l2, l4), l3, l6],
-                [(l1, l5), (l2, l4), (l3, l6)], [(l1, l5), (l2, l6), l3, l4],
-                [(l1, l5), (l2, l6), (l3, l4)], [(l1, l5), (l3, l4), l2, l6],
-                [(l1, l5), (l3, l6), l2, l4],
-                [(l2, l4), l1, l3, l5, l6], [(l2, l4), l1, (l3, l6), l5],
-                [(l2, l4), l1, (l5, l6), l3],
-                [(l2, l6), l1, l3, l4, l5], [(l2, l6), l1, (l3, l4), l5],
-                [(l2, l6), l1, (l4, l5), l3],
-                [(l3, l4), l1, l2, l5, l6], [(l3, l4), l1, l2, (l5, l6)],
-                [(l3, l6), l1, l2, l4, l5], [(l3, l6), l1, l2, (l4, l5)],
-                [(l4, l5), l1, l2, l3, l6],
-                [(l5, l6), l1, l2, l3, l4]
-                ]
-
-        combined_legs = self.myamplitude.combine_legs(
-                                              [leg for leg in myleglist],
-                                                self.ref_dict_to1, 3)
-        self.assertEqual(combined_legs, my_combined_legs)
-
+        self.assertEqual(reduced_list, my_reduced_list)
 
     def test_diagram_generation_gluons(self):
         """Test the number of diagram generated for gg>ng with n up to 4"""
@@ -576,17 +517,15 @@ class DiagramGenerationTest(unittest.TestCase):
         goal_ndiags = [1, 4, 25, 220, 2485, 34300]
 
         # Test 1,2,3 and 4 gluons in the final state
-        for ngluon in range (1, 5):
+        for ngluon in range (1, 4):
 
             # Create the amplitude
             myleglist = base_objects.LegList([base_objects.Leg({'id':21,
-                                              'number':num,
-                                              'state':'final'}) \
-                                              for num in range(1, ngluon + 3)])
+                                              'state':'initial'})]*2 )
 
-            myleglist[0].set('state', 'initial')
-            myleglist[1].set('state', 'initial')
-
+            myleglist.extend([base_objects.Leg({'id':21,
+                                              'state':'final'})]*ngluon)
+            
             myproc = base_objects.Process({'legs':myleglist,
                                                 'orders':{'QCD':ngluon},
                                                 'model':self.mymodel})
@@ -608,16 +547,12 @@ class DiagramGenerationTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':-1,
-                                         'number':1,
                                          'state':'initial'}))
         myleglist.append(base_objects.Leg({'id':1,
-                                         'number':2,
                                          'state':'initial'}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'number':3,
                                          'state':'final'}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'number':4,
                                          'state':'final'}))
 
         myproc = base_objects.Process({'legs':myleglist,
@@ -637,21 +572,15 @@ class DiagramGenerationTest(unittest.TestCase):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':-1,
-                                             'number':1,
                                              'state':'initial'}))
             myleglist.append(base_objects.Leg({'id':1,
-                                             'number':2,
                                              'state':'initial'}))
             myleglist.append(base_objects.Leg({'id':-1,
-                                             'number':3,
                                              'state':'final'}))
             myleglist.append(base_objects.Leg({'id':1,
-                                             'number':4,
                                              'state':'final'}))
-            for i in range(0, ngluons):
-                myleglist.append(base_objects.Leg({'id':21,
-                                                 'number':5 + i,
-                                                 'state':'final'}))
+            myleglist.extend([base_objects.Leg({'id':21,
+                                                 'state':'final'})]*ngluons)
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel})
@@ -671,21 +600,15 @@ class DiagramGenerationTest(unittest.TestCase):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':-1,
-                                             'number':1,
                                              'state':'initial'}))
             myleglist.append(base_objects.Leg({'id':1,
-                                             'number':2,
                                              'state':'initial'}))
             myleglist.append(base_objects.Leg({'id':-2,
-                                             'number':3,
                                              'state':'final'}))
             myleglist.append(base_objects.Leg({'id':2,
-                                             'number':4,
                                              'state':'final'}))
-            for i in range(0, ngluons):
-                myleglist.append(base_objects.Leg({'id':21,
-                                                 'number':5 + i,
-                                                 'state':'final'}))
+            myleglist.extend([base_objects.Leg({'id':21,
+                                                 'state':'final'})]*ngluons)
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel})
@@ -704,21 +627,15 @@ class DiagramGenerationTest(unittest.TestCase):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':-1,
-                                             'number':1,
                                              'state':'initial'}))
             myleglist.append(base_objects.Leg({'id':1,
-                                             'number':2,
                                              'state':'initial'}))
             myleglist.append(base_objects.Leg({'id':-2,
-                                             'number':3,
                                              'state':'final'}))
             myleglist.append(base_objects.Leg({'id':2,
-                                             'number':4,
                                              'state':'final'}))
-            for i in range(0, nquarks):
-                myleglist.append(base_objects.Leg({'id':1,
-                                                 'number':5 + i,
-                                                 'state':'final'}))
+            myleglist.extend([base_objects.Leg({'id':1,
+                                                'state':'final'})]*nquarks)
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel})
@@ -731,22 +648,18 @@ class DiagramGenerationTest(unittest.TestCase):
         """Test the number of diagram generated for uu~>na with n up to 5"""
 
         # Test up to 5 photons in the final state
-        for nphot in range (1, 6):
+        for nphot in range (1, 5):
 
             # Create the amplitude
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':-1,
-                                             'number':1,
                                              'state':'initial'}))
             myleglist.append(base_objects.Leg({'id':1,
-                                             'number':2,
                                              'state':'initial'}))
 
-            for i in range(1, nphot + 1):
-                myleglist.append(base_objects.Leg({'id':22,
-                                                  'number':i + 2,
-                                                  'state':'final'}))
+            myleglist.extend([base_objects.Leg({'id':22,
+                                                'state':'final'})]*nphot)
 
             myproc = base_objects.Process({'legs':myleglist,
                                             'orders':{'QED':nphot},
@@ -767,25 +680,20 @@ class DiagramGenerationTest(unittest.TestCase):
         """
 
         goal_ndiags = [2, 36, 1728]
-        for npairs in range (1, 4):
+        for npairs in range (1, 3):
 
             # Create the amplitude
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':-11,
-                                             'number':1,
                                              'state':'initial'}))
             myleglist.append(base_objects.Leg({'id':11,
-                                             'number':2,
                                              'state':'initial'}))
 
-            for i in range(1, npairs + 1):
-                myleglist.append(base_objects.Leg({'id':11,
-                                                  'number':(i - 1) * 2 + i + 2,
-                                                  'state':'final'}))
-                myleglist.append(base_objects.Leg({'id':-11,
-                                                  'number':(i - 1) * 2 + i + 3,
-                                                  'state':'final'}))
+            myleglist.extend([base_objects.Leg({'id':11,
+                                                'state':'final'}),
+                              base_objects.Leg({'id':-11,
+                                                'state':'final'})]*npairs)
 
             myproc = base_objects.Process({'legs':myleglist,
                                             'orders':{'QED':npairs * 2},

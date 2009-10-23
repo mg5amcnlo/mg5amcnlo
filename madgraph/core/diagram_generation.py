@@ -69,7 +69,12 @@ class Amplitude(base_objects.PhysicsObject):
         """
         model = self['process'].get('model')
 
-        for leg in self['process'].get('legs'):
+        for i in range(0,len(self['process'].get('legs'))):
+
+            # Make sure legs are unique
+            leg = copy.copy(self['process'].get('legs')[i])
+            self['process'].get('legs')[i] = leg
+
             # For the first step, ensure the tag from_group 
             # is true for all legs
             leg.set('from_group', True)
@@ -79,6 +84,10 @@ class Amplitude(base_objects.PhysicsObject):
             if leg.get('state') == 'initial':
                 part = model.get('particle_dict')[leg.get('id')]
                 leg.set('id', part.get_anti_pdg_code())
+
+            # Need to set leg number - this is defined by the leg order
+            leg.set('number',i+1)
+
 
         # Calculate the maximal multiplicity of n-1>1 configurations
         # to restrict possible leg combinations
@@ -325,8 +334,8 @@ def expand_list(mylist):
     return res
 
 def expand_list_list(mylist):
-    """Takes a list of lists and lists of lists and returns a list of 
-    flat lists.
+    """Recursive function. Takes a list of lists and lists of lists
+    and returns a list of flat lists.
     Example: [[1,2],[[4,5],[6,7]]] -> [[1,2,4,5], [1,2,6,7]]
     """
 
