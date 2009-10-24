@@ -387,20 +387,20 @@ class DiagramGenerationTest(unittest.TestCase):
                                 'state':'initial'})
 
         # Associated vertices
-        vx12 = base_objects.Vertex({'legs':base_objects.LegList([l1, l2, l12]),'id': 1})
-        vx13 = base_objects.Vertex({'legs':base_objects.LegList([l1, l3, l13]),'id': 1})
-        vx14 = base_objects.Vertex({'legs':base_objects.LegList([l1, l4, l14]),'id': 1})
-        vx23 = base_objects.Vertex({'legs':base_objects.LegList([l2, l3, l23]),'id': 1})
-        vx24 = base_objects.Vertex({'legs':base_objects.LegList([l2, l4, l24]),'id': 1})
-        vx34 = base_objects.Vertex({'legs':base_objects.LegList([l3, l4, l34]),'id': 1})
+        vx12 = base_objects.Vertex({'legs':base_objects.LegList([l1, l2, l12]), 'id': 1})
+        vx13 = base_objects.Vertex({'legs':base_objects.LegList([l1, l3, l13]), 'id': 1})
+        vx14 = base_objects.Vertex({'legs':base_objects.LegList([l1, l4, l14]), 'id': 1})
+        vx23 = base_objects.Vertex({'legs':base_objects.LegList([l2, l3, l23]), 'id': 1})
+        vx24 = base_objects.Vertex({'legs':base_objects.LegList([l2, l4, l24]), 'id': 1})
+        vx34 = base_objects.Vertex({'legs':base_objects.LegList([l3, l4, l34]), 'id': 1})
         vx123 = base_objects.Vertex(
-            {'legs':base_objects.LegList([l1, l2, l3, l123]),'id': 2})
+            {'legs':base_objects.LegList([l1, l2, l3, l123]), 'id': 2})
         vx124 = base_objects.Vertex(
-            {'legs':base_objects.LegList([l1, l2, l4, l124]),'id': 2})
+            {'legs':base_objects.LegList([l1, l2, l4, l124]), 'id': 2})
         vx134 = base_objects.Vertex(
-            {'legs':base_objects.LegList([l1, l3, l4, l134]),'id': 2})
+            {'legs':base_objects.LegList([l1, l3, l4, l134]), 'id': 2})
         vx234 = base_objects.Vertex(
-            {'legs':base_objects.LegList([l2, l3, l4, l234]),'id': 2})
+            {'legs':base_objects.LegList([l2, l3, l4, l234]), 'id': 2})
 
         # The final object which should be produced by merge_comb_legs
         goal_reduced_list = [\
@@ -490,13 +490,13 @@ class DiagramGenerationTest(unittest.TestCase):
                                 'number':3,
                                 'state':'final'})
         vx12glue = base_objects.Vertex(
-            {'legs':base_objects.LegList([l1, l2, l12glue]),'id':3})
+            {'legs':base_objects.LegList([l1, l2, l12glue]), 'id':3})
         vx12phot = base_objects.Vertex(
-            {'legs':base_objects.LegList([l1, l2, l12phot]),'id':4})
+            {'legs':base_objects.LegList([l1, l2, l12phot]), 'id':4})
         vx34glue = base_objects.Vertex(
-            {'legs':base_objects.LegList([l3, l4, l34glue]),'id':5})
+            {'legs':base_objects.LegList([l3, l4, l34glue]), 'id':5})
         vx34phot = base_objects.Vertex(
-            {'legs':base_objects.LegList([l3, l4, l34phot]),'id':6})
+            {'legs':base_objects.LegList([l3, l4, l34phot]), 'id':6})
 
         my_reduced_list = [\
                 (base_objects.LegList([l12glue, l3, l4]),
@@ -521,9 +521,9 @@ class DiagramGenerationTest(unittest.TestCase):
 
     def test_combine_legs_uux_uuxuux(self):
         """Test combine_legs: uu~>uu~uu~"""
- 
+
         myleglist = base_objects.LegList()
- 
+
         myleglist.append(base_objects.Leg({'id':-2,
                                          'number':1,
                                          'state':'initial'}))
@@ -548,7 +548,7 @@ class DiagramGenerationTest(unittest.TestCase):
         l4 = myleglist[3]
         l5 = myleglist[4]
         l6 = myleglist[5]
- 
+
         my_combined_legs = [\
                 [(l1, l2), l3, l4, l5, l6], [(l1, l2), (l3, l4), l5, l6],
                 [(l1, l2), (l3, l4), (l5, l6)], [(l1, l2), (l3, l6), l4, l5],
@@ -571,7 +571,7 @@ class DiagramGenerationTest(unittest.TestCase):
                 [l1, l2, l3, (l4, l5), l6],
                 [l1, l2, l3, l4, (l5, l6)]
                 ]
- 
+
         combined_legs = self.myamplitude.combine_legs(
                                               [leg for leg in myleglist],
                                                 self.ref_dict_to1, 3)
@@ -588,11 +588,11 @@ class DiagramGenerationTest(unittest.TestCase):
 
             # Create the amplitude
             myleglist = base_objects.LegList([base_objects.Leg({'id':21,
-                                              'state':'initial'})]*2 )
+                                              'state':'initial'})] * 2)
 
             myleglist.extend([base_objects.Leg({'id':21,
-                                              'state':'final'})]*ngluon)
-            
+                                              'state':'final'})] * ngluon)
+
             myproc = base_objects.Process({'legs':myleglist,
                                                 'orders':{'QCD':ngluon},
                                                 'model':self.mymodel})
@@ -647,7 +647,7 @@ class DiagramGenerationTest(unittest.TestCase):
             myleglist.append(base_objects.Leg({'id':1,
                                              'state':'final'}))
             myleglist.extend([base_objects.Leg({'id':21,
-                                                 'state':'final'})]*ngluons)
+                                                 'state':'final'})] * ngluons)
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel})
@@ -675,7 +675,7 @@ class DiagramGenerationTest(unittest.TestCase):
             myleglist.append(base_objects.Leg({'id':2,
                                              'state':'final'}))
             myleglist.extend([base_objects.Leg({'id':21,
-                                                 'state':'final'})]*ngluons)
+                                                 'state':'final'})] * ngluons)
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel})
@@ -690,7 +690,7 @@ class DiagramGenerationTest(unittest.TestCase):
         diagrams, due to lack of time)
         """
         myleglist = base_objects.LegList()
-        
+
         myleglist.append(base_objects.Leg({'id':-1,
                                            'state':'initial'}))
         myleglist.append(base_objects.Leg({'id':1,
@@ -701,16 +701,16 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'state':'final'}))
         myleglist.append(base_objects.Leg({'id':21,
                                            'state':'final'}))
-        
+
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
-        
+
         self.myamplitude.set('process', myproc)
-        
+
         mydiagrams = self.myamplitude.generate_diagrams()
 
         for leg in myleglist:
-            leg.set('from_group',True)
+            leg.set('from_group', True)
 
         l1 = myleglist[0]
         l2 = myleglist[1]
@@ -735,33 +735,33 @@ class DiagramGenerationTest(unittest.TestCase):
                                 'state':'final'})
 
         vx12glue = base_objects.Vertex(
-            {'legs':base_objects.LegList([l1, l2, l12glue]),'id':5})
+            {'legs':base_objects.LegList([l1, l2, l12glue]), 'id':5})
         vx12phot = base_objects.Vertex(
-            {'legs':base_objects.LegList([l1, l2, l12phot]),'id':6})
+            {'legs':base_objects.LegList([l1, l2, l12phot]), 'id':6})
         vx34glue = base_objects.Vertex(
-            {'legs':base_objects.LegList([l3, l4, l34glue]),'id':3})
+            {'legs':base_objects.LegList([l3, l4, l34glue]), 'id':3})
         vx34phot = base_objects.Vertex(
-            {'legs':base_objects.LegList([l3, l4, l34phot]),'id':4})
+            {'legs':base_objects.LegList([l3, l4, l34phot]), 'id':4})
         vx12glue34glue5 = base_objects.Vertex(
-            {'legs':base_objects.LegList([l12glue, l34glue, l5]),'id':1})
+            {'legs':base_objects.LegList([l12glue, l34glue, l5]), 'id':1})
         vx35 = base_objects.Vertex(
-            {'legs':base_objects.LegList([l3, l5, l35]),'id':3})
+            {'legs':base_objects.LegList([l3, l5, l35]), 'id':3})
         vx12glue354 = base_objects.Vertex(
-            {'legs':base_objects.LegList([l12glue, l35, l4]),'id':3})
+            {'legs':base_objects.LegList([l12glue, l35, l4]), 'id':3})
 
         goaldiagrams = base_objects.DiagramList([\
             base_objects.Diagram({'vertices': base_objects.VertexList(\
-            [vx12glue,vx34glue,vx12glue34glue5])}),
+            [vx12glue, vx34glue, vx12glue34glue5])}),
             base_objects.Diagram({'vertices': base_objects.VertexList(\
-            [vx12glue,vx35,vx12glue354])})\
+            [vx12glue, vx35, vx12glue354])})\
             ])
 
         for diagram in mydiagrams:
             for vertex in diagram.get('vertices'):
                 for leg in vertex.get('legs'):
-                    leg.set('from_group',True)
+                    leg.set('from_group', True)
 
-        self.assertEqual(goaldiagrams[0:2],mydiagrams[0:2])
+        self.assertEqual(goaldiagrams[0:2], mydiagrams[0:2])
 
 
     def test_diagram_generation_nodiag(self):
@@ -781,7 +781,7 @@ class DiagramGenerationTest(unittest.TestCase):
             myleglist.append(base_objects.Leg({'id':2,
                                              'state':'final'}))
             myleglist.extend([base_objects.Leg({'id':1,
-                                                'state':'final'})]*nquarks)
+                                                'state':'final'})] * nquarks)
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel})
@@ -791,7 +791,7 @@ class DiagramGenerationTest(unittest.TestCase):
             self.assertEqual(len(self.myamplitude.generate_diagrams()), 0)
 
     def test_diagram_generation_photons(self):
-        """Test the number of diagram generated for uu~>na with n up to 5"""
+        """Test the number of diagram generated for uu~>na with n up to 6"""
 
         # Test up to 5 photons in the final state
         for nphot in range (1, 5):
@@ -805,7 +805,7 @@ class DiagramGenerationTest(unittest.TestCase):
                                              'state':'initial'}))
 
             myleglist.extend([base_objects.Leg({'id':22,
-                                                'state':'final'})]*nphot)
+                                                'state':'final'})] * nphot)
 
             myproc = base_objects.Process({'legs':myleglist,
                                             'orders':{'QED':nphot},
@@ -839,7 +839,7 @@ class DiagramGenerationTest(unittest.TestCase):
             myleglist.extend([base_objects.Leg({'id':11,
                                                 'state':'final'}),
                               base_objects.Leg({'id':-11,
-                                                'state':'final'})]*npairs)
+                                                'state':'final'})] * npairs)
 
             myproc = base_objects.Process({'legs':myleglist,
                                             'orders':{'QED':npairs * 2},
@@ -1087,18 +1087,18 @@ class MultiparticleTest(unittest.TestCase):
 
         max_fs = 2 # 3
 
-        p = [1,-1,2,-2,21]
+        p = [1, -1, 2, -2, 21]
 
-        multiparticle = base_objects.LegList([base_objects.Leg({'id':id,'number':1,'state':'initial'}) for id in p ])
+        multiparticle = base_objects.LegList([base_objects.Leg({'id':id, 'number':1, 'state':'initial'}) for id in p ])
 
         islist = []
         # Following equivalent to diagram_generation.expand_list([multiparticle,multiparticle])
-        for prod in itertools.product(multiparticle,multiparticle):
+        for prod in itertools.product(multiparticle, multiparticle):
             islist.append(base_objects.LegList([copy.copy(leg) \
                                                 for leg in prod]))
 
         for leg in multiparticle:
-            leg.set('state','final')
+            leg.set('state', 'final')
 
         goal_valid_procs = []
         goal_valid_procs.append([([1, 1, 1, 1], 4),
@@ -1135,7 +1135,7 @@ class MultiparticleTest(unittest.TestCase):
                                  ([21, -2, -2, 21], 3),
                                  ([21, 21, 1, -1], 3),
                                  ([21, 21, 2, -2], 3),
-                                 ([21, 21, 21, 21], 4)] )
+                                 ([21, 21, 21, 21], 4)])
         goal_valid_procs.append([([1, 1, 1, 1, 21], 18),
                                  ([1, -1, 1, -1, 21], 18),
                                  ([1, -1, 2, -2, 21], 9),
@@ -1189,11 +1189,11 @@ class MultiparticleTest(unittest.TestCase):
                                  ([21, 21, 21, 21, 21], 25)])
 
 
-        for nfs in range(2,max_fs+1):
+        for nfs in range(2, max_fs + 1):
 
             # Generate all combinations of final state particles
             fsall = []
-            for legs in itertools.product(multiparticle,repeat=nfs):
+            for legs in itertools.product(multiparticle, repeat=nfs):
                 fsall.append(base_objects.LegList([copy.copy(leg) for leg in legs]))
             # Now remove all double counting - this is kinda slow (but not
             # compared to diagram generation of course)
@@ -1211,15 +1211,15 @@ class MultiparticleTest(unittest.TestCase):
                     leg_lists.append(base_objects.LegList(leg_list))
 
             for leg_list in leg_lists:
-                for i in range(0,len(leg_list)):
-                    leg_list[i].set('number',i+1)
+                for i in range(0, len(leg_list)):
+                    leg_list[i].set('number', i + 1)
 
             # Setup processes
-            processes = base_objects.ProcessList([base_objects.Process({'legs':legs,'model':self.mymodel}) for legs in leg_lists])
+            processes = base_objects.ProcessList([base_objects.Process({'legs':legs, 'model':self.mymodel}) for legs in leg_lists])
             # Setup amplitudes
             amplitudes = [diagram_generation.Amplitude({'process':process}) for process in processes]
 
-            nproc=0
+            nproc = 0
 
             # Calculate diagrams for all processes
             valid_procs = []
@@ -1231,11 +1231,11 @@ class MultiparticleTest(unittest.TestCase):
                                         len(amplitude.get('diagrams'))))
 
             # Check process/number of diagrams
-            self.assertEqual(valid_procs,goal_valid_procs[nfs-2])
+            self.assertEqual(valid_procs, goal_valid_procs[nfs - 2])
 
             # print 'pp > ',nfs,'j:'
             # print 'Valid processes: ',nproc
             # print 'Attempted processes: ',len(amplitudes)
             # print 'Total parton combinations (before accounting for FS ordering: ',\
             #       len(islist)*len(fsall)
-            
+
