@@ -137,16 +137,6 @@ def read_interactions_v4(fsock, ref_part_list):
                         # corresponds to a particle! (eg G)
                         if len(values) >= 2 * len(part_list) + 1:
                             part_list.append(curr_part)
-                            # Comment by Johan: Note that here (or
-                            # slightly later) we need to add a kinda
-                            # elaborate check to harmonize the old MG
-                            # standard for interaction, where FFS/FFV
-                            # and VVV/SSS/etc interactions are treated
-                            # differently in terms of
-                            # particles/antiparticles. Alternatively
-                            # (which I like less, but is also
-                            # possible) we need to keep track of this
-                            # during generation of the dictionnaries
                         else: break
                     # also stops if string does not correspond to 
                     # a particle name
@@ -156,6 +146,13 @@ def read_interactions_v4(fsock, ref_part_list):
                     raise Interaction.PhysicsObjectError, \
                         "Vertex with less than 3 known particles found."
 
+                # Flip part/antipart of second part when needed 
+                # according to v4 convention
+                spin_array = [part['spin'] for part in part_list]
+                if spin_array in [[2,2,1],   # FFS
+                                  [2,2,3]]:  # FFV
+                    part_list[1]['is_part'] = False
+                
                 myinter.set('particles', part_list)
 
                 # Give a dummy 'guess' values for color and Lorentz structures

@@ -19,12 +19,14 @@ import cmd
 import os
 import subprocess
 import sys
+import time
 
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.files as files
 import madgraph.iolibs.import_v4 as import_v4
 
 import madgraph.core.base_objects as base_objects
+import madgraph.core.diagram_generation as diagram_generation
 
 #===============================================================================
 # MadGraphCmd
@@ -32,9 +34,10 @@ import madgraph.core.base_objects as base_objects
 class MadGraphCmd(cmd.Cmd):
     """The command line processor of MadGraph"""
 
-    _curr_model = base_objects.Model()
+    __curr_model = base_objects.Model()
+    __curr_amp = diagram_generation.Amplitude()
 
-    _import_formats = ['v4']
+    __import_formats = ['v4']
 
     def split_arg(self, line):
         """Split a line of arguments"""
@@ -122,16 +125,16 @@ class MadGraphCmd(cmd.Cmd):
             elif os.path.isfile(args[1]):
                 filename = os.path.basename(args[1])
                 if filename == 'particles.dat':
-                    self._curr_model.set('particles',
+                    self.__curr_model.set('particles',
                                          files.read_from_file(
                                                 args[1],
                                                 import_v4.read_particles_v4))
                 if filename == 'interactions.dat':
-                    self._curr_model.set('interactions',
+                    self.__curr_model.set('interactions',
                                          files.read_from_file(
                                                 args[1],
                                                 import_v4.read_interactions_v4,
-                                                self._curr_model['particles']))
+                                                self.__curr_model['particles']))
             else:
                 print "Path %s is not a valid pathname" % args[1]
 
@@ -157,23 +160,40 @@ class MadGraphCmd(cmd.Cmd):
         """Display current internal status"""
 
         args = self.split_arg(line)
-
+        
+        if len(args) != 1:
+            self.help_display()
+            return False
+        
         if args[0] == 'particles':
             print "Current model contains %i particles:" % \
-                    len(self._curr_model['particles']),
-            for part in self._curr_model['particles']:
+                    len(self.__curr_model['particles']),
+            for part in self.__curr_model['particles']:
                 print part['name'],
             print ''
 
         if args[0] == 'interactions':
             print "Current model contains %i interactions" % \
-                    len(self._curr_model['interactions'])
+                    len(self.__curr_model['interactions'])
+            for inter in self.__curr_model['interactions']:
+                print str(inter['id']) + ':',
+                for part in inter['particles']:
+                    if part['is_part']:
+                        print part['name'],
+                    else:
+                        print part['antiname'],
+                print
+        
+        if args[0] == 'amplitude':
+            print self.__curr_amp['process'].nice_string()
+            print self.__curr_amp['diagrams'].nice_string()
 
     def complete_display(self, text, line, begidx, endidx):
         "Complete the display command"
 
         display_opts = ['particles',
-                        'interactions']
+                        'interactions',
+                        'amplitude']
         # Format
         if len(self.split_arg(line[0:begidx])) == 1:
             return self.list_completion(text, display_opts)
@@ -187,6 +207,60 @@ class MadGraphCmd(cmd.Cmd):
         else:
             print "running shell command:", line
             subprocess.call(line, shell=True)
+    
+    # Generate a new amplitude
+    def do_generate(self, line):
+        """Generate an amplitude for a given process"""
+    
+        args = self.split_arg(line)
+        
+        if len(args) < 1:
+            self.help_display()
+            return False
+        
+        if len(self.__curr_model['particles']) == 0:
+            print "No particle list currently active, please create one first!"
+            return False
+        
+        if len(self.__curr_model['interactions']) == 0:
+            print "No interaction list currently active," + \
+            " please create one first!"
+            return False
+        
+        myleglist = base_objects.LegList()
+        state = 'initial'
+        number = 1
+        
+        for part_name in args:
+            if part_name == '>':
+                state = 'final'
+                continue
+            
+            mypart = self.__curr_model['particles'].find_name(part_name)
+            
+            if mypart:
+                myleglist.append(base_objects.Leg({'id':mypart.get_pdg_code(),
+                                                   'number':number,
+                                                   'state':state}))
+                number = number + 1
+            else:
+                print "Error with particle %s: skipped" % part_name
+        
+        if myleglist and state == 'final':
+            myproc = base_objects.Process({'legs':myleglist,
+                                            'orders':{},
+                                            'model':self.__curr_model})
+            self.__curr_amp.set('process', myproc)
+            
+            cpu_time1 = time.time()
+            ndiags = len(self.__curr_amp.generate_diagrams())
+            cpu_time2 = time.time()
+            
+            print "%i diagrams generated in %0.3f s" % (ndiags, (cpu_time2 - \
+                                                               cpu_time1))
+
+        else:
+            print "Empty or wrong format process, please try again."
 
     # Quit
     def do_quit(self, line):
@@ -198,8 +272,13 @@ class MadGraphCmd(cmd.Cmd):
         print "-- imports file(s) in various formats"
 
     def help_display(self):
-        print "syntax: display particles|interactions",
+        print "syntax: display particles|interactions|amplitude",
         print "-- display a the status of various internal state variables"
+    
+    def help_generate(self):
+        print "syntax: generate INITIAL STATE > FINAL STATE",
+        print "-- generate amplitude for a given process (list of particles"
+        print "   separated by >)"
 
     def help_shell(self):
         print "syntax: shell CMD (or ! CMD)",

@@ -41,8 +41,8 @@ class PhysicsObject(dict):
         self.default_setup()
 
         if not isinstance(init_dict, dict):
-               raise self.PhysicsObjectError, \
-                   "Argument %s is not a dictionary" % repr(init_dict)
+            raise self.PhysicsObjectError, \
+                "Argument %s is not a dictionary" % repr(init_dict)
 
         for item in init_dict.keys():
             self.set(item, init_dict[item])
@@ -213,16 +213,16 @@ class Particle(PhysicsObject):
                 raise self.PhysicsObjectError, \
                     "Spin %s is not an integer" % repr(value)
             if value < 1 or value > 5:
-                 raise self.PhysicsObjectError, \
-                    "Spin %i is smaller than one" % value
+                raise self.PhysicsObjectError, \
+                   "Spin %i is smaller than one" % value
 
         if name is 'color':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                     "Color %s is not an integer" % repr(value)
             if value not in [1, 3, 6, 8]:
-                 raise self.PhysicsObjectError, \
-                    "Color %i is not valid" % value
+                raise self.PhysicsObjectError, \
+                   "Color %i is not valid" % value
 
         if name in ['mass', 'width']:
             # Must start with a letter, followed by letters, digits or _
@@ -237,16 +237,16 @@ class Particle(PhysicsObject):
                 raise self.PhysicsObjectError, \
                     "PDG code %s is not an integer" % repr(value)
             if value < 0:
-                 raise self.PhysicsObjectError, \
-                    "PDG code %i is smaller than one" % value
+                raise self.PhysicsObjectError, \
+                   "PDG code %i is smaller than one" % value
 
         if name is 'line':
             if not isinstance(value, str):
                 raise self.PhysicsObjectError, \
                     "Line type %s is not a string" % repr(value)
             if value not in ['dashed', 'straight', 'wavy', 'curly']:
-                 raise self.PhysicsObjectError, \
-                    "Line type %s is unknown" % value
+                raise self.PhysicsObjectError, \
+                   "Line type %s is unknown" % value
 
         if name is 'charge':
             if not isinstance(value, float):
@@ -307,9 +307,9 @@ class ParticleList(PhysicsObjectList):
         corresponding particle (first one in the list), with the 
         is_part flag set accordingly. None otherwise."""
 
-        if not Particle.filter(Particle(), 'name', name):
+        if not isinstance(name, str):
             raise self.PhysicsObjectError, \
-                "%s is not a valid particle name" % str(name)
+                "%s is not a valid string" % str(name)
 
         for part in self:
             mypart = copy.copy(part)
@@ -570,7 +570,7 @@ class Model(PhysicsObject):
         """Filter for model property values"""
 
         if name == 'name':
-            if not isinstance(value, String):
+            if not isinstance(value, str):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a string" % \
                                                             type(value)
@@ -580,28 +580,28 @@ class Model(PhysicsObject):
                     "Object of type %s is not a ParticleList object" % \
                                                             type(value)
         if name == 'interactions':
-           if not isinstance(value, InteractionList):
-               raise self.PhysicsObjectError, \
-                   "Object of type %s is not a InteractionList object" % \
-                                                           type(value)
+            if not isinstance(value, InteractionList):
+                raise self.PhysicsObjectError, \
+                    "Object of type %s is not a InteractionList object" % \
+                                                            type(value)
         if name == 'particle_dict':
-            if not isinstance(value, dictionary):
+            if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a dictionary" % \
                                                         type(value)
         if name == 'interaction_dict':
-            if not isinstance(value, dictionary):
+            if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a dictionary" % \
                                                         type(value)
 
         if name == 'ref_dict_to0':
-            if not isinstance(value, dictionary):
+            if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a dictionary" % \
                                                         type(value)
         if name == 'ref_dict_to1':
-            if not isinstance(value, dictionary):
+            if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a dictionary" % \
                                                         type(value)
@@ -635,7 +635,7 @@ class Model(PhysicsObject):
         return ['name', 'particles', 'parameters', 'interactions', 'couplings',
                 'lorentz']
 
-    def get_particle(self,id):
+    def get_particle(self, id):
         """Return the particle corresponding to the id"""
 
         if id in self.get("particle_dict").keys():
@@ -643,7 +643,7 @@ class Model(PhysicsObject):
         else:
             return None
 
-    def get_interaction(self,id):
+    def get_interaction(self, id):
         """Return the interaction corresponding to the id"""
 
         if id in self.get("interaction_dict").keys():
@@ -687,10 +687,10 @@ class Leg(PhysicsObject):
                                                                     str(value)
 
         if name == 'from_group':
-           if not isinstance(value, bool):
-               raise self.PhysicsObjectError, \
-                       "%s is not a valid boolean for leg flagr from_group" % \
-                                                                   str(value)
+            if not isinstance(value, bool):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid boolean for leg flagr from_group" % \
+                                                                    str(value)
 
         return True
 
@@ -707,55 +707,55 @@ class LegList(PhysicsObjectList):
     """
 
     def is_valid_element(self, obj):
-       """Test if object obj is a valid Leg for the list."""
+        """Test if object obj is a valid Leg for the list."""
+        
+        return isinstance(obj, Leg)
 
-       return isinstance(obj, Leg)
-
-   # Helper methods for diagram generation
+    # Helper methods for diagram generation
 
     def from_group_elements(self):
-       """Return all elements which have 'from_group' True"""
-
-       return filter(lambda leg: leg.get('from_group'), self)
+        """Return all elements which have 'from_group' True"""
+        
+        return filter(lambda leg: leg.get('from_group'), self)
 
     def minimum_one_from_group(self):
-       """Return True if at least one element has 'from_group' True"""
-
-       return len(self.from_group_elements()) > 0
+        """Return True if at least one element has 'from_group' True"""
+        
+        return len(self.from_group_elements()) > 0
 
     def minimum_two_from_group(self):
-       """Return True if at least two elements have 'from_group' True"""
-
-       return len(self.from_group_elements()) > 1
+        """Return True if at least two elements have 'from_group' True"""
+        
+        return len(self.from_group_elements()) > 1
 
     def can_combine_to_1(self, ref_dict_to1):
-       """If has at least one 'from_group' True and in ref_dict_to1,
-          return the return list from ref_dict_to1, otherwise return False"""
-       if self.minimum_one_from_group():
-           return ref_dict_to1.has_key(tuple([leg.get('id') for leg in self]))
-       else:
-           return False
+        """If has at least one 'from_group' True and in ref_dict_to1,
+           return the return list from ref_dict_to1, otherwise return False"""
+        if self.minimum_one_from_group():
+            return ref_dict_to1.has_key(tuple([leg.get('id') for leg in self]))
+        else:
+            return False
 
     def can_combine_to_0(self, ref_dict_to0):
-       """If has at least two 'from_group' True and in ref_dict_to0,
-          return the vertex (with id from ref_dict_to0), otherwise return None
-          """
-       if self.minimum_two_from_group():
-           return ref_dict_to0.has_key(tuple([leg.get('id') for leg in self]))
-       else:
-           return False
+        """If has at least two 'from_group' True and in ref_dict_to0,
+           return the vertex (with id from ref_dict_to0), otherwise return None
+           """
+        if self.minimum_two_from_group():
+            return ref_dict_to0.has_key(tuple([leg.get('id') for leg in self]))
+        else:
+            return False
 
     def not_in_unordered_lists(self, leg_list_list):
         """Returns true if the leglists is not in the list of leg lists,
         ignoring ordering of elements"""
 
-        if not isinstance(leg_list_list,list):
+        if not isinstance(leg_list_list, list):
             raise self.PhysicsObjectError, \
                   "Not a valid list in LegList.not_in_unordered_list"
 
         leg_list_ids = []
         for leg_list in leg_list_list:
-            if not isinstance(leg_list,LegList):
+            if not isinstance(leg_list, LegList):
                 raise self.PhysicsObjectError, \
                       "Not a valid list of leglists in LegList.not_in_unordered_list"
             leg_list_ids.append(tuple([leg.get('id') for leg in leg_list]))
@@ -809,9 +809,9 @@ class VertexList(PhysicsObjectList):
     """
 
     def is_valid_element(self, obj):
-       """Test if object obj is a valid Vertex for the list."""
-
-       return isinstance(obj, Vertex)
+        """Test if object obj is a valid Vertex for the list."""
+        
+        return isinstance(obj, Vertex)
 
 
 #===============================================================================
@@ -840,6 +840,23 @@ class Diagram(PhysicsObject):
         """Return particle property names as a nicely sorted list."""
 
         return ['vertices']
+    
+    def nice_string(self):
+        """Returns a nicely formatted string of the diagram content."""
+        
+        if self['vertices']:
+            mystr = '('
+            for vert in self['vertices']:
+                mystr = mystr + '('
+                for leg in vert['legs'][:-1]:
+                    mystr = mystr + str(leg['number']) + ','    
+                mystr = mystr[:-1] + '>' + \
+                        str(vert['legs'][-1]['number']) + ','
+                mystr = mystr + 'id:' + str(vert['id']) + '),'
+            mystr = mystr[:-1] + ')'
+            return mystr
+        else:
+            return '()'
 
 #===============================================================================
 # DiagramList
@@ -849,9 +866,17 @@ class DiagramList(PhysicsObjectList):
     """
 
     def is_valid_element(self, obj):
-       """Test if object obj is a valid Diagram for the list."""
+        """Test if object obj is a valid Diagram for the list."""
 
-       return isinstance(obj, Diagram)
+        return isinstance(obj, Diagram)
+    
+    def nice_string(self):
+        """Returns a nicely formatted string"""
+        mystr = str(len(self)) + ' diagrams:\n'
+        for diag in self:
+            mystr = mystr + "  " + diag.nice_string() + '\n'
+        return mystr[:-1]
+   
 
 #===============================================================================
 # Process
@@ -891,7 +916,21 @@ class Process(PhysicsObject):
         """Return process property names as a nicely sorted list."""
 
         return ['legs', 'orders', 'model']
+    
+    def nice_string(self):
+        """Returns a nicely formated string about current process
+        content"""
+        
+        mystr = "Process: "
+        for leg in self['legs']:
+            mypart = self['model']['particle_dict'][leg['id']]
+            if mypart['is_part']:
+                mystr = mystr + mypart['name']
+            else:
+                mystr = mystr + mypart['antiname']
+            mystr = mystr + '(%i) ' % leg['number']
 
+        return mystr
 
 #===============================================================================
 # ProcessList
@@ -901,7 +940,7 @@ class ProcessList(PhysicsObjectList):
     """
 
     def is_valid_element(self, obj):
-       """Test if object obj is a valid Process for the list."""
-
-       return isinstance(obj, Process)
+        """Test if object obj is a valid Process for the list."""
+        
+        return isinstance(obj, Process)
 
