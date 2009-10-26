@@ -745,27 +745,6 @@ class LegList(PhysicsObjectList):
         else:
             return False
 
-    def not_in_unordered_lists(self, leg_list_list):
-        """Returns true if the leglists is not in the list of leg lists,
-        ignoring ordering of elements"""
-
-        if not isinstance(leg_list_list, list):
-            raise self.PhysicsObjectError, \
-                  "Not a valid list in LegList.not_in_unordered_list"
-
-        leg_list_ids = []
-        for leg_list in leg_list_list:
-            if not isinstance(leg_list, LegList):
-                raise self.PhysicsObjectError, \
-                      "Not a valid list of leglists in LegList.not_in_unordered_list"
-            leg_list_ids.append(tuple([leg.get('id') for leg in leg_list]))
-
-        for perm in itertools.permutations([leg.get('id') for leg in self]):
-            if perm in leg_list_ids:
-                return False
-
-        return True
-
 
 #===============================================================================
 # Vertex
