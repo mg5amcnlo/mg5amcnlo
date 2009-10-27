@@ -452,7 +452,7 @@ class Interaction(PhysicsObject):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['particles', 'color', 'lorentz', 'couplings', 'orders']
+        return ['id', 'particles', 'color', 'lorentz', 'couplings', 'orders']
 
     def __permutate(self, seq):
         """Permutate a sequence and return a list of all permutations"""
@@ -829,8 +829,10 @@ class Diagram(PhysicsObject):
                 mystr = mystr + '('
                 for leg in vert['legs'][:-1]:
                     mystr = mystr + str(leg['number']) + ','    
-                mystr = mystr[:-1] + '>' + \
-                        str(vert['legs'][-1]['number']) + ','
+                if self['vertices'].index(vert) < len(self['vertices'])-1:
+                    # Do not want ">" in the last vertex
+                    mystr = mystr[:-1] + '>'
+                mystr = mystr + str(vert['legs'][-1]['number']) + ','
                 mystr = mystr + 'id:' + str(vert['id']) + '),'
             mystr = mystr[:-1] + ')'
             return mystr
@@ -895,19 +897,25 @@ class Process(PhysicsObject):
         """Return process property names as a nicely sorted list."""
 
         return ['legs', 'orders', 'model']
-    
+
     def nice_string(self):
         """Returns a nicely formated string about current process
         content"""
         
         mystr = "Process: "
+        prevleg = None
         for leg in self['legs']:
             mypart = self['model']['particle_dict'][leg['id']]
+            if prevleg and prevleg['state'] == 'initial' \
+                   and leg['state'] == 'final':
+                # Separate initial and final legs by ">"
+                mystr = mystr + '> '
             if mypart['is_part']:
                 mystr = mystr + mypart['name']
             else:
                 mystr = mystr + mypart['antiname']
             mystr = mystr + '(%i) ' % leg['number']
+            prevleg = leg
 
         return mystr
 

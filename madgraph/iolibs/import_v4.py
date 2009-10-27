@@ -151,7 +151,7 @@ def read_interactions_v4(fsock, ref_part_list):
                 spin_array = [part['spin'] for part in part_list]
                 if spin_array in [[2,2,1],   # FFS
                                   [2,2,3]]:  # FFV
-                    part_list[1]['is_part'] = False
+                    part_list[0]['is_part'] = False
                 
                 myinter.set('particles', part_list)
 

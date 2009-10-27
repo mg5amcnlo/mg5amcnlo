@@ -13,13 +13,16 @@
 #
 ################################################################################
 
-"""A user friendly command line interface to access MadGraph features."""
+"""A user friendly command line interface to access MadGraph features.
+   Uses the cmd package for command interpretation and tab completion.
+"""
 
 import cmd
 import os
 import subprocess
 import sys
 import time
+import readline
 
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.files as files
@@ -80,6 +83,9 @@ class MadGraphCmd(cmd.Cmd):
 
         self.prompt = 'mg5>'
 
+        # initialize tab completion, if not already set
+        readline.parse_and_bind('tab: complete')
+
         # If possible, build an info line with current version number 
         # and date, from the VERSION text file
 
@@ -129,12 +135,20 @@ class MadGraphCmd(cmd.Cmd):
                                          files.read_from_file(
                                                 args[1],
                                                 import_v4.read_particles_v4))
+                    print "%d particles imported" % \
+                          len(self.__curr_model['particles'])
                 if filename == 'interactions.dat':
+                    if len(self.__curr_model['particles']) == 0:
+                        print "No particle list currently active,",
+                        print "please create one first!"
+                        return False
                     self.__curr_model.set('interactions',
                                          files.read_from_file(
                                                 args[1],
                                                 import_v4.read_interactions_v4,
                                                 self.__curr_model['particles']))
+                    print "%d interactions imported" % \
+                          len(self.__curr_model['interactions'])
             else:
                 print "Path %s is not a valid pathname" % args[1]
 
@@ -167,7 +181,7 @@ class MadGraphCmd(cmd.Cmd):
         
         if args[0] == 'particles':
             print "Current model contains %i particles:" % \
-                    len(self.__curr_model['particles']),
+                    len(self.__curr_model['particles'])
             for part in self.__curr_model['particles']:
                 print part['name'],
             print ''
@@ -207,11 +221,14 @@ class MadGraphCmd(cmd.Cmd):
         else:
             print "running shell command:", line
             subprocess.call(line, shell=True)
-    
+
     # Generate a new amplitude
     def do_generate(self, line):
         """Generate an amplitude for a given process"""
-    
+
+        # Particle names always lowercase
+        line = line.lower()
+
         args = self.split_arg(line)
         
         if len(args) < 1:
@@ -232,7 +249,11 @@ class MadGraphCmd(cmd.Cmd):
         number = 1
         
         for part_name in args:
+
             if part_name == '>':
+                if not len(myleglist):
+                    print "Empty or wrong format process, please try again."
+                    return False
                 state = 'final'
                 continue
             
@@ -268,31 +289,31 @@ class MadGraphCmd(cmd.Cmd):
 
     # In-line help
     def help_import(self):
-        print "syntax: import v4|... FILENAME",
+        print "syntax: import v4|... FILENAME"
         print "-- imports file(s) in various formats"
 
     def help_display(self):
-        print "syntax: display particles|interactions|amplitude",
+        print "syntax: display particles|interactions|amplitude"
         print "-- display a the status of various internal state variables"
     
     def help_generate(self):
-        print "syntax: generate INITIAL STATE > FINAL STATE",
-        print "-- generate amplitude for a given process (list of particles"
-        print "   separated by >)"
+        print "syntax: generate INITIAL STATE > FINAL STATE"
+        print "-- generate amplitude for a given process"
+        print "   Example: u d~ > m+ vm g"
 
     def help_shell(self):
-        print "syntax: shell CMD (or ! CMD)",
+        print "syntax: shell CMD (or ! CMD)"
         print "-- run the shell command CMD and catch output"
 
     def help_quit(self):
-        print "syntax: quit",
+        print "syntax: quit"
         print "-- terminates the application"
 
     def help_help(self):
-        print "syntax: help",
+        print "syntax: help"
         print "-- access to the in-line help"
 
-    # ALiases
+    # Aliases
 
     do_EOF = do_quit
     help_EOF = help_quit

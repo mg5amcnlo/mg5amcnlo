@@ -346,6 +346,7 @@ class InteractionTest(unittest.TestCase):
         """Test interaction object string representation."""
 
         goal = "{\n"
+        goal = goal + "    \'id\': %d,\n" % self.myinter['id']
         goal = goal + "    \'particles\': %s,\n" % \
                             repr(base_objects.ParticleList([self.mypart] * 4))
         goal = goal + "    \'color\': [\'C1\', \'C2\'],\n"
