@@ -19,7 +19,6 @@ import copy
 import logging
 import math
 import unittest
-import itertools
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -721,13 +720,7 @@ class DiagramGenerationTest(unittest.TestCase):
         l12glue = base_objects.Leg({'id':21,
                                     'number':1,
                                     'state':'final'})
-        l12phot = base_objects.Leg({'id':22,
-                                    'number':1,
-                                    'state':'final'})
         l34glue = base_objects.Leg({'id':21,
-                                    'number':3,
-                                    'state':'final'})
-        l34phot = base_objects.Leg({'id':22,
                                     'number':3,
                                     'state':'final'})
         l35 = base_objects.Leg({'id':-2,
@@ -736,12 +729,8 @@ class DiagramGenerationTest(unittest.TestCase):
 
         vx12glue = base_objects.Vertex(
             {'legs':base_objects.LegList([l1, l2, l12glue]), 'id':5})
-        vx12phot = base_objects.Vertex(
-            {'legs':base_objects.LegList([l1, l2, l12phot]), 'id':6})
         vx34glue = base_objects.Vertex(
             {'legs':base_objects.LegList([l3, l4, l34glue]), 'id':3})
-        vx34phot = base_objects.Vertex(
-            {'legs':base_objects.LegList([l3, l4, l34phot]), 'id':4})
         vx12glue34glue5 = base_objects.Vertex(
             {'legs':base_objects.LegList([l12glue, l34glue, l5]), 'id':1})
         vx35 = base_objects.Vertex(

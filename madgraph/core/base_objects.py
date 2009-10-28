@@ -19,7 +19,6 @@ interaction, model, leg, vertex, process, ..."""
 import copy
 import logging
 import re
-import itertools
 
 #===============================================================================
 # PhysicsObject
@@ -829,7 +828,7 @@ class Diagram(PhysicsObject):
                 mystr = mystr + '('
                 for leg in vert['legs'][:-1]:
                     mystr = mystr + str(leg['number']) + ','    
-                if self['vertices'].index(vert) < len(self['vertices'])-1:
+                if self['vertices'].index(vert) < len(self['vertices']) - 1:
                     # Do not want ">" in the last vertex
                     mystr = mystr[:-1] + '>'
                 mystr = mystr + str(vert['legs'][-1]['number']) + ','
@@ -905,7 +904,7 @@ class Process(PhysicsObject):
         mystr = "Process: "
         prevleg = None
         for leg in self['legs']:
-            mypart = self['model']['particle_dict'][leg['id']]
+            mypart = self['model'].get('particle_dict')[leg['id']]
             if prevleg and prevleg['state'] == 'initial' \
                    and leg['state'] == 'final':
                 # Separate initial and final legs by ">"
@@ -917,7 +916,8 @@ class Process(PhysicsObject):
             mystr = mystr + '(%i) ' % leg['number']
             prevleg = leg
 
-        return mystr
+        # Remove last space
+        return mystr[:-1]
 
 #===============================================================================
 # ProcessList

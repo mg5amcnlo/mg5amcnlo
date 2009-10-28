@@ -23,9 +23,9 @@ import madgraph
 import madgraph.iolibs.files as files
 
 #===============================================================================
-# _parse_info_str
+# parse_info_str
 #===============================================================================
-def _parse_info_str(fsock):
+def parse_info_str(fsock):
     """Parse a newline separated list of "param=value" as a dictionnary
     """
 
@@ -57,9 +57,9 @@ def get_pkg_info(info_str=None):
     if info_str is None:
         info_dict = files.read_from_file(os.path.join(madgraph.__path__[0],
                                                   "VERSION"),
-                                                  _parse_info_str)
+                                                  parse_info_str)
     else:
-        info_dict = _parse_info_str(StringIO.StringIO(info_str))
+        info_dict = parse_info_str(StringIO.StringIO(info_str))
 
     return info_dict
 
