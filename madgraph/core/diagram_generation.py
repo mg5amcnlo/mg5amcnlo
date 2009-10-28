@@ -77,7 +77,7 @@ class Amplitude(base_objects.PhysicsObject):
         3. If there is a dictionary n->0 with n=number of external
            particles, create if possible the combination [(1,2,3,4,...)] 
            with *at least two* from_group==true. This will give a
-           finished (set of) diagram(s) (done by reduced_leglist)
+           finished (set of) diagram(s) (done by reduce_leglist)
 
         4. Create all allowed groupings of particles with at least one
            from_group==true (according to dictionaries n->1):
@@ -93,7 +93,7 @@ class Amplitude(base_objects.PhysicsObject):
         6. Stop algorithm when at most 2 particles remain.
            Return all diagrams (lists of vertices).
 
-        7. Repeat from 3 (recursion done by reduced_leglist)
+        7. Repeat from 3 (recursion done by reduce_leglist)
         """
         model = self['process'].get('model')
 
@@ -208,7 +208,10 @@ class Amplitude(base_objects.PhysicsObject):
         tuples of Legs (allowed combinations) and Legs (rest). Algorithm:
 
         1. Get all n-combinations from list [123456]: [12],..,[23],..,[123],..
-        2. For each combination, say [34]. Check if combination is valid. If so:
+
+        2. For each combination, say [34]. Check if combination is valid.
+           If so:
+
            a. Append [12[34]56] to result array
 
            b. Split [123456] at index(first element in combination+1),
@@ -220,9 +223,9 @@ class Amplitude(base_objects.PhysicsObject):
            from 1.) = [12[34][56]] to result array
 
         4. After appending results from all n-combinations, return
-           resulting array. Example, assume [12] and [45] are valid
+           resulting array. Example, if [13] and [45] are valid
            combinations:
-            [[[12]3456],[[12]3[45]6],[123[45]6]] 
+            [[[13]2456],[[13]2[45]6],[123[45]6]] 
         """
 
         res = []
