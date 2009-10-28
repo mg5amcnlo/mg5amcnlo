@@ -65,7 +65,35 @@ class Amplitude(base_objects.PhysicsObject):
         return ['process', 'diagrams']
 
     def generate_diagrams(self):
-        """Generate diagrams. For algorithm explanation, see documentation.
+        """Generate diagrams. Algorithm:
+
+        1. Define interaction dictionaries:
+          * 2->0 (identity), 3->0, 4->0, ... , maxlegs->0
+          * 2 -> 1, 3 -> 1, ..., maxlegs-1 -> 1 
+
+        2. Set flag from_group=true for all external particles.
+           Flip particle/anti particle for incoming particles.
+
+        3. If there is a dictionary n->0 with n=number of external
+           particles, create if possible the combination [(1,2,3,4,...)] 
+           with *at least two* from_group==true. This will give a
+           finished (set of) diagram(s) (done by reduced_leglist)
+
+        4. Create all allowed groupings of particles with at least one
+           from_group==true (according to dictionaries n->1):
+           [(1,2),3,4...],[1,(2,3),4,...],...,
+                          [(1,2),(3,4),...],...,[(1,2,3),4,...],... 
+           (done by combine_legs)
+
+        5. Replace each group with a (list of) new particle(s) with number 
+           n = min(group numbers). Set from_group true for these
+           particles and false for all other particles. Store vertex info.
+           (done by merge_comb_legs)
+
+        6. Stop algorithm when at most 2 particles remain.
+           Return all diagrams (lists of vertices).
+
+        7. Repeat from 3 (recursion done by reduced_leglist)
         """
         model = self['process'].get('model')
 
@@ -117,6 +145,7 @@ class Amplitude(base_objects.PhysicsObject):
 
     def reduce_leglist(self, curr_leglist, max_multi_to1):
         """Recursive function to reduce N LegList to N-1
+           For algorithm, see doc for generate_diagrams.
         """
 
         # Result variable which is a list of lists of vertices
@@ -176,8 +205,24 @@ class Amplitude(base_objects.PhysicsObject):
     def combine_legs(self, list_legs, ref_dict_to1, max_multi_to1):
         """Recursive function. Take a list of legs as an input, with
         the reference dictionary n-1->1, and output a list of list of
-        tuples of Legs (allowed combinations) and Legs (rest). For
-        algorithm, see documentation.
+        tuples of Legs (allowed combinations) and Legs (rest). Algorithm:
+
+        1. Get all n-combinations from list [123456]: [12],..,[23],..,[123],..
+        2. For each combination, say [34]. Check if combination is valid. If so:
+           a. Append [12[34]56] to result array
+
+           b. Split [123456] at index(first element in combination+1),
+              i.e. [12],[456] and subtract combination from second half,
+              i.e.: [456]-[34]=[56]. Repeat from 1. with this array
+
+        3. Take result array from call to 1. (here, [[56]]) and append
+           (first half in step b - combination) + combination + (result
+           from 1.) = [12[34][56]] to result array
+
+        4. After appending results from all n-combinations, return
+           resulting array. Example, assume [12] and [45] are valid
+           combinations:
+            [[[12]3456],[[12]3[45]6],[123[45]6]] 
         """
 
         res = []
