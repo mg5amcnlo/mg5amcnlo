@@ -23,6 +23,7 @@ import subprocess
 import sys
 import time
 import readline
+import atexit
 
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.files as files
@@ -85,6 +86,14 @@ class MadGraphCmd(cmd.Cmd):
 
         # initialize tab completion, if not already set
         readline.parse_and_bind('tab: complete')
+
+        # initialize command history
+        history_file = os.path.join(os.environ['HOME'], '.mg5history')
+        try:
+            readline.read_history_file(history_file)
+        except IOError:
+            pass
+        atexit.register(readline.write_history_file, history_file)
 
         # If possible, build an info line with current version number 
         # and date, from the VERSION text file
