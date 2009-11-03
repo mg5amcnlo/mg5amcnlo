@@ -119,38 +119,53 @@ class MadGraphCmd(cmd.Cmd):
     def do_import(self, line):
         """Import files with external formats"""
 
+        def import_v4file(self, filepath):
+            """Helper function to load a v4 file from file path filepath"""
+            filename = os.path.basename(filepath)
+            if filename == 'particles.dat':
+                self.__curr_model.set('particles',
+                                     files.read_from_file(
+                                            filepath,
+                                            import_v4.read_particles_v4))
+                print "%d particles imported" % \
+                      len(self.__curr_model['particles'])
+            if filename == 'interactions.dat':
+                if len(self.__curr_model['particles']) == 0:
+                    print "No particle list currently active,",
+                    print "please create one first!"
+                    return False
+                self.__curr_model.set('interactions',
+                                     files.read_from_file(
+                                            filepath,
+                                            import_v4.read_interactions_v4,
+                                            self.__curr_model['particles']))
+                print "%d interactions imported" % \
+                      len(self.__curr_model['interactions'])
+                      
         args = self.split_arg(line)
         if len(args) != 2:
             self.help_import()
             return False
 
         if args[0] == 'v4':
-            #Try to guess which function to call according to the given path
+            
+            files_to_import = ('particles.dat', 'interactions.dat')
+            
             if os.path.isdir(args[1]):
-                pass
+                for filename in files_to_import:
+                    if os.path.isfile(os.path.join(args[1], filename)):
+                        import_v4file(self, os.path.join(args[1], filename))
+            
             elif os.path.isfile(args[1]):
-                filename = os.path.basename(args[1])
-                if filename == 'particles.dat':
-                    self.__curr_model.set('particles',
-                                         files.read_from_file(
-                                                args[1],
-                                                import_v4.read_particles_v4))
-                    print "%d particles imported" % \
-                          len(self.__curr_model['particles'])
-                if filename == 'interactions.dat':
-                    if len(self.__curr_model['particles']) == 0:
-                        print "No particle list currently active,",
-                        print "please create one first!"
-                        return False
-                    self.__curr_model.set('interactions',
-                                         files.read_from_file(
-                                                args[1],
-                                                import_v4.read_interactions_v4,
-                                                self.__curr_model['particles']))
-                    print "%d interactions imported" % \
-                          len(self.__curr_model['interactions'])
+                if os.path.basename(args[1]) in files_to_import:
+                    import_v4file(self, args[1])
+                else:
+                    print "%s is not a valid v4 file name" % \
+                                        os.path.basename(args[1])
             else:
                 print "Path %s is not a valid pathname" % args[1]
+        
+        
 
     def complete_import(self, text, line, begidx, endidx):
         "Complete the import command"
@@ -182,7 +197,14 @@ class MadGraphCmd(cmd.Cmd):
         if args[0] == 'particles':
             print "Current model contains %i particles:" % \
                     len(self.__curr_model['particles'])
-            for part in self.__curr_model['particles']:
+            part_antipart = [part for part in self.__curr_model['particles'] \
+                             if not part['self_antipart']]
+            part_self = [part for part in self.__curr_model['particles'] \
+                             if part['self_antipart']]
+            for part in part_antipart:
+                print part['name'] + '/' + part['antiname'],
+            print ''
+            for part in part_self:
                 print part['name'],
             print ''
 
