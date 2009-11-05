@@ -57,12 +57,15 @@ def read_particles_v4(fsock):
             values = line.split()
             if len(values) != 9:
                 # Not the right number tags on the line
-                raise self.ValueError, \
+                raise ValueError, \
                     "Unvalid initialization string:" + line
             else:
                 try:
                     mypart.set('name', values[0])
                     mypart.set('antiname', values[1])
+
+                    if mypart['name'] == mypart['antiname']:
+                        mypart['self_antipart'] = True
 
                     if values[2].lower() in spin_equiv.keys():
                         mypart.set('spin',
@@ -112,8 +115,8 @@ def read_interactions_v4(fsock, ref_part_list):
     myinterlist = InteractionList()
 
     if not isinstance(ref_part_list, ParticleList):
-           raise ValueError, \
-               "Object %s is not a valid ParticleList" % repr(ref_part_list)
+        raise ValueError, \
+            "Object %s is not a valid ParticleList" % repr(ref_part_list)
 
     for line in fsock:
         myinter = Interaction()
@@ -123,7 +126,7 @@ def read_interactions_v4(fsock, ref_part_list):
 
         if line != "": # skip blank
             values = line.split()
-            part_list = []
+            part_list = ParticleList()
 
             try:
                 for str_name in values:
@@ -133,7 +136,7 @@ def read_interactions_v4(fsock, ref_part_list):
                         # anyway not enough, required if a variable name 
                         # corresponds to a particle! (eg G)
                         if len(values) >= 2 * len(part_list) + 1:
-                            part_list.append(str_name)
+                            part_list.append(curr_part)
                         else: break
                     # also stops if string does not correspond to 
                     # a particle name
@@ -142,6 +145,13 @@ def read_interactions_v4(fsock, ref_part_list):
                 if len(part_list) < 3:
                     raise Interaction.PhysicsObjectError, \
                         "Vertex with less than 3 known particles found."
+
+                # Flip part/antipart of second part when needed 
+                # according to v4 convention
+                spin_array = [part['spin'] for part in part_list]
+                if spin_array in [[2, 2, 1], # FFS
+                                  [2, 2, 3]]:  # FFV
+                    part_list[0]['is_part'] = False
 
                 myinter.set('particles', part_list)
 
@@ -165,6 +175,7 @@ def read_interactions_v4(fsock, ref_part_list):
                     return ret_dict
 
                 myinter.set('orders', count_duplicates_in_list(order_list))
+                myinter.set('id', len(myinterlist) + 1)
 
                 myinterlist.append(myinter)
 

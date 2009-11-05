@@ -1,0 +1,7 @@
+TO BE COMPLETED!
+
+To run mg5:
+./bin/mg5
+
+To run the test suite:
+./tests/test_manager.py (--verbose=1)

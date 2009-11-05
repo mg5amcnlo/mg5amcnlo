@@ -16,7 +16,6 @@
 """Methods and classes dealing with file access."""
 
 import logging
-import os
 
 #===============================================================================
 # read_from_file

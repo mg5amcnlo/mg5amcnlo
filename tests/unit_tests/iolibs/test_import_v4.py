@@ -17,6 +17,7 @@
 
 import StringIO
 import unittest
+import copy
 
 import madgraph.iolibs.import_v4 as import_v4
 import madgraph.core.base_objects as base_objects
@@ -60,7 +61,9 @@ class IOImportV4Test(unittest.TestCase):
                                                       'line':'straight',
                                                       'charge': 0.,
                                                       'pdg_code':12,
-                                                      'propagating':True}),
+                                                      'propagating':True,
+                                                      'is_part':True,
+                                                      'self_antipart':False}),
                                  base_objects.Particle({'name':'w+',
                                                       'antiname':'w-',
                                                       'spin':3,
@@ -72,7 +75,9 @@ class IOImportV4Test(unittest.TestCase):
                                                       'line':'wavy',
                                                       'charge':0.,
                                                       'pdg_code':24,
-                                                      'propagating':True}),
+                                                      'propagating':True,
+                                                      'is_part':True,
+                                                      'self_antipart':False}),
                                  base_objects.Particle({'name':'T1',
                                                       'antiname':'T1',
                                                       'spin':5,
@@ -84,7 +89,9 @@ class IOImportV4Test(unittest.TestCase):
                                                       'line':'dashed',
                                                       'charge': 0.,
                                                       'pdg_code':8000002,
-                                                      'propagating':True})])
+                                                      'propagating':True,
+                                                      'is_part':True,
+                                                      'self_antipart':True})])
 
         self.assertEqual(import_v4.read_particles_v4(fsock), goal_part_list)
 
@@ -114,6 +121,7 @@ class IOImportV4Test(unittest.TestCase):
                                     w+   w-   a MGVX3   QED
                                     g   g   T1 MGVX2   QCD a
                                     w+   w-   w+   w- MGVX6   DUM0   QED QED n
+                                    e-   ve   w- MGVX24   QED
                                     # And now some bad format entries
                                     # which should be ignored with a warning
                                     k+ k- a test QED
@@ -124,27 +132,61 @@ class IOImportV4Test(unittest.TestCase):
 
         myparts = import_v4.read_particles_v4(fsock_part)
 
+        wplus = copy.copy(myparts[14])
+        wmin = copy.copy(myparts[14])
+        wmin.set('is_part', False)
+        eplus = copy.copy(myparts[3])
+        eplus.set('is_part',False)
+        enu = copy.copy(myparts[0])
+        photon = copy.copy(myparts[12])
+        gluon = copy.copy(myparts[15])
+        t1 = copy.copy(myparts[17])
+
         goal_inter_list = base_objects.InteractionList([ \
-                                base_objects.Interaction(
-                                                {'particles':['w+', 'w-', 'a'],
-                                                 'color':['guess'],
-                                                 'lorentz':['guess'],
-                                                 'couplings':{(0, 0):'MGVX3'},
-                                                 'orders':{'QED':1}}),
-                                 base_objects.Interaction(
-                                                {'particles':['g', 'g', 'T1'],
-                                                 'color':['guess'],
-                                                 'lorentz':['guess'],
-                                                 'couplings':{(0, 0):'MGVX2'},
-                                                 'orders':{'QCD':1}}),
-                                 base_objects.Interaction(
-                                                {'particles': \
-                                                    ['w+', 'w-', 'w+', 'w-'],
-                                                 'color':['guess'],
-                                                 'lorentz':['guess'],
-                                                 'couplings':{(0, 0):'MGVX6'},
-                                                 'orders':{'QED':2}})])
+                    base_objects.Interaction(
+                                    {'id':1,
+                                     'particles':base_objects.ParticleList([
+                                                                wplus,
+                                                                wmin,
+                                                                photon]),
+                                     'color':['guess'],
+                                     'lorentz':['guess'],
+                                     'couplings':{(0, 0):'MGVX3'},
+                                     'orders':{'QED':1}}),
+                     base_objects.Interaction(
+                                    {'id':2,
+                                     'particles':base_objects.ParticleList([
+                                                                gluon,
+                                                                gluon,
+                                                                t1]),
+                                     'color':['guess'],
+                                     'lorentz':['guess'],
+                                     'couplings':{(0, 0):'MGVX2'},
+                                     'orders':{'QCD':1}}),
+                     base_objects.Interaction(
+                                    {'id':3,
+                                     'particles':base_objects.ParticleList([
+                                                                wplus,
+                                                                wmin,
+                                                                wplus,
+                                                                wmin]),
+                                     'color':['guess'],
+                                     'lorentz':['guess'],
+                                     'couplings':{(0, 0):'MGVX6'},
+                                     'orders':{'QED':2}}),
+
+                     base_objects.Interaction(
+                                    {'id':4,
+                                     'particles':base_objects.ParticleList([
+                                                                eplus,
+                                                                enu,
+                                                                wmin]),
+                                     'color':['guess'],
+                                     'lorentz':['guess'],
+                                     'couplings':{(0, 0):'MGVX24'},
+                                     'orders':{'QED':1}})])
 
         self.assertEqual(import_v4.read_interactions_v4(fsock_inter,
                                                         myparts),
                                                 goal_inter_list)
+
