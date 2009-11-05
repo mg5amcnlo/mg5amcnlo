@@ -25,6 +25,7 @@ import time
 import readline
 import atexit
 
+
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.files as files
 import madgraph.iolibs.import_v4 as import_v4
@@ -76,6 +77,7 @@ class MadGraphCmd(cmd.Cmd):
                        if f.startswith(text) and \
                             os.path.isdir(os.path.join(base_dir, f))
                      ]
+
         return completion
 
 
@@ -85,7 +87,15 @@ class MadGraphCmd(cmd.Cmd):
         self.prompt = 'mg5>'
 
         # initialize tab completion, if not already set
-        readline.parse_and_bind('tab: complete')
+        if(sys.platform == 'darwin'):
+            # Only on Mac OS X
+            try:
+                import rlcompleter
+                readline.parse_and_bind ("bind ^I rl_complete")
+            except ImportError:
+                pass
+        else:
+            readline.parse_and_bind("tab: complete")
 
         # initialize command history
         history_file = os.path.join(os.environ['HOME'], '.mg5history')
@@ -150,21 +160,21 @@ class MadGraphCmd(cmd.Cmd):
                                             self.__curr_model['particles']))
                 print "%d interactions imported" % \
                       len(self.__curr_model['interactions'])
-                      
+
         args = self.split_arg(line)
         if len(args) != 2:
             self.help_import()
             return False
 
         if args[0] == 'v4':
-            
+
             files_to_import = ('particles.dat', 'interactions.dat')
-            
+
             if os.path.isdir(args[1]):
                 for filename in files_to_import:
                     if os.path.isfile(os.path.join(args[1], filename)):
                         import_v4file(self, os.path.join(args[1], filename))
-            
+
             elif os.path.isfile(args[1]):
                 if os.path.basename(args[1]) in files_to_import:
                     import_v4file(self, args[1])
@@ -173,8 +183,8 @@ class MadGraphCmd(cmd.Cmd):
                                         os.path.basename(args[1])
             else:
                 print "Path %s is not a valid pathname" % args[1]
-        
-        
+
+
 
     def complete_import(self, text, line, begidx, endidx):
         "Complete the import command"
@@ -198,11 +208,11 @@ class MadGraphCmd(cmd.Cmd):
         """Display current internal status"""
 
         args = self.split_arg(line)
-        
+
         if len(args) != 1:
             self.help_display()
             return False
-        
+
         if args[0] == 'particles':
             print "Current model contains %i particles:" % \
                     len(self.__curr_model['particles'])
@@ -228,7 +238,7 @@ class MadGraphCmd(cmd.Cmd):
                     else:
                         print part['antiname'],
                 print
-        
+
         if args[0] == 'amplitude':
             print self.__curr_amp['process'].nice_string()
             print self.__curr_amp['diagrams'].nice_string()
@@ -261,24 +271,24 @@ class MadGraphCmd(cmd.Cmd):
         line = line.lower()
 
         args = self.split_arg(line)
-        
+
         if len(args) < 1:
             self.help_display()
             return False
-        
+
         if len(self.__curr_model['particles']) == 0:
             print "No particle list currently active, please create one first!"
             return False
-        
+
         if len(self.__curr_model['interactions']) == 0:
             print "No interaction list currently active," + \
             " please create one first!"
             return False
-        
+
         myleglist = base_objects.LegList()
         state = 'initial'
         number = 1
-        
+
         for part_name in args:
 
             if part_name == '>':
@@ -287,9 +297,9 @@ class MadGraphCmd(cmd.Cmd):
                     return False
                 state = 'final'
                 continue
-            
+
             mypart = self.__curr_model['particles'].find_name(part_name)
-            
+
             if mypart:
                 myleglist.append(base_objects.Leg({'id':mypart.get_pdg_code(),
                                                    'number':number,
@@ -297,17 +307,17 @@ class MadGraphCmd(cmd.Cmd):
                 number = number + 1
             else:
                 print "Error with particle %s: skipped" % part_name
-        
+
         if myleglist and state == 'final':
             myproc = base_objects.Process({'legs':myleglist,
                                             'orders':{},
                                             'model':self.__curr_model})
             self.__curr_amp.set('process', myproc)
-            
+
             cpu_time1 = time.time()
             ndiags = len(self.__curr_amp.generate_diagrams())
             cpu_time2 = time.time()
-            
+
             print "%i diagrams generated in %0.3f s" % (ndiags, (cpu_time2 - \
                                                                cpu_time1))
 
@@ -326,7 +336,7 @@ class MadGraphCmd(cmd.Cmd):
     def help_display(self):
         print "syntax: display particles|interactions|amplitude"
         print "-- display a the status of various internal state variables"
-    
+
     def help_generate(self):
         print "syntax: generate INITIAL STATE > FINAL STATE"
         print "-- generate amplitude for a given process"

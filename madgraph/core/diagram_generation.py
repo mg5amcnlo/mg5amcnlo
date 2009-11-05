@@ -97,7 +97,7 @@ class Amplitude(base_objects.PhysicsObject):
         """
         model = self['process'].get('model')
 
-        for i in range(0,len(self['process'].get('legs'))):
+        for i in range(0, len(self['process'].get('legs'))):
 
             # Make sure legs are unique
             leg = copy.copy(self['process'].get('legs')[i])
@@ -114,7 +114,7 @@ class Amplitude(base_objects.PhysicsObject):
                 leg.set('id', part.get_anti_pdg_code())
 
             # Need to set leg number - this is defined by the leg order
-            leg.set('number',i+1)
+            leg.set('number', i + 1)
 
 
         # Calculate the maximal multiplicity of n-1>1 configurations
@@ -232,6 +232,10 @@ class Amplitude(base_objects.PhysicsObject):
 
         # loop over possible combination lengths (+1 is for range convention!)
         for comb_length in range(2, max_multi_to1 + 1):
+
+            # Check the considered length is not longer than the list length
+            if comb_length > len(list_legs):
+                return res
 
             # itertools.combinations returns all possible combinations
             # of comb_length elements from list_legs
@@ -380,7 +384,7 @@ def expand_list(mylist):
         else:
             tmplist.append([item])
 
-    for item in apply(itertools.product,tmplist):
+    for item in apply(itertools.product, tmplist):
         res.append(list(item))
 
     return res
