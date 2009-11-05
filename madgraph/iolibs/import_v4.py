@@ -115,8 +115,8 @@ def read_interactions_v4(fsock, ref_part_list):
     myinterlist = InteractionList()
 
     if not isinstance(ref_part_list, ParticleList):
-           raise ValueError, \
-               "Object %s is not a valid ParticleList" % repr(ref_part_list)
+        raise ValueError, \
+            "Object %s is not a valid ParticleList" % repr(ref_part_list)
 
     for line in fsock:
         myinter = Interaction()
@@ -152,7 +152,7 @@ def read_interactions_v4(fsock, ref_part_list):
                 if spin_array in [[2, 2, 1], # FFS
                                   [2, 2, 3]]:  # FFV
                     part_list[0]['is_part'] = False
-                
+
                 myinter.set('particles', part_list)
 
                 # Give a dummy 'guess' values for color and Lorentz structures
