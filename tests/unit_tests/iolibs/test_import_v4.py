@@ -121,6 +121,7 @@ class IOImportV4Test(unittest.TestCase):
                                     w+   w-   a MGVX3   QED
                                     g   g   T1 MGVX2   QCD a
                                     w+   w-   w+   w- MGVX6   DUM0   QED QED n
+                                    e-   ve   w- MGVX24   QED
                                     # And now some bad format entries
                                     # which should be ignored with a warning
                                     k+ k- a test QED
@@ -134,6 +135,9 @@ class IOImportV4Test(unittest.TestCase):
         wplus = copy.copy(myparts[14])
         wmin = copy.copy(myparts[14])
         wmin.set('is_part', False)
+        eplus = copy.copy(myparts[3])
+        eplus.set('is_part',False)
+        enu = copy.copy(myparts[0])
         photon = copy.copy(myparts[12])
         gluon = copy.copy(myparts[15])
         t1 = copy.copy(myparts[17])
@@ -169,7 +173,18 @@ class IOImportV4Test(unittest.TestCase):
                                      'color':['guess'],
                                      'lorentz':['guess'],
                                      'couplings':{(0, 0):'MGVX6'},
-                                     'orders':{'QED':2}})])
+                                     'orders':{'QED':2}}),
+
+                     base_objects.Interaction(
+                                    {'id':4,
+                                     'particles':base_objects.ParticleList([
+                                                                eplus,
+                                                                enu,
+                                                                wmin]),
+                                     'color':['guess'],
+                                     'lorentz':['guess'],
+                                     'couplings':{(0, 0):'MGVX24'},
+                                     'orders':{'QED':1}})])
 
         self.assertEqual(import_v4.read_interactions_v4(fsock_inter,
                                                         myparts),

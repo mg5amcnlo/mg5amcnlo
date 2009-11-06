@@ -57,7 +57,7 @@ def read_particles_v4(fsock):
             values = line.split()
             if len(values) != 9:
                 # Not the right number tags on the line
-                raise self.ValueError, \
+                raise ValueError, \
                     "Unvalid initialization string:" + line
             else:
                 try:
@@ -115,8 +115,8 @@ def read_interactions_v4(fsock, ref_part_list):
     myinterlist = InteractionList()
 
     if not isinstance(ref_part_list, ParticleList):
-           raise ValueError, \
-               "Object %s is not a valid ParticleList" % repr(ref_part_list)
+        raise ValueError, \
+            "Object %s is not a valid ParticleList" % repr(ref_part_list)
 
     for line in fsock:
         myinter = Interaction()
@@ -149,10 +149,10 @@ def read_interactions_v4(fsock, ref_part_list):
                 # Flip part/antipart of second part when needed 
                 # according to v4 convention
                 spin_array = [part['spin'] for part in part_list]
-                if spin_array in [[2,2,1],   # FFS
-                                  [2,2,3]]:  # FFV
-                    part_list[1]['is_part'] = False
-                
+                if spin_array in [[2, 2, 1], # FFS
+                                  [2, 2, 3]]:  # FFV
+                    part_list[0]['is_part'] = False
+
                 myinter.set('particles', part_list)
 
                 # Give a dummy 'guess' values for color and Lorentz structures
@@ -175,7 +175,7 @@ def read_interactions_v4(fsock, ref_part_list):
                     return ret_dict
 
                 myinter.set('orders', count_duplicates_in_list(order_list))
-                myinter.set('id',len(myinterlist)+1)
+                myinter.set('id', len(myinterlist) + 1)
 
                 myinterlist.append(myinter)
 

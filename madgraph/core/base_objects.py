@@ -17,9 +17,9 @@
 interaction, model, leg, vertex, process, ..."""
 
 import copy
+import itertools
 import logging
 import re
-import itertools
 
 #===============================================================================
 # PhysicsObject
@@ -452,7 +452,7 @@ class Interaction(PhysicsObject):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['particles', 'color', 'lorentz', 'couplings', 'orders']
+        return ['id', 'particles', 'color', 'lorentz', 'couplings', 'orders']
 
     def __permutate(self, seq):
         """Permutate a sequence and return a list of all permutations"""
@@ -744,7 +744,7 @@ class LegList(PhysicsObjectList):
             return ref_dict_to0.has_key(tuple([leg.get('id') for leg in self]))
         else:
             return False
-
+    
     def not_in_unordered_lists(self, leg_list_list):
         """Returns true if the leglists is not in the list of leg lists,
         ignoring ordering of elements"""
@@ -757,7 +757,7 @@ class LegList(PhysicsObjectList):
         for leg_list in leg_list_list:
             if not isinstance(leg_list, LegList):
                 raise self.PhysicsObjectError, \
-                      "Not a valid list of leglists in LegList.not_in_unordered_list"
+            "Not a valid list of leglists in LegList.not_in_unordered_list"
             leg_list_ids.append(tuple([leg.get('id') for leg in leg_list]))
 
         for perm in itertools.permutations([leg.get('id') for leg in self]):
@@ -850,8 +850,10 @@ class Diagram(PhysicsObject):
                 mystr = mystr + '('
                 for leg in vert['legs'][:-1]:
                     mystr = mystr + str(leg['number']) + ','    
-                mystr = mystr[:-1] + '>' + \
-                        str(vert['legs'][-1]['number']) + ','
+                if self['vertices'].index(vert) < len(self['vertices']) - 1:
+                    # Do not want ">" in the last vertex
+                    mystr = mystr[:-1] + '>'
+                mystr = mystr + str(vert['legs'][-1]['number']) + ','
                 mystr = mystr + 'id:' + str(vert['id']) + '),'
             mystr = mystr[:-1] + ')'
             return mystr
@@ -916,21 +918,28 @@ class Process(PhysicsObject):
         """Return process property names as a nicely sorted list."""
 
         return ['legs', 'orders', 'model']
-    
+
     def nice_string(self):
         """Returns a nicely formated string about current process
         content"""
         
         mystr = "Process: "
+        prevleg = None
         for leg in self['legs']:
-            mypart = self['model']['particle_dict'][leg['id']]
+            mypart = self['model'].get('particle_dict')[leg['id']]
+            if prevleg and prevleg['state'] == 'initial' \
+                   and leg['state'] == 'final':
+                # Separate initial and final legs by ">"
+                mystr = mystr + '> '
             if mypart['is_part']:
                 mystr = mystr + mypart['name']
             else:
                 mystr = mystr + mypart['antiname']
             mystr = mystr + '(%i) ' % leg['number']
+            prevleg = leg
 
-        return mystr
+        # Remove last space
+        return mystr[:-1]
 
 #===============================================================================
 # ProcessList

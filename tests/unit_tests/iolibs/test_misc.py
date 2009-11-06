@@ -32,7 +32,7 @@ class IOMiscTest(unittest.TestCase):
         pass
 
     def test_parse_info_str_correct(self):
-        "_parse_info_str converts info strings to dictionaries"
+        "Test parse_info_str converts info strings to dictionaries"
 
         mystr = "param1 = value1\n param2=value 2\n \n"
         rightdict = {'param1':'value1', 'param2':'value 2'}
@@ -40,7 +40,7 @@ class IOMiscTest(unittest.TestCase):
         self.assertEqual(rightdict, misc.get_pkg_info(mystr))
 
     def test_parse_info_str_error(self):
-        "_parse_info_str raises an error for strings which are not valid"
+        "Test parse_info_str raises an error for strings which are not valid"
 
         mystr = "param1 : value1"
 

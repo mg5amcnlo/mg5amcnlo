@@ -15,8 +15,6 @@
 
 """Unit test library for the Misc routine library in the I/O package"""
 
-import inspect
-import sys
 import unittest
 
 import tests.test_manager as test_manager
@@ -40,7 +38,7 @@ class TestTestFinder(unittest.TestCase):
     def test_buiding_in_iter(self):
         """ TestFinder.__iter__ is able to build the list """
 
-        for i in self.testmodule:
+        for dummy in self.testmodule:
             break
         self.assert_(len(self.testmodule) > 1)
 
@@ -62,7 +60,7 @@ class TestTestFinder(unittest.TestCase):
 
     def test_collect_dir_with_restriction_file2(self):
         " TestFinder.collect_dir pass corectly restriction rule on file "
-        self.testmodule.restrict_to('./tests/unit_tests/various/' +
+        self.testmodule.restrict_to('./tests/unit_tests/various/' + 
                                     'test_test_finder.py')
         self.assert_('tests.unit_tests.various.test_test_finder.' + \
                          'TestTestFinder.test_collect_dir'
@@ -124,7 +122,6 @@ class TestTestFinder(unittest.TestCase):
     def test_output_are_function(self):
         """ TestFinder.collect_function returns test funcions only """
         self.testmodule.collect_function(TestTestFinder)
-        mytest = unittest.TestSuite()
         collect = unittest.TestLoader()
         for test_fct in self.testmodule:
             try:
@@ -297,7 +294,7 @@ class TestTestFinder(unittest.TestCase):
         self.assertFalse(self.testmodule.check_valid(name))
 
     def test_passin_pyformat(self):
-        """ convert from linux position format to python include """
+        """ Test convert from linux position format to python include """
 
         input = {'test.py':'test', 'Source/test.py':'Source.test', \
                    'Source//test.py':'Source.test', './test.py':'test'}
@@ -312,7 +309,7 @@ class TestTestFinder(unittest.TestCase):
                               , self.testmodule.passin_pyformat, data)
 
     def test_add_to_possibility(self):
-        """ convert name in different matching possibility """
+        """ Test convert name in different matching possibility """
         # the sanity of the output is checked by check_valid test,
         # this test the format of the output
 

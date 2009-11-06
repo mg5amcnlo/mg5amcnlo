@@ -13,13 +13,18 @@
 #
 ################################################################################
 
-"""A user friendly command line interface to access MadGraph features."""
+"""A user friendly command line interface to access MadGraph features.
+   Uses the cmd package for command interpretation and tab completion.
+"""
 
 import cmd
 import os
 import subprocess
 import sys
 import time
+import readline
+import atexit
+
 
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.files as files
@@ -72,6 +77,7 @@ class MadGraphCmd(cmd.Cmd):
                        if f.startswith(text) and \
                             os.path.isdir(os.path.join(base_dir, f))
                      ]
+
         return completion
 
 
@@ -79,6 +85,25 @@ class MadGraphCmd(cmd.Cmd):
         """Initializing before starting the main loop"""
 
         self.prompt = 'mg5>'
+
+        # initialize tab completion, if not already set
+        if(sys.platform == 'darwin'):
+            # Only on Mac OS X
+            try:
+                import rlcompleter
+                readline.parse_and_bind ("bind ^I rl_complete")
+            except ImportError:
+                pass
+        else:
+            readline.parse_and_bind("tab: complete")
+
+        # initialize command history
+        history_file = os.path.join(os.environ['HOME'], '.mg5history')
+        try:
+            readline.read_history_file(history_file)
+        except IOError:
+            pass
+        atexit.register(readline.write_history_file, history_file)
 
         # If possible, build an info line with current version number 
         # and date, from the VERSION text file
@@ -113,30 +138,53 @@ class MadGraphCmd(cmd.Cmd):
     def do_import(self, line):
         """Import files with external formats"""
 
+        def import_v4file(self, filepath):
+            """Helper function to load a v4 file from file path filepath"""
+            filename = os.path.basename(filepath)
+            if filename == 'particles.dat':
+                self.__curr_model.set('particles',
+                                     files.read_from_file(
+                                            filepath,
+                                            import_v4.read_particles_v4))
+                print "%d particles imported" % \
+                      len(self.__curr_model['particles'])
+            if filename == 'interactions.dat':
+                if len(self.__curr_model['particles']) == 0:
+                    print "No particle list currently active,",
+                    print "please create one first!"
+                    return False
+                self.__curr_model.set('interactions',
+                                     files.read_from_file(
+                                            filepath,
+                                            import_v4.read_interactions_v4,
+                                            self.__curr_model['particles']))
+                print "%d interactions imported" % \
+                      len(self.__curr_model['interactions'])
+
         args = self.split_arg(line)
         if len(args) != 2:
             self.help_import()
             return False
 
         if args[0] == 'v4':
-            #Try to guess which function to call according to the given path
+
+            files_to_import = ('particles.dat', 'interactions.dat')
+
             if os.path.isdir(args[1]):
-                pass
+                for filename in files_to_import:
+                    if os.path.isfile(os.path.join(args[1], filename)):
+                        import_v4file(self, os.path.join(args[1], filename))
+
             elif os.path.isfile(args[1]):
-                filename = os.path.basename(args[1])
-                if filename == 'particles.dat':
-                    self.__curr_model.set('particles',
-                                         files.read_from_file(
-                                                args[1],
-                                                import_v4.read_particles_v4))
-                if filename == 'interactions.dat':
-                    self.__curr_model.set('interactions',
-                                         files.read_from_file(
-                                                args[1],
-                                                import_v4.read_interactions_v4,
-                                                self.__curr_model['particles']))
+                if os.path.basename(args[1]) in files_to_import:
+                    import_v4file(self, args[1])
+                else:
+                    print "%s is not a valid v4 file name" % \
+                                        os.path.basename(args[1])
             else:
                 print "Path %s is not a valid pathname" % args[1]
+
+
 
     def complete_import(self, text, line, begidx, endidx):
         "Complete the import command"
@@ -160,15 +208,22 @@ class MadGraphCmd(cmd.Cmd):
         """Display current internal status"""
 
         args = self.split_arg(line)
-        
+
         if len(args) != 1:
             self.help_display()
             return False
-        
+
         if args[0] == 'particles':
             print "Current model contains %i particles:" % \
-                    len(self.__curr_model['particles']),
-            for part in self.__curr_model['particles']:
+                    len(self.__curr_model['particles'])
+            part_antipart = [part for part in self.__curr_model['particles'] \
+                             if not part['self_antipart']]
+            part_self = [part for part in self.__curr_model['particles'] \
+                             if part['self_antipart']]
+            for part in part_antipart:
+                print part['name'] + '/' + part['antiname'],
+            print ''
+            for part in part_self:
                 print part['name'],
             print ''
 
@@ -183,7 +238,7 @@ class MadGraphCmd(cmd.Cmd):
                     else:
                         print part['antiname'],
                 print
-        
+
         if args[0] == 'amplitude':
             print self.__curr_amp['process'].nice_string()
             print self.__curr_amp['diagrams'].nice_string()
@@ -207,37 +262,44 @@ class MadGraphCmd(cmd.Cmd):
         else:
             print "running shell command:", line
             subprocess.call(line, shell=True)
-    
+
     # Generate a new amplitude
     def do_generate(self, line):
         """Generate an amplitude for a given process"""
-    
+
+        # Particle names always lowercase
+        line = line.lower()
+
         args = self.split_arg(line)
-        
+
         if len(args) < 1:
             self.help_display()
             return False
-        
+
         if len(self.__curr_model['particles']) == 0:
             print "No particle list currently active, please create one first!"
             return False
-        
+
         if len(self.__curr_model['interactions']) == 0:
             print "No interaction list currently active," + \
             " please create one first!"
             return False
-        
+
         myleglist = base_objects.LegList()
         state = 'initial'
         number = 1
-        
+
         for part_name in args:
+
             if part_name == '>':
+                if not len(myleglist):
+                    print "Empty or wrong format process, please try again."
+                    return False
                 state = 'final'
                 continue
-            
+
             mypart = self.__curr_model['particles'].find_name(part_name)
-            
+
             if mypart:
                 myleglist.append(base_objects.Leg({'id':mypart.get_pdg_code(),
                                                    'number':number,
@@ -245,17 +307,17 @@ class MadGraphCmd(cmd.Cmd):
                 number = number + 1
             else:
                 print "Error with particle %s: skipped" % part_name
-        
+
         if myleglist and state == 'final':
             myproc = base_objects.Process({'legs':myleglist,
                                             'orders':{},
                                             'model':self.__curr_model})
             self.__curr_amp.set('process', myproc)
-            
+
             cpu_time1 = time.time()
             ndiags = len(self.__curr_amp.generate_diagrams())
             cpu_time2 = time.time()
-            
+
             print "%i diagrams generated in %0.3f s" % (ndiags, (cpu_time2 - \
                                                                cpu_time1))
 
@@ -268,31 +330,31 @@ class MadGraphCmd(cmd.Cmd):
 
     # In-line help
     def help_import(self):
-        print "syntax: import v4|... FILENAME",
+        print "syntax: import v4|... FILENAME"
         print "-- imports file(s) in various formats"
 
     def help_display(self):
-        print "syntax: display particles|interactions|amplitude",
+        print "syntax: display particles|interactions|amplitude"
         print "-- display a the status of various internal state variables"
-    
+
     def help_generate(self):
-        print "syntax: generate INITIAL STATE > FINAL STATE",
-        print "-- generate amplitude for a given process (list of particles"
-        print "   separated by >)"
+        print "syntax: generate INITIAL STATE > FINAL STATE"
+        print "-- generate amplitude for a given process"
+        print "   Example: u d~ > m+ vm g"
 
     def help_shell(self):
-        print "syntax: shell CMD (or ! CMD)",
+        print "syntax: shell CMD (or ! CMD)"
         print "-- run the shell command CMD and catch output"
 
     def help_quit(self):
-        print "syntax: quit",
+        print "syntax: quit"
         print "-- terminates the application"
 
     def help_help(self):
-        print "syntax: help",
+        print "syntax: help"
         print "-- access to the in-line help"
 
-    # ALiases
+    # Aliases
 
     do_EOF = do_quit
     help_EOF = help_quit
