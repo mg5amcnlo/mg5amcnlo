@@ -1132,21 +1132,3 @@ class ProcessTest(unittest.TestCase):
         goal_str = "Process: c(5) c(5) > c(5) c(5) c(5)"
         
         self.assertEqual(goal_str, self.myprocess.nice_string())
-
-#===============================================================================
-# Test the global helper function cyclic_permutations
-#===============================================================================
-class GlobalTest(unittest.TestCase):
-    """Test class for global helper functions"""
-
-    def test_cyclic_permutations(self):
-        mylist = [1,2,3,4]
-
-        cyclic2 = [[[1,2],[3,4]],[[2,3],[4,1]],[[3,4],[1,2]],[[4,1],[2,3]]]
-        cyclic3 = [[[1,2,3],[4]],[[2,3,4],[1]],[[3,4,1],[2]],[[4,1,2],[3]]]
-        cyclic4 = [[[1,2,3,4],[]],[[2,3,4,1],[]],[[3,4,1,2],[]],[[4,1,2,3],[]]]
-
-        self.assertEqual(cyclic2, base_objects.cyclic_permutations(mylist,2))
-        self.assertEqual(cyclic3, base_objects.cyclic_permutations(mylist,3))
-        self.assertEqual(cyclic4, base_objects.cyclic_permutations(mylist,4))
-        

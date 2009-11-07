@@ -459,7 +459,9 @@ class Interaction(PhysicsObject):
         the reference dictionaries (for n>0 and n-1>1)"""
 
         # Create n>0 entries. Format is (p1,p2,p3,...):interaction_id.
-        for permut in itertools.permutations(self['particles'],len(self['particles'])):
+
+        for permut in itertools.permutations(self['particles'],
+                                             len(self['particles'])):
             pdg_tuple = tuple([p.get_pdg_code() for p in permut])
             if pdg_tuple not in ref_dict_to0.keys():
                 ref_dict_to0[pdg_tuple] = self['id']
@@ -470,17 +472,24 @@ class Interaction(PhysicsObject):
         # while in the dictionary we treat the n-1 particles as
         # incoming
 
-        for cycl_perm in cyclic_permutations(self['particles'],
-                                             len(self['particles'])-1):
-            pdg_tuple = tuple([p.get_anti_pdg_code() for p in cycl_perm[0]])
-            pdg_part = cycl_perm[1][0].get_pdg_code()
-            for perm in itertools.permutations(pdg_tuple,len(pdg_tuple)):
-                if perm in ref_dict_to1.keys():
-                    if (pdg_part, self['id']) not in  ref_dict_to1[perm]:
-                        ref_dict_to1[perm].append((pdg_part, self['id']))
+        for part in self['particles']:
+
+            # Create a list w/o part
+            short_part_list = copy.copy(self['particles'])
+            short_part_list.remove(part)
+
+            # Add all permutations
+            for permut in itertools.permutations(short_part_list,
+                                                 len(short_part_list)):
+                # Add interaction permutation
+                pdg_tuple = tuple([p.get_anti_pdg_code() for p in permut])
+                pdg_part = part.get_pdg_code()
+                if pdg_tuple in ref_dict_to1.keys():
+                    if (pdg_part, self['id']) not in  ref_dict_to1[pdg_tuple]:
+                        ref_dict_to1[pdg_tuple].append((pdg_part, self['id']))
                 else:
-                    ref_dict_to1[perm] = [(pdg_part, self['id'])]
-            
+                    ref_dict_to1[pdg_tuple] = [(pdg_part, self['id'])]
+
 
 #===============================================================================
 # InteractionList
@@ -903,41 +912,3 @@ class ProcessList(PhysicsObjectList):
         
         return isinstance(obj, Process)
 
-#===============================================================================
-# Global helper methods
-#===============================================================================
-
-def cyclic_permutations(mylist,n):
-    """Returns all cyclic permutations with n elements in mylist, and
-    the rests. For 2-perm in [1,2,3]:
-    [ [[1,2],[3]] , [[2,3],[1]] , [[3,1],[2]] ]
-    """
-
-    if not isinstance(mylist,list) and not isinstance(mylist,tuple):
-        raise PermutationsError, \
-              "Argument %s is not a list" % repr(mylist)
-
-    if not isinstance(n,int):
-        raise PermutationsError, \
-              "Argument n is not an integer"
-
-    if n < 1:
-        return []
-
-    # Create a new list which is [mylist,mylist], then pick all unique
-    # series of elements from this list
-    double_list = copy.copy(mylist)
-    double_list.extend(mylist)
-
-    master_list = []
-    i = 0
-    iterlist = double_list[0:n]
-    rest = mylist[n:]
-    while not [iterlist,rest] in master_list:
-        master_list.append([iterlist,rest])
-        i = i + 1
-        iterlist = double_list[i:i + n]
-        rest = mylist[i+n:]
-        rest.extend(mylist[max(0,i+n-len(mylist)):i])
-
-    return master_list
