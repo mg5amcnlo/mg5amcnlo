@@ -86,16 +86,7 @@ class MadGraphCmd(cmd.Cmd):
 
         self.prompt = 'mg5>'
 
-        # initialize tab completion, if not already set
-        if(sys.platform == 'darwin'):
-            # Only on Mac OS X
-            try:
-                import rlcompleter
-                readline.parse_and_bind ("bind ^I rl_complete")
-            except ImportError:
-                pass
-        else:
-            readline.parse_and_bind("tab: complete")
+        readline.parse_and_bind("tab: complete")
 
         # initialize command history
         history_file = os.path.join(os.environ['HOME'], '.mg5history')
