@@ -19,6 +19,7 @@ interaction, model, leg, vertex, process, ..."""
 import copy
 import logging
 import re
+import itertools
 
 #===============================================================================
 # PhysicsObject
@@ -453,36 +454,23 @@ class Interaction(PhysicsObject):
 
         return ['id', 'particles', 'color', 'lorentz', 'couplings', 'orders']
 
-    def __permutate(self, seq):
-        """Permutate a sequence and return a list of all permutations"""
-        if not seq:
-            return [seq] # is an empty sequence
-        else:
-            temp = []
-            for k in range(len(seq)):
-                part = seq[:k] + seq[k + 1:]
-                for m in self.__permutate(part):
-                    temp.append(seq[k:k + 1] + m)
-            return temp
-
     def generate_dict_entries(self, ref_dict_to0, ref_dict_to1):
         """Add entries corresponding to the current interactions to 
         the reference dictionaries (for n>0 and n-1>1)"""
 
         # Create n>0 entries. Format is (p1,p2,p3,...):interaction_id.
-        for permut in self.__permutate(self['particles']):
+
+        for permut in itertools.permutations(self['particles'],
+                                             len(self['particles'])):
             pdg_tuple = tuple([p.get_pdg_code() for p in permut])
             if pdg_tuple not in ref_dict_to0.keys():
                 ref_dict_to0[pdg_tuple] = self['id']
-            pdg_tuple = tuple([p.get_anti_pdg_code() for p in permut])
-            if pdg_tuple not in ref_dict_to0.keys():
-                ref_dict_to0[pdg_tuple] = self['id']
 
-        # Create n-1>1 entries. Note that, in the n-1
-        # > 1 dictionary, the 1 entry should have opposite sign as
-        # compared to the n > 0 dictionary, since this should replace
-        # the n-1 particles. We prefer to keep track of the sign
-        # (part/antipart) here rather than in the diagram generation.
+        # Create n-1>1 entries. Note that, in the n-1 > 1 dictionary,
+        # the n-1 entries should have opposite sign as compared to
+        # interaction, since the interaction has outgoing particles,
+        # while in the dictionary we treat the n-1 particles as
+        # incoming
 
         for part in self['particles']:
 
@@ -491,16 +479,9 @@ class Interaction(PhysicsObject):
             short_part_list.remove(part)
 
             # Add all permutations
-            for permut in self.__permutate(short_part_list):
+            for permut in itertools.permutations(short_part_list,
+                                                 len(short_part_list)):
                 # Add interaction permutation
-                pdg_tuple = tuple([p.get_pdg_code() for p in permut])
-                pdg_part = part.get_anti_pdg_code()
-                if pdg_tuple in ref_dict_to1.keys():
-                    if (pdg_part, self['id']) not in  ref_dict_to1[pdg_tuple]:
-                        ref_dict_to1[pdg_tuple].append((pdg_part, self['id']))
-                else:
-                    ref_dict_to1[pdg_tuple] = [(pdg_part, self['id'])]
-                # Add hermitian conjugate
                 pdg_tuple = tuple([p.get_anti_pdg_code() for p in permut])
                 pdg_part = part.get_pdg_code()
                 if pdg_tuple in ref_dict_to1.keys():
