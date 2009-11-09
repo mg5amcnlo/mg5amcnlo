@@ -57,7 +57,8 @@ class Amplitude(base_objects.PhysicsObject):
             if self['process']:
                 self['diagrams'] = self.generate_diagrams()
 
-        return super(Amplitude, self).get(name)
+        return Amplitude.__bases__[0].get(self, name)  #return the mother routine
+
 
     def get_sorted_keys(self):
         """Return diagram property names as a nicely sorted list."""

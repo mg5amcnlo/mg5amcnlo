@@ -47,7 +47,15 @@ class PhysicsObject(dict):
 
         for item in init_dict.keys():
             self.set(item, init_dict[item])
-
+            
+    def __getitem__(self,name):
+        """ force the check that the property exist before returning the 
+            value associated to value. This ensure that the correct error 
+            is always raise
+        """
+        
+        if self.is_valid_prop(name):
+            return dict.__getitem__(self, name)
 
     def default_setup(self):
         """Function called to create and setup default values for all object
@@ -70,8 +78,8 @@ class PhysicsObject(dict):
     def get(self, name):
         """Get the value of the property name."""
 
-        if self.is_valid_prop(name):
-            return self[name]
+        #if self.is_valid_prop(name): #done automaticaly in __getitem__
+        return self[name]
 
     def set(self, name, value):
         """Set the value of the property name. First check if value
@@ -608,8 +616,8 @@ class Model(PhysicsObject):
             if self['interactions']:
                 self['interaction_dict'] = self['interactions'].generate_dict()
 
-        return super(Model, self).get(name)
-
+        return Model.__bases__[0].get(self, name) # call the mother routine
+    
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
