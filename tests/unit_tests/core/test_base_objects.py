@@ -115,7 +115,7 @@ class ParticleTest(unittest.TestCase):
                         'right_list':['me', 'zero', 'mm2'],
                         'wrong_list':['m+', '', ' ', 'm~']},
                        {'prop':'pdg_code',
-                        'right_list':[1, 12, 8000000000, -1],
+                        'right_list':[1, 12, 80000000, -1],
                         'wrong_list':[1.2, 'a']},
                        {'prop':'line',
                         'right_list':['straight', 'wavy', 'curly', 'dashed'],
@@ -428,7 +428,7 @@ class InteractionTest(unittest.TestCase):
         goal_ref_dict_to0[(3, -2, 1)] = 0
 
         self.assertEqual(myinterlist.generate_ref_dict()[0], goal_ref_dict_to0)
- 
+
     def test_generating_dict_to_1(self):
         """Test the dictionary generation routine generate_ref_dict"""
 
@@ -1010,17 +1010,17 @@ class DiagramTest(unittest.TestCase):
 
     def test_diagram_list_nice_string(self):
         """Test Diagram and Diagram list nice_string representation"""
-        
+
         mylist = [self.mydiagram] * 10
         mydiagramlist = base_objects.DiagramList(mylist)
-        
+
         goal_string = "  (" + "(5,5,5,5,5,5,5,5,5>5,id:3),"*10
         goal_string = goal_string[:-1] + ")\n"
         goal_string = goal_string * 10
-        
+
         self.assertEqual(mydiagramlist.nice_string(),
                          "10 diagrams:\n" + goal_string[:-1])
-        
+
 #===============================================================================
 # ProcessTest
 #===============================================================================
@@ -1034,7 +1034,7 @@ class ProcessTest(unittest.TestCase):
                                       'state':'final',
                                       'from_group':False})) for \
                                                     dummy in range(5)])
-    
+
     mymodel = base_objects.Model()
 
     def setUp(self):
@@ -1043,12 +1043,12 @@ class ProcessTest(unittest.TestCase):
                      base_objects.Particle({'name':'c',
                                              'antiname':'c~',
                                              'pdg_code':3})])
-        
+
         self.mymodel.set('particles', mypartlist)
 
         self.myleglist[0].set('state', 'initial')
         self.myleglist[1].set('state', 'initial')
-    
+
         self.mydict = {'legs':self.myleglist,
                        'orders':{'QCD':5, 'QED':1},
                        'model':self.mymodel}
@@ -1125,10 +1125,10 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'model\': %s\n}" % repr(self.myprocess['model'])
 
         self.assertEqual(goal, str(self.myprocess))
-    
+
     def test_nice_string(self):
         """Test Process nice_string representation"""
-        
+
         goal_str = "Process: c(5) c(5) > c(5) c(5) c(5)"
-        
+
         self.assertEqual(goal_str, self.myprocess.nice_string())
