@@ -236,9 +236,6 @@ class Particle(PhysicsObject):
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                     "PDG code %s is not an integer" % repr(value)
-            if value < 0:
-                raise self.PhysicsObjectError, \
-                   "PDG code %i is smaller than one" % value
 
         if name is 'line':
             if not isinstance(value, str):
