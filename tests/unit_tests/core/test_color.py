@@ -20,8 +20,115 @@ import unittest
 import madgraph.core.color as color
 
 class ColorTest(unittest.TestCase):
-    """Test class for code related to color"""
+    """Test class for code parts related to color"""
 
     def setUp(self):
         pass
 
+    def test_validity(self):
+        """Test the color string validity check"""
+
+        my_color_str = color.ColorString()
+        
+        valid_strings = ["T(101,102)",
+                         "T(1,101,102)",
+                         "f(1,2,3)",
+                         "d(1,2,3)",
+                         "Nc", "1/Nc", "I",
+                         "0", "1", "-1", "1/2", "-123/345"]
+        
+        for valid_str in valid_strings:
+            self.assert_(my_color_str.is_valid_color_structure(valid_str))
+        
+        wrong_strings = ["T(101,102",
+                         "T 1,101,102)",
+                         "T(1, 101, 102)",
+                         "k(1,2,3)",
+                         "d((1,2,3))",
+                         "d(1,2,3,)",
+                         "T(1.2)",
+                         "-2/Nc"]
+        
+        for wrong_str in wrong_strings:
+            self.assertFalse(my_color_str.is_valid_color_structure(wrong_str))
+    
+    def test_colorstring_init(self):
+        """Test the color string initialization"""
+        
+        wrong_lists = [['T(101,102)', 1],
+                       ['T(101,102)', 'k(1,2,3)'],
+                       'T(101,102)']
+    
+        for wrg_list in wrong_lists:
+            self.assertRaises(ValueError,
+                              color.ColorString,
+                              wrg_list)
+    
+    def test_colorstring_manip(self):
+        """Test the color string manipulation (append, insert and extend)"""
+        
+        my_color_string = color.ColorString(['T(101,102)'])
+    
+        self.assertRaises(ValueError,
+                          my_color_string.append,
+                          'k(1,2,3)')
+        self.assertRaises(ValueError,
+                          my_color_string.insert,
+                          0, 'k(1,2,3)')  
+        self.assertRaises(ValueError,
+                          my_color_string.extend,
+                          ['k(1,2,3)'])
+    
+    def test_traces_simplify(self):
+        """Test color string trace simplification"""
+        
+        my_color_string1 = color.ColorString(['T(101,101)',
+                                             'T(102,103)',
+                                             'T(1,101,101)',
+                                             'T(2,104,105)'])
+        
+        my_color_string2 = color.ColorString(['Nc',
+                                             'T(102,103)',
+                                             '0',
+                                             'T(2,104,105)'])
+        
+        my_color_string1.simplify()
+        
+        self.assertEqual(my_color_string1, my_color_string2)
+    
+    def test_delta_simplify(self):
+        """Test color string delta simplification"""
+        
+        my_color_string1 = color.ColorString(['T(101,102)',
+                                              'f(1,2,3)',
+                                              'T(103,102,104)', 'Nc'])
+        
+        my_color_string2 = color.ColorString(['T(103,101,104)',
+                                              'f(1,2,3)', 'Nc'])
+        
+        my_color_string1.simplify()
+        
+        self.assertEqual(my_color_string1, my_color_string2)
+        
+        my_color_string1 = color.ColorString(['T(101,102)',
+                                              'f(1,2,3)',
+                                              'T(103,104,101)'])
+        
+        my_color_string2 = color.ColorString(['T(103,104,102)',
+                                              'f(1,2,3)'])
+        
+        my_color_string1.simplify()
+        
+        self.assertEqual(my_color_string1, my_color_string2)
+        
+        my_color_string1 = color.ColorString(['T(101,102)',
+                                              'f(1,2,3)',
+                                              'T(103,104,101)',
+                                              'T(105,104)'])
+        
+        my_color_string2 = color.ColorString(['T(103,105,102)',
+                                              'f(1,2,3)'])
+        
+        my_color_string1.simplify()
+        
+        self.assertEqual(my_color_string1, my_color_string2)
