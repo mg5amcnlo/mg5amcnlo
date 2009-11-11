@@ -115,8 +115,8 @@ class ParticleTest(unittest.TestCase):
                         'right_list':['me', 'zero', 'mm2'],
                         'wrong_list':['m+', '', ' ', 'm~']},
                        {'prop':'pdg_code',
-                        'right_list':[1, 12, 8000000],
-                        'wrong_list':[-1, 'a']},
+                        'right_list':[1, 12, 80000000, -1],
+                        'wrong_list':[1.2, 'a']},
                        {'prop':'line',
                         'right_list':['straight', 'wavy', 'curly', 'dashed'],
                         'wrong_list':[-1, 'wrong']},
@@ -357,7 +357,7 @@ class InteractionTest(unittest.TestCase):
 
         self.assertEqual(goal, str(self.myinter))
 
-    def test_generating_dict(self):
+    def test_generating_dict_to_0(self):
         """Test the dictionary generation routine"""
 
         # Create a non trivial 4-interaction
@@ -406,57 +406,56 @@ class InteractionTest(unittest.TestCase):
                           (4, -2, 1, 3):0,
                           (4, -2, 3, 1):0,
                           (4, 3, 1, -2):0,
-                          (4, 3, -2, 1):0,
-                          (-1, 2, -3, 4):0,
-                          (-1, 2, 4, -3):0,
-                          (-1, -3, 2, 4):0,
-                          (-1, -3, 4, 2):0,
-                          (-1, 4, 2, -3):0,
-                          (-1, 4, -3, 2):0,
-                          (2, -1, -3, 4):0,
-                          (2, -1, 4, -3):0,
-                          (2, -3, -1, 4):0,
-                          (2, -3, 4, -1):0,
-                          (2, 4, -1, -3):0,
-                          (2, 4, -3, -1):0,
-                          (-3, -1, 2, 4):0,
-                          (-3, -1, 4, 2):0,
-                          (-3, 2, -1, 4):0,
-                          (-3, 2, 4, -1):0,
-                          (-3, 4, -1, 2):0,
-                          (-3, 4, 2, -1):0,
-                          (4, -1, 2, -3):0,
-                          (4, -1, -3, 2):0,
-                          (4, 2, -1, -3):0,
-                          (4, 2, -3, -1):0,
-                          (4, -3, -1, 2):0,
-                          (4, -3, 2, -1):0}
+                          (4, 3, -2, 1):0}
 
-        goal_ref_dict_to1 = {(-2, 3, 4):[(-1, 0)],
-                            (-2, 4, 3):[(-1, 0)],
-                            (3, -2, 4):[(-1, 0)],
-                            (3, 4, -2):[(-1, 0)],
-                            (4, -2, 3):[(-1, 0)],
-                            (4, 3, -2):[(-1, 0)],
-                            (1, 3, 4):[(2, 0)],
-                            (1, 4, 3):[(2, 0)],
-                            (3, 1, 4):[(2, 0)],
-                            (3, 4, 1):[(2, 0)],
-                            (4, 1, 3):[(2, 0)],
-                            (4, 3, 1):[(2, 0)],
-                            (1, -2, 4):[(-3, 0)],
-                            (1, 4, -2):[(-3, 0)],
-                            (-2, 1, 4):[(-3, 0)],
-                            (-2, 4, 1):[(-3, 0)],
-                            (4, 1, -2):[(-3, 0)],
-                            (4, -2, 1):[(-3, 0)],
-                            (1, -2, 3):[(4, 0)],
-                            (1, 3, -2):[(4, 0)],
-                            (-2, 1, 3):[(4, 0)],
-                            (-2, 3, 1):[(4, 0)],
-                            (3, 1, -2):[(4, 0)],
-                            (3, -2, 1):[(4, 0)],
-                            (2, -3, 4):[(1, 0)],
+        self.assertEqual(ref_dict_to0, goal_ref_dict_to0)
+
+        # Check it still work if I add a 3-interaction
+
+        myinterlist = base_objects.InteractionList([myinter] * 10)
+
+        add_inter = base_objects.Interaction()
+        add_inter.set('particles', base_objects.ParticleList([part1,
+                                                              part2,
+                                                              part3]))
+        myinterlist.append(add_inter)
+
+        goal_ref_dict_to0[(1, -2, 3)] = 0
+        goal_ref_dict_to0[(1, 3, -2)] = 0
+        goal_ref_dict_to0[(-2, 1, 3)] = 0
+        goal_ref_dict_to0[(-2, 3, 1)] = 0
+        goal_ref_dict_to0[(3, 1, -2)] = 0
+        goal_ref_dict_to0[(3, -2, 1)] = 0
+
+        self.assertEqual(myinterlist.generate_ref_dict()[0], goal_ref_dict_to0)
+
+    def test_generating_dict_to_1(self):
+        """Test the dictionary generation routine generate_ref_dict"""
+
+        # Create a non trivial 4-interaction
+        part1 = base_objects.Particle()
+        part1.set('pdg_code', 1)
+        part2 = base_objects.Particle()
+        part2.set('pdg_code', 2)
+        part2.set('is_part', False)
+        part3 = base_objects.Particle()
+        part3.set('pdg_code', 3)
+        part4 = base_objects.Particle()
+        part4.set('pdg_code', 4)
+        part4.set('is_part', False)
+        part4.set('self_antipart', True)
+
+        myinter = base_objects.Interaction()
+        myinter.set('particles', base_objects.ParticleList([part1,
+                                                           part2,
+                                                           part3,
+                                                           part4]))
+        ref_dict_to0 = {}
+        ref_dict_to1 = {}
+
+        myinter.generate_dict_entries(ref_dict_to0, ref_dict_to1)
+
+        goal_ref_dict_to1 = {(2, -3, 4):[(1, 0)],
                             (2, 4, -3):[(1, 0)],
                             (-3, 2, 4):[(1, 0)],
                             (-3, 4, 2):[(1, 0)],
@@ -481,7 +480,6 @@ class InteractionTest(unittest.TestCase):
                             (-3, -1, 2):[(4, 0)],
                             (-3, 2, -1):[(4, 0)]}
 
-        self.assertEqual(ref_dict_to0, goal_ref_dict_to0)
         self.assertEqual(ref_dict_to1, goal_ref_dict_to1)
 
         # Check it still work if I add a 3-interaction
@@ -494,25 +492,6 @@ class InteractionTest(unittest.TestCase):
                                                               part3]))
         myinterlist.append(add_inter)
 
-        goal_ref_dict_to0[(1, -2, 3)] = 0
-        goal_ref_dict_to0[(1, 3, -2)] = 0
-        goal_ref_dict_to0[(-2, 1, 3)] = 0
-        goal_ref_dict_to0[(-2, 3, 1)] = 0
-        goal_ref_dict_to0[(3, 1, -2)] = 0
-        goal_ref_dict_to0[(3, -2, 1)] = 0
-        goal_ref_dict_to0[(-1, 2, -3)] = 0
-        goal_ref_dict_to0[(-1, -3, 2)] = 0
-        goal_ref_dict_to0[(2, -1, -3)] = 0
-        goal_ref_dict_to0[(2, -3, -1)] = 0
-        goal_ref_dict_to0[(-3, -1, 2)] = 0
-        goal_ref_dict_to0[(-3, 2, -1)] = 0
-
-        goal_ref_dict_to1[(1, -2)] = [(-3, 0)]
-        goal_ref_dict_to1[(1, 3)] = [(2, 0)]
-        goal_ref_dict_to1[(-2, 1)] = [(-3, 0)]
-        goal_ref_dict_to1[(-2, 3)] = [(-1, 0)]
-        goal_ref_dict_to1[(3, 1)] = [(2, 0)]
-        goal_ref_dict_to1[(3, -2)] = [(-1, 0)]
         goal_ref_dict_to1[(-1, 2)] = [(3, 0)]
         goal_ref_dict_to1[(-1, -3)] = [(-2, 0)]
         goal_ref_dict_to1[(2, -1)] = [(3, 0)]
@@ -520,7 +499,6 @@ class InteractionTest(unittest.TestCase):
         goal_ref_dict_to1[(-3, -1)] = [(-2, 0)]
         goal_ref_dict_to1[(-3, 2)] = [(1, 0)]
 
-        self.assertEqual(myinterlist.generate_ref_dict()[0], goal_ref_dict_to0)
         self.assertEqual(myinterlist.generate_ref_dict()[1], goal_ref_dict_to1)
 
     def test_interaction_list(self):
@@ -1032,17 +1010,17 @@ class DiagramTest(unittest.TestCase):
 
     def test_diagram_list_nice_string(self):
         """Test Diagram and Diagram list nice_string representation"""
-        
+
         mylist = [self.mydiagram] * 10
         mydiagramlist = base_objects.DiagramList(mylist)
-        
+
         goal_string = "  (" + "(5,5,5,5,5,5,5,5,5>5,id:3),"*10
         goal_string = goal_string[:-1] + ")\n"
         goal_string = goal_string * 10
-        
+
         self.assertEqual(mydiagramlist.nice_string(),
                          "10 diagrams:\n" + goal_string[:-1])
-        
+
 #===============================================================================
 # ProcessTest
 #===============================================================================
@@ -1056,7 +1034,7 @@ class ProcessTest(unittest.TestCase):
                                       'state':'final',
                                       'from_group':False})) for \
                                                     dummy in range(5)])
-    
+
     mymodel = base_objects.Model()
 
     def setUp(self):
@@ -1065,12 +1043,12 @@ class ProcessTest(unittest.TestCase):
                      base_objects.Particle({'name':'c',
                                              'antiname':'c~',
                                              'pdg_code':3})])
-        
+
         self.mymodel.set('particles', mypartlist)
 
         self.myleglist[0].set('state', 'initial')
         self.myleglist[1].set('state', 'initial')
-    
+
         self.mydict = {'legs':self.myleglist,
                        'orders':{'QCD':5, 'QED':1},
                        'model':self.mymodel}
@@ -1147,10 +1125,10 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'model\': %s\n}" % repr(self.myprocess['model'])
 
         self.assertEqual(goal, str(self.myprocess))
-    
+
     def test_nice_string(self):
         """Test Process nice_string representation"""
-        
+
         goal_str = "Process: c(5) c(5) > c(5) c(5) c(5)"
-        
+
         self.assertEqual(goal_str, self.myprocess.nice_string())
