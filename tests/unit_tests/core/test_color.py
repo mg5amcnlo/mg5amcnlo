@@ -20,10 +20,10 @@ import unittest
 import madgraph.core.color as color
 
 #===============================================================================
-# ColorTest
+# ColorStringTest
 #===============================================================================
-class ColorTest(unittest.TestCase):
-    """Test class for code parts related to color"""
+class ColorStringTest(unittest.TestCase):
+    """Test class for code parts related to ColorString objects"""
 
     def test_validity(self):
         """Test the color string validity check"""
@@ -238,3 +238,43 @@ class ColorTest(unittest.TestCase):
                                              'd(6,-7,-8)'])])
         
         
+#===============================================================================
+# ColorFactorTest
+#===============================================================================
+class ColorFactorTest(unittest.TestCase):
+    """Test class for code parts related to ColorFactor objects"""
+
+    def test_colorfactor_init(self):
+        """Test the color factor initialization"""
+        
+        wrong_lists = [1, ['T(101,102)', 'k(1,2,3)']]
+    
+        for wrg_list in wrong_lists:
+            self.assertRaises(ValueError,
+                              color.ColorFactor,
+                              wrg_list)
+    
+    def test_colorfactor_manip(self):
+        """Test the color factor manipulation (append, insert and extend)"""
+        
+        my_color_factor = color.ColorFactor([color.ColorString(['T(101,102)'])])
+    
+        self.assertRaises(ValueError,
+                          my_color_factor.append,
+                          1)
+        self.assertRaises(ValueError,
+                          my_color_factor.insert,
+                          0, 1)  
+        self.assertRaises(ValueError,
+                          my_color_factor.extend,
+                          [1])
+        
+    def test_simplify(self):
+        """Test the color factor simplify algorithm"""
+        
+        my_color_factor = color.ColorFactor([color.ColorString(['f(1,2,3)',
+                                                                'f(2,3,4)'])])
+        
+        my_color_factor.simplify()
+        
+        # Add a test here!

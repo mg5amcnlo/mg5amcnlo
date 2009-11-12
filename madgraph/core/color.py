@@ -360,8 +360,12 @@ class ColorFactor(list):
         list.__init__(self)
 
         if init_list is not None:
-            for object in init_list:
-                self.append(object)
+            if isinstance(init_list, list):
+                for object in init_list:
+                    self.append(object)
+            else:
+                raise ValueError, \
+                    "Object %s is not a valid list" % repr(init_list)
 
     def append(self, object):
         """Appends an ColorString, but test if valid before."""
@@ -385,7 +389,37 @@ class ColorFactor(list):
             raise ValueError, \
                         "Object %s is not a valid ColorFactor" % col_factor
         else:
-            list.extend(self, col_factor)   
+            list.extend(self, col_factor)
+    
+    def simplify(self):
+        """Simplify the current ColorFactor. First apply simplification rules
+        on all ColorStrings, then expand first composite terms and apply the
+        golden rule. Iterate until the result does not change anymore"""
+        
+        while True:
+            original = copy.copy(self)
+            
+            # Simplify each color string
+            for col_str in self:
+                col_str.simplify()
+            
+            # Expand one composite term if possible
+            for col_str in self[:]:
+                result = col_str.expand_composite_terms()
+                if result:
+                    self.remove(col_str)
+                    self.extend(ColorFactor(result))
+
+            # Expand one composite term if possible
+            for col_str in self[:]:
+                result = col_str.apply_golden_rule()
+                if result:
+                    self.remove(col_str)
+                    self.extend(ColorFactor(result))
+            
+            # Iterate until the result does not change anymore
+            if self == original:
+                break
         
         
         
