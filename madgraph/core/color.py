@@ -17,6 +17,7 @@
 related to QCD color."""
 
 import copy
+import operator
 import re
 
 class ColorString(list):
@@ -91,6 +92,7 @@ class ColorString(list):
             original = copy.copy(self)
             self.__simplify_traces()
             self.__simplify_delta()
+            self.__simplify_coeffs()
             if self == original:
                 break
     
@@ -131,6 +133,75 @@ class ColorString(list):
                         return True
         
         return False
+
+    def __simplify_coeffs(self):
+        """Applies simple algebraic simplifications on scalar coefficients
+        and bring the final result to the first position"""
+        
+        # Simplify factors Nc
+        numNc = self.count('Nc') - self.count('1/Nc')
+        while ('Nc' in self): self.remove('Nc')
+        while ('1/Nc' in self): self.remove('1/Nc')
+        if numNc > 0:
+            for dummy in range(numNc):
+                self.insert(0, 'Nc')
+        elif numNc < 0:
+            for dummy in range(abs(numNc)):
+                self.insert(0, '1/Nc')
+        
+        # Simplify factors I
+        numI = self.count('I')
+        while ('I' in self): self.remove('I')
+        if numI % 4 == 1:
+            self.insert(0, 'I')
+        elif numI % 4 == 2:
+            self.insert(0, '-1')
+        elif numI % 4 == 3:
+            self.insert(0, 'I')
+            self.insert(0, '-1')
+        
+        # Simplify numbers
+        numlist = [elem for elem in self if re.match('^-?(\d+/)?\d+$', elem)]
+        numwithdenlist = [elem for elem in \
+                            numlist if re.match('^-?\d+/\d+$', elem)]
+        for num in numlist: self.remove(num)
+        
+        is_neg = len([elem for elem in numlist if re.match('^-.*$', elem)]) % 2
+        numerator = reduce(operator.mul,
+                      [int(re.match('^-?(?P<x>\d+)(/\d+)?$', elem).group('x'))\
+                      for elem in numlist], 1)
+        denominator = reduce(operator.mul,
+                      [int(re.match('^-?\d+/(?P<y>\d+)$', elem).group('y'))\
+                      for elem in numwithdenlist], 1)
+        
+        if denominator != 1:
+                        
+            def gcd(a, b):
+                while b: a, b = b, a % b
+                return a
+            
+            dev = gcd(numerator, denominator)
+            numerator //= dev
+            denominator //= dev
+            
+            if is_neg:
+                self.insert(0, "-%i/%i" % (numerator, denominator))
+            else:
+                self.insert(0, "%i/%i" % (numerator, denominator))
+        
+        elif numerator != 1 or (numerator == 1 and is_neg):
+            if is_neg:
+                self.insert(0, "-%i" % numerator)
+            else:
+                self.insert(0, "%i" % numerator)
+        
+
+
+        
+        
+        
+        
+        
                 
                 
                 

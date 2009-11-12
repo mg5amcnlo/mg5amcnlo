@@ -87,9 +87,8 @@ class ColorTest(unittest.TestCase):
                                              'T(1,101,101)',
                                              'T(2,104,105)'])
         
-        my_color_string2 = color.ColorString(['Nc',
+        my_color_string2 = color.ColorString(['0', 'Nc',
                                              'T(102,103)',
-                                             '0',
                                              'T(2,104,105)'])
         
         my_color_string1.simplify()
@@ -103,8 +102,8 @@ class ColorTest(unittest.TestCase):
                                               'f(1,2,3)',
                                               'T(103,102,104)', 'Nc'])
         
-        my_color_string2 = color.ColorString(['T(103,101,104)',
-                                              'f(1,2,3)', 'Nc'])
+        my_color_string2 = color.ColorString(['Nc', 'T(103,101,104)',
+                                              'f(1,2,3)'])
         
         my_color_string1.simplify()
         
@@ -132,3 +131,48 @@ class ColorTest(unittest.TestCase):
         my_color_string1.simplify()
         
         self.assertEqual(my_color_string1, my_color_string2)
+    
+    def test_coeff_simplify(self):
+        """Test color string coefficient simplification"""
+        
+        # Test Nc simplification
+        my_color_string = color.ColorString(['Nc'] * 5 + \
+                                            ['f(1,2,3)'] + \
+                                            ['1/Nc'] * 3)
+        
+        my_color_string.simplify()
+        
+        self.assertEqual(my_color_string, color.ColorString(['Nc',
+                                                             'Nc',
+                                                             'f(1,2,3)']))
+        
+        # Test factors I simplification
+        my_color_string = color.ColorString(['I'] * 4)
+        my_color_string.simplify()
+        self.assertEqual(my_color_string, color.ColorString([]))
+        
+        my_color_string = color.ColorString(['I'] * 5)
+        my_color_string.simplify()
+        self.assertEqual(my_color_string, color.ColorString(['I']))
+        
+        my_color_string = color.ColorString(['I'] * 6)
+        my_color_string.simplify()
+        self.assertEqual(my_color_string, color.ColorString(['-1']))
+        
+        my_color_string = color.ColorString(['I'] * 7)
+        my_color_string.simplify()
+        self.assertEqual(my_color_string, color.ColorString(['-1', 'I']))
+        
+        # Test numbers simplification
+        my_color_string = color.ColorString(['-1/2', '2/3', '2', '-3'])
+        my_color_string.simplify()
+        self.assertEqual(my_color_string, color.ColorString(['2']))
+        
+        # Mix everything
+        my_color_string = color.ColorString(['Nc', 'I', '-4', 'I', '1/Nc',
+                                             'I', 'Nc', 'd(1,2,3)',
+                                             '2/3', '-2/8'])
+        my_color_string.simplify()
+        self.assertEqual(my_color_string,
+                         color.ColorString(['-2/3', 'I', 'Nc', 'd(1,2,3)']))
+        
