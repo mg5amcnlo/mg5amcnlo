@@ -19,11 +19,11 @@ import unittest
 
 import madgraph.core.color as color
 
+#===============================================================================
+# ColorTest
+#===============================================================================
 class ColorTest(unittest.TestCase):
     """Test class for code parts related to color"""
-
-    def setUp(self):
-        pass
 
     def test_validity(self):
         """Test the color string validity check"""
@@ -84,12 +84,10 @@ class ColorTest(unittest.TestCase):
         
         my_color_string1 = color.ColorString(['T(101,101)',
                                              'T(102,103)',
-                                             'T(1,101,101)',
+                                             'T(1,-101,-101)',
                                              'T(2,104,105)'])
         
-        my_color_string2 = color.ColorString(['0', 'Nc',
-                                             'T(102,103)',
-                                             'T(2,104,105)'])
+        my_color_string2 = color.ColorString(['0'])
         
         my_color_string1.simplify()
         
@@ -98,9 +96,9 @@ class ColorTest(unittest.TestCase):
     def test_delta_simplify(self):
         """Test color string delta simplification"""
         
-        my_color_string1 = color.ColorString(['T(101,102)',
+        my_color_string1 = color.ColorString(['T(101,-102)',
                                               'f(1,2,3)',
-                                              'T(103,102,104)', 'Nc'])
+                                              'T(103,-102,104)', 'Nc'])
         
         my_color_string2 = color.ColorString(['Nc', 'T(103,101,104)',
                                               'f(1,2,3)'])
@@ -120,9 +118,9 @@ class ColorTest(unittest.TestCase):
         
         self.assertEqual(my_color_string1, my_color_string2)
         
-        my_color_string1 = color.ColorString(['T(101,102)',
+        my_color_string1 = color.ColorString(['T(-101,102)',
                                               'f(1,2,3)',
-                                              'T(103,104,101)',
+                                              'T(103,104,-101)',
                                               'T(105,104)'])
         
         my_color_string2 = color.ColorString(['T(103,105,102)',
@@ -175,4 +173,47 @@ class ColorTest(unittest.TestCase):
         my_color_string.simplify()
         self.assertEqual(my_color_string,
                          color.ColorString(['-2/3', 'I', 'Nc', 'd(1,2,3)']))
+        
+    def test_expand_composite(self):
+        """Test color string expansion in the presence of terms like f, d, ...
+        """
+        
+        my_color_string1 = color.ColorString(['T(1,2)',
+                                              'd(3,4,-5)',
+                                              'T(-5,6,7)'])
+        
+        my_color_string2 = color.ColorString(['T(1,2)',
+                                              'f(3,4,5)',
+                                              'T(5,6,7)'])
+        
+        self.assertEqual(my_color_string1.expand_composite_terms(),
+                         [color.ColorString(['T(1,2)',
+                                             '2',
+                                             'T(3,-6,-7)',
+                                             'T(4,-7,-8)',
+                                             'T(-5,-8,-6)',
+                                             'T(-5,6,7)']),
+                          color.ColorString(['T(1,2)',
+                                             '2',
+                                             'T(-5,-6,-7)',
+                                             'T(4,-7,-8)',
+                                             'T(3,-8,-6)',
+                                             'T(-5,6,7)'])])
+        
+        self.assertEqual(my_color_string2.expand_composite_terms(-4),
+                         [color.ColorString(['T(1,2)',
+                                             '-2',
+                                             'I',
+                                             'T(3,-4,-5)',
+                                             'T(4,-5,-6)',
+                                             'T(5,-6,-4)',
+                                             'T(5,6,7)']),
+                          color.ColorString(['T(1,2)',
+                                             '2',
+                                             'I',
+                                             'T(5,-4,-5)',
+                                             'T(4,-5,-6)',
+                                             'T(3,-6,-4)',
+                                             'T(5,6,7)'])])
+        
         
