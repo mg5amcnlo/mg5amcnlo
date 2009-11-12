@@ -637,8 +637,12 @@ class Model(PhysicsObject):
         else:
             return None
 
+    def fill_cross_legs_dict(self,cross_legs_dict,legs,index):
 
+        if not isinstance(legs,LegList) or not isinstance(cross_legs_dict,dict):
+            return
 
+        cross_legs_dict[tuple(sorted(legs.get_outgoing_id_list(self.get('particle_dict'))))] = index
 #===============================================================================
 # Leg
 #===============================================================================
@@ -752,6 +756,23 @@ class LegList(PhysicsObjectList):
 
         return True
 
+    def get_outgoing_id_list(self,particle_dict):
+        """Returns the list of ids corresponding to the leglist with
+        all particles outgoing"""
+
+        res = []
+
+        if not isinstance(particle_dict,dict):
+            print "Error! particle_dict not dict"
+            return res
+        
+        for leg in self:
+            if leg.get('state') == 'initial':
+                res.append(particle_dict[leg.get('id')].get_anti_pdg_code())
+            else:
+                res.append(leg.get('id'))
+
+        return res
 
 #===============================================================================
 # Vertex

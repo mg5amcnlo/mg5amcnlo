@@ -97,7 +97,15 @@ class Amplitude(base_objects.PhysicsObject):
         7. Repeat from 3 (recursion done by reduce_leglist)
         """
         model = self['process'].get('model')
+        res = base_objects.DiagramList()
 
+        # First check that the number of fermions is even
+        if len(filter(lambda leg: model.get('particle_dict')[\
+                        leg.get('id')].get('spin') in [2,4],
+                      self.get('process').get('legs'))) % 2 == 1:
+            self['diagrams'] = res
+            return res
+        
         for i in range(0, len(self['process'].get('legs'))):
 
             # Make sure legs are unique
@@ -129,8 +137,6 @@ class Amplitude(base_objects.PhysicsObject):
 
         reduced_leglist = self.reduce_leglist(self['process'].get('legs'),
                                            max_multi_to1)
-        res = base_objects.DiagramList()
-
         for vertex_list in reduced_leglist:
             res.append(base_objects.Diagram(
                             {'vertices':base_objects.VertexList(vertex_list)}))

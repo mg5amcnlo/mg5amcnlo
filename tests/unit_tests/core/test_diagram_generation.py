@@ -1241,7 +1241,9 @@ class MultiparticleTest(unittest.TestCase):
     def test_multiparticle_pp_nj(self):
         """Setting up and testing pp > nj based on multiparticle lists"""
 
-        max_fs = 2 # 3
+        print "Testing multiparticles"
+
+        max_fs = 4
 
         p = [1, -1, 2, -2, 21]
 
@@ -1386,19 +1388,404 @@ class MultiparticleTest(unittest.TestCase):
 
             # Calculate diagrams for all processes
             valid_procs = []
+
             for amplitude in amplitudes:
+                model = amplitude.get('process').get('model')
                 if len(amplitude.get('diagrams')) > 0:
                     nproc = nproc + 1
                     valid_procs.append(([leg.get('id') for leg in \
                                          amplitude.get('process').get('legs')],
                                         len(amplitude.get('diagrams'))))
+            if nfs <= 2:
+                self.assertEqual(valid_procs, goal_valid_procs[nfs - 2])
 
-            # Check process/number of diagrams
-            self.assertEqual(valid_procs, goal_valid_procs[nfs - 2])
+            print 'pp > ',nfs,'j (p,j = ', \
+                  [leg.get("id") for leg in multiparticle],'):'
+            print 'Valid processes: ',nproc
+            print 'Attempted processes: ',len(amplitudes)
+            print 'Total parton combinations (before accounting for FS ordering): ',\
+                  len(islist)*len(fsall)
 
-            # print 'pp > ',nfs,'j:'
-            # print 'Valid processes: ',nproc
-            # print 'Attempted processes: ',len(amplitudes)
-            # print 'Total parton combinations (before accounting for FS ordering: ',\
-            #       len(islist)*len(fsall)
+    def test_multiparticle_pp_nj_with_improvements(self):
+        """Setting up and testing pp > nj based on multiparticle lists"""
 
+        print "Testing multiparticles with crossing checks for failed particles only"
+
+        max_fs = 4
+
+        p = [1, -1, 2, -2, 21]
+
+        multiparticle = base_objects.LegList([base_objects.Leg({'id':id,
+                                'number':1, 'state':'initial'}) for id in p ])
+
+        islist = []
+        # Following equivalent to 
+        # diagram_generation.expand_list([multiparticle,multiparticle])
+        for prod in itertools.product(multiparticle, multiparticle):
+            islist.append(base_objects.LegList([copy.copy(leg) \
+                                                for leg in prod]))
+
+        for leg in multiparticle:
+            leg.set('state', 'final')
+
+        goal_valid_procs = []
+        goal_valid_procs.append([([1, 1, 1, 1], 4),
+                                 ([1, -1, 1, -1], 4),
+                                 ([1, -1, 2, -2], 2),
+                                 ([1, -1, 21, 21], 3),
+                                 ([1, 2, 1, 2], 2),
+                                 ([1, -2, 1, -2], 2),
+                                 ([1, 21, 1, 21], 3),
+                                 ([-1, 1, 1, -1], 4),
+                                 ([-1, 1, 2, -2], 2),
+                                 ([-1, 1, 21, 21], 3),
+                                 ([-1, -1, -1, -1], 4),
+                                 ([-1, 2, -1, 2], 2),
+                                 ([-1, -2, -1, -2], 2),
+                                 ([-1, 21, -1, 21], 3),
+                                 ([2, 1, 1, 2], 2),
+                                 ([2, -1, -1, 2], 2),
+                                 ([2, 2, 2, 2], 4),
+                                 ([2, -2, 1, -1], 2),
+                                 ([2, -2, 2, -2], 4),
+                                 ([2, -2, 21, 21], 3),
+                                 ([2, 21, 2, 21], 3),
+                                 ([-2, 1, 1, -2], 2),
+                                 ([-2, -1, -1, -2], 2),
+                                 ([-2, 2, 1, -1], 2),
+                                 ([-2, 2, 2, -2], 4),
+                                 ([-2, 2, 21, 21], 3),
+                                 ([-2, -2, -2, -2], 4),
+                                 ([-2, 21, -2, 21], 3),
+                                 ([21, 1, 1, 21], 3),
+                                 ([21, -1, -1, 21], 3),
+                                 ([21, 2, 2, 21], 3),
+                                 ([21, -2, -2, 21], 3),
+                                 ([21, 21, 1, -1], 3),
+                                 ([21, 21, 2, -2], 3),
+                                 ([21, 21, 21, 21], 4)])
+        goal_valid_procs.append([([1, 1, 1, 1, 21], 18),
+                                 ([1, -1, 1, -1, 21], 18),
+                                 ([1, -1, 2, -2, 21], 9),
+                                 ([1, -1, 21, 21, 21], 16),
+                                 ([1, 2, 1, 2, 21], 9),
+                                 ([1, -2, 1, -2, 21], 9),
+                                 ([1, 21, 1, 1, -1], 18),
+                                 ([1, 21, 1, 2, -2], 9),
+                                 ([1, 21, 1, 21, 21], 16),
+                                 ([-1, 1, 1, -1, 21], 18),
+                                 ([-1, 1, 2, -2, 21], 9),
+                                 ([-1, 1, 21, 21, 21], 16),
+                                 ([-1, -1, -1, -1, 21], 18),
+                                 ([-1, 2, -1, 2, 21], 9),
+                                 ([-1, -2, -1, -2, 21], 9),
+                                 ([-1, 21, 1, -1, -1], 18),
+                                 ([-1, 21, -1, 2, -2], 9),
+                                 ([-1, 21, -1, 21, 21], 16),
+                                 ([2, 1, 1, 2, 21], 9),
+                                 ([2, -1, -1, 2, 21], 9),
+                                 ([2, 2, 2, 2, 21], 18),
+                                 ([2, -2, 1, -1, 21], 9),
+                                 ([2, -2, 2, -2, 21], 18),
+                                 ([2, -2, 21, 21, 21], 16),
+                                 ([2, 21, 1, -1, 2], 9),
+                                 ([2, 21, 2, 2, -2], 18),
+                                 ([2, 21, 2, 21, 21], 16),
+                                 ([-2, 1, 1, -2, 21], 9),
+                                 ([-2, -1, -1, -2, 21], 9),
+                                 ([-2, 2, 1, -1, 21], 9),
+                                 ([-2, 2, 2, -2, 21], 18),
+                                 ([-2, 2, 21, 21, 21], 16),
+                                 ([-2, -2, -2, -2, 21], 18),
+                                 ([-2, 21, 1, -1, -2], 9),
+                                 ([-2, 21, 2, -2, -2], 18),
+                                 ([-2, 21, -2, 21, 21], 16),
+                                 ([21, 1, 1, 1, -1], 18),
+                                 ([21, 1, 1, 2, -2], 9),
+                                 ([21, 1, 1, 21, 21], 16),
+                                 ([21, -1, 1, -1, -1], 18),
+                                 ([21, -1, -1, 2, -2], 9),
+                                 ([21, -1, -1, 21, 21], 16),
+                                 ([21, 2, 1, -1, 2], 9),
+                                 ([21, 2, 2, 2, -2], 18),
+                                 ([21, 2, 2, 21, 21], 16),
+                                 ([21, -2, 1, -1, -2], 9),
+                                 ([21, -2, 2, -2, -2], 18),
+                                 ([21, -2, -2, 21, 21], 16),
+                                 ([21, 21, 1, -1, 21], 16),
+                                 ([21, 21, 2, -2, 21], 16),
+                                 ([21, 21, 21, 21, 21], 25)])
+
+
+        for nfs in range(2, max_fs + 1):
+
+            # Generate all combinations of final state particles
+            fsall = []
+            for legs in itertools.product(multiparticle, repeat=nfs):
+                fsall.append(base_objects.LegList([copy.copy(leg) \
+                                                    for leg in legs]))
+            # Now remove all double counting - this is kinda slow (but not
+            # compared to diagram generation of course)
+            fslist = []
+            for legs in fsall:
+                if legs.not_in_unordered_lists(fslist):
+                    fslist.append(legs)
+
+            # Combine IS and FS particles
+            leg_lists = []
+            for islegs in islist:
+                for fslegs in fslist:
+                    leg_list = [copy.copy(leg) for leg in islegs]
+                    leg_list.extend([copy.copy(leg) for leg in fslegs])
+                    leg_lists.append(base_objects.LegList(leg_list))
+
+            for leg_list in leg_lists:
+                for i in range(0, len(leg_list)):
+                    leg_list[i].set('number', i + 1)
+
+            # Setup processes
+            processes = base_objects.ProcessList([ \
+                            base_objects.Process({'legs':legs,
+                                                  'model':self.mymodel}) \
+                                                  for legs in leg_lists])
+            # Setup amplitudes
+            amplitudes = [diagram_generation.Amplitude({'process':process}) \
+                                                    for process in processes]
+
+            nproc = 0
+
+            # Calculate diagrams for all processes
+            valid_procs = []
+            # Check for crossed processes
+            valid_procs_dict = {}
+            failed_procs_dic = {}
+            number_valid_procs_crossed = 0
+            number_failed_procs_crossed = 0
+            failed_fermions = 0
+            for amplitude in amplitudes:
+                model = amplitude.get('process').get('model')
+                legs = amplitude.get('process').get('legs')
+                # Check for even number of fermions first, since it
+                # takes quite a lot of time to fill the
+                # dictionaries
+                fermions = len(filter(lambda leg: model.get('particle_dict')[\
+                        leg.get('id')].get('spin') in [2,4],
+                                      legs))
+                if fermions % 2 == 1:
+                    failed_fermions = failed_fermions + 1
+                elif tuple(sorted(legs.get_outgoing_id_list(model.get('particle_dict')))) \
+                          in valid_procs_dict:
+
+                    amplitude_number = valid_procs_dict[tuple(sorted(legs.get_outgoing_id_list(model.get('particle_dict'))))]
+                    number_valid_procs_crossed = number_valid_procs_crossed + 1
+                    valid_procs.append(([leg.get('id') for leg in \
+                                         legs],
+                                        len(amplitudes[amplitude_number].get('diagrams'))))
+                elif tuple(sorted(legs.get_outgoing_id_list(model.get('particle_dict')))) \
+                            in failed_procs_dic:
+                    number_failed_procs_crossed = number_failed_procs_crossed + 1
+                else:
+                    if len(amplitude.get('diagrams')) > 0:
+                        nproc = nproc + 1
+                        valid_procs.append(([leg.get('id') for leg in \
+                                             legs],
+                                            len(amplitude.get('diagrams'))))
+                        model.fill_cross_legs_dict(valid_procs_dict, legs, amplitudes.index(amplitude))
+                    else:
+                        model.fill_cross_legs_dict(failed_procs_dic, legs, amplitudes.index(amplitude))
+            if nfs < 3:
+                self.assertEqual(valid_procs, goal_valid_procs[nfs - 2])
+
+            print 'pp > ',nfs,'j, (p,j=', \
+                  [leg.get("id") for leg in multiparticle],'):'
+            print 'Valid processes generated: ',nproc
+            print 'Valid crossings found: ',number_valid_procs_crossed
+            print 'Attempted processes: ',len(amplitudes)-number_failed_procs_crossed
+            print 'Failed fermions: ',failed_fermions
+            print 'Failed crossings found: ',number_failed_procs_crossed
+
+    def test_multiparticle_pp_nj_with_partial_improvements(self):
+        """Setting up and testing pp > nj based on multiparticle lists"""
+
+        print "Testing multiparticles with crossing checks for failed particles only"
+
+        max_fs = 4
+
+        p = [1, -1, 2, -2, 21]
+
+        multiparticle = base_objects.LegList([base_objects.Leg({'id':id,
+                                'number':1, 'state':'initial'}) for id in p ])
+
+        islist = []
+        # Following equivalent to 
+        # diagram_generation.expand_list([multiparticle,multiparticle])
+        for prod in itertools.product(multiparticle, multiparticle):
+            islist.append(base_objects.LegList([copy.copy(leg) \
+                                                for leg in prod]))
+
+        for leg in multiparticle:
+            leg.set('state', 'final')
+
+        goal_valid_procs = []
+        goal_valid_procs.append([([1, 1, 1, 1], 4),
+                                 ([1, -1, 1, -1], 4),
+                                 ([1, -1, 2, -2], 2),
+                                 ([1, -1, 21, 21], 3),
+                                 ([1, 2, 1, 2], 2),
+                                 ([1, -2, 1, -2], 2),
+                                 ([1, 21, 1, 21], 3),
+                                 ([-1, 1, 1, -1], 4),
+                                 ([-1, 1, 2, -2], 2),
+                                 ([-1, 1, 21, 21], 3),
+                                 ([-1, -1, -1, -1], 4),
+                                 ([-1, 2, -1, 2], 2),
+                                 ([-1, -2, -1, -2], 2),
+                                 ([-1, 21, -1, 21], 3),
+                                 ([2, 1, 1, 2], 2),
+                                 ([2, -1, -1, 2], 2),
+                                 ([2, 2, 2, 2], 4),
+                                 ([2, -2, 1, -1], 2),
+                                 ([2, -2, 2, -2], 4),
+                                 ([2, -2, 21, 21], 3),
+                                 ([2, 21, 2, 21], 3),
+                                 ([-2, 1, 1, -2], 2),
+                                 ([-2, -1, -1, -2], 2),
+                                 ([-2, 2, 1, -1], 2),
+                                 ([-2, 2, 2, -2], 4),
+                                 ([-2, 2, 21, 21], 3),
+                                 ([-2, -2, -2, -2], 4),
+                                 ([-2, 21, -2, 21], 3),
+                                 ([21, 1, 1, 21], 3),
+                                 ([21, -1, -1, 21], 3),
+                                 ([21, 2, 2, 21], 3),
+                                 ([21, -2, -2, 21], 3),
+                                 ([21, 21, 1, -1], 3),
+                                 ([21, 21, 2, -2], 3),
+                                 ([21, 21, 21, 21], 4)])
+        goal_valid_procs.append([([1, 1, 1, 1, 21], 18),
+                                 ([1, -1, 1, -1, 21], 18),
+                                 ([1, -1, 2, -2, 21], 9),
+                                 ([1, -1, 21, 21, 21], 16),
+                                 ([1, 2, 1, 2, 21], 9),
+                                 ([1, -2, 1, -2, 21], 9),
+                                 ([1, 21, 1, 1, -1], 18),
+                                 ([1, 21, 1, 2, -2], 9),
+                                 ([1, 21, 1, 21, 21], 16),
+                                 ([-1, 1, 1, -1, 21], 18),
+                                 ([-1, 1, 2, -2, 21], 9),
+                                 ([-1, 1, 21, 21, 21], 16),
+                                 ([-1, -1, -1, -1, 21], 18),
+                                 ([-1, 2, -1, 2, 21], 9),
+                                 ([-1, -2, -1, -2, 21], 9),
+                                 ([-1, 21, 1, -1, -1], 18),
+                                 ([-1, 21, -1, 2, -2], 9),
+                                 ([-1, 21, -1, 21, 21], 16),
+                                 ([2, 1, 1, 2, 21], 9),
+                                 ([2, -1, -1, 2, 21], 9),
+                                 ([2, 2, 2, 2, 21], 18),
+                                 ([2, -2, 1, -1, 21], 9),
+                                 ([2, -2, 2, -2, 21], 18),
+                                 ([2, -2, 21, 21, 21], 16),
+                                 ([2, 21, 1, -1, 2], 9),
+                                 ([2, 21, 2, 2, -2], 18),
+                                 ([2, 21, 2, 21, 21], 16),
+                                 ([-2, 1, 1, -2, 21], 9),
+                                 ([-2, -1, -1, -2, 21], 9),
+                                 ([-2, 2, 1, -1, 21], 9),
+                                 ([-2, 2, 2, -2, 21], 18),
+                                 ([-2, 2, 21, 21, 21], 16),
+                                 ([-2, -2, -2, -2, 21], 18),
+                                 ([-2, 21, 1, -1, -2], 9),
+                                 ([-2, 21, 2, -2, -2], 18),
+                                 ([-2, 21, -2, 21, 21], 16),
+                                 ([21, 1, 1, 1, -1], 18),
+                                 ([21, 1, 1, 2, -2], 9),
+                                 ([21, 1, 1, 21, 21], 16),
+                                 ([21, -1, 1, -1, -1], 18),
+                                 ([21, -1, -1, 2, -2], 9),
+                                 ([21, -1, -1, 21, 21], 16),
+                                 ([21, 2, 1, -1, 2], 9),
+                                 ([21, 2, 2, 2, -2], 18),
+                                 ([21, 2, 2, 21, 21], 16),
+                                 ([21, -2, 1, -1, -2], 9),
+                                 ([21, -2, 2, -2, -2], 18),
+                                 ([21, -2, -2, 21, 21], 16),
+                                 ([21, 21, 1, -1, 21], 16),
+                                 ([21, 21, 2, -2, 21], 16),
+                                 ([21, 21, 21, 21, 21], 25)])
+
+
+        for nfs in range(2, max_fs + 1):
+
+            # Generate all combinations of final state particles
+            fsall = []
+            for legs in itertools.product(multiparticle, repeat=nfs):
+                fsall.append(base_objects.LegList([copy.copy(leg) \
+                                                    for leg in legs]))
+            # Now remove all double counting - this is kinda slow (but not
+            # compared to diagram generation of course)
+            fslist = []
+            for legs in fsall:
+                if legs.not_in_unordered_lists(fslist):
+                    fslist.append(legs)
+
+            # Combine IS and FS particles
+            leg_lists = []
+            for islegs in islist:
+                for fslegs in fslist:
+                    leg_list = [copy.copy(leg) for leg in islegs]
+                    leg_list.extend([copy.copy(leg) for leg in fslegs])
+                    leg_lists.append(base_objects.LegList(leg_list))
+
+            for leg_list in leg_lists:
+                for i in range(0, len(leg_list)):
+                    leg_list[i].set('number', i + 1)
+
+            # Setup processes
+            processes = base_objects.ProcessList([ \
+                            base_objects.Process({'legs':legs,
+                                                  'model':self.mymodel}) \
+                                                  for legs in leg_lists])
+            # Setup amplitudes
+            amplitudes = [diagram_generation.Amplitude({'process':process}) \
+                                                    for process in processes]
+
+            nproc = 0
+
+            # Calculate diagrams for all processes
+            valid_procs = []
+            # Check for crossed processes
+            failed_procs_dic = {}
+            number_failed_procs_crossed = 0
+            failed_fermions = 0
+            for amplitude in amplitudes:
+                model = amplitude.get('process').get('model')
+                legs = amplitude.get('process').get('legs')
+                # Check for even number of fermions first, since it
+                # takes quite a lot of time to fill the
+                # dictionaries
+                fermions = len(filter(lambda leg: model.get('particle_dict')[\
+                        leg.get('id')].get('spin') in [2,4],
+                                      legs))
+                if fermions % 2 == 1:
+                    failed_fermions = failed_fermions + 1
+                elif tuple(sorted(legs.get_outgoing_id_list(model.get('particle_dict')))) \
+                            in failed_procs_dic:
+                    number_failed_procs_crossed = number_failed_procs_crossed + 1
+                else:
+                    if len(amplitude.get('diagrams')) > 0:
+                        nproc = nproc + 1
+                        valid_procs.append(([leg.get('id') for leg in \
+                                             legs],
+                                            len(amplitude.get('diagrams'))))
+                    else:
+                        model.fill_cross_legs_dict(failed_procs_dic, legs, amplitudes.index(amplitude))
+            if nfs < 3:
+                self.assertEqual(valid_procs, goal_valid_procs[nfs - 2])
+
+            print 'pp > ',nfs,'j, (p,j=', \
+                  [leg.get("id") for leg in multiparticle],'):'
+            print 'Valid processes generated: ',nproc
+            print 'Attempted processes: ',len(amplitudes)-number_failed_procs_crossed
+            print 'Failed fermions: ',failed_fermions
+            print 'Failed crossings found: ',number_failed_procs_crossed
