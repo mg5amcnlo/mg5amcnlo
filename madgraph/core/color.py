@@ -125,10 +125,10 @@ class ColorString(list):
             for index2, mystr2 in enumerate(self[index1 + 1:]):
                 
                 match_strings = \
-                (r"^T\((?P<i>-?\d+),(?P<x>-?\d+)\)T\((?P<a>-?\d+),(?P=x),(?P<j>-?\d+)\)$",
-                 r"^T\((?P<x>-?\d+),(?P<j>-?\d+)\)T\((?P<a>-?\d+),(?P<i>-?\d+),(?P=x)\)$",
-                 r"^T\((?P<a>-?\d+),(?P<x>-?\d+),(?P<j>-?\d+)\)T\((?P<i>-?\d+),(?P=x)\)$",
-                 r"^T\((?P<a>-?\d+),(?P<i>-?\d+),(?P<x>-?\d+)\)T\((?P=x),(?P<j>-?\d+)\)$")
+    (r"^T\((?P<i>-?\d+),(?P<x>-?\d+)\)T\((?P<a>-?\d+),(?P=x),(?P<j>-?\d+)\)$",
+     r"^T\((?P<x>-?\d+),(?P<j>-?\d+)\)T\((?P<a>-?\d+),(?P<i>-?\d+),(?P=x)\)$",
+     r"^T\((?P<a>-?\d+),(?P<x>-?\d+),(?P<j>-?\d+)\)T\((?P<i>-?\d+),(?P=x)\)$",
+     r"^T\((?P<a>-?\d+),(?P<i>-?\d+),(?P<x>-?\d+)\)T\((?P=x),(?P<j>-?\d+)\)$")
                 
                 for match_str in match_strings:
                     res_match_object = re.match(match_str, mystr1 + mystr2)
@@ -216,6 +216,14 @@ class ColorString(list):
         
         return True
     
+    def __find_first_free_index(self):
+        """Find the first free negative index in self"""
+        
+        all_numbers = []
+        for elem in self:
+            all_numbers.extend([int(x) for x in re.findall('-?\d+', elem)])
+        return min(min(all_numbers) - 1, -1)
+            
     def expand_composite_terms(self, first_index=0):
         """Expand the first encountered composite term like f,d,... 
         and returns the corresponding list of ColorString objects. 
@@ -228,10 +236,7 @@ class ColorString(list):
         
         # Find the smallest negative index still free
         if first_index >= 0:
-            all_numbers = []
-            for elem in self:
-                all_numbers.extend([int(x) for x in re.findall('-?\d+', elem)])
-            first_index = min(min(all_numbers) - 1, -1)
+            first_index = self.__find_first_free_index()
             
         i = first_index
         j = first_index - 1
@@ -296,10 +301,52 @@ class ColorString(list):
                 return [color_string1, color_string2]
         
         return []
+    
+    def apply_golden_rule(self, first_index=0):
+        """Similar to expand_composite_terms, but applies the golden rule
+        T(a,i1,j1)T(a,i2,j2) = 1/2 (T[i1,j2]T[i2,j1]-1/Nc T[i1,j1]T[i2,j2])
+        on the first T product corresponding to the pattern."""
+        
+        for index1, mystr1 in enumerate(self):
+            for index2, mystr2 in enumerate(self[index1 + 1:]):
+                res_match_object = re.match(r"""^T\((?P<a>-?\d+),
+                                                    (?P<i1>-?\d+),
+                                                    (?P<j1>-?\d+)\)
+                                                 T\((?P=a),
+                                                    (?P<i2>-?\d+),
+                                                    (?P<j2>-?\d+)\)$""",
+                                            mystr1 + mystr2, re.VERBOSE)
+                if res_match_object:
+                    i1 = res_match_object.group('i1')
+                    i2 = res_match_object.group('i2')
+                    j1 = res_match_object.group('j1')
+                    j2 = res_match_object.group('j2')
+                    
+                    color_string1 = copy.copy(self)
+                    del color_string1[index1]
+                    # +1 here is needed because del shifts all indices
+                    del color_string1[index2 + 1]
+                    
+                    color_string2 = copy.copy(self)
+                    del color_string2[index1]
+                    del color_string2[index2 + 1]
+                    
+                    color_string1.insert(index1, '1/2')
+                    color_string1.insert(index1 + 1, "T(%s,%s)" % (i1, j2))
+                    color_string1.insert(index1 + 2, "T(%s,%s)" % (i2, j1))
+                    
+                    color_string2.insert(index1, '-1/2')
+                    color_string2.insert(index1 + 1, '1/Nc')
+                    color_string2.insert(index1 + 2, "T(%s,%s)" % (i1, j1))
+                    color_string2.insert(index1 + 3, "T(%s,%s)" % (i2, j2))
+
+                    return [color_string1, color_string2]
+
+        return []
                 
-            
-
-
+#===============================================================================
+# ColorFactor
+#===============================================================================
 class ColorFactor(list):
     """A list of ColorString object used to store the final result of a given
     color factor calculation. Different elements are implicitly linked by a
@@ -332,13 +379,13 @@ class ColorFactor(list):
         else:
             list.insert(self, pos, object)
     
-    def extend(self, col_string):
+    def extend(self, col_factor):
         """Extend with another ColorFactor, but test if valid before."""
-        if not isinstance(col_string, ColorString):
+        if not isinstance(col_factor, ColorFactor):
             raise ValueError, \
-                        "Object %s is not a valid color string" % col_string
+                        "Object %s is not a valid ColorFactor" % col_factor
         else:
-            list.extend(self, col_string)   
+            list.extend(self, col_factor)   
         
         
         

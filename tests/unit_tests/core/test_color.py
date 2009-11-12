@@ -216,4 +216,25 @@ class ColorTest(unittest.TestCase):
                                              'T(3,-6,-4)',
                                              'T(5,6,7)'])])
         
+    def test_golden_rule(self):
+        """Test color string golden rule implementation"""
+        
+        my_color_string1 = color.ColorString(['T(1,2)',
+                                              'T(3,4,5)',
+                                              'd(6,-7,-8)',
+                                              'T(3,-7,-8)'])
+        
+        self.assertEqual(my_color_string1.apply_golden_rule(),
+                         [color.ColorString(['T(1,2)',
+                                             '1/2',
+                                             'T(4,-8)',
+                                             'T(-7,5)',
+                                             'd(6,-7,-8)']),
+                          color.ColorString(['T(1,2)',
+                                             '-1/2',
+                                             '1/Nc',
+                                             'T(4,5)',
+                                             'T(-7,-8)',
+                                             'd(6,-7,-8)'])])
+        
         
