@@ -35,7 +35,7 @@ class Amplitude(base_objects.PhysicsObject):
         """Default values for all properties"""
 
         self['process'] = base_objects.Process()
-        self['diagrams'] = base_objects.DiagramList()
+        self['diagrams'] = None
 
     def filter(self, name, value):
         """Filter for valid amplitude property values."""
@@ -53,7 +53,8 @@ class Amplitude(base_objects.PhysicsObject):
     def get(self, name):
         """Get the value of the property name."""
 
-        if name == 'diagrams' and not self[name]:
+        if name == 'diagrams' and self[name] == None:
+            # Have not yet generated diagrams for this process
             if self['process']:
                 self['diagrams'] = self.generate_diagrams()
 
@@ -367,7 +368,54 @@ class Amplitude(base_objects.PhysicsObject):
 
         return res
 
+#===============================================================================
+# AmplitudeList
+#===============================================================================
+class AmplitudeList(base_objects.PhysicsObjectList):
+    """List of Amplitude objects
+    """
 
+    def is_valid_element(self, obj):
+        """Test if object obj is a valid Amplitude for the list."""
+        
+        return isinstance(obj, Amplitude)
+
+    def __init__(self, argument = None):
+        if isinstance(argument, base_objects.MultiProcess):
+            list.__init__(self)
+            self.extend([Amplitude(\
+                {'process': process})  for process in argument.get('processes')])
+        else:
+            # call the mother routine
+            list.__init__(self, argument)
+
+    def generate_amplitudes(self):
+        """Generate amplitudes in a semi-efficient way.
+        Make use of crossing symmetry for processes that fail diagram generation,
+        but not for processes that succeed diagram generation.
+        Doing so will risk making it impossible to identify processes with
+        identical amplitudes.
+        """
+
+        # Check for crossed processes
+        failed_procs = []
+        for amplitude in self:
+            process = amplitude.get('process')
+            model = process.get('model')
+            legs = process.get('legs')
+            sorted_legs = sorted(legs.get_outgoing_id_list(model))
+            # Check if crossed process has already failed
+            # In that case don't check process
+            # Remember to turn this off if we require or forbid s-channel propagators
+            if tuple(sorted_legs) in failed_procs:
+                # Need to set empty DiagramList, since otherwise
+                # generate_diagrams will be called every time get('diagrams')
+                # is called
+                amplitude.set('diagrams',base_objects.DiagramList()) 
+            elif len(amplitude.get('diagrams')) == 0:
+                # Add process to failed_proc
+                failed_procs.append(tuple(sorted_legs))
+                    
 #===============================================================================
 # Global helper methods
 #===============================================================================
