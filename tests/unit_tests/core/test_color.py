@@ -272,9 +272,9 @@ class ColorFactorTest(unittest.TestCase):
     def test_simplify(self):
         """Test the color factor simplify algorithm"""
         
-        my_color_factor = color.ColorFactor([color.ColorString(['f(1,2,3)',
-                                                                'f(2,3,4)'])])
+        my_color_factor = color.ColorFactor([color.ColorString(['f(1,2,3)'
+                                                                ])])
         
         my_color_factor.simplify()
         
-        # Add a test here!
+        # add tests here!

@@ -106,7 +106,7 @@ class ColorString(list):
         """Applies T(i,i) = Nc and T(a,i,i)=0 on all elements of the current
         color string."""
     
-        for index, mystr in enumerate(self):
+        for index, mystr in enumerate(self[:]):
             # T(i,i) = Nc
             if re.match(r'T\((?P<id>-?\d+),(?P=id)\)', mystr):
                 self[index] = 'Nc'
@@ -121,7 +121,7 @@ class ColorString(list):
         The first element of the pair is replaced, the second one removed.
         Return True if one replacement is made, False otherwise."""
     
-        for index1, mystr1 in enumerate(self):
+        for index1, mystr1 in enumerate(self[:]):
             for index2, mystr2 in enumerate(self[index1 + 1:]):
                 
                 match_strings = \
@@ -324,12 +324,11 @@ class ColorString(list):
                     
                     color_string1 = copy.copy(self)
                     del color_string1[index1]
-                    # +1 here is needed because del shifts all indices
-                    del color_string1[index2 + 1]
+                    del color_string1[index1 + index2 ]
                     
                     color_string2 = copy.copy(self)
                     del color_string2[index1]
-                    del color_string2[index2 + 1]
+                    del color_string2[index1 + index2 ]
                     
                     color_string1.insert(index1, '1/2')
                     color_string1.insert(index1 + 1, "T(%s,%s)" % (i1, j2))
@@ -399,23 +398,36 @@ class ColorFactor(list):
         while True:
             original = copy.copy(self)
             
+            # Expand one composite term if possible
+            for index, col_str in enumerate(self[:]):
+                result = col_str.expand_composite_terms()
+                if result:
+                    self[index] = ColorString(['0'])
+                    self.extend(ColorFactor(result))
+            
+            # Remove zeros
+            while(ColorString(['0']) in self): self.remove(ColorString(['0']))
+                    
+            # Iterate until the result does not change anymore
+            if self == original:
+                break
+            
+        while True:
+            original = copy.copy(self)
+            
             # Simplify each color string
             for col_str in self:
                 col_str.simplify()
             
-            # Expand one composite term if possible
-            for col_str in self[:]:
-                result = col_str.expand_composite_terms()
-                if result:
-                    self.remove(col_str)
-                    self.extend(ColorFactor(result))
-
-            # Expand one composite term if possible
-            for col_str in self[:]:
+            # Apply golden rule
+            for index, col_str in enumerate(self[:]):
                 result = col_str.apply_golden_rule()
                 if result:
-                    self.remove(col_str)
+                    self[index] = ColorString(['0'])
                     self.extend(ColorFactor(result))
+            
+            # Remove zeros
+            while(ColorString(['0']) in self): self.remove(ColorString(['0']))
             
             # Iterate until the result does not change anymore
             if self == original:
