@@ -284,8 +284,17 @@ class ColorStringTest(unittest.TestCase):
         my_color_string3 = color.ColorString(['2',
                                               'Nc'])
 
+        my_color_string4 = color.ColorString(['-2',
+                                              'Nc'])
+
+        my_color_string5 = color.ColorString(['0',
+                                              'Nc'])
+
         self.assertEqual(my_color_string1.add(my_color_string2),
                          my_color_string3)
+
+        self.assertEqual(my_color_string3.add(my_color_string4),
+                         my_color_string5)
 
 
 
@@ -323,8 +332,8 @@ class ColorFactorTest(unittest.TestCase):
     def test_simplify(self):
         """Test the color factor simplify algorithm"""
 
-        my_color_factor = color.ColorFactor([color.ColorString(['d(1,2,3)',
-                                                                'd(3,2,1)'
+        my_color_factor = color.ColorFactor([color.ColorString(['f(1,2,3)',
+                                                                'f(1,2,3)'
                                                                 ])])
 
         my_color_factor.simplify()

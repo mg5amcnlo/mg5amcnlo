@@ -103,6 +103,7 @@ class ColorString(list):
 
             if self == original:
                 return True
+#            print 'subs:', self
 
         raise ValueError, "Maximal iteration reached!"
 
@@ -140,6 +141,19 @@ class ColorString(list):
                         self[index1] = "T(%s,%s,%s)" % \
                                 (res_match_object.group('a'),
                                  res_match_object.group('i'),
+                                 res_match_object.group('j'))
+                        del self[index1 + index2 + 1]
+                        return True
+
+                match_strings = \
+    (r"^T\((?P<i>-?\d+),(?P<x>-?\d+)\)T\((?P=x),(?P<j>-?\d+)\)$",
+     r"^T\((?P<x>-?\d+),(?P<j>-?\d+)\)T\((?P<i>-?\d+),(?P=x)\)$")
+
+                for match_str in match_strings:
+                    res_match_object = re.match(match_str, mystr1 + mystr2)
+                    if res_match_object:
+                        self[index1] = "T(%s,%s)" % \
+                                (res_match_object.group('i'),
                                  res_match_object.group('j'))
                         del self[index1 + index2 + 1]
                         return True
@@ -360,6 +374,10 @@ class ColorString(list):
         # Remove coeffs one by one
         if col_str and re.match("^-?(\d+/)?\d+$", col_str[0]):
             coeff_str = col_str.pop(0)
+        elif col_str:
+            return ('1', col_str)
+        else:
+            return ('0', ColorString(['0']))
 
         return (coeff_str, col_str)
 
@@ -572,7 +590,7 @@ class ColorFactor(list):
         for i1, col_str1 in enumerate(self[:]):
             for i2, col_str2 in enumerate(self[i1 + 1:]):
                 if col_str1.is_similar(col_str2):
-                    self[i1] = col_str1.add(col_str2)
+                    self[i1] = self[i1].add(col_str2)
                     self[i1 + i2 + 1] = ColorString(['0'])
 
         while(ColorString(['0']) in self): self.remove(ColorString(['0']))
