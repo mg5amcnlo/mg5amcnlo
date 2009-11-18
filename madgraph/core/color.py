@@ -369,17 +369,14 @@ class ColorString(list):
         with the rest"""
 
         col_str = copy.copy(self)
-        col_str.simplify()
 
         # Remove coeffs one by one
         if col_str and re.match("^-?(\d+/)?\d+$", col_str[0]):
             coeff_str = col_str.pop(0)
+            return (coeff_str, col_str)
         elif col_str:
             return ('1', col_str)
-        else:
-            return ('0', ColorString(['0']))
 
-        return (coeff_str, col_str)
 
     def is_similar(self, col_str):
         """Test if self is similar to col_str, i.e. if they have the same
@@ -593,8 +590,10 @@ class ColorFactor(list):
                     self[i1] = self[i1].add(col_str2)
                     self[i1 + i2 + 1] = ColorString(['0'])
 
-        while(ColorString(['0']) in self): self.remove(ColorString(['0']))
+        for elem in self:
+            elem.simplify()
 
+        while(ColorString(['0']) in self): self.remove(ColorString(['0']))
 
 
 
