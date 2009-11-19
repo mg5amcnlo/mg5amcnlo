@@ -133,12 +133,8 @@ class HelasWavefunctionTest(unittest.TestCase):
         mymother = copy.copy(self.mymothers[0])
         mymother.set('pdg_code',13)
         mymothers = helas_objects.HelasWavefunctionList([mymother])
-        mywavefunction = helas_objects.HelasWavefunction({'pdg_code': 12,
-                                                          'interaction_id': 2,
-                                                          'mothers': mymothers,
-                                                          'direction': 'incoming',
-                                                          'number': 2})
-
+        mywavefunction = copy.copy(self.mywavefunction)
+        mywavefunction.set('mothers',mymothers)
         self.assertTrue(self.mywavefunction == mywavefunction)
         mywavefunction.set('pdg_code', 13)
         self.assertFalse(self.mywavefunction == mywavefunction)
@@ -165,6 +161,23 @@ class HelasWavefunctionTest(unittest.TestCase):
         self.assertRaises(helas_objects.HelasWavefunctionList.PhysicsObjectListError,
                           mywavefunctionlist.append,
                           not_a_wavefunction)
+
+    def test_equality_in_list(self):
+        """Test that the overloaded equality operator works also for a list"""
+        mymother = copy.copy(self.mymothers[0])
+        mymothers = helas_objects.HelasWavefunctionList([mymother])
+        mymother.set('pdg_code',100)
+        mywavefunction = copy.copy(self.mywavefunction)
+        mywavefunction.set('mothers',mymothers)
+        mywavefunction.set('pdg_code',self.mywavefunction.get('pdg_code') + 1)
+
+        wavefunctionlist = helas_objects.HelasWavefunctionList(\
+            [copy.copy(wf) for wf in [ mywavefunction ] * 100 ])
+        self.assertFalse(self.mywavefunction in wavefunctionlist)
+        mywavefunction.set('pdg_code',self.mywavefunction.get('pdg_code'))
+        self.assertFalse(self.mywavefunction in wavefunctionlist)
+        wavefunctionlist.append(mywavefunction)
+        self.assertTrue(self.mywavefunction in wavefunctionlist)
 
 #===============================================================================
 # HelasAmplitudeTest
@@ -412,3 +425,112 @@ class HelasDiagramTest(unittest.TestCase):
         self.assertRaises(helas_objects.HelasDiagramList.PhysicsObjectListError,
                           mydiagramlist.append,
                           not_a_diagram)
+
+#===============================================================================
+# HelasMatrixElementTest
+#===============================================================================
+class HelasMatrixElementTest(unittest.TestCase):
+    """Test class for the HelasMatrixElement object"""
+
+    mydict = {}
+    mywavefunctions = None
+    myamplitude = None
+    mydiagrams = None
+    mymatrixelement = None
+
+    def setUp(self):
+
+        mydict = {'pdg_code': 10,
+                  'mothers': helas_objects.HelasWavefunctionList(),
+                  'interaction_id': 2,
+                  'direction': 'incoming',
+                  'number': 5}
+                        
+
+        self.mywavefunctions = helas_objects.HelasWavefunctionList(\
+            [helas_objects.HelasWavefunction(mydict)] * 3)
+
+        mydict = {'mothers': self.mywavefunctions,
+                  'interaction_id': 2,
+                  'number': 5}
+
+        self.myamplitude = helas_objects.HelasAmplitude(self.mydict)
+        
+        mydict = {'wavefunctions': self.mywavefunctions,
+                  'amplitude': self.myamplitude,
+                  'fermionfactor': 1}
+        
+        self.mydiagrams = helas_objects.HelasDiagramList([helas_objects.HelasDiagram(mydict)] * 4)
+        self.mydict = {'diagrams': self.mydiagrams}
+        self.mymatrixelement = helas_objects.HelasMatrixElement(self.mydict)
+
+    def test_setget_matrix_element_correct(self):
+        "Test correct HelasMatrixElement object __init__, get and set"
+
+        mymatrixelement2 = helas_objects.HelasMatrixElement()
+
+        for prop in self.mydict.keys():
+            mymatrixelement2.set(prop, self.mydict[prop])
+
+        self.assertEqual(self.mymatrixelement, mymatrixelement2)
+
+        for prop in self.mymatrixelement.keys():
+            self.assertEqual(self.mymatrixelement.get(prop), self.mydict[prop])
+
+    def test_setget_matrix_element_exceptions(self):
+        "Test error raising in HelasMatrixElement __init__, get and set"
+
+        wrong_dict = self.mydict
+        wrong_dict['wrongparam'] = 'wrongvalue'
+
+        a_number = 0
+
+        # Test init
+        self.assertRaises(helas_objects.HelasMatrixElement.PhysicsObjectError,
+                          helas_objects.HelasMatrixElement,
+                          wrong_dict)
+        self.assertRaises(helas_objects.HelasMatrixElement.PhysicsObjectError,
+                          helas_objects.HelasMatrixElement,
+                          a_number)
+
+        # Test get
+        self.assertRaises(helas_objects.HelasMatrixElement.PhysicsObjectError,
+                          self.mymatrixelement.get,
+                          a_number)
+        self.assertRaises(helas_objects.HelasMatrixElement.PhysicsObjectError,
+                          self.mymatrixelement.get,
+                          'wrongparam')
+
+        # Test set
+        self.assertRaises(helas_objects.HelasMatrixElement.PhysicsObjectError,
+                          self.mymatrixelement.set,
+                          a_number, 0)
+        self.assertRaises(helas_objects.HelasMatrixElement.PhysicsObjectError,
+                          self.mymatrixelement.set,
+                          'wrongparam', 0)
+
+    def test_values_for_prop(self):
+        """Test filters for matrix_element properties"""
+
+        test_values = [
+                       {'prop':'diagrams',
+                        'right_list':[self.mydiagrams],
+                        'wrong_list':['', 0.0]}
+                       ]
+
+        temp_matrix_element = self.mymatrixelement
+
+        for test in test_values:
+            for x in test['right_list']:
+                self.assert_(temp_matrix_element.set(test['prop'], x))
+            for x in test['wrong_list']:
+                self.assertFalse(temp_matrix_element.set(test['prop'], x))
+
+    def test_representation(self):
+        """Test matrix_element object string representation."""
+
+        goal = "{\n"
+        goal = goal + "    \'diagrams\': " + repr(self.mydiagrams) + "\n}"
+
+        self.assertEqual(goal, str(self.mymatrixelement))
+

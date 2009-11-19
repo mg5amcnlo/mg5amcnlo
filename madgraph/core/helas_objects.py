@@ -241,6 +241,32 @@ class HelasDiagramList(base_objects.PhysicsObjectList):
 
         return isinstance(obj, HelasDiagram)
     
+#===============================================================================
+# HelasMatrixElement
+#===============================================================================
+class HelasMatrixElement(base_objects.PhysicsObject):
+    """HelasMatrixElement: list of HelasDiagrams (ordered)
+    """
+
+    def default_setup(self):
+        """Default values for all properties"""
+
+        self['diagrams'] = HelasDiagramList()
+
+    def filter(self, name, value):
+        """Filter for valid diagram property values."""
+
+        if name == 'diagrams':
+            if not isinstance(value, HelasDiagramList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid HelasDiagramList object" % str(value)
+        return True
+
+    def get_sorted_keys(self):
+        """Return particle property names as a nicely sorted list."""
+
+        return ['diagrams']
+    
     def __init__(self, *arguments):
         """Constructor for the HelasDiagramList. In particular allows
         generating a HelasDiagramList from a DiagramList, with
@@ -249,21 +275,23 @@ class HelasDiagramList(base_objects.PhysicsObjectList):
 
         if len(arguments) > 0:
             if isinstance(arguments[0],base_objects.DiagramList):
-                list.__init__(self)
+                super(HelasMatrixElement, self).__init__()
                 diagram_list = arguments[0]
                 optimization = 1
                 if len(arguments) > 1 and isinstance(arguments[1],int):
                     optimization = arguments[1]
 
-                self.extend(generate_helas_diagrams(diagram_list, optimization))
+                    self.generate_helas_diagrams(diagram_list,optimization)
             else:
-                list.__init__(self, arguments[0])
+                super(HelasMatrixElement, self).__init__(arguments[0])
+        else:
+            super(HelasMatrixElement, self).__init__()
    
-    @staticmethod
-    def generate_helas_diagrams(diagram_list,optimization):
+    def generate_helas_diagrams(self, diagram_list, optimization):
         """Static method. Starting from a list of Diagrams from the
         diagram generation, generate the corresponding HelasDiagrams,
         i.e., the wave functions, amplitudes and fermionfactors
         """
         
         return HelasDiagramList()
+
