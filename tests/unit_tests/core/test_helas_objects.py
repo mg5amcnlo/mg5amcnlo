@@ -27,19 +27,19 @@ import madgraph.core.helas_objects as helas_objects
 class HelasWavefunctionTest(unittest.TestCase):
     """Test class for the HelasWavefunction object"""
 
-    myleg = None
     mydict = {}
     mywavefunction = None
+    mymothers = helas_objects.HelasWavefunctionList()
 
     def setUp(self):
 
-        self.myleg = base_objects.Leg({'id':3,
-                                       'number':5,
-                                       'state':'final',
-                                       'from_group':False})
-
-        self.mydict = {'leg': self.myleg,
-                       'mothers': helas_objects.HelasWavefunctionList(),
+        mywavefunction = helas_objects.HelasWavefunction({'pdg_code': 12,
+                                                           'interaction_id': 2,
+                                                           'direction': 'incoming',
+                                                           'number': 2})
+        self.mymothers = helas_objects.HelasWavefunctionList([mywavefunction])
+        self.mydict = {'pdg_code': 12,
+                       'mothers': self.mymothers,
                        'interaction_id': 2,
                        'direction': 'incoming',
                        'number': 5}
@@ -119,8 +119,8 @@ class HelasWavefunctionTest(unittest.TestCase):
         """Test wavefunction object string representation."""
 
         goal = "{\n"
-        goal = goal + "    \'leg\': " + repr(self.myleg) + ",\n"
-        goal = goal + "    \'mothers\': [],\n"
+        goal = goal + "    \'pdg_code\': 12,\n"
+        goal = goal + "    \'mothers\': " + repr(self.mymothers) + ",\n"
         goal = goal + "    \'interaction_id\': 2,\n"
         goal = goal + "    \'direction\': \'incoming\',\n"
         goal = goal + "    \'number\': 5\n}"
@@ -129,35 +129,24 @@ class HelasWavefunctionTest(unittest.TestCase):
 
     def test_equality(self):
         """Test that the overloaded equality operator works"""
-        identicalleg = base_objects.Leg({'id':3,
-                                         'number':5,
-                                         'state':'final',
-                                         'from_group':True})
-        differentleg1 = base_objects.Leg({'id':2,
-                                         'number':5,
-                                         'state':'final',
-                                         'from_group':True})
-        differentleg2 = base_objects.Leg({'id':3,
-                                         'number':3,
-                                         'state':'final',
-                                         'from_group':True})
-        differentleg3 = base_objects.Leg({'id':3,
-                                         'number':5,
-                                         'state':'initial',
-                                         'from_group':True})
-        mywavefunction = helas_objects.HelasWavefunction({'leg': identicalleg,
-                                                    'interaction_id': 2,
-                                                    'direction': 'incoming',
-                                                    'number': 0})
+        
+        mymother = copy.copy(self.mymothers[0])
+        mymother.set('pdg_code',13)
+        mymothers = helas_objects.HelasWavefunctionList([mymother])
+        mywavefunction = helas_objects.HelasWavefunction({'pdg_code': 12,
+                                                          'interaction_id': 2,
+                                                          'mothers': mymothers,
+                                                          'direction': 'incoming',
+                                                          'number': 2})
+
         self.assertTrue(self.mywavefunction == mywavefunction)
-        mywavefunction.set('leg',differentleg1)
+        mywavefunction.set('pdg_code', 13)
         self.assertFalse(self.mywavefunction == mywavefunction)
-        mywavefunction.set('leg',differentleg2)
+        mywavefunction.set('pdg_code', self.mywavefunction.get('pdg_code'))
+        mywavefunction.set('mothers', helas_objects.HelasWavefunctionList())
         self.assertFalse(self.mywavefunction == mywavefunction)
-        mywavefunction.set('leg',differentleg3)
-        self.assertFalse(self.mywavefunction == mywavefunction)
-        mywavefunction.set('leg',identicalleg)
-        mywavefunction.set('mothers',helas_objects.HelasWavefunctionList([self.mywavefunction]))
+        mymother.set('number', 4)
+        mywavefunction.set('mothers', mymothers)
         self.assertFalse(self.mywavefunction == mywavefunction)
 
 
@@ -183,19 +172,13 @@ class HelasWavefunctionTest(unittest.TestCase):
 class HelasAmplitudeTest(unittest.TestCase):
     """Test class for the HelasAmplitude object"""
 
-    myleg = None
     mydict = {}
     myamplitude = None
     mywavefunctions = None
 
     def setUp(self):
 
-        self.myleg = base_objects.Leg({'id':3,
-                                       'number':5,
-                                       'state':'final',
-                                       'from_group':False})
-
-        mydict = {'leg': self.myleg,
+        mydict = {'pdg_code': 10,
                   'mothers': helas_objects.HelasWavefunctionList(),
                   'interaction_id': 2,
                   'direction': 'incoming',
@@ -315,12 +298,7 @@ class HelasDiagramTest(unittest.TestCase):
 
     def setUp(self):
 
-        myleg = base_objects.Leg({'id':3,
-                                  'number':5,
-                                  'state':'final',
-                                  'from_group':False})
-
-        mydict = {'leg': myleg,
+        mydict = {'pdg_code': 10,
                   'mothers': helas_objects.HelasWavefunctionList(),
                   'interaction_id': 2,
                   'direction': 'incoming',

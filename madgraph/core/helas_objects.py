@@ -36,16 +36,15 @@ iolibs directory"""
 #===============================================================================
 class HelasWavefunction(base_objects.PhysicsObject):
     """HelasWavefunction object, has the information necessary for
-    writing a call to a HELAS wavefunction routine: the leg with info
-    about the PDG number, leg number and virtuality/direction of the
-    particle (t/s-channel), a list of mother wavefunctions,
-    interaction id, flow direction, wavefunction number
+    writing a call to a HELAS wavefunction routine: the PDG number, a
+    list of mother wavefunctions, interaction id, flow direction,
+    wavefunction number
     """
 
     def default_setup(self):
         """Default values for all properties"""
 
-        self['leg'] = None
+        self['pdg_code'] = 0
         self['mothers'] = HelasWavefunctionList()
         self['interaction_id'] = 0
         self['direction'] = 'incoming'
@@ -54,11 +53,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
     def filter(self, name, value):
         """Filter for valid wavefunction property values."""
 
-        if name == 'leg':
-            if not isinstance(value, base_objects.Leg):
+        if name == 'pdg_code':
+            if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid leg for wavefunction" % \
-                                                                    str(value)
+                      "%s is not a valid pdg_code for wavefunction" % \
+                      str(value)
 
         if name == 'mothers':
             if not isinstance(value, HelasWavefunctionList):
@@ -83,14 +82,14 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if name == 'number':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid integer for leg id" % str(value)
+                        "%s is not a valid integer for wavefunction number" % str(value)
 
         return True
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['leg', 'mothers', 'interaction_id', 'direction', 'number']
+        return ['pdg_code', 'mothers', 'interaction_id', 'direction', 'number']
 
 
     # Overloaded operators
@@ -105,34 +104,16 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if not isinstance(other,HelasWavefunction):
             return False
 
-        if not self['leg'] or not other['leg']:
-            return False
-
-        if self['interaction_id'] != other['interaction_id'] or \
+        # Check relevant directly defined properties
+        if self['pdg_code'] != other['pdg_code'] or \
+           self['interaction_id'] != other['interaction_id'] or \
            self['direction'] != other['direction']:
             return False
 
-        if self['leg'].get('state') != other['leg'].get('state') or \
-               self['leg'].get('id') != other['leg'].get('id') or \
-               self['leg'].get('number') != other['leg'].get('number'):
-            return False
-
-        if self['mothers'] and not other['mothers'] or \
-           not self['mothers'] and other['mothers']:
-            return False
-
-        if not self['mothers']:
-            # We have made all relevant comparisons, so they are equal
-            return True
-
-        if len(self['mothers']) != len(other['mothers']):
-            return False
-
-        for i in range(len(self['mothers'])):
-            if self['mothers'][i].get('number') != other['mothers'][i].get('number'):
-                return False
-                
-
+        # Check that mothers have the same numbers (only relevant info)
+        return [ mother.get('number') for mother in self['mothers'] ] == \
+               [ mother.get('number') for mother in other['mothers'] ]
+    
 
     def __ne__(self, other):
         """Overloading the nonequality operator, to make comparison easy"""
@@ -173,18 +154,18 @@ class HelasAmplitude(base_objects.PhysicsObject):
         if name == 'mothers':
             if not isinstance(value, HelasWavefunctionList):
                 raise self.PhysicsObjectError, \
-                      "%s is not a valid list of mothers for wavefunction" % \
+                      "%s is not a valid list of mothers for amplitude" % \
                       str(value)
 
         if name == 'interaction_id':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid integer for wavefunction interaction id" % str(value)
+                        "%s is not a valid integer for amplitude interaction id" % str(value)
 
         if name == 'number':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid integer for leg id" % str(value)
+                        "%s is not a valid integer for amplitude number" % str(value)
 
         return True
 
