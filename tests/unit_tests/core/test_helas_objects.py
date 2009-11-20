@@ -35,14 +35,15 @@ class HelasWavefunctionTest(unittest.TestCase):
 
         mywavefunction = helas_objects.HelasWavefunction({'pdg_code': 12,
                                                            'interaction_id': 2,
-                                                           'direction': 'incoming',
+                                                           'state': 'initial',
                                                            'number': 2})
         self.mymothers = helas_objects.HelasWavefunctionList([mywavefunction])
         self.mydict = {'pdg_code': 12,
                        'mothers': self.mymothers,
                        'interaction_id': 2,
-                       'direction': 'incoming',
-                       'number': 5}
+                       'state': 'initial',
+                       'number': 5,
+                       'fermionflow': 1}
                         
 
         self.mywavefunction = helas_objects.HelasWavefunction(self.mydict)
@@ -102,8 +103,8 @@ class HelasWavefunctionTest(unittest.TestCase):
                        {'prop':'number',
                         'right_list':[1, 2, 3, 4, 5],
                         'wrong_list':['a', {}]},
-                       {'prop':'direction',
-                        'right_list':['incoming', 'outgoing'],
+                       {'prop':'state',
+                        'right_list':['initial', 'final', 'intermediate'],
                         'wrong_list':[0, 'wrong']}
                        ]
 
@@ -122,8 +123,9 @@ class HelasWavefunctionTest(unittest.TestCase):
         goal = goal + "    \'pdg_code\': 12,\n"
         goal = goal + "    \'mothers\': " + repr(self.mymothers) + ",\n"
         goal = goal + "    \'interaction_id\': 2,\n"
-        goal = goal + "    \'direction\': \'incoming\',\n"
-        goal = goal + "    \'number\': 5\n}"
+        goal = goal + "    \'state\': \'initial\',\n"
+        goal = goal + "    \'number\': 5,\n"
+        goal = goal + "    \'fermionflow\': 1\n}"
 
         self.assertEqual(goal, str(self.mywavefunction))
 
@@ -194,7 +196,7 @@ class HelasAmplitudeTest(unittest.TestCase):
         mydict = {'pdg_code': 10,
                   'mothers': helas_objects.HelasWavefunctionList(),
                   'interaction_id': 2,
-                  'direction': 'incoming',
+                  'state': 'initial',
                   'number': 5}
                         
 
@@ -314,7 +316,7 @@ class HelasDiagramTest(unittest.TestCase):
         mydict = {'pdg_code': 10,
                   'mothers': helas_objects.HelasWavefunctionList(),
                   'interaction_id': 2,
-                  'direction': 'incoming',
+                  'state': 'initial',
                   'number': 5}
                         
 
@@ -443,7 +445,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         mydict = {'pdg_code': 10,
                   'mothers': helas_objects.HelasWavefunctionList(),
                   'interaction_id': 2,
-                  'direction': 'incoming',
+                  'state': 'initial',
                   'number': 5}
                         
 

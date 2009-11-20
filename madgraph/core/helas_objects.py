@@ -37,7 +37,7 @@ iolibs directory"""
 class HelasWavefunction(base_objects.PhysicsObject):
     """HelasWavefunction object, has the information necessary for
     writing a call to a HELAS wavefunction routine: the PDG number, a
-    list of mother wavefunctions, interaction id, flow direction,
+    list of mother wavefunctions, interaction id, flow state,
     wavefunction number
     """
 
@@ -47,8 +47,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['pdg_code'] = 0
         self['mothers'] = HelasWavefunctionList()
         self['interaction_id'] = 0
-        self['direction'] = 'incoming'
+        self['state'] = 'initial'
         self['number'] = 0
+        self['fermionflow'] = 1
         
     def filter(self, name, value):
         """Filter for valid wavefunction property values."""
@@ -70,26 +71,35 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid integer for wavefunction interaction id" % str(value)
 
-        if name == 'direction':
+        if name == 'state':
             if not isinstance(value, str):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid string for wavefunction direction" % \
+                        "%s is not a valid string for wavefunction state" % \
                                                                     str(value)
-            if value not in ['incoming', 'outgoing']:
+            if value not in ['initial', 'final', 'intermediate']:
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid wavefunction direction (incoming|outgoing)" % \
+                        "%s is not a valid wavefunction state (initial|final|intermediate)" % \
                                                                     str(value)
         if name == 'number':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid integer for wavefunction number" % str(value)
 
+        if name == 'fermionflow':
+            if not isinstance(value, int):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid integer for wavefunction number" % str(value)
+            if not value in [-1,0,1]:
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid fermionflow (must be -1, 0 or 1)" % str(value)                
+
         return True
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['pdg_code', 'mothers', 'interaction_id', 'direction', 'number']
+        return ['pdg_code', 'mothers', 'interaction_id',
+                'state', 'number', 'fermionflow']
 
 
     # Overloaded operators
@@ -107,7 +117,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Check relevant directly defined properties
         if self['pdg_code'] != other['pdg_code'] or \
            self['interaction_id'] != other['interaction_id'] or \
-           self['direction'] != other['direction']:
+           self['fermionflow'] != other['fermionflow'] or \
+           self['state'] != other['state']:
             return False
 
         # Check that mothers have the same numbers (only relevant info)
@@ -282,16 +293,24 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     optimization = arguments[1]
 
                     self.generate_helas_diagrams(diagram_list,optimization)
+                    self.calculate_fermion_factors(diagram_list)
             else:
                 super(HelasMatrixElement, self).__init__(arguments[0])
         else:
             super(HelasMatrixElement, self).__init__()
    
     def generate_helas_diagrams(self, diagram_list, optimization):
-        """Static method. Starting from a list of Diagrams from the
+        """Starting from a list of Diagrams from the diagram
+        generation, generate the corresponding HelasDiagrams, i.e.,
+        the wave functions, amplitudes and fermionfactors. Choose
+        between default optimization (= 1) or no optimization (= 0,
+        for GPU).
+        """
+
+    def calculate_fermion_factors(self, diagram_list):
+        """Starting from a list of Diagrams from the
         diagram generation, generate the corresponding HelasDiagrams,
         i.e., the wave functions, amplitudes and fermionfactors
         """
-        
-        return HelasDiagramList()
+
 
