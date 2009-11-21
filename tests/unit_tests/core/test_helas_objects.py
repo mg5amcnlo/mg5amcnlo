@@ -439,6 +439,8 @@ class HelasMatrixElementTest(unittest.TestCase):
     myamplitude = None
     mydiagrams = None
     mymatrixelement = None
+    mymodel = base_objects.Model()
+
 
     def setUp(self):
 
@@ -465,6 +467,125 @@ class HelasMatrixElementTest(unittest.TestCase):
         self.mydiagrams = helas_objects.HelasDiagramList([helas_objects.HelasDiagram(mydict)] * 4)
         self.mydict = {'diagrams': self.mydiagrams}
         self.mymatrixelement = helas_objects.HelasMatrixElement(self.mydict)
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        g = mypartlist[len(mypartlist)-1]
+
+        # A quark U and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[len(mypartlist)-1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        # A electron and positron
+        mypartlist.append(base_objects.Particle({'name':'e+',
+                      'antiname':'e-',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'e^+',
+                      'antitexname':'e^-',
+                      'line':'straight',
+                      'charge':-1.,
+                      'pdg_code':11,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        eminus = mypartlist[len(mypartlist)-1]
+        eplus = copy.copy(eminus)
+        eplus.set('is_part', False)
+
+        # A photon
+        mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        a = mypartlist[len(mypartlist)-1]
+
+
+        # Gluon and photon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [u, \
+                                             antiu, \
+                                             g]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [u, \
+                                             antiu, \
+                                             a]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of e to gamma
+        myinterlist.append(base_objects.Interaction({
+                      'id': 7,
+                      'particles': base_objects.ParticleList(\
+                                            [eminus, \
+                                             eplus, \
+                                             a]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+
+        self.mymodel.set('particles', mypartlist)
+        self.mymodel.set('interactions', myinterlist)
+        
 
     def test_setget_matrix_element_correct(self):
         "Test correct HelasMatrixElement object __init__, get and set"
@@ -542,125 +663,6 @@ class HelasMatrixElementTest(unittest.TestCase):
         using the processes u u~ > g e+ e-
         """
 
-        # Set up model
-
-        mypartlist = base_objects.ParticleList()
-        myinterlist = base_objects.InteractionList()
-        mymodel = base_objects.Model()
-
-        # A gluon
-        mypartlist.append(base_objects.Particle({'name':'g',
-                      'antiname':'g',
-                      'spin':3,
-                      'color':8,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'g',
-                      'antitexname':'g',
-                      'line':'curly',
-                      'charge':0.,
-                      'pdg_code':21,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':True}))
-
-        g = mypartlist[len(mypartlist)-1]
-
-        # A quark U and its antiparticle
-        mypartlist.append(base_objects.Particle({'name':'u',
-                      'antiname':'u~',
-                      'spin':2,
-                      'color':3,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'u',
-                      'antitexname':'\bar u',
-                      'line':'straight',
-                      'charge':2. / 3.,
-                      'pdg_code':2,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False}))
-        u = mypartlist[len(mypartlist)-1]
-        antiu = copy.copy(u)
-        antiu.set('is_part', False)
-
-        # A electron and positron
-        mypartlist.append(base_objects.Particle({'name':'e+',
-                      'antiname':'e-',
-                      'spin':2,
-                      'color':1,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'e^+',
-                      'antitexname':'e^-',
-                      'line':'straight',
-                      'charge':-1.,
-                      'pdg_code':11,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False}))
-        eminus = mypartlist[len(mypartlist)-1]
-        eplus = copy.copy(eminus)
-        eplus.set('is_part', False)
-
-        # A photon
-        mypartlist.append(base_objects.Particle({'name':'a',
-                      'antiname':'a',
-                      'spin':3,
-                      'color':1,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
-                      'line':'wavy',
-                      'charge':0.,
-                      'pdg_code':22,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':True}))
-        a = mypartlist[len(mypartlist)-1]
-
-
-        # Gluon and photon couplings to quarks
-        myinterlist.append(base_objects.Interaction({
-                      'id': 3,
-                      'particles': base_objects.ParticleList(\
-                                            [u, \
-                                             antiu, \
-                                             g]),
-                      'color': ['C1'],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':1}}))
-
-        myinterlist.append(base_objects.Interaction({
-                      'id': 4,
-                      'particles': base_objects.ParticleList(\
-                                            [u, \
-                                             antiu, \
-                                             a]),
-                      'color': ['C1'],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':1}}))
-
-        # Coupling of e to gamma
-        myinterlist.append(base_objects.Interaction({
-                      'id': 7,
-                      'particles': base_objects.ParticleList(\
-                                            [eminus, \
-                                             eplus, \
-                                             a]),
-                      'color': ['C1'],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':1}}))
-
-
-        mymodel.set('particles', mypartlist)
-        mymodel.set('interactions', myinterlist)
-        
         # Test u u~ > g e+ e-
 
         myleglist = base_objects.LegList()
@@ -677,7 +679,112 @@ class HelasMatrixElementTest(unittest.TestCase):
                                          'state':'final'}))
 
         myproc = base_objects.Process({'legs':myleglist,
-                                       'model':mymodel})
+                                       'model':self.mymodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        goal = "2 diagrams:\n"
+        goal = goal + "  ((1,3>1,id:3),(4,5>4,id:7),(1,2,4,id:4))\n"
+        goal = goal + "  ((2,3>2,id:3),(4,5>4,id:7),(1,2,4,id:4))"
+
+        self.assertEqual(goal,
+                         myamplitude.get('diagrams').nice_string())
+
+        wavefunctions1 = helas_objects.HelasWavefunctionList()
+        wavefunctions1.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': 2,
+             'state': 'initial',
+             'number': 1}))
+        wavefunctions1.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': -2,
+             'state': 'initial',
+             'number': 2}))
+        wavefunctions1.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': 21,
+             'state': 'final',
+             'number': 3}))
+        wavefunctions1.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': 11,
+             'state': 'final',
+             'number': 4}))
+        wavefunctions1.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': -11,
+             'state': 'final',
+             'number': 5}))
+        wavefunctions1.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': 2,
+             'state': 'intermediate',
+             'mothers': helas_objects.HelasWavefunctionList(\
+                         [wavefunctions1[0],wavefunctions1[2]]),
+             'interaction_id': 3,
+             'number': 6}))
+        wavefunctions1.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': 22,
+             'state': 'intermediate',
+             'mothers': helas_objects.HelasWavefunctionList(\
+                         [wavefunctions1[3],wavefunctions1[4]]),
+             'interaction_id': 7,
+             'number': 7}))
+
+        amplitude1 = helas_objects.HelasAmplitude({\
+             'mothers': helas_objects.HelasWavefunctionList(\
+                         [wavefunctions1[5], wavefunctions1[1],
+                          wavefunctions1[6]]),
+             'interaction_id': 4,
+             'number': 1})
+
+        wavefunctions2 = helas_objects.HelasWavefunctionList()
+        wavefunctions2.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': -2,
+             'state': 'intermediate',
+             'mothers': helas_objects.HelasWavefunctionList(\
+                         [wavefunctions1[1],wavefunctions1[2]]),
+             'interaction_id': 3,
+             'number': 8}))
+
+        amplitude2 = helas_objects.HelasAmplitude({\
+             'mothers': helas_objects.HelasWavefunctionList(\
+                         [wavefunctions1[0], wavefunctions2[0],
+                          wavefunctions1[6]]),
+             'interaction_id': 4,
+             'number': 2})
+
+        diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
+                                               'amplitude': amplitude1})
+
+        diagram2 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions2,
+                                               'amplitude': amplitude2})
+
+        diagrams = helas_objects.HelasDiagramList([diagram1, diagram2])
+
+        matrix_element = helas_objects.HelasMatrixElement(\
+            myamplitude,
+            1)
+        
+        self.assertEqual(matrix_element.get('diagrams'), diagrams)
+
+    def test_generate_helas_diagrams_uux_gepem_no_optimization(self):
+        """Testing the helas diagram generation based on Diagrams
+        using the processes u u~ > g e+ e-
+        """
+
+        # Test u u~ > g e+ e-
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':'final'}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
 
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
@@ -734,16 +841,44 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions2 = helas_objects.HelasWavefunctionList()
         wavefunctions2.append(helas_objects.HelasWavefunction(\
             {'pdg_code': 2,
+             'state': 'initial',
+             'number': 1}))
+        wavefunctions2.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': -2,
+             'state': 'initial',
+             'number': 2}))
+        wavefunctions2.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': 21,
+             'state': 'final',
+             'number': 3}))
+        wavefunctions2.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': 11,
+             'state': 'final',
+             'number': 4}))
+        wavefunctions2.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': -11,
+             'state': 'final',
+             'number': 5}))
+        wavefunctions2.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': -2,
              'state': 'intermediate',
              'mothers': helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[1],wavefunctions1[2]]),
+                         [wavefunctions2[1],wavefunctions2[2]]),
              'interaction_id': 3,
-             'number': 8}))
+             'number': 6}))
+        wavefunctions2.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': 22,
+             'state': 'intermediate',
+             'mothers': helas_objects.HelasWavefunctionList(\
+                         [wavefunctions2[3],wavefunctions2[4]]),
+             'interaction_id': 7,
+             'number': 7}))
+
 
         amplitude2 = helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[0], wavefunctions2[0],
-                          wavefunctions1[6]]),
+                         [wavefunctions2[0], wavefunctions2[5],
+                          wavefunctions2[6]]),
              'interaction_id': 4,
              'number': 2})
 
@@ -755,134 +890,17 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         diagrams = helas_objects.HelasDiagramList([diagram1, diagram2])
 
-        matrix_element = helas_objects.HelasMatrixElement(myamplitude.get('diagrams'))
+        matrix_element = helas_objects.HelasMatrixElement(\
+            myamplitude,
+            0)
         
-        self.assertEqual(diagrams, matrix_element.get('diagrams'))
+        self.assertEqual(matrix_element.get('diagrams'), diagrams)
 
     def test_generate_helas_diagrams_uux_epem(self):
         """Testing the helas diagram generation based on Diagrams
         using the processes u u~ > e+ e-
         """
 
-        # Set up model
-
-        mypartlist = base_objects.ParticleList()
-        myinterlist = base_objects.InteractionList()
-        mymodel = base_objects.Model()
-
-        # A gluon
-        mypartlist.append(base_objects.Particle({'name':'g',
-                      'antiname':'g',
-                      'spin':3,
-                      'color':8,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'g',
-                      'antitexname':'g',
-                      'line':'curly',
-                      'charge':0.,
-                      'pdg_code':21,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':True}))
-
-        g = mypartlist[len(mypartlist)-1]
-
-        # A quark U and its antiparticle
-        mypartlist.append(base_objects.Particle({'name':'u',
-                      'antiname':'u~',
-                      'spin':2,
-                      'color':3,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'u',
-                      'antitexname':'\bar u',
-                      'line':'straight',
-                      'charge':2. / 3.,
-                      'pdg_code':2,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False}))
-        u = mypartlist[len(mypartlist)-1]
-        antiu = copy.copy(u)
-        antiu.set('is_part', False)
-
-        # A electron and positron
-        mypartlist.append(base_objects.Particle({'name':'e+',
-                      'antiname':'e-',
-                      'spin':2,
-                      'color':1,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'e^+',
-                      'antitexname':'e^-',
-                      'line':'straight',
-                      'charge':-1.,
-                      'pdg_code':11,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False}))
-        eminus = mypartlist[len(mypartlist)-1]
-        eplus = copy.copy(eminus)
-        eplus.set('is_part', False)
-
-        # A photon
-        mypartlist.append(base_objects.Particle({'name':'a',
-                      'antiname':'a',
-                      'spin':3,
-                      'color':1,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
-                      'line':'wavy',
-                      'charge':0.,
-                      'pdg_code':22,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':True}))
-        a = mypartlist[len(mypartlist)-1]
-
-
-        # Gluon and photon couplings to quarks
-        myinterlist.append(base_objects.Interaction({
-                      'id': 3,
-                      'particles': base_objects.ParticleList(\
-                                            [u, \
-                                             antiu, \
-                                             g]),
-                      'color': ['C1'],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':1}}))
-
-        myinterlist.append(base_objects.Interaction({
-                      'id': 4,
-                      'particles': base_objects.ParticleList(\
-                                            [u, \
-                                             antiu, \
-                                             a]),
-                      'color': ['C1'],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':1}}))
-
-        # Coupling of e to gamma
-        myinterlist.append(base_objects.Interaction({
-                      'id': 7,
-                      'particles': base_objects.ParticleList(\
-                                            [eminus, \
-                                             eplus, \
-                                             a]),
-                      'color': ['C1'],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':1}}))
-
-
-        mymodel.set('particles', mypartlist)
-        mymodel.set('interactions', myinterlist)
-        
         # Test u u~ > e+ e-
 
         myleglist = base_objects.LegList()
@@ -897,7 +915,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                                          'state':'final'}))
 
         myproc = base_objects.Process({'legs':myleglist,
-                                       'model':mymodel})
+                                       'model':self.mymodel})
 
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
@@ -929,7 +947,7 @@ class HelasMatrixElementTest(unittest.TestCase):
              'state': 'intermediate',
              'mothers': helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[0],wavefunctions1[1]]),
-             'interaction_id': 3,
+             'interaction_id': 4,
              'number': 5}))
 
         amplitude1 = helas_objects.HelasAmplitude({\
@@ -942,9 +960,188 @@ class HelasMatrixElementTest(unittest.TestCase):
         diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
                                                'amplitude': amplitude1})
 
-        diagrams = helas_objects.HelasDiagramList([diagram1])
+        mydiagrams = helas_objects.HelasDiagramList([diagram1])
 
-        matrix_element = helas_objects.HelasMatrixElement(myamplitude.get('diagrams'))
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
         
-        self.assertEqual(diagrams, matrix_element.get('diagrams'))
+        self.assertEqual(matrix_element.get('diagrams'), mydiagrams)
 
+    def test_generate_helas_diagrams_ae_ae(self):
+        """Testing the helas diagram generation based on Diagrams
+        using the processes a e- > a e-
+        """
+
+        # Test a e- > a e-
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'final'}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        goal = "2 diagrams:\n"
+        goal = goal + "  ((1,2>1,id:7),(3,4>3,id:7),(1,3,id:0))\n"
+        goal = goal + "  ((1,4>1,id:7),(2,3>2,id:7),(1,2,id:0))"
+
+        self.assertEqual(goal,
+                         myamplitude.get('diagrams').nice_string())
+
+        wavefunctions1 = helas_objects.HelasWavefunctionList()
+        wavefunctions1.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': 22,
+             'state': 'initial',
+             'number': 1}))
+        wavefunctions1.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': 11,
+             'state': 'initial',
+             'number': 2}))
+        wavefunctions1.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': 22,
+             'state': 'final',
+             'number': 3}))
+        wavefunctions1.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': 11,
+             'state': 'final',
+             'number': 4}))
+        wavefunctions1.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': 11,
+             'state': 'intermediate',
+             'mothers': helas_objects.HelasWavefunctionList(\
+                         [wavefunctions1[0],wavefunctions1[1]]),
+             'interaction_id': 7,
+             'number': 5}))
+
+        amplitude1 = helas_objects.HelasAmplitude({\
+             'mothers': helas_objects.HelasWavefunctionList(\
+                         [wavefunctions1[4], wavefunctions1[2],
+                          wavefunctions1[3]]),
+             'interaction_id': 7,
+             'number': 1})
+
+        diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
+                                               'amplitude': amplitude1})
+
+        wavefunctions2 = helas_objects.HelasWavefunctionList()
+        wavefunctions2.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': 11, # This is what comes out for t-channel; is this right?
+             'state': 'intermediate',
+             'mothers': helas_objects.HelasWavefunctionList(\
+                         [wavefunctions1[0],wavefunctions1[3]]),
+             'interaction_id': 7,
+             'number': 6}))
+
+        amplitude2 = helas_objects.HelasAmplitude({\
+             'mothers': helas_objects.HelasWavefunctionList(\
+                         [wavefunctions2[0], wavefunctions1[1],
+                          wavefunctions1[2]]),
+             'interaction_id': 7,
+             'number': 2})
+
+        diagram2 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions2,
+                                               'amplitude': amplitude2})
+
+        mydiagrams = helas_objects.HelasDiagramList([diagram1, diagram2])
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
+        
+        self.assertEqual(matrix_element.get('diagrams'), mydiagrams)
+
+    def test_generate_helas_diagrams_ea_ae(self):
+        """Testing the helas diagram generation based on Diagrams
+        using the processes a e- > a e-
+        """
+
+        # Test a e- > a e-
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'final'}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        goal = "2 diagrams:\n"
+        goal = goal + "  ((1,2>1,id:7),(3,4>3,id:7),(1,3,id:0))\n"
+        goal = goal + "  ((1,3>1,id:7),(2,4>2,id:7),(1,2,id:0))"
+
+        self.assertEqual(goal,
+                         myamplitude.get('diagrams').nice_string())
+
+        wavefunctions1 = helas_objects.HelasWavefunctionList()
+        wavefunctions1.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': 11,
+             'state': 'initial',
+             'number': 1}))
+        wavefunctions1.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': 22,
+             'state': 'initial',
+             'number': 2}))
+        wavefunctions1.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': 22,
+             'state': 'final',
+             'number': 3}))
+        wavefunctions1.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': 11,
+             'state': 'final',
+             'number': 4}))
+        wavefunctions1.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': 11,
+             'state': 'intermediate',
+             'mothers': helas_objects.HelasWavefunctionList(\
+                         [wavefunctions1[0],wavefunctions1[1]]),
+             'interaction_id': 7,
+             'number': 5}))
+
+        amplitude1 = helas_objects.HelasAmplitude({\
+             'mothers': helas_objects.HelasWavefunctionList(\
+                         [wavefunctions1[4], wavefunctions1[2],
+                          wavefunctions1[3]]),
+             'interaction_id': 7,
+             'number': 1})
+
+        diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
+                                               'amplitude': amplitude1})
+
+        wavefunctions2 = helas_objects.HelasWavefunctionList()
+        wavefunctions2.append(helas_objects.HelasWavefunction(\
+            {'pdg_code': -11, # This is what comes out for t-channel; is this right?
+             'state': 'intermediate',
+             'mothers': helas_objects.HelasWavefunctionList(\
+                         [wavefunctions1[0],wavefunctions1[2]]),
+             'interaction_id': 7,
+             'number': 6}))
+
+        amplitude2 = helas_objects.HelasAmplitude({\
+             'mothers': helas_objects.HelasWavefunctionList(\
+                         [wavefunctions2[0], wavefunctions1[1],
+                          wavefunctions1[3]]),
+             'interaction_id': 7,
+             'number': 2})
+
+        diagram2 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions2,
+                                               'amplitude': amplitude2})
+
+        mydiagrams = helas_objects.HelasDiagramList([diagram1, diagram2])
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
+        
+        self.assertEqual(matrix_element.get('diagrams'), mydiagrams)

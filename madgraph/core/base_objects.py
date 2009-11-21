@@ -669,7 +669,7 @@ class Leg(PhysicsObject):
         if name == 'from_group':
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid boolean for leg flagr from_group" % \
+                        "%s is not a valid boolean for leg flag from_group" % \
                                                                     str(value)
 
         return True

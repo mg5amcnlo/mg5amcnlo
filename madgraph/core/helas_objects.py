@@ -19,6 +19,7 @@ import re
 import itertools
 
 import madgraph.core.base_objects as base_objects
+import madgraph.core.diagram_generation as diagram_generation
 
 """Definitions of objects used to generate Helas calls (language-independent):
 HelasWavefunction, HelasAmplitude, HelasDiagram for the generation of
@@ -51,6 +52,20 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['number'] = 0
         self['fermionflow'] = 1
         
+    def __init__(self, argument = {}):
+        """Constructor for the HelasDiagramList. In particular allows
+        generating a HelasDiagramList from a DiagramList, with
+        automatic generation of the necessary wavefunctions
+        """
+
+        if isinstance(argument,base_objects.Leg):
+            super(HelasWavefunction, self).__init__()
+            self.set('pdg_code', argument.get('id'))
+            self.set('number', argument.get('number'))
+            self.set('state', argument.get('state'))
+        else:
+            super(HelasWavefunction, self).__init__(argument)
+   
     def filter(self, name, value):
         """Filter for valid wavefunction property values."""
 
@@ -284,22 +299,22 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         automatic generation of the necessary wavefunctions
         """
 
-        if len(arguments) > 0:
-            if isinstance(arguments[0],base_objects.DiagramList):
+        if arguments:
+            if isinstance(arguments[0],diagram_generation.Amplitude):
                 super(HelasMatrixElement, self).__init__()
-                diagram_list = arguments[0]
+                amplitude = arguments[0]
                 optimization = 1
                 if len(arguments) > 1 and isinstance(arguments[1],int):
                     optimization = arguments[1]
 
-                    self.generate_helas_diagrams(diagram_list,optimization)
-                    self.calculate_fermion_factors(diagram_list)
+                self.generate_helas_diagrams(amplitude, optimization)
+                self.calculate_fermion_factors(amplitude)
             else:
                 super(HelasMatrixElement, self).__init__(arguments[0])
         else:
             super(HelasMatrixElement, self).__init__()
    
-    def generate_helas_diagrams(self, diagram_list, optimization):
+    def generate_helas_diagrams(self, amplitude, optimization = 1):
         """Starting from a list of Diagrams from the diagram
         generation, generate the corresponding HelasDiagrams, i.e.,
         the wave functions, amplitudes and fermionfactors. Choose
@@ -307,10 +322,159 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         for GPU).
         """
 
-    def calculate_fermion_factors(self, diagram_list):
+        if not isinstance(amplitude, diagram_generation.Amplitude) or \
+               not isinstance(optimization,int):
+            raise self.PhysicsObjectError,\
+                  "Missing or erraneous arguments for generate_helas_diagrams"
+        diagram_list = amplitude.get('diagrams')
+        process = amplitude.get('process')
+        model = process.get('model')
+        if not diagram_list:
+            return
+
+        # wavefunctions has all the previously defined wavefunctions
+        wavefunctions = []
+
+        # Generate wavefunctions for the external particles
+        external_wavefunctions = [ HelasWavefunction(leg) for leg \
+                                   in process.get('legs') ]
+        
+        incoming_numbers = [ leg.get('number') for leg in filter(lambda leg: \
+                                  leg.get('state') == 'initial',
+                                  process.get('legs')) ]
+        
+        # Sort the wavefunctions according to number, just to be sure
+        external_wavefunctions.sort(lambda wf1, wf2: \
+                                    wf1.get('number')-wf2.get('number'))
+
+        wavefunctions.extend(external_wavefunctions)
+
+        # Now go through the diagrams, looking for undefined wavefunctions
+
+        helas_diagrams = HelasDiagramList()
+
+        for diagram in diagram_list:
+
+            # Dictionary from leg number to wave function, keeps track
+            # of the present position in the tree
+            number_to_wavefunctions = {}
+
+            # Initialize wavefunctions for this diagram
+            diagram_wavefunctions = HelasWavefunctionList()
+            if diagram == diagram_list[0] or not optimization:
+                diagram_wavefunctions.extend(external_wavefunctions)
+            elif not optimization:
+                wavefunctions = copy.copy(external_wavefunctions)
+            
+            vertices = copy.copy(diagram.get('vertices'))
+
+            # Single out last vertex, since this will give amplitude
+            lastvx = vertices.pop()
+
+            # Check if last vertex is indentity vertex
+            if lastvx.get('id') == 0:
+                # Need to "glue together" last and next-to-last
+                # vertext, by replacing the (incoming) last leg of the
+                # next-to-last vertex with the (outgoing) leg in the
+                # last vertex
+                nexttolastvertex = vertices.pop()
+                legs = nexttolastvertex.get('legs')
+                ntlnumber = legs[len(legs)-1].get('number')
+                lastleg = filter(lambda leg: leg.get('number') != ntlnumber,
+                                 lastvx.get('legs'))[0]
+                # Replace the last leg of nexttolastvertex
+                legs[len(legs)-1] = lastleg
+                lastvx = nexttolastvertex
+                # Sort the legs, to get right order of wave functions
+                lastvx.get('legs').sort(lambda leg1, leg2: \
+                                    leg1.get('number')-leg2.get('number'))
+
+            # If s-channel from incoming particles, flip pdg code
+
+            # I'm not actually sure which particle identity to use for
+            # intermediate wavefunction for t-channel particles, since
+            # this depends on the order of the particles
+            # (e.g., 1<->2), so I just use whatever comes out
+            for leg in lastvx.get('legs'):
+                if leg.get('number') not in incoming_numbers and \
+                   leg.get('state') == 'final':
+                    part = model.get('particle_dict')[lastleg.get('id')]
+                    lastleg.set('id', part.get_anti_pdg_code())            
+
+            # Go through all vertices except the last and create
+            # wavefunctions
+            for vertex in vertices:
+                legs = copy.copy(vertex.get('legs'))
+                last_leg = legs.pop()
+                # Generate list of mothers from legs
+                mothers = self.getmothers(legs, number_to_wavefunctions,
+                                          external_wavefunctions)
+                # Now generate new wavefunction for the last leg
+                wf = HelasWavefunction(last_leg)
+                wf.set('interaction_id',vertex.get('id'))
+                wf.set('mothers', mothers)
+                wf.set('number', len(wavefunctions) + 1)
+                # If s-channel from incoming particles, flip pdg code
+                if last_leg.get('number') in incoming_numbers and \
+                       leg.get('state') == 'final':
+                    part = model.get('particle_dict')[wf.get('pdg_code')]
+                    wf.set('pdg_code', part.get_anti_pdg_code())
+                wf.set('state','intermediate')
+                if wf in wavefunctions and optimization:
+                    wf = wavefunctions[wavefunctions.index(wf)]
+                else:
+                    wavefunctions.append(wf)
+                    diagram_wavefunctions.append(wf)
+                number_to_wavefunctions[last_leg.get('number')] = wf
+
+            # Find mothers for the amplitude
+            legs = lastvx.get('legs')
+            mothers = self.getmothers(legs, number_to_wavefunctions,
+                                      external_wavefunctions)
+                
+            # Now generate a HelasAmplitude from the last vertex.
+            amp = HelasAmplitude({\
+                'interaction_id': lastvx.get('id'),
+                'mothers': mothers,
+                'number': diagram_list.index(diagram) + 1 })
+
+            # Sort the wavefunctions according to number
+            diagram_wavefunctions.sort(lambda wf1, wf2: \
+                                       wf1.get('number')-wf2.get('number'))
+
+            # Generate HelasDiagram
+            helas_diagrams.append(HelasDiagram({ \
+                'wavefunctions': diagram_wavefunctions,
+                'amplitude': amp
+                }))
+
+        self.set('diagrams',helas_diagrams)
+
+    def calculate_fermion_factors(self, amplitude):
         """Starting from a list of Diagrams from the
         diagram generation, generate the corresponding HelasDiagrams,
         i.e., the wave functions, amplitudes and fermionfactors
         """
 
+
+    # Helper methods
+
+    def getmothers(self, legs, number_to_wavefunctions,
+                   external_wavefunctions):
+        """Generate list of mothers from number_to_wavefunctions and
+        external_wavefunctions"""
+        
+        mothers = HelasWavefunctionList()
+
+        for leg in legs:
+            if not leg.get('number') in number_to_wavefunctions:
+                # This is an external leg, pick from external_wavefunctions
+                wf = external_wavefunctions[leg.get('number')-1]
+                number_to_wavefunctions[leg.get('number')] = wf
+            else:
+                # The mother is an existing wavefunction
+                wf = number_to_wavefunctions[leg.get('number')]
+            mothers.append(wf)
+
+        return mothers
 
