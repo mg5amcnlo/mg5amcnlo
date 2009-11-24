@@ -50,7 +50,8 @@ class ColorStringTest(unittest.TestCase):
                          "d((1,2,3))",
                          "d(1,2,3,)",
                          "T(1.2)",
-                         "-2/Nc"]
+                         "-2/Nc",
+                         'Tr(3,)']
 
         for wrong_str in wrong_strings:
             self.assertFalse(my_color_str.is_valid_color_object(wrong_str))
@@ -176,7 +177,101 @@ class ColorStringTest(unittest.TestCase):
         self.assertEqual(my_color_string,
                          color.ColorString(['-2/3', 'I', 'Nc', 'd(1,2,3)']))
 
+    def test_expand_composite(self):
+        """Test color string expansion in the presence of terms like f, d, ...
+        """
+
+        my_color_string1 = color.ColorString(['T(1,2)',
+                                              'd(3,4,-5)',
+                                              'T(-5,6,7)'])
+
+        my_color_string2 = color.ColorString(['T(1,2)',
+                                              'f(3,4,5)',
+                                              'T(5,6,7)'])
+
+        self.assertEqual(my_color_string1.expand_composite_terms(),
+                         [color.ColorString(['T(1,2)',
+                                             '2',
+                                             'Tr(3,4,-5)',
+                                             'T(-5,6,7)']),
+                          color.ColorString(['T(1,2)',
+                                             '2',
+                                             'Tr(-5,4,3)',
+                                             'T(-5,6,7)'])])
+
+        self.assertEqual(my_color_string2.expand_composite_terms(),
+                         [color.ColorString(['T(1,2)',
+                                             '-2', 'I',
+                                             'Tr(3,4,5)',
+                                             'T(5,6,7)']),
+                          color.ColorString(['T(1,2)',
+                                             '2', 'I',
+                                             'Tr(5,4,3)',
+                                             'T(5,6,7)'])])
+    
+    def test_expand_T_int_sum(self):
+        """Test color string expansion for T(a,x,b,x,c,i,j)"""
         
+        my_color_string = color.ColorString(['T(1,2)',
+                                              'T(1,2,101,3,101,4,5,6,102,103)',
+                                              'T(-5,6,7)'])
+        
+        self.assertEqual(my_color_string.expand_T_internal_sum(),
+                        [color.ColorString(['T(1,2)',
+                                             '1/2', 'T(1,2,4,5,6,102,103)',
+                                             'Tr(3)',
+                                             'T(-5,6,7)']),
+                         color.ColorString(['T(1,2)',
+                                             '-1/2', '1/Nc',
+                                             'T(1,2,3,4,5,6,102,103)',
+                                             'T(-5,6,7)'])])
+        
+        my_color_string = color.ColorString(['T(1,2)',
+                                              'T(101,101,102,103)',
+                                              'T(-5,6,7)'])
+        
+        self.assertEqual(my_color_string.expand_T_internal_sum(),
+                        [color.ColorString(['T(1,2)',
+                                             '1/2', 'T(102,103)',
+                                             'Tr()',
+                                             'T(-5,6,7)']),
+                         color.ColorString(['T(1,2)',
+                                             '-1/2', '1/Nc',
+                                             'T(102,103)',
+                                             'T(-5,6,7)'])])
+    
+    def test_expand_trace_int_sum(self):
+        """Test color string expansion for Tr(a,x,b,x,c)"""
+        
+        my_color_string = color.ColorString(['T(1,2)',
+                                              'Tr(1,2,101,3,101,4,5,6)',
+                                              'T(-5,6,7)'])
+        
+        self.assertEqual(my_color_string.expand_trace_internal_sum(),
+                        [color.ColorString(['T(1,2)',
+                                             '1/2', 'Tr(1,2,4,5,6)',
+                                             'Tr(3)',
+                                             'T(-5,6,7)']),
+                         color.ColorString(['T(1,2)',
+                                             '-1/2', '1/Nc',
+                                             'Tr(1,2,3,4,5,6)',
+                                             'T(-5,6,7)'])])
+        
+        my_color_string = color.ColorString(['T(1,2)',
+                                              'Tr(1,2,101,101)',
+                                              'T(-5,6,7)'])
+        
+        self.assertEqual(my_color_string.expand_trace_internal_sum(),
+                        [color.ColorString(['T(1,2)',
+                                             '1/2', 'Tr(1,2)',
+                                             'Tr()',
+                                             'T(-5,6,7)']),
+                         color.ColorString(['T(1,2)',
+                                             '-1/2', '1/Nc',
+                                             'Tr(1,2)',
+                                             'T(-5,6,7)'])])
+        
+
         
 #
 #    def test_traces_simplify(self):

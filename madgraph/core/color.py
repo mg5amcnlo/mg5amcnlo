@@ -13,8 +13,8 @@
 #
 ################################################################################
 
-"""Classes, methods and functions required for all calculations
-related to QCD color."""
+"""Classes, methods, functions and regular expressions required 
+for all calculations related to QCD color."""
 
 import copy
 import operator
@@ -25,8 +25,8 @@ import re
 #===============================================================================
 
 # Match only valid color string object
-re_color_object = re.compile(r"""^(T\((-?\d+,)*(-?\d+)?\)
-                            |Tr\((-?\d+,)*(-?\d+)?\)
+re_color_object = re.compile(r"""^(T\(((-?\d+)(,-?\d+)*)?\)
+                            |Tr\(((-?\d+)(,-?\d+)*)?\)
                             |f\(-?\d+,-?\d+,-?\d+\)
                             |d\(-?\d+,-?\d+,-?\d+\)
                             |(1/)?Nc
@@ -63,6 +63,29 @@ re_trace_n_indices = re.compile(r"^Tr\((?P<elems>(-?\d+,)*(-?\d+)?)\)$")
 
 # Match a fraction (with denominator or not), group has num/den entries
 re_fraction = re.compile(r"^(?P<num>-?\d+)(/(?P<den>\d+))?$")
+
+# Match f(a,b,c) terms, groups elements are a, b and c
+re_f_term = re.compile(r"^f\((?P<a>-?\d+),(?P<b>-?\d+),(?P<c>-?\d+)\)")
+
+# Match d(a,b,c) terms, groups elements are a, b and c
+re_d_term = re.compile(r"^d\((?P<a>-?\d+),(?P<b>-?\d+),(?P<c>-?\d+)\)")
+
+# Match T(a,...,x,b,...,x,c,...,i,j), groups element are a='a,...',b='b,...,' 
+# c='c,...,' (notice commas) and id1=i, id2=j
+re_T_int_sum = re.compile(r"""^T\((?P<a>(-?\d+,)*)
+                                (?P<x>-?\d+),
+                                (?P<b>(-?\d+,)*)
+                                (?P=x),
+                                (?P<c>(-?\d+,)*)
+                                (?P<id1>-?\d+),(?P<id2>-?\d+)\)$""", re.VERBOSE)
+
+# Match Tr(a,...,x,b,...,x,c,...), groups element are a='a,...',b='b,...,' 
+# c='c,...,' (notice commas) 
+re_trace_int_sum = re.compile(r"""^Tr\((?P<a>(-?\d+,)*)
+                                (?P<x>-?\d+),
+                                (?P<b>(-?\d+,)*)
+                                (?P=x),?
+                                (?P<c>(-?\d+,)*(-?\d+)?)\)$""", re.VERBOSE)
 
 #===============================================================================
 # ColorString
@@ -247,13 +270,115 @@ class ColorString(list):
         """Find the gcd of two integers"""
         while b: a, b = b, a % b
         return a
+    
+    def __expand_term(self, index, new_str1, new_str2):
+        """Return two color strings built on self where index has been
+        removed and, in one case, replaced by new_str1 and in the other case
+        by new_str2."""
+        
+        str1 = copy.copy(self)
+        str2 = copy.copy(self)
+        
+        del str1[index]
+        del str2[index]
+        
+        for i in range(len(new_str1)):
+            str1.insert(index + i, new_str1[i])
+        
+        for i in range(len(new_str2)):
+            str2.insert(index + i, new_str2[i])
+        
+        return [str1, str2]
+    
+    
+    def expand_composite_terms(self):
+        """Expand the first encountered composite term like f,d,... 
+        and returns the corresponding list of ColorString objects. 
+        This method will NOT modify the current color string. If nothing
+        to expand is found, returns an empty list."""
+        
+        for index, col_obj in enumerate(self):
+            
+            # Deal with d terms
+            m = re_d_term.match(col_obj)
+            if m:
+                return self.__expand_term(index, ['2', 'Tr(%s,%s,%s)' % \
+                                                      (m.group('a'),
+                                                       m.group('b'),
+                                                       m.group('c'))],
+                                                 ['2', 'Tr(%s,%s,%s)' % \
+                                                      (m.group('c'),
+                                                       m.group('b'),
+                                                       m.group('a'))])
+            # Deal with f terms
+            m = re_f_term.match(col_obj)
+            if m:
+                return self.__expand_term(index, ['-2', 'I', 'Tr(%s,%s,%s)' % \
+                                                      (m.group('a'),
+                                                       m.group('b'),
+                                                       m.group('c'))],
+                                                 ['2', 'I', 'Tr(%s,%s,%s)' % \
+                                                      (m.group('c'),
+                                                       m.group('b'),
+                                                       m.group('a'))])
+            
+        return []
+    
+    def expand_T_internal_sum(self):
+        """Expand the first encountered term with an internal sum in T's using
+        T(a,x,b,x,c,i,j) = 1/2(T(a,c,i,j)Tr(b)-1/Nc T(a,b,c,i,j)) and 
+        returns the corresponding list of ColorString objects. 
+        This method will NOT modify the current color string. If nothing
+        to expand is found, returns an empty list."""
 
-#import copy
-#import itertools
-#import operator
-#import re
-#
-#
+        for index, col_obj in enumerate(self):
+            
+            m = re_T_int_sum.match(col_obj)
+            if m:
+                # Since b ends with a comma, we should remove it for Tr(b)
+                b = m.group('b')
+                b = b.rstrip(',')
+                return self.__expand_term(index, ['1/2', 'T(%s%s%s,%s)' % \
+                                                      (m.group('a'),
+                                                       m.group('c'),
+                                                       m.group('id1'),
+                                                       m.group('id2')),
+                                                       'Tr(%s)' % b],
+                                                 ['-1/2', '1/Nc',
+                                                  'T(%s%s%s%s,%s)' % \
+                                                      (m.group('a'),
+                                                       m.group('b'),
+                                                       m.group('c'),
+                                                       m.group('id1'),
+                                                       m.group('id2'))])
+        return []
+    
+    def expand_trace_internal_sum(self):
+        """Expand the first encountered term with an internal sum in a trace
+        using Tr(a,x,b,x,c) = 1/2(T(a,c)Tr(b)-1/Nc T(a,b,c)) and 
+        returns the corresponding list of ColorString objects. 
+        This method will NOT modify the current color string. If nothing
+        to expand is found, returns an empty list."""
+        
+        for index, col_obj in enumerate(self):
+            
+            m = re_trace_int_sum.match(col_obj)
+            if m:
+                # Here we must also be careful about final comma, since there is
+                # no index after color indices
+                b = m.group('b')
+                b = b.rstrip(',')
+                ac = m.group('a') + m.group('c')
+                ac = ac.rstrip(',')
+                abc = m.group('a') + m.group('b') + m.group('c')
+                abc = abc.rstrip(',')
+                return self.__expand_term(index, ['1/2', 'Tr(%s)' % ac,
+                                                       'Tr(%s)' % b],
+                                                 ['-1/2', '1/Nc',
+                                                  'Tr(%s)' % abc])
+        return []
+
+
 ##===============================================================================
 ## ColorString
 ##===============================================================================
