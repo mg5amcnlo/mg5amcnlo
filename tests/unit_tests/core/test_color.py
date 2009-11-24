@@ -33,6 +33,8 @@ class ColorStringTest(unittest.TestCase):
         valid_strings = ["T(101,102)",
                          "T(1,101,102)",
                          "T(1,2,3,4,101,102)",
+                         "Tr()",
+                         "Tr(1,2,3,4)",
                          "f(1,2,3)",
                          "d(1,2,3)",
                          "Nc", "1/Nc", "I",
@@ -53,7 +55,7 @@ class ColorStringTest(unittest.TestCase):
         for wrong_str in wrong_strings:
             self.assertFalse(my_color_str.is_valid_color_object(wrong_str))
 
-    def test_colorstring_init(self):
+    def test_init(self):
         """Test the color string initialization"""
 
         wrong_lists = [['T(101,102)', 1],
@@ -65,7 +67,7 @@ class ColorStringTest(unittest.TestCase):
                               color.ColorString,
                               wrg_list)
 
-    def test_colorstring_manip(self):
+    def test_manip(self):
         """Test the color string manipulation (append, insert and extend)"""
 
         my_color_string = color.ColorString(['T(101,102)'])
@@ -79,6 +81,103 @@ class ColorStringTest(unittest.TestCase):
         self.assertRaises(ValueError,
                           my_color_string.extend,
                           ['k(1,2,3)'])
+    
+    def test_T_traces(self):
+        """Test identity T(a,b,c,...,i,i) = Tr(a,b,c,...)"""
+        
+        my_color_string = color.ColorString(['T(1,2,3,101,101)'])
+        
+        my_color_string.simplify()
+        
+        self.assertEqual(my_color_string,
+                         color.ColorString(['Tr(1,2,3)']))
+    
+    def test_T_products(self):
+        """Test identity T(a,...,i,j)T(b,...,j,k) = T(a,...,b,...,i,k)"""
+        
+        my_color_string = color.ColorString(['T(4,102,103)',
+                                             'T(1,2,3,101,102)',
+                                             'T(103,104)',
+                                             'T(5,6,104,105)'])
+        
+        my_color_string.simplify()
+        
+        self.assertEqual(my_color_string,
+                         color.ColorString(['T(1,2,3,4,5,6,101,105)']))
+    
+    def test_simple_traces(self):
+        """Test identities Tr(1)=0, Tr()=Nc"""
+        
+        my_color_string = color.ColorString(['Tr(1)'])
+        
+        my_color_string.simplify()
+        
+        self.assertEqual(my_color_string,
+                         color.ColorString(['0']))
+        
+        my_color_string = color.ColorString(['Tr()'])
+        
+        my_color_string.simplify()
+        
+        self.assertEqual(my_color_string,
+                         color.ColorString(['Nc']))
+    
+    def test_trace_cyclicity(self):
+        """Test trace cyclicity"""
+        
+        my_color_string = color.ColorString(['Tr(5,2,3,4,1)'])
+        
+        my_color_string.simplify()
+        
+        self.assertEqual(my_color_string,
+                         color.ColorString(['Tr(1,5,2,3,4)']))
+        
+    def test_coeff_simplify(self):
+        """Test color string coefficient simplification"""
+
+        # Test Nc simplification
+        my_color_string = color.ColorString(['Nc'] * 5 + \
+                                            ['f(1,2,3)'] + \
+                                            ['1/Nc'] * 3)
+
+        my_color_string.simplify()
+
+        self.assertEqual(my_color_string, color.ColorString(['Nc',
+                                                             'Nc',
+                                                             'f(1,2,3)']))
+
+        # Test factors I simplification
+        my_color_string = color.ColorString(['I'] * 4)
+        my_color_string.simplify()
+        self.assertEqual(my_color_string, color.ColorString([]))
+
+        my_color_string = color.ColorString(['I'] * 5)
+        my_color_string.simplify()
+        self.assertEqual(my_color_string, color.ColorString(['I']))
+
+        my_color_string = color.ColorString(['I'] * 6)
+        my_color_string.simplify()
+        self.assertEqual(my_color_string, color.ColorString(['-1']))
+
+        my_color_string = color.ColorString(['I'] * 7)
+        my_color_string.simplify()
+        self.assertEqual(my_color_string, color.ColorString(['-1', 'I']))
+
+        # Test numbers simplification
+        my_color_string = color.ColorString(['-1/2', '2/3', '2', '-3'])
+        my_color_string.simplify()
+        self.assertEqual(my_color_string, color.ColorString(['2']))
+
+        # Mix everything
+        my_color_string = color.ColorString(['Nc', 'I', '-4', 'I', '1/Nc',
+                                             'I', 'Nc', 'd(1,2,3)',
+                                             '2/3', '-2/8'])
+        my_color_string.simplify()
+        self.assertEqual(my_color_string,
+                         color.ColorString(['-2/3', 'I', 'Nc', 'd(1,2,3)']))
+
+        
+        
 #
 #    def test_traces_simplify(self):
 #        """Test color string trace simplification"""

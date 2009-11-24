@@ -16,21 +16,53 @@
 """Classes, methods and functions required for all calculations
 related to QCD color."""
 
+import copy
+import operator
 import re
 
 #===============================================================================
 # Regular expression objects (compiled)
 #===============================================================================
 
-# Match correct color string object
-
-re_color_object = re.compile(r"""^(T\((-?\d+,)*-?\d+,-?\d+\)
+# Match only valid color string object
+re_color_object = re.compile(r"""^(T\((-?\d+,)*(-?\d+)?\)
+                            |Tr\((-?\d+,)*(-?\d+)?\)
                             |f\(-?\d+,-?\d+,-?\d+\)
                             |d\(-?\d+,-?\d+,-?\d+\)
                             |(1/)?Nc
                             |-?(\d+/)?\d+
                             |I)$""",
                             re.VERBOSE)
+
+# T trace T(a,b,c,...,i,i), group start is a,b,c,...
+re_T_trace = re.compile(r"""^T\((?P<start>(-?\d+,)*?(-?\d+)?),?
+                            (?P<id>-?\d+),(?P=id)\)$""", re.VERBOSE)
+
+# T product T(a,...,i,j)T(b,...,j,k), group start1 is a,...,
+# group start2 is b,..., group id1 is i and group id2 is k
+re_T_product1 = re.compile(r"""^T\((?P<start1>(-?\d+,)*)
+                                (?P<id1>-?\d+),(?P<summed>-?\d+)\)
+                                T\((?P<start2>(-?\d+,)*)
+                                (?P=summed),(?P<id2>-?\d+)\)$""", re.VERBOSE)
+
+# T product T(b,...,j,k)T(a,...,i,j), group start1 is a,...,
+# group start2 is b,..., group id1 is i and group id2 is k
+re_T_product2 = re.compile(r"""^T\((?P<start2>(-?\d+,)*)
+                                (?P<summed>-?\d+),(?P<id2>-?\d+)\)
+                                T\((?P<start1>(-?\d+,)*)
+                                (?P<id1>-?\d+),(?P=summed)\)$""", re.VERBOSE)
+
+# Tr()
+re_trace_0_index = re.compile(r"^Tr\(\)$")
+
+# Tr(i), group id is i
+re_trace_1_index = re.compile(r"^Tr\((?P<id>-?\d+)\)$")
+
+# Tr(a,b,c,...), group elems is a,b,c,...
+re_trace_n_indices = re.compile(r"^Tr\((?P<elems>(-?\d+,)*(-?\d+)?)\)$")
+
+# Match a fraction (with denominator or not), group has num/den entries
+re_fraction = re.compile(r"^(?P<num>-?\d+)(/(?P<den>\d+))?$")
 
 #===============================================================================
 # ColorString
@@ -92,6 +124,129 @@ class ColorString(list):
                         "Object %s is not a valid color string" % col_string
         else:
             list.extend(self, col_string)
+
+    def simplify(self):
+        """Simplify the current color string as much as possible, using 
+        all possible identities."""
+
+        while True:
+            original = copy.copy(self)
+
+            self.__simplify_T_traces()
+            self.__simplify_T_products()
+            self.__simplify_simple_traces()
+            self.__simplify_trace_cyclicity()
+            self.__simplify_coeffs()
+            if self == original:
+                break
+    
+    def __simplify_T_traces(self):
+        """Apply the identity T(a,b,c,...,i,i) = Tr(a,b,c,...)"""
+        
+        for index, col_obj in enumerate(self):
+            self[index] = re_T_trace.sub(lambda m: "Tr(%s)" % m.group('start'),
+                                     col_obj)
+    
+    def __simplify_T_products(self):
+        """Apply the identity T(a,...,i,j)T(b,...,j,k) = T(a,...,b,...,i,k)
+        on the first matching pair"""
+        
+        for index1, mystr1 in enumerate(self):
+            for index2, mystr2 in enumerate(self[index1 + 1:]):
+                # Test both product ordering
+                m = re_T_product1.match(mystr1 + mystr2)
+                if not m:
+                    m = re_T_product2.match(mystr1 + mystr2)
+                if m:
+                    self[index1] = "T(%s%s%s,%s)" % \
+                                (m.group('start1'),
+                                 m.group('start2'),
+                                 m.group('id1'),
+                                 m.group('id2'))
+                    del self[index1 + index2 + 1]
+                    return
+    
+    def __simplify_simple_traces(self):
+        """Apply the identities Tr(a)=0 (AS) and Tr() = Nc (delta)"""
+        
+        for index, col_obj in enumerate(self):
+            if re_trace_0_index.match(col_obj):
+                self[index] = "Nc"
+            if re_trace_1_index.match(col_obj):
+                self[index] = "0"
+    
+    def __simplify_trace_cyclicity(self):
+        """Re-order traces using cyclicity to bring smallest id in front"""
+        
+        for index, col_obj in enumerate(self):
+            m = re_trace_n_indices.match(col_obj)
+            if m:
+                list_indices = [int(s) for s in m.group('elems').split(',')]
+                pos = list_indices.index(min(list_indices))
+                res_list = list_indices[pos:]
+                res_list.extend(list_indices[:pos])
+                self[index] = 'Tr(%s)' % ','.join([str(i) for i in res_list])
+
+    def __simplify_coeffs(self):
+        """Applies simple algebraic simplifications on scalar coefficients
+        and bring the final result to the first position"""
+
+        # Simplify factors Nc
+        numNc = self.count('Nc') - self.count('1/Nc')
+        while ('Nc' in self): self.remove('Nc')
+        while ('1/Nc' in self): self.remove('1/Nc')
+        if numNc > 0:
+            for dummy in range(numNc):
+                self.insert(0, 'Nc')
+        elif numNc < 0:
+            for dummy in range(abs(numNc)):
+                self.insert(0, '1/Nc')
+
+        # Simplify factors I
+        numI = self.count('I')
+        while ('I' in self): self.remove('I')
+        if numI % 4 == 1:
+            self.insert(0, 'I')
+        elif numI % 4 == 2:
+            self.insert(0, '-1')
+        elif numI % 4 == 3:
+            self.insert(0, 'I')
+            self.insert(0, '-1')
+
+        # Compute numerators and denominators
+        numlist = []
+        denlist = []
+        for elem in self[:]:
+            m = re_fraction.match(elem)
+            if m:
+                self.remove(elem)
+                numlist.append(int(m.group('num')))
+                if m.group('den'):
+                    denlist.append(int(m.group('den')))
+        numerator = reduce(operator.mul, numlist, 1)
+        denominator = reduce(operator.mul, denlist, 1)
+            
+        # Deal with 0 coeff
+        if numerator == 0:
+            del self[:]
+            self.insert(0, '0')
+            return
+        
+        # Try to simplify further fractions
+        dev = self.__gcd(numerator, denominator)
+        numerator //= dev
+        denominator //= dev
+
+        # Output result in a correct way
+        if denominator != 1:
+            self.insert(0, "%i/%i" % (numerator, denominator))
+        elif numerator != 1:
+            self.insert(0, "%i" % numerator)
+
+    def __gcd(self, a, b):
+        """Find the gcd of two integers"""
+        while b: a, b = b, a % b
+        return a
 
 #import copy
 #import itertools
