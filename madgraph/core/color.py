@@ -271,22 +271,24 @@ class ColorString(list):
         while b: a, b = b, a % b
         return a
     
-    def __expand_term(self, index, new_str1, new_str2):
-        """Return two color strings built on self where index has been
-        removed and, in one case, replaced by new_str1 and in the other case
-        by new_str2."""
+    def __expand_term(self, indices, new_str1, new_str2):
+        """Return two color strings built on self where all indices in the
+        list indices have been removed and, for the first index of the list, 
+        replaced once by new_str1 and once bynew_str2."""
         
         str1 = copy.copy(self)
         str2 = copy.copy(self)
         
-        del str1[index]
-        del str2[index]
+        # Remove indices, pay attention to the shift induced by del
+        for i, index in enumerate(indices):
+            del str1[index + i]
+            del str2[index + i]
         
         for i in range(len(new_str1)):
-            str1.insert(index + i, new_str1[i])
+            str1.insert(indices[0] + i, new_str1[i])
         
         for i in range(len(new_str2)):
-            str2.insert(index + i, new_str2[i])
+            str2.insert(indices[0] + i, new_str2[i])
         
         return [str1, str2]
     
@@ -302,7 +304,7 @@ class ColorString(list):
             # Deal with d terms
             m = re_d_term.match(col_obj)
             if m:
-                return self.__expand_term(index, ['2', 'Tr(%s,%s,%s)' % \
+                return self.__expand_term([index], ['2', 'Tr(%s,%s,%s)' % \
                                                       (m.group('a'),
                                                        m.group('b'),
                                                        m.group('c'))],
@@ -313,7 +315,8 @@ class ColorString(list):
             # Deal with f terms
             m = re_f_term.match(col_obj)
             if m:
-                return self.__expand_term(index, ['-2', 'I', 'Tr(%s,%s,%s)' % \
+                return self.__expand_term([index], ['-2', 'I',
+                                                    'Tr(%s,%s,%s)' % \
                                                       (m.group('a'),
                                                        m.group('b'),
                                                        m.group('c'))],
@@ -338,7 +341,7 @@ class ColorString(list):
                 # Since b ends with a comma, we should remove it for Tr(b)
                 b = m.group('b')
                 b = b.rstrip(',')
-                return self.__expand_term(index, ['1/2', 'T(%s%s%s,%s)' % \
+                return self.__expand_term([index], ['1/2', 'T(%s%s%s,%s)' % \
                                                       (m.group('a'),
                                                        m.group('c'),
                                                        m.group('id1'),
@@ -372,7 +375,7 @@ class ColorString(list):
                 ac = ac.rstrip(',')
                 abc = m.group('a') + m.group('b') + m.group('c')
                 abc = abc.rstrip(',')
-                return self.__expand_term(index, ['1/2', 'Tr(%s)' % ac,
+                return self.__expand_term([index], ['1/2', 'Tr(%s)' % ac,
                                                        'Tr(%s)' % b],
                                                  ['-1/2', '1/Nc',
                                                   'Tr(%s)' % abc])
