@@ -495,7 +495,7 @@ class ColorString(list):
         if col_str and re_fraction.match(col_str[0]):
             coeff_str = col_str.pop(0)
             return (coeff_str, col_str)
-        elif col_str:
+        else:
             return ('1', col_str)
 
 

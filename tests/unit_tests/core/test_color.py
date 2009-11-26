@@ -387,7 +387,9 @@ class ColorFactorTest(unittest.TestCase):
                                      color.ColorString(['Nc', 'Nc', 'Nc'])])])
 
         my_color_factor = color.ColorFactor([color.ColorString(['f(1,2,3)',
-                                                                'd(1,2,3)'
+                                                                'd(1,2,3)',
+                                                                'f(5,6,7)',
+                                                                'd(5,6,7)'
                                                                 ])])
 
         my_color_factor.simplify()
