@@ -37,7 +37,7 @@ import sys
 import unittest
 
 #Add the ROOT dir to the current PYTHONPATH
-root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
+root_path = os.path.split(os.path.dirname(os.path.realpath(sys.argv[0])))[0]
 sys.path.append(root_path)
 
 #===============================================================================
