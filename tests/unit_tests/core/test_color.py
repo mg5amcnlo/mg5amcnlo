@@ -115,7 +115,7 @@ class ColorStringTest(unittest.TestCase):
         my_color_string.simplify()
 
         self.assertEqual(my_color_string,
-                         color.ColorString(['0']))
+                         color.ColorString())
 
         my_color_string = color.ColorString(['Tr()'])
 
@@ -449,6 +449,7 @@ class ColorFactorTest(unittest.TestCase):
                                                         'f(-3,5,-4)',
                                                         'f(-4,6,-5)',
                                                         'f(-5,7,8)'
+                                                      #  'f(-6,8,-7)',
+                                                      #  'f(-7,9,10)'
                                                         ])])
         my_color_factor.simplify()
-        print my_color_factor

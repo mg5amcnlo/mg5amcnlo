@@ -279,7 +279,7 @@ class ColorString(list):
         # Deal with 0 coeff
         if numerator == 0:
             del self[:]
-            self.insert(0, '0')
+          #  self.insert(0, '0')
             return
 
         # Try to simplify further fractions
@@ -485,81 +485,71 @@ class ColorString(list):
                     break
             return my_str
 
-    def extract_coeff(self):
-        """Returns a tuple with first value being a color string with only
-        numerical coefficients, and the second one a color string 
-        with the rest"""
-
-        # col_str = copy.copy(self)
-
-        if self and re_fraction.match(self[0]):
-            coeff_str = self[0]
-            if len(self) > 1:
-                col_str = ColorString(self[1:])
-            else:
-                col_str = ColorString()
-            return (coeff_str, col_str)
-        else:
-            return ('1', self)
-
-
     def is_similar(self, col_str):
         """Test if self is similar to col_str, i.e. if they have the same
         tensorial structure (taking into account possible renaming of 
         summed indices, permutations, ...) and identical powers of Nc/I"""
 
-        #col_str1 = copy.copy(self)
-        #col_str2 = copy.copy(col_str)
+        l_self = len(self)
+        l_col_str = len(col_str)
 
-
-        # Get rid of coefficients
-        col_str1 = self.extract_coeff()[1]
-        col_str2 = col_str.extract_coeff()[1]
-
-
-        if col_str1 == ColorString() or col_str2 == ColorString():
-            if col_str1 == ColorString() and col_str2 == ColorString():
+        if l_self == 0  or l_col_str == 0:
+            if l_self == 0  and l_col_str == 0:
                 return True
             else:
                 return False
 
-        # test all permutations of str2
-#        for str2_permut in itertools.permutations(col_str2):
-#            if col_str1 == ColorString(list(str2_permut)):
-#                return True
-#        return False
-        if col_str1 == col_str2:
-            return True
+        if re_fraction.match(self[0]):
+            self_shift = 1
         else:
+            self_shift = 0
+
+        if re_fraction.match(col_str[0]):
+            col_str_shift = 1
+        else:
+            col_str_shift = 0
+
+        if l_self - self_shift != l_col_str - col_str_shift:
             return False
 
+        for i in range(l_self - self_shift):
+            if self[i + self_shift] != col_str[i + col_str_shift]:
+                return False
+
+        return True
+
     def add(self, col_str):
-        """Add two color similar strings, i.e. returns a new color string with
+        """Add two color similar strings, i.e. self becomes a new color string with
         numerical coefficients added."""
 
-        col_str1 = copy.copy(self)
-        col_str2 = copy.copy(col_str)
+        if len(self) == 0:
+            self = copy.copy(col_str)
+            return
 
-        # Separate coefficients
-        coeff1, col_str1 = col_str1.extract_coeff()
-        coeff2, col_str2 = col_str2.extract_coeff()
+        if len(col_str) == 0:
+            return
 
-        # Extract numerators and denominators
-        match1 = re_fraction.match(coeff1)
-        match2 = re_fraction.match(coeff2)
+        match1 = re_fraction.match(self[0])
+        match2 = re_fraction.match(col_str[0])
 
-        num1 = int(match1.group('num'))
-        num2 = int(match2.group('num'))
-
-        if match1.group('den'):
-            den1 = int(match1.group('den'))
+        if match1:
+            num1 = int(match1.group('num'))
+            if match1.group('den'):
+                den1 = int(match1.group('den'))
+            else:
+                den1 = 1
         else:
-            den1 = 1
+            num1 = den1 = 1
+            self.insert(0, '1')
 
-        if match2.group('den'):
-            den2 = int(match2.group('den'))
+        if match2:
+            num2 = int(match2.group('num'))
+            if match2.group('den'):
+                den2 = int(match2.group('den'))
+            else:
+                den2 = 1
         else:
-            den2 = 1
+            num2 = den2 = 1
 
         # Simplify the fraction
         numerator = num1 * den2 + num2 * den1
@@ -568,18 +558,12 @@ class ColorString(list):
         dev = self.__gcd(numerator, denominator)
         numerator //= dev
         denominator //= dev
-
-        # Output the result with the correct format (1 is not output)
-        out_str = ColorString()
         if denominator != 1:
-            out_str.append("%i/%i" % (numerator, denominator))
+            self[0] = "%i/%i" % (numerator, denominator)
         elif numerator != 1:
-            out_str.append("%i" % numerator)
-        out_str.extend(col_str1)
-
-        return out_str
-
-
+            self[0] = "%i" % numerator
+        else:
+            del self[0]
 #===============================================================================
 # ColorFactor
 #===============================================================================
@@ -634,13 +618,8 @@ class ColorFactor(list):
         for i1, col_str1 in enumerate(self[:]):
             for i2, col_str2 in enumerate(self[i1 + 1:]):
                 if col_str1.is_similar(col_str2):
-                    self[i1] = self[i1].add(col_str2)
-                    self[i1 + i2 + 1] = ColorString(['0'])
-
-        for elem in self:
-            elem.simplify()
-
-        while(ColorString(['0']) in self): self.remove(ColorString(['0']))
+                    self[i1].add(col_str2)
+                    del self[i1 + i2 + 1][:]
 
     def simplify(self):
         """Simplify the current ColorFactor. First apply simplification rules
@@ -649,12 +628,11 @@ class ColorFactor(list):
 
         while True:
             original = copy.copy(self)
-
             # Expand one f/d if possible
             for index, col_str in enumerate(self[:]):
                 result = col_str.expand_composite_terms()
                 if result:
-                    self[index] = ColorString(['0'])
+                    del self[index][:]
                     self.append(result[0])
                     self.append(result[1])
 
@@ -668,20 +646,22 @@ class ColorFactor(list):
                 if not result:
                     result = col_str.expand_trace_T_product()
                 if result:
-                    self[index] = ColorString(['0'])
+                    del self[index][:]
                     self.append(result[0])
                     self.append(result[1])
             # Simplify
             for col_str in self:
                 col_str.simplify()
 
-            # Remove zeros
-            while(ColorString(['0']) in self): self.remove(ColorString(['0']))
-
             self.__collect()
 
+            for elem in self:
+                elem.simplify()
+
+            empty = ColorString()
+            # zero = ColorString(['0'])
+            while(empty in self): self.remove(empty)
+            # while(zero in self): self.remove(zero)
             # Iterate until the result does not change anymore
             if self == original:
                 break
-
-
