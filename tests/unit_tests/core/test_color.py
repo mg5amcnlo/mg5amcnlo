@@ -430,3 +430,25 @@ class ColorFactorTest(unittest.TestCase):
                                     color.ColorString(['-2', 'I',
                                                         'Tr(1,5,4,3,2)'])])])
 
+        my_color_factor = color.ColorFactor([color.ColorString(['Tr(1,2,3,4,5,6,7)',
+                                                                'Tr(1,7,6,5,4,3,2)'
+                                                                ])])
+        my_color_factor.simplify()
+        self.assertEqual(my_color_factor,
+                    color.ColorFactor([color.ColorString(['1/128', 'Nc', 'Nc', 'Nc', 'Nc', 'Nc', 'Nc', 'Nc']),
+                                     color.ColorString(['-7/128', 'Nc', 'Nc', 'Nc', 'Nc', 'Nc']),
+                                     color.ColorString(['21/128', 'Nc', 'Nc', 'Nc']),
+                                     color.ColorString(['-35/128', 'Nc']),
+                                     color.ColorString(['35/128', '1/Nc']),
+                                     color.ColorString(['-21/128', '1/Nc', '1/Nc', '1/Nc']),
+                                     color.ColorString(['3/64', '1/Nc', '1/Nc', '1/Nc', '1/Nc', '1/Nc'])]))
+
+        my_color_factor = color.ColorFactor([color.ColorString(['f(1,2,-1)',
+                                                        'f(-1,3,-2)',
+                                                        'f(-2,4,-3)',
+                                                        'f(-3,5,-4)',
+                                                        'f(-4,6,-5)',
+                                                        'f(-5,7,8)'
+                                                        ])])
+        my_color_factor.simplify()
+        print my_color_factor

@@ -490,13 +490,17 @@ class ColorString(list):
         numerical coefficients, and the second one a color string 
         with the rest"""
 
-        col_str = copy.copy(self)
+        # col_str = copy.copy(self)
 
-        if col_str and re_fraction.match(col_str[0]):
-            coeff_str = col_str.pop(0)
+        if self and re_fraction.match(self[0]):
+            coeff_str = self[0]
+            if len(self) > 1:
+                col_str = ColorString(self[1:])
+            else:
+                col_str = ColorString()
             return (coeff_str, col_str)
         else:
-            return ('1', col_str)
+            return ('1', self)
 
 
     def is_similar(self, col_str):
@@ -504,12 +508,13 @@ class ColorString(list):
         tensorial structure (taking into account possible renaming of 
         summed indices, permutations, ...) and identical powers of Nc/I"""
 
-        col_str1 = copy.copy(self)
-        col_str2 = copy.copy(col_str)
+        #col_str1 = copy.copy(self)
+        #col_str2 = copy.copy(col_str)
+
 
         # Get rid of coefficients
-        col_str1 = col_str1.extract_coeff()[1]
-        col_str2 = col_str2.extract_coeff()[1]
+        col_str1 = self.extract_coeff()[1]
+        col_str2 = col_str.extract_coeff()[1]
 
 
         if col_str1 == ColorString() or col_str2 == ColorString():
@@ -519,10 +524,14 @@ class ColorString(list):
                 return False
 
         # test all permutations of str2
-        for str2_permut in itertools.permutations(col_str2):
-            if col_str1 == ColorString(list(str2_permut)):
-                return True
-        return False
+#        for str2_permut in itertools.permutations(col_str2):
+#            if col_str1 == ColorString(list(str2_permut)):
+#                return True
+#        return False
+        if col_str1 == col_str2:
+            return True
+        else:
+            return False
 
     def add(self, col_str):
         """Add two color similar strings, i.e. returns a new color string with
@@ -646,17 +655,9 @@ class ColorFactor(list):
                 result = col_str.expand_composite_terms()
                 if result:
                     self[index] = ColorString(['0'])
-                    self.extend(ColorFactor(result))
+                    self.append(result[0])
+                    self.append(result[1])
 
-            # Remove zeros
-            while(ColorString(['0']) in self): self.remove(ColorString(['0']))
-
-            # Iterate until the result does not change anymore
-            if self == original:
-                break
-
-        while True:
-            original = copy.copy(self)
             # Apply rules
             for index, col_str in enumerate(self[:]):
                 result = col_str.expand_T_internal_sum()
@@ -668,7 +669,8 @@ class ColorFactor(list):
                     result = col_str.expand_trace_T_product()
                 if result:
                     self[index] = ColorString(['0'])
-                    self.extend(ColorFactor(result))
+                    self.append(result[0])
+                    self.append(result[1])
             # Simplify
             for col_str in self:
                 col_str.simplify()
@@ -676,10 +678,10 @@ class ColorFactor(list):
             # Remove zeros
             while(ColorString(['0']) in self): self.remove(ColorString(['0']))
 
+            self.__collect()
+
             # Iterate until the result does not change anymore
             if self == original:
                 break
 
-        # Collect similar terms
-        self.__collect()
 
