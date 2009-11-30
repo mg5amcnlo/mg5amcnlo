@@ -18,4 +18,3 @@ color information for diagrams."""
 
 import unittest
 
-import madgraph.core.color_algebra as color
