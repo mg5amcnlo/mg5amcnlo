@@ -13,12 +13,13 @@
 #
 ################################################################################
 
-"""Unit test library for the color related routines in the core library"""
+"""Unit test library for the color algebra related routines 
+in the core library"""
 
 import itertools
 import unittest
 
-import madgraph.core.color as color
+import madgraph.core.color_algebra as color
 
 #===============================================================================
 # ColorStringTest

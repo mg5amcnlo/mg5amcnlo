@@ -14,7 +14,7 @@
 ################################################################################
 
 """Classes, methods, functions and regular expressions required 
-for all calculations related to QCD color."""
+for all calculations related to QCD color algebra."""
 
 import copy
 import itertools
