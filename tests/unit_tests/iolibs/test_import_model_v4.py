@@ -19,7 +19,7 @@ import StringIO
 import unittest
 import copy
 
-import madgraph.iolibs.import_v4 as import_v4
+import madgraph.iolibs.import_model_v4 as import_v4
 import madgraph.core.base_objects as base_objects
 
 #===============================================================================
@@ -27,12 +27,6 @@ import madgraph.core.base_objects as base_objects
 #===============================================================================
 class IOImportV4Test(unittest.TestCase):
     """Test class for the import v4 module"""
-
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
 
     def test_read_particles(self):
         """Test the output of import particles.dat file"""
@@ -136,7 +130,7 @@ class IOImportV4Test(unittest.TestCase):
         wmin = copy.copy(myparts[14])
         wmin.set('is_part', False)
         eplus = copy.copy(myparts[3])
-        eplus.set('is_part',False)
+        eplus.set('is_part', False)
         enu = copy.copy(myparts[0])
         photon = copy.copy(myparts[12])
         gluon = copy.copy(myparts[15])

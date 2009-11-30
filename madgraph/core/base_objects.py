@@ -487,6 +487,29 @@ class Interaction(PhysicsObject):
                 else:
                     ref_dict_to1[pdg_tuple] = [(pdg_part, self['id'])]
 
+    def __str__(self):
+        """String representation of an interaction. Outputs valid Python 
+        with improved format. Overrides the PhysicsObject __str__ to only
+        display PDG code of involved particles."""
+
+        mystr = '{\n'
+
+        for prop in self.get_sorted_keys():
+            if isinstance(self[prop], str):
+                mystr = mystr + '    \'' + prop + '\': \'' + \
+                        self[prop] + '\',\n'
+            elif isinstance(self[prop], float):
+                mystr = mystr + '    \'' + prop + '\': %.2f,\n' % self[prop]
+            elif isinstance(self[prop], ParticleList):
+                mystr = mystr + '    \'' + prop + '\': [%s],\n' % \
+                   ','.join([str(part.get_pdg_code()) for part in self[prop]])
+            else:
+                mystr = mystr + '    \'' + prop + '\': ' + \
+                        repr(self[prop]) + ',\n'
+        mystr = mystr.rstrip(',\n')
+        mystr = mystr + '\n}'
+
+        return mystr
 
 #===============================================================================
 # InteractionList
@@ -685,24 +708,24 @@ class LegList(PhysicsObjectList):
 
     def is_valid_element(self, obj):
         """Test if object obj is a valid Leg for the list."""
-        
+
         return isinstance(obj, Leg)
 
     # Helper methods for diagram generation
 
     def from_group_elements(self):
         """Return all elements which have 'from_group' True"""
-        
+
         return filter(lambda leg: leg.get('from_group'), self)
 
     def minimum_one_from_group(self):
         """Return True if at least one element has 'from_group' True"""
-        
+
         return len(self.from_group_elements()) > 0
 
     def minimum_two_from_group(self):
         """Return True if at least two elements have 'from_group' True"""
-        
+
         return len(self.from_group_elements()) > 1
 
     def can_combine_to_1(self, ref_dict_to1):
@@ -766,7 +789,7 @@ class VertexList(PhysicsObjectList):
 
     def is_valid_element(self, obj):
         """Test if object obj is a valid Vertex for the list."""
-        
+
         return isinstance(obj, Vertex)
 
 
@@ -796,16 +819,16 @@ class Diagram(PhysicsObject):
         """Return particle property names as a nicely sorted list."""
 
         return ['vertices']
-    
+
     def nice_string(self):
         """Returns a nicely formatted string of the diagram content."""
-        
+
         if self['vertices']:
             mystr = '('
             for vert in self['vertices']:
                 mystr = mystr + '('
                 for leg in vert['legs'][:-1]:
-                    mystr = mystr + str(leg['number']) + ','    
+                    mystr = mystr + str(leg['number']) + ','
                 if self['vertices'].index(vert) < len(self['vertices']) - 1:
                     # Do not want ">" in the last vertex
                     mystr = mystr[:-1] + '>'
@@ -827,14 +850,14 @@ class DiagramList(PhysicsObjectList):
         """Test if object obj is a valid Diagram for the list."""
 
         return isinstance(obj, Diagram)
-    
+
     def nice_string(self):
         """Returns a nicely formatted string"""
         mystr = str(len(self)) + ' diagrams:\n'
         for diag in self:
             mystr = mystr + "  " + diag.nice_string() + '\n'
         return mystr[:-1]
-   
+
 
 #===============================================================================
 # Process
@@ -878,7 +901,7 @@ class Process(PhysicsObject):
     def nice_string(self):
         """Returns a nicely formated string about current process
         content"""
-        
+
         mystr = "Process: "
         prevleg = None
         for leg in self['legs']:
@@ -906,6 +929,6 @@ class ProcessList(PhysicsObjectList):
 
     def is_valid_element(self, obj):
         """Test if object obj is a valid Process for the list."""
-        
+
         return isinstance(obj, Process)
 

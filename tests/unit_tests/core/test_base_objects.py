@@ -347,8 +347,8 @@ class InteractionTest(unittest.TestCase):
 
         goal = "{\n"
         goal = goal + "    \'id\': %d,\n" % self.myinter['id']
-        goal = goal + "    \'particles\': %s,\n" % \
-                            repr(base_objects.ParticleList([self.mypart] * 4))
+        goal = goal + "    \'particles\': [%s],\n" % \
+                            ','.join([str(self.mypart.get_pdg_code())]*4)
         goal = goal + "    \'color\': [\'C1\', \'C2\'],\n"
         goal = goal + "    \'lorentz\': [\'L1\', \'L2\'],\n"
         goal = goal + "    \'couplings\': %s,\n" % \
