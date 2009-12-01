@@ -408,10 +408,10 @@ class Interaction(PhysicsObject):
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list of strings" % str(value)
-            for mystr in value:
-                if not isinstance(mystr, str):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a valid string" % str(mystr)
+#            for mystr in value:
+#                if not isinstance(mystr, str):
+#                    raise self.PhysicsObjectError, \
+#                        "%s is not a valid string" % str(mystr)
 
         if name == 'couplings':
             #Should be a dictionary of strings with (i,j) keys
@@ -420,10 +420,10 @@ class Interaction(PhysicsObject):
                         "%s is not a valid dictionary for couplings" % \
                                                                 str(value)
 
-            if len(value) != len(self['color']) * len(self['lorentz']):
-                raise self.PhysicsObjectError, \
-                        "Dictionary " + str(value) + \
-                        " for couplings has not the right number of entry"
+#            if len(value) != len(self['color']) * len(self['lorentz']):
+#                raise self.PhysicsObjectError, \
+#                        "Dictionary " + str(value) + \
+#                        " for couplings has not the right number of entry"
 
             for key in value.keys():
                 if not isinstance(key, tuple):
