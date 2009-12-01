@@ -94,14 +94,27 @@ class Amplitude(base_objects.PhysicsObject):
            Return all diagrams (lists of vertices).
 
         7. Repeat from 3 (recursion done by reduce_leglist)
+
+        Be aware that the resulting vertices have all particles outgoing,
+        so need to flip for incoming particles when used.
         """
+
         model = self['process'].get('model')
 
-        for i in range(0, len(self['process'].get('legs'))):
-
+        # Give numbers to legs in process
+        for i in range(len(self['process'].get('legs'))):
             # Make sure legs are unique
             leg = copy.copy(self['process'].get('legs')[i])
             self['process'].get('legs')[i] = leg
+            if leg.get('number') == 0:
+                leg.set('number', i + 1)
+
+        # Copy leglist from process, so we can flip leg identities
+        # without affecting the original process
+        leglist = base_objects.LegList(\
+                       [ copy.copy(leg) for leg in self['process'].get('legs') ])
+
+        for leg in leglist:
 
             # For the first step, ensure the tag from_group 
             # is true for all legs
@@ -113,10 +126,6 @@ class Amplitude(base_objects.PhysicsObject):
                 part = model.get('particle_dict')[leg.get('id')]
                 leg.set('id', part.get_anti_pdg_code())
 
-            # Need to set leg number - this is defined by the leg order
-            leg.set('number', i + 1)
-
-
         # Calculate the maximal multiplicity of n-1>1 configurations
         # to restrict possible leg combinations
         max_multi_to1 = max([len(key) for key in \
@@ -126,19 +135,13 @@ class Amplitude(base_objects.PhysicsObject):
         # Reduce the leg list and return the corresponding
         # list of vertices
 
-        reduced_leglist = self.reduce_leglist(self['process'].get('legs'),
-                                           max_multi_to1)
+        reduced_leglist = self.reduce_leglist(leglist,
+                                              max_multi_to1)
         res = base_objects.DiagramList()
 
         for vertex_list in reduced_leglist:
             res.append(base_objects.Diagram(
                             {'vertices':base_objects.VertexList(vertex_list)}))
-
-        for leg in self['process'].get('legs'):
-            # Flip back part-antipart for incoming particles, 
-            if leg.get('state') == 'initial':
-                part = model.get('particle_dict')[leg.get('id')]
-                leg.set('id', part.get_anti_pdg_code())
 
         self['diagrams'] = res
         return res
@@ -165,8 +168,8 @@ class Amplitude(base_objects.PhysicsObject):
         # vertex to res and continue
         if curr_leglist.can_combine_to_0(ref_dict_to0):
             # Extract the interaction id associated to the vertex 
-            vertex_id = ref_dict_to0[tuple([leg.get('id') for \
-                                                         leg in curr_leglist])]
+            vertex_id = ref_dict_to0[tuple(sorted([leg.get('id') for \
+                                                   leg in curr_leglist]))]
 
             final_vertex = base_objects.Vertex({'legs':curr_leglist,
                                                 'id':vertex_id})
@@ -299,8 +302,8 @@ class Amplitude(base_objects.PhysicsObject):
                     # Build the leg object which will replace the combination:
                     # 1) leg ids is as given in the ref_dict
                     leg_ids = [elem[0] for elem in \
-                           ref_dict_to1[tuple([leg.get('id') \
-                                               for leg in entry])]]
+                           ref_dict_to1[tuple(sorted([leg.get('id') \
+                                               for leg in entry]))]]
                     # 2) number is the minimum of leg numbers involved in the
                     # combination
                     number = min([leg.get('number') for leg in entry])
@@ -327,8 +330,8 @@ class Amplitude(base_objects.PhysicsObject):
                     # Extract vertex ids corresponding to the various legs
                     # in mylegs
                     vert_ids = [elem[1] for elem in \
-                           ref_dict_to1[tuple([leg.get('id') \
-                                               for leg in entry])]]
+                           ref_dict_to1[tuple(sorted([leg.get('id') \
+                                               for leg in entry]))]]
                     vlist = base_objects.VertexList()
                     for myleg in mylegs:
                         # Start with the considered combination...
