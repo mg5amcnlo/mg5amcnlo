@@ -476,6 +476,7 @@ class Interaction(PhysicsObject):
             short_part_list.remove(part)
 
             # Add all permutations
+            # REWRITE THIS USING SORT INSTEAD!!!
             for permut in itertools.permutations(short_part_list,
                                                  len(short_part_list)):
                 # Add interaction permutation
