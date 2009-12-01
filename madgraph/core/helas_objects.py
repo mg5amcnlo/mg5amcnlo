@@ -37,33 +37,54 @@ iolibs directory"""
 #===============================================================================
 class HelasWavefunction(base_objects.PhysicsObject):
     """HelasWavefunction object, has the information necessary for
-    writing a call to a HELAS wavefunction routine: the PDG number, a
-    list of mother wavefunctions, interaction id, flow state,
-    wavefunction number
+    writing a call to a HELAS wavefunction routine: the PDG number,
+    all relevant particle information, a list of mother wavefunctions,
+    interaction id, all relevant interaction information, fermion flow
+    state, wavefunction number
     """
 
     def default_setup(self):
         """Default values for all properties"""
 
+        # Properties related to the particle propagator
         self['pdg_code'] = 0
-        self['mothers'] = HelasWavefunctionList()
+        self['name'] = 'none'
+        self['antiname'] = 'none'
+        self['spin'] = 1
+        self['color'] = 1
+        self['mass'] = 'zero'
+        self['width'] = 'zero'
+        self['is_part'] = True
+        self['self_antipart'] = False
+        # Properties related to the interaction generating the propagator
         self['interaction_id'] = 0
+        self['inter_color'] = []
+        self['lorentz'] = []
+        self['couplings'] = { (0, 0):'none'}
+        # Properties relating to the leg/vertex
         self['state'] = 'initial'
+        self['mothers'] = HelasWavefunctionList()
         self['number'] = 0
         self['fermionflow'] = 1
         
     # Customized constructor
-    def __init__(self, argument = {}):
+    def __init__(self, *arguments):
         """Allow generating a HelasWavefunction from a Leg
         """
 
-        if isinstance(argument,base_objects.Leg):
-            super(HelasWavefunction, self).__init__()
-            self.set('pdg_code', argument.get('id'))
-            self.set('number', argument.get('number'))
-            self.set('state', argument.get('state'))
+        if len(arguments) > 2:
+            if isinstance(arguments[0], base_objects.Leg) and \
+                   isinstance(arguments[1], int) and \
+                   isinstance(arguments[2], base_objects.Model):
+                super(HelasWavefunction, self).__init__()
+                self.set('pdg_code', (arguments[0].get('id'),arguments[2]))
+                self.set('number', arguments[0].get('number'))
+                self.set('state', arguments[0].get('state'))
+                self.set('interaction_id', (arguments[1], arguments[2]))
+        elif arguments:
+            super(HelasWavefunction, self).__init__(arguments[0])
         else:
-            super(HelasWavefunction, self).__init__(argument)
+            super(HelasWavefunction, self).__init__()
    
     def filter(self, name, value):
         """Filter for valid wavefunction property values."""
@@ -74,16 +95,88 @@ class HelasWavefunction(base_objects.PhysicsObject):
                       "%s is not a valid pdg_code for wavefunction" % \
                       str(value)
 
-        if name == 'mothers':
-            if not isinstance(value, HelasWavefunctionList):
+        if name in ['name', 'antiname']:
+            # Must start with a letter, followed by letters,  digits,
+            # - and + only
+            p = re.compile('\A[a-zA-Z]+[\w]*[\-\+]*~?\Z')
+            if not p.match(value):
                 raise self.PhysicsObjectError, \
-                      "%s is not a valid list of mothers for wavefunction" % \
-                      str(value)
+                        "%s is not a valid particle name" % value
+
+        if name is 'spin':
+            if not isinstance(value, int):
+                raise self.PhysicsObjectError, \
+                    "Spin %s is not an integer" % repr(value)
+            if value < 1 or value > 5:
+                raise self.PhysicsObjectError, \
+                   "Spin %i is smaller than one" % value
+
+        if name is 'color':
+            if not isinstance(value, int):
+                raise self.PhysicsObjectError, \
+                    "Color %s is not an integer" % repr(value)
+            if value not in [1, 3, 6, 8]:
+                raise self.PhysicsObjectError, \
+                   "Color %i is not valid" % value
+
+        if name in ['mass', 'width']:
+            # Must start with a letter, followed by letters, digits or _
+            p = re.compile('\A[a-zA-Z]+[\w\_]*\Z')
+            if not p.match(value):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid name for mass/width variable" % \
+                        value
+
+        if name in ['is_part', 'self_antipart']:
+            if not isinstance(value, bool):
+                raise self.PhysicsObjectError, \
+                    "%s tag %s is not a boolean" % (name, repr(value))
 
         if name == 'interaction_id':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid integer for wavefunction interaction id" % str(value)
+
+        if name in ['inter_color', 'lorentz']:
+            #Should be a list of strings
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list of strings" % str(value)
+            for mystr in value:
+                if not isinstance(mystr, str):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid string" % str(mystr)
+
+        if name == 'couplings':
+            #Should be a dictionary of strings with (i,j) keys
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid dictionary for couplings" % \
+                                                                str(value)
+
+            if len(value) != len(self['inter_color']) * len(self['lorentz']):
+                raise self.PhysicsObjectError, \
+                        "Dictionary " + str(value) + \
+                        " for couplings has not the right number of entry"
+
+            for key in value.keys():
+                if not isinstance(key, tuple):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid tuple" % str(key)
+                if len(key) != 2:
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid tuple with 2 elements" % str(key)
+                if not isinstance(key[0], int) or not isinstance(key[1], int):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid tuple of integer" % str(key)
+                if key[0] < 0 or key[1] < 0 or \
+                   key[0] >= len(self['inter_color']) or key[1] >= \
+                                                    len(self['lorentz']):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a tuple with valid range" % str(key)
+                if not isinstance(value[key], str):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid string" % str(mystr)
 
         if name == 'state':
             if not isinstance(value, str):
@@ -94,11 +187,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid wavefunction state (initial|final|intermediate)" % \
                                                                     str(value)
-        if name == 'number':
-            if not isinstance(value, int):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid integer for wavefunction number" % str(value)
-
         if name == 'fermionflow':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
@@ -107,30 +195,88 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid fermionflow (must be -1, 0 or 1)" % str(value)                
 
+        if name == 'number':
+            if not isinstance(value, int):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid integer for wavefunction number" % str(value)
+
+        if name == 'mothers':
+            if not isinstance(value, HelasWavefunctionList):
+                raise self.PhysicsObjectError, \
+                      "%s is not a valid list of mothers for wavefunction" % \
+                      str(value)
+
         return True
+
+    def set(self, name, value):
+        """When setting interaction_id, if model is given (in tuple),
+        set all other interaction properties. When setting pdg_code,
+        if model is given, set all other particle properties."""
+
+        if name == 'interaction_id' and isinstance(value, tuple):
+            if len(value) < 2 or not isinstance(value[0], int) or \
+               not isinstance(value[1], base_objects.Model):
+                raise self.PhysicsObjectError, \
+                      "%s is not a valid (interaction id, model) tuple" % \
+                      str(value)
+            self.set('interaction_id', value[0])
+            if value[0] > 0:
+                inter = value[1].get('interaction_dict')[value[0]]
+                self.set('inter_color', inter.get('color'))
+                self.set('lorentz', inter.get('lorentz'))
+                self.set('couplings', inter.get('couplings'))
+            return True
+        elif name == 'pdg_code' and isinstance(value, tuple):
+            if len(value) < 2 or not isinstance(value[0], int) or \
+               not isinstance(value[1], base_objects.Model):
+                raise self.PhysicsObjectError, \
+                      "%s is not a valid (pdg code, model) tuple" % \
+                      str(value)
+            self.set('pdg_code', value[0])
+            part = value[1].get('particle_dict')[value[0]]
+            self.set('name', part.get('name'))
+            self.set('antiname', part.get('antiname'))
+            self.set('spin', part.get('spin'))
+            self.set('color', part.get('color'))
+            self.set('mass', part.get('mass'))
+            self.set('width', part.get('width'))
+            self.set('is_part', part.get('is_part'))
+            self.set('self_antipart', part.get('self_antipart'))
+            return True
+        else:
+            return super(HelasWavefunction, self).set(name, value)
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['pdg_code', 'mothers', 'interaction_id',
-                'state', 'number', 'fermionflow']
-
+        return ['pdg_code', 'name', 'antiname', 'spin', 'color',
+                'mass', 'width', 'is_part', 'self_antipart',
+                'interaction_id', 'inter_color', 'lorentz', 'couplings',
+                'state', 'number', 'fermionflow', 'mothers']
 
     # Overloaded operators
     
     def __eq__(self, other):
         """Overloading the equality operator, to make comparison easy
-        when checking if wavefunction is already written. Note that
-        the number for this wavefunction is irrelevant (not yet
-        given), while the number for the mothers is important.
+        when checking if wavefunction is already written, or when
+        checking for identical processes. Note that the number for
+        this wavefunction, the pdg code, and the interaction id are
+        irrelevant, while the numbers for the mothers are important.
         """
 
         if not isinstance(other,HelasWavefunction):
             return False
 
         # Check relevant directly defined properties
-        if self['pdg_code'] != other['pdg_code'] or \
-           self['interaction_id'] != other['interaction_id'] or \
+        if self['spin'] != other['spin'] or \
+           self['color'] != other['color'] or \
+           self['mass'] != other['mass'] or \
+           self['width'] != other['width'] or \
+           self['is_part'] != other['is_part'] or \
+           self['self_antipart'] != other['self_antipart'] or \
+           self['inter_color'] != other['inter_color'] or \
+           self['lorentz'] != other['lorentz'] or \
+           self['couplings'] != other['couplings'] or \
            self['fermionflow'] != other['fermionflow'] or \
            self['state'] != other['state']:
             return False
@@ -169,12 +315,84 @@ class HelasAmplitude(base_objects.PhysicsObject):
     def default_setup(self):
         """Default values for all properties"""
 
-        self['mothers'] = HelasWavefunctionList()
+        # Properties related to the interaction generating the propagator
         self['interaction_id'] = 0
+        self['inter_color'] = []
+        self['lorentz'] = []
+        self['couplings'] = { (0, 0):'none'}
+        # Properties relating to the vertex
         self['number'] = 0
+        self['mothers'] = HelasWavefunctionList()
         
+    # Customized constructor
+    def __init__(self, *arguments):
+        """Allow generating a HelasAmplitude from a Vertex
+        """
+
+        if len(arguments) > 1:
+            if isinstance(arguments[0],base_objects.Vertex) and \
+               isinstance(arguments[1],base_objects.Model):
+                super(HelasAmplitude, self).__init__()
+                self.set('interaction_id',
+                         (arguments[0].get('id'), arguments[1]))
+        elif arguments:
+            super(HelasAmplitude, self).__init__(arguments[0])
+        else:
+            super(HelasAmplitude, self).__init__()
+   
     def filter(self, name, value):
         """Filter for valid property values."""
+
+        if name == 'interaction_id':
+            if not isinstance(value, int):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid integer for wavefunction interaction id" % str(value)
+
+        if name in ['inter_color', 'lorentz']:
+            #Should be a list of strings
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list of strings" % str(value)
+            for mystr in value:
+                if not isinstance(mystr, str):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid string" % str(mystr)
+
+        if name == 'couplings':
+            #Should be a dictionary of strings with (i,j) keys
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid dictionary for couplings" % \
+                                                                str(value)
+
+            if len(value) != len(self['inter_color']) * len(self['lorentz']):
+                raise self.PhysicsObjectError, \
+                        "Dictionary " + str(value) + \
+                        " for couplings has not the right number of entry"
+
+            for key in value.keys():
+                if not isinstance(key, tuple):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid tuple" % str(key)
+                if len(key) != 2:
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid tuple with 2 elements" % str(key)
+                if not isinstance(key[0], int) or not isinstance(key[1], int):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid tuple of integer" % str(key)
+                if key[0] < 0 or key[1] < 0 or \
+                   key[0] >= len(self['inter_color']) or key[1] >= \
+                                                    len(self['lorentz']):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a tuple with valid range" % str(key)
+                if not isinstance(value[key], str):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid string" % str(mystr)
+
+        if name == 'number':
+            if not isinstance(value, int):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid integer for amplitude number" % str(value)
 
         if name == 'mothers':
             if not isinstance(value, HelasWavefunctionList):
@@ -182,23 +400,58 @@ class HelasAmplitude(base_objects.PhysicsObject):
                       "%s is not a valid list of mothers for amplitude" % \
                       str(value)
 
-        if name == 'interaction_id':
-            if not isinstance(value, int):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid integer for amplitude interaction id" % str(value)
-
-        if name == 'number':
-            if not isinstance(value, int):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid integer for amplitude number" % str(value)
-
         return True
+
+    def set(self, name, value):
+        """When setting interaction_id, if model is given (in tuple),
+        set all other interaction properties."""
+
+        if name == 'interaction_id' and isinstance(value, tuple):
+            if len(value) < 2 or not isinstance(value[0], int) or \
+               not isinstance(value[1], base_objects.Model):
+                raise self.PhysicsObjectError, \
+                      "%s is not a valid (interaction id, model) tuple" % \
+                      str(value)
+            self.set('interaction_id', value[0])
+            inter = value[1].get('interaction_dict')[value[0]]
+            self.set('inter_color', inter.get('color'))
+            self.set('lorentz', inter.get('lorentz'))
+            self.set('couplings', inter.get('couplings'))
+            return True
+        else:
+            return super(HelasAmplitude, self).set(name, value)
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['mothers', 'interaction_id', 'number']
+        return ['interaction_id', 'inter_color', 'lorentz', 'couplings',
+                'number', 'mothers']
 
+    # Comparison between different amplitudes, to allow check for
+    # identical processes. Note that we are then not interested in
+    # interaction id, but in all other properties.
+    def __eq__(self, other):
+        """Comparison between different amplitudes, to allow check for
+        identical processes.
+        """
+        
+        if not isinstance(other,HelasAmplitude):
+            return False
+
+        # Check relevant directly defined properties
+        if self['inter_color'] != other['inter_color'] or \
+           self['lorentz'] != other['lorentz'] or \
+           self['couplings'] != other['couplings'] or \
+           self['number'] != other['number']:
+            return False
+
+        # Check that mothers have the same numbers (only relevant info)
+        return [ mother.get('number') for mother in self['mothers'] ] == \
+               [ mother.get('number') for mother in other['mothers'] ]
+
+    def __ne__(self, other):
+        """Overloading the nonequality operator, to make comparison easy"""
+        return not self.__eq__(other)
 
 #===============================================================================
 # HelasAmplitudeList
@@ -336,7 +589,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         wavefunctions = []
 
         # Generate wavefunctions for the external particles
-        external_wavefunctions = [ HelasWavefunction(leg) for leg \
+        external_wavefunctions = [ HelasWavefunction(leg, 0, model) for leg \
                                    in process.get('legs') ]
         
         incoming_numbers = [ leg.get('number') for leg in filter(lambda leg: \
@@ -354,6 +607,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         helas_diagrams = HelasDiagramList()
 
         for diagram in diagram_list:
+
+            if not optimization:
+                wavefunctions = []
+                wavefunctions.extend(external_wavefunctions)
 
             # Dictionary from leg number to wave function, keeps track
             # of the present position in the tree
@@ -404,16 +661,15 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 # Generate list of mothers from legs
                 mothers = self.getmothers(legs, number_to_wavefunctions,
                                           external_wavefunctions)
-                # Now generate new wavefunction for the last leg
-                wf = HelasWavefunction(last_leg)
-                wf.set('interaction_id',vertex.get('id'))
-                wf.set('mothers', mothers)
-                wf.set('number', len(wavefunctions) + 1)
                 # If wavefunction from incoming particles, flip pdg code
                 # (both for s- and t-channel particle)
                 if last_leg.get('number') in incoming_numbers:
-                    part = model.get('particle_dict')[wf.get('pdg_code')]
-                    wf.set('pdg_code', part.get_anti_pdg_code())
+                    part = model.get('particle_dict')[last_leg.get('id')]
+                    last_leg.set('id', part.get_anti_pdg_code())
+                # Now generate new wavefunction for the last leg
+                wf = HelasWavefunction(last_leg, vertex.get('id'), model)
+                wf.set('mothers', mothers)
+                wf.set('number', len(wavefunctions) + 1)
                 wf.set('state','intermediate')
                 if wf in wavefunctions and optimization:
                     wf = wavefunctions[wavefunctions.index(wf)]
@@ -428,10 +684,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                       external_wavefunctions)
                 
             # Now generate a HelasAmplitude from the last vertex.
-            amp = HelasAmplitude({\
-                'interaction_id': lastvx.get('id'),
-                'mothers': mothers,
-                'number': diagram_list.index(diagram) + 1 })
+            amp = HelasAmplitude(lastvx, model)
+            amp.set('mothers', mothers)
+            amp.set('number', diagram_list.index(diagram) + 1)
 
             # Sort the wavefunctions according to number
             diagram_wavefunctions.sort(lambda wf1, wf2: \

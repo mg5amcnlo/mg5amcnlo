@@ -40,8 +40,19 @@ class HelasWavefunctionTest(unittest.TestCase):
                                                            'number': 2})
         self.mymothers = helas_objects.HelasWavefunctionList([mywavefunction])
         self.mydict = {'pdg_code': 12,
+                       'name': 'none',
+                       'antiname': 'none',
+                       'spin': 1,
+                       'color': 1,
+                       'mass': 'zero',
+                       'width': 'zero',
+                       'is_part': True,
+                       'self_antipart': False,
                        'mothers': self.mymothers,
                        'interaction_id': 2,
+                       'inter_color': [],
+                       'lorentz': [],
+                       'couplings': { (0, 0):'none'},
                        'state': 'initial',
                        'number': 5,
                        'fermionflow': 1}
@@ -121,11 +132,22 @@ class HelasWavefunctionTest(unittest.TestCase):
 
         goal = "{\n"
         goal = goal + "    \'pdg_code\': 12,\n"
-        goal = goal + "    \'mothers\': " + repr(self.mymothers) + ",\n"
+        goal = goal + "    \'name\': \'none\',\n"
+        goal = goal + "    \'antiname\': \'none\',\n"
+        goal = goal + "    \'spin\': 1,\n"
+        goal = goal + "    \'color\': 1,\n"
+        goal = goal + "    \'mass\': 'zero',\n"
+        goal = goal + "    \'width\': 'zero',\n"
+        goal = goal + "    \'is_part\': True,\n"
+        goal = goal + "    \'self_antipart\': False,\n"
         goal = goal + "    \'interaction_id\': 2,\n"
+        goal = goal + "    \'inter_color\': [],\n"
+        goal = goal + "    \'lorentz\': [],\n"
+        goal = goal + "    \'couplings\': {(0, 0): \'none\'},\n"
         goal = goal + "    \'state\': \'initial\',\n"
         goal = goal + "    \'number\': 5,\n"
-        goal = goal + "    \'fermionflow\': 1\n}"
+        goal = goal + "    \'fermionflow\': 1,\n"
+        goal = goal + "    \'mothers\': " + repr(self.mymothers) + "\n}"
 
         self.assertEqual(goal, str(self.mywavefunction))
 
@@ -138,9 +160,9 @@ class HelasWavefunctionTest(unittest.TestCase):
         mywavefunction = copy.copy(self.mywavefunction)
         mywavefunction.set('mothers',mymothers)
         self.assertTrue(self.mywavefunction == mywavefunction)
-        mywavefunction.set('pdg_code', 13)
+        mywavefunction.set('spin', 5)
         self.assertFalse(self.mywavefunction == mywavefunction)
-        mywavefunction.set('pdg_code', self.mywavefunction.get('pdg_code'))
+        mywavefunction.set('spin', self.mywavefunction.get('spin'))
         mywavefunction.set('mothers', helas_objects.HelasWavefunctionList())
         self.assertFalse(self.mywavefunction == mywavefunction)
         mymother.set('number', 4)
@@ -171,12 +193,12 @@ class HelasWavefunctionTest(unittest.TestCase):
         mymother.set('pdg_code',100)
         mywavefunction = copy.copy(self.mywavefunction)
         mywavefunction.set('mothers',mymothers)
-        mywavefunction.set('pdg_code',self.mywavefunction.get('pdg_code') + 1)
+        mywavefunction.set('spin',self.mywavefunction.get('spin') + 1)
 
         wavefunctionlist = helas_objects.HelasWavefunctionList(\
             [copy.copy(wf) for wf in [ mywavefunction ] * 100 ])
         self.assertFalse(self.mywavefunction in wavefunctionlist)
-        mywavefunction.set('pdg_code',self.mywavefunction.get('pdg_code'))
+        mywavefunction.set('spin',self.mywavefunction.get('spin'))
         self.assertFalse(self.mywavefunction in wavefunctionlist)
         wavefunctionlist.append(mywavefunction)
         self.assertTrue(self.mywavefunction in wavefunctionlist)
@@ -194,17 +216,30 @@ class HelasAmplitudeTest(unittest.TestCase):
     def setUp(self):
 
         mydict = {'pdg_code': 10,
-                  'mothers': helas_objects.HelasWavefunctionList(),
+                  'name': 'none',
+                  'antiname': 'none',
+                  'spin': 1,
+                  'color': 1,
+                  'mass': 'zero',
+                  'width': 'zero',
+                  'is_part': True,
+                  'self_antipart': False,
                   'interaction_id': 2,
+                  'inter_color': [],
+                  'lorentz': [],
+                  'couplings': { (0, 0):'none'},
                   'state': 'initial',
+                  'mothers': helas_objects.HelasWavefunctionList(),
                   'number': 5}
-                        
 
         self.mywavefunctions = helas_objects.HelasWavefunctionList(\
             [helas_objects.HelasWavefunction(mydict)] * 3)
 
         self.mydict = {'mothers': self.mywavefunctions,
                        'interaction_id': 2,
+                       'inter_color': [],
+                       'lorentz': [],
+                       'couplings': { (0, 0):'none'},
                        'number': 5}
 
         self.myamplitude = helas_objects.HelasAmplitude(self.mydict)
@@ -278,9 +313,12 @@ class HelasAmplitudeTest(unittest.TestCase):
         """Test amplitude object string representation."""
 
         goal = "{\n"
-        goal = goal + "    \'mothers\': " + repr(self.mywavefunctions) + ",\n"
         goal = goal + "    \'interaction_id\': 2,\n"
-        goal = goal + "    \'number\': 5\n}"
+        goal = goal + "    \'inter_color\': [],\n"
+        goal = goal + "    \'lorentz\': [],\n"
+        goal = goal + "    \'couplings\': {(0, 0): \'none\'},\n"
+        goal = goal + "    \'number\': 5,\n"
+        goal = goal + "    \'mothers\': " + repr(self.mywavefunctions) + "\n}"
 
         self.assertEqual(goal, str(self.myamplitude))
 
@@ -692,62 +730,53 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         wavefunctions1 = helas_objects.HelasWavefunctionList()
         wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 2,
-             'state': 'initial',
-             'number': 1}))
+            myleglist[0], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': -2,
-             'state': 'initial',
-             'number': 2}))
+            myleglist[1], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 21,
-             'state': 'final',
-             'number': 3}))
+            myleglist[2], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 11,
-             'state': 'final',
-             'number': 4}))
+            myleglist[3], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': -11,
-             'state': 'final',
-             'number': 5}))
-        wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 2,
-             'state': 'intermediate',
-             'mothers': helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[0],wavefunctions1[2]]),
-             'interaction_id': 3,
-             'number': 6}))
-        wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 22,
-             'state': 'intermediate',
-             'mothers': helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[3],wavefunctions1[4]]),
-             'interaction_id': 7,
-             'number': 7}))
+            myleglist[4], 0, self.mymodel))
+        wavefunctions1.append(helas_objects.HelasWavefunction())
+        wavefunctions1[5].set('pdg_code', (2, self.mymodel))
+        wavefunctions1[5].set('state', 'intermediate')
+        wavefunctions1[5].set('mothers',
+                              helas_objects.HelasWavefunctionList(\
+                         [wavefunctions1[0],wavefunctions1[2]]))
+        wavefunctions1[5].set('interaction_id', (3, self.mymodel))
+        wavefunctions1[5].set('number', 6)
+        wavefunctions1.append(helas_objects.HelasWavefunction())
+        wavefunctions1[6].set('pdg_code', (22, self.mymodel))
+        wavefunctions1[6].set('state', 'intermediate')
+        wavefunctions1[6].set('mothers', helas_objects.HelasWavefunctionList(
+                         [wavefunctions1[3],wavefunctions1[4]]))
+        wavefunctions1[6].set('interaction_id', (7, self.mymodel))
+        wavefunctions1[6].set('number', 7)
 
         amplitude1 = helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[5], wavefunctions1[1],
                           wavefunctions1[6]]),
-             'interaction_id': 4,
              'number': 1})
+        amplitude1.set('interaction_id', (4, self.mymodel))
 
         wavefunctions2 = helas_objects.HelasWavefunctionList()
-        wavefunctions2.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': -2,
-             'state': 'intermediate',
-             'mothers': helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[1],wavefunctions1[2]]),
-             'interaction_id': 3,
-             'number': 8}))
+        wavefunctions2.append(helas_objects.HelasWavefunction())
+        wavefunctions2[0].set('pdg_code', (-2, self.mymodel))
+        wavefunctions2[0].set('state', 'intermediate')
+        wavefunctions2[0].set('mothers', helas_objects.HelasWavefunctionList(\
+                         [wavefunctions1[1],wavefunctions1[2]]))
+        wavefunctions2[0].set('interaction_id', (3, self.mymodel))
+        wavefunctions2[0].set('number', 8)
 
         amplitude2 = helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[0], wavefunctions2[0],
                           wavefunctions1[6]]),
-             'interaction_id': 4,
              'number': 2})
+        amplitude2.set('interaction_id', (4, self.mymodel))
 
         diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
                                                'amplitude': amplitude1})
@@ -797,90 +826,70 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         wavefunctions1 = helas_objects.HelasWavefunctionList()
         wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 2,
-             'state': 'initial',
-             'number': 1}))
+            myleglist[0], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': -2,
-             'state': 'initial',
-             'number': 2}))
+            myleglist[1], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 21,
-             'state': 'final',
-             'number': 3}))
+            myleglist[2], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 11,
-             'state': 'final',
-             'number': 4}))
+            myleglist[3], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': -11,
-             'state': 'final',
-             'number': 5}))
-        wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 2,
-             'state': 'intermediate',
-             'mothers': helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[0],wavefunctions1[2]]),
-             'interaction_id': 3,
-             'number': 6}))
-        wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 22,
-             'state': 'intermediate',
-             'mothers': helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[3],wavefunctions1[4]]),
-             'interaction_id': 7,
-             'number': 7}))
+            myleglist[4], 0, self.mymodel))
+        wavefunctions1.append(helas_objects.HelasWavefunction())
+        wavefunctions1[5].set('pdg_code', (2, self.mymodel))
+        wavefunctions1[5].set('state', 'intermediate')
+        wavefunctions1[5].set('mothers',
+                              helas_objects.HelasWavefunctionList(\
+                         [wavefunctions1[0],wavefunctions1[2]]))
+        wavefunctions1[5].set('interaction_id', (3, self.mymodel))
+        wavefunctions1[5].set('number', 6)
+        wavefunctions1.append(helas_objects.HelasWavefunction())
+        wavefunctions1[6].set('pdg_code', (22, self.mymodel))
+        wavefunctions1[6].set('state', 'intermediate')
+        wavefunctions1[6].set('mothers', helas_objects.HelasWavefunctionList(
+                         [wavefunctions1[3],wavefunctions1[4]]))
+        wavefunctions1[6].set('interaction_id', (7, self.mymodel))
+        wavefunctions1[6].set('number', 7)
 
         amplitude1 = helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[5], wavefunctions1[1],
                           wavefunctions1[6]]),
-             'interaction_id': 4,
              'number': 1})
+        amplitude1.set('interaction_id', (4, self.mymodel))
 
         wavefunctions2 = helas_objects.HelasWavefunctionList()
         wavefunctions2.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 2,
-             'state': 'initial',
-             'number': 1}))
+            myleglist[0], 0, self.mymodel))
         wavefunctions2.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': -2,
-             'state': 'initial',
-             'number': 2}))
+            myleglist[1], 0, self.mymodel))
         wavefunctions2.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 21,
-             'state': 'final',
-             'number': 3}))
+            myleglist[2], 0, self.mymodel))
         wavefunctions2.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 11,
-             'state': 'final',
-             'number': 4}))
+            myleglist[3], 0, self.mymodel))
         wavefunctions2.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': -11,
-             'state': 'final',
-             'number': 5}))
-        wavefunctions2.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': -2,
-             'state': 'intermediate',
-             'mothers': helas_objects.HelasWavefunctionList(\
-                         [wavefunctions2[1],wavefunctions2[2]]),
-             'interaction_id': 3,
-             'number': 6}))
-        wavefunctions2.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 22,
-             'state': 'intermediate',
-             'mothers': helas_objects.HelasWavefunctionList(\
-                         [wavefunctions2[3],wavefunctions2[4]]),
-             'interaction_id': 7,
-             'number': 7}))
-
+            myleglist[4], 0, self.mymodel))
+        wavefunctions2.append(helas_objects.HelasWavefunction())
+        wavefunctions2[5].set('pdg_code', (-2, self.mymodel))
+        wavefunctions2[5].set('state', 'intermediate')
+        wavefunctions2[5].set('mothers', helas_objects.HelasWavefunctionList(\
+                         [wavefunctions1[1],wavefunctions1[2]]))
+        wavefunctions2[5].set('interaction_id', (3, self.mymodel))
+        wavefunctions2[5].set('number', 6)
+        wavefunctions2.append(helas_objects.HelasWavefunction())
+        wavefunctions2[6].set('pdg_code', (22, self.mymodel))
+        wavefunctions2[6].set('state', 'intermediate')
+        wavefunctions2[6].set('mothers', helas_objects.HelasWavefunctionList(
+                         [wavefunctions1[3],wavefunctions1[4]]))
+        wavefunctions2[6].set('interaction_id', (7, self.mymodel))
+        wavefunctions2[6].set('number', 7)
 
         amplitude2 = helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
                          [wavefunctions2[0], wavefunctions2[5],
                           wavefunctions2[6]]),
-             'interaction_id': 4,
              'number': 2})
+        amplitude2.set('interaction_id', (4, self.mymodel))
 
         diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
                                                'amplitude': amplitude1})
@@ -895,76 +904,6 @@ class HelasMatrixElementTest(unittest.TestCase):
             0)
         
         self.assertEqual(matrix_element.get('diagrams'), diagrams)
-
-    def test_generate_helas_diagrams_uux_epem(self):
-        """Testing the helas diagram generation based on Diagrams
-        using the processes u u~ > e+ e-
-        """
-
-        # Test u u~ > e+ e-
-
-        myleglist = base_objects.LegList()
-
-        myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
-        myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':'initial'}))
-        myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
-        myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'final'}))
-
-        myproc = base_objects.Process({'legs':myleglist,
-                                       'model':self.mymodel})
-
-        myamplitude = diagram_generation.Amplitude({'process': myproc})
-
-        goal = "1 diagrams:\n"
-        goal = goal + "  ((1,2>1,id:4),(3,4>3,id:7),(1,3,id:0))"
-
-        self.assertEqual(goal,
-                         myamplitude.get('diagrams').nice_string())
-
-        wavefunctions1 = helas_objects.HelasWavefunctionList()
-        wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 2,
-             'state': 'initial',
-             'number': 1}))
-        wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': -2,
-             'state': 'initial',
-             'number': 2}))
-        wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 11,
-             'state': 'final',
-             'number': 3}))
-        wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': -11,
-             'state': 'final',
-             'number': 4}))
-        wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 22,
-             'state': 'intermediate',
-             'mothers': helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[0],wavefunctions1[1]]),
-             'interaction_id': 4,
-             'number': 5}))
-
-        amplitude1 = helas_objects.HelasAmplitude({\
-             'mothers': helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[4], wavefunctions1[2],
-                          wavefunctions1[3]]),
-             'interaction_id': 7,
-             'number': 1})
-
-        diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
-                                               'amplitude': amplitude1})
-
-        mydiagrams = helas_objects.HelasDiagramList([diagram1])
-
-        matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
-        
-        self.assertEqual(matrix_element.get('diagrams'), mydiagrams)
 
     def test_generate_helas_diagrams_ae_ae(self):
         """Testing the helas diagram generation based on Diagrams
@@ -998,54 +937,50 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         wavefunctions1 = helas_objects.HelasWavefunctionList()
         wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 22,
-             'state': 'initial',
-             'number': 1}))
+            myleglist[0], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 11,
-             'state': 'initial',
-             'number': 2}))
+            myleglist[1], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 22,
-             'state': 'final',
-             'number': 3}))
+            myleglist[2], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 11,
-             'state': 'final',
-             'number': 4}))
+            myleglist[3], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 11,
-             'state': 'intermediate',
-             'mothers': helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[0],wavefunctions1[1]]),
-             'interaction_id': 7,
-             'number': 5}))
+            myleglist[1], 7, self.mymodel))
+        wavefunctions1[4].set('state', 'intermediate')
+        wavefunctions1[4].set('mothers',
+                              helas_objects.HelasWavefunctionList(\
+                         [wavefunctions1[0],wavefunctions1[1]]))
+        wavefunctions1[4].set('number', 5)
 
         amplitude1 = helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[4], wavefunctions1[2],
                           wavefunctions1[3]]),
-             'interaction_id': 7,
              'number': 1})
+        amplitude1.set('interaction_id', (7, self.mymodel))
 
         diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
                                                'amplitude': amplitude1})
 
         wavefunctions2 = helas_objects.HelasWavefunctionList()
+        
         wavefunctions2.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': -11, # This is what comes out for t-channel; is this right?
-             'state': 'intermediate',
-             'mothers': helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[0],wavefunctions1[3]]),
-             'interaction_id': 7,
-             'number': 6}))
-
+            # -11 is what comes out of algorithm - don't know if right
+            base_objects.Leg({'id': -11, 'state': 'initial'}),
+                              7, self.mymodel))
+        wavefunctions2[0].set('state', 'intermediate')
+        wavefunctions2[0].set('mothers',
+                              helas_objects.HelasWavefunctionList(\
+                         [wavefunctions1[0],wavefunctions1[3]]))
+        wavefunctions2[0].set('number', 6)
+        
         amplitude2 = helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
                          [wavefunctions2[0], wavefunctions1[1],
                           wavefunctions1[2]]),
              'interaction_id': 7,
              'number': 2})
+        amplitude2.set('interaction_id', (7, self.mymodel))
 
         diagram2 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions2,
                                                'amplitude': amplitude2})
@@ -1088,58 +1023,53 @@ class HelasMatrixElementTest(unittest.TestCase):
         
         wavefunctions1 = helas_objects.HelasWavefunctionList()
         wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 11,
-             'state': 'initial',
-             'number': 1}))
+            myleglist[0], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 22,
-             'state': 'initial',
-             'number': 2}))
+            myleglist[1], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 22,
-             'state': 'final',
-             'number': 3}))
+            myleglist[2], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 11,
-             'state': 'final',
-             'number': 4}))
+            myleglist[3], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 11,
-             'state': 'intermediate',
-             'mothers': helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[0],wavefunctions1[1]]),
-             'interaction_id': 7,
-             'number': 5}))
+            myleglist[0], 7, self.mymodel))
+        wavefunctions1[4].set('state', 'intermediate')
+        wavefunctions1[4].set('mothers',
+                              helas_objects.HelasWavefunctionList(\
+                         [wavefunctions1[0],wavefunctions1[1]]))
+        wavefunctions1[4].set('number', 5)
 
         amplitude1 = helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[4], wavefunctions1[2],
                           wavefunctions1[3]]),
-             'interaction_id': 7,
              'number': 1})
+        amplitude1.set('interaction_id', (7, self.mymodel))
 
         diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
                                                'amplitude': amplitude1})
 
         wavefunctions2 = helas_objects.HelasWavefunctionList()
+        
         wavefunctions2.append(helas_objects.HelasWavefunction(\
-            {'pdg_code': 11, # This is what comes out for t-channel; is this right?
-             'state': 'intermediate',
-             'mothers': helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[0],wavefunctions1[2]]),
-             'interaction_id': 7,
-             'number': 6}))
-
+            # 11 is what comes out of algorithm - don't know if right
+            base_objects.Leg({'id': 11, 'state': 'initial'}),
+                              7, self.mymodel))
+        wavefunctions2[0].set('state', 'intermediate')
+        wavefunctions2[0].set('mothers',
+                              helas_objects.HelasWavefunctionList(\
+                         [wavefunctions1[0],wavefunctions1[2]]))
+        wavefunctions2[0].set('number', 6)
+        
         amplitude2 = helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
                          [wavefunctions2[0], wavefunctions1[1],
                           wavefunctions1[3]]),
              'interaction_id': 7,
              'number': 2})
+        amplitude2.set('interaction_id', (7, self.mymodel))
 
         diagram2 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions2,
                                                'amplitude': amplitude2})
-
         mydiagrams = helas_objects.HelasDiagramList([diagram1, diagram2])
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
