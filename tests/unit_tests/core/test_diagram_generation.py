@@ -1358,7 +1358,8 @@ class MultiparticleTest(unittest.TestCase):
             
             amplitudes = diagram_generation.AmplitudeList(my_multiprocess)
 
-            self.assertEqual(len(amplitudes),goal_number_processes[nfs - 2])
+            if nfs <= 2:
+                self.assertEqual(len(amplitudes),goal_number_processes[nfs - 2])
             
             amplitudes.generate_amplitudes()
 
@@ -1372,9 +1373,8 @@ class MultiparticleTest(unittest.TestCase):
             if nfs <= 2:
                 self.assertEqual(valid_procs, goal_valid_procs[nfs - 2])
 
-            #print 'pp > ',nfs,'j (p,j = ', \
-            #      p,'):'
-            #print 'Valid processes: ',nproc
+            #print 'pp > ',nfs,'j (p,j = ', p, '):'
+            #print 'Valid processes: ',len(filter(lambda item: item[1] > 0, valid_procs))
             #print 'Attempted processes: ',len(amplitudes)
 
     def test_multiparticle_pp_nj_with_full_crossing(self):
