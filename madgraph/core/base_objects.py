@@ -19,7 +19,6 @@ interaction, model, leg, vertex, process, ..."""
 import copy
 import logging
 import re
-import itertools
 
 #===============================================================================
 # PhysicsObject
@@ -403,15 +402,29 @@ class Interaction(PhysicsObject):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid integer" % str(value[order])
 
-        if name in ['color', 'lorentz']:
-            #Should be a list of strings
+        if name in ['color']:
+            #Should be a list of list strings
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list of list" % str(value)
+            for mylist in value:
+                if not isinstance(mylist, list):
+                    raise self.PhysicsObjectError, \
+                            "%s is not a valid list of list" % str(value)
+                for mystr in mylist:
+                    if not isinstance(mystr, str):
+                        raise self.PhysicsObjectError, \
+                            "%s is not a valid string" % str(mystr)
+
+        if name in ['lorentz']:
+            #Should be a list of list strings
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list of strings" % str(value)
-#            for mystr in value:
-#                if not isinstance(mystr, str):
-#                    raise self.PhysicsObjectError, \
-#                        "%s is not a valid string" % str(mystr)
+            for mystr in value:
+                if not isinstance(mystr, str):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid string" % str(mystr)
 
         if name == 'couplings':
             #Should be a dictionary of strings with (i,j) keys
@@ -419,11 +432,6 @@ class Interaction(PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid dictionary for couplings" % \
                                                                 str(value)
-
-#            if len(value) != len(self['color']) * len(self['lorentz']):
-#                raise self.PhysicsObjectError, \
-#                        "Dictionary " + str(value) + \
-#                        " for couplings has not the right number of entry"
 
             for key in value.keys():
                 if not isinstance(key, tuple):
@@ -456,12 +464,11 @@ class Interaction(PhysicsObject):
         the reference dictionaries (for n>0 and n-1>1)"""
 
         # Create n>0 entries. Format is (p1,p2,p3,...):interaction_id.
+        # We are interested in the unordered list, so use sorted()
 
-        for permut in itertools.permutations(self['particles'],
-                                             len(self['particles'])):
-            pdg_tuple = tuple([p.get_pdg_code() for p in permut])
-            if pdg_tuple not in ref_dict_to0.keys():
-                ref_dict_to0[pdg_tuple] = self['id']
+        pdg_tuple = tuple(sorted([p.get_pdg_code() for p in self['particles']]))
+        if pdg_tuple not in ref_dict_to0.keys():
+            ref_dict_to0[pdg_tuple] = self['id']
 
         # Create n-1>1 entries. Note that, in the n-1 > 1 dictionary,
         # the n-1 entries should have opposite sign as compared to
@@ -475,17 +482,14 @@ class Interaction(PhysicsObject):
             short_part_list = copy.copy(self['particles'])
             short_part_list.remove(part)
 
-            # Add all permutations
-            for permut in itertools.permutations(short_part_list,
-                                                 len(short_part_list)):
-                # Add interaction permutation
-                pdg_tuple = tuple([p.get_anti_pdg_code() for p in permut])
-                pdg_part = part.get_pdg_code()
-                if pdg_tuple in ref_dict_to1.keys():
-                    if (pdg_part, self['id']) not in  ref_dict_to1[pdg_tuple]:
-                        ref_dict_to1[pdg_tuple].append((pdg_part, self['id']))
-                else:
-                    ref_dict_to1[pdg_tuple] = [(pdg_part, self['id'])]
+            # We are interested in the unordered list, so use sorted()
+            pdg_tuple = tuple(sorted([p.get_anti_pdg_code() for p in short_part_list]))
+            pdg_part = part.get_pdg_code()
+            if pdg_tuple in ref_dict_to1.keys():
+                if (pdg_part, self['id']) not in  ref_dict_to1[pdg_tuple]:
+                    ref_dict_to1[pdg_tuple].append((pdg_part, self['id']))
+            else:
+                ref_dict_to1[pdg_tuple] = [(pdg_part, self['id'])]
 
     def __str__(self):
         """String representation of an interaction. Outputs valid Python 
@@ -732,7 +736,7 @@ class LegList(PhysicsObjectList):
         """If has at least one 'from_group' True and in ref_dict_to1,
            return the return list from ref_dict_to1, otherwise return False"""
         if self.minimum_one_from_group():
-            return ref_dict_to1.has_key(tuple([leg.get('id') for leg in self]))
+            return ref_dict_to1.has_key(tuple(sorted([leg.get('id') for leg in self])))
         else:
             return False
 
@@ -741,7 +745,7 @@ class LegList(PhysicsObjectList):
            return the vertex (with id from ref_dict_to0), otherwise return None
            """
         if self.minimum_two_from_group():
-            return ref_dict_to0.has_key(tuple([leg.get('id') for leg in self]))
+            return ref_dict_to0.has_key(tuple(sorted([leg.get('id') for leg in self])))
         else:
             return False
 

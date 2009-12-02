@@ -245,7 +245,7 @@ class InteractionTest(unittest.TestCase):
 
         self.mydict = {'id': 1,
                        'particles': base_objects.ParticleList([self.mypart] * 4),
-                       'color': ['C1', 'C2'],
+                       'color': [['C1', 'C2'], ['C3']],
                        'lorentz':['L1', 'L2'],
                        'couplings':{(0, 0):'g00',
                                     (0, 1):'g01',
@@ -312,7 +312,7 @@ class InteractionTest(unittest.TestCase):
                                       base_objects.ParticleList([self.mypart] * 3)],
                         'wrong_list':[1, 'x ', [self.mypart, 1], [1, 2]]},
                        {'prop':'color',
-                        'right_list':[[], ['C1'], ['C1', 'C2']],
+                        'right_list':[[], [['C1']], [['C1', 'C2'], ['C3']]],
                         'wrong_list':[1, 'a', ['a', 1]]},
                        {'prop':'lorentz',
                         'right_list':[[], ['L1'], ['L1', 'L2']],
@@ -329,9 +329,7 @@ class InteractionTest(unittest.TestCase):
                         'wrong_list':[{(0):'g00', (0, 1):'g01',
                                        (1, 0):'g10', (1, 2):'g11'},
                                       {(0, 0):'g00', (0, 1):'g01',
-                                       (1, 0):'g10', (1, 2):'g11'},
-                                      {(0, 0):'g00', (0, 1):'g01',
-                                       (1, 0):'g10'}]}
+                                       (1, 0):'g10', (1, 2):'g11'}]}
                        ]
 
         mytestinter = self.myinter
@@ -349,7 +347,7 @@ class InteractionTest(unittest.TestCase):
         goal = goal + "    \'id\': %d,\n" % self.myinter['id']
         goal = goal + "    \'particles\': [%s],\n" % \
                             ','.join([str(self.mypart.get_pdg_code())]*4)
-        goal = goal + "    \'color\': [\'C1\', \'C2\'],\n"
+        goal = goal + "    \'color\': [[\'C1\', \'C2\'], [\'C3\']],\n"
         goal = goal + "    \'lorentz\': [\'L1\', \'L2\'],\n"
         goal = goal + "    \'couplings\': %s,\n" % \
                                     repr(self.myinter['couplings'])
@@ -383,30 +381,7 @@ class InteractionTest(unittest.TestCase):
 
         myinter.generate_dict_entries(ref_dict_to0, ref_dict_to1)
 
-        goal_ref_dict_to0 = { (1, -2, 3, 4):0,
-                          (1, -2, 4, 3):0,
-                          (1, 3, -2, 4):0,
-                          (1, 3, 4, -2):0,
-                          (1, 4, -2, 3):0,
-                          (1, 4, 3, -2):0,
-                          (-2, 1, 3, 4):0,
-                          (-2, 1, 4, 3):0,
-                          (-2, 3, 1, 4):0,
-                          (-2, 3, 4, 1):0,
-                          (-2, 4, 1, 3):0,
-                          (-2, 4, 3, 1):0,
-                          (3, 1, -2, 4):0,
-                          (3, 1, 4, -2):0,
-                          (3, -2, 1, 4):0,
-                          (3, -2, 4, 1):0,
-                          (3, 4, 1, -2):0,
-                          (3, 4, -2, 1):0,
-                          (4, 1, -2, 3):0,
-                          (4, 1, 3, -2):0,
-                          (4, -2, 1, 3):0,
-                          (4, -2, 3, 1):0,
-                          (4, 3, 1, -2):0,
-                          (4, 3, -2, 1):0}
+        goal_ref_dict_to0 = { (-2, 1, 3, 4):0}
 
         self.assertEqual(ref_dict_to0, goal_ref_dict_to0)
 
@@ -420,12 +395,7 @@ class InteractionTest(unittest.TestCase):
                                                               part3]))
         myinterlist.append(add_inter)
 
-        goal_ref_dict_to0[(1, -2, 3)] = 0
-        goal_ref_dict_to0[(1, 3, -2)] = 0
         goal_ref_dict_to0[(-2, 1, 3)] = 0
-        goal_ref_dict_to0[(-2, 3, 1)] = 0
-        goal_ref_dict_to0[(3, 1, -2)] = 0
-        goal_ref_dict_to0[(3, -2, 1)] = 0
 
         self.assertEqual(myinterlist.generate_ref_dict()[0], goal_ref_dict_to0)
 
@@ -455,30 +425,10 @@ class InteractionTest(unittest.TestCase):
 
         myinter.generate_dict_entries(ref_dict_to0, ref_dict_to1)
 
-        goal_ref_dict_to1 = {(2, -3, 4):[(1, 0)],
-                            (2, 4, -3):[(1, 0)],
-                            (-3, 2, 4):[(1, 0)],
-                            (-3, 4, 2):[(1, 0)],
-                            (4, 2, -3):[(1, 0)],
-                            (4, -3, 2):[(1, 0)],
-                            (-1, -3, 4):[(-2, 0)],
-                            (-1, 4, -3):[(-2, 0)],
+        goal_ref_dict_to1 = {(-3, 2, 4):[(1, 0)],
                             (-3, -1, 4):[(-2, 0)],
-                            (-3, 4, -1):[(-2, 0)],
-                            (4, -1, -3):[(-2, 0)],
-                            (4, -3, -1):[(-2, 0)],
                             (-1, 2, 4):[(3, 0)],
-                            (-1, 4, 2):[(3, 0)],
-                            (2, -1, 4):[(3, 0)],
-                            (2, 4, -1):[(3, 0)],
-                            (4, -1, 2):[(3, 0)],
-                            (4, 2, -1):[(3, 0)],
-                            (-1, 2, -3):[(4, 0)],
-                            (-1, -3, 2):[(4, 0)],
-                            (2, -1, -3):[(4, 0)],
-                            (2, -3, -1):[(4, 0)],
-                            (-3, -1, 2):[(4, 0)],
-                            (-3, 2, -1):[(4, 0)]}
+                            (-3, -1, 2):[(4, 0)]}
 
         self.assertEqual(ref_dict_to1, goal_ref_dict_to1)
 
@@ -493,9 +443,6 @@ class InteractionTest(unittest.TestCase):
         myinterlist.append(add_inter)
 
         goal_ref_dict_to1[(-1, 2)] = [(3, 0)]
-        goal_ref_dict_to1[(-1, -3)] = [(-2, 0)]
-        goal_ref_dict_to1[(2, -1)] = [(3, 0)]
-        goal_ref_dict_to1[(2, -3)] = [(1, 0)]
         goal_ref_dict_to1[(-3, -1)] = [(-2, 0)]
         goal_ref_dict_to1[(-3, 2)] = [(1, 0)]
 
