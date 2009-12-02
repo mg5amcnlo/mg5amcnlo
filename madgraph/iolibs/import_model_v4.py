@@ -158,8 +158,8 @@ def read_interactions_v4(fsock, ref_part_list):
                 # Give a dummy 'guess' values for color and Lorentz structures
                 # Those will have to be replaced by a proper guess!
 
-                myinter.set('color', ['guess'])
-                myinter.set('lorentz', ['guess'])
+                myinter.set('color', [['C1']])
+                myinter.set('lorentz', ['L1'])
 
                 # Use the other strings to fill variable names and tags
                 myinter.set('couplings', {(0, 0):values[len(part_list)]})

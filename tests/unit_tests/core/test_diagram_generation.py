@@ -230,7 +230,7 @@ class DiagramGenerationTest(unittest.TestCase):
                       'id': 1,
                       'particles': base_objects.ParticleList(\
                                             [self.mypartlist[0]] * 3),
-                      'color': ['C1'],
+                      'color': [['C1']],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'G'},
                       'orders':{'QCD':1}}))
@@ -240,7 +240,7 @@ class DiagramGenerationTest(unittest.TestCase):
                       'id': 2,
                       'particles': base_objects.ParticleList(\
                                             [self.mypartlist[0]] * 4),
-                      'color': ['C1'],
+                      'color': [['C1']],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'G^2'},
                       'orders':{'QCD':2}}))
@@ -252,7 +252,7 @@ class DiagramGenerationTest(unittest.TestCase):
                                             [self.mypartlist[1], \
                                              antiu, \
                                              self.mypartlist[0]]),
-                      'color': ['C1'],
+                      'color': [['C1']],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
@@ -263,7 +263,7 @@ class DiagramGenerationTest(unittest.TestCase):
                                             [self.mypartlist[1], \
                                              antiu, \
                                              self.mypartlist[3]]),
-                      'color': ['C1'],
+                      'color': [['C1']],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -274,7 +274,7 @@ class DiagramGenerationTest(unittest.TestCase):
                                             [self.mypartlist[2], \
                                              antid, \
                                              self.mypartlist[0]]),
-                      'color': ['C1'],
+                      'color': [['C1']],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
@@ -285,7 +285,7 @@ class DiagramGenerationTest(unittest.TestCase):
                                             [self.mypartlist[2], \
                                              antid, \
                                              self.mypartlist[3]]),
-                      'color': ['C1'],
+                      'color': [['C1']],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -298,7 +298,7 @@ class DiagramGenerationTest(unittest.TestCase):
                                             [self.mypartlist[4], \
                                              antie, \
                                              self.mypartlist[3]]),
-                      'color': ['C1'],
+                      'color': [['C1']],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -903,7 +903,7 @@ class DiagramGenerationTest(unittest.TestCase):
 
         mypartlist = base_objects.ParticleList();
         myinterlist = base_objects.InteractionList();
-        
+
         # A quark U and its antiparticle
         mypartlist.append(base_objects.Particle({'name':'u',
                       'antiname':'u~',
@@ -919,7 +919,7 @@ class DiagramGenerationTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        u = mypartlist[len(mypartlist)-1]
+        u = mypartlist[len(mypartlist) - 1]
         antiu = copy.copy(u)
         antiu.set('is_part', False)
 
@@ -938,7 +938,7 @@ class DiagramGenerationTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        d = mypartlist[len(mypartlist)-1]
+        d = mypartlist[len(mypartlist) - 1]
         antid = copy.copy(d)
         antid.set('is_part', False)
 
@@ -957,8 +957,8 @@ class DiagramGenerationTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        
-        eminus = mypartlist[len(mypartlist)-1]
+
+        eminus = mypartlist[len(mypartlist) - 1]
         eplus = copy.copy(eminus)
         eplus.set('is_part', False)
 
@@ -977,7 +977,7 @@ class DiagramGenerationTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        nue = mypartlist[len(mypartlist)-1]
+        nue = mypartlist[len(mypartlist) - 1]
         nuebar = copy.copy(nue)
         nuebar.set('is_part', False)
 
@@ -997,7 +997,7 @@ class DiagramGenerationTest(unittest.TestCase):
                       'is_part':True,
                       'self_antipart':False}))
 
-        wplus = mypartlist[len(mypartlist)-1]
+        wplus = mypartlist[len(mypartlist) - 1]
         wminus = copy.copy(wplus)
         wminus.set('is_part', False)
 
@@ -1009,7 +1009,7 @@ class DiagramGenerationTest(unittest.TestCase):
                                             [antid, \
                                              u, \
                                              wminus]),
-                      'color': ['C1'],
+                      'color': [['C1']],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -1022,7 +1022,7 @@ class DiagramGenerationTest(unittest.TestCase):
                                             [antiu, \
                                              d, \
                                              wplus]),
-                      'color': ['C1'],
+                      'color': [['C1']],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -1035,7 +1035,7 @@ class DiagramGenerationTest(unittest.TestCase):
                                             [nuebar, \
                                              eminus, \
                                              wplus]),
-                      'color': ['C1'],
+                      'color': [['C1']],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))

@@ -31,8 +31,6 @@ class ColorAmpTest(unittest.TestCase):
     mypartlist = base_objects.ParticleList()
     myinterlist = base_objects.InteractionList()
     mymodel = base_objects.Model()
-    myprocess = base_objects.Process()
-    myamplitude = diagram_generation.Amplitude()
 
     def setUp(self):
         # A gluon
@@ -108,6 +106,9 @@ class ColorAmpTest(unittest.TestCase):
         self.mymodel.set('particles', self.mypartlist)
         self.mymodel.set('interactions', self.myinterlist)
 
+    def test_colorize_uu_gg(self):
+        """Test the colorize function for uu~ > gg"""
+
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':-2,
@@ -118,34 +119,88 @@ class ColorAmpTest(unittest.TestCase):
         myleglist.extend([base_objects.Leg({'id':21,
                                             'state':'final'})] * 2)
 
-        self.myprocess = base_objects.Process({'legs':myleglist,
+        myprocess = base_objects.Process({'legs':myleglist,
                                         'model':self.mymodel})
 
-        self.myamplitude.set('process', self.myprocess)
+        myamplitude = diagram_generation.Amplitude()
 
-        self.myamplitude.generate_diagrams()
+        myamplitude.set('process', myprocess)
 
-    def test_colorize(self):
-        """Test the colorize function"""
+        myamplitude.generate_diagrams()
 
-        col_str = color_amp.colorize(self.myamplitude['diagrams'][0],
+        # S channel
+        col_fact = color_amp.colorize(myamplitude['diagrams'][0],
                                      self.mymodel)
 
-        goal_str = color_algebra.ColorString(['T(-1,2,1)',
-                                              'f(-1,3,4)'])
+        goal_fact = color_algebra.ColorFactor([\
+                            color_algebra.ColorString(['T(-100,2,1)',
+                                              'f(3,4,-100)'])])
 
-        self.assertEqual(col_str, goal_str)
+        self.assertEqual(col_fact, goal_fact)
+
+        # T channel
+        col_fact = color_amp.colorize(myamplitude['diagrams'][1],
+                                     self.mymodel)
+
+        goal_fact = color_algebra.ColorFactor([\
+                            color_algebra.ColorString(['T(3,-100,1)',
+                                              'T(4,2,-100)'])])
+
+        self.assertEqual(col_fact, goal_fact)
+
+        # U channel
+        col_fact = color_amp.colorize(myamplitude['diagrams'][2],
+                                     self.mymodel)
+
+        goal_fact = color_algebra.ColorFactor([\
+                            color_algebra.ColorString(['T(4,-100,1)',
+                                              'T(3,2,-100)'])])
+
+        self.assertEqual(col_fact, goal_fact)
+
+    def test_colorize_uu_ggg(self):
+        """Test the colorize function for uu~ > ggg"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':'initial'}))
+
+        myleglist.extend([base_objects.Leg({'id':21,
+                                            'state':'final'})] * 3)
+
+        myprocess = base_objects.Process({'legs':myleglist,
+                                        'model':self.mymodel})
+
+        myamplitude = diagram_generation.Amplitude()
+
+        myamplitude.set('process', myprocess)
+
+        myamplitude.generate_diagrams()
+
+        # 
+        for diag in myamplitude['diagrams']:
+            print diag.nice_string()
+        col_fact = color_amp.colorize(myamplitude['diagrams'][0],
+                                     self.mymodel)
+
+        goal_fact = color_algebra.ColorFactor([\
+                            color_algebra.ColorString(['T(-100,2,1)',
+                                              'f(3,4,-100)'])])
+
+        self.assertEqual(col_fact, goal_fact)
 
     def test_replace_index(self):
         """Test the color index replacement"""
 
-        my_col_str = color_algebra.ColorString(['T(-1,2,1)',
-                                              'f(-1,3,4)'])
+        my_col_str = 'T(-1,2,1)f(-1,3,4)'
 
-        out_str = color_amp.replace_index(my_col_str,
-                                          [100, 101, 102, 103, 104])
+        my_col_str = color_amp.replace_index(my_col_str, 1, 101)
+        my_col_str = color_amp.replace_index(my_col_str, 2, 102)
+        my_col_str = color_amp.replace_index(my_col_str, 3, 103)
+        my_col_str = color_amp.replace_index(my_col_str, 4, 104)
 
-        self.assertEqual(out_str,
-                         color_algebra.ColorString(['T(-1,102,101)',
-                                              'f(-1,103,104)']))
+        self.assertEqual(my_col_str, 'T(-1,102,101)f(-1,103,104)')
 
