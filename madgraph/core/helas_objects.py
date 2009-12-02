@@ -62,8 +62,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['lorentz'] = []
         self['couplings'] = { (0, 0):'none'}
         # Properties relating to the leg/vertex
-        self['state'] = 'initial'
+        self['state'] = 'incoming'
         self['mothers'] = HelasWavefunctionList()
+        self['number_external'] = 0
         self['number'] = 0
         self['fermionflow'] = 1
         
@@ -77,10 +78,31 @@ class HelasWavefunction(base_objects.PhysicsObject):
                    isinstance(arguments[1], int) and \
                    isinstance(arguments[2], base_objects.Model):
                 super(HelasWavefunction, self).__init__()
-                self.set('pdg_code', (arguments[0].get('id'),arguments[2]))
-                self.set('number', arguments[0].get('number'))
-                self.set('state', arguments[0].get('state'))
-                self.set('interaction_id', (arguments[1], arguments[2]))
+                leg = arguments[0]
+                interaction_id = arguments[1]
+                model = arguments[2]
+                self.set('pdg_code', leg.get('id'), model)
+                self.set('number_external', leg.get('number'))
+                self.set('number', leg.get('number'))
+                # Set fermion flow state. Initial particle and final
+                # antiparticle are incoming, and vice versa for
+                # outgoing
+                if leg.get('state') == 'initial' and \
+                   self.get('is_part') or \
+                   leg.get('state') == 'final' and \
+                   not self.get('is_part'):
+                    self.set('state', 'incoming')
+                else:
+                    self.set('state', 'outgoing')
+                # For boson, set state to intermediate
+                # If initial state, flip PDG code (if has antipart)
+                # since all bosons should be treated as outgoing
+                if self.get('spin') % 2 == 1:
+                    self.set('state', 'intermediate')
+                    if leg.get('state') == 'initial' and \
+                           not self.get('self_antipart'):
+                        self.set('pdg_code', -self.get('pdg_code'), model)
+                self.set('interaction_id', interaction_id, model)
         elif arguments:
             super(HelasWavefunction, self).__init__(arguments[0])
         else:
@@ -183,9 +205,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid string for wavefunction state" % \
                                                                     str(value)
-            if value not in ['initial', 'final', 'intermediate']:
+            if value not in ['incoming', 'outgoing', 'intermediate']:
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid wavefunction state (initial|final|intermediate)" % \
+                        "%s is not a valid wavefunction state (incoming|outgoing|intermediate)" % \
                                                                     str(value)
         if name == 'fermionflow':
             if not isinstance(value, int):
@@ -195,7 +217,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid fermionflow (must be -1, 0 or 1)" % str(value)                
 
-        if name == 'number':
+        if name in ['number_external', 'number']:
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid integer for wavefunction number" % str(value)
@@ -208,41 +230,46 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return True
 
-    def set(self, name, value):
+    # Enhanced set function, where we can append a model
+
+    def set(self, *arguments):
         """When setting interaction_id, if model is given (in tuple),
         set all other interaction properties. When setting pdg_code,
         if model is given, set all other particle properties."""
 
-        if name == 'interaction_id' and isinstance(value, tuple):
-            if len(value) < 2 or not isinstance(value[0], int) or \
-               not isinstance(value[1], base_objects.Model):
+        if len(arguments) < 2:
+            raise self.PhysicsObjectError, \
+                  "Too few arguments for set"
+
+        name = arguments[0]
+        value = arguments[1]
+        
+        if len(arguments) > 2 and \
+               isinstance(value, int) and \
+               isinstance(arguments[2], base_objects.Model):
+            if name == 'interaction_id':
+                self.set('interaction_id', value)
+                if value > 0:
+                    inter = arguments[2].get('interaction_dict')[value]
+                    self.set('inter_color', inter.get('color'))
+                    self.set('lorentz', inter.get('lorentz'))
+                    self.set('couplings', inter.get('couplings'))
+                return True
+            elif name == 'pdg_code':
+                self.set('pdg_code', value)
+                part = arguments[2].get('particle_dict')[value]
+                self.set('name', part.get('name'))
+                self.set('antiname', part.get('antiname'))
+                self.set('spin', part.get('spin'))
+                self.set('color', part.get('color'))
+                self.set('mass', part.get('mass'))
+                self.set('width', part.get('width'))
+                self.set('is_part', part.get('is_part'))
+                self.set('self_antipart', part.get('self_antipart'))
+                return True
+            else:
                 raise self.PhysicsObjectError, \
-                      "%s is not a valid (interaction id, model) tuple" % \
-                      str(value)
-            self.set('interaction_id', value[0])
-            if value[0] > 0:
-                inter = value[1].get('interaction_dict')[value[0]]
-                self.set('inter_color', inter.get('color'))
-                self.set('lorentz', inter.get('lorentz'))
-                self.set('couplings', inter.get('couplings'))
-            return True
-        elif name == 'pdg_code' and isinstance(value, tuple):
-            if len(value) < 2 or not isinstance(value[0], int) or \
-               not isinstance(value[1], base_objects.Model):
-                raise self.PhysicsObjectError, \
-                      "%s is not a valid (pdg code, model) tuple" % \
-                      str(value)
-            self.set('pdg_code', value[0])
-            part = value[1].get('particle_dict')[value[0]]
-            self.set('name', part.get('name'))
-            self.set('antiname', part.get('antiname'))
-            self.set('spin', part.get('spin'))
-            self.set('color', part.get('color'))
-            self.set('mass', part.get('mass'))
-            self.set('width', part.get('width'))
-            self.set('is_part', part.get('is_part'))
-            self.set('self_antipart', part.get('self_antipart'))
-            return True
+                      "%s not allowed name for 3-argument set", name
         else:
             return super(HelasWavefunction, self).set(name, value)
 
@@ -252,7 +279,124 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return ['pdg_code', 'name', 'antiname', 'spin', 'color',
                 'mass', 'width', 'is_part', 'self_antipart',
                 'interaction_id', 'inter_color', 'lorentz', 'couplings',
-                'state', 'number', 'fermionflow', 'mothers']
+                'state', 'number_external', 'number', 'fermionflow', 'mothers']
+
+    # Helper functions
+
+    def set_state_and_particle(self, model):
+        """Set incoming/outgoing state according to mother states and
+        Lorentz structure of the interaction"""
+
+        if not isinstance(model, base_objects.Model):
+            raise self.PhysicsObjectError, \
+                  "%s is not a valid model for call to set_state_and_particle" \
+                  % repr(model)
+        # Start by setting the state of the wavefunction
+        if self.get('spin') % 2 == 1:
+            # For boson, set state to intermediate
+            self.set('state', 'intermediate')
+        else:
+            # For fermion, set state to same as other fermion (in the right way)
+            mother_fermions = filter(lambda wf: wf.get('spin') % 2 == 0,
+                                     self.get('mothers'))
+            if len(filter(lambda wf: wf.get('state') == 'incoming',
+                          self.get('mothers'))) > \
+                          len(filter(lambda wf: wf.get('state') == 'outgoing',
+                          self.get('mothers'))):
+                self.set('state', 'incoming')
+            else:
+                self.set('state', 'outgoing')
+
+        # Now determine particle-antiparticle based on the identities
+        # of the mothers and the relevant interaction
+
+        # Set up needed info
+        interaction = model.get('interaction_dict')[self.get('interaction_id')]
+        interaction_pdgs = [ -(-1)**part.get('is_part')*part.get('pdg_code') \
+                             for part in interaction.get('particles') ]
+        mother_info = [ [wf.get('pdg_code'),
+                         wf.get('is_part'),
+                         wf.get('self_antipart'),
+                         wf.get('state')] for wf in self.get('mothers') ]
+
+        # Need to flip pdg for incoming particle or outgoing antiparticle,
+        # since interaction has all particles outgoing
+        # (corresponding to outgoing particles and incoming antiparticles)
+
+        for info in mother_info:
+            if not info[2] and \
+                   (info[3] == 'incoming' and info[1] or \
+                    info[3] == 'outgoing' and not info[1]):
+                info[0] = -info[0]
+
+        # Now remove all mother pdgs from the interaction pdgs
+        mother_pdgs = [info[0] for info in mother_info]
+        reduced_pdgs = copy.copy(interaction_pdgs)
+        for pdg in interaction_pdgs:
+            if pdg in mother_pdgs:
+                reduced_pdgs.remove(pdg)
+                mother_pdgs.remove(pdg)
+        
+        # Check that we only have one pdg code left
+        if len(reduced_pdgs) != 1:
+            raise self.PhysicsObjectError, \
+                  "%d pdg codes left after subtraction in set_state_and_particle" \
+                  % len(reduced_pdgs)
+
+        # Set pdg
+        self.set('pdg_code', reduced_pdgs[0], model)
+        
+        # Now check the rule above. Remember that we want the particle
+        # created here to go into the next vertex, so we need to flip
+        # identity for incoming antiparticle and outgoing particle.
+        if not self.get('self_antipart') and \
+               (self.get('state') == 'incoming' and not self.get('is_part') \
+                or self.get('state') == 'outgoing' and self.get('is_part')):
+            self.set('pdg_code', -self.get(pdg_code), model)
+
+        # For a boson, flip code (since going into next vertex)
+        if not self.get('self_antipart') and \
+               self.get('spin') % 2 == 1:
+            self.set('pdg_code', -self.get(pdg_code), model)
+
+        return True
+        
+    def get_flow(self, name):
+        """Generate the is_part and state needed for writing out
+        wavefunctions, taking into account the fermion flow"""
+
+        if self.get('fermionflow') > 0:
+            # Just return (spin, state)
+            return self.get(name)
+        
+        # If fermionflow is -1, need to flip state
+        if name == 'is_part':
+            return 1 - self.get('is_part')
+        if name == 'state':
+            return filter(lambda state: state != self.get('state'),
+                          ['incoming', 'outgoing'])[0]
+        return self.get(name)
+
+    def get_wf_key(self):
+        """Generate the (spin, state) tuple used as key for the helas call
+        dictionnaries in HelasModel"""
+
+        if not self.get('mothers'):
+            return (self.get('spin'), self.get_flow('state'))
+
+        res = []
+        for mother in self.get('mothers'):
+            res.append((mother.get('spin'), mother.get_flow('state')))
+
+        # Sort according to spin and flow direction
+        res.sort(lambda t1, t2: t1[0] - t2[0] or t1[1] > t2[1])
+
+        # Append present wavefunction
+        res.append((self.get('spin'), self.get_flow('state')))
+
+        # IMPLEMENT: Check if we need to append a charge conjugation flag
+
+        return tuple(res)
 
     # Overloaded operators
     
@@ -276,6 +420,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
            self['self_antipart'] != other['self_antipart'] or \
            self['inter_color'] != other['inter_color'] or \
            self['lorentz'] != other['lorentz'] or \
+           self['number_external'] != other['number_external'] or \
            self['couplings'] != other['couplings'] or \
            self['fermionflow'] != other['fermionflow'] or \
            self['state'] != other['state']:
@@ -334,7 +479,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                isinstance(arguments[1],base_objects.Model):
                 super(HelasAmplitude, self).__init__()
                 self.set('interaction_id',
-                         (arguments[0].get('id'), arguments[1]))
+                         arguments[0].get('id'), arguments[1])
         elif arguments:
             super(HelasAmplitude, self).__init__(arguments[0])
         else:
@@ -402,22 +547,34 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         return True
 
-    def set(self, name, value):
-        """When setting interaction_id, if model is given (in tuple),
-        set all other interaction properties."""
+    # Enhanced set function, where we can append a model
 
-        if name == 'interaction_id' and isinstance(value, tuple):
-            if len(value) < 2 or not isinstance(value[0], int) or \
-               not isinstance(value[1], base_objects.Model):
+    def set(self, *arguments):
+        """When setting interaction_id, if model is given (in tuple),
+        set all other interaction properties. When setting pdg_code,
+        if model is given, set all other particle properties."""
+
+        if len(arguments) < 2:
+            raise self.PhysicsObjectError, \
+                  "Too few arguments for set"
+
+        name = arguments[0]
+        value = arguments[1]
+        
+        if len(arguments) > 2 and \
+               isinstance(value, int) and \
+               isinstance(arguments[2], base_objects.Model):
+            if name == 'interaction_id':
+                self.set('interaction_id', value)
+                if value > 0:
+                    inter = arguments[2].get('interaction_dict')[value]
+                    self.set('inter_color', inter.get('color'))
+                    self.set('lorentz', inter.get('lorentz'))
+                    self.set('couplings', inter.get('couplings'))
+                return True
+            else:
                 raise self.PhysicsObjectError, \
-                      "%s is not a valid (interaction id, model) tuple" % \
-                      str(value)
-            self.set('interaction_id', value[0])
-            inter = value[1].get('interaction_dict')[value[0]]
-            self.set('inter_color', inter.get('color'))
-            self.set('lorentz', inter.get('lorentz'))
-            self.set('couplings', inter.get('couplings'))
-            return True
+                      "%s not allowed name for 3-argument set", name
         else:
             return super(HelasAmplitude, self).set(name, value)
 
@@ -426,6 +583,24 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         return ['interaction_id', 'inter_color', 'lorentz', 'couplings',
                 'number', 'mothers']
+
+
+    # Helper functions
+
+    def get_amp_key(self):
+        """Generate the (spin, state) tuple used as key for the helas call
+        dictionnaries in HelasModel"""
+
+        res = []
+        for mother in self.get('mothers'):
+            res.append((mother.get('spin'), mother.get_flow('state')))
+
+        # Sort according to spin and flow direction
+        res.sort(lambda t1, t2: t1[0] - t2[0] or t1[1] > t2[1])
+
+        # IMPLEMENT: Check if we need to append a charge conjugation flag
+
+        return tuple(res)
 
     # Comparison between different amplitudes, to allow check for
     # identical processes. Note that we are then not interested in
@@ -593,7 +768,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                    in process.get('legs') ]
         
         incoming_numbers = [ leg.get('number') for leg in filter(lambda leg: \
-                                  leg.get('state') == 'initial',
+                                  leg.get('state') == 'incoming',
                                   process.get('legs')) ]
 
         # Sort the wavefunctions according to number, just to be sure
@@ -661,16 +836,16 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 # Generate list of mothers from legs
                 mothers = self.getmothers(legs, number_to_wavefunctions,
                                           external_wavefunctions)
-                # If wavefunction from incoming particles, flip pdg code
-                # (both for s- and t-channel particle)
-                if last_leg.get('number') in incoming_numbers:
-                    part = model.get('particle_dict')[last_leg.get('id')]
-                    last_leg.set('id', part.get_anti_pdg_code())
                 # Now generate new wavefunction for the last leg
                 wf = HelasWavefunction(last_leg, vertex.get('id'), model)
                 wf.set('mothers', mothers)
                 wf.set('number', len(wavefunctions) + 1)
-                wf.set('state','intermediate')
+                # Need to set incoming/outgoing and
+                # particle/antiparticle according to the fermion flow
+                # of mothers
+                wf.set_state_and_particle(model)
+                # No number_external for internal propagators
+                wf.set('number_external', 0)
                 if wf in wavefunctions and optimization:
                     wf = wavefunctions[wavefunctions.index(wf)]
                 else:
@@ -729,226 +904,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         return mothers
 
 #===============================================================================
-# HelasParticle
-#===============================================================================
-class HelasParticle(base_objects.Particle):
-    """HelasParticle: The necessary information for writing a
-    wavefunction. Language-independent base class for
-    language-dependent writing of calls to Helas routines.
-    """
-
-    # Static dictionnary, from particle properties to
-    # language-specific HELAS calls
-    wavefunctions = {}
-
-    def default_setup(self):
-        """Default values for all properties"""
-
-        super(HelasParticle, self).default_setup()
-
-    def filter(self, name, value):
-        """Filter for valid particle property values."""
-
-        super(HelasParticle, self).filter(name, value)
-
-        if name == 'wavefunctions':
-            # Should be a dictionary of functions returning strings, 
-            # with keys (spin, initial/final)
-            if not isinstance(value, dict):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid dictionary for wavefunction" % \
-                                                                str(value)
-
-            for key in value.keys():
-                if not isinstance(key, tuple):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a valid tuple" % str(key)
-                if len(key) != 2:
-                    raise self.PhysicsObjectError, \
-                        "%s is not a valid tuple with 2 elements" % str(key)
-                if not isinstance(key[0], int) or not isinstance(key[1], string):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a valid tuple of (integer, string)" % str(key)
-                if key[0] < 1 or key[0] > 5 or \
-                       key[1] not in ['initial', 'final']:
-                    raise self.PhysicsObjectError, \
-                          "%s is not a valid tuple of (spin, initial/final)" % str(key)
-                if not callable(value[key]):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a callable function" % str(value[key])
-
-        return True
-
-    def get(self, name):
-        """Get the value of the property name."""
-
-        if name == 'wavefunctions':
-            return HelasParticle.wavefunctions
-
-        return super(HelasParticle, self).get(name)
-
-    def set(self, name, value):
-        """Set the value of the property name. First check if value
-        is a valid value for the considered property. Return True if the
-        value has been correctly set, False otherwise."""
-
-        if name == 'wavefunctions':
-            try:
-                self.filter(name, value)
-                HelasParticle.wavefunctions = value
-                return True
-            except self.PhysicsObjectError, why:
-                logging.warning("Property " + name + " cannot be changed:" + \
-                                str(why))
-                return False
-
-        return super(HelasParticle, self).set(name, value)
-        
-#===============================================================================
-# HelasParticleList
-#===============================================================================
-class HelasParticleList(base_objects.ParticleList):
-    """A class to store lists of helas particles."""
-
-    def is_valid_element(self, obj):
-        """Test if object obj is a valid HelasParticle for the list."""
-        return isinstance(obj, HelasParticle)
-
-    # Customized constructor
-    def __init__(self, argument = {}):
-        """Allow generating a HelasParticleList from a ParticleList
-        """
-
-        if isinstance(argument,base_objects.ParticleList):
-            super(HelasParticleList, self).__init__()
-            for part in argument:
-                self.append(HelasParticle(part))
-
-        else:
-            super(HelasParticleList, self).__init__(argument)
-
-#===============================================================================
-# HelasInteraction
-#===============================================================================
-class HelasInteraction(base_objects.Interaction):
-    """HelasInteraction: The necessary information for writing a
-    wavefunction or amplitude from an
-    interaction. Language-independent base class for
-    language-dependent writing of calls to Helas routines.
-    """
-    
-    # Static dictionnaries, from particle properties to
-    # language-specific HELAS calls
-    wavefunctions = {}
-    amplitudes = {}
-
-    def default_setup(self):
-        """Default values for all properties"""
-
-        super(HelasInteraction, self).default_setup()
-
-    def filter(self, name, value):
-        """Filter for valid particle property values."""
-
-        super(HelasInteraction, self).filter(name, value)
-
-        if name == 'wavefunctions':
-            # Should be a dictionary of functions returning strings, 
-            # with keys (spin, initial/final)
-            if not isinstance(value, dict):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid dictionary for wavefunction" % \
-                                                                str(value)
-
-            for key in value.keys():
-                if not isinstance(key, tuple):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a valid tuple" % str(key)
-                if not callable(value[key]):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a callable function" % str(value[key])
-
-        if name == 'amplitudes':
-            # Should be a dictionary of functions returning strings, 
-            # with keys (spin, initial/final)
-            if not isinstance(value, dict):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid dictionary for amplitude" % \
-                                                                str(value)
-
-            for key in value.keys():
-                if not isinstance(key, tuple):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a valid tuple" % str(key)
-                if not callable(value[key]):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a callable function" % str(value[key])
-
-        return True
-
-    def get(self, name):
-        """Get the value of the property name."""
-
-        if name == 'wavefunctions':
-            return HelasInteraction.wavefunctions
-
-        if name == 'amplitudes':
-            return HelasInteraction.amplitudes
-
-        return super(HelasInteraction, self).get(name)
-
-    def set(self, name, value):
-        """Set the value of the property name. First check if value
-        is a valid value for the considered property. Return True if the
-        value has been correctly set, False otherwise."""
-
-        if name == 'wavefunctions':
-            try:
-                self.filter(name, value)
-                HelasInteraction.wavefunctions = value
-                return True
-            except self.PhysicsObjectError, why:
-                logging.warning("Property " + name + " cannot be changed:" + \
-                                str(why))
-                return False
-
-        if name == 'amplitudes':
-            try:
-                self.filter(name, value)
-                HelasInteraction.amplitudes = value
-                return True
-            except self.PhysicsObjectError, why:
-                logging.warning("Property " + name + " cannot be changed:" + \
-                                str(why))
-                return False
-
-        return super(HelasInteraction, self).set(name, value)
-
-#===============================================================================
-# HelasInteractionList
-#===============================================================================
-class HelasInteractionList(base_objects.InteractionList):
-    """A class to store lists of helas interactionss."""
-
-    def is_valid_element(self, obj):
-        """Test if object obj is a valid HelasInteraction for the list."""
-
-        return isinstance(obj, HelasInteraction)
-
-    # Customized constructor
-    def __init__(self, argument = {}):
-        """Allow generating a HelasInteractionList from a InteractionList
-        """
-
-        if isinstance(argument,base_objects.InteractionList):
-            super(HelasInteractionList, self).__init__()
-            for part in argument:
-                self.append(HelasInteraction(part))
-
-        else:
-            super(HelasInteractionList, self).__init__(argument)
-
-#===============================================================================
 # HelasModel
 #===============================================================================
 class HelasModel(base_objects.PhysicsObject):
@@ -957,13 +912,8 @@ class HelasModel(base_objects.PhysicsObject):
     def default_setup(self):
 
         self['name'] = ""
-        self['particles'] = HelasParticleList()
-        self['parameters'] = None
-        self['interactions'] = HelasInteractionList()
-        self['couplings'] = None
-        self['lorentz'] = None
-        self['particle_dict'] = {}
-        self['interaction_dict'] = {}
+        self['wavefunctions'] = {}
+        self['amplitudes'] = {}
 
     def filter(self, name, value):
         """Filter for model property values"""
@@ -973,64 +923,90 @@ class HelasModel(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a string" % \
                                                             type(value)
-        if name == 'particles':
-            if not isinstance(value, HelasParticleList):
-                raise self.PhysicsObjectError, \
-                    "Object of type %s is not a HelasParticleList object" % \
-                                                            type(value)
-        if name == 'interactions':
-            if not isinstance(value, HelasInteractionList):
-                raise self.PhysicsObjectError, \
-                    "Object of type %s is not a HelasInteractionList object" % \
-                                                            type(value)
-        if name == 'particle_dict':
+
+        if name == 'wavefunctions':
+            # Should be a dictionary of functions returning strings, 
+            # with keys (spins, incoming/outgoing)
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
-                    "Object of type %s is not a dictionary" % \
-                                                        type(value)
-        if name == 'interaction_dict':
+                        "%s is not a valid dictionary for wavefunction" % \
+                                                                str(value)
+
+            for key in value.keys():
+                self.add_wavefunction(key, value[key])
+
+        if name == 'amplitudes':
+            # Should be a dictionary of functions returning strings, 
+            # with keys (spins, incoming/outgoing)
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
-                    "Object of type %s is not a dictionary" % \
-                                                        type(value)
+                        "%s is not a valid dictionary for amplitude" % \
+                                                                str(value)
+
+            for key in value.keys():
+                add_amplitude(key, value[key])
 
         return True
-
-    def get(self, name):
-        """Get the value of the property name."""
-
-        if (name == 'particle_dict') and not self[name]:
-            if self['particles']:
-                self['particle_dict'] = self['particles'].generate_dict()
-
-        if (name == 'interaction_dict') and not self[name]:
-            if self['interactions']:
-                self['interaction_dict'] = self['interactions'].generate_dict()
-
-        return super(HelasModel, self).get(name)
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return ['name', 'particles', 'parameters', 'interactions', 'couplings',
-                'lorentz']
+        return ['name', 'wavefunctions', 'amplitudes']
 
-    def get_particle(self, id):
-        """Return the particle corresponding to the id"""
+    def get_wavefunction(self, key):
+        """Return the function for writing the wavefunction
+        corresponding to the key"""
 
-        if id in self.get("particle_dict").keys():
-            return self["particle_dict"][id]
+        if key in self.get("wavefunctions").keys():
+            return self["wavefunctions"][id]
         else:
             return None
 
-    def get_interaction(self, id):
-        """Return the interaction corresponding to the id"""
+    def get_amplitude(self, key):
+        """Return the function for writing the amplitude
+        corresponding to the key"""
 
-        if id in self.get("interaction_dict").keys():
-            return self["interaction_dict"][id]
+        if key in self.get("amplitudes").keys():
+            return self["amplitudes"][id]
         else:
             return None
 
+    def add_wavefunction(self, key, function):
+        """Set the function for writing the wavefunction
+        corresponding to the key"""
+
+
+        if not isinstance(key, tuple):
+            raise self.PhysicsObjectError, \
+                  "%s is not a valid tuple for wavefunction key" % \
+                  str(key)
+
+        if not callable(function):
+            raise self.PhysicsObjectError, \
+                  "%s is not a valid function for wavefunction string" % \
+                  str(function)
+
+        self.get('wavefunctions')[key] = function
+        return True
+        
+    def add_amplitude(self, key, function):
+        """Set the function for writing the amplitude
+        corresponding to the key"""
+
+
+        if not isinstance(key, tuple):
+            raise self.PhysicsObjectError, \
+                  "%s is not a valid tuple for amplitude key" % \
+                  str(key)
+
+        if not callable(function):
+            raise self.PhysicsObjectError, \
+                  "%s is not a valid function for amplitude string" % \
+                  str(function)
+
+        amplitudes[key] = function
+        return True
+        
     # Customized constructor
     def __init__(self, argument = {}):
         """Allow generating a HelasModel from a Model
@@ -1039,13 +1015,6 @@ class HelasModel(base_objects.PhysicsObject):
         if isinstance(argument,base_objects.Model):
             super(HelasModel, self).__init__()
             self.set('name',argument.get('name'))
-            self.set('particles',
-                     HelasParticleList(argument.get('particles')))
-            self.set('parameters',argument.get('parameters'))
-            self.set('interactions',
-                     HelasInteractionList(argument.get('interactions')))
-            self.set('couplings',argument.get('couplings'))
-            self.set('lorentz',argument.get('lorentz'))
         else:
             super(HelasModel, self).__init__(argument)
 

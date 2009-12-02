@@ -36,7 +36,7 @@ class HelasWavefunctionTest(unittest.TestCase):
 
         mywavefunction = helas_objects.HelasWavefunction({'pdg_code': 12,
                                                            'interaction_id': 2,
-                                                           'state': 'initial',
+                                                           'state': 'incoming',
                                                            'number': 2})
         self.mymothers = helas_objects.HelasWavefunctionList([mywavefunction])
         self.mydict = {'pdg_code': 12,
@@ -53,7 +53,8 @@ class HelasWavefunctionTest(unittest.TestCase):
                        'inter_color': [],
                        'lorentz': [],
                        'couplings': { (0, 0):'none'},
-                       'state': 'initial',
+                       'state': 'incoming',
+                       'number_external': 4,
                        'number': 5,
                        'fermionflow': 1}
 
@@ -115,7 +116,7 @@ class HelasWavefunctionTest(unittest.TestCase):
                         'right_list':[1, 2, 3, 4, 5],
                         'wrong_list':['a', {}]},
                        {'prop':'state',
-                        'right_list':['initial', 'final', 'intermediate'],
+                        'right_list':['incoming', 'outgoing', 'intermediate'],
                         'wrong_list':[0, 'wrong']}
                        ]
 
@@ -144,7 +145,8 @@ class HelasWavefunctionTest(unittest.TestCase):
         goal = goal + "    \'inter_color\': [],\n"
         goal = goal + "    \'lorentz\': [],\n"
         goal = goal + "    \'couplings\': {(0, 0): \'none\'},\n"
-        goal = goal + "    \'state\': \'initial\',\n"
+        goal = goal + "    \'state\': \'incoming\',\n"
+        goal = goal + "    \'number_external\': 4,\n"
         goal = goal + "    \'number\': 5,\n"
         goal = goal + "    \'fermionflow\': 1,\n"
         goal = goal + "    \'mothers\': " + repr(self.mymothers) + "\n}"
@@ -228,7 +230,7 @@ class HelasAmplitudeTest(unittest.TestCase):
                   'inter_color': [],
                   'lorentz': [],
                   'couplings': { (0, 0):'none'},
-                  'state': 'initial',
+                  'state': 'incoming',
                   'mothers': helas_objects.HelasWavefunctionList(),
                   'number': 5}
 
@@ -354,7 +356,7 @@ class HelasDiagramTest(unittest.TestCase):
         mydict = {'pdg_code': 10,
                   'mothers': helas_objects.HelasWavefunctionList(),
                   'interaction_id': 2,
-                  'state': 'initial',
+                  'state': 'incoming',
                   'number': 5}
                         
 
@@ -485,7 +487,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         mydict = {'pdg_code': 10,
                   'mothers': helas_objects.HelasWavefunctionList(),
                   'interaction_id': 2,
-                  'state': 'initial',
+                  'state': 'incoming',
                   'number': 5}
                         
 
@@ -622,8 +624,7 @@ class HelasMatrixElementTest(unittest.TestCase):
 
 
         self.mymodel.set('particles', mypartlist)
-        self.mymodel.set('interactions', myinterlist)
-        
+        self.mymodel.set('interactions', myinterlist)        
 
     def test_setget_matrix_element_correct(self):
         "Test correct HelasMatrixElement object __init__, get and set"
@@ -740,19 +741,19 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions1.append(helas_objects.HelasWavefunction(\
             myleglist[4], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction())
-        wavefunctions1[5].set('pdg_code', (2, self.mymodel))
-        wavefunctions1[5].set('state', 'intermediate')
+        wavefunctions1[5].set('pdg_code', 2, self.mymodel)
+        wavefunctions1[5].set('state', 'incoming')
         wavefunctions1[5].set('mothers',
                               helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[0],wavefunctions1[2]]))
-        wavefunctions1[5].set('interaction_id', (3, self.mymodel))
+        wavefunctions1[5].set('interaction_id', 3, self.mymodel)
         wavefunctions1[5].set('number', 6)
         wavefunctions1.append(helas_objects.HelasWavefunction())
-        wavefunctions1[6].set('pdg_code', (22, self.mymodel))
+        wavefunctions1[6].set('pdg_code', 22, self.mymodel)
         wavefunctions1[6].set('state', 'intermediate')
         wavefunctions1[6].set('mothers', helas_objects.HelasWavefunctionList(
                          [wavefunctions1[3],wavefunctions1[4]]))
-        wavefunctions1[6].set('interaction_id', (7, self.mymodel))
+        wavefunctions1[6].set('interaction_id', 7, self.mymodel)
         wavefunctions1[6].set('number', 7)
 
         amplitude1 = helas_objects.HelasAmplitude({\
@@ -760,15 +761,15 @@ class HelasMatrixElementTest(unittest.TestCase):
                          [wavefunctions1[5], wavefunctions1[1],
                           wavefunctions1[6]]),
              'number': 1})
-        amplitude1.set('interaction_id', (4, self.mymodel))
+        amplitude1.set('interaction_id', 4, self.mymodel)
 
         wavefunctions2 = helas_objects.HelasWavefunctionList()
         wavefunctions2.append(helas_objects.HelasWavefunction())
-        wavefunctions2[0].set('pdg_code', (-2, self.mymodel))
-        wavefunctions2[0].set('state', 'intermediate')
+        wavefunctions2[0].set('pdg_code', -2, self.mymodel)
+        wavefunctions2[0].set('state', 'outgoing')
         wavefunctions2[0].set('mothers', helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[1],wavefunctions1[2]]))
-        wavefunctions2[0].set('interaction_id', (3, self.mymodel))
+        wavefunctions2[0].set('interaction_id', 3, self.mymodel)
         wavefunctions2[0].set('number', 8)
 
         amplitude2 = helas_objects.HelasAmplitude({\
@@ -776,7 +777,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                          [wavefunctions1[0], wavefunctions2[0],
                           wavefunctions1[6]]),
              'number': 2})
-        amplitude2.set('interaction_id', (4, self.mymodel))
+        amplitude2.set('interaction_id', 4, self.mymodel)
 
         diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
                                                'amplitude': amplitude1})
@@ -836,19 +837,19 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions1.append(helas_objects.HelasWavefunction(\
             myleglist[4], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction())
-        wavefunctions1[5].set('pdg_code', (2, self.mymodel))
-        wavefunctions1[5].set('state', 'intermediate')
+        wavefunctions1[5].set('pdg_code', 2, self.mymodel)
+        wavefunctions1[5].set('state', 'incoming')
         wavefunctions1[5].set('mothers',
                               helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[0],wavefunctions1[2]]))
-        wavefunctions1[5].set('interaction_id', (3, self.mymodel))
+        wavefunctions1[5].set('interaction_id', 3, self.mymodel)
         wavefunctions1[5].set('number', 6)
         wavefunctions1.append(helas_objects.HelasWavefunction())
-        wavefunctions1[6].set('pdg_code', (22, self.mymodel))
+        wavefunctions1[6].set('pdg_code', 22, self.mymodel)
         wavefunctions1[6].set('state', 'intermediate')
         wavefunctions1[6].set('mothers', helas_objects.HelasWavefunctionList(
                          [wavefunctions1[3],wavefunctions1[4]]))
-        wavefunctions1[6].set('interaction_id', (7, self.mymodel))
+        wavefunctions1[6].set('interaction_id', 7, self.mymodel)
         wavefunctions1[6].set('number', 7)
 
         amplitude1 = helas_objects.HelasAmplitude({\
@@ -856,7 +857,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                          [wavefunctions1[5], wavefunctions1[1],
                           wavefunctions1[6]]),
              'number': 1})
-        amplitude1.set('interaction_id', (4, self.mymodel))
+        amplitude1.set('interaction_id', 4, self.mymodel)
 
         wavefunctions2 = helas_objects.HelasWavefunctionList()
         wavefunctions2.append(helas_objects.HelasWavefunction(\
@@ -870,18 +871,18 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions2.append(helas_objects.HelasWavefunction(\
             myleglist[4], 0, self.mymodel))
         wavefunctions2.append(helas_objects.HelasWavefunction())
-        wavefunctions2[5].set('pdg_code', (-2, self.mymodel))
-        wavefunctions2[5].set('state', 'intermediate')
+        wavefunctions2[5].set('pdg_code', -2, self.mymodel)
+        wavefunctions2[5].set('state', 'outgoing')
         wavefunctions2[5].set('mothers', helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[1],wavefunctions1[2]]))
-        wavefunctions2[5].set('interaction_id', (3, self.mymodel))
+        wavefunctions2[5].set('interaction_id', 3, self.mymodel)
         wavefunctions2[5].set('number', 6)
         wavefunctions2.append(helas_objects.HelasWavefunction())
-        wavefunctions2[6].set('pdg_code', (22, self.mymodel))
+        wavefunctions2[6].set('pdg_code', 22, self.mymodel)
         wavefunctions2[6].set('state', 'intermediate')
         wavefunctions2[6].set('mothers', helas_objects.HelasWavefunctionList(
                          [wavefunctions1[3],wavefunctions1[4]]))
-        wavefunctions2[6].set('interaction_id', (7, self.mymodel))
+        wavefunctions2[6].set('interaction_id', 7, self.mymodel)
         wavefunctions2[6].set('number', 7)
 
         amplitude2 = helas_objects.HelasAmplitude({\
@@ -889,7 +890,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                          [wavefunctions2[0], wavefunctions2[5],
                           wavefunctions2[6]]),
              'number': 2})
-        amplitude2.set('interaction_id', (4, self.mymodel))
+        amplitude2.set('interaction_id', 4, self.mymodel)
 
         diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
                                                'amplitude': amplitude1})
@@ -944,9 +945,10 @@ class HelasMatrixElementTest(unittest.TestCase):
             myleglist[2], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction(\
             myleglist[3], 0, self.mymodel))
-        wavefunctions1.append(helas_objects.HelasWavefunction(\
-            myleglist[1], 7, self.mymodel))
-        wavefunctions1[4].set('state', 'intermediate')
+        wavefunctions1.append(helas_objects.HelasWavefunction())
+        wavefunctions1[4].set('pdg_code', 11, self.mymodel)
+        wavefunctions1[4].set('interaction_id', 7, self.mymodel)
+        wavefunctions1[4].set('state', 'incoming')
         wavefunctions1[4].set('mothers',
                               helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[0],wavefunctions1[1]]))
@@ -957,18 +959,17 @@ class HelasMatrixElementTest(unittest.TestCase):
                          [wavefunctions1[4], wavefunctions1[2],
                           wavefunctions1[3]]),
              'number': 1})
-        amplitude1.set('interaction_id', (7, self.mymodel))
+        amplitude1.set('interaction_id', 7, self.mymodel)
 
         diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
                                                'amplitude': amplitude1})
 
         wavefunctions2 = helas_objects.HelasWavefunctionList()
         
-        wavefunctions2.append(helas_objects.HelasWavefunction(\
-            # -11 is what comes out of algorithm - don't know if right
-            base_objects.Leg({'id': -11, 'state': 'initial'}),
-                              7, self.mymodel))
-        wavefunctions2[0].set('state', 'intermediate')
+        wavefunctions2.append(helas_objects.HelasWavefunction())
+        wavefunctions2[0].set('pdg_code', -11, self.mymodel)
+        wavefunctions2[0].set('interaction_id', 7, self.mymodel)
+        wavefunctions2[0].set('state', 'outgoing')
         wavefunctions2[0].set('mothers',
                               helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[0],wavefunctions1[3]]))
@@ -980,7 +981,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                           wavefunctions1[2]]),
              'interaction_id': 7,
              'number': 2})
-        amplitude2.set('interaction_id', (7, self.mymodel))
+        amplitude2.set('interaction_id', 7, self.mymodel)
 
         diagram2 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions2,
                                                'amplitude': amplitude2})
@@ -993,10 +994,10 @@ class HelasMatrixElementTest(unittest.TestCase):
 
     def test_generate_helas_diagrams_ea_ae(self):
         """Testing the helas diagram generation based on Diagrams
-        using the processes a e- > a e-
+        using the processes e- a > a e-
         """
 
-        # Test a e- > a e-
+        # Test e- a > a e-
 
         myleglist = base_objects.LegList()
 
@@ -1030,9 +1031,10 @@ class HelasMatrixElementTest(unittest.TestCase):
             myleglist[2], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction(\
             myleglist[3], 0, self.mymodel))
-        wavefunctions1.append(helas_objects.HelasWavefunction(\
-            myleglist[0], 7, self.mymodel))
-        wavefunctions1[4].set('state', 'intermediate')
+        wavefunctions1.append(helas_objects.HelasWavefunction())
+        wavefunctions1[4].set('pdg_code', 11, self.mymodel)
+        wavefunctions1[4].set('interaction_id', 7, self.mymodel)
+        wavefunctions1[4].set('state', 'incoming')
         wavefunctions1[4].set('mothers',
                               helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[0],wavefunctions1[1]]))
@@ -1043,18 +1045,17 @@ class HelasMatrixElementTest(unittest.TestCase):
                          [wavefunctions1[4], wavefunctions1[2],
                           wavefunctions1[3]]),
              'number': 1})
-        amplitude1.set('interaction_id', (7, self.mymodel))
+        amplitude1.set('interaction_id', 7, self.mymodel)
 
         diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
                                                'amplitude': amplitude1})
 
         wavefunctions2 = helas_objects.HelasWavefunctionList()
         
-        wavefunctions2.append(helas_objects.HelasWavefunction(\
-            # 11 is what comes out of algorithm - don't know if right
-            base_objects.Leg({'id': 11, 'state': 'initial'}),
-                              7, self.mymodel))
-        wavefunctions2[0].set('state', 'intermediate')
+        wavefunctions2.append(helas_objects.HelasWavefunction())
+        wavefunctions2[0].set('pdg_code', 11, self.mymodel)
+        wavefunctions2[0].set('interaction_id', 7, self.mymodel)
+        wavefunctions2[0].set('state', 'incoming')
         wavefunctions2[0].set('mothers',
                               helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[0],wavefunctions1[2]]))
@@ -1066,7 +1067,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                           wavefunctions1[3]]),
              'interaction_id': 7,
              'number': 2})
-        amplitude2.set('interaction_id', (7, self.mymodel))
+        amplitude2.set('interaction_id', 7, self.mymodel)
 
         diagram2 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions2,
                                                'amplitude': amplitude2})
@@ -1076,415 +1077,6 @@ class HelasMatrixElementTest(unittest.TestCase):
         
         self.assertEqual(matrix_element.get('diagrams'), mydiagrams)
 
-
-#===============================================================================
-# HelasParticleTest
-#===============================================================================
-class HelasParticleTest(unittest.TestCase):
-    """Test class for the HelasParticle object"""
-
-    mydict = {}
-    mypart = None
-
-    def setUp(self):
-
-        self.mydict = {'name':'t',
-                      'antiname':'t~',
-                      'spin':2,
-                      'color':3,
-                      'mass':'mt',
-                      'width':'wt',
-                      'texname':'t',
-                      'antitexname':'\\overline{t}',
-                      'line':'straight',
-                      'charge':2. / 3.,
-                      'pdg_code':6,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False}
-
-        self.mypart = helas_objects.HelasParticle(self.mydict)
-
-    def test_setget_helas_particle_correct(self):
-        "Test correct HelasParticle object __init__, get and set"
-
-        mypart2 = helas_objects.HelasParticle()
-
-        # First fill mypart2 it using set
-        for prop in self.mydict.keys():
-            mypart2.set(prop, self.mydict[prop])
-
-        # Check equality between HelasParticle objects
-        self.assertEqual(self.mypart, mypart2)
-
-        # Check equality with initial dic using get
-        for prop in self.mypart.keys():
-            self.assertEqual(self.mypart.get(prop), self.mydict[prop])
-
-    def test_setget_helas_particle_exceptions(self):
-        "Test error raising in HelasParticle __init__, get and set"
-
-        wrong_dict = self.mydict
-        wrong_dict['wrongparam'] = 'wrongvalue'
-
-        a_number = 0
-
-        # Test init
-        self.assertRaises(helas_objects.HelasParticle.PhysicsObjectError,
-                          helas_objects.HelasParticle,
-                          wrong_dict)
-        self.assertRaises(helas_objects.HelasParticle.PhysicsObjectError,
-                          helas_objects.HelasParticle,
-                          a_number)
-
-        # Test get
-        self.assertRaises(helas_objects.HelasParticle.PhysicsObjectError,
-                          self.mypart.get,
-                          a_number)
-        self.assertRaises(helas_objects.HelasParticle.PhysicsObjectError,
-                          self.mypart.get,
-                          'wrongparam')
-
-        # Test set
-        self.assertRaises(helas_objects.HelasParticle.PhysicsObjectError,
-                          self.mypart.set,
-                          a_number, 0)
-        self.assertRaises(helas_objects.HelasParticle.PhysicsObjectError,
-                          self.mypart.set,
-                          'wrongparam', 0)
-
-    def test_initialize_with_base_object_particle(self):
-        """Test initialization with instance of mother class"""
-
-        mybaseparticle = base_objects.Particle(self.mydict)
-        myparticle = helas_objects.HelasParticle(mybaseparticle)
-        self.assertEqual(myparticle, self.mypart)
-
-    def test_values_for_prop(self):
-        """Test filters for particle properties"""
-
-        test_values = [
-                       {'prop':'name',
-                        'right_list':['h', 'e+', 'e-', 'u~',
-                                      'k++', 'k--', 'T', 'u+~'],
-                        'wrong_list':['', 'x ', 'e?', '{}', '9x', 'd~3', 'd+g',
-                                      'u~+', 'u~~']},
-                       {'prop':'spin',
-                        'right_list':[1, 2, 3, 4, 5],
-                        'wrong_list':[-1, 0, 'a', 6]},
-                       {'prop':'color',
-                        'right_list':[1, 3, 6, 8],
-                        'wrong_list':[2, 0, 'a', 23, -1, -3, -6]},
-                       {'prop':'mass',
-                        'right_list':['me', 'zero', 'mm2'],
-                        'wrong_list':['m+', '', ' ', 'm~']},
-                       {'prop':'pdg_code',
-                        'right_list':[1, 12, 80000000, -1],
-                        'wrong_list':[1.2, 'a']},
-                       {'prop':'line',
-                        'right_list':['straight', 'wavy', 'curly', 'dashed'],
-                        'wrong_list':[-1, 'wrong']},
-                       {'prop':'charge',
-                        'right_list':[1., -1., -2. / 3., 0.],
-                        'wrong_list':[1, 'a']},
-                       {'prop':'propagating',
-                        'right_list':[True, False],
-                        'wrong_list':[1, 'a', 'true', None]},
-                       {'prop':'is_part',
-                        'right_list':[True, False],
-                        'wrong_list':[1, 'a', 'true', None]},
-                       {'prop':'self_antipart',
-                        'right_list':[True, False],
-                        'wrong_list':[1, 'a', 'true', None]}
-                       ]
-
-        temp_part = self.mypart
-
-        for test in test_values:
-            for x in test['right_list']:
-                self.assert_(temp_part.set(test['prop'], x))
-            for x in test['wrong_list']:
-                self.assertFalse(temp_part.set(test['prop'], x))
-
-    def test_representation(self):
-        """Test particle object string representation."""
-
-        goal = "{\n"
-        goal = goal + "    \'name\': \'t\',\n"
-        goal = goal + "    \'antiname\': \'t~\',\n"
-        goal = goal + "    \'spin\': 2,\n"
-        goal = goal + "    \'color\': 3,\n"
-        goal = goal + "    \'charge\': 0.67,\n"
-        goal = goal + "    \'mass\': \'mt\',\n"
-        goal = goal + "    \'width\': \'wt\',\n"
-        goal = goal + "    \'pdg_code\': 6,\n"
-        goal = goal + "    \'texname\': \'t\',\n"
-        goal = goal + "    \'antitexname\': \'\\overline{t}\',\n"
-        goal = goal + "    \'line\': \'straight\',\n"
-        goal = goal + "    \'propagating\': True,\n"
-        goal = goal + "    \'is_part\': True,\n"
-        goal = goal + "    \'self_antipart\': False\n}"
-
-        self.assertEqual(goal, str(self.mypart))
-
-    def test_get_pdg_code(self):
-        """Test the get_pdg_code function of HelasParticle"""
-
-        test_part = copy.copy(self.mypart)
-        self.assertEqual(test_part.get_pdg_code(), 6)
-        test_part.set('is_part', False)
-        self.assertEqual(test_part.get_pdg_code(), -6)
-        test_part.set('self_antipart', True)
-        self.assertEqual(test_part.get_pdg_code(), 6)
-
-    def test_get_anti_pdg_code(self):
-        """Test the get_anti_pdg_code function of HelasParticle"""
-
-        test_part = copy.copy(self.mypart)
-        self.assertEqual(test_part.get_anti_pdg_code(), -6)
-        test_part.set('is_part', False)
-        self.assertEqual(test_part.get_anti_pdg_code(), 6)
-        test_part.set('self_antipart', True)
-        self.assertEqual(test_part.get_pdg_code(), 6)
-
-    def test_set_wavefunction_list(self):
-        """Test setting the static Helas wavefunction call dictionnary"""
-
-        self.assertEqual(self.mypart.get('wavefunctions'),{})
-
-    def test_helas_particle_list(self):
-        """Test particle list initialization, search and dict generation
-        functions."""
-
-        mylist = [self.mypart] * 10
-        mypartlist = helas_objects.HelasParticleList(mylist)
-
-        not_a_part = 1
-
-        for part in mypartlist:
-            self.assertEqual(part, self.mypart)
-
-        self.assertRaises(helas_objects.HelasParticleList.PhysicsObjectListError,
-                          mypartlist.append,
-                          not_a_part)
-        
-        not_a_part = base_objects.Particle()
-        self.assertRaises(helas_objects.HelasParticleList.PhysicsObjectListError,
-                          mypartlist.append,
-                          not_a_part)
-        # test particle search
-        self.assertEqual(self.mypart,
-                         mypartlist.find_name(self.mypart['name']))
-        anti_part = copy.copy(self.mypart)
-        anti_part.set('is_part', False)
-        self.assertEqual(anti_part,
-                         mypartlist.find_name(self.mypart['antiname']))
-        self.assertEqual(None,
-                         mypartlist.find_name('none'))
-
-        mydict = {6:self.mypart, -6:anti_part}
-
-        self.assertEqual(mydict, mypartlist.generate_dict())
-
-        # test initialization with base_objects.ParticleList
-        mybasepart = base_objects.Particle(self.mydict)
-        mybaselist = [mybasepart] * 10
-        self.assertRaises(helas_objects.HelasParticleList.PhysicsObjectListError,
-                          helas_objects.HelasParticleList,
-                          mybaselist)
-        mybaselist = base_objects.ParticleList(mybaselist)
-        self.assertEqual(helas_objects.HelasParticleList(mybaselist),
-                         mypartlist)
-        
-
-#===============================================================================
-# HelasInteractionTest
-#===============================================================================
-class HelasInteractionTest(unittest.TestCase):
-    """Test class for the interaction object."""
-
-    mydict = {}
-    myinter = None
-    mypart = None
-
-    def setUp(self):
-
-        self.mypart = helas_objects.HelasParticle({'name':'t',
-                      'antiname':'t~',
-                      'spin':2,
-                      'color':3,
-                      'mass':'mt',
-                      'width':'wt',
-                      'texname':'t',
-                      'antitexname':'\\overline{t}',
-                      'line':'straight',
-                      'charge':2. / 3.,
-                      'pdg_code':6,
-                      'propagating':True,
-                      'is_part':True})
-
-        self.mydict = {'id': 1,
-                       'particles': helas_objects.HelasParticleList([self.mypart] * 4),
-                       'color': ['C1', 'C2'],
-                       'lorentz':['L1', 'L2'],
-                       'couplings':{(0, 0):'g00',
-                                    (0, 1):'g01',
-                                    (1, 0):'g10',
-                                    (1, 1):'g11'},
-                       'orders':{'QCD':1, 'QED':1}}
-
-        self.myinter = helas_objects.HelasInteraction(self.mydict)
-
-    def test_setget_helas_interaction_correct(self):
-        "Test correct interaction object __init__, get and set"
-
-        myinter2 = helas_objects.HelasInteraction()
-
-        # First fill myinter2 it using set
-        for prop in ['id', 'particles', 'color', 'lorentz', 'couplings', 'orders']:
-            myinter2.set(prop, self.mydict[prop])
-
-        # Check equality between HelasInteraction objects
-        self.assertEqual(self.myinter, myinter2)
-
-        # Check equality with initial dic using get
-        for prop in self.myinter.keys():
-            self.assertEqual(self.myinter.get(prop), self.mydict[prop])
-
-    def test_setget_helas_interaction_exceptions(self):
-        "Test error raising in HelasInteraction __init__, get and set"
-
-        wrong_dict = self.mydict
-        wrong_dict['wrongparam'] = 'wrongvalue'
-
-        a_number = 0
-
-        # Test init
-        self.assertRaises(helas_objects.HelasInteraction.PhysicsObjectError,
-                          helas_objects.HelasInteraction,
-                          wrong_dict)
-        self.assertRaises(helas_objects.HelasInteraction.PhysicsObjectError,
-                          helas_objects.HelasInteraction,
-                          a_number)
-
-        # Test get
-        self.assertRaises(helas_objects.HelasInteraction.PhysicsObjectError,
-                          self.myinter.get,
-                          a_number)
-        self.assertRaises(helas_objects.HelasInteraction.PhysicsObjectError,
-                          self.myinter.get,
-                          'wrongparam')
-
-        # Test set
-        self.assertRaises(helas_objects.HelasInteraction.PhysicsObjectError,
-                          self.myinter.set,
-                          a_number, 0)
-        self.assertRaises(helas_objects.HelasInteraction.PhysicsObjectError,
-                          self.myinter.set,
-                          'wrongparam', 0)
-
-    def test_initialize_with_base_object_interaction(self):
-        """Test initialization with instance of mother class"""
-
-        mybaseinter = base_objects.Interaction(self.mydict)
-        myinter = helas_objects.HelasInteraction(mybaseinter)
-        self.assertEqual(myinter, self.myinter)
-
-    def test_values_for_prop(self):
-        """Test filters for interaction properties"""
-
-        test_values = [
-                       {'prop':'particles',
-                        'right_list':[helas_objects.HelasParticleList([]),
-                                      helas_objects.HelasParticleList([self.mypart] * 3)],
-                        'wrong_list':[1, 'x ', [self.mypart, 1], [1, 2]]},
-                       {'prop':'color',
-                        'right_list':[[], ['C1'], ['C1', 'C2']],
-                        'wrong_list':[1, 'a', ['a', 1]]},
-                       {'prop':'lorentz',
-                        'right_list':[[], ['L1'], ['L1', 'L2']],
-                        'wrong_list':[1, 'a', ['a', 1]]},
-                       {'prop':'orders',
-                        'right_list':[{}, {'QCD':2}, {'QED':1, 'QCD':1}],
-                        'wrong_list':[1, 'a', {1:'a'}]},
-                       # WARNING: Valid value should be defined with
-                       # respect to the last status of myinter, i.e.
-                       # the last good color and lorentz lists
-                       {'prop':'couplings',
-                        'right_list':[{(0, 0):'g00', (0, 1):'g01',
-                                       (1, 0):'g10', (1, 1):'g11'}],
-                        'wrong_list':[{(0):'g00', (0, 1):'g01',
-                                       (1, 0):'g10', (1, 2):'g11'},
-                                      {(0, 0):'g00', (0, 1):'g01',
-                                       (1, 0):'g10', (1, 2):'g11'},
-                                      {(0, 0):'g00', (0, 1):'g01',
-                                       (1, 0):'g10'}]}
-                       ]
-
-        mytestinter = self.myinter
-
-        for test in test_values:
-            for x in test['right_list']:
-                self.assert_(mytestinter.set(test['prop'], x))
-            for x in test['wrong_list']:
-                self.assertFalse(mytestinter.set(test['prop'], x))
-
-    def test_representation(self):
-        """Test interaction object string representation."""
-
-        goal = "{\n"
-        goal = goal + "    \'id\': %d,\n" % self.myinter['id']
-        goal = goal + "    \'particles\': %s,\n" % \
-                            repr(helas_objects.HelasParticleList([self.mypart] * 4))
-        goal = goal + "    \'color\': [\'C1\', \'C2\'],\n"
-        goal = goal + "    \'lorentz\': [\'L1\', \'L2\'],\n"
-        goal = goal + "    \'couplings\': %s,\n" % \
-                                    repr(self.myinter['couplings'])
-        goal = goal + "    \'orders\': %s\n}" % repr(self.myinter['orders'])
-
-        self.assertEqual(goal, str(self.myinter))
-
-    def test_interaction_list(self):
-        """Test interaction list initialization"""
-
-        # Create a dummy list of interactions with ids
-        mylist = [copy.copy(inter) for inter in [self.myinter] * 3]
-        for i in range(1, 4):
-            mylist[i - 1].set('id', i)
-        myinterlist = helas_objects.HelasInteractionList(mylist)
-
-        # Check error raising
-        not_a_inter = 1
-        self.assertRaises(helas_objects.HelasInteractionList.PhysicsObjectListError,
-                          myinterlist.append,
-                          not_a_inter)
-
-        # Check error raising
-        not_a_inter = base_objects.Interaction()
-        self.assertRaises(helas_objects.HelasInteractionList.PhysicsObjectListError,
-                          myinterlist.append,
-                          not_a_inter)
-
-        # Check reference dict
-        mydict = {}
-        for i in range(1, 4):
-            mydict[i] = myinterlist[i - 1]
-        self.assertEqual(mydict, myinterlist.generate_dict())
-
-        # test initialization with base_objects.InteractionList
-        mybaseinter = base_objects.Interaction(self.mydict)
-        mybaselist = [copy.copy(inter) for inter in [mybaseinter] * 3]
-        for i in range(1, 4):
-            mybaselist[i - 1].set('id', i)
-
-        self.assertRaises(helas_objects.HelasInteractionList.PhysicsObjectListError,
-                          helas_objects.HelasInteractionList,
-                          mybaselist)
-        mybaselist = base_objects.InteractionList(mybaselist)
-        self.assertEqual(helas_objects.HelasInteractionList(mybaselist),
-                         myinterlist)
-        
-
 #===============================================================================
 # HelasModelTest
 #===============================================================================
@@ -1492,26 +1084,18 @@ class HelasModelTest(unittest.TestCase):
     """Test class for the HelasModel object"""
 
     mymodel = helas_objects.HelasModel()
-    myinterlist = helas_objects.HelasInteractionList()
-    mypartlist = helas_objects.HelasParticleList()
+    mybasemodel = base_objects.Model()    
 
     def setUp(self):
+        self.mymodel.set('name', 'sm')
 
-        # Create a model with gluon and top quark + a single interaction
-        self.mypartlist.append(helas_objects.HelasParticle({'name':'t',
-                  'antiname':'t~',
-                  'spin':2,
-                  'color':3,
-                  'mass':'mt',
-                  'width':'wt',
-                  'texname':'t',
-                  'antitexname':'\\overline{t}',
-                  'line':'straight',
-                  'charge':2. / 3.,
-                  'pdg_code':6,
-                  'propagating':True,
-                  'self_antipart':False}))
-        self.mypartlist.append(helas_objects.HelasParticle({'name':'g',
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
                       'antiname':'g',
                       'spin':3,
                       'color':8,
@@ -1526,55 +1110,107 @@ class HelasModelTest(unittest.TestCase):
                       'is_part':True,
                       'self_antipart':True}))
 
-        antit = copy.copy(self.mypartlist[0])
-        antit.set('is_part', False)
+        g = mypartlist[len(mypartlist)-1]
 
-        self.myinterlist.append(helas_objects.HelasInteraction({
-                      'id':1,
-                      'particles': helas_objects.HelasParticleList(\
-                                            [self.mypartlist[0], \
-                                             antit, \
-                                             self.mypartlist[1]]),
+        # A quark U and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[len(mypartlist)-1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        # A electron and positron
+        mypartlist.append(base_objects.Particle({'name':'e+',
+                      'antiname':'e-',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'e^+',
+                      'antitexname':'e^-',
+                      'line':'straight',
+                      'charge':-1.,
+                      'pdg_code':11,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        eminus = mypartlist[len(mypartlist)-1]
+        eplus = copy.copy(eminus)
+        eplus.set('is_part', False)
+
+        # A photon
+        mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        a = mypartlist[len(mypartlist)-1]
+
+
+        # Gluon and photon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [u, \
+                                             antiu, \
+                                             g]),
                       'color': ['C1'],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
 
-        self.mymodel.set('interactions', self.myinterlist)
-        self.mymodel.set('particles', self.mypartlist)
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [u, \
+                                             antiu, \
+                                             a]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
 
-    def test_helas_model_initialization(self):
-        """Test the default HelasModel class initialization"""
-        mymodel = helas_objects.HelasModel()
+        # Coupling of e to gamma
+        myinterlist.append(base_objects.Interaction({
+                      'id': 7,
+                      'particles': base_objects.ParticleList(\
+                                            [eminus, \
+                                             eplus, \
+                                             a]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
 
-        self.assertEqual(mymodel['particles'],
-                         helas_objects.HelasParticleList())
-        self.assertEqual(mymodel['interactions'],
-                         helas_objects.HelasInteractionList())
+
+        self.mybasemodel.set('particles', mypartlist)
+        self.mybasemodel.set('interactions', myinterlist)
 
     def test_setget_helas_model_correct(self):
         """Test correct HelasModel object get and set"""
 
-        # Test the particles item
-        mydict = {'name':'t',
-                  'antiname':'t~',
-                  'spin':2,
-                  'color':3,
-                  'mass':'mt',
-                  'width':'wt',
-                  'texname':'t',
-                  'antitexname':'\\overline{t}',
-                  'line':'straight',
-                  'charge':2. / 3.,
-                  'pdg_code':6,
-                  'propagating':True}
-
-        mypart = helas_objects.HelasParticle(mydict)
-        mypartlist = helas_objects.HelasParticleList([mypart])
-        mymodel = helas_objects.HelasModel()
-        mymodel.set('particles', mypartlist)
-
-        self.assertEqual(mymodel.get('particles'), mypartlist)
+        self.assertEqual(self.mymodel.get('name'), 'sm')
 
     def test_setget_helas_model_error(self):
         """Test error raising in HelasModel object get and set"""
@@ -1596,18 +1232,59 @@ class HelasModelTest(unittest.TestCase):
                           mymodel.set,
                           'wrong_subclass', None)
 
-        # For each subclass
-        self.assertFalse(mymodel.set('particles', not_a_string))
-        self.assertFalse(mymodel.set('interactions', not_a_string))
+    def test_set_wavefunctions(self):
+        """Test wavefunction dictionary in HelasModel"""
 
-    def test_dictionaries(self):
-        """Test particle dictionary in HelasModel"""
+        wavefunctions = {}
+        # IXXXXXX.Key: (spin, state)
+        wavefunctions[(2, 'incoming')] = \
+                          lambda wf: 'CALL IXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
+                          (wf.get('number_external'), wf.get('mass'),
+                           wf.get('number_external'), -(-1)**wf.get_flow('is_part'),
+                           wf.get('number_external'), wf.get('number'))
+        # OXXXXXX.Key: (spin, state)
+        wavefunctions[(2, 'outgoing')] = \
+                          lambda wf: 'CALL OXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
+                          (wf.get('number_external'), wf.get('mass'),
+                           wf.get('number_external'), 1**wf.get_flow('is_part'),
+                           wf.get('number_external'), wf.get('number'))
+        
+        self.assert_(self.mymodel.set('wavefunctions', wavefunctions))
 
-        antitop = copy.copy(self.mypartlist[0])
-        antitop.set('is_part', False)
-        mypartdict = {6:self.mypartlist[0], -6:antitop, 21:self.mypartlist[1]}
-        self.assertEqual(mypartdict, self.mymodel.get('particle_dict'))
+        wf = helas_objects.HelasWavefunction()
+        wf.set('pdg_code', -2, self.mybasemodel)
+        wf.set('state', 'incoming')
+        wf.set('interaction_id', 0)
+        wf.set('number_external', 1)
+        wf.set('number', 40)
 
-        myinterdict = {1:self.myinterlist[0]}
-        self.assertEqual(myinterdict, self.mymodel.get('interaction_dict'))
+        goal = 'CALL IXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,40))'
+        self.assertEqual(wavefunctions[wf.get_wf_key()](wf), goal)
+
+        wf.set('fermionflow', -1)
+
+        goal = 'CALL OXXXXX(P(0,1),zero,NHEL(1),1*IC(1),W(1,40))'
+        self.assertEqual(wavefunctions[wf.get_wf_key()](wf), goal)
+        
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final'}))
+
+        mothers = helas_objects.HelasWavefunctionList()
+
+        for leg in myleglist:
+            mothers.append(helas_objects.HelasWavefunction(leg, 0,
+                                                           self.mybasemodel))
+
+        wf.set('mothers', mothers)
+
+        goal = ((2, 'incoming'), (2, 'outgoing'),
+                (3, 'intermediate'), (2, 'outgoing'))
+
+        self.assertEqual(wf.get_wf_key(), goal)
 
