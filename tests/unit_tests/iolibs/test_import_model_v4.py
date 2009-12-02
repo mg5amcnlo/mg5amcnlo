@@ -143,8 +143,8 @@ class IOImportV4Test(unittest.TestCase):
                                                                 wplus,
                                                                 wmin,
                                                                 photon]),
-                                     'color':['guess'],
-                                     'lorentz':['guess'],
+                                     'color':[['C1']],
+                                     'lorentz':['L1'],
                                      'couplings':{(0, 0):'MGVX3'},
                                      'orders':{'QED':1}}),
                      base_objects.Interaction(
@@ -153,8 +153,8 @@ class IOImportV4Test(unittest.TestCase):
                                                                 gluon,
                                                                 gluon,
                                                                 t1]),
-                                     'color':['guess'],
-                                     'lorentz':['guess'],
+                                     'color':[['C1']],
+                                     'lorentz':['L1'],
                                      'couplings':{(0, 0):'MGVX2'},
                                      'orders':{'QCD':1}}),
                      base_objects.Interaction(
@@ -164,8 +164,8 @@ class IOImportV4Test(unittest.TestCase):
                                                                 wmin,
                                                                 wplus,
                                                                 wmin]),
-                                     'color':['guess'],
-                                     'lorentz':['guess'],
+                                     'color':[['C1']],
+                                     'lorentz':['L1'],
                                      'couplings':{(0, 0):'MGVX6'},
                                      'orders':{'QED':2}}),
 
@@ -175,8 +175,8 @@ class IOImportV4Test(unittest.TestCase):
                                                                 eplus,
                                                                 enu,
                                                                 wmin]),
-                                     'color':['guess'],
-                                     'lorentz':['guess'],
+                                     'color':[['C1']],
+                                     'lorentz':['L1'],
                                      'couplings':{(0, 0):'MGVX24'},
                                      'orders':{'QED':1}})])
 

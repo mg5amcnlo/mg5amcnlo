@@ -134,7 +134,7 @@ class ColorAmpTest(unittest.TestCase):
 
         goal_fact = color_algebra.ColorFactor([\
                             color_algebra.ColorString(['T(-100,2,1)',
-                                              'f(3,4,-100)'])])
+                                                       'f(3,4,-100)'])])
 
         self.assertEqual(col_fact, goal_fact)
 
@@ -143,8 +143,8 @@ class ColorAmpTest(unittest.TestCase):
                                      self.mymodel)
 
         goal_fact = color_algebra.ColorFactor([\
-                            color_algebra.ColorString(['T(3,-100,1)',
-                                              'T(4,2,-100)'])])
+                            color_algebra.ColorString(['T(3,1,-100)',
+                                                       'T(4,2,-100)'])])
 
         self.assertEqual(col_fact, goal_fact)
 
@@ -153,8 +153,8 @@ class ColorAmpTest(unittest.TestCase):
                                      self.mymodel)
 
         goal_fact = color_algebra.ColorFactor([\
-                            color_algebra.ColorString(['T(4,-100,1)',
-                                              'T(3,2,-100)'])])
+                            color_algebra.ColorString(['T(4,1,-100)',
+                                                       'T(3,2,-100)'])])
 
         self.assertEqual(col_fact, goal_fact)
 
@@ -180,15 +180,31 @@ class ColorAmpTest(unittest.TestCase):
 
         myamplitude.generate_diagrams()
 
-        # 
-        for diag in myamplitude['diagrams']:
-            print diag.nice_string()
+        # First diagram with two 3-gluon vertices
         col_fact = color_amp.colorize(myamplitude['diagrams'][0],
                                      self.mymodel)
 
         goal_fact = color_algebra.ColorFactor([\
                             color_algebra.ColorString(['T(-100,2,1)',
-                                              'f(3,4,-100)'])])
+                                                        'f(3,4,-101)',
+                                                        'f(5,-101,-100)'])])
+
+        self.assertEqual(col_fact, goal_fact)
+
+        # Diagram with one 4-gluon vertex
+        col_fact = color_amp.colorize(myamplitude['diagrams'][3],
+                                     self.mymodel)
+
+        goal_fact = color_algebra.ColorFactor([\
+                            color_algebra.ColorString(['T(-100,1,2)',
+                                                       'f(-1,3,4)',
+                                                       'f(-1,5,-100)']),
+                            color_algebra.ColorString(['T(-100,1,2)',
+                                                       'f(-1,3,-100)',
+                                                       'f(-1,5,4)']),
+                            color_algebra.ColorString(['T(-100,1,2)',
+                                                       'f(-1,3,5)',
+                                                       'f(-1,4,-100)'])])
 
         self.assertEqual(col_fact, goal_fact)
 
@@ -202,5 +218,13 @@ class ColorAmpTest(unittest.TestCase):
         my_col_str = color_amp.replace_index(my_col_str, 3, 103)
         my_col_str = color_amp.replace_index(my_col_str, 4, 104)
 
-        self.assertEqual(my_col_str, 'T(-1,102,101)f(-1,103,104)')
+        self.assertEqual(my_col_str, 'T(-1,X102,X101)f(-1,X103,X104)')
+
+    def test_str_cleaning(self):
+        """Test the color index X label cleaning"""
+
+        my_col_str = 'T(X-1,X2,1)f(X-1,3,X-4)'
+
+        self.assertEqual(color_amp.clean_str(my_col_str),
+                         'T(-1,2,1)f(-1,3,-4)')
 

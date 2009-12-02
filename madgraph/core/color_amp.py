@@ -50,6 +50,7 @@ def colorize(diagram, model):
                 ret_str = color_algebra.ColorString()
                 for col_obj in col_str:
                     mystr = replace_index(col_obj, old_num, new_num)
+                    mystr = clean_str(mystr)
                     ret_str.append(mystr)
                 del col_fact[index]
                 col_fact.insert(index, ret_str)
@@ -57,7 +58,6 @@ def colorize(diagram, model):
             return col_fact
 
         # NORMAL VERTICES WITH ID != 0 -----------------------------------------
-
         # Create a list of pdg codes entering the vertex ordered as in
         # interactions.py
         list_pdg = [part.get_pdg_code() for part in \
@@ -88,18 +88,18 @@ def colorize(diagram, model):
         # ordering
         for pdg_code in list_pdg:
             my_number = list_leg[pdg_code].pop()
-            if my_number not in list_numbers:
-                list_numbers.append(my_number)
-            elif my_number in repl_dict.keys():
+            if  my_number in repl_dict.keys():
                 # If a number has already been replaced, use the new value
                 list_numbers.append(repl_dict[my_number])
+            elif my_number not in list_numbers:
+                # Only appear once until now -> no need for a new index
+                list_numbers.append(my_number)
             else:
                 # If the number already appear, create a new index and save
                 # it as replaced
                 list_numbers.append(min_index)
                 repl_dict[my_number] = min_index
                 min_index = min_index - 1
-
         # Create a new ColorFactor to store new elements
         new_col_fact = color_algebra.ColorFactor()
 
@@ -113,12 +113,13 @@ def colorize(diagram, model):
                 mystr = col_obj
                 for ind in range(len(list_numbers)):
                     mystr = replace_index(mystr, ind, list_numbers[ind])
+                mystr = clean_str(mystr)
                 mod_str.append(mystr)
-
             # Attach it to all elements of the current color factor and
             # store the result in the new one
             if col_fact:
-                for final_str in col_fact[:]:
+                for exist_str in col_fact:
+                    final_str = copy.copy(exist_str)
                     final_str.extend(mod_str)
                     new_col_fact.append(final_str)
             else:
@@ -132,11 +133,16 @@ def colorize(diagram, model):
 
 def replace_index(mystr, old_ind, new_ind):
     """Replace all indices old_ind by new_ind in mystr and return
-    the result"""
+    the result. Use clean_str when all replacement are done."""
 
     return re.sub(r'(?P<start>,|\()%i(?P<end>,|\))' % old_ind,
-                   r'\g<start>%i\g<end>' % new_ind,
+                   r'\g<start>X%i\g<end>' % new_ind,
                    mystr)
 
+def clean_str(mystr):
+    """Remove spurious X labels in front of replaced indices"""
 
+    return re.sub(r'(?P<start>,|\()X(?P<index>-?\d+)',
+                   r'\g<start>\g<index>',
+                   mystr)
 
