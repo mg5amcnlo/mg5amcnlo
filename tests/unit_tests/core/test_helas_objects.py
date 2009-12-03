@@ -1714,7 +1714,7 @@ class HelasFortranModelTest(HelasModelTest):
 
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
-        myamplitude.get('diagrams')
+        print myamplitude.get('diagrams').nice_string()
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude)
         
@@ -1723,25 +1723,25 @@ class HelasFortranModelTest(HelasModelTest):
         # factors and color to really check.
 
         self.assertEqual("\n".join(helas_objects.HelasFortranModel().\
-                        get_matrix_element_calls(matrix_element)),\
+                        get_matrix_element_calls(matrix_element)),
                     """      CALL IXXXXX(P(0,1),mu,NHEL(1),1*IC(1),W(1,1))
       CALL OXXXXX(P(0,2),mu,NHEL(2),-1*IC(2),W(1,2))
       CALL VXXXXX(P(0,3),zero,NHEL(3),1*IC(3),W(1,3))
       CALL VXXXXX(P(0,4),zero,NHEL(4),1*IC(4),W(1,4))
       CALL VXXXXX(P(0,5),zero,NHEL(5),1*IC(5),W(1,5))
       CALL JIOXXX(W(1,1),W(1,2),GG,zero,zero,W(1,6))
-      CALL UVVXXX(W(1,3),W(1,4),MGVX2,zero,zero,W(1,7))
-      CALL VVTXXX(W(1,5),W(1,6),W(1,7),MGVX2,AMP(1))
-      CALL JVVXXX(W(1,3),W(1,4),MGVX1,zero,zero,W(1,8))
+      CALL UVVaXX(W(1,4),W(1,3),MGVX2,zero,zero,zero,W(1,7))
+      CALL VVTaXX(W(1,5),W(1,6),W(1,7),MGVX2,zero,AMP(1))
+      CALL JVVXXX(W(1,4),W(1,3),MGVX1,zero,zero,W(1,8))
       CALL VVVXXX(W(1,5),W(1,6),W(1,8),MGVX1,AMP(2))
-      CALL UVVXXX(W(1,3),W(1,5),MGVX2,zero,zero,W(1,9))
-      CALL VVTXXX(W(1,4),W(1,6),W(1,9),MGVX2,AMP(3))
-      CALL JVVXXX(W(1,3),W(1,5),MGVX1,zero,zero,W(1,10))
+      CALL UVVaXX(W(1,5),W(1,3),MGVX2,zero,zero,zero,W(1,9))
+      CALL VVTaXX(W(1,4),W(1,6),W(1,9),MGVX2,zero,AMP(3))
+      CALL JVVXXX(W(1,5),W(1,3),MGVX1,zero,zero,W(1,10))
       CALL VVVXXX(W(1,4),W(1,6),W(1,10),MGVX1,AMP(4))
-      CALL UVVXXX(W(1,4),W(1,5),MGVX2,zero,zero,W(1,11))
-      CALL VVTXXX(W(1,3),W(1,6),W(1,11),MGVX2,AMP(5))
-      CALL JVVXXX(W(1,4),W(1,5),MGVX1,zero,zero,W(1,12))
-      CALL VVVXXX(W(1,3),W(1,6),W(1,12),MGVX1,AMP(6))
+      CALL UVVaXX(W(1,4),W(1,5),MGVX2,zero,zero,zero,W(1,11))
+      CALL VVTaXX(W(1,3),W(1,6),W(1,11),MGVX2,zero,AMP(5))
+      CALL JVVXXX(W(1,5),W(1,4),MGVX1,zero,zero,W(1,12))
+      CALL VVVXXX(W(1,6),W(1,3),W(1,12),MGVX1,AMP(6))
       CALL FVIXXX(W(1,1),W(1,3),GG,mu,zero,W(1,13))
       CALL FVOXXX(W(1,2),W(1,4),GG,mu,zero,W(1,14))
       CALL IOVXXX(W(1,13),W(1,14),W(1,5),GG,AMP(7))

@@ -1175,7 +1175,7 @@ class HelasFortranModel(HelasModel):
             mother_letters = HelasFortranModel.sorted_letters(argument)
 
             call = call +''.join(mother_letters)
-            # IMPLEMENT Add C and other addition (for HEFT) if needed
+            # IMPLEMENT Add C and other addition (for HEFT etc) if needed
 
             # Fill out with X up to 6 positions
             call = call + 'X' * (17 - len(call)) + '('
@@ -1252,8 +1252,9 @@ class HelasFortranModel(HelasModel):
                           HelasFortranModel.sort_amp[HelasFortranModel.mother_dict[\
             wf2.get_spin_state_number()]] - \
                           HelasFortranModel.sort_amp[HelasFortranModel.mother_dict[\
-            wf1.get_spin_state_number()]] or \
-                          wf1.get('number') - wf2.get('number'))
+            wf1.get_spin_state_number()]])
+        # or \
+        #                  wf1.get('number') - wf2.get('number')
     
     @staticmethod
     def sorted_letters(arg):
