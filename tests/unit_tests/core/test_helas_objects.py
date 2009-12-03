@@ -596,7 +596,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                                              g]),
                       'color': ['C1'],
                       'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
+                      'couplings':{(0, 0):'GG'},
                       'orders':{'QCD':1}}))
 
         myinterlist.append(base_objects.Interaction({
@@ -607,7 +607,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                                              a]),
                       'color': ['C1'],
                       'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
+                      'couplings':{(0, 0):'MGVX15'},
                       'orders':{'QED':1}}))
 
         # Coupling of e to gamma
@@ -619,7 +619,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                                              a]),
                       'color': ['C1'],
                       'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
+                      'couplings':{(0, 0):'MGVX12'},
                       'orders':{'QED':1}}))
 
 
@@ -906,6 +906,27 @@ class HelasMatrixElementTest(unittest.TestCase):
         
         self.assertEqual(matrix_element.get('diagrams'), diagrams)
 
+        # Bonus test - I have checked that the resulting Helas calls
+        # below give identical result as MG4
+        self.assertEqual("\n".join(helas_objects.HelasFortranModel().\
+                                   get_matrix_element_calls(matrix_element)),
+                         """      CALL IXXXXX(P(0,1),zero,NHEL(1),1*IC(1),W(1,1))
+      CALL OXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
+      CALL VXXXXX(P(0,3),zero,NHEL(3),1*IC(3),W(1,3))
+      CALL OXXXXX(P(0,4),zero,NHEL(4),1*IC(4),W(1,4))
+      CALL IXXXXX(P(0,5),zero,NHEL(5),-1*IC(5),W(1,5))
+      CALL FVIXXX(W(1,1),W(1,3),GG,zero,zero,W(1,6))
+      CALL JIOXXX(W(1,5),W(1,4),MGVX12,zero,zero,W(1,7))
+      CALL IOVXXX(W(1,6),W(1,2),W(1,7),MGVX15,AMP(1))
+      CALL IXXXXX(P(0,1),zero,NHEL(1),1*IC(1),W(1,1))
+      CALL OXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
+      CALL VXXXXX(P(0,3),zero,NHEL(3),1*IC(3),W(1,3))
+      CALL OXXXXX(P(0,4),zero,NHEL(4),1*IC(4),W(1,4))
+      CALL IXXXXX(P(0,5),zero,NHEL(5),-1*IC(5),W(1,5))
+      CALL FVOXXX(W(1,2),W(1,3),GG,zero,zero,W(1,6))
+      CALL JIOXXX(W(1,5),W(1,4),MGVX12,zero,zero,W(1,7))
+      CALL IOVXXX(W(1,1),W(1,6),W(1,7),MGVX15,AMP(2))""")
+
     def test_generate_helas_diagrams_ae_ae(self):
         """Testing the helas diagram generation based on Diagrams
         using the processes a e- > a e-
@@ -1077,6 +1098,19 @@ class HelasMatrixElementTest(unittest.TestCase):
         
         self.assertEqual(matrix_element.get('diagrams'), mydiagrams)
 
+        # Bonus test - I have checked that the resulting Helas calls
+        # below give identical result as MG4
+        self.assertEqual("\n".join(helas_objects.HelasFortranModel().\
+                                   get_matrix_element_calls(matrix_element)),
+                         """      CALL IXXXXX(P(0,1),zero,NHEL(1),1*IC(1),W(1,1))
+      CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
+      CALL VXXXXX(P(0,3),zero,NHEL(3),1*IC(3),W(1,3))
+      CALL OXXXXX(P(0,4),zero,NHEL(4),1*IC(4),W(1,4))
+      CALL FVIXXX(W(1,1),W(1,2),MGVX12,zero,zero,W(1,5))
+      CALL IOVXXX(W(1,5),W(1,4),W(1,3),MGVX12,AMP(1))
+      CALL FVIXXX(W(1,1),W(1,3),MGVX12,zero,zero,W(1,6))
+      CALL IOVXXX(W(1,6),W(1,4),W(1,2),MGVX12,AMP(2))""")
+
 #===============================================================================
 # HelasModelTest
 #===============================================================================
@@ -1117,7 +1151,7 @@ class HelasModelTest(unittest.TestCase):
                       'antiname':'u~',
                       'spin':2,
                       'color':3,
-                      'mass':'zero',
+                      'mass':'mu',
                       'width':'zero',
                       'texname':'u',
                       'antitexname':'\bar u',
@@ -1136,7 +1170,7 @@ class HelasModelTest(unittest.TestCase):
                       'antiname':'e-',
                       'spin':2,
                       'color':1,
-                      'mass':'zero',
+                      'mass':'me',
                       'width':'zero',
                       'texname':'e^+',
                       'antitexname':'e^-',
@@ -1167,6 +1201,77 @@ class HelasModelTest(unittest.TestCase):
                       'self_antipart':True}))
         a = mypartlist[len(mypartlist)-1]
 
+        # A T particle
+        mypartlist.append(base_objects.Particle({'name':'T1',
+                      'antiname':'T1',
+                      'spin':5,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'T',
+                      'antitexname':'T',
+                      'line':'double',
+                      'charge':0.,
+                      'pdg_code':8000002,
+                      'propagating':False,
+                      'is_part':True,
+                      'self_antipart':True}))
+        T1 = mypartlist[len(mypartlist)-1]
+
+        # A U squark and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'su',
+                      'antiname':'su~',
+                      'spin':1,
+                      'color':3,
+                      'mass':'sumas',
+                      'width':'suwid',
+                      'texname':'\tilde u',
+                      'antitexname':'\bar {\tilde u}',
+                      'line':'dashed',
+                      'charge':2. / 3.,
+                      'pdg_code':1000002,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        su = mypartlist[len(mypartlist)-1]
+        antisu = copy.copy(u)
+        antisu.set('is_part', False)
+
+        # W+ and W-
+        mypartlist.append(base_objects.Particle({'name':'W+',
+                      'antiname':'W-',
+                      'spin':3,
+                      'color':1,
+                      'mass':'wmas',
+                      'width':'wwid',
+                      'texname':'W^+',
+                      'antitexname':'W^-',
+                      'line':'wavy',
+                      'charge':1.,
+                      'pdg_code':24,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        wplus = mypartlist[len(mypartlist)-1]
+        wminus = copy.copy(u)
+        wminus.set('is_part', False)
+
+        # Z
+        mypartlist.append(base_objects.Particle({'name':'Z',
+                      'antiname':'Z',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zmas',
+                      'width':'zwid',
+                      'texname':'Z',
+                      'antitexname':'Z',
+                      'line':'wavy',
+                      'charge':1.,
+                      'pdg_code':23,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        z = mypartlist[len(mypartlist)-1]
 
         # Gluon and photon couplings to quarks
         myinterlist.append(base_objects.Interaction({
@@ -1177,7 +1282,7 @@ class HelasModelTest(unittest.TestCase):
                                              g]),
                       'color': ['C1'],
                       'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
+                      'couplings':{(0, 0):'GG'},
                       'orders':{'QCD':1}}))
 
         myinterlist.append(base_objects.Interaction({
@@ -1188,8 +1293,33 @@ class HelasModelTest(unittest.TestCase):
                                              a]),
                       'color': ['C1'],
                       'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
+                      'couplings':{(0, 0):'MGVX15'},
                       'orders':{'QED':1}}))
+
+        # Tgg coupling
+        myinterlist.append(base_objects.Interaction({
+                      'id': 5,
+                      'particles': base_objects.ParticleList(\
+                                            [g, \
+                                             g, \
+                                             T1]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'MGVX2'},
+                      'orders':{'QCD':1}}))
+
+
+        # ggg coupling
+        myinterlist.append(base_objects.Interaction({
+                      'id': 15,
+                      'particles': base_objects.ParticleList(\
+                                            [g, \
+                                             g, \
+                                             g]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'MGVX1'},
+                      'orders':{'QCD':1}}))
 
         # Coupling of e to gamma
         myinterlist.append(base_objects.Interaction({
@@ -1202,6 +1332,45 @@ class HelasModelTest(unittest.TestCase):
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
+
+        # g-gamma-su-subar coupling
+        myinterlist.append(base_objects.Interaction({
+                      'id': 100,
+                      'particles': base_objects.ParticleList(\
+                                            [a,
+                                             g,
+                                             su,
+                                             antisu]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'MGVX89'},
+                      'orders':{'QED':1, 'QCD':1}}))
+
+        # w+w-w+w- coupling
+        myinterlist.append(base_objects.Interaction({
+                      'id': 8,
+                      'particles': base_objects.ParticleList(\
+                                            [wplus,
+                                             wminus,
+                                             wplus,
+                                             wminus]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'MGVX6'},
+                      'orders':{'QED':2}}))
+
+        # w+w-zz coupling
+        myinterlist.append(base_objects.Interaction({
+                      'id': 9,
+                      'particles': base_objects.ParticleList(\
+                                            [wplus,
+                                             wminus,
+                                             z,
+                                             z]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'MGVX8'},
+                      'orders':{'QED':2}}))
 
 
         self.mybasemodel.set('particles', mypartlist)
@@ -1237,16 +1406,16 @@ class HelasModelTest(unittest.TestCase):
 
         wavefunctions = {}
         # IXXXXXX.Key: (spin, state)
-        wavefunctions[(2, 'incoming')] = \
+        wavefunctions[tuple([-2])] = \
                           lambda wf: 'CALL IXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
                           (wf.get('number_external'), wf.get('mass'),
-                           wf.get('number_external'), -(-1)**wf.get_flow('is_part'),
+                           wf.get('number_external'), -(-1)**wf.get_with_flow('is_part'),
                            wf.get('number_external'), wf.get('number'))
         # OXXXXXX.Key: (spin, state)
-        wavefunctions[(2, 'outgoing')] = \
+        wavefunctions[tuple([2])] = \
                           lambda wf: 'CALL OXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
                           (wf.get('number_external'), wf.get('mass'),
-                           wf.get('number_external'), 1**wf.get_flow('is_part'),
+                           wf.get('number_external'), 1**wf.get_with_flow('is_part'),
                            wf.get('number_external'), wf.get('number'))
         
         self.assert_(self.mymodel.set('wavefunctions', wavefunctions))
@@ -1258,33 +1427,336 @@ class HelasModelTest(unittest.TestCase):
         wf.set('number_external', 1)
         wf.set('number', 40)
 
-        goal = 'CALL IXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,40))'
-        self.assertEqual(wavefunctions[wf.get_wf_key()](wf), goal)
+        goal = 'CALL IXXXXX(P(0,1),mu,NHEL(1),-1*IC(1),W(1,40))'
+        self.assertEqual(self.mymodel.get_wavefunction_call(wf), goal)
 
         wf.set('fermionflow', -1)
 
-        goal = 'CALL OXXXXX(P(0,1),zero,NHEL(1),1*IC(1),W(1,40))'
-        self.assertEqual(wavefunctions[wf.get_wf_key()](wf), goal)
+        goal = 'CALL OXXXXX(P(0,1),mu,NHEL(1),1*IC(1),W(1,40))'
+        self.assertEqual(self.mymodel.get_wavefunction_call(wf), goal)
         
+#===============================================================================
+# HelasModelTest
+#===============================================================================
+class HelasFortranModelTest(HelasModelTest):
+    """Test class for the HelasFortranModel object"""
+
+    def test_generate_wavefunctions_and_amplitudes(self):
+        """Test automatic generation of wavefunction and amplitude calls"""
+
+        goal = [ \
+            '      CALL IXXXXX(P(0,1),me,NHEL(1),1*IC(1),W(1,1))',
+            '      CALL OXXXXX(P(0,2),me,NHEL(2),-1*IC(2),W(1,2))',
+            '      CALL VXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,3))',
+            '      CALL FVOXXX(W(1,2),W(1,3),GQED,me,zero,W(1,1))',
+            '      CALL FVIXXX(W(1,1),W(1,3),GQED,me,zero,W(1,2))',
+            '      CALL JIOXXX(W(1,1),W(1,2),GQED,zero,zero,W(1,3))',
+            '      CALL IOVXXX(W(1,1),W(1,2),W(1,3),GQED,AMP(1))',
+            '      CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))',
+            '      CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))',
+            '      CALL TXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,3))',
+            '      CALL JVTXXX(W(1,2),W(1,3),MGVX2,zero,zero,W(1,1))',
+            '      CALL JVTXXX(W(1,1),W(1,3),MGVX2,zero,zero,W(1,2))',
+            '      CALL UVVXXX(W(1,1),W(1,2),MGVX2,zero,zero,W(1,3))',
+            '      CALL VVTXXX(W(1,1),W(1,2),W(1,3),MGVX2,AMP(2))',
+            '      CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))',
+            '      CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))',
+            '      CALL SXXXXX(P(0,3),-1*IC(3),W(1,3))',
+            '      CALL SXXXXX(P(0,4),1*IC(4),W(1,4))',
+            '      CALL JVSSXX(W(1,2),W(1,3),W(1,4),MGVX89,zero,zero,W(1,1))',
+            '      CALL JVSSXX(W(1,1),W(1,3),W(1,4),MGVX89,zero,zero,W(1,2))',
+            '      CALL HVVSXX(W(1,1),W(1,2),W(1,4),MGVX89,sumas,suwid,W(1,3))',
+            '      CALL HVVSXX(W(1,1),W(1,2),W(1,3),MGVX89,sumas,suwid,W(1,4))',
+            '      CALL VVSSXX(W(1,1),W(1,2),W(1,3),W(1,4),MGVX89,AMP(1))']
+
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'initial'}))
+                                           'number': 1,
+                                           'state':'initial'}))
         myleglist.append(base_objects.Leg({'id':-11,
+                                           'number': 2,
                                          'state':'initial'}))
         myleglist.append(base_objects.Leg({'id':22,
+                                           'number': 3,
+                                         'state':'initial'}))
+
+        wfs = helas_objects.HelasWavefunctionList(\
+            [ helas_objects.HelasWavefunction(leg, 7,
+                                              self.mybasemodel) \
+              for leg in myleglist ])
+
+        fortran_model = helas_objects.HelasFortranModel()
+
+        goal_counter = 0
+
+        for wf in wfs:
+            self.assertEqual(fortran_model.get_wavefunction_call(wf),
+                             goal[goal_counter])
+            goal_counter = goal_counter + 1
+
+        for wf in wfs:
+            mothers = copy.copy(wfs)
+            mothers.remove(wf)
+            wf.set('mothers',mothers)
+            self.assertEqual(fortran_model.get_wavefunction_call(wf),
+                             goal[goal_counter])
+            goal_counter = goal_counter + 1
+
+        amplitude = helas_objects.HelasAmplitude({\
+            'mothers': wfs,
+            'number': 1})
+        amplitude.set('interaction_id', 7, self.mybasemodel)
+        self.assertEqual(fortran_model.get_amplitude_call(amplitude),
+                         goal[goal_counter])
+        goal_counter = goal_counter + 1
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'number': 1,
+                                           'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'number': 2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id': 8000002,
+                                           'number': 3,
+                                         'state':'initial'}))
+
+        wfs = helas_objects.HelasWavefunctionList(\
+            [ helas_objects.HelasWavefunction(leg, 5,
+                                              self.mybasemodel) \
+              for leg in myleglist ])
+
+        fortran_model = helas_objects.HelasFortranModel()
+
+        for wf in wfs:
+            self.assertEqual(fortran_model.get_wavefunction_call(wf),
+                             goal[goal_counter])
+            goal_counter = goal_counter + 1
+
+        for wf in wfs:
+            mothers = copy.copy(wfs)
+            mothers.remove(wf)
+            wf.set('mothers',mothers)
+            self.assertEqual(fortran_model.get_wavefunction_call(wf),
+                             goal[goal_counter])
+            goal_counter = goal_counter + 1
+
+        amplitude = helas_objects.HelasAmplitude({\
+            'mothers': wfs,
+            'number': 2})
+        amplitude.set('interaction_id', 5, self.mybasemodel)
+        self.assertEqual(fortran_model.get_amplitude_call(amplitude),
+                         goal[goal_counter])
+        goal_counter = goal_counter + 1
+
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'number': 1,
+                                           'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                           'number': 2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id': 1000002,
+                                           'number': 3,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id': -1000002,
+                                           'number': 4,
+                                         'state':'initial'}))
+
+        wfs = helas_objects.HelasWavefunctionList(\
+            [ helas_objects.HelasWavefunction(leg, 100,
+                                              self.mybasemodel) \
+              for leg in myleglist ])
+
+        fortran_model = helas_objects.HelasFortranModel()
+
+        for wf in wfs:
+            self.assertEqual(fortran_model.get_wavefunction_call(wf),
+                             goal[goal_counter])
+            goal_counter = goal_counter + 1
+
+        for wf in wfs:
+            mothers = copy.copy(wfs)
+            mothers.remove(wf)
+            wf.set('mothers',mothers)
+            self.assertEqual(fortran_model.get_wavefunction_call(wf),
+                             goal[goal_counter])
+            goal_counter = goal_counter + 1
+
+        amplitude = helas_objects.HelasAmplitude({\
+            'mothers': wfs,
+            'number': 1})
+        amplitude.set('interaction_id', 100, self.mybasemodel)
+        self.assertEqual(fortran_model.get_amplitude_call(amplitude),
+                         goal[goal_counter])
+        goal_counter = goal_counter + 1
+
+    def test_w_and_z_amplitudes(self):
+        """Test wavefunction and amplitude calls for W and Z"""
+        
+        goal = [ \
+            'CALL JWWWXX(W(1,2),W(1,3),W(1,4),MGVX6,wmas,wwid,W(1,1))',
+            'CALL JWWWXX(W(1,1),W(1,3),W(1,4),MGVX6,wmas,wwid,W(1,2))',
+            'CALL JWWWXX(W(1,1),W(1,2),W(1,4),MGVX6,wmas,wwid,W(1,3))',
+            'CALL JWWWXX(W(1,1),W(1,2),W(1,3),MGVX6,wmas,wwid,W(1,4))',
+            'CALL WWWWXX(W(1,1),W(1,2),W(1,3),W(1,4),MGVX6,AMP(1))',
+            'CALL JW3WXX(W(1,2),W(1,3),W(1,4),MGVX8,wmas,wwid,W(1,1))',
+            'CALL JW3WXX(W(1,1),W(1,3),W(1,4),MGVX8,wmas,wwid,W(1,2))',
+            'CALL JW3WXX(W(1,1),W(1,2),W(1,4),MGVX8,zmas,zwid,W(1,3))',
+            'CALL JW3WXX(W(1,1),W(1,2),W(1,3),MGVX8,zmas,zwid,W(1,4))',
+            'CALL W3W3XX(W(1,1),W(1,2),W(1,3),W(1,4),MGVX8,AMP(1))']
+
+        goal_counter = 0
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':24,
+                                           'number': 1,
+                                           'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-24,
+                                           'number': 2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id': 24,
+                                           'number': 3,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id': -24,
+                                           'number': 4,
+                                         'state':'initial'}))
+
+        wfs = helas_objects.HelasWavefunctionList(\
+            [ helas_objects.HelasWavefunction(leg, 8,
+                                              self.mybasemodel) \
+              for leg in myleglist ])
+
+        fortran_model = helas_objects.HelasFortranModel()
+
+        for wf in wfs:
+            mothers = copy.copy(wfs)
+            mothers.remove(wf)
+            wf.set('mothers',mothers)
+            # Not yet implemented special wavefunctions for W/Z
+            #self.assertEqual(fortran_model.get_wavefunction_call(wf),
+            #                 goal[goal_counter])
+            goal_counter = goal_counter + 1
+
+        amplitude = helas_objects.HelasAmplitude({\
+            'mothers': wfs,
+            'number': 1})
+        amplitude.set('interaction_id', 8, self.mybasemodel)
+        # Not yet implemented special wavefunctions for W/Z
+        #self.assertEqual(fortran_model.get_amplitude_call(amplitude),
+        #                 goal[goal_counter])
+        goal_counter = goal_counter + 1
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':24,
+                                           'number': 1,
+                                           'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-24,
+                                           'number': 2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id': 23,
+                                           'number': 3,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id': 23,
+                                           'number': 4,
+                                         'state':'initial'}))
+
+        wfs = helas_objects.HelasWavefunctionList(\
+            [ helas_objects.HelasWavefunction(leg, 9,
+                                              self.mybasemodel) \
+              for leg in myleglist ])
+
+        fortran_model = helas_objects.HelasFortranModel()
+
+        for wf in wfs:
+            mothers = copy.copy(wfs)
+            mothers.remove(wf)
+            wf.set('mothers',mothers)
+            # Not yet implemented special wavefunctions for W/Z
+            # self.assertEqual(fortran_model.get_wavefunction_call(wf),
+            #                 goal[goal_counter])
+            goal_counter = goal_counter + 1
+
+
+        amplitude = helas_objects.HelasAmplitude({\
+            'mothers': wfs,
+            'number': 1})
+        amplitude.set('interaction_id', 9, self.mybasemodel)
+        # Not yet implemented special wavefunctions for W/Z
+        #self.assertEqual(fortran_model.get_amplitude_call(amplitude),
+        #                 goal[goal_counter])
+        goal_counter = goal_counter + 1
+
+    def test_generate_uux_ggg(self):
+        """Test calls for u u~ > g g g"""
+        
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':21,
                                          'state':'final'}))
 
-        mothers = helas_objects.HelasWavefunctionList()
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mybasemodel})
 
-        for leg in myleglist:
-            mothers.append(helas_objects.HelasWavefunction(leg, 0,
-                                                           self.mybasemodel))
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
-        wf.set('mothers', mothers)
+        myamplitude.get('diagrams')
 
-        goal = ((2, 'incoming'), (2, 'outgoing'),
-                (3, 'intermediate'), (2, 'outgoing'))
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude)
+        
+        # Note that I haven't actually checked that the expression
+        # below is correct, so this is just as example. Need fermion
+        # factors and color to really check.
 
-        self.assertEqual(wf.get_wf_key(), goal)
-
+        self.assertEqual("\n".join(helas_objects.HelasFortranModel().\
+                        get_matrix_element_calls(matrix_element)),\
+                    """      CALL IXXXXX(P(0,1),mu,NHEL(1),1*IC(1),W(1,1))
+      CALL OXXXXX(P(0,2),mu,NHEL(2),-1*IC(2),W(1,2))
+      CALL VXXXXX(P(0,3),zero,NHEL(3),1*IC(3),W(1,3))
+      CALL VXXXXX(P(0,4),zero,NHEL(4),1*IC(4),W(1,4))
+      CALL VXXXXX(P(0,5),zero,NHEL(5),1*IC(5),W(1,5))
+      CALL JIOXXX(W(1,1),W(1,2),GG,zero,zero,W(1,6))
+      CALL UVVXXX(W(1,3),W(1,4),MGVX2,zero,zero,W(1,7))
+      CALL VVTXXX(W(1,5),W(1,6),W(1,7),MGVX2,AMP(1))
+      CALL JVVXXX(W(1,3),W(1,4),MGVX1,zero,zero,W(1,8))
+      CALL VVVXXX(W(1,5),W(1,6),W(1,8),MGVX1,AMP(2))
+      CALL UVVXXX(W(1,3),W(1,5),MGVX2,zero,zero,W(1,9))
+      CALL VVTXXX(W(1,4),W(1,6),W(1,9),MGVX2,AMP(3))
+      CALL JVVXXX(W(1,3),W(1,5),MGVX1,zero,zero,W(1,10))
+      CALL VVVXXX(W(1,4),W(1,6),W(1,10),MGVX1,AMP(4))
+      CALL UVVXXX(W(1,4),W(1,5),MGVX2,zero,zero,W(1,11))
+      CALL VVTXXX(W(1,3),W(1,6),W(1,11),MGVX2,AMP(5))
+      CALL JVVXXX(W(1,4),W(1,5),MGVX1,zero,zero,W(1,12))
+      CALL VVVXXX(W(1,3),W(1,6),W(1,12),MGVX1,AMP(6))
+      CALL FVIXXX(W(1,1),W(1,3),GG,mu,zero,W(1,13))
+      CALL FVOXXX(W(1,2),W(1,4),GG,mu,zero,W(1,14))
+      CALL IOVXXX(W(1,13),W(1,14),W(1,5),GG,AMP(7))
+      CALL FVOXXX(W(1,2),W(1,5),GG,mu,zero,W(1,15))
+      CALL IOVXXX(W(1,13),W(1,15),W(1,4),GG,AMP(8))
+      CALL IOVXXX(W(1,13),W(1,2),W(1,12),GG,AMP(9))
+      CALL FVIXXX(W(1,1),W(1,4),GG,mu,zero,W(1,16))
+      CALL FVOXXX(W(1,2),W(1,3),GG,mu,zero,W(1,17))
+      CALL IOVXXX(W(1,16),W(1,17),W(1,5),GG,AMP(10))
+      CALL IOVXXX(W(1,16),W(1,15),W(1,3),GG,AMP(11))
+      CALL IOVXXX(W(1,16),W(1,2),W(1,10),GG,AMP(12))
+      CALL FVIXXX(W(1,1),W(1,5),GG,mu,zero,W(1,18))
+      CALL IOVXXX(W(1,18),W(1,17),W(1,4),GG,AMP(13))
+      CALL IOVXXX(W(1,18),W(1,14),W(1,3),GG,AMP(14))
+      CALL IOVXXX(W(1,18),W(1,2),W(1,8),GG,AMP(15))
+      CALL IOVXXX(W(1,1),W(1,17),W(1,12),GG,AMP(16))
+      CALL IOVXXX(W(1,1),W(1,14),W(1,10),GG,AMP(17))
+      CALL IOVXXX(W(1,1),W(1,15),W(1,8),GG,AMP(18))""")

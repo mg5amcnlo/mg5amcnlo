@@ -99,9 +99,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 # since all bosons should be treated as outgoing
                 if self.get('spin') % 2 == 1:
                     self.set('state', 'intermediate')
-                    if leg.get('state') == 'initial' and \
-                           not self.get('self_antipart'):
-                        self.set('pdg_code', -self.get('pdg_code'), model)
+                    if leg.get('state') == 'initial':
+                        self.set('is_part',not self.get('is_part'))
+                        if not self.get('self_antipart'):
+                            self.set('pdg_code', -self.get('pdg_code'))
                 self.set('interaction_id', interaction_id, model)
         elif arguments:
             super(HelasWavefunction, self).__init__(arguments[0])
@@ -285,7 +286,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
     def set_state_and_particle(self, model):
         """Set incoming/outgoing state according to mother states and
-        Lorentz structure of the interaction"""
+        Lorentz structure of the interaction, and set PDG code
+        according to the particles in the interaction"""
 
         if not isinstance(model, base_objects.Model):
             raise self.PhysicsObjectError, \
@@ -307,61 +309,48 @@ class HelasWavefunction(base_objects.PhysicsObject):
             else:
                 self.set('state', 'outgoing')
 
-        # Now determine particle-antiparticle based on the identities
-        # of the mothers and the relevant interaction
-
-        # Set up needed info
-        interaction = model.get('interaction_dict')[self.get('interaction_id')]
-        interaction_pdgs = [ -(-1)**part.get('is_part')*part.get('pdg_code') \
-                             for part in interaction.get('particles') ]
-        mother_info = [ [wf.get('pdg_code'),
-                         wf.get('is_part'),
-                         wf.get('self_antipart'),
-                         wf.get('state')] for wf in self.get('mothers') ]
-
-        # Need to flip pdg for incoming particle or outgoing antiparticle,
-        # since interaction has all particles outgoing
-        # (corresponding to outgoing particles and incoming antiparticles)
-
-        for info in mother_info:
-            if not info[2] and \
-                   (info[3] == 'incoming' and info[1] or \
-                    info[3] == 'outgoing' and not info[1]):
-                info[0] = -info[0]
-
-        # Now remove all mother pdgs from the interaction pdgs
-        mother_pdgs = [info[0] for info in mother_info]
-        reduced_pdgs = copy.copy(interaction_pdgs)
-        for pdg in interaction_pdgs:
-            if pdg in mother_pdgs:
-                reduced_pdgs.remove(pdg)
-                mother_pdgs.remove(pdg)
-        
-        # Check that we only have one pdg code left
-        if len(reduced_pdgs) != 1:
-            raise self.PhysicsObjectError, \
-                  "%d pdg codes left after subtraction in set_state_and_particle" \
-                  % len(reduced_pdgs)
-
-        # Set pdg
-        self.set('pdg_code', reduced_pdgs[0], model)
-        
-        # Now check the rule above. Remember that we want the particle
-        # created here to go into the next vertex, so we need to flip
-        # identity for incoming antiparticle and outgoing particle.
+        # We want the particle created here to go into the next
+        # vertex, so we need to flip identity for incoming
+        # antiparticle and outgoing particle.
         if not self.get('self_antipart') and \
                (self.get('state') == 'incoming' and not self.get('is_part') \
                 or self.get('state') == 'outgoing' and self.get('is_part')):
-            self.set('pdg_code', -self.get(pdg_code), model)
+            self.set('pdg_code', -self.get('pdg_code'), model)
 
         # For a boson, flip code (since going into next vertex)
         if not self.get('self_antipart') and \
                self.get('spin') % 2 == 1:
-            self.set('pdg_code', -self.get(pdg_code), model)
+            self.set('pdg_code', -self.get('pdg_code'), model)
 
         return True
         
-    def get_flow(self, name):
+    def check_and_fix_fermion_flow(self, wavefunctions, diagram_wavefunctions):
+        """Check for clashing fermion flow (N(incoming) !=
+        N(outgoing)). If found, we need to trace back through the
+        mother structure (only looking at fermions), until we find a
+        Majorana fermion.  Set fermionflow = -1 for this wavefunction,
+        as well as all other fermions along this line all the way from
+        the initial clash to the external fermion, and consider an
+        incoming particle with fermionflow -1 as outgoing (and vice
+        versa). Continue until we have N(incoming) = N(outgoing).
+        """
+
+        # Clash is defined by whether the mothers have N(incoming) !=
+        # N(outgoing) after this state has been subtracted
+        mother_states = [ wf.get('state') for wf in self.get('mothers') ]
+        if self.get('state') in mother_states:
+            mother_states.remove(self.get('state'))
+
+        if len(filter(lambda state: state == 'incoming', mother_states)) == \
+           len(filter(lambda state: state == 'outgoing', mother_states)):
+            return True
+
+        # IMPLEMENT the rest
+        print 'Clashing fermion flow found'
+
+        return True
+
+    def get_with_flow(self, name):
         """Generate the is_part and state needed for writing out
         wavefunctions, taking into account the fermion flow"""
 
@@ -377,23 +366,26 @@ class HelasWavefunction(base_objects.PhysicsObject):
                           ['incoming', 'outgoing'])[0]
         return self.get(name)
 
+    def get_spin_state_number(self):
+
+        state_number = {'incoming': -1, 'outgoing': 1, 'intermediate': 1}
+        return self.get('fermionflow')* \
+               state_number[self.get('state')]* \
+               self.get('spin')
+
     def get_wf_key(self):
         """Generate the (spin, state) tuple used as key for the helas call
-        dictionnaries in HelasModel"""
-
-        if not self.get('mothers'):
-            return (self.get('spin'), self.get_flow('state'))
+        dictionaries in HelasModel"""
 
         res = []
         for mother in self.get('mothers'):
-            res.append((mother.get('spin'), mother.get_flow('state')))
+            res.append(mother.get_spin_state_number())
 
         # Sort according to spin and flow direction
-        res.sort(lambda t1, t2: t1[0] - t2[0] or t1[1] > t2[1])
+        res.sort()
 
-        # Append present wavefunction
-        res.append((self.get('spin'), self.get_flow('state')))
-
+        res.append(self.get_spin_state_number())
+        
         # IMPLEMENT: Check if we need to append a charge conjugation flag
 
         return tuple(res)
@@ -587,16 +579,40 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
     # Helper functions
 
+    def check_and_fix_fermion_flow(self, wavefunctions, diagram_wavefunctions):
+        """Check for clashing fermion flow (N(incoming) !=
+        N(outgoing)). If found, we need to trace back through the
+        mother structure (only looking at fermions), until we find a
+        Majorana fermion.  Set fermionflow = -1 for this wavefunction,
+        as well as all other fermions along this line all the way from
+        the initial clash to the external fermion, and consider an
+        incoming particle with fermionflow -1 as outgoing (and vice
+        versa). Continue until we have N(incoming) = N(outgoing).
+        """
+
+        # Clash is defined by whether the mothers have N(incoming) !=
+        # N(outgoing) after this state has been subtracted
+        mother_states = [ wf.get('state') for wf in self.get('mothers') ]
+
+        if len(filter(lambda state: state == 'incoming', mother_states)) == \
+           len(filter(lambda state: state == 'outgoing', mother_states)):
+            return True
+
+        # IMPLEMENT the rest
+        print 'Clashing fermion flow found'
+
+        return True
+
     def get_amp_key(self):
-        """Generate the (spin, state) tuple used as key for the helas call
-        dictionnaries in HelasModel"""
+        """Generate the (spin, state) tuples used as key for the helas call
+        dictionaries in HelasModel"""
 
         res = []
         for mother in self.get('mothers'):
-            res.append((mother.get('spin'), mother.get_flow('state')))
+            res.append(mother.get_spin_state_number())
 
         # Sort according to spin and flow direction
-        res.sort(lambda t1, t2: t1[0] - t2[0] or t1[1] > t2[1])
+        res.sort()
 
         # IMPLEMENT: Check if we need to append a charge conjugation flag
 
@@ -764,18 +780,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         wavefunctions = []
 
         # Generate wavefunctions for the external particles
-        external_wavefunctions = [ HelasWavefunction(leg, 0, model) for leg \
-                                   in process.get('legs') ]
-        
+        external_wavefunctions = dict([(leg.get('number'),
+                                        HelasWavefunction(leg, 0, model)) \
+                                       for leg in process.get('legs')])
+
         incoming_numbers = [ leg.get('number') for leg in filter(lambda leg: \
-                                  leg.get('state') == 'incoming',
+                                  leg.get('state') == 'initial',
                                   process.get('legs')) ]
-
-        # Sort the wavefunctions according to number, just to be sure
-        external_wavefunctions.sort(lambda wf1, wf2: \
-                                    wf1.get('number')-wf2.get('number'))
-
-        wavefunctions.extend(external_wavefunctions)
 
         # Now go through the diagrams, looking for undefined wavefunctions
 
@@ -783,20 +794,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         for diagram in diagram_list:
 
-            if not optimization:
-                wavefunctions = []
-                wavefunctions.extend(external_wavefunctions)
-
             # Dictionary from leg number to wave function, keeps track
             # of the present position in the tree
             number_to_wavefunctions = {}
 
             # Initialize wavefunctions for this diagram
             diagram_wavefunctions = HelasWavefunctionList()
-            if diagram == diagram_list[0] or not optimization:
-                diagram_wavefunctions.extend(external_wavefunctions)
-            elif not optimization:
-                wavefunctions = copy.copy(external_wavefunctions)
             
             vertices = copy.copy(diagram.get('vertices'))
 
@@ -835,34 +838,56 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 last_leg = legs.pop()
                 # Generate list of mothers from legs
                 mothers = self.getmothers(legs, number_to_wavefunctions,
-                                          external_wavefunctions)
+                                          external_wavefunctions,
+                                          wavefunctions,
+                                          diagram_wavefunctions)
                 # Now generate new wavefunction for the last leg
                 wf = HelasWavefunction(last_leg, vertex.get('id'), model)
                 wf.set('mothers', mothers)
-                wf.set('number', len(wavefunctions) + 1)
                 # Need to set incoming/outgoing and
                 # particle/antiparticle according to the fermion flow
                 # of mothers
                 wf.set_state_and_particle(model)
+                # Need to check for clashing fermion flow due to
+                # Majorana fermions, and modify if necessary
+                wf.check_and_fix_fermion_flow(wavefunctions,
+                                              diagram_wavefunctions)
                 # No number_external for internal propagators
                 wf.set('number_external', 0)
-                if wf in wavefunctions and optimization:
+                # Wavefunction number is given by: number of external
+                # wavefunctions + number of non-external wavefunctions
+                # in wavefunctions and diagram_wavefunctions
+                number = len(external_wavefunctions) + 1
+                number = number + len(filter(lambda wf: wf not in \
+                                         external_wavefunctions.values(),
+                                         wavefunctions))
+                number = number + len(filter(lambda wf: wf not in \
+                                         external_wavefunctions.values(),
+                                         diagram_wavefunctions))
+                wf.set('number',number)
+                # Store wavefunction
+                if wf in wavefunctions:
                     wf = wavefunctions[wavefunctions.index(wf)]
                 else:
-                    wavefunctions.append(wf)
                     diagram_wavefunctions.append(wf)
                 number_to_wavefunctions[last_leg.get('number')] = wf
 
             # Find mothers for the amplitude
             legs = lastvx.get('legs')
             mothers = self.getmothers(legs, number_to_wavefunctions,
-                                      external_wavefunctions)
+                                      external_wavefunctions,
+                                      wavefunctions,
+                                      diagram_wavefunctions)
                 
             # Now generate a HelasAmplitude from the last vertex.
             amp = HelasAmplitude(lastvx, model)
             amp.set('mothers', mothers)
             amp.set('number', diagram_list.index(diagram) + 1)
 
+            # Need to check for clashing fermion flow due to
+            # Majorana fermions, and modify if necessary
+            amp.check_and_fix_fermion_flow(wavefunctions,
+                                           diagram_wavefunctions)
             # Sort the wavefunctions according to number
             diagram_wavefunctions.sort(lambda wf1, wf2: \
                                        wf1.get('number')-wf2.get('number'))
@@ -872,6 +897,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 'wavefunctions': diagram_wavefunctions,
                 'amplitude': amp
                 }))
+
+            if optimization:
+                wavefunctions.extend(diagram_wavefunctions)
 
         self.set('diagrams',helas_diagrams)
 
@@ -885,7 +913,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     # Helper methods
 
     def getmothers(self, legs, number_to_wavefunctions,
-                   external_wavefunctions):
+                   external_wavefunctions, wavefunctions,
+                   diagram_wavefunctions):
         """Generate list of mothers from number_to_wavefunctions and
         external_wavefunctions"""
         
@@ -894,8 +923,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         for leg in legs:
             if not leg.get('number') in number_to_wavefunctions:
                 # This is an external leg, pick from external_wavefunctions
-                wf = external_wavefunctions[leg.get('number')-1]
+                wf = external_wavefunctions[leg.get('number')]
                 number_to_wavefunctions[leg.get('number')] = wf
+                if not wf in wavefunctions:
+                    diagram_wavefunctions.append(wf)
             else:
                 # The mother is an existing wavefunction
                 wf = number_to_wavefunctions[leg.get('number')]
@@ -907,7 +938,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 # HelasModel
 #===============================================================================
 class HelasModel(base_objects.PhysicsObject):
-    """A class to store all the model information."""
+    """Language independent base class for writing Helas calls. The
+    calls are stored in two dictionaries, wavefunctions and
+    amplitudes, with entries being a mapping from a set of spin and
+    incoming/outgoing states to a function which writes the
+    corresponding wavefunction call."""
 
     def default_setup(self):
 
@@ -926,7 +961,7 @@ class HelasModel(base_objects.PhysicsObject):
 
         if name == 'wavefunctions':
             # Should be a dictionary of functions returning strings, 
-            # with keys (spins, incoming/outgoing)
+            # with keys (spins, flow state)
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid dictionary for wavefunction" % \
@@ -937,7 +972,7 @@ class HelasModel(base_objects.PhysicsObject):
 
         if name == 'amplitudes':
             # Should be a dictionary of functions returning strings, 
-            # with keys (spins, incoming/outgoing)
+            # with keys (spins, flow state)
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid dictionary for amplitude" % \
@@ -953,23 +988,40 @@ class HelasModel(base_objects.PhysicsObject):
 
         return ['name', 'wavefunctions', 'amplitudes']
 
-    def get_wavefunction(self, key):
+    def get_matrix_element_calls(self, matrix_element):
+        """Return a list of strings, corresponding to the Helas calls
+        for the matrix element"""
+
+        if not isinstance(matrix_element, HelasMatrixElement):
+            raise self.PhysicsObjectError, \
+                  "%s not valid argument for get_matrix_element_calls" % \
+                  repr(matrix_element)
+
+        res = []
+        for diagram in matrix_element.get('diagrams'):
+            res.extend([ self.get_wavefunction_call(wf) for \
+                         wf in diagram.get('wavefunctions') ])
+            res.append(self.get_amplitude_call(diagram.get('amplitude')))
+
+        return res
+
+    def get_wavefunction_call(self, wavefunction):
         """Return the function for writing the wavefunction
         corresponding to the key"""
 
-        if key in self.get("wavefunctions").keys():
-            return self["wavefunctions"][id]
+        if wavefunction.get_wf_key() in self.get("wavefunctions").keys():
+            return self["wavefunctions"][wavefunction.get_wf_key()](wavefunction)
         else:
-            return None
+            return ""
 
-    def get_amplitude(self, key):
+    def get_amplitude_call(self, amplitude):
         """Return the function for writing the amplitude
         corresponding to the key"""
 
-        if key in self.get("amplitudes").keys():
-            return self["amplitudes"][id]
+        if amplitude.get_amp_key() in self.get("amplitudes").keys():
+            return self["amplitudes"][amplitude.get_amp_key()](amplitude)
         else:
-            return None
+            return ""
 
     def add_wavefunction(self, key, function):
         """Set the function for writing the wavefunction
@@ -1004,7 +1056,7 @@ class HelasModel(base_objects.PhysicsObject):
                   "%s is not a valid function for amplitude string" % \
                   str(function)
 
-        amplitudes[key] = function
+        self.get('amplitudes')[key] = function
         return True
         
     # Customized constructor
@@ -1018,3 +1070,207 @@ class HelasModel(base_objects.PhysicsObject):
         else:
             super(HelasModel, self).__init__(argument)
 
+
+#===============================================================================
+# HelasFortranModel
+#===============================================================================
+class HelasFortranModel(HelasModel):
+    """The class for writing Helas calls in Fortran, starting from
+    HelasWavefunctions and HelasAmplitudes."""
+
+    mother_dict = {1: 'S', 2: 'O', -2: 'I', 3: 'V', 5: 'T'}
+    self_dict = {1: 'H', 2: 'F', -2: 'F', 3: 'J', 5: 'U'}
+    sort_wf = {'O': 0, 'I': 1, 'S': 2, 'T': 3, 'V': 4}
+    sort_amp = {'S': 1, 'V': 2, 'T': 0, 'O': 3, 'I': 4}
+
+    def default_setup(self):
+
+        super(HelasFortranModel, self).default_setup()
+
+        # Add special fortran Helas calls, which are not automatically
+        # generated
+
+    def get_wavefunction_call(self, wavefunction):
+        """Return the function for writing the wavefunction
+        corresponding to the key"""
+
+        val = super(HelasFortranModel, self).get_wavefunction_call(wavefunction)
+
+        if val:
+            return val
+
+        # If function not already existing, try to generate it.
+
+        if len(wavefunction.get('mothers')) > 3:
+            raise self.PhysicsObjectError,\
+                  """Automatic generation of Fortran wavefunctions not
+                  implemented for > 3 mothers"""
+
+        self.generate_helas_call(wavefunction)
+        return super(HelasFortranModel, self).get_wavefunction_call(wavefunction)
+
+    def get_amplitude_call(self, amplitude):
+        """Return the function for writing the amplitude
+        corresponding to the key"""
+
+        val = super(HelasFortranModel, self).get_amplitude_call(amplitude)
+
+        if val:
+            return val
+
+        # If function not already existing, try to generate it.
+
+        if len(amplitude.get('mothers')) > 4:
+            raise self.PhysicsObjectError,\
+                  """Automatic generation of Fortran amplitudes not
+                  implemented for > 4 mothers"""
+
+        self.generate_helas_call(amplitude)
+        return super(HelasFortranModel, self).get_amplitude_call(amplitude)
+
+    def generate_helas_call(self, argument):
+            
+        if not isinstance(argument, HelasWavefunction) and \
+           not isinstance(argument, HelasAmplitude):
+            raise self.PhysicsObjectError, \
+                  "get_helas_call must be called with wavefunction or amplitude"
+
+        call = "      CALL "
+
+        call_function = None
+            
+        if isinstance(argument, HelasWavefunction) and \
+               not argument.get('mothers'):
+            # String is just IXXXXX, OXXXXX, VXXXXX or SXXXXX
+            call = call + HelasFortranModel.mother_dict[\
+                argument.get_spin_state_number()]
+            # Fill out with X up to 6 positions
+            call = call + 'X' * (17 - len(call))
+            call = call + "(P(0,%d),"
+            if argument.get('spin') != 1:
+                # For non-scalars, need mass
+                call = call + "%s,NHEL(%d),"
+            call = call + "%d*IC(%d),W(1,%d))"
+            if argument.get('spin') == 1:
+                call_function = lambda wf: call % \
+                                (wf.get('number_external'),
+                                 -(-1)**wf.get_with_flow('is_part'),
+                                 wf.get('number_external'),
+                                 wf.get('number'))
+            else:
+                call_function = lambda wf: call % \
+                                (wf.get('number_external'),
+                                 wf.get('mass'),
+                                 wf.get('number_external'),
+                                 -(-1)**wf.get_with_flow('is_part'),
+                                 wf.get('number_external'),
+                                 wf.get('number'))
+        else:
+            # String is FOVXXX, FIVXXX, JIOXXX etc.
+            if isinstance(argument, HelasWavefunction):
+                call = call + \
+                       HelasFortranModel.self_dict[\
+                argument.get_spin_state_number()]
+
+            mother_letters = HelasFortranModel.sorted_letters(argument)
+
+            call = call +''.join(mother_letters)
+            # IMPLEMENT Add C and other addition (for HEFT) if needed
+
+            # Fill out with X up to 6 positions
+            call = call + 'X' * (17 - len(call)) + '('
+            # Wavefunctions
+            call = call + "W(1,%d)," * len(argument.get('mothers'))
+            # Couplings
+            call = call + "%s,"
+
+            # IMPLEMENT Here we need to add extra coupling for certain
+            # 4-vertices
+
+            if isinstance(argument, HelasWavefunction):
+                # Mass and width
+                call = call + "%s,%s,"
+                # New wavefunction
+                call = call + "W(1,%d))"
+            else:
+                # Amplitude
+                call = call + "AMP(%d))"                
+
+            if isinstance(argument,HelasWavefunction):
+                # Create call for wavefunction
+                if len(argument.get('mothers')) == 2:
+                    call_function = lambda wf: call % \
+                                    (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
+                                     HelasFortranModel.sorted_mothers(wf)[1].get('number'),
+                                     wf.get('couplings').values()[0],
+                                     wf.get('mass'),
+                                     wf.get('width'),
+                                     wf.get('number'))
+                else:
+                    call_function = lambda wf: call % \
+                                    (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
+                                     HelasFortranModel.sorted_mothers(wf)[1].get('number'),
+                                     HelasFortranModel.sorted_mothers(wf)[2].get('number'),
+                                     wf.get('couplings').values()[0],
+                                     wf.get('mass'),
+                                     wf.get('width'),
+                                     wf.get('number'))
+            else:
+                # Create call for amplitude
+                if len(argument.get('mothers')) == 3:
+                    call_function = lambda amp: call % \
+                                    (HelasFortranModel.sorted_mothers(amp)[0].get('number'),
+                                     HelasFortranModel.sorted_mothers(amp)[1].get('number'),
+                                     HelasFortranModel.sorted_mothers(amp)[2].get('number'),
+                                     amp.get('couplings').values()[0],
+                                     amp.get('number'))
+                else:
+                    call_function = lambda amp: call % \
+                                    (HelasFortranModel.sorted_mothers(amp)[0].get('number'),
+                                     HelasFortranModel.sorted_mothers(amp)[1].get('number'),
+                                     HelasFortranModel.sorted_mothers(amp)[2].get('number'),
+                                     HelasFortranModel.sorted_mothers(amp)[3].get('number'),
+                                     amp.get('couplings').values()[0],
+                                     amp.get('number'))                    
+                
+        if isinstance(argument,HelasWavefunction):
+            self.add_wavefunction(argument.get_wf_key(),call_function)
+        else:
+            self.add_amplitude(argument.get_amp_key(),call_function)
+            
+    # Static helper functions
+
+    @staticmethod
+    def sorted_mothers(arg):
+        """Gives a list of mother wavefunctions sorted according to
+        the order needed in the Fortran Helas calls"""
+
+        if isinstance(arg, HelasWavefunction) or \
+           isinstance(arg, HelasAmplitude):
+            return sorted(arg.get('mothers'),
+                          lambda wf1, wf2: \
+                          HelasFortranModel.sort_amp[HelasFortranModel.mother_dict[\
+            wf2.get_spin_state_number()]] - \
+                          HelasFortranModel.sort_amp[HelasFortranModel.mother_dict[\
+            wf1.get_spin_state_number()]] or \
+                          wf1.get('number') - wf2.get('number'))
+    
+    @staticmethod
+    def sorted_letters(arg):
+        """Gives a list of letters sorted according to
+        the order of letters in the Fortran Helas calls"""
+
+        if isinstance(arg, HelasWavefunction):
+            return sorted([HelasFortranModel.mother_dict[\
+            wf.get_spin_state_number()] for wf in arg.get('mothers')],
+                          lambda l1, l2: \
+                          HelasFortranModel.sort_wf[l2] - \
+                          HelasFortranModel.sort_wf[l1])
+
+        if isinstance(arg, HelasAmplitude):
+            return sorted([HelasFortranModel.mother_dict[\
+            wf.get_spin_state_number()] for wf in arg.get('mothers')],
+                          lambda l1, l2: \
+                          HelasFortranModel.sort_amp[l2] - \
+                          HelasFortranModel.sort_amp[l1])
+    
