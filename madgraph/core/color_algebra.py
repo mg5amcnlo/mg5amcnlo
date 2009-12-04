@@ -85,33 +85,33 @@ re_T_int_sum = re.compile(r"""^T\((?P<a>(-?\d+,)*)
 re_trace_int_sum = re.compile(r"""^Tr\((?P<a>(-?\d+,)*)
                                 (?P<x>-?\d+),
                                 (?P<b>(-?\d+,)*)
-                                (?P=x),?
-                                (?P<c>(-?\d+,)*(-?\d+)?)\)$""", re.VERBOSE)
+                                (?P=x)
+                                (?P<c>(,-?\d+)*)\)$""", re.VERBOSE)
 
 # Match Tr(a...,x,b,...)Tr(c...,x,d,...), groups element are a='a,...',
 # b='b,...', c='c,...,' and d='d,...' (notice commas) 
 re_trace_product = re.compile(r"""^Tr\((?P<a>(-?\d+,)*)
-                                (?P<x>-?\d+),
-                                (?P<b>(-?\d+,)*(-?\d+)?)\)
+                                (?P<x>-?\d+)
+                                (?P<b>(,-?\d+)*)\)
                                 Tr\((?P<c>(-?\d+,)*)
-                                (?P=x),?
-                                (?P<d>(-?\d+,)*(-?\d+)?)\)$""", re.VERBOSE)
+                                (?P=x)
+                                (?P<d>(,-?\d+)*)\)$""", re.VERBOSE)
 
 # Match Tr(a,...,x,b,...)T(c,...,x,d,...,i,j)
 re_trace_T_product1 = re.compile(r"""^Tr\((?P<a>(-?\d+,)*)
                                 (?P<x>-?\d+),
                                 (?P<b>(-?\d+,)*(-?\d+)?)\)
                                 T\((?P<c>(-?\d+,)*)
-                                (?P=x),?
+                                (?P=x),
                                 (?P<d>(-?\d+,)*)
                                 (?P<id1>-?\d+),(?P<id2>-?\d+)\)$""", re.VERBOSE)
 re_trace_T_product2 = re.compile(r"""^T\((?P<c>(-?\d+,)*)
-                                (?P<x>-?\d+),?
+                                (?P<x>-?\d+),
                                 (?P<d>(-?\d+,)*)
                                 (?P<id1>-?\d+),(?P<id2>-?\d+)\)
                                 Tr\((?P<a>(-?\d+,)*)
-                                (?P=x),
-                                (?P<b>(-?\d+,)*(-?\d+)?)\)$""", re.VERBOSE)
+                                (?P=x)
+                                (?P<b>(,-?\d+)*)\)$""", re.VERBOSE)
 
 
 #===============================================================================

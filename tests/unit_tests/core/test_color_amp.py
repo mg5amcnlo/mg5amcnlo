@@ -207,6 +207,8 @@ class ColorAmpTest(unittest.TestCase):
                                                        'f(-1,4,-100)'])])
 
         self.assertEqual(col_fact, goal_fact)
+        goal_fact.simplify()
+        print goal_fact
 
     def test_replace_index(self):
         """Test the color index replacement"""

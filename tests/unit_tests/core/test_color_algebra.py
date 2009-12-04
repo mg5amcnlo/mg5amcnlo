@@ -211,6 +211,7 @@ class ColorStringTest(unittest.TestCase):
                                              'Tr(5,4,3)',
                                              'T(5,6,7)'])])
 
+
     def test_expand_T_int_sum(self):
         """Test color string expansion for T(a,x,b,x,c,i,j)"""
 
@@ -273,6 +274,9 @@ class ColorStringTest(unittest.TestCase):
                                              'Tr(1,2)',
                                              'T(-5,6,7)'])])
 
+        my_color_string = color.ColorString(['Tr(-1,5,-100)'])
+        self.assertEqual(my_color_string.expand_trace_internal_sum(), [])
+
     def test_expand_trace_product(self):
         """Test color string expansion for Tr(a,x,b)Tr(c,x,d)"""
 
@@ -292,16 +296,16 @@ class ColorStringTest(unittest.TestCase):
         my_color_string = color.ColorString(['Tr(1,2,3)', 'Tr(1,2,3)'])
 
         self.assertEqual(my_color_string.expand_trace_product(),
-                        [color.ColorString(['1/2', 'Tr(1,3,1,3)']),
+                        [color.ColorString(['1/2', 'Tr(1,2,1,2)']),
                          color.ColorString(['-1/2', '1/Nc',
-                                             'Tr(1,3)', 'Tr(1,3)'])])
+                                             'Tr(1,2)', 'Tr(1,2)'])])
 
         my_color_string = color.ColorString(['Tr(1,2,3)', 'Tr(3,2,1)'])
 
         self.assertEqual(my_color_string.expand_trace_product(),
-                        [color.ColorString(['1/2', 'Tr(1,1,3,3)']),
+                        [color.ColorString(['1/2', 'Tr(1,2,2,1)']),
                          color.ColorString(['-1/2', '1/Nc',
-                                             'Tr(1,3)', 'Tr(3,1)'])])
+                                             'Tr(1,2)', 'Tr(2,1)'])])
 
     def test_expand_trace_T_product(self):
         """Test color string expansion for Tr(a,x,b)T(c,x,d,i,j)"""
@@ -444,13 +448,16 @@ class ColorFactorTest(unittest.TestCase):
                                      color.ColorString(['-21/128', '1/Nc', '1/Nc', '1/Nc']),
                                      color.ColorString(['3/64', '1/Nc', '1/Nc', '1/Nc', '1/Nc', '1/Nc'])]))
 
-        my_color_factor = color.ColorFactor([color.ColorString(['f(1,2,-1)',
-                                                        'f(-1,3,-2)',
-                                                        'f(-2,4,-3)',
-                                                        'f(-3,5,-4)',
-                                                        'f(-4,6,-5)',
-                                                        'f(-5,7,8)'
-                                                      #  'f(-6,8,-7)',
-                                                      #  'f(-7,9,10)'
-                                                        ])])
-        my_color_factor.simplify()
+
+
+#        my_color_factor = color.ColorFactor([color.ColorString(['f(1,2,-1)',
+#                                                        'f(-1,3,-2)',
+#                                                        'f(-2,4,-3)',
+#                                                        'f(-3,5,-4)',
+#                                                        'f(-4,6,-5)',
+#                                                        'f(-5,7,8)'
+#                                                      #  'f(-6,8,-7)',
+#                                                      #  'f(-7,9,10)'
+#                                                        ])])
+#        my_color_factor.simplify()
+
