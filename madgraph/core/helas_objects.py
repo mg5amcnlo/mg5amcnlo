@@ -94,11 +94,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     self.set('state', 'incoming')
                 else:
                     self.set('state', 'outgoing')
-                # For boson, set state to intermediate
+                # For boson, set state to initial/final
                 # If initial state, flip PDG code (if has antipart)
                 # since all bosons should be treated as outgoing
                 if self.get('spin') % 2 == 1:
-                    self.set('state', 'intermediate')
+                    self.set('state', leg.get('state'))
                     if leg.get('state') == 'initial':
                         self.set('is_part',not self.get('is_part'))
                         if not self.get('self_antipart'):
@@ -206,7 +206,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid string for wavefunction state" % \
                                                                     str(value)
-            if value not in ['incoming', 'outgoing', 'intermediate']:
+            if value not in ['incoming', 'outgoing',
+                             'intermediate', 'initial', 'final']:
                 raise self.PhysicsObjectError, \
                         "%s is not a valid wavefunction state (incoming|outgoing|intermediate)" % \
                                                                     str(value)
@@ -301,13 +302,23 @@ class HelasWavefunction(base_objects.PhysicsObject):
             # For fermion, set state to same as other fermion (in the right way)
             mother_fermions = filter(lambda wf: wf.get('spin') % 2 == 0,
                                      self.get('mothers'))
-            if len(filter(lambda wf: wf.get('state') == 'incoming',
+            if len(filter(lambda wf: wf.get_with_flow('state') == 'incoming',
                           self.get('mothers'))) > \
-                          len(filter(lambda wf: wf.get('state') == 'outgoing',
+                          len(filter(lambda wf: \
+                                     wf.get_with_flow('state') == 'outgoing',
                           self.get('mothers'))):
-                self.set('state', 'incoming')
+                # Pick one with incoming state as mother and set flow
+                # Note that this needs to be done more properly if we have
+                # 4-fermion vertices
+                mother = filter(lambda wf: \
+                                wf.get_with_flow('state') == 'incoming',
+                                self.get('mothers'))[0]
             else:
-                self.set('state', 'outgoing')
+                mother = filter(lambda wf: \
+                                wf.get_with_flow('state') == 'outgoing',
+                                self.get('mothers'))[0]
+            self.set('state', mother.get('state'))
+            self.set('fermionflow', mother.get('fermionflow'))
 
         # We want the particle created here to go into the next
         # vertex, so we need to flip identity for incoming
@@ -324,31 +335,104 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return True
         
-    def check_and_fix_fermion_flow(self, wavefunctions, diagram_wavefunctions):
+    def check_and_fix_fermion_flow(self,
+                                   wavefunctions,
+                                   diagram_wavefunctions,
+                                   external_wavefunctions):
         """Check for clashing fermion flow (N(incoming) !=
-        N(outgoing)). If found, we need to trace back through the
-        mother structure (only looking at fermions), until we find a
-        Majorana fermion.  Set fermionflow = -1 for this wavefunction,
-        as well as all other fermions along this line all the way from
-        the initial clash to the external fermion, and consider an
-        incoming particle with fermionflow -1 as outgoing (and vice
-        versa). Continue until we have N(incoming) = N(outgoing).
+        N(outgoing)) in mothers
         """
 
-        # Clash is defined by whether the mothers have N(incoming) !=
-        # N(outgoing) after this state has been subtracted
-        mother_states = [ wf.get('state') for wf in self.get('mothers') ]
-        if self.get('state') in mother_states:
-            mother_states.remove(self.get('state'))
+        return self.get('mothers').check_and_fix_fermion_flow(\
+                                   wavefunctions,
+                                   diagram_wavefunctions,
+                                   external_wavefunctions,
+                                   self.get_with_flow('state'))
 
-        if len(filter(lambda state: state == 'incoming', mother_states)) == \
-           len(filter(lambda state: state == 'outgoing', mother_states)):
-            return True
+    def check_majorana_and_flip_flow(self, found_majorana,
+                                     wavefunctions,
+                                     diagram_wavefunctions,
+                                     external_wavefunctions):
+        """Recursive function. Check for Majorana fermion. If found,
+        continue down to external leg, then flip all the fermion flows
+        on the way back up.
+        """
 
-        # IMPLEMENT the rest
-        print 'Clashing fermion flow found'
+        if not found_majorana:
+            found_majorana = self.get('self_antipart')
 
-        return True
+        new_wf = self
+        flip_sign = False
+        
+        # Stop recursion at the external leg
+        mothers = copy.copy(self.get('mothers'))
+        if not mothers:
+            flip_sign = found_majorana
+        else:
+            # Follow fermion flow up through tree
+            fermion_mother = filter(lambda wf: wf.get('spin') % 2 == 0 and
+                                     wf.get_with_flow('state') == \
+                                     self.get_with_flow('state'),
+                                     mothers)
+
+            if len(fermion_mother) > 1:
+                raise self.PhysicsObjectError,\
+                      "6-fermion vertices not yet implemented"
+            if len(fermion_mother) == 0:
+                raise self.PhysicsObjectError,\
+                      "Previous unresolved fermion flow in mother chain"
+            
+            # Perform recursion by calling on mother
+            new_mother = fermion_mother[0].check_majorana_and_flip_flow(\
+                found_majorana,
+                wavefunctions,
+                diagram_wavefunctions,
+                external_wavefunctions)
+
+            # Now, flip sign if mother has different fermion flow than this
+            flip_sign = new_mother.get('fermionflow') != \
+                        self.get('fermionflow')
+
+            # Replace old mother with new mother
+            mothers[mothers.index(fermion_mother[0])] = new_mother
+                
+        # Flip sign if needed
+        if flip_sign:
+            if self in wavefunctions:
+                # Need to create a new copy
+                new_wf = copy.copy(self)
+                # Wavefunction number is given by: number of external
+                # wavefunctions + number of non-external wavefunctions
+                # in wavefunctions and diagram_wavefunctions
+                number = len(external_wavefunctions) + 1
+                number = number + len(filter(lambda wf: \
+                                             wf not in external_wavefunctions.values(),
+                                         wavefunctions))
+                number = number + len(filter(lambda wf: \
+                                             wf not in external_wavefunctions.values(),
+                                         diagram_wavefunctions))
+                new_wf.set('number',number)
+                new_wf.set('fermionflow', -new_wf.get('fermionflow'))
+                new_wf.set('mothers',mothers)                
+                if new_wf not in wavefunctions:
+                    diagram_wavefunctions.append(new_wf)
+            else:
+                new_wf.set('fermionflow', -new_wf.get('fermionflow'))
+
+        # Return the new (or old) wavefunction
+        return new_wf
+
+    def needs_hermitian_conjugate(self):
+        """Returns true if there is a fermion flow clash, i.e.,
+        there is an odd number of negative fermion flows"""
+        
+        if self.get('mothers'):
+            return self.get('fermionflow')*\
+                   reduce(lambda x, y: x * y,
+                          [ wf.get('fermionflow') for wf in \
+                            self.get('mothers') ], 1) < 0
+        else:
+            return False
 
     def get_with_flow(self, name):
         """Generate the is_part and state needed for writing out
@@ -368,12 +452,13 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
     def get_spin_state_number(self):
 
-        state_number = {'incoming': -1, 'outgoing': 1, 'intermediate': 1}
+        state_number = {'incoming': -1, 'outgoing': 1,
+                        'intermediate': 1, 'initial': 1, 'final': 1}
         return self.get('fermionflow')* \
                state_number[self.get('state')]* \
                self.get('spin')
 
-    def get_wf_key(self):
+    def get_call_key(self):
         """Generate the (spin, state) tuple used as key for the helas call
         dictionaries in HelasModel"""
 
@@ -386,7 +471,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         res.append(self.get_spin_state_number())
         
-        # IMPLEMENT: Check if we need to append a charge conjugation flag
+        # Check if we need to append a charge conjugation flag
+        if self.needs_hermitian_conjugate():
+            res.append('C')
 
         return tuple(res)
 
@@ -439,6 +526,78 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
         
         return isinstance(obj, HelasWavefunction)
 
+    # Helper function
+    def check_and_fix_fermion_flow(self,
+                                   wavefunctions,
+                                   diagram_wavefunctions,
+                                   external_wavefunctions,
+                                   my_state):
+        """Check for clashing fermion flow (N(incoming) !=
+        N(outgoing)). If found, we need to trace back through the
+        mother structure (only looking at fermions), until we find a
+        Majorana fermion.  Set fermionflow = -1 for this wavefunction,
+        as well as all other fermions along this line all the way from
+        the initial clash to the external fermion, and consider an
+        incoming particle with fermionflow -1 as outgoing (and vice
+        versa). Continue until we have N(incoming) = N(outgoing).
+        """
+        # Clash is defined by whether the mothers have N(incoming) !=
+        # N(outgoing) after this state has been subtracted
+        mother_states = [ wf.get_with_flow('state') for wf in \
+                          self ]
+        if my_state in mother_states:
+            mother_states.remove(my_state)
+
+        Nincoming = len(filter(lambda state: state == 'incoming',
+                               mother_states))
+        Noutgoing = len(filter(lambda state: state == 'outgoing',
+                               mother_states))
+
+        if  Nincoming == Noutgoing:
+            return True
+
+        fermion_mothers = filter(lambda wf: wf.get('spin') % 2 == 0,
+                                 self)
+
+        for mother in fermion_mothers:
+            if Nincoming > Noutgoing and \
+               mother.get_with_flow('state') == 'outgoing' or \
+               Nincoming < Noutgoing and \
+               mother.get_with_flow('state') == 'incoming' or \
+               Nincoming == Noutgoing:
+                # This is not a problematic leg
+                continue
+
+            # Call recursive function to check for Majorana fermions
+            # and flip fermionflow if found
+            found_majorana = False
+
+            new_mother = mother.check_majorana_and_flip_flow(found_majorana,
+                                                wavefunctions,
+                                                diagram_wavefunctions,
+                                                external_wavefunctions) 
+            # Replace old mother with new mother
+            self[self.index(mother)] = new_mother
+
+            # Update counters
+            mother_states = [ wf.get_with_flow('state') for wf in \
+                             self ]
+            if my_state in mother_states:
+                mother_states.remove(my_state)
+
+            Nincoming = len(filter(lambda state: state == 'incoming',
+                                       mother_states))
+            Noutgoing = len(filter(lambda state: state == 'outgoing',
+                                       mother_states))
+            
+        if Nincoming != Noutgoing:
+            raise self.PhysicsObjectListError, \
+                  "Failed to fix fermion flow, %d != %d" % \
+                  (Nincoming, Noutgoing)
+
+        return True
+
+    
 
 #===============================================================================
 # HelasAmplitude
@@ -579,31 +738,29 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
     # Helper functions
 
-    def check_and_fix_fermion_flow(self, wavefunctions, diagram_wavefunctions):
+    def check_and_fix_fermion_flow(self,
+                                   wavefunctions,
+                                   diagram_wavefunctions,
+                                   external_wavefunctions):
         """Check for clashing fermion flow (N(incoming) !=
-        N(outgoing)). If found, we need to trace back through the
-        mother structure (only looking at fermions), until we find a
-        Majorana fermion.  Set fermionflow = -1 for this wavefunction,
-        as well as all other fermions along this line all the way from
-        the initial clash to the external fermion, and consider an
-        incoming particle with fermionflow -1 as outgoing (and vice
-        versa). Continue until we have N(incoming) = N(outgoing).
+        N(outgoing)) in mothers
         """
 
-        # Clash is defined by whether the mothers have N(incoming) !=
-        # N(outgoing) after this state has been subtracted
-        mother_states = [ wf.get('state') for wf in self.get('mothers') ]
+        return self.get('mothers').check_and_fix_fermion_flow(\
+                                   wavefunctions,
+                                   diagram_wavefunctions,
+                                   external_wavefunctions,
+                                   'nostate')
 
-        if len(filter(lambda state: state == 'incoming', mother_states)) == \
-           len(filter(lambda state: state == 'outgoing', mother_states)):
-            return True
+    def needs_hermitian_conjugate(self):
+        """Returns true if there is a fermion flow clash, i.e.,
+        there is an odd number of negative fermion flows"""
+        
+        return reduce(lambda x, y: x * y,
+                      [ wf.get('fermionflow') for wf in \
+                        self.get('mothers') ], 1) < 0                      
 
-        # IMPLEMENT the rest
-        print 'Clashing fermion flow found'
-
-        return True
-
-    def get_amp_key(self):
+    def get_call_key(self):
         """Generate the (spin, state) tuples used as key for the helas call
         dictionaries in HelasModel"""
 
@@ -614,7 +771,9 @@ class HelasAmplitude(base_objects.PhysicsObject):
         # Sort according to spin and flow direction
         res.sort()
 
-        # IMPLEMENT: Check if we need to append a charge conjugation flag
+        # Check if we need to append a charge conjugation flag
+        if self.needs_hermitian_conjugate():
+            res.append('C')
 
         return tuple(res)
 
@@ -851,18 +1010,17 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 # Need to check for clashing fermion flow due to
                 # Majorana fermions, and modify if necessary
                 wf.check_and_fix_fermion_flow(wavefunctions,
-                                              diagram_wavefunctions)
-                # No number_external for internal propagators
-                wf.set('number_external', 0)
+                                              diagram_wavefunctions,
+                                              external_wavefunctions)
                 # Wavefunction number is given by: number of external
                 # wavefunctions + number of non-external wavefunctions
                 # in wavefunctions and diagram_wavefunctions
                 number = len(external_wavefunctions) + 1
-                number = number + len(filter(lambda wf: wf not in \
-                                         external_wavefunctions.values(),
+                number = number + len(filter(lambda wf: \
+                                             wf not in external_wavefunctions.values(),
                                          wavefunctions))
-                number = number + len(filter(lambda wf: wf not in \
-                                         external_wavefunctions.values(),
+                number = number + len(filter(lambda wf: \
+                                             wf not in external_wavefunctions.values(),
                                          diagram_wavefunctions))
                 wf.set('number',number)
                 # Store wavefunction
@@ -887,7 +1045,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # Need to check for clashing fermion flow due to
             # Majorana fermions, and modify if necessary
             amp.check_and_fix_fermion_flow(wavefunctions,
-                                           diagram_wavefunctions)
+                                           diagram_wavefunctions,
+                                           external_wavefunctions)
             # Sort the wavefunctions according to number
             diagram_wavefunctions.sort(lambda wf1, wf2: \
                                        wf1.get('number')-wf2.get('number'))
@@ -1009,8 +1168,8 @@ class HelasModel(base_objects.PhysicsObject):
         """Return the function for writing the wavefunction
         corresponding to the key"""
 
-        if wavefunction.get_wf_key() in self.get("wavefunctions").keys():
-            return self["wavefunctions"][wavefunction.get_wf_key()](wavefunction)
+        if wavefunction.get_call_key() in self.get("wavefunctions").keys():
+            return self["wavefunctions"][wavefunction.get_call_key()](wavefunction)
         else:
             return ""
 
@@ -1018,8 +1177,8 @@ class HelasModel(base_objects.PhysicsObject):
         """Return the function for writing the amplitude
         corresponding to the key"""
 
-        if amplitude.get_amp_key() in self.get("amplitudes").keys():
-            return self["amplitudes"][amplitude.get_amp_key()](amplitude)
+        if amplitude.get_call_key() in self.get("amplitudes").keys():
+            return self["amplitudes"][amplitude.get_call_key()](amplitude)
         else:
             return ""
 
@@ -1154,7 +1313,15 @@ class HelasFortranModel(HelasModel):
             if argument.get('spin') == 1:
                 call_function = lambda wf: call % \
                                 (wf.get('number_external'),
-                                 -(-1)**wf.get_with_flow('is_part'),
+                                 (-1)**(wf.get('state') == 'initial'),
+                                 wf.get('number_external'),
+                                 wf.get('number'))
+            elif argument.get('spin') % 2 == 1:
+                call_function = lambda wf: call % \
+                                (wf.get('number_external'),
+                                 wf.get('mass'),
+                                 wf.get('number_external'),
+                                 (-1)**(wf.get('state')=='initial'),
                                  wf.get('number_external'),
                                  wf.get('number'))
             else:
@@ -1176,6 +1343,10 @@ class HelasFortranModel(HelasModel):
 
             call = call +''.join(mother_letters)
             # IMPLEMENT Add C and other addition (for HEFT etc) if needed
+            # Check if we need to append a charge conjugation flag
+            if argument.needs_hermitian_conjugate():
+                call = call + 'C'
+
 
             # Fill out with X up to 6 positions
             call = call + 'X' * (17 - len(call)) + '('
@@ -1234,27 +1405,28 @@ class HelasFortranModel(HelasModel):
                                      amp.get('number'))                    
                 
         if isinstance(argument,HelasWavefunction):
-            self.add_wavefunction(argument.get_wf_key(),call_function)
+            self.add_wavefunction(argument.get_call_key(),call_function)
         else:
-            self.add_amplitude(argument.get_amp_key(),call_function)
+            self.add_amplitude(argument.get_call_key(),call_function)
             
     # Static helper functions
 
     @staticmethod
     def sorted_mothers(arg):
         """Gives a list of mother wavefunctions sorted according to
-        the order needed in the Fortran Helas calls"""
+        1. the spin order needed in the Fortran Helas calls and
+        2. the number for the external leg"""
 
         if isinstance(arg, HelasWavefunction) or \
            isinstance(arg, HelasAmplitude):
             return sorted(arg.get('mothers'),
                           lambda wf1, wf2: \
-                          HelasFortranModel.sort_amp[HelasFortranModel.mother_dict[\
-            wf2.get_spin_state_number()]] - \
-                          HelasFortranModel.sort_amp[HelasFortranModel.mother_dict[\
-            wf1.get_spin_state_number()]])
-        # or \
-        #                  wf1.get('number') - wf2.get('number')
+                          HelasFortranModel.sort_amp[\
+                HelasFortranModel.mother_dict[wf2.get_spin_state_number()]]\
+                          - HelasFortranModel.sort_amp[\
+                HelasFortranModel.mother_dict[wf1.get_spin_state_number()]]\
+                          or wf1.get('number_external') - \
+                          wf2.get('number_external'))
     
     @staticmethod
     def sorted_letters(arg):
