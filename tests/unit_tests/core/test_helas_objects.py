@@ -56,6 +56,7 @@ class HelasWavefunctionTest(unittest.TestCase):
                        'state': 'incoming',
                        'number_external': 4,
                        'number': 5,
+                       'helas_wavefunction_sign': 1,
                        'fermionflow': 1}
 
         self.mywavefunction = helas_objects.HelasWavefunction(self.mydict)
@@ -149,6 +150,7 @@ class HelasWavefunctionTest(unittest.TestCase):
         goal = goal + "    \'number_external\': 4,\n"
         goal = goal + "    \'number\': 5,\n"
         goal = goal + "    \'fermionflow\': 1,\n"
+        goal = goal + "    \'helas_wavefunction_sign\': 1,\n"
         goal = goal + "    \'mothers\': " + repr(self.mymothers) + "\n}"
 
         self.assertEqual(goal, str(self.mywavefunction))
@@ -173,8 +175,7 @@ class HelasWavefunctionTest(unittest.TestCase):
 
 
     def test_wavefunction_list(self):
-        """Test wavefunction list initialization and counting functions
-        for wavefunctions with 'from_group' = True"""
+        """Test wavefunction list initialization"""
 
         mylist = [copy.copy(self.mywavefunction) for dummy in range(1, 4) ]
         mywavefunctionlist = helas_objects.HelasWavefunctionList(mylist)
@@ -187,6 +188,27 @@ class HelasWavefunctionTest(unittest.TestCase):
         self.assertRaises(helas_objects.HelasWavefunctionList.PhysicsObjectListError,
                           mywavefunctionlist.append,
                           not_a_wavefunction)
+
+    def test_wavefunction_list_sign_flips(self):
+        """Test wavefunction list initialization"""
+
+        mylist = [copy.copy(self.mywavefunction) for dummy in range(6) ]
+        mywavefunctionlist = helas_objects.HelasWavefunctionList(mylist)
+
+        mywavefunctionlist[0].set('spin', 2)
+        mywavefunctionlist[1].set('spin', 2)
+        mywavefunctionlist[3].set('spin', 2)
+        mywavefunctionlist[5].set('spin', 2)
+
+        mywavefunctionlist[0].set('number_external', 3)
+        mywavefunctionlist[1].set('number_external', 2)
+        mywavefunctionlist[3].set('number_external', 6)
+        mywavefunctionlist[5].set('number_external', 4)
+
+        self.assertEqual(mywavefunctionlist.sign_flips_to_external(), 1)
+
+        mywavefunctionlist[3].set('number_external', 1)
+        self.assertEqual(mywavefunctionlist.sign_flips_to_external(), -1)
 
     def test_equality_in_list(self):
         """Test that the overloaded equality operator works also for a list"""
@@ -242,6 +264,7 @@ class HelasAmplitudeTest(unittest.TestCase):
                        'inter_color': [],
                        'lorentz': [],
                        'couplings': { (0, 0):'none'},
+                       'helas_amplitude_sign': 1,
                        'number': 5}
 
         self.myamplitude = helas_objects.HelasAmplitude(self.mydict)
@@ -320,6 +343,7 @@ class HelasAmplitudeTest(unittest.TestCase):
         goal = goal + "    \'lorentz\': [],\n"
         goal = goal + "    \'couplings\': {(0, 0): \'none\'},\n"
         goal = goal + "    \'number\': 5,\n"
+        goal = goal + "    \'helas_amplitude_sign\': 1,\n"
         goal = goal + "    \'mothers\': " + repr(self.mywavefunctions) + "\n}"
 
         self.assertEqual(goal, str(self.myamplitude))
@@ -1477,16 +1501,16 @@ class HelasModelTest(unittest.TestCase):
         wavefunctions = {}
         # IXXXXXX.Key: (spin, state)
         wavefunctions[tuple([-2])] = \
-                          lambda wf: 'CALL IXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
+                          lambda wf: ('CALL IXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
                           (wf.get('number_external'), wf.get('mass'),
                            wf.get('number_external'), -(-1)**wf.get_with_flow('is_part'),
-                           wf.get('number_external'), wf.get('number'))
+                           wf.get('number_external'), wf.get('number')), 1)
         # OXXXXXX.Key: (spin, state)
         wavefunctions[tuple([2])] = \
-                          lambda wf: 'CALL OXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
+                          lambda wf: ('CALL OXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
                           (wf.get('number_external'), wf.get('mass'),
                            wf.get('number_external'), 1**wf.get_with_flow('is_part'),
-                           wf.get('number_external'), wf.get('number'))
+                           wf.get('number_external'), wf.get('number')), -1)
         
         self.assert_(self.mymodel.set('wavefunctions', wavefunctions))
 
@@ -1499,12 +1523,14 @@ class HelasModelTest(unittest.TestCase):
 
         goal = 'CALL IXXXXX(P(0,1),mu,NHEL(1),-1*IC(1),W(1,40))'
         self.assertEqual(self.mymodel.get_wavefunction_call(wf), goal)
+        self.assertEqual(wf.get('helas_wavefunction_sign'), 1)
 
         wf.set('fermionflow', -1)
 
         goal = 'CALL OXXXXX(P(0,1),mu,NHEL(1),1*IC(1),W(1,40))'
         self.assertEqual(self.mymodel.get_wavefunction_call(wf), goal)
-        
+        self.assertEqual(wf.get('helas_wavefunction_sign'), -1)
+
 #===============================================================================
 # HelasFortranModelTest
 #===============================================================================
