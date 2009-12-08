@@ -46,7 +46,6 @@ class PhysicsObject(dict):
         for item in init_dict.keys():
             self.set(item, init_dict[item])
 
-
     def default_setup(self):
         """Function called to create and setup default values for all object
         properties"""
@@ -373,11 +372,23 @@ class Interaction(PhysicsObject):
         self['couplings'] = { (0, 0):'none'}
         self['orders'] = {}
 
+    def __init__(self, init_dict={}):
+        """Creates a new Interaction object. Since there are special
+        checks for the \'couplings\' variable, it needs to be set
+        last."""
+
+        super(Interaction, self).__init__(init_dict)
+
+        # Set couplings separately, since it needs to be set after
+        # color and lorentz
+        if 'couplings' in init_dict.keys():
+            self.set('couplings', init_dict['couplings'])
+
     def filter(self, name, value):
         """Filter for valid interaction property values."""
 
         if name == 'id':
-            #Should be a list of valid particle names
+            #Should be an integer
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid integer" % str(value)
@@ -448,7 +459,8 @@ class Interaction(PhysicsObject):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['id', 'particles', 'color', 'lorentz', 'couplings', 'orders']
+        return ['id', 'particles', 'color', 'lorentz',
+                'couplings', 'orders']
 
     def generate_dict_entries(self, ref_dict_to0, ref_dict_to1):
         """Add entries corresponding to the current interactions to 
@@ -474,8 +486,8 @@ class Interaction(PhysicsObject):
             short_part_list.remove(part)
 
             # We are interested in the unordered list, so use sorted()
-            pdg_tuple = tuple(sorted([p.get_anti_pdg_code() for p in short_part_list]))
-            pdg_part = part.get_pdg_code()
+            pdg_tuple = tuple(sorted([p.get_pdg_code() for p in short_part_list]))
+            pdg_part = part.get_anti_pdg_code()
             if pdg_tuple in ref_dict_to1.keys():
                 if (pdg_part, self['id']) not in  ref_dict_to1[pdg_tuple]:
                     ref_dict_to1[pdg_tuple].append((pdg_part, self['id']))
@@ -517,7 +529,6 @@ class InteractionList(PhysicsObjectList):
             interaction_dict[inter.get('id')] = inter
 
         return interaction_dict
-
 
 #===============================================================================
 # Model
@@ -623,7 +634,10 @@ class Model(PhysicsObject):
         else:
             return None
 
-
+#===============================================================================
+# Classes used in diagram generation and process definition:
+#    Leg, Vertex, Diagram, Process
+#===============================================================================
 
 #===============================================================================
 # Leg
@@ -661,7 +675,7 @@ class Leg(PhysicsObject):
         if name == 'from_group':
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid boolean for leg flagr from_group" % \
+                        "%s is not a valid boolean for leg flag from_group" % \
                                                                     str(value)
 
         return True
