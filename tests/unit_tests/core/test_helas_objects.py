@@ -53,6 +53,7 @@ class HelasWavefunctionTest(unittest.TestCase):
                        'inter_color': [],
                        'lorentz': [],
                        'couplings': { (0, 0):'none'},
+                       'conjugate_couplings': { (0, 0):'none'},
                        'state': 'incoming',
                        'number_external': 4,
                        'number': 5,
@@ -145,6 +146,7 @@ class HelasWavefunctionTest(unittest.TestCase):
         goal = goal + "    \'inter_color\': [],\n"
         goal = goal + "    \'lorentz\': [],\n"
         goal = goal + "    \'couplings\': {(0, 0): \'none\'},\n"
+        goal = goal + "    \'conjugate_couplings\': {(0, 0): \'none\'},\n"
         goal = goal + "    \'state\': \'incoming\',\n"
         goal = goal + "    \'number_external\': 4,\n"
         goal = goal + "    \'number\': 5,\n"
@@ -230,6 +232,7 @@ class HelasAmplitudeTest(unittest.TestCase):
                   'inter_color': [],
                   'lorentz': [],
                   'couplings': { (0, 0):'none'},
+                  'conjugate_couplings': { (0, 0):'none'},
                   'state': 'incoming',
                   'mothers': helas_objects.HelasWavefunctionList(),
                   'number': 5}
@@ -242,6 +245,9 @@ class HelasAmplitudeTest(unittest.TestCase):
                        'inter_color': [],
                        'lorentz': [],
                        'couplings': { (0, 0):'none'},
+                       'conjugate_couplings': { (0, 0):'none'},
+                       'pdg_codes': [1,2,3],
+                       'conjugate_pdg_codes': [-1,-2,3],
                        'number': 5}
 
         self.myamplitude = helas_objects.HelasAmplitude(self.mydict)
@@ -319,6 +325,9 @@ class HelasAmplitudeTest(unittest.TestCase):
         goal = goal + "    \'inter_color\': [],\n"
         goal = goal + "    \'lorentz\': [],\n"
         goal = goal + "    \'couplings\': {(0, 0): \'none\'},\n"
+        goal = goal + "    \'conjugate_couplings\': {(0, 0): \'none\'},\n"
+        goal = goal + "    \'pdg_codes\': [1, 2, 3],\n"
+        goal = goal + "    \'conjugate_pdg_codes\': [-1, -2, 3],\n"
         goal = goal + "    \'number\': 5,\n"
         goal = goal + "    \'mothers\': " + repr(self.mywavefunctions) + "\n}"
 
@@ -597,6 +606,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'color': ['C1'],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GG'},
+                      'conjugate_interaction': 3,
                       'orders':{'QCD':1}}))
 
         myinterlist.append(base_objects.Interaction({
@@ -608,6 +618,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'color': ['C1'],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'MGVX15'},
+                      'conjugate_interaction': 4,
                       'orders':{'QED':1}}))
 
         # Coupling of e to gamma
@@ -620,8 +631,8 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'color': ['C1'],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'MGVX12'},
+                      'conjugate_interaction': 7,
                       'orders':{'QED':1}}))
-
 
         self.mymodel.set('particles', mypartlist)
         self.mymodel.set('interactions', myinterlist)        
@@ -1296,6 +1307,7 @@ class HelasModelTest(unittest.TestCase):
                       'color': ['C1'],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GG'},
+                      'conjugate_interaction': 3,
                       'orders':{'QCD':1}}))
 
         myinterlist.append(base_objects.Interaction({
@@ -1307,6 +1319,7 @@ class HelasModelTest(unittest.TestCase):
                       'color': ['C1'],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'MGVX15'},
+                      'conjugate_interaction': 4,
                       'orders':{'QED':1}}))
 
         # Tgg coupling
@@ -1319,6 +1332,7 @@ class HelasModelTest(unittest.TestCase):
                       'color': ['C1'],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'MGVX2'},
+                      'conjugate_interaction': 5,
                       'orders':{'QCD':1}}))
 
 
@@ -1332,6 +1346,7 @@ class HelasModelTest(unittest.TestCase):
                       'color': ['C1'],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'MGVX1'},
+                      'conjugate_interaction': 15,
                       'orders':{'QCD':1}}))
 
         # Coupling of e to gamma
@@ -1344,7 +1359,21 @@ class HelasModelTest(unittest.TestCase):
                       'color': ['C1'],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'MGVX12'},
+                      'conjugate_interaction': 7,
                       'orders':{'QED':1}}))
+
+        # Gluon coupling to su
+        myinterlist.append(base_objects.Interaction({
+                      'id': 105,
+                      'particles': base_objects.ParticleList(\
+                                            [g, \
+                                             su, \
+                                             antisu]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'MGVX74'},
+                      'conjugate_interaction': 105,
+                      'orders':{'QCD':1}}))
 
         # Coupling of n1 to u and su
         myinterlist.append(base_objects.Interaction({
@@ -1356,6 +1385,7 @@ class HelasModelTest(unittest.TestCase):
                       'color': ['C1'],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'MGVX570'},
+                      'conjugate_interaction': 102,
                       'orders':{'QED':1}}))
 
         myinterlist.append(base_objects.Interaction({
@@ -1367,6 +1397,7 @@ class HelasModelTest(unittest.TestCase):
                       'color': ['C1'],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'MGVX575'},
+                      'conjugate_interaction': 101,
                       'orders':{'QED':1}}))
 
         # Coupling of n1 to e and se
@@ -1379,6 +1410,7 @@ class HelasModelTest(unittest.TestCase):
                       'color': ['C1'],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'MGVX350'},
+                      'conjugate_interaction': 104,
                       'orders':{'QED':1}}))
 
         myinterlist.append(base_objects.Interaction({
@@ -1390,6 +1422,7 @@ class HelasModelTest(unittest.TestCase):
                       'color': ['C1'],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'MGVX494'},
+                      'conjugate_interaction': 103,
                       'orders':{'QED':1}}))
 
         # g-gamma-su-subar coupling
@@ -1402,6 +1435,7 @@ class HelasModelTest(unittest.TestCase):
                                              antisu]),
                       'color': ['C1'],
                       'lorentz':['L1'],
+                      'conjugate_interaction': 100,
                       'couplings':{(0, 0):'MGVX89'},
                       'orders':{'QED':1, 'QCD':1}}))
 
@@ -1415,6 +1449,7 @@ class HelasModelTest(unittest.TestCase):
                                              wminus]),
                       'color': ['C1'],
                       'lorentz':['L1'],
+                      'conjugate_interaction': 8,
                       'couplings':{(0, 0):'MGVX6'},
                       'orders':{'QED':2}}))
 
@@ -1428,6 +1463,7 @@ class HelasModelTest(unittest.TestCase):
                                              z]),
                       'color': ['C1'],
                       'lorentz':['L1'],
+                      'conjugate_interaction': 9,
                       'couplings':{(0, 0):'MGVX8'},
                       'orders':{'QED':2}}))
 
@@ -1929,17 +1965,20 @@ class HelasFortranModelTest(HelasModelTest):
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
         
         # I have checked that the resulting Helas calls
-        # below give identical result as MG4
+        # below give identical result as MG4, apart from the sign!
+        print "\n".join(helas_objects.HelasFortranModel().\
+                                   get_matrix_element_calls(matrix_element))
+
         self.assertEqual("\n".join(helas_objects.HelasFortranModel().\
                                    get_matrix_element_calls(matrix_element)),
                          """      CALL OXXXXX(P(0,1),mu,NHEL(1),-1*IC(1),W(1,1))
       CALL IXXXXX(P(0,2),mu,NHEL(2),1*IC(2),W(1,2))
       CALL SXXXXX(P(0,3),1*IC(3),W(1,3))
       CALL SXXXXX(P(0,4),1*IC(4),W(1,4))
-      CALL FSOXXX(W(1,1),W(1,3),MGVX570,Mneu1,Wneu1,W(1,5))
-      CALL IOSCXX(W(1,2),W(1,5),W(1,4),MGVX570,AMP(1))
-      CALL FSOXXX(W(1,1),W(1,4),MGVX570,Mneu1,Wneu1,W(1,6))
-      CALL IOSCXX(W(1,2),W(1,6),W(1,3),MGVX570,AMP(2))""")
+      CALL FSOXXX(W(1,1),W(1,3),MGVX575,Mneu1,Wneu1,W(1,5))
+      CALL IOSCXX(W(1,2),W(1,5),W(1,4),MGVX575,AMP(1))
+      CALL FSOXXX(W(1,1),W(1,4),MGVX575,Mneu1,Wneu1,W(1,6))
+      CALL IOSCXX(W(1,2),W(1,6),W(1,3),MGVX575,AMP(2))""")
 
     def test_generate_helas_diagrams_epem_elpelmepem(self):
         """Testing the helas diagram generation based on Diagrams
@@ -2016,6 +2055,7 @@ class HelasFortranModelTest(HelasModelTest):
                       'color': ['C1'],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'MGVX350'},
+                      'conjugate_interaction': 104,
                       'orders':{'QED':1}}))
 
         myinterlist.append(base_objects.Interaction({
@@ -2027,6 +2067,7 @@ class HelasFortranModelTest(HelasModelTest):
                       'color': ['C1'],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'MGVX494'},
+                      'conjugate_interaction': 103,
                       'orders':{'QED':1}}))
 
         mybasemodel = base_objects.Model()
@@ -2061,3 +2102,160 @@ class HelasFortranModelTest(HelasModelTest):
         print myamplitude.get('process').nice_string()
         print "\n".join(helas_objects.HelasFortranModel().\
                                    get_matrix_element_calls(matrix_element))
+
+    def test_generate_helas_diagrams_uu_susug(self):
+        """Testing the helas diagram generation based on Diagrams
+        using the processes u u > su su with t-channel n1
+        """
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':1000002,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':1000002,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mybasemodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
+        
+        # I have checked that the resulting Helas calls
+        # below give identical result as MG4
+        print myamplitude.get('process').nice_string()
+        print myamplitude.get('diagrams').nice_string()
+        print "\n".join(helas_objects.HelasFortranModel().\
+                                   get_matrix_element_calls(matrix_element))
+
+    def test_generate_helas_diagrams_enu_enu(self):
+        """Testing the helas diagram generation based on Diagrams
+        using the processes e- nubar > e- nubar
+        """
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A electron and positron
+        mypartlist.append(base_objects.Particle({'name':'e+',
+                      'antiname':'e-',
+                      'spin':2,
+                      'color':1,
+                      'mass':'me',
+                      'width':'zero',
+                      'texname':'e^+',
+                      'antitexname':'e^-',
+                      'line':'straight',
+                      'charge':-1.,
+                      'pdg_code':11,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        eminus = mypartlist[len(mypartlist)-1]
+        eplus = copy.copy(eminus)
+        eplus.set('is_part', False)
+
+        # A neutrino
+        mypartlist.append(base_objects.Particle({'name':'ve',
+                      'antiname':'ve~',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\nu_e',
+                      'antitexname':'\bar\nu_e',
+                      'line':'straight',
+                      'charge':0.,
+                      'pdg_code':12,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        nu = mypartlist[len(mypartlist)-1]
+        nubar = copy.copy(nu)
+        nubar.set('is_part', False)
+
+        # A W
+        mypartlist.append(base_objects.Particle({'name':'W+',
+                      'antiname':'W-',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MW',
+                      'width':'WW',
+                      'texname':'W^+',
+                      'antitexname':'W^-',
+                      'line':'wavy',
+                      'charge':1.,
+                      'pdg_code':24,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        Wplus = mypartlist[len(mypartlist)-1]
+        Wminus = copy.copy(Wplus)
+        Wminus.set('is_part', False)
+
+        # Coupling of W- e+ nu_e
+
+        myinterlist.append(base_objects.Interaction({
+            'id': 1,
+            'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             nu, \
+                                             Wminus]),
+            'color': ['C1'],
+            'lorentz':['L1'],
+            'couplings':{(0, 0):'MGVX27'},
+            'conjugate_interaction': 2,
+            'orders':{'QED':1}}))
+        myinterlist.append(base_objects.Interaction({
+            'id': 2,
+            'particles': base_objects.ParticleList(\
+                                            [nubar, \
+                                             eminus, \
+                                             Wplus]),
+            'color': ['C1'],
+            'lorentz':['L1'],
+            'couplings':{(0, 0):'MGVX27'},
+            'conjugate_interaction': 1,
+            'orders':{'QED':1}}))
+
+        mybasemodel = base_objects.Model()
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-12,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-12,
+                                         'state':'final'}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mybasemodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
+
+        # I have checked that the resulting Helas calls
+        # below give identical result as MG4
+        self.assertEqual("\n".join(helas_objects.HelasFortranModel().\
+                                   get_matrix_element_calls(matrix_element)),
+                         """      CALL IXXXXX(P(0,1),me,NHEL(1),1*IC(1),W(1,1))
+      CALL OXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
+      CALL OXXXXX(P(0,3),me,NHEL(3),1*IC(3),W(1,3))
+      CALL IXXXXX(P(0,4),zero,NHEL(4),-1*IC(4),W(1,4))
+      CALL JIOXXX(W(1,1),W(1,2),MGVX27,MW,WW,W(1,5))
+      CALL IOVXXX(W(1,4),W(1,3),W(1,5),MGVX27,AMP(1))""")

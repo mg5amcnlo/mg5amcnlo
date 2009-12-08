@@ -251,7 +251,8 @@ class InteractionTest(unittest.TestCase):
                                     (0, 1):'g01',
                                     (1, 0):'g10',
                                     (1, 1):'g11'},
-                       'orders':{'QCD':1, 'QED':1}}
+                       'orders':{'QCD':1, 'QED':1},
+                       'conjugate_interaction': 1}
 
         self.myinter = base_objects.Interaction(self.mydict)
 
@@ -261,7 +262,8 @@ class InteractionTest(unittest.TestCase):
         myinter2 = base_objects.Interaction()
 
         # First fill myinter2 it using set
-        for prop in ['id', 'particles', 'color', 'lorentz', 'couplings', 'orders']:
+        for prop in ['id', 'particles', 'color', 'lorentz', 'couplings',
+                     'orders', 'conjugate_interaction']:
             myinter2.set(prop, self.mydict[prop])
 
         # Check equality between Interaction objects
@@ -353,7 +355,9 @@ class InteractionTest(unittest.TestCase):
         goal = goal + "    \'lorentz\': [\'L1\', \'L2\'],\n"
         goal = goal + "    \'couplings\': %s,\n" % \
                                     repr(self.myinter['couplings'])
-        goal = goal + "    \'orders\': %s\n}" % repr(self.myinter['orders'])
+        goal = goal + "    \'orders\': %s,\n" % repr(self.myinter['orders'])
+        goal = goal + "    \'conjugate_interaction\': %d\n}" % \
+               self.myinter['conjugate_interaction']
 
         self.assertEqual(goal, str(self.myinter))
 

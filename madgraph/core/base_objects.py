@@ -47,7 +47,6 @@ class PhysicsObject(dict):
         for item in init_dict.keys():
             self.set(item, init_dict[item])
 
-
     def default_setup(self):
         """Function called to create and setup default values for all object
         properties"""
@@ -362,6 +361,7 @@ class Interaction(PhysicsObject):
     couplings: dictionary listing coupling variable names. The key is a
                2-tuple of integers referring to color and Lorentz structures
     orders: dictionary listing order names (as keys) with their value
+    conjugate_interaction: The charge conjugate interaction id
     """
 
     def default_setup(self):
@@ -373,12 +373,24 @@ class Interaction(PhysicsObject):
         self['lorentz'] = []
         self['couplings'] = { (0, 0):'none'}
         self['orders'] = {}
+        self['conjugate_interaction'] = 0
+
+    def __init__(self, init_dict={}):
+        """Creates a new particle object. If a dictionary is given, tries to 
+        use it to give values to properties."""
+
+        super(Interaction, self).__init__(init_dict)
+
+        # Set couplings separately, since it needs to be set after
+        # color and lorentz
+        if 'couplings' in init_dict.keys():
+            self.set('couplings', init_dict['couplings'])
 
     def filter(self, name, value):
         """Filter for valid interaction property values."""
 
-        if name == 'id':
-            #Should be a list of valid particle names
+        if name in ['id', 'conjugate_interaction']:
+            #Should be an integer
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid integer" % str(value)
@@ -449,7 +461,8 @@ class Interaction(PhysicsObject):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['id', 'particles', 'color', 'lorentz', 'couplings', 'orders']
+        return ['id', 'particles', 'color', 'lorentz',
+                'couplings', 'orders', 'conjugate_interaction']
 
     def generate_dict_entries(self, ref_dict_to0, ref_dict_to1):
         """Add entries corresponding to the current interactions to 
@@ -523,7 +536,6 @@ class InteractionList(PhysicsObjectList):
             interaction_dict[inter.get('id')] = inter
 
         return interaction_dict
-
 
 #===============================================================================
 # Model
