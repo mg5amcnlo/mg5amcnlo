@@ -1980,6 +1980,7 @@ class HelasFortranModelTest(HelasModelTest):
       CALL FSOXXX(W(1,1),W(1,4),MGVX575,Mneu1,Wneu1,W(1,6))
       CALL IOSCXX(W(1,2),W(1,6),W(1,3),MGVX575,AMP(2))""")
 
+
     def test_generate_helas_diagrams_epem_elpelmepem(self):
         """Testing the helas diagram generation based on Diagrams
         using the processes e+ e- > sl2+ sl2- e+ e-
@@ -2093,6 +2094,9 @@ class HelasFortranModelTest(HelasModelTest):
                                        'model':mybasemodel})
 
         myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        print myamplitude.get('process').nice_string()
+        print myamplitude.get('diagrams').nice_string()
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
 

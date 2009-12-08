@@ -102,11 +102,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 # For boson, set state to initial/final
                 # If initial state, flip PDG code (if has antipart)
                 # since all bosons should be treated as outgoing
-                else:
-                    if leg.get('state') == 'initial':
-                        self.set('is_part',not self.get('is_part'))
-                        if not self.get('self_antipart'):
-                            self.set('pdg_code', -self.get('pdg_code'))
+                #else:
+                #    if leg.get('state') == 'initial':
+                #        self.set('is_part',not self.get('is_part'))
+                #        if not self.get('self_antipart'):
+                #            self.set('pdg_code', -self.get('pdg_code'))
                 self.set('interaction_id', interaction_id, model)
         elif arguments:
             super(HelasWavefunction, self).__init__(arguments[0])
@@ -403,9 +403,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         Noutgoing = len(filter(lambda state: state == 'outgoing',
                                mother_states))
 
-        pdg_codes = [wf.get_pdg_code_incoming() for wf in \
+        pdg_codes = [wf.get_pdg_code_outgoing() for wf in \
                      self.get('mothers')]
-        pdg_codes.append(self.get_pdg_code_outgoing())
+        pdg_codes.append(self.get_pdg_code_incoming())
         pdg_codes.sort()
 
         if Nincoming == Noutgoing and \
@@ -415,8 +415,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
             return self
 
-        print 'Need flip: ', Nincoming, Noutgoing, pdg_codes,\
-              self.get_with_flow('pdg_codes')
+        print 'Need flip wf: ', Nincoming, Noutgoing, pdg_codes,\
+              self.get_with_flow('pdg_codes'), self.get('pdg_code'), \
+              self.get_pdg_code_incoming()
 
         # Start by checking if the problem is this particle
         if Nincoming == Noutgoing and \
@@ -427,7 +428,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             new_wf = self.flip_flow(wavefunctions,
                                     diagram_wavefunctions,
                                     external_wavefunctions)
-            pdg_codes = [wf.get_pdg_code_incoming() for wf in \
+            pdg_codes = [wf.get_pdg_code_outgoing() for wf in \
                          new_wf.get('mothers')]
             pdg_codes.append(new_wf.get('pdg_code'))
             pdg_codes.sort()
@@ -438,7 +439,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                       (repr(pdg_codes), repr(new_wf.get_with_flow('pdg_codes')))
             return new_wf
 
-        if self.get_pdg_code_outgoing() not in self.get_with_flow('pdg_codes'):
+        if self.get_pdg_code_incoming() not in self.get_with_flow('pdg_codes'):
             raise self.PhysicsObjectError,\
                   "Error: Self-code not in pdg codes!"
         
@@ -449,9 +450,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
             # Remove boson codes
             for wf in filter(lambda wf: wf.get('spin') % 2 == 1,self.get('mothers')):
-                reduced_pdg_codes.remove(wf.get_pdg_code_incoming())
+                reduced_pdg_codes.remove(wf.get_pdg_code_outgoing())
             if self.get('spin') % 2 == 1:
-                reduced_pdg_codes.remove(self.get_pdg_code_outgoing())
+                reduced_pdg_codes.remove(self.get_pdg_code_incoming())
 
             # Fermion mothers
             fermion_mothers = filter(lambda wf: wf.get('spin') % 2 == 0,
@@ -459,8 +460,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         
             # Find the erraneous code
             for mother in fermion_mothers:
-                if mother.get_pdg_code_incoming() in reduced_pdg_codes:
-                    reduced_pdg_codes.remove(mother.get_pdg_code_incoming())
+                if mother.get_pdg_code_outgoing() in reduced_pdg_codes:
+                    reduced_pdg_codes.remove(mother.get_pdg_code_outgoing())
                 else:
                     # This mother needs to get the fermion flow code flipped
                     new_mother = mother.flip_flow(wavefunctions,
@@ -468,7 +469,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                      external_wavefunctions)
                     # Replace old mother with new mother
                     self.get('mothers')[self.get(mothers).index(mother)] = new_mother
-                    reduced_pdg_codes.remove(new_mother.get_pdg_code_incoming())
+                    reduced_pdg_codes.remove(new_mother.get_pdg_code_outgoing())
             if reduced_pdg_codes:
                 raise self.PhysicsObjectError, \
                       "Problem with bosonic mothers!"
@@ -485,25 +486,24 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                mother_states))
 
         while Nincoming != Noutgoing:
-            # The problem is in pure Majorana states. Flip flow of
-            # first Majorana mother with wrong flow.
+            # Flip flow of first mother with wrong flow.
             if Nincoming > Noutgoing:
-                majorana_mothers = filter(lambda wf: wf.get('self_antipart') and \
+                flow_mothers = filter(lambda wf: \
                                           wf.get('spin') % 2 == 0 and \
                                           wf.get_with_flow('state') == 'incoming',
                                           self.get('mothers'))
             else:
-                majorana_mothers = filter(lambda wf: wf.get('self_antipart') and \
+                flow_mothers = filter(lambda wf: \
                                           wf.get('spin') % 2 == 0 and \
-                                          wf.get_with_flow('state') == 'incoming',
+                                          wf.get_with_flow('state') == 'outgoing',
                                           self.get('mothers'))
-            new_mother = majorana_mothers[0].flip_flow(wavefunctions,
+            new_mother = flow_mothers[0].flip_flow(wavefunctions,
                                           diagram_wavefunctions,
                                           external_wavefunctions)
 
             # Replace old mother with new mother
             self.get('mothers')[self.get('mothers').index(\
-                majorana_mothers[0])] = new_mother
+                flow_mothers[0])] = new_mother
 
             mother_states = [ wf.get_with_flow('state') for wf in \
                               self.get('mothers') ]
@@ -767,10 +767,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
         #    return self.get('conjugate_couplings')
         #if name == 'conjugate_couplings':
         #    return self.get('couplings')
-        if name == 'pdg_codes':
-            return self.get('conjugate_pdg_codes')
-        if name == 'conjugate_pdg_codes':
-            return self.get('pdg_codes')
+        #if name == 'pdg_codes':
+        #    return self.get('conjugate_pdg_codes')
+        #if name == 'conjugate_pdg_codes':
+        #    return self.get('pdg_codes')
         return self.get(name)
 
     def get_pdg_code_outgoing(self):
@@ -1164,12 +1164,15 @@ class HelasAmplitude(base_objects.PhysicsObject):
         Noutgoing = len(filter(lambda state: state == 'outgoing',
                                mother_states))
 
-        pdg_codes = sorted([wf.get_pdg_code_incoming() for wf in \
+        pdg_codes = sorted([wf.get_pdg_code_outgoing() for wf in \
                      self.get('mothers')])
 
         if Nincoming == Noutgoing and \
-               pdg_codes == self.get_pdg_codes_conjugate():
+               pdg_codes == self.get('pdg_codes'):
             return True
+
+        print 'Need flip amp: ', Nincoming, Noutgoing, pdg_codes,\
+              self.get('pdg_codes')
 
         # Start by checking if the pdg codes are ok:
         if pdg_codes != self.get_pdg_codes_conjugate():        
@@ -1178,7 +1181,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
             # Remove boson codes
             for wf in filter(lambda wf: wf.get('spin') % 2 == 1,self.get('mothers')):
-                reduced_pdg_codes.remove(wf.get_pdg_code_incoming())
+                reduced_pdg_codes.remove(wf.get_pdg_code_outgoing())
 
             # Fermion mothers
             fermion_mothers = filter(lambda wf: wf.get('spin') % 2 == 0,
@@ -1186,8 +1189,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
         
             # Find the erraneous code
             for mother in fermion_mothers:
-                if mother.get_pdg_code_incoming() in reduced_pdg_codes:
-                    reduced_pdg_codes.remove(mother.get_pdg_code_incoming())
+                if mother.get_pdg_code_outgoing() in reduced_pdg_codes:
+                    reduced_pdg_codes.remove(mother.get_pdg_code_outgoing())
                 else:
                     # This mother needs to get the fermion flow code flipped
                     new_mother = mother.flip_flow(wavefunctions,
@@ -1195,7 +1198,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                                      external_wavefunctions)
                     # Replace old mother with new mother
                     self[self.index(mother)] = new_mother
-                    reduced_pdg_codes.remove(new_mother.get_pdg_code_incoming())
+                    reduced_pdg_codes.remove(new_mother.get_pdg_code_outgoing())
             if reduced_pdg_codes:
                 raise self.PhysicsObjectError, \
                       "Problem with bosonic mothers!"
@@ -1209,7 +1212,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                                mother_states))
 
         print 'Nincoming = ',Nincoming, ' Noutgoing = ',Noutgoing
-        print 'pdg_codes = ', sorted([wf.get_pdg_code_incoming() for wf in \
+        print 'pdg_codes = ', sorted([wf.get_pdg_code_outgoing() for wf in \
                      self.get('mothers')])
         print 'should be: ',self.get('pdg_codes')
         print 'for: ',self
