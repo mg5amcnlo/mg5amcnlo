@@ -373,8 +373,9 @@ class Interaction(PhysicsObject):
         self['orders'] = {}
 
     def __init__(self, init_dict={}):
-        """Creates a new particle object. If a dictionary is given, tries to 
-        use it to give values to properties."""
+        """Creates a new Interaction object. Since there are special
+        checks for the \'couplings\' variable, it needs to be set
+        last."""
 
         super(Interaction, self).__init__(init_dict)
 
