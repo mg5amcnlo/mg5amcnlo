@@ -19,7 +19,6 @@ interaction, model, leg, vertex, process, ..."""
 import copy
 import logging
 import re
-import itertools
 
 #===============================================================================
 # PhysicsObject
@@ -469,12 +468,11 @@ class Interaction(PhysicsObject):
         the reference dictionaries (for n>0 and n-1>1)"""
 
         # Create n>0 entries. Format is (p1,p2,p3,...):interaction_id.
+        # We are interested in the unordered list, so use sorted()
 
-        for permut in itertools.permutations(self['particles'],
-                                             len(self['particles'])):
-            pdg_tuple = tuple([p.get_pdg_code() for p in permut])
-            if pdg_tuple not in ref_dict_to0.keys():
-                ref_dict_to0[pdg_tuple] = self['id']
+        pdg_tuple = tuple(sorted([p.get_pdg_code() for p in self['particles']]))
+        if pdg_tuple not in ref_dict_to0.keys():
+            ref_dict_to0[pdg_tuple] = self['id']
 
         # Create n-1>1 entries. Note that, in the n-1 > 1 dictionary,
         # the n-1 entries should have opposite sign as compared to
@@ -488,18 +486,14 @@ class Interaction(PhysicsObject):
             short_part_list = copy.copy(self['particles'])
             short_part_list.remove(part)
 
-            # Add all permutations
-            # REWRITE THIS USING SORT INSTEAD!!!
-            for permut in itertools.permutations(short_part_list,
-                                                 len(short_part_list)):
-                # Add interaction permutation
-                pdg_tuple = tuple([p.get_anti_pdg_code() for p in permut])
-                pdg_part = part.get_pdg_code()
-                if pdg_tuple in ref_dict_to1.keys():
-                    if (pdg_part, self['id']) not in  ref_dict_to1[pdg_tuple]:
-                        ref_dict_to1[pdg_tuple].append((pdg_part, self['id']))
-                else:
-                    ref_dict_to1[pdg_tuple] = [(pdg_part, self['id'])]
+            # We are interested in the unordered list, so use sorted()
+            pdg_tuple = tuple(sorted([p.get_pdg_code() for p in short_part_list]))
+            pdg_part = part.get_anti_pdg_code()
+            if pdg_tuple in ref_dict_to1.keys():
+                if (pdg_part, self['id']) not in  ref_dict_to1[pdg_tuple]:
+                    ref_dict_to1[pdg_tuple].append((pdg_part, self['id']))
+            else:
+                ref_dict_to1[pdg_tuple] = [(pdg_part, self['id'])]
 
 
 #===============================================================================
@@ -725,7 +719,7 @@ class LegList(PhysicsObjectList):
         """If has at least one 'from_group' True and in ref_dict_to1,
            return the return list from ref_dict_to1, otherwise return False"""
         if self.minimum_one_from_group():
-            return ref_dict_to1.has_key(tuple([leg.get('id') for leg in self]))
+            return ref_dict_to1.has_key(tuple(sorted([leg.get('id') for leg in self])))
         else:
             return False
 
@@ -734,7 +728,7 @@ class LegList(PhysicsObjectList):
            return the vertex (with id from ref_dict_to0), otherwise return None
            """
         if self.minimum_two_from_group():
-            return ref_dict_to0.has_key(tuple([leg.get('id') for leg in self]))
+            return ref_dict_to0.has_key(tuple(sorted([leg.get('id') for leg in self])))
         else:
             return False
 

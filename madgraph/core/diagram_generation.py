@@ -168,8 +168,8 @@ class Amplitude(base_objects.PhysicsObject):
         # vertex to res and continue
         if curr_leglist.can_combine_to_0(ref_dict_to0):
             # Extract the interaction id associated to the vertex 
-            vertex_id = ref_dict_to0[tuple([leg.get('id') for \
-                                                         leg in curr_leglist])]
+            vertex_id = ref_dict_to0[tuple(sorted([leg.get('id') for \
+                                                   leg in curr_leglist]))]
 
             final_vertex = base_objects.Vertex({'legs':curr_leglist,
                                                 'id':vertex_id})
@@ -302,8 +302,8 @@ class Amplitude(base_objects.PhysicsObject):
                     # Build the leg object which will replace the combination:
                     # 1) leg ids is as given in the ref_dict
                     leg_ids = [elem[0] for elem in \
-                           ref_dict_to1[tuple([leg.get('id') \
-                                               for leg in entry])]]
+                           ref_dict_to1[tuple(sorted([leg.get('id') \
+                                               for leg in entry]))]]
                     # 2) number is the minimum of leg numbers involved in the
                     # combination
                     number = min([leg.get('number') for leg in entry])
@@ -330,8 +330,8 @@ class Amplitude(base_objects.PhysicsObject):
                     # Extract vertex ids corresponding to the various legs
                     # in mylegs
                     vert_ids = [elem[1] for elem in \
-                           ref_dict_to1[tuple([leg.get('id') \
-                                               for leg in entry])]]
+                           ref_dict_to1[tuple(sorted([leg.get('id') \
+                                               for leg in entry]))]]
                     vlist = base_objects.VertexList()
                     for myleg in mylegs:
                         # Start with the considered combination...

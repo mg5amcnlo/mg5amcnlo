@@ -763,10 +763,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
         #        return self.get('pdg_code')
         #    else:
         #        return -self.get('pdg_code')
-        if name == 'couplings':
-            return self.get('conjugate_couplings')
-        if name == 'conjugate_couplings':
-            return self.get('couplings')
+        #if name == 'couplings':
+        #    return self.get('conjugate_couplings')
+        #if name == 'conjugate_couplings':
+        #    return self.get('couplings')
         if name == 'pdg_codes':
             return self.get('conjugate_pdg_codes')
         if name == 'conjugate_pdg_codes':
