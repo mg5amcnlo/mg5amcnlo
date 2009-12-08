@@ -1041,19 +1041,6 @@ class DiagramGenerationTest(unittest.TestCase):
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
 
-        # Coupling of e- and nu_e to W
-
-        myinterlist.append(base_objects.Interaction({
-                      'id': 10,
-                      'particles': base_objects.ParticleList(\
-                                            [nuebar, \
-                                             eminus, \
-                                             wplus]),
-                      'color': ['C1'],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':1}}))
-
         # Coupling of nu_e and e+ to W
 
         myinterlist.append(base_objects.Interaction({
