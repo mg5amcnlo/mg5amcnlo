@@ -323,6 +323,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
             else:
                 # If more outgoing than incoming mothers,
                 # Pick one with outgoing state as mother and set flow
+                # Note that this needs to be done more properly if we have
+                # 4-fermion vertices
                 mother = filter(lambda wf: \
                                 wf.get_with_flow('state') == 'outgoing',
                                 self.get('mothers'))[0]
@@ -365,7 +367,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                      external_wavefunctions):
         """Recursive function. Check for Majorana fermion. If found,
         continue down to external leg, then flip all the fermion flows
-        on the way back up, in the correct way.
+        on the way back up, in the correct way:
+        Only flip fermionflow after the last Majorana fermion; for
+        wavefunctions before the last Majorana fermion, instead flip
+        particle identities and state.
         """
 
         if not found_majorana:
@@ -400,11 +405,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 diagram_wavefunctions,
                 external_wavefunctions)
 
-            # If mother is Majorana and has different fermion flow, it means
-            # that we should from now on in the chain flip the particle id
-            # and flow state
-            # Otherwise, if mother has different fermion flow, flip flow
-            #flip_flow = new_mother.get('fermionflow') != self.get('fermionflow')
+            # If this is Majorana and mother has different fermion
+            # flow, it means that we should from now on in the chain
+            # flip the particle id and flow state.
+            # Otherwise, if mother has different fermion flow, flip
+            # flow
             flip_flow = new_mother.get('fermionflow') != self.get('fermionflow') \
                         and not self.get('self_antipart')
             flip_sign = new_mother.get('fermionflow') != self.get('fermionflow') \
@@ -417,7 +422,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Flip sign if needed
         if flip_flow or flip_sign:
             if self in wavefunctions:
-                # Need to create a new copy
+                # Need to create a new copy, since we don't want to change
+                # the wavefunction for previous diagrams
                 new_wf = copy.copy(self)
                 # Wavefunction number is given by: number of external
                 # wavefunctions + number of non-external wavefunctions
@@ -435,9 +441,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
             # Now flip flow or sign
             if flip_flow:
+                # Flip fermion flow
                 new_wf.set('fermionflow', -new_wf.get('fermionflow'))
                 
             if flip_sign:
+                # Flip state and particle identity
+                # (to keep particle identity * flow state)
                 new_wf.set('state', filter(lambda state: \
                                            state != new_wf.get('state'),
                                            ['incoming', 'outgoing'])[0])
@@ -446,8 +455,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     new_wf.set('pdg_code', -new_wf.get('pdg_code'))
 
             if new_wf in wavefunctions:
+                # Use the copy in wavefunctions instead.
+                # Remove this copy from diagram_wavefunctions
                 new_wf = wavefunctions[wavefunctions.index(new_wf)]
                 diagram_wavefunctions.remove(new_wf)
+
         # Return the new (or old) wavefunction
         return new_wf
 
@@ -473,40 +485,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
             return filter(lambda state: state != self.get('state'),
                           ['incoming', 'outgoing'])[0]
         return self.get(name)
-
-    def get_pdg_code_outgoing(self):
-        """Generate the corresponding pdg_code for an outgoing particle,
-        taking into account fermion flow, for mother wavefunctions"""
-
-        if self.get('self_antipart'):
-            return self.get('pdg_code')
-
-        if self.get('state') not in ['incoming', 'outgoing']:
-            # This is a boson
-            return self.get('pdg_code')
-
-        if (self.get('state') == 'incoming' and self.get('is_part') \
-                or self.get('state') == 'outgoing' and not self.get('is_part')):
-            return -self.get('pdg_code')
-        else:
-            return self.get('pdg_code')
-
-    def get_pdg_code_incoming(self):
-        """Generate the corresponding pdg_code for an outgoing particle,
-        taking into account fermion flow, for produced wavefunctions"""
-
-        if self.get('self_antipart'):
-            return self.get('pdg_code')
-
-        if self.get('state') not in ['incoming', 'outgoing']:
-            # This is a boson
-            return -self.get('pdg_code')
-
-        if (self.get('state') == 'outgoing' and self.get('is_part') \
-                or self.get('state') == 'incoming' and not self.get('is_part')):
-            return -self.get('pdg_code')
-        else:
-            return self.get('pdg_code')
 
     def get_spin_state_number(self):
 
@@ -593,12 +571,13 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
         """Check for clashing fermion flow (N(incoming) !=
         N(outgoing)). If found, we need to trace back through the
         mother structure (only looking at fermions), until we find a
-        Majorana fermion.  Set fermionflow = -1 for this wavefunction,
-        as well as all other fermions along this line all the way from
-        the initial clash to the external fermion, and consider an
+        Majorana fermion. Then flip fermion flow along this line all
+        the way from the initial clash to the external fermion (in the
+        right way, see check_majorana_and_flip_flow), and consider an
         incoming particle with fermionflow -1 as outgoing (and vice
         versa). Continue until we have N(incoming) = N(outgoing).
         """
+
         # Clash is defined by whether the mothers have N(incoming) !=
         # N(outgoing) after this state has been subtracted
         mother_states = [ wf.get_with_flow('state') for wf in \
@@ -933,7 +912,7 @@ class HelasDiagramList(base_objects.PhysicsObjectList):
 # HelasMatrixElement
 #===============================================================================
 class HelasMatrixElement(base_objects.PhysicsObject):
-    """HelasMatrixElement: list of HelasDiagrams (ordered)
+    """HelasMatrixElement: ordered list of HelasDiagrams
     """
 
     def default_setup(self):
@@ -1154,9 +1133,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 class HelasModel(base_objects.PhysicsObject):
     """Language independent base class for writing Helas calls. The
     calls are stored in two dictionaries, wavefunctions and
-    amplitudes, with entries being a mapping from a set of spin and
-    incoming/outgoing states to a function which writes the
-    corresponding wavefunction call."""
+    amplitudes, with entries being a mapping from a set of spin,
+    incoming/outgoing states and Lorentz structure to a function which
+    writes the corresponding wavefunction call."""
 
     def default_setup(self):
 
