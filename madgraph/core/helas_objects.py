@@ -381,12 +381,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
         N(outgoing)) in mothers
         """
 
-        #return self.get('mothers').check_and_fix_fermion_flow(\
-        #                           wavefunctions,
-        #                           diagram_wavefunctions,
-        #                           external_wavefunctions,
-        #                           self.get_with_flow('state'),
-        #                           self.get_outgoing_pdg_code())
+        self.get('mothers').check_and_fix_fermion_flow(\
+                                   wavefunctions,
+                                   diagram_wavefunctions,
+                                   external_wavefunctions,
+                                   self.get_with_flow('state'))
+        return self
 
         # Clash is defined by whether the mothers have N(incoming) !=
         # N(outgoing) after this state has been subtracted, OR
@@ -443,37 +443,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
             raise self.PhysicsObjectError,\
                   "Error: Self-code not in pdg codes!"
         
-        # Check if the pdg codes are ok:
-        if pdg_codes != self.get_with_flow('pdg_codes'):        
-
-            reduced_pdg_codes = copy.copy(pdg_codes)        
-
-            # Remove boson codes
-            for wf in filter(lambda wf: wf.get('spin') % 2 == 1,self.get('mothers')):
-                reduced_pdg_codes.remove(wf.get_pdg_code_outgoing())
-            if self.get('spin') % 2 == 1:
-                reduced_pdg_codes.remove(self.get_pdg_code_incoming())
-
-            # Fermion mothers
-            fermion_mothers = filter(lambda wf: wf.get('spin') % 2 == 0,
-                                self.get('mothers'))
-        
-            # Find the erraneous code
-            for mother in fermion_mothers:
-                if mother.get_pdg_code_outgoing() in reduced_pdg_codes:
-                    reduced_pdg_codes.remove(mother.get_pdg_code_outgoing())
-                else:
-                    # This mother needs to get the fermion flow code flipped
-                    new_mother = mother.flip_flow(wavefunctions,
-                                     diagram_wavefunctions,
-                                     external_wavefunctions)
-                    # Replace old mother with new mother
-                    self.get('mothers')[self.get(mothers).index(mother)] = new_mother
-                    reduced_pdg_codes.remove(new_mother.get_pdg_code_outgoing())
-            if reduced_pdg_codes:
-                raise self.PhysicsObjectError, \
-                      "Problem with bosonic mothers!"
-
         mother_states = [ wf.get_with_flow('state') for wf in \
                           self.get('mothers') ]
 
@@ -536,7 +505,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         new_wf = self
         flip_flow = False
-        #flip_sign = False
+        flip_sign = False
         
         # Stop recursion at the external leg
         mothers = copy.copy(self.get('mothers'))
@@ -567,18 +536,18 @@ class HelasWavefunction(base_objects.PhysicsObject):
             # that we should from now on in the chain flip the particle id
             # and flow state
             # Otherwise, if mother has different fermion flow, flip flow
-            flip_flow = new_mother.get('fermionflow') != self.get('fermionflow')
-            #flip_flow = new_mother.get('fermionflow') != self.get('fermionflow') \
-            #            and not new_mother.get('self_antipart')
-            #flip_sign = new_mother.get('fermionflow') != self.get('fermionflow') \
-            #            and new_mother.get('self_antipart') or \
-            #            new_mother.get('state') != self.get('state')
+            #flip_flow = new_mother.get('fermionflow') != self.get('fermionflow')
+            flip_flow = new_mother.get('fermionflow') != self.get('fermionflow') \
+                        and not self.get('self_antipart')
+            flip_sign = new_mother.get('fermionflow') != self.get('fermionflow') \
+                        and self.get('self_antipart') or \
+                        new_mother.get('state') != self.get('state')
                         
             # Replace old mother with new mother
             mothers[mothers.index(fermion_mother[0])] = new_mother
                 
         # Flip sign if needed
-        if flip_flow: #or flip_sign:
+        if flip_flow or flip_sign:
             if self in wavefunctions:
                 # Need to create a new copy
                 new_wf = copy.copy(self)
@@ -593,21 +562,24 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                              wf not in external_wavefunctions.values(),
                                          diagram_wavefunctions))
                 new_wf.set('number',number)
-                new_wf.set('mothers',mothers)                
-                if new_wf not in wavefunctions:
-                    diagram_wavefunctions.append(new_wf)
+                new_wf.set('mothers',mothers)
+                diagram_wavefunctions.append(new_wf)
 
             # Now flip flow or sign
             if flip_flow:
                 new_wf.set('fermionflow', -new_wf.get('fermionflow'))
+                
+            if flip_sign:
+                new_wf.set('state', filter(lambda state: \
+                                           state != self.get('state'),
+                                           ['incoming', 'outgoing'])[0])
+                new_wf.set('is_part', 1 - self.get('is_part'))
+                if not new_wf.get('self_antipart'):
+                    new_wf.set('pdg_code', -new_wf.get('pdg_code'))
 
-            #if flip_sign:
-            #    new_wf.set('state', filter(lambda state: \
-            #                               state != self.get('state'),
-            #                               ['incoming', 'outgoing'])[0])
-            #    if not new_wf.get('self_antipart'):
-            #        new_wf.set('pdg_code', -new_wf.get('pdg_code'))
-
+            if new_wf in wavefunctions:
+                new_wf = wavefunctions[wavefunctions.index(new_wf)]
+                diagram_wavefunctions.remove(new_wf)
         # Return the new (or old) wavefunction
         return new_wf
 
@@ -687,11 +659,13 @@ class HelasWavefunction(base_objects.PhysicsObject):
         """Returns true if there is a fermion flow clash, i.e.,
         there is an odd number of negative fermion flows"""
         
-        if self.get('mothers'):
-            return self.get('fermionflow')*\
-                   reduce(lambda x, y: x * y,
-                          [ wf.get('fermionflow') for wf in \
-                            self.get('mothers') ], 1) < 0
+        return filter(lambda wf: wf.get('fermionflow') < 0,
+                      self.get('mothers'))
+        #if self.get('mothers'):
+        #    return self.get('fermionflow')*\
+        #           reduce(lambda x, y: x * y,
+        #                  [ wf.get('fermionflow') for wf in \
+        #                    self.get('mothers') ], 1) < 0
 
 #            # Easiest case: Not flipped fermionflow or no Majorana
 #            # mother with flipped fermionflow, return False
@@ -741,8 +715,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
 #                          "Too many negative fermionflow mothers, not yet implemented"
 #                print not got_herm_conj
 #            return not got_herm_conj
-        else:
-            return False
+        #else:
+        #    return False
 
     def get_with_flow(self, name):
         """Generate the is_part and state needed for writing out
@@ -1146,11 +1120,11 @@ class HelasAmplitude(base_objects.PhysicsObject):
         N(outgoing)) in mothers
         """
 
-        #return self.get('mothers').check_and_fix_fermion_flow(\
-        #                           wavefunctions,
-        #                           diagram_wavefunctions,
-        #                           external_wavefunctions,
-        #                           'nostate')
+        return self.get('mothers').check_and_fix_fermion_flow(\
+                                   wavefunctions,
+                                   diagram_wavefunctions,
+                                   external_wavefunctions,
+                                   'nostate')
 
         # Clash is defined by whether the mothers have N(incoming) !=
         # N(outgoing) after this state has been subtracted, OR
@@ -1577,8 +1551,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 # Need to check for clashing fermion flow due to
                 # Majorana fermions, and modify if necessary
                 wf = wf.check_and_fix_fermion_flow(wavefunctions,
-                                                       diagram_wavefunctions,
-                                                       external_wavefunctions)
+                                                   diagram_wavefunctions,
+                                                   external_wavefunctions)
                 # Wavefunction number is given by: number of external
                 # wavefunctions + number of non-external wavefunctions
                 # in wavefunctions and diagram_wavefunctions
