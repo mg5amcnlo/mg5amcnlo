@@ -261,7 +261,8 @@ class InteractionTest(unittest.TestCase):
         myinter2 = base_objects.Interaction()
 
         # First fill myinter2 it using set
-        for prop in ['id', 'particles', 'color', 'lorentz', 'couplings', 'orders']:
+        for prop in ['id', 'particles', 'color', 'lorentz', 'couplings',
+                     'orders']:
             myinter2.set(prop, self.mydict[prop])
 
         # Check equality between Interaction objects
@@ -425,10 +426,10 @@ class InteractionTest(unittest.TestCase):
 
         myinter.generate_dict_entries(ref_dict_to0, ref_dict_to1)
 
-        goal_ref_dict_to1 = {(-3, 2, 4):[(1, 0)],
-                            (-3, -1, 4):[(-2, 0)],
-                            (-1, 2, 4):[(3, 0)],
-                            (-3, -1, 2):[(4, 0)]}
+        goal_ref_dict_to1 = {(-2, 3, 4):[(-1, 0)],
+                            (1, 3, 4):[(2, 0)],
+                            (-2, 1, 4):[(-3, 0)],
+                            (-2, 1, 3):[(4, 0)]}
 
         self.assertEqual(ref_dict_to1, goal_ref_dict_to1)
 
@@ -442,9 +443,9 @@ class InteractionTest(unittest.TestCase):
                                                               part3]))
         myinterlist.append(add_inter)
 
-        goal_ref_dict_to1[(-1, 2)] = [(3, 0)]
-        goal_ref_dict_to1[(-3, -1)] = [(-2, 0)]
-        goal_ref_dict_to1[(-3, 2)] = [(1, 0)]
+        goal_ref_dict_to1[(-2, 1)] = [(-3, 0)]
+        goal_ref_dict_to1[(1, 3)] = [(2, 0)]
+        goal_ref_dict_to1[(-2, 3)] = [(-1, 0)]
 
         self.assertEqual(myinterlist.generate_ref_dict()[1], goal_ref_dict_to1)
 
