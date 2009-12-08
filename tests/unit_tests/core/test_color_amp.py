@@ -232,11 +232,11 @@ class ColorAmpTest(unittest.TestCase):
 
         myamplitude.generate_diagrams()
 
-        # First diagram with two 3-gluon vertices
         for diag in myamplitude['diagrams']:
             col_fact = color_amp.colorize(diag, self.mymodel)
             col_fact.simplify()
-            print col_fact
+#            print col_fact
+
 
 
     def test_replace_index(self):

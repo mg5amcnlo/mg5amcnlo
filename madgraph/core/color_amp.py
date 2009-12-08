@@ -41,9 +41,9 @@ def colorize(diagram, model):
             old_num = vertex.get('legs')[1].get('number')
             new_num = vertex.get('legs')[0].get('number')
             # Be careful i1 or i2 might have been replaced themselves
-            if old_num in repl_dict.keys():
+            while old_num in repl_dict.keys():
                 old_num = repl_dict[old_num]
-            if new_num in repl_dict.keys():
+            while new_num in repl_dict.keys():
                 new_num = repl_dict[new_num]
             # Do the replacement
             for index, col_str in enumerate(col_fact):
@@ -88,10 +88,10 @@ def colorize(diagram, model):
         # ordering
         for pdg_code in list_pdg:
             my_number = list_leg[pdg_code].pop()
-            if  my_number in repl_dict.keys():
+            while my_number in repl_dict.keys():
                 # If a number has already been replaced, use the new value
-                list_numbers.append(repl_dict[my_number])
-            elif my_number not in list_numbers:
+                my_number = repl_dict[my_number]
+            if my_number not in list_numbers:
                 # Only appear once until now -> no need for a new index
                 list_numbers.append(my_number)
             else:
