@@ -360,7 +360,6 @@ class Interaction(PhysicsObject):
     couplings: dictionary listing coupling variable names. The key is a
                2-tuple of integers referring to color and Lorentz structures
     orders: dictionary listing order names (as keys) with their value
-    conjugate_interaction: The charge conjugate interaction id
     """
 
     def default_setup(self):
@@ -372,7 +371,6 @@ class Interaction(PhysicsObject):
         self['lorentz'] = []
         self['couplings'] = { (0, 0):'none'}
         self['orders'] = {}
-        self['conjugate_interaction'] = 0
 
     def __init__(self, init_dict={}):
         """Creates a new particle object. If a dictionary is given, tries to 
@@ -388,7 +386,7 @@ class Interaction(PhysicsObject):
     def filter(self, name, value):
         """Filter for valid interaction property values."""
 
-        if name in ['id', 'conjugate_interaction']:
+        if name == 'id':
             #Should be an integer
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
@@ -461,7 +459,7 @@ class Interaction(PhysicsObject):
         """Return particle property names as a nicely sorted list."""
 
         return ['id', 'particles', 'color', 'lorentz',
-                'couplings', 'orders', 'conjugate_interaction']
+                'couplings', 'orders']
 
     def generate_dict_entries(self, ref_dict_to0, ref_dict_to1):
         """Add entries corresponding to the current interactions to 

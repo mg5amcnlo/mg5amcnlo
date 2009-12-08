@@ -61,9 +61,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['inter_color'] = []
         self['lorentz'] = []
         self['couplings'] = { (0, 0):'none'}
-        self['conjugate_couplings'] = { (0, 0):'none'}
-        self['pdg_codes'] = []
-        self['conjugate_pdg_codes'] = []
         # Properties relating to the leg/vertex
         self['state'] = 'incoming'
         self['mothers'] = HelasWavefunctionList()
@@ -114,8 +111,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
             # color and lorentz
             if 'couplings' in arguments[0].keys():
                 self.set('couplings', arguments[0]['couplings'])
-            if 'conjugate_couplings' in arguments[0].keys():
-                self.set('conjugate_couplings', arguments[0]['conjugate_couplings'])
         else:
             super(HelasWavefunction, self).__init__()
    
@@ -180,7 +175,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid string" % str(mystr)
 
-        if name in ['couplings', 'conjugate_couplings']:
+        if name == 'couplings':
             #Should be a dictionary of strings with (i,j) keys
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
@@ -210,16 +205,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if not isinstance(value[key], str):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid string" % str(mystr)
-
-        if name in ['pdg_codes', 'conjugate_pdg_codes']:
-            #Should be a list of integers
-            if not isinstance(value, list):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid list of integers" % str(value)
-            for mystr in value:
-                if not isinstance(mystr, int):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a valid integer" % str(mystr)
 
         if name == 'state':
             if not isinstance(value, str):
@@ -276,20 +261,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     self.set('inter_color', inter.get('color'))
                     self.set('lorentz', inter.get('lorentz'))
                     self.set('couplings', inter.get('couplings'))
-                    self.set('pdg_codes',sorted([\
-                        part.get_pdg_code() for part in \
-                        inter.get('particles')]))
-                    if not inter.get('conjugate_interaction'):
-                        raise self.PhysicsObjectError,\
-                              "Interaction %d has no conjugate_interaction" % \
-                              repr(inter.get('id'))
-                    conj_inter = arguments[2].get('interaction_dict')[\
-                        inter.get('conjugate_interaction')]
-                    self.set('conjugate_couplings',
-                             conj_inter.get('couplings'))
-                    self.set('conjugate_pdg_codes',sorted([\
-                        part.get_pdg_code() for part in \
-                        conj_inter.get('particles')]))
                 return True
             elif name == 'pdg_code':
                 self.set('pdg_code', value)
@@ -315,8 +286,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return ['pdg_code', 'name', 'antiname', 'spin', 'color',
                 'mass', 'width', 'is_part', 'self_antipart',
                 'interaction_id', 'inter_color', 'lorentz',
-                'couplings', 'conjugate_couplings',
-                'state', 'number_external', 'number', 'fermionflow', 'mothers']
+                'couplings', 'state', 'number_external', 'number',
+                'fermionflow', 'mothers']
 
     # Helper functions
 
@@ -355,8 +326,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 mother = filter(lambda wf: \
                                 wf.get_with_flow('state') == 'outgoing',
                                 self.get('mothers'))[0]
-            self.set('state', mother.get('state'))
-            self.set('fermionflow', mother.get('fermionflow'))
+            if not self.get('self_antipart'):
+                self.set('state', mother.get('state'))
+                self.set('fermionflow', mother.get('fermionflow'))
+            else:
+                self.set('state', mother.get_with_flow('state'))
+                self.set('is_part', mother.get_with_flow('is_part'))
 
         # We want the particle created here to go into the next
         # vertex, so we need to flip identity for incoming
@@ -365,11 +340,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
                (self.get('state') == 'incoming' and not self.get('is_part') \
                 or self.get('state') == 'outgoing' and self.get('is_part')):
             self.set('pdg_code', -self.get('pdg_code'), model)
-
-        # For a boson, flip code (since going into next vertex)
-        #if not self.get('self_antipart') and \
-        #       self.get('spin') % 2 == 1:
-        #    self.set('pdg_code', -self.get('pdg_code'), model)
 
         return True
         
@@ -381,6 +351,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         N(outgoing)) in mothers
         """
 
+        # Use the HelasWavefunctionList helper function
         self.get('mothers').check_and_fix_fermion_flow(\
                                    wavefunctions,
                                    diagram_wavefunctions,
@@ -388,116 +359,13 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                    self.get_with_flow('state'))
         return self
 
-        # Clash is defined by whether the mothers have N(incoming) !=
-        # N(outgoing) after this state has been subtracted, OR
-        # the pdg codes for the interaction don't work with flow
-
-        mother_states = [ wf.get_with_flow('state') for wf in \
-                          self.get('mothers') ]
-
-        if self.get_with_flow('state') in mother_states:
-            mother_states.remove(self.get_with_flow('state'))
-
-        Nincoming = len(filter(lambda state: state == 'incoming',
-                               mother_states))
-        Noutgoing = len(filter(lambda state: state == 'outgoing',
-                               mother_states))
-
-        pdg_codes = [wf.get_pdg_code_outgoing() for wf in \
-                     self.get('mothers')]
-        pdg_codes.append(self.get_pdg_code_incoming())
-        pdg_codes.sort()
-
-        if Nincoming == Noutgoing and \
-               pdg_codes == self.get_with_flow('pdg_codes'):
-            print 'Ok! ', pdg_codes,\
-                  self.get_with_flow('pdg_codes')
-
-            return self
-
-        print 'Need flip wf: ', Nincoming, Noutgoing, pdg_codes,\
-              self.get_with_flow('pdg_codes'), self.get('pdg_code'), \
-              self.get_pdg_code_incoming()
-
-        # Start by checking if the problem is this particle
-        if Nincoming == Noutgoing and \
-           pdg_codes == self.get_with_flow('conjugate_pdg_codes'):
-            if not self.get('spin') % 2 == 0:
-                raise self.PhysicsObjectError, \
-                      "Error: Need to flip fermion flow of boson"
-            new_wf = self.flip_flow(wavefunctions,
-                                    diagram_wavefunctions,
-                                    external_wavefunctions)
-            pdg_codes = [wf.get_pdg_code_outgoing() for wf in \
-                         new_wf.get('mothers')]
-            pdg_codes.append(new_wf.get('pdg_code'))
-            pdg_codes.sort()
-
-            if not pdg_codes == new_wf.get_with_flow('pdg_codes'):
-                raise self.PhysicsObjectError,\
-                      "Error: Flipped flow did not do it: %s != %s" %\
-                      (repr(pdg_codes), repr(new_wf.get_with_flow('pdg_codes')))
-            return new_wf
-
-        if self.get_pdg_code_incoming() not in self.get_with_flow('pdg_codes'):
-            raise self.PhysicsObjectError,\
-                  "Error: Self-code not in pdg codes!"
-        
-        mother_states = [ wf.get_with_flow('state') for wf in \
-                          self.get('mothers') ]
-
-        if self.get_with_flow('state') in mother_states:
-            mother_states.remove(my_state)
-
-        Nincoming = len(filter(lambda state: state == 'incoming',
-                               mother_states))
-        Noutgoing = len(filter(lambda state: state == 'outgoing',
-                               mother_states))
-
-        while Nincoming != Noutgoing:
-            # Flip flow of first mother with wrong flow.
-            if Nincoming > Noutgoing:
-                flow_mothers = filter(lambda wf: \
-                                          wf.get('spin') % 2 == 0 and \
-                                          wf.get_with_flow('state') == 'incoming',
-                                          self.get('mothers'))
-            else:
-                flow_mothers = filter(lambda wf: \
-                                          wf.get('spin') % 2 == 0 and \
-                                          wf.get_with_flow('state') == 'outgoing',
-                                          self.get('mothers'))
-            new_mother = flow_mothers[0].flip_flow(wavefunctions,
-                                          diagram_wavefunctions,
-                                          external_wavefunctions)
-
-            # Replace old mother with new mother
-            self.get('mothers')[self.get('mothers').index(\
-                flow_mothers[0])] = new_mother
-
-            mother_states = [ wf.get_with_flow('state') for wf in \
-                              self.get('mothers') ]
-            
-            if self.get_with_flow('state') in mother_states:
-                mother_states.remove(my_state)
-                
-            Nincoming = len(filter(lambda state: state == 'incoming',
-                                       mother_states))
-            Noutgoing = len(filter(lambda state: state == 'outgoing',
-                                       mother_states))
-            print 'pdg_codes: ',pdg_codes 
-            print 'self.pdg_codes: ',self.get_with_flow('pdg_codes')
-            print 'fermionflow: ',self.get('fermionflow')
-            print 'Nincoming: ',Nincoming, ' Noutgoing: ',Noutgoing
-
-        return self
-            
     def check_majorana_and_flip_flow(self, found_majorana,
                                      wavefunctions,
                                      diagram_wavefunctions,
                                      external_wavefunctions):
         """Recursive function. Check for Majorana fermion. If found,
         continue down to external leg, then flip all the fermion flows
-        on the way back up.
+        on the way back up, in the correct way.
         """
 
         if not found_majorana:
@@ -571,9 +439,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 
             if flip_sign:
                 new_wf.set('state', filter(lambda state: \
-                                           state != self.get('state'),
+                                           state != new_wf.get('state'),
                                            ['incoming', 'outgoing'])[0])
-                new_wf.set('is_part', 1 - self.get('is_part'))
+                new_wf.set('is_part', 1 - new_wf.get('is_part'))
                 if not new_wf.get('self_antipart'):
                     new_wf.set('pdg_code', -new_wf.get('pdg_code'))
 
@@ -583,140 +451,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Return the new (or old) wavefunction
         return new_wf
 
-    def flip_flow(self,
-                  wavefunctions,
-                  diagram_wavefunctions,
-                  external_wavefunctions):
-        """Recursive function. Trace fermion flow down to external
-        leg, then flip all the fermion flows on the way back up.
-        """
-
-        print "flip_flow called for ", self.get('pdg_code')
-
-        new_wf = self
-
-        # Stop recursion at the external leg
-        mothers = copy.copy(self.get('mothers'))
-        if mothers:
-            # Follow fermion flow up through tree
-            fermion_mother = filter(lambda wf: wf.get('spin') % 2 == 0 and
-                                     wf.get_with_flow('state') == \
-                                     self.get_with_flow('state'),
-                                     mothers)
-
-            if len(fermion_mother) > 1:
-                raise self.PhysicsObjectError,\
-                      "6-fermion vertices not yet implemented"
-            if len(fermion_mother) == 0:
-                raise self.PhysicsObjectError,\
-                      "Previous unresolved fermion flow in mother chain"
-            
-            # Perform recursion by calling on mother
-            new_mother = fermion_mother[0].flip_flow(\
-                wavefunctions,
-                diagram_wavefunctions,
-                external_wavefunctions)
-
-            # Replace old mother with new mother
-            mothers[mothers.index(fermion_mother[0])] = new_mother
-                
-        # Flip fermion flow
-        if self in wavefunctions:
-            # Need to create a new copy
-            new_wf = copy.copy(self)
-            # Wavefunction number is given by: number of external
-            # wavefunctions + number of non-external wavefunctions
-            # in wavefunctions and diagram_wavefunctions
-            number = len(external_wavefunctions) + 1
-            number = number + len(filter(lambda wf: \
-                                         wf not in external_wavefunctions.values(),
-                                         wavefunctions))
-            number = number + len(filter(lambda wf: \
-                                         wf not in external_wavefunctions.values(),
-                                         diagram_wavefunctions))
-            new_wf.set('number',number)
-            new_wf.set('mothers',mothers)                
-            # Now flip flow
-            new_wf.set('fermionflow', -new_wf.get('fermionflow'))
-            if new_wf not in wavefunctions:
-                diagram_wavefunctions.append(new_wf)
-            else:
-                new_wf = wavefunctions[wavefunctions.index(new_wf)]
-        else:
-            new_wf.set('mothers',mothers)
-            # Flip flow
-            new_wf.set('fermionflow', -new_wf.get('fermionflow'))
-            if new_wf in wavefunctions:
-                new_wf = wavefunctions[wavefunctions.index(new_wf)]
-                diagram_wavefunctions.remove(new_wf)
-
-        print "Flipped flow of ",new_wf
-
-        # Return the new (or old) wavefunction
-        return new_wf
-
     def needs_hermitian_conjugate(self):
         """Returns true if there is a fermion flow clash, i.e.,
         there is an odd number of negative fermion flows"""
         
         return filter(lambda wf: wf.get('fermionflow') < 0,
                       self.get('mothers'))
-        #if self.get('mothers'):
-        #    return self.get('fermionflow')*\
-        #           reduce(lambda x, y: x * y,
-        #                  [ wf.get('fermionflow') for wf in \
-        #                    self.get('mothers') ], 1) < 0
-
-#            # Easiest case: Not flipped fermionflow or no Majorana
-#            # mother with flipped fermionflow, return False
-#            if self.get('fermionflow') > 0 or \
-#               not self.get('self_antipart') and not \
-#               filter(lambda wf: wf.get('fermionflow') < 0 and \
-#                      wf.get('self_antipart'), self.get('mothers')):
-#                print "False"
-#                return False
-#            # Easy case 1: If we have a Majorana parent which is an
-#            # external particle
-#            if len(filter(lambda wf: wf.get('fermionflow') < 0 and \
-#                          wf.get('self_antipart') and not wf.get('mothers'),
-#                          self.get('mothers'))) == 1:
-#                print "True"
-#                return True
-#            # Easy case 2: If we have a Majorana parent which is not an
-#            # external particle, that should be the conjugate
-#            if filter(lambda wf: wf.get('fermionflow') < 0 and \
-#                      wf.get('self_antipart') and \
-#                      wf.get('state') == self.get('state'),
-#                      self.get('mothers')):
-#                print "False 2"
-#                return False
-#            # Now it gets more complicated - if this is a Majorana
-#            # particle without a Majorana parent, we need to parse
-#            # through the parents to make sure there is no other
-#            # Majorana particle, which would already have given a
-#            # conjugate
-#            mothers = filter(lambda wf: wf.get('fermionflow') < 0 and \
-#                             wf.get('state') == self.get('state'),
-#                             self.get('mothers'))
-#            if len(mothers) > 1:
-#                raise self.PhysicsObjectError,\
-#                      "Too many negative fermionflow mothers, not yet implemented"
-#            got_herm_conj = False
-#            while mothers:
-#                mother = mothers[0]
-#                print "mother: ",mother.get('number'),mother.get('pdg_code')
-#                got_herm_conj = got_herm_conj or \
-#                                mother.get('self_antipart')
-#                mothers = filter(lambda wf: wf.get('fermionflow') < 0 and \
-#                             wf.get('state') == self.get('state'),
-#                             mother.get('mothers'))
-#                if len(mothers) > 1:
-#                    raise self.PhysicsObjectError,\
-#                          "Too many negative fermionflow mothers, not yet implemented"
-#                print not got_herm_conj
-#            return not got_herm_conj
-        #else:
-        #    return False
 
     def get_with_flow(self, name):
         """Generate the is_part and state needed for writing out
@@ -732,24 +472,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if name == 'state':
             return filter(lambda state: state != self.get('state'),
                           ['incoming', 'outgoing'])[0]
-        #if name == 'pdg_code':
-        #    if self.get('self_antipart'):
-        #        return self.get('pdg_code')
-        #    else:
-        #        return -self.get('pdg_code')
-        #if name == 'couplings':
-        #    return self.get('conjugate_couplings')
-        #if name == 'conjugate_couplings':
-        #    return self.get('couplings')
-        #if name == 'pdg_codes':
-        #    return self.get('conjugate_pdg_codes')
-        #if name == 'conjugate_pdg_codes':
-        #    return self.get('pdg_codes')
         return self.get(name)
 
     def get_pdg_code_outgoing(self):
         """Generate the corresponding pdg_code for an outgoing particle,
-        taking into account fermion flow, assuming the particle being final"""
+        taking into account fermion flow, for mother wavefunctions"""
 
         if self.get('self_antipart'):
             return self.get('pdg_code')
@@ -766,7 +493,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
     def get_pdg_code_incoming(self):
         """Generate the corresponding pdg_code for an outgoing particle,
-        taking into account fermion flow, assuming the particle being initial"""
+        taking into account fermion flow, for produced wavefunctions"""
 
         if self.get('self_antipart'):
             return self.get('pdg_code')
@@ -788,16 +515,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return self.get('fermionflow')* \
                state_number[self.get('state')]* \
                self.get('spin')
-
-    def get_coupling_conjugate(self):
-        """Special get for couplings: Returns conjugate coupling if this is
-        a conjugate wavefunction, i.e., if any fermionflow is negative"""
-
-        if self.get('fermionflow') < 0 or \
-           filter(lambda wf: wf.get('fermionflow') < 0, self.get('mothers')):
-            return self.get('conjugate_couplings')
-        else:
-            return self.get('couplings')
 
     def get_call_key(self):
         """Generate the (spin, state) tuple used as key for the helas call
@@ -956,9 +673,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
         self['inter_color'] = []
         self['lorentz'] = []
         self['couplings'] = { (0, 0):'none'}
-        self['conjugate_couplings'] = { (0, 0):'none'}
-        self['pdg_codes'] = []
-        self['conjugate_pdg_codes'] = []
         # Properties relating to the vertex
         self['number'] = 0
         self['mothers'] = HelasWavefunctionList()
@@ -980,8 +694,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
             # color and lorentz
             if 'couplings' in arguments[0].keys():
                 self.set('couplings', arguments[0]['couplings'])
-            if 'conjugate_couplings' in arguments[0].keys():
-                self.set('conjugate_couplings', arguments[0]['conjugate_couplings'])
         else:
             super(HelasAmplitude, self).__init__()
    
@@ -1003,7 +715,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid string" % str(mystr)
 
-        if name in ['couplings', 'conjugate_couplings']:
+        if name == 'couplings':
             #Should be a dictionary of strings with (i,j) keys
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
@@ -1039,16 +751,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid integer for amplitude number" % str(value)
 
-        if name in ['pdg_codes', 'conjugate_pdg_codes']:
-            #Should be a list of integers
-            if not isinstance(value, list):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid list of integers" % str(value)
-            for mystr in value:
-                if not isinstance(mystr, int):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a valid integer" % str(mystr)
-
         if name == 'mothers':
             if not isinstance(value, HelasWavefunctionList):
                 raise self.PhysicsObjectError, \
@@ -1081,20 +783,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     self.set('inter_color', inter.get('color'))
                     self.set('lorentz', inter.get('lorentz'))
                     self.set('couplings', inter.get('couplings'))
-                    self.set('pdg_codes',sorted([\
-                        part.get_pdg_code() for part in \
-                        inter.get('particles')]))
-                    if not inter.get('conjugate_interaction'):
-                        raise self.PhysicsObjectError,\
-                              "Interaction %d has no conjugate_interaction" % \
-                              repr(inter.get('id'))
-                    conj_inter = arguments[2].get('interaction_dict')[\
-                        inter.get('conjugate_interaction')]
-                    self.set('conjugate_couplings',
-                             conj_inter.get('couplings'))
-                    self.set('conjugate_pdg_codes',sorted([\
-                        part.get_pdg_code() for part in \
-                        conj_inter.get('particles')]))
                 return True
             else:
                 raise self.PhysicsObjectError, \
@@ -1106,7 +794,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
         """Return particle property names as a nicely sorted list."""
 
         return ['interaction_id', 'inter_color', 'lorentz', 'couplings', 
-                'conjugate_couplings', 'pdg_codes', 'conjugate_pdg_codes',
                 'number', 'mothers']
 
 
@@ -1126,178 +813,12 @@ class HelasAmplitude(base_objects.PhysicsObject):
                                    external_wavefunctions,
                                    'nostate')
 
-        # Clash is defined by whether the mothers have N(incoming) !=
-        # N(outgoing) after this state has been subtracted, OR
-        # the pdg codes for the interaction don't work with flow
-
-        mother_states = [ wf.get_with_flow('state') for wf in \
-                          self.get('mothers') ]
-
-        Nincoming = len(filter(lambda state: state == 'incoming',
-                               mother_states))
-        Noutgoing = len(filter(lambda state: state == 'outgoing',
-                               mother_states))
-
-        pdg_codes = sorted([wf.get_pdg_code_outgoing() for wf in \
-                     self.get('mothers')])
-
-        if Nincoming == Noutgoing and \
-               pdg_codes == self.get('pdg_codes'):
-            return True
-
-        print 'Need flip amp: ', Nincoming, Noutgoing, pdg_codes,\
-              self.get('pdg_codes')
-
-        # Start by checking if the pdg codes are ok:
-        if pdg_codes != self.get_pdg_codes_conjugate():        
-
-            reduced_pdg_codes = copy.copy(pdg_codes)        
-
-            # Remove boson codes
-            for wf in filter(lambda wf: wf.get('spin') % 2 == 1,self.get('mothers')):
-                reduced_pdg_codes.remove(wf.get_pdg_code_outgoing())
-
-            # Fermion mothers
-            fermion_mothers = filter(lambda wf: wf.get('spin') % 2 == 0,
-                                self.get('mothers'))
-        
-            # Find the erraneous code
-            for mother in fermion_mothers:
-                if mother.get_pdg_code_outgoing() in reduced_pdg_codes:
-                    reduced_pdg_codes.remove(mother.get_pdg_code_outgoing())
-                else:
-                    # This mother needs to get the fermion flow code flipped
-                    new_mother = mother.flip_flow(wavefunctions,
-                                     diagram_wavefunctions,
-                                     external_wavefunctions)
-                    # Replace old mother with new mother
-                    self[self.index(mother)] = new_mother
-                    reduced_pdg_codes.remove(new_mother.get_pdg_code_outgoing())
-            if reduced_pdg_codes:
-                raise self.PhysicsObjectError, \
-                      "Problem with bosonic mothers!"
-
-        mother_states = [ wf.get_with_flow('state') for wf in \
-                          self.get('mothers') ]
-
-        Nincoming = len(filter(lambda state: state == 'incoming',
-                               mother_states))
-        Noutgoing = len(filter(lambda state: state == 'outgoing',
-                               mother_states))
-
-        print 'Nincoming = ',Nincoming, ' Noutgoing = ',Noutgoing
-        print 'pdg_codes = ', sorted([wf.get_pdg_code_outgoing() for wf in \
-                     self.get('mothers')])
-        print 'should be: ',self.get('pdg_codes')
-        print 'for: ',self
-
-        while Nincoming != Noutgoing:
-            # The problem is in pure Majorana states. Flip flow of
-            # first Majorana mother with wrong flow.
-            if Nincoming > Noutgoing:
-                majorana_mothers = filter(lambda wf: wf.get('self_antipart') and \
-                                          wf.get('spin') % 2 == 0 and \
-                                          wf.get_with_flow('state') == 'incoming',
-                                          self.get('mothers'))
-            else:
-                majorana_mothers = filter(lambda wf: wf.get('self_antipart') and \
-                                          wf.get('spin') % 2 == 0 and \
-                                          wf.get_with_flow('state') == 'outgoing',
-                                          self.get('mothers'))
-            new_mother = majorana_mothers[0].flip_flow(wavefunctions,
-                                          diagram_wavefunctions,
-                                          external_wavefunctions)
-
-            # Replace old mother with new mother
-            self.get('mothers')[self.get('mothers').index(\
-                majorana_mothers[0])] = new_mother
-
-            mother_states = [ wf.get_with_flow('state') for wf in \
-                              self.get('mothers') ]
-            
-            Nincoming = len(filter(lambda state: state == 'incoming',
-                                   mother_states))
-            Noutgoing = len(filter(lambda state: state == 'outgoing',
-                                   mother_states))
-            
     def needs_hermitian_conjugate(self):
         """Returns true if there is a fermion flow clash, i.e.,
         there is an odd number of negative fermion flows"""
 
         return filter(lambda wf: wf.get('fermionflow') < 0,
                       self.get('mothers'))
-
-#        # Only if we have a Majorana parent which is an
-#        # external particle, return true
-#        if len(filter(lambda wf: wf.get('fermionflow') < 0 and \
-#                      wf.get('self_antipart') and not wf.get('mothers'),
-#                      self.get('mothers'))) == 1:
-#            return True
-#        else:
-#            return False
-
-#        return reduce(lambda x, y: x * y,
-#                      [ wf.get('fermionflow') for wf in \
-#                        self.get('mothers') ], 1) < 0                      
-
-    def get_coupling_conjugate(self):
-        """Special get for couplings: Returns conjugate coupling if this is
-        a conjugate wavefunction, i.e., if any fermionflow is negative"""
-
-        #if sorted([wf.get_pdg_code_incoming() for wf in \
-        #           self.get('mothers')]) == self.get('pdg_codes'):
-        #    return self.get('couplings')
-        #elif sorted([wf.get_pdg_code_incoming() for wf in \
-        #           self.get('mothers')]) == self.get('conjugate_pdg_codes'):
-        #    return self.get('conjugate_couplings')
-        #else:
-        #    raise self.PhysicsObjectError, \
-        #          "PDG codes %s do not correspond to either pdg_codes %s or conjugate %s" % \
-        #          (repr(sorted([wf.get_pdg_code_incoming() for wf in \
-        #                        self.get('mothers')])),
-        #           repr(self.get('pdg_codes')),
-        #           repr(self.get('conjugate_pdg_codes')))
-
-        if self.needs_hermitian_conjugate():
-            return self.get('conjugate_couplings')
-        else:
-            return self.get('couplings')
-
-
-    def get_pdg_codes_conjugate(self):
-        """Special get for pdg_codes: Returns conjugate pdg_codes if this is
-        a conjugate wavefunction, as determined by the bosonic mothers"""
-
-        if self.needs_hermitian_conjugate():
-            return self.get('conjugate_pdg_codes')
-        else:
-            return self.get('pdg_codes')
-
-        # Use bosonic pdg codes to determine between pdg_codes and
-        # conjugate_pdg_codes
-        #bosonic_pdg_codes = [wf.get_pdg_code_incoming() for wf in \
-        # self.get('mothers')]
-        #
-        #reduced_bosonic_pdg_codes = copy.copy(bosonic_pdg_codes)
-        #reduced_pdg_codes = copy.copy(self.get('pdg_codes'))
-        #for code in bosonic_pdg_codes:
-        #    if code in reduced_pdg_codes:
-        #        reduced_bosonic_pdg_codes.remove(code)
-        #        reduced_pdg_codes.remove(code)
-        #if not reduced_bosonic_pdg_codes:
-        #    return self.get('pdg_codes')
-        #
-        #reduced_bosonic_pdg_codes = copy.copy(bosonic_pdg_codes)
-        #reduced_pdg_codes = copy.copy(self.get('conjugate_pdg_codes'))
-        #for code in bosonic_pdg_codes:
-        #    if code in reduced_pdg_codes:
-        #        reduced_bosonic_pdg_codes.remove(code)
-        #        reduced_pdg_codes.remove(code)
-        #if not reduced_bosonic_pdg_codes:
-        #    return self.get('conjugate_pdg_codes')
-        #
-        #raise self.PhysicsObjectError, \
-        #      "Mother bosons correspond to neither pdg_codes nor conjugate_pdg_codes"
 
     def get_call_key(self):
         """Generate the (spin, state) tuples used as key for the helas call
@@ -1492,8 +1013,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         for diagram in diagram_list:
 
-            print "New diagram"
-
             # Dictionary from leg number to wave function, keeps track
             # of the present position in the tree
             number_to_wavefunctions = {}
@@ -1523,13 +1042,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 # Sort the legs, to get right order of wave functions
                 lastvx.get('legs').sort(lambda leg1, leg2: \
                                     leg1.get('number')-leg2.get('number'))
-
-            # If wavefunction from incoming particles, flip pdg code
-            # (both for s- and t-channel particle)
-            #lastleg = lastvx.get('legs')[len(lastvx.get('legs')) - 1]
-            #if lastleg.get('number') in incoming_numbers:
-            #    part = model.get('particle_dict')[lastleg.get('id')]
-            #    lastleg.set('id', part.get_anti_pdg_code())
 
             # Go through all vertices except the last and create
             # wavefunctions

@@ -251,8 +251,7 @@ class InteractionTest(unittest.TestCase):
                                     (0, 1):'g01',
                                     (1, 0):'g10',
                                     (1, 1):'g11'},
-                       'orders':{'QCD':1, 'QED':1},
-                       'conjugate_interaction': 1}
+                       'orders':{'QCD':1, 'QED':1}}
 
         self.myinter = base_objects.Interaction(self.mydict)
 
@@ -263,7 +262,7 @@ class InteractionTest(unittest.TestCase):
 
         # First fill myinter2 it using set
         for prop in ['id', 'particles', 'color', 'lorentz', 'couplings',
-                     'orders', 'conjugate_interaction']:
+                     'orders']:
             myinter2.set(prop, self.mydict[prop])
 
         # Check equality between Interaction objects
@@ -355,9 +354,7 @@ class InteractionTest(unittest.TestCase):
         goal = goal + "    \'lorentz\': [\'L1\', \'L2\'],\n"
         goal = goal + "    \'couplings\': %s,\n" % \
                                     repr(self.myinter['couplings'])
-        goal = goal + "    \'orders\': %s,\n" % repr(self.myinter['orders'])
-        goal = goal + "    \'conjugate_interaction\': %d\n}" % \
-               self.myinter['conjugate_interaction']
+        goal = goal + "    \'orders\': %s\n}" % repr(self.myinter['orders'])
 
         self.assertEqual(goal, str(self.myinter))
 
@@ -431,10 +428,10 @@ class InteractionTest(unittest.TestCase):
 
         myinter.generate_dict_entries(ref_dict_to0, ref_dict_to1)
 
-        goal_ref_dict_to1 = {(-3, 2, 4):[(1, 0)],
-                            (-3, -1, 4):[(-2, 0)],
-                            (-1, 2, 4):[(3, 0)],
-                            (-3, -1, 2):[(4, 0)]}
+        goal_ref_dict_to1 = {(-2, 3, 4):[(-1, 0)],
+                            (1, 3, 4):[(2, 0)],
+                            (-2, 1, 4):[(-3, 0)],
+                            (-2, 1, 3):[(4, 0)]}
 
         self.assertEqual(ref_dict_to1, goal_ref_dict_to1)
 
@@ -448,9 +445,9 @@ class InteractionTest(unittest.TestCase):
                                                               part3]))
         myinterlist.append(add_inter)
 
-        goal_ref_dict_to1[(-1, 2)] = [(3, 0)]
-        goal_ref_dict_to1[(-3, -1)] = [(-2, 0)]
-        goal_ref_dict_to1[(-3, 2)] = [(1, 0)]
+        goal_ref_dict_to1[(-2, 1)] = [(-3, 0)]
+        goal_ref_dict_to1[(1, 3)] = [(2, 0)]
+        goal_ref_dict_to1[(-2, 3)] = [(-1, 0)]
 
         self.assertEqual(myinterlist.generate_ref_dict()[1], goal_ref_dict_to1)
 
