@@ -210,6 +210,35 @@ class ColorAmpTest(unittest.TestCase):
         goal_fact.simplify()
         print goal_fact
 
+    def test_colorize_gg_gggg(self):
+        """Test the colorize function for gg > gggg"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'initial'}))
+
+        myleglist.extend([base_objects.Leg({'id':21,
+                                            'state':'final'})] * 4)
+
+        myprocess = base_objects.Process({'legs':myleglist,
+                                        'model':self.mymodel})
+
+        myamplitude = diagram_generation.Amplitude()
+
+        myamplitude.set('process', myprocess)
+
+        myamplitude.generate_diagrams()
+
+        # First diagram with two 3-gluon vertices
+        for diag in myamplitude['diagrams']:
+            col_fact = color_amp.colorize(diag, self.mymodel)
+            col_fact.simplify()
+            print col_fact
+
+
     def test_replace_index(self):
         """Test the color index replacement"""
 
