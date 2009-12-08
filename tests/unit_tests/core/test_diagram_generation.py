@@ -225,7 +225,7 @@ class DiagramGenerationTest(unittest.TestCase):
         antie = copy.copy(self.mypartlist[4])
         antie.set('is_part', False)
 
-        # 3 gluon vertiex
+        # 3 gluon vertex
         self.myinterlist.append(base_objects.Interaction({
                       'id': 1,
                       'particles': base_objects.ParticleList(\
