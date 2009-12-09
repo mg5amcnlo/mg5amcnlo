@@ -64,7 +64,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Properties relating to the leg/vertex
         self['state'] = 'incoming'
         self['mothers'] = HelasWavefunctionList()
-        self['helas_wavefunction_sign'] = 1
         self['number_external'] = 0
         self['number'] = 0
         self['fermionflow'] = 1
@@ -217,7 +216,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid wavefunction state (incoming|outgoing|intermediate)" % \
                                                                     str(value)
-        if name in ['fermionflow', 'helas_wavefunction_sign']:
+        if name in ['fermionflow']:
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid integer" % str(value)
@@ -288,7 +287,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 'mass', 'width', 'is_part', 'self_antipart',
                 'interaction_id', 'inter_color', 'lorentz',
                 'couplings', 'state', 'number_external', 'number',
-                'fermionflow', 'helas_wavefunction_sign', 'mothers']
+                'fermionflow', 'mothers']
 
     # Helper functions
 
@@ -635,31 +634,6 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
 
         return True
 
-    def sign_flips_to_external(self):
-        """Gives the sign corresponding to the number of flips needed
-        to place the fermion wavefunctions in order of
-        external_wavefunction"""
-
-        fermions = filter(lambda wf: wf.get('spin') % 2 == 0, self)
-
-        # Perform bubble sort on the fermions, and keep track of
-        # the number of flips that are needed
-
-        nflips = 0
-
-        for i in range(len(fermions) - 1):
-            for j in range(i+1, len(fermions)):
-                if fermions[j].get('number_external') < \
-                   fermions[i].get('number_external'):
-                    tmp  = fermions[i]
-                    fermions[i] = fermions[j]
-                    fermions[j] = tmp
-                    nflips = nflips + 1
-            
-        return (-1)**nflips
-
-    
-
 #===============================================================================
 # HelasAmplitude
 #===============================================================================
@@ -679,7 +653,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
         self['couplings'] = { (0, 0):'none'}
         # Properties relating to the vertex
         self['number'] = 0
-        self['helas_amplitude_sign'] = 1
         self['mothers'] = HelasWavefunctionList()
         
     # Customized constructor
@@ -756,13 +729,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid integer for amplitude number" % str(value)
 
-        if name == 'helas_amplitude_sign':
-            if not isinstance(value, int):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid integer" % str(value)
-            if not value in [-1,1]:
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid sign (must be -1 or 1)" % str(value)                
         if name == 'mothers':
             if not isinstance(value, HelasWavefunctionList):
                 raise self.PhysicsObjectError, \
@@ -806,7 +772,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         """Return particle property names as a nicely sorted list."""
 
         return ['interaction_id', 'inter_color', 'lorentz', 'couplings', 
-                'number', 'helas_amplitude_sign', 'mothers']
+                'number', 'mothers']
 
 
     # Helper functions
@@ -848,6 +814,31 @@ class HelasAmplitude(base_objects.PhysicsObject):
             res.append('C')
 
         return tuple(res)
+
+    def calculate_fermion_factor(self):
+        """Calculate the fermion factor for the diagram corresponding
+        to this amplitude"""
+
+        return 0
+
+    def sign_flips_to_order(self, fermions):
+        """Gives the sign corresponding to the number of flips needed
+        to place the fermion numbers in order"""
+
+        # Perform bubble sort on the fermions, and keep track of
+        # the number of flips that are needed
+
+        nflips = 0
+
+        for i in range(len(fermions) - 1):
+            for j in range(i+1, len(fermions)):
+                if fermions[j] < fermions[i]:
+                    tmp  = fermions[i]
+                    fermions[i] = fermions[j]
+                    fermions[j] = tmp
+                    nflips = nflips + 1
+            
+        return (-1)**nflips
 
     # Comparison between different amplitudes, to allow check for
     # identical processes. Note that we are then not interested in
@@ -900,7 +891,7 @@ class HelasDiagram(base_objects.PhysicsObject):
 
         self['wavefunctions'] = HelasWavefunctionList()
         self['amplitude'] = HelasAmplitude()
-        self['fermionfactor'] = 1
+        self['fermionfactor'] = 0
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
@@ -918,11 +909,21 @@ class HelasDiagram(base_objects.PhysicsObject):
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid integer for fermionfactor" % str(value)
-            if not value in [-1,1]:
+            if not value in [-1,0,1]:
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid fermion factor (must be -1 or 1)" % str(value)                
+                        "%s is not a valid fermion factor (must be -1, 0 or 1)" % str(value)                
 
         return True
+
+    def get(self, name):
+        """Get the value of the property name."""
+
+        if name == 'fermionfactor' and not self[name]:
+            if self['amplitude']:
+                self.set('fermionfactor',
+                         self.get('amplitude').calculate_fermion_factor())
+
+        return super(HelasDiagram, self).get(name)
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
@@ -992,7 +993,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     def generate_helas_diagrams(self, amplitude, optimization = 1):
         """Starting from a list of Diagrams from the diagram
         generation, generate the corresponding HelasDiagrams, i.e.,
-        the wave functions, amplitudes and fermionfactors. Choose
+        the wave functions and amplitudes. Choose
         between default optimization (= 1) or no optimization (= 0,
         for GPU).
         """
@@ -1130,11 +1131,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         self.set('diagrams',helas_diagrams)
 
     def calculate_fermion_factors(self, amplitude):
-        """Starting from a list of Diagrams from the
-        diagram generation, generate the corresponding HelasDiagrams,
-        i.e., the wave functions, amplitudes and fermionfactors
+        """Generate the fermion factors for all diagrams in the amplitude
         """
 
+        for diagram in self.get('diagrams'):
+            diagram.get('fermionfactor')
 
     # Helper methods
 
@@ -1237,8 +1238,7 @@ class HelasModel(base_objects.PhysicsObject):
 
         if wavefunction.get_call_key() in self.get("wavefunctions").keys():
             call = self["wavefunctions"][wavefunction.get_call_key()](wavefunction)
-            wavefunction.set('helas_wavefunction_sign', call[1])
-            return call[0]
+            return call
         else:
             return ""
 
@@ -1248,8 +1248,7 @@ class HelasModel(base_objects.PhysicsObject):
 
         if amplitude.get_call_key() in self.get("amplitudes").keys():
             call = self["amplitudes"][amplitude.get_call_key()](amplitude)
-            amplitude.set('helas_amplitude_sign', call[1])
-            return call[0]
+            return call
         else:
             return ""
 
@@ -1381,30 +1380,30 @@ class HelasFortranModel(HelasModel):
                 call = call + "%s,NHEL(%d),"
             call = call + "%d*IC(%d),W(1,%d))"
             if argument.get('spin') == 1:
-                call_function = lambda wf: (call % \
+                call_function = lambda wf: call % \
                                 (wf.get('number_external'),
                                  # For boson, need initial/final here
                                  (-1)**(wf.get('state') == 'initial'),
                                  wf.get('number_external'),
-                                 wf.get('number')), 1)
+                                 wf.get('number'))
             elif argument.get('spin') % 2 == 1:
-                call_function = lambda wf: (call % \
+                call_function = lambda wf: call % \
                                 (wf.get('number_external'),
                                  wf.get('mass'),
                                  wf.get('number_external'),
                                  # For boson, need initial/final here
                                  (-1)**(wf.get('state')=='initial'),
                                  wf.get('number_external'),
-                                 wf.get('number')), 1)
+                                 wf.get('number'))
             else:
-                call_function = lambda wf: (call % \
+                call_function = lambda wf: call % \
                                 (wf.get('number_external'),
                                  wf.get('mass'),
                                  wf.get('number_external'),
                                  # For fermions, need particle/antiparticle
                                  -(-1)**wf.get_with_flow('is_part'),
                                  wf.get('number_external'),
-                                 wf.get('number')), 1)
+                                 wf.get('number'))
         else:
             # String is FOVXXX, FIVXXX, JIOXXX etc.
             if isinstance(argument, HelasWavefunction):
@@ -1443,17 +1442,16 @@ class HelasFortranModel(HelasModel):
             if isinstance(argument,HelasWavefunction):
                 # Create call for wavefunction
                 if len(argument.get('mothers')) == 2:
-                    call_function = lambda wf: (call % \
+                    call_function = lambda wf: call % \
                                     (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
                                      HelasFortranModel.sorted_mothers(wf)[1].get('number'),
                                      #wf.get_coupling_conjugate().values()[0],
                                      wf.get_with_flow('couplings').values()[0],
                                      wf.get('mass'),
                                      wf.get('width'),
-                                     wf.get('number')),
-                                     HelasFortranModel.sorted_mothers(wf).sign_flips_to_external())
+                                     wf.get('number'))
                 else:
-                    call_function = lambda wf: (call % \
+                    call_function = lambda wf: call % \
                                     (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
                                      HelasFortranModel.sorted_mothers(wf)[1].get('number'),
                                      HelasFortranModel.sorted_mothers(wf)[2].get('number'),
@@ -1461,33 +1459,27 @@ class HelasFortranModel(HelasModel):
                                      wf.get_with_flow('couplings').values()[0],
                                      wf.get('mass'),
                                      wf.get('width'),
-                                     wf.get('number')),
-                                     HelasFortranModel.sorted_mothers(wf).sign_flips_to_external())
-
+                                     wf.get('number'))
             else:
                 # Create call for amplitude
                 if len(argument.get('mothers')) == 3:
-                    call_function = lambda amp: (call % \
+                    call_function = lambda amp: call % \
                                     (HelasFortranModel.sorted_mothers(amp)[0].get('number'),
                                      HelasFortranModel.sorted_mothers(amp)[1].get('number'),
                                      HelasFortranModel.sorted_mothers(amp)[2].get('number'),
                                      #amp.get_coupling_conjugate().values()[0],
                                      amp.get('couplings').values()[0],
-                                     amp.get('number')),
-                                     HelasFortranModel.sorted_mothers(amp).sign_flips_to_external())
-
+                                     amp.get('number'))
                 else:
-                    call_function = lambda amp: (call % \
+                    call_function = lambda amp: call % \
                                     (HelasFortranModel.sorted_mothers(amp)[0].get('number'),
                                      HelasFortranModel.sorted_mothers(amp)[1].get('number'),
                                      HelasFortranModel.sorted_mothers(amp)[2].get('number'),
                                      HelasFortranModel.sorted_mothers(amp)[3].get('number'),
                                      #amp.get_coupling_conjugate().values()[0],
                                      amp.get('couplings').values()[0],
-                                     amp.get('number')),
-                                     HelasFortranModel.sorted_mothers(amp).sign_flips_to_external())
+                                     amp.get('number'))
 
-                
         if isinstance(argument,HelasWavefunction):
             self.add_wavefunction(argument.get_call_key(),call_function)
         else:
