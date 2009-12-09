@@ -24,7 +24,6 @@ for a diagram."""
 def colorize(diagram, model):
     """Takes a diagram and a model as input and output the ColorFactor
     object associated to the diagram"""
-
     # The smallest value used to create new summed indices
     min_index = -100
     # The color factor to be output
@@ -35,15 +34,15 @@ def colorize(diagram, model):
     for vertex in diagram.get('vertices'):
 
         # SPECIAL VERTEX WITH ID = 0 -------------------------------------------
-
         if vertex['id'] == 0:
+
             # For vertex (i1,i2), replace all i2 by i1
             old_num = vertex.get('legs')[1].get('number')
             new_num = vertex.get('legs')[0].get('number')
             # Be careful i1 or i2 might have been replaced themselves
-            while old_num in repl_dict.keys():
+            if old_num in repl_dict.keys():
                 old_num = repl_dict[old_num]
-            while new_num in repl_dict.keys():
+            if new_num in repl_dict.keys():
                 new_num = repl_dict[new_num]
             # Do the replacement
             for index, col_str in enumerate(col_fact):
@@ -58,51 +57,40 @@ def colorize(diagram, model):
             return col_fact
 
         # NORMAL VERTICES WITH ID != 0 -----------------------------------------
+
         # Create a list of pdg codes entering the vertex ordered as in
         # interactions.py
         list_pdg = [part.get_pdg_code() for part in \
                model.get_interaction(vertex.get('id')).get('particles')]
+
+        # Create a dictionary pdg code --> leg(s)
+        dict_pdg_leg = {}
+        for index, leg in enumerate(vertex.get('legs')):
+            curr_num = leg.get('number')
+            curr_pdg = leg.get('id')
+            # If this is the last leg and not the last vertex, 
+            # flip part/antipart, and replace last index by a new summed index
+            if index == len(vertex.get('legs')) - 1 and \
+                vertex != diagram.get('vertices')[-1]:
+                part = model.get('particle_dict')[curr_pdg]
+                curr_pdg = \
+                    model.get('particle_dict')[curr_pdg].get_anti_pdg_code()
+                repl_dict[curr_num] = min_index
+                min_index = min_index - 1
+            if curr_num in repl_dict.keys():
+                curr_num = repl_dict[curr_num]
+            if curr_pdg in dict_pdg_leg.keys():
+                dict_pdg_leg[curr_pdg].append(curr_num)
+            else:
+                dict_pdg_leg[curr_pdg] = [curr_num]
+
         # Create a list of associated leg number following the same order
         list_numbers = []
-        # Step 1: create a dictionary associating PDG code -> number
-        list_leg = {}
-
-        # Create a copy of the current vertex where all legs labeled as initial 
-        # state, except the last one (outgoing) have a flipped PDG code
-        # ASK JOHAN IF IT'S NOT THE CONTRARY!!!
-        flipped_vertex = copy.copy(vertex)
-        for leg in flipped_vertex['legs']:
-            if leg.get('state') == 'initial' and \
-                flipped_vertex['legs'].index(leg) != \
-                                    len(flipped_vertex['legs']) - 1:
-                part = model.get('particle_dict')[leg.get('id')]
-                leg.set('id', part.get_anti_pdg_code())
-
         for pdg_code in list_pdg:
-            if pdg_code not in list_leg.keys():
-                list_leg[pdg_code] = [leg['number'] for leg in \
-                           flipped_vertex['legs'] if leg['id'] == pdg_code]
+            list_numbers.append(dict_pdg_leg[pdg_code].pop())
 
-        # Step 2: replace the PDG code by numbers, if several times the same
-        # PDG code, pop the corresponding numbers according to the vertex
-        # ordering
-        for pdg_code in list_pdg:
-            my_number = list_leg[pdg_code].pop()
-            while my_number in repl_dict.keys():
-                # If a number has already been replaced, use the new value
-                my_number = repl_dict[my_number]
-            if my_number not in list_numbers:
-                # Only appear once until now -> no need for a new index
-                list_numbers.append(my_number)
-            else:
-                # If the number already appear, create a new index and save
-                # it as replaced
-                list_numbers.append(min_index)
-                repl_dict[my_number] = min_index
-                min_index = min_index - 1
         # Create a new ColorFactor to store new elements
         new_col_fact = color_algebra.ColorFactor()
-
         # For each new string
         for new_col_str in [color_algebra.ColorString(s) for s in \
                        model.get_interaction(vertex['id'])['color']]:

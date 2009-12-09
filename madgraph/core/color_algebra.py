@@ -113,6 +113,15 @@ re_trace_T_product2 = re.compile(r"""^T\((?P<c>(-?\d+,)*)
                                 (?P=x)
                                 (?P<b>(,-?\d+)*)\)$""", re.VERBOSE)
 
+# Match T(a,...,x,b,...,i,j)T(c,...,x,d,...,k,l)
+re_T_product = re.compile(r"""^T\((?P<a>(-?\d+,)*)
+                                (?P<x>-?\d+),
+                                (?P<b>(-?\d+,)*)
+                                (?P<id1>-?\d+),(?P<id2>-?\d+)\)
+                                T\((?P<c>(-?\d+,)*)
+                                (?P=x),
+                                (?P<d>(-?\d+,)*)
+                                (?P<id3>-?\d+),(?P<id4>-?\d+)\)$""", re.VERBOSE)
 
 #===============================================================================
 # ColorString
@@ -470,6 +479,43 @@ class ColorString(list):
                                                'T(%s)' % cdi1i2])
         return []
 
+    def expand_T_product(self):
+        """Expand the first encountered product of two T's with a summed indicex 
+        using T(a,x,b,i,j)T(c,x,d,k,l) = 1/2(T(a,d,i,l)T(c,b,k,j)
+                                        -1/Nc T(a,b,i,j)T(c,d,k,l))
+        and returns the corresponding list of ColorString objects. 
+        This method will NOT modify the current color string. If nothing
+        to expand is found, returns an empty list."""
+
+        for index1, mystr1 in enumerate(self):
+            for index2, mystr2 in enumerate(self[index1 + 1:]):
+                m = re_T_product.match(mystr1 + mystr2)
+                if m:
+                    adi1i4 = self.__clean_commas(','.join([m.group('a'),
+                                                           m.group('d'),
+                                                           m.group('id1'),
+                                                           m.group('id4')]))
+                    cbi3i2 = self.__clean_commas(','.join([m.group('c'),
+                                                           m.group('b'),
+                                                           m.group('id3'),
+                                                           m.group('id2')]))
+                    abi1i2 = self.__clean_commas(','.join([m.group('a'),
+                                                           m.group('b'),
+                                                           m.group('id1'),
+                                                           m.group('id2')]))
+                    cdi3i4 = self.__clean_commas(','.join([m.group('c'),
+                                                           m.group('d'),
+                                                           m.group('id3'),
+                                                           m.group('id4')]))
+                    return self.__expand_term([index1, index1 + index2 + 1],
+                                              ['1/2',
+                                               'T(%s)' % adi1i4,
+                                               'T(%s)' % cbi3i2],
+                                              ['-1/2', '1/Nc',
+                                               'T(%s)' % abi1i2,
+                                               'T(%s)' % cdi3i4])
+        return []
+
     def __clean_commas(self, string):
             """Return a string built on string where multiple commas
             and commas at the beginning/end have been removed.
@@ -645,6 +691,8 @@ class ColorFactor(list):
                     result = col_str.expand_trace_product()
                 if not result:
                     result = col_str.expand_trace_T_product()
+                if not result:
+                    result = col_str.expand_T_product()
                 if result:
                     del self[index][:]
                     self.append(result[0])

@@ -338,6 +338,19 @@ class ColorStringTest(unittest.TestCase):
                                              'Tr(2)', 'T(3,102,103)',
                                              'T(-5,6,7)'])])
 
+    def test_expand_T_product(self):
+        """Test color string expansion for T(a,x,b,i,j)T(c,x,d,k,l)"""
+
+        my_color_string = color.ColorString(['T(3,101,4,102,103)',
+                                              'T(5,101,6,104,105)'])
+
+        self.assertEqual(my_color_string.expand_T_product(),
+                        [color.ColorString(['1/2', 'T(3,6,102,105)',
+                                             'T(5,4,104,103)']),
+                         color.ColorString(['-1/2', '1/Nc',
+                                             'T(3,4,102,103)',
+                                             'T(5,6,104,105)'])])
+
 class ColorFactorTest(unittest.TestCase):
     """Test class for code parts related to ColorFactor objects"""
 
