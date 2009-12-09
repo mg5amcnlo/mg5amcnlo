@@ -89,9 +89,9 @@ class TestFeynman_line(unittest.TestCase):
         """ test that begin/end routines forbids wrong entry """
     
         self.assertRaises(drawing.Feynman_line.FeynmanLineError, \
-                          self.my_line.def_begin_point([0, 0]))
+                          self.my_line.def_begin_point, [0, 0])
         self.assertRaises(drawing.Feynman_line.FeynmanLineError, \
-                          self.my_line.def_end_point([0, 0]))
+                          self.my_line.def_end_point, [0, 0])
         
     def test_has_type(self):
         """ test if we found the correct type of line for some basic line """
@@ -99,16 +99,53 @@ class TestFeynman_line(unittest.TestCase):
         #need to load SM?
         for id in [1, 2, 3, 4, 5, 6, 11, 12, 13, 14, 15]:
             my_line = drawing.Feynman_line(id)
-            self.assertTrue(my_line.has_type() == 0.5)
+            self.assertEquals(my_line.has_type(), 0.5)
             
         for id in [25]:
             my_line = drawing.Feynman_line(id)
-            self.assertTrue(my_line.has_type() == 0)        
+            self.assertEquals(my_line.has_type(), 0)        
         
         for id in [21, 22, 23, 24]:
             my_line = drawing.Feynman_line(id)
-            self.assertTrue(my_line.has_type() == 1)               
+            self.assertEquals(my_line.has_type(), 1)
+            
+            
+    def test_domain_intersection(self):
+        """ test if domain intersection works correctly """
+        
+        my_line1 = self.def_line([0, 0], [1, 1])         #diagonal
+        my_line2 = self.def_line([0.5, 0.5], [0.9, 0.9]) # part of the diagonal
+        my_line3 = self.def_line([0.1, 0.5], [0.5, 1])     # parallel to the diagonal
+        my_line4 = self.def_line([0.0, 0.0], [0.0, 1.0]) # y axis 
+        my_line5 = self.def_line([0.0, 0.0], [0.3, 0.2])
+                       
+        self.assertEquals(my_line1.domain_intersection(my_line1), (0, 1) )
+        self.assertEquals(my_line1.domain_intersection(my_line2), (0.5, 0.9))
+        self.assertEquals(my_line1.domain_intersection(my_line3), (0.1, 0.5))
+        self.assertEquals(my_line1.domain_intersection(my_line4), (0, 0))
+        self.assertEquals(my_line1.domain_intersection(my_line5), (0, 0.3))
+        self.assertEquals(my_line2.domain_intersection(my_line3), (0.5,0.5))
+        self.assertEquals(my_line2.domain_intersection(my_line4), (None ,None) )
+        self.assertEquals(my_line2.domain_intersection(my_line5), (None, None))
+        self.assertEquals(my_line3.domain_intersection(my_line4), (None, None) )        
+        self.assertEquals(my_line3.domain_intersection(my_line5), (0.1, 0.3))
+        
+        self.assertEquals(my_line1.domain_intersection(my_line4, 'x'), (0, 0))
+        self.assertEquals(my_line1.domain_intersection(my_line4, 'y'), (0, 1))        
     
+    def test_domain_intersection_failure(self):
+        """ check that domain intersection send correct error on wrong data """
+        
+        my_line1 = self.def_line([0, 0], [1, 1])
+        self.assertRaises( drawing.Feynman_line.FeynmanLineError, \
+                           my_line1.domain_intersection,[0,1])
+        self.assertRaises( drawing.Feynman_line.FeynmanLineError, \
+                           my_line1.domain_intersection,(0,1))
+        self.assertRaises( drawing.Feynman_line.FeynmanLineError, \
+                           my_line1.domain_intersection,([0,1],1))                
+        my_line1.domain_intersection([0,1],1)
+
+
     def test_hasintersection(self):
         """ check if two lines cross-each-other works correctly"""
         
@@ -122,6 +159,9 @@ class TestFeynman_line(unittest.TestCase):
         my_line7 = self.def_line([0, 1], [0.6, 0.4])     # part of the second 
         my_line8 = self.def_line([0.6, 0.4], [0, 1])     # same part but inverse order
         my_line9 = self.def_line([0, 0.5], [0.9, 1])     # other
+        my_line10 = self.def_line([0.5,0.5], [0.5,1])    # vertical line center
+        my_line11 = self.def_line([0.5,0], [0.5,0.5])    # second part
+        my_line12 = self.def_line([0.5,0],[0.5,0.4])     # just shorther
 
         #Line 1 intersection
         self.assertTrue(my_line1.has_intersection(my_line1))
@@ -133,7 +173,10 @@ class TestFeynman_line(unittest.TestCase):
         self.assertTrue(my_line1.has_intersection(my_line7))
         self.assertTrue(my_line1.has_intersection(my_line8))
         self.assertFalse(my_line1.has_intersection(my_line9))        
-        
+        self.assertTrue(my_line1.has_intersection(my_line10))
+        self.assertTrue(my_line1.has_intersection(my_line11))
+        self.assertFalse(my_line1.has_intersection(my_line12))
+           
         #Line2 intersection
         self.assertTrue(my_line2.has_intersection(my_line1))      
         self.assertFalse(my_line2.has_intersection(my_line3))
@@ -143,7 +186,10 @@ class TestFeynman_line(unittest.TestCase):
         self.assertTrue(my_line2.has_intersection(my_line7))
         self.assertTrue(my_line2.has_intersection(my_line8))
         self.assertFalse(my_line2.has_intersection(my_line9))
-                 
+        self.assertFalse(my_line2.has_intersection(my_line10))
+        self.assertFalse(my_line2.has_intersection(my_line11))
+        self.assertFalse(my_line2.has_intersection(my_line12))
+                         
         #Line3 intersection
         self.assertFalse(my_line3.has_intersection(my_line4))
         self.assertFalse(my_line3.has_intersection(my_line5))
@@ -151,6 +197,9 @@ class TestFeynman_line(unittest.TestCase):
         self.assertFalse(my_line3.has_intersection(my_line7))
         self.assertFalse(my_line3.has_intersection(my_line8))   
         self.assertFalse(my_line3.has_intersection(my_line9))
+        self.assertFalse(my_line3.has_intersection(my_line10))
+        self.assertFalse(my_line3.has_intersection(my_line11))
+        self.assertFalse(my_line3.has_intersection(my_line12))
            
         # Line 4 intersection
         self.assertTrue(my_line4.has_intersection(my_line5))
@@ -158,22 +207,54 @@ class TestFeynman_line(unittest.TestCase):
         self.assertTrue(my_line4.has_intersection(my_line7))
         self.assertTrue(my_line4.has_intersection(my_line8))
         self.assertFalse(my_line4.has_intersection(my_line9)) 
+        self.assertFalse(my_line4.has_intersection(my_line10))
+        self.assertFalse(my_line4.has_intersection(my_line11))
+        self.assertFalse(my_line4.has_intersection(my_line12))
+        
         
         # Line 5 intersection
         self.assertFalse(my_line5.has_intersection(my_line6))
         self.assertFalse(my_line5.has_intersection(my_line7))
         self.assertFalse(my_line5.has_intersection(my_line8))
-        self.assertTrue(my_line1.has_intersection(my_line9))         
+        self.assertTrue(my_line5.has_intersection(my_line9))         
+        self.assertFalse(my_line5.has_intersection(my_line10))
+        self.assertFalse(my_line5.has_intersection(my_line11))
+        self.assertFalse(my_line5.has_intersection(my_line12))
         
         # Line 6 intersection
         self.assertTrue(my_line6.has_intersection(my_line7))
         self.assertTrue(my_line6.has_intersection(my_line8))
-        self.assertTrue(my_line6.has_intersection(my_line9))         
+        self.assertTrue(my_line6.has_intersection(my_line9))
+        self.assertTrue(my_line6.has_intersection(my_line10))
+        self.assertTrue(my_line6.has_intersection(my_line11))
+        self.assertFalse(my_line6.has_intersection(my_line12))         
         
         #Line 7-8 intersection
         self.assertTrue(my_line7.has_intersection(my_line8))
         self.assertTrue(my_line8.has_intersection(my_line7))
         self.assertTrue(my_line7.has_intersection(my_line9))
+        self.assertTrue(my_line7.has_intersection(my_line10))
+        self.assertTrue(my_line8.has_intersection(my_line11))
+        self.assertFalse(my_line7.has_intersection(my_line12))
+        
+        #line 9 intersection
+        self.assertTrue(my_line9.has_intersection(my_line10))
+        self.assertFalse(my_line9.has_intersection(my_line11))
+        self.assertFalse(my_line9.has_intersection(my_line12))       
+        
+        #line 10 intersection
+        self.assertFalse(my_line10.has_intersection(my_line3))
+        self.assertFalse(my_line10.has_intersection(my_line5))
+        self.assertTrue(my_line10.has_intersection(my_line7))
+        self.assertTrue(my_line10.has_intersection(my_line8))        
+        self.assertTrue(my_line10.has_intersection(my_line10))
+        self.assertFalse(my_line10.has_intersection(my_line11))
+        self.assertFalse(my_line10.has_intersection(my_line12))        
+
+        #line 11 intersection  
+        self.assertTrue(my_line11.has_intersection(my_line12))  
+  
+  
   
     def test_domainintersection(self):
         """ check if two lines cross-each-other works correctly"""
@@ -216,13 +297,14 @@ class TestFeynman_line(unittest.TestCase):
         
         my_line1 = self.def_line([0.1, 0.1], [0.4, 0.1]) #horizontal
         my_line3 = self.def_line([0.1, 0.1], [0.4, 0.4]) #normal
-        
+        my_line4 = self.def_line([0, 0.5], [0.5, 1])       
     
-        #returns correct value in other case
+        #returns correct value
         self.assertEquals(my_line1.has_ordinate(0.2), 0.1)
         self.assertEquals(my_line1.has_ordinate(0.1), 0.1)
         self.assertEquals(my_line3.has_ordinate(0.2), 0.2)
         self.assertEquals(my_line3.has_ordinate(0.1), 0.1)
+        self.assertEquals(my_line4.has_ordinate(0.5), 1)
         
     def test_hasordinate_wronginput(self):
         """ check the error raises in case of incorrect input """
@@ -232,53 +314,51 @@ class TestFeynman_line(unittest.TestCase):
         
         #fail if asked outside range
         self.assertRaises(drawing.Feynman_line.FeynmanLineError, \
-                          my_line1.has_ordinate(-2))
+                          my_line1.has_ordinate,-2)
         self.assertRaises(drawing.Feynman_line.FeynmanLineError, \
-                          my_line1.has_ordinate(1.2))
+                          my_line1.has_ordinate, 1.2)
         self.assertRaises(drawing.Feynman_line.FeynmanLineError, \
-                          my_line1.has_ordinate(0.05))
+                          my_line1.has_ordinate, 0.05)
         self.assertRaises(drawing.Feynman_line.FeynmanLineError, \
-                          my_line1.has_ordinate(0.5))
+                          my_line1.has_ordinate, 0.5)
         self.assertRaises(drawing.Feynman_line.FeynmanLineError, \
-                          my_line2.has_ordinate(-2))
+                          my_line2.has_ordinate, -2)
         self.assertRaises(drawing.Feynman_line.FeynmanLineError, \
-                          my_line2.has_ordinate(1.2))
+                          my_line2.has_ordinate, 1.2)
         self.assertRaises(drawing.Feynman_line.FeynmanLineError, \
-                          my_line2.has_ordinate(0.05))
+                          my_line2.has_ordinate, 0.05)
         self.assertRaises(drawing.Feynman_line.FeynmanLineError, \
-                          my_line2.has_ordinate(0.5))
+                          my_line2.has_ordinate, 0.5)
         
         #fails for vertical line
         self.assertRaises(drawing.Feynman_line.FeynmanLineError, \
-                          my_line2.has_ordinate(0.1))
+                          my_line2.has_ordinate, 0.1)
         
         #fails if not real value
         self.assertRaises(drawing.Feynman_line.FeynmanLineError, \
-                          my_line2.has_ordinate('a'))
+                          my_line2.has_ordinate, 'a')
         self.assertRaises(drawing.Feynman_line.FeynmanLineError, \
-                          my_line2.has_ordinate([0, 0.2]))
+                          my_line2.has_ordinate, [0, 0.2])
         self.assertRaises(drawing.Feynman_line.FeynmanLineError, \
-                          my_line2.has_ordinate(my_line1))
+                          my_line2.has_ordinate, my_line1)
 
 
-    def test_failure_if_no_vertex(self):
-        """ check that the correct is raise if no vertex
+    def test_has_ordinate_failure(self):
+        """ check that the correct error is raise if no vertex
             are assigned before doing position related operation
         """
-        print type(self.my_line)
-        print type(self.my_line.has_ordinate)    
-
+  
         self.assertRaises(drawing.Feynman_line.FeynmanLineError, \
-                          self.my_line.has_ordinate(0.5))
+                          self.my_line.has_ordinate, 0.5)
         self.assertRaises(drawing.Feynman_line.FeynmanLineError, \
-                          self.my_line.intersection(self.my_line))
+                          self.my_line.has_intersection, self.my_line)
         
         #check intersection if one is valid
         my_line2 = self.def_line([0.1, 0.1], [0.4, 0.2]) #random
         self.assertRaises(drawing.Feynman_line.FeynmanLineError, \
-                          my_line2.intersection(self.my_line))
+                          my_line2.has_intersection, self.my_line)
         self.assertRaises(drawing.Feynman_line.FeynmanLineError, \
-                          self.my_line.intersection(my_line2))        
+                          self.my_line.has_intersection, my_line2)        
 
 #===============================================================================
 # TestVertex
@@ -309,7 +389,7 @@ class TestVertexPoint(unittest.TestCase):
         self.assertTrue(isinstance(my_vertex, drawing.Vertex_Point))
         
         self.assertRaises(drawing.Vertex_Point.VertexPointError, \
-                          drawing.Vertex_Point({'data':''}))
+                          drawing.Vertex_Point, {'data':''})
         
  
  
@@ -331,13 +411,13 @@ class TestVertexPoint(unittest.TestCase):
         my_vertex.def_position(0.3, 1)      
         
         self.assertRaises(drawing.Vertex_Point.VertexPointError, \
-                          my_vertex.def_position(1.4, 0.2))
+                          my_vertex.def_position, (1.4, 0.2) )
         self.assertRaises(drawing.Vertex_Point.VertexPointError, \
-                          my_vertex.def_position(-1.0, 0.2))
+                          my_vertex.def_position, (-1.0, 0.2))
         self.assertRaises(drawing.Vertex_Point.VertexPointError, \
-                          my_vertex.def_position(0.4, 1.2))
+                          my_vertex.def_position, (0.4, 1.2))
         self.assertRaises(drawing.Vertex_Point.VertexPointError, \
-                          my_vertex.def_position(0, -0.2))
+                          my_vertex.def_position, (0, -0.2))
   
   
         
@@ -364,7 +444,7 @@ class TestVertexPoint(unittest.TestCase):
         
         self.assertTrue(self.line1 in my_vertex['line'])       
         self.assertRaises(drawing.Vertex_Point.VertexPointError, \
-                                                    my_vertex.add_line('data'))
+                                                    my_vertex.add_line, 'data')
          
     def testdef_level(self):
         """ define the level at level """
@@ -374,7 +454,7 @@ class TestVertexPoint(unittest.TestCase):
         self.assertEquals(my_vertex['level'], 3)
         
         self.assertRaises(drawing.Vertex_Point.VertexPointError, \
-                          my_vertex.def_level('3'))
+                          my_vertex.def_level, '3')
                           
                           
 #===============================================================================

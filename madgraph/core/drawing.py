@@ -59,40 +59,106 @@ class Feynman_line(base_objects.PhysicsObject):
         """ return the spin of the feynman line """
         pass
 
-    def has_intersection(self, line):
+    def has_intersection(self,line):
+        """ check if the two line intersects 
+            return True/False
+            contains the check consistency
+        """
+        
+        self.check_position_exist()
+        line.check_position_exist()
+        
+        return self._has_intersection(line)
+
+    def _has_intersection(self, line):
         """ check if the two line intersects 
             return True/False
         """
-        #
-        min, max = self.domain_intersection(line)
         
+        min, max = self._domain_intersection(line)
         if min == None:
             return False
         
-        if min == max: #vertical line
-            return 
+        if min == max :
+            if self.start['pos_x'] != self.end['pos_x']:
+                if line.start['pos_x'] != line.end['pos_x']: #no vertical line
+                    return False
+                #line is vertical but not self:
+                return self._intersection_with_vertical_line(line)           
+                
+            elif (line.start['pos_x'] != line.end['pos_x']):
+                # self is vertical but not line
+                return line._intersection_with_vertical_line(self)
+            else:
+                #both vertical line
+                min, max = self._domain_intersection(line,'y')
+                if min == None or min==max:
+                    return False
+                else:
+                    return True
         
-        min_line = line._has_ordinate(min) 
-        min_self = self._has_ordinate(min)
-        max_line = self._has_ordinate(max)
-        max_self = self._has_ordinate(max)        
-    
-        if ( (min_line>min_self) == (max_line>max_self) ):
+        xS0 = self.start['pos_x']
+        yS0 = self.start['pos_y']
+        xS1 = self.end['pos_x']
+        yS1 = self.end['pos_y']
+
+        xL0 = line.start['pos_x']        
+        yL0 = line.start['pos_y']
+        xL1 = line.end['pos_x']  
+        yL1 = line.end['pos_y']
+                
+        coef1=(yS1-yS0)/(xS1-xS0)
+        coef2=(yL1-yL0)/(xL1-xL0)
+        
+        if coef1 == coef2: #parralel line
+            if line._has_ordinate(min) == self._has_ordinate(min):
+                return True
+            else:
+                return False
+        commonX=(yS0-yL0-coef1*xS0+coef2*xL0)/(coef2-coef1)
+        if ( commonX>=min) == (commonX>=max):
             return False
-        else:    
+        
+        commonY=self._has_ordinate(commonX)
+        if self._is_end_point(commonX, commonY):
+            if line._is_end_point(commonX, commonY):
+                return False
+            else:
+                return True 
+        else:
             return True
-    
-    def domain_intersection(self,line):
+        
+    def _is_end_point(self,x,y):
+        """ check if this is the end point coordinate """
+
+        if x == self.start['pos_x'] and y == self.start['pos_y']:
+            return True
+        elif x == self.end['pos_x'] and y == self.end['pos_y']:
+            return True
+        else:
+            return False
+
+    def domain_intersection(self,line,axis='x'):
         """ return x1,x2 where both line and self are defined 
-            return None,None if no such domain """
+            return None,None if no such domain 
+        """
         
-        data=[self.start['pos_x'],self.end['pos_x']] 
-        data.sort()
-        min_self, max_self = data
+        if not isinstance(line, Feynman_line):
+            raise self.FeynmanLineError, ' domain intersection are between ' + \
+                'Feynman_line object only and not {0} object'.format(type(line))
+               
+        self.check_position_exist()
+        line.check_position_exist()
+        return self._domain_intersection(line,axis)
+    
+    def _domain_intersection(self,line,axis='x'):
+        """ return x1,x2 where both line and self are defined 
+            return None,None if no such domain 
+            whithout existence test
+        """
         
-        data=[line.start['pos_x'],line.end['pos_x']]
-        data.sort()
-        min_line, max_line = data
+        min_self, max_self = self._border_on_axis(axis)
+        min_line, max_line = line._border_on_axis(axis)
         
         start=max(min_self,min_line)
         end=min(max_self,max_line)
@@ -100,10 +166,52 @@ class Feynman_line(base_objects.PhysicsObject):
             return start,end
         else:
             return None,None
-            
+        
+    def _border_on_axis(self,axis='x'):
+        """ return the axis coordinate for the begin-end point in a order way """
+  
+        data=[self.start['pos_'+axis],self.end['pos_'+axis]] 
+        data.sort()
+        return data
+    
+    def _intersection_with_vertical_line(self,line): 
+        """ deal with case where line is vertical but self is not \
+            vertical (no check of that)"""
+                
+        y_self=self._has_ordinate(line.start['pos_x'])
+        ymin,ymax= line._border_on_axis('y')
+        if (ymin == y_self or ymax == y_self):
+            if self._is_end_point(line.start['pos_x'], y_self):
+                return False
+            else:
+                return True
+        elif (y_self>ymin) and (y_self<ymax):
+            return True
+        else:
+            return False            
+   
+    def check_position_exist(self):
+        """ check if the begin-end position are defined """
+ 
+        try:
+            min=self.start['pos_x']
+            max=self.end['pos_y']
+        except:
+            raise self.FeynmanLineError, 'No vertex in begin-end position ' + \
+                        ' or no position attach at one of those vertex '       
+        return
             
     def has_ordinate(self, x):
         """ return the y associate to the x """
+        
+        self.check_position_exist()
+        min = self.start['pos_x']
+        max = self.end['pos_x']
+
+        if min==max:
+            raise self.FeynmanLineError, 'Vertical line: no unique solution'
+        if(not(min<=x<=max)):
+            raise self.FeynmanLineError, 'point outside interval'
         
         return self._has_ordinate(x)
 
@@ -120,7 +228,7 @@ class Feynman_line(base_objects.PhysicsObject):
         
         alpha=(y_1-y_0)/(x_1-x_0) #x1 always diff of x0
         
-        self.ordinate_fct=lambda pos: y_0+alpha*(pos-x_0)
+        self.ordinate_fct=lambda X: y_0+alpha*(X-x_0)
         return self.ordinate_fct(x)
 
 class Vertex_Point(base_objects.Vertex):
