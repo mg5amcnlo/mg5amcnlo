@@ -143,8 +143,6 @@ class TestFeynman_line(unittest.TestCase):
                            my_line1.domain_intersection,(0,1))
         self.assertRaises( drawing.Feynman_line.FeynmanLineError, \
                            my_line1.domain_intersection,([0,1],1))                
-        my_line1.domain_intersection([0,1],1)
-
 
     def test_hasintersection(self):
         """ check if two lines cross-each-other works correctly"""
@@ -391,6 +389,16 @@ class TestVertexPoint(unittest.TestCase):
         self.assertRaises(drawing.Vertex_Point.VertexPointError, \
                           drawing.Vertex_Point, {'data':''})
         
+        self.assertFalse(my_vertex is self.vertex)
+        my_vertex['value']=2
+        self.assertRaises(base_objects.PhysicsObject.PhysicsObjectError,
+                          self.vertex.__getitem__,'value')
+        self.assertTrue('value' in my_vertex.keys())        
+        self.assertTrue('line' in my_vertex.keys())
+        self.assertTrue('id' in my_vertex.keys())
+        self.assertTrue('pos_x' in my_vertex.keys())
+        self.assertTrue('pos_y' in my_vertex.keys())
+        
  
  
     def testdef_position(self):
@@ -411,13 +419,13 @@ class TestVertexPoint(unittest.TestCase):
         my_vertex.def_position(0.3, 1)      
         
         self.assertRaises(drawing.Vertex_Point.VertexPointError, \
-                          my_vertex.def_position, (1.4, 0.2) )
+                          my_vertex.def_position, 1.4, 0.2 )
         self.assertRaises(drawing.Vertex_Point.VertexPointError, \
-                          my_vertex.def_position, (-1.0, 0.2))
+                          my_vertex.def_position, -1.0, 0.2)
         self.assertRaises(drawing.Vertex_Point.VertexPointError, \
-                          my_vertex.def_position, (0.4, 1.2))
+                          my_vertex.def_position, 0.4, 1.2)
         self.assertRaises(drawing.Vertex_Point.VertexPointError, \
-                          my_vertex.def_position, (0, -0.2))
+                          my_vertex.def_position, 0, -0.2)
   
   
         
@@ -428,23 +436,41 @@ class TestVertexPoint(unittest.TestCase):
         my_vertex = drawing.Vertex_Point(self.vertex)
         my_vertex.def_position(0.1, 0.3)
         my_vertex2 = drawing.Vertex_Point(self.vertex)
-        my_vertex2.def_position(0.4, 0.5)        
+        my_vertex2.def_position(0.4, 0.6)        
         self.line1.def_begin_point(my_vertex)
         self.line1.def_end_point(my_vertex2)
-        self.line1.has_ordinate(0.2)
-        my_vertex2.begin_position(0.3, 0.5)
+        self.assertAlmostEquals(self.line1.has_ordinate(0.2),0.4)
+        my_vertex2.def_position(0.3, 0.6)
         self.assertEquals(self.line1.ordinate_fct,0)
-        self.assertEquals(self.line1.has_ordinate(0.35),0.5)
+        self.assertAlmostEquals
+        (self.line1.has_ordinate(0.2),0.45)
                 
     def test_add_line(self):
-        """add the line in linelist """
+        """check that the line is correctly added"""
         
         my_vertex = drawing.Vertex_Point(self.vertex)
         my_vertex.add_line(self.line1)
         
-        self.assertTrue(self.line1 in my_vertex['line'])       
+        self.assertTrue(self.line1 in my_vertex['line']) 
+        my_vertex.add_line(self.line1)
+        self.assertEquals(my_vertex['line'].count(self.line1),1)
+                          
         self.assertRaises(drawing.Vertex_Point.VertexPointError, \
                                                     my_vertex.add_line, 'data')
+        
+    def test_remove_line(self):
+        """ check that a line is correctly remove """
+        
+        my_vertex = drawing.Vertex_Point(self.vertex)
+        my_vertex['line']=[self.line1]
+        my_vertex.remove_line(self.line1)        
+        self.assertFalse(self.line1 in my_vertex['line'])
+         
+        self.assertRaises(drawing.Vertex_Point.VertexPointError, \
+                          my_vertex.remove_line,self.line1)
+        self.assertRaises(drawing.Vertex_Point.VertexPointError, \
+                                                    my_vertex.add_line, 'data')       
+        
          
     def testdef_level(self):
         """ define the level at level """
@@ -490,13 +516,13 @@ class TestFeynman_Diagram(unittest.TestCase):
     vertex2 = base_objects.Vertex({'id':2, \
                         'legs':base_objects.LegList([leg2, leg6, leg_t2])})
  
-    leg_s1 = base_objects.Leg({'id':22, 'number':1, 'state':'initial',
+    leg_s1 = base_objects.Leg({'id':22, 'number':1, 'state':'final',
                         'from_group':True}) 
     vertex3 = base_objects.Vertex({'id':3, \
                         'legs':base_objects.LegList([leg_t1, leg_t2, leg_s1])})
     
     vertex4 = base_objects.Vertex({'id':4, \
-                        'legs':base_objects.LegList([leg_s1, leg3, leg4])})
+                        'legs':base_objects.LegList([leg_s1, leg5, leg4])})
 
     vertexlist = base_objects.VertexList([vertex1, vertex2, vertex3, vertex4])
     
@@ -541,7 +567,7 @@ class TestFeynman_Diagram(unittest.TestCase):
                             'from_group':False})    
    
     #intermediate particle +vertex associate
-    leg_s = base_objects.Leg({'id':22, 'number':1, 'state':'initial',
+    leg_s = base_objects.Leg({'id':22, 'number':1, 'state':'final',
                         'from_group':True}) 
     vertex1 = base_objects.Vertex({'id':1, \
                         'legs':base_objects.LegList([leg1, leg2, leg_s])})
@@ -573,7 +599,7 @@ class TestFeynman_Diagram(unittest.TestCase):
         
         # gg>gg (via a S channel)
         s_diagram = base_objects.Diagram(self.s_diagram_dict)
-        self.s_diagram = drawing.Feynman_Diagram(s_diagram)
+        self.s_drawing = drawing.Feynman_Diagram(s_diagram)
               
     def test_charge_diagram(self):
         """ define all the object for the Feynman Diagram Drawing (Vertex and 
@@ -608,30 +634,33 @@ class TestFeynman_Diagram(unittest.TestCase):
         self.mix_drawing.charge_diagram()
         self.mix_drawing.define_level()
         
-        level_solution = [0, 0, 3, 3, 3, 3, 1, 1, 1, 2] #order: initial-external-vertex \ 
-                                             # in diagram order                                 
+        #order: initial-external-vertex in diagram order                                 
+        level_solution = [1, 1, 1, 2, 0, 2, 0, 2, 3, 3]
+        # the ordering is not important but we test it anyway in order 
+        # to ensure that we don't have an incorect permutation
+        
         for i in range(0, 10):
             self.assertEquals(self.mix_drawing.VertexList[i]['level'], \
-                              level_solution[i])
+                                                            level_solution[i])
             
         self.s_drawing.charge_diagram()
         self.s_drawing.define_level()
 
-        level_solution = [0, 0, 3, 3, 1, 2] #order: initial-external-vertex in \
-                                     #   diagram order                                 
+        #order: initial-external-vertex in diagram order                                 
+        level_solution = [0, 0, 3, 3, 1, 2] 
+
         for i in range(0, 6):
-            self.assertEquals(self.s_drawing.VertexList[i]['level'], \
-                              level_solution[i])        
+             level_solution.remove(self.s_drawing.VertexList[i]['level'])
         
         
         self.t_drawing.charge_diagram()       
         self.t_drawing.define_level()
         
-        level_solution = [0, 0, 2, 2, 1, 1] #order: initial-external-vertex in \
-                                     #   diagram order                                 
+        #order: initial-external-vertex in diagram order                                 
+        level_solution = [0, 0, 2, 2, 1, 1] 
+                                     
         for i in range(0, 6):
-            self.assertEquals(self.t_drawing.VertexList[i]['level'], \
-                              level_solution[i])    
+             level_solution.remove(self.t_drawing.VertexList[i]['level'])
     
     
     def test_find_initial_vertex_position(self):
@@ -645,9 +674,10 @@ class TestFeynman_Diagram(unittest.TestCase):
         self.mix_drawing.charge_diagram()
         self.mix_drawing.define_level()        
         self.mix_drawing.find_initial_vertex_position()
-        
-        x_position = [0, 0, 1, 1, 1, 1, 1 / 3, 1 / 3, 1 / 3, 2 / 3]
-        y_position = [0, 1, 0, 1 / 3, 2 / 3, 1, 1 / 4, 1 / 2, 0.75, 0.5]
+
+        x_position = [1/3, 1/3, 1/3, 2/3, 0.0, 2/3, 0.0, 2/3, 1.0, 1.0]
+        y_position = [3/4, 1/4, 1/2, 1/2, 1.0, 1.0, 0.0, 1/2, 0.0, 0.0]       
+
         for i in range(0, 10):
             self.assertEquals(self.mix_drawing.VertexList[i]['pos_x'], \
                               x_position[i])
