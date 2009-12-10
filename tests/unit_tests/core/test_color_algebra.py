@@ -351,6 +351,43 @@ class ColorStringTest(unittest.TestCase):
                                              'T(3,4,102,103)',
                                              'T(5,6,104,105)'])])
 
+    def test_similarity(self):
+        """Test color string similarity"""
+
+        my_color_string = color.ColorString(['-1/3', 'T(3,101,4,102,103)',
+                                              'T(5,101,6,104,105)'])
+
+        my_color_string1 = color.ColorString(['1/2', 'T(3,101,4,102,103)',
+                                              'T(5,101,6,104,105)'])
+
+        my_color_string2 = color.ColorString(['1/2', 'I', 'T(3,101,4,102,103)',
+                                              'T(5,101,6,104,105)'])
+
+        my_color_string3 = color.ColorString(['1/2', 'T(7,101,4,102,103)',
+                                              'T(5,101,6,104,105)'])
+
+        self.assertTrue(my_color_string.is_similar(my_color_string1,
+                                                   check_I=True))
+
+        self.assertTrue(my_color_string.is_similar(my_color_string2,
+                                                   check_I=False))
+
+        self.assertFalse(my_color_string.is_similar(my_color_string3,
+                                                   check_I=False))
+
+    def test_extract_coeff(self):
+        """Test coefficient extraction for color string"""
+
+        my_color_string = color.ColorString(['1/2', 'I', 'T(3,101,4,102,103)',
+                                              'T(5,101,6,104,105)'])
+
+        self.assertEqual(my_color_string.extract_coeff()[0],
+                         color.ColorString(['1/2', 'I']))
+
+        self.assertEqual(my_color_string.extract_coeff()[1],
+                         color.ColorString(['T(3,101,4,102,103)',
+                                              'T(5,101,6,104,105)']))
+
 class ColorFactorTest(unittest.TestCase):
     """Test class for code parts related to ColorFactor objects"""
 

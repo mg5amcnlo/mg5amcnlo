@@ -36,7 +36,7 @@ re_color_object = re.compile(r"""^(T\(((-?\d+)(,-?\d+)*)?\)
                             re.VERBOSE)
 
 # T trace T(a,b,c,...,i,i), group start is a,b,c,...
-re_T_trace = re.compile(r"""^T\((?P<start>(-?\d+,)*?(-?\d+)?),?
+re_T_trace = re.compile(r"""^T\((?P<start>(-?\d+,)*)?
                             (?P<id>-?\d+),(?P=id)\)$""", re.VERBOSE)
 
 # T product T(a,...,i,j)T(b,...,j,k), group start1 is a,...,
@@ -189,6 +189,7 @@ class ColorString(list):
         all possible identities."""
 
         while True:
+
             original = copy.copy(self)
 
             self.__simplify_T_traces()
@@ -203,13 +204,13 @@ class ColorString(list):
         """Apply the identity T(a,b,c,...,i,i) = Tr(a,b,c,...)"""
 
         for index, col_obj in enumerate(self):
-            self[index] = re_T_trace.sub(lambda m: "Tr(%s)" % m.group('start'),
-                                     col_obj)
+            self[index] = re_T_trace.sub(lambda m: "Tr(%s)" % \
+                                         self.__clean_commas(m.group('start')),
+                                         col_obj)
 
     def __simplify_T_products(self):
         """Apply the identity T(a,...,i,j)T(b,...,j,k) = T(a,...,b,...,i,k)
         on the first matching pair"""
-
         for index1, mystr1 in enumerate(self):
             for index2, mystr2 in enumerate(self[index1 + 1:]):
                 # Test both product ordering
@@ -531,10 +532,12 @@ class ColorString(list):
                     break
             return my_str
 
-    def is_similar(self, col_str):
+    def is_similar(self, col_str, check_I=True):
         """Test if self is similar to col_str, i.e. if they have the same
         tensorial structure (taking into account possible renaming of 
-        summed indices, permutations, ...) and identical powers of Nc/I"""
+        summed indices, permutations, ...) and identical powers of Nc/I. If
+        check_I is False, two strings are considered similar even if they
+        don't have the same power of I."""
 
         l_self = len(self)
         l_col_str = len(col_str)
@@ -555,6 +558,12 @@ class ColorString(list):
         else:
             col_str_shift = 0
 
+        if not check_I:
+            while self[self_shift] == 'I':
+                self_shift += 1
+            while col_str[col_str_shift] == 'I':
+                col_str_shift += 1
+
         if l_self - self_shift != l_col_str - col_str_shift:
             return False
 
@@ -563,6 +572,30 @@ class ColorString(list):
                 return False
 
         return True
+
+    def extract_coeff(self, take_I=True):
+        """Returns (coeff,col_str) where coeff is the coefficient of the color
+        string (incl I's if take_I is True) and col_str is the rest. The 
+        current object is nor modified."""
+
+        my_col_str = copy.copy(self)
+
+        if re_fraction.match(my_col_str[0]):
+            shift = 1
+        else:
+            shift = 0
+
+        if take_I:
+            while my_col_str[shift] == 'I':
+                shift += 1
+
+        coeff = ColorString(my_col_str[:shift])
+        remain = ColorString(my_col_str[shift:])
+
+        if not coeff:
+            coeff.append('1')
+
+        return (coeff, remain)
 
     def add(self, col_str):
         """Add two color similar strings, i.e. self becomes a new color string with
@@ -673,6 +706,7 @@ class ColorFactor(list):
         golden rule. Iterate until the result does not change anymore"""
 
         while True:
+
             original = copy.copy(self)
             # Expand one f/d if possible
             for index, col_str in enumerate(self[:]):

@@ -187,6 +187,7 @@ class ColorAmpTest(unittest.TestCase):
 
         self.assertEqual(col_fact, goal_fact)
 
+
     def test_colorize_uu_ggg(self):
         """Test the colorize function for uu~ > ggg"""
 
@@ -293,8 +294,8 @@ class ColorAmpTest(unittest.TestCase):
 
         for diag in myamplitude['diagrams']:
             col_fact = color_amp.colorize(diag, self.mymodel)
-#            col_fact.simplify()
-            print col_fact
+            col_fact.simplify()
+#            print col_fact
 
     def test_replace_index(self):
         """Test the color index replacement"""
@@ -316,3 +317,68 @@ class ColorAmpTest(unittest.TestCase):
         self.assertEqual(color_amp.clean_str(my_col_str),
                          'T(-1,2,1)f(-1,3,-4)')
 
+    def test_build_basis_uu_gg(self):
+        """Test the build_basis function for gg > gg"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'initial'}))
+
+        myleglist.extend([base_objects.Leg({'id':21,
+                                            'state':'final'})] * 2)
+
+        myprocess = base_objects.Process({'legs':myleglist,
+                                        'model':self.mymodel})
+
+        myamplitude = diagram_generation.Amplitude()
+
+        myamplitude.set('process', myprocess)
+
+        myamplitude.generate_diagrams()
+
+        col_fact_list = [color_amp.colorize(diag, self.mymodel) \
+                         for diag in myamplitude['diagrams']]
+
+        map(lambda x:x.simplify(), col_fact_list)
+
+        res = color_amp.build_color_basis(col_fact_list)
+        for k, v in res.items():
+            print k, v
+
+    def test_build_basis_uux_ddxg(self):
+        """Test the build_basis function for uu~ > dd~g"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':'initial'}))
+
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+
+        myprocess = base_objects.Process({'legs':myleglist,
+                                        'model':self.mymodel})
+
+        myamplitude = diagram_generation.Amplitude()
+
+        myamplitude.set('process', myprocess)
+
+        myamplitude.generate_diagrams()
+
+        col_fact_list = [color_amp.colorize(diag, self.mymodel) \
+                         for diag in myamplitude['diagrams']]
+
+        map(lambda x:x.simplify(), col_fact_list)
+
+        res = color_amp.build_color_basis(col_fact_list)
+        for k, v in res.items():
+            print k, v
