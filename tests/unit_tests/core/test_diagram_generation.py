@@ -690,16 +690,21 @@ class DiagramGenerationTest(unittest.TestCase):
         """
         myleglist = base_objects.LegList()
 
-        myleglist.append(base_objects.Leg({'id':-1,
-                                           'state':'initial'}))
         myleglist.append(base_objects.Leg({'id':1,
-                                           'state':'initial'}))
+                                           'state':'initial',
+                                           'number': 1}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                           'state':'initial',
+                                           'number': 2}))
         myleglist.append(base_objects.Leg({'id':-2,
-                                           'state':'final'}))
+                                           'state':'final',
+                                           'number': 3}))
         myleglist.append(base_objects.Leg({'id':2,
-                                           'state':'final'}))
+                                           'state':'final',
+                                           'number': 4}))
         myleglist.append(base_objects.Leg({'id':21,
-                                           'state':'final'}))
+                                           'state':'final',
+                                           'number': 5}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -716,6 +721,11 @@ class DiagramGenerationTest(unittest.TestCase):
         l3 = myleglist[2]
         l4 = myleglist[3]
         l5 = myleglist[4]
+
+        l1.set('id',
+               self.mymodel.get('particle_dict')[l1.get('id')].get_anti_pdg_code())
+        l2.set('id',
+               self.mymodel.get('particle_dict')[l2.get('id')].get_anti_pdg_code())
 
         l12glue = base_objects.Leg({'id':21,
                                     'number':1,
@@ -887,6 +897,7 @@ class DiagramGenerationTest(unittest.TestCase):
         goal_list = [[1, 2, 5, 6, 7], [1, 2, 5, 8, 9], [3, 4, 5, 6, 7],
                      [3, 4, 5, 8, 9]]
         self.assertEqual(diagram_generation.expand_list_list(mylist), goal_list)
+
     def test_diagram_generation_ue_dve(self):
         """Test the number of diagram generated for ue->dve (t channel)
         """
@@ -1030,6 +1041,19 @@ class DiagramGenerationTest(unittest.TestCase):
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
 
+        # Coupling of nu_e and e+ to W
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 11,
+                      'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             nue, \
+                                             wminus]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
         mymodel = base_objects.Model()
         mymodel.set('particles', mypartlist)
         mymodel.set('interactions', myinterlist)
@@ -1052,3 +1076,4 @@ class DiagramGenerationTest(unittest.TestCase):
         myamplitude.set('process', myproc)
 
         self.assertEqual(len(myamplitude.get('diagrams')), 1)
+
