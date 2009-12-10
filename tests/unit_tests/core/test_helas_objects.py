@@ -610,7 +610,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                                              antiu, \
                                              g]),
                       'color': ['C1'],
-                      'lorentz':['L1'],
+                      'lorentz':[''],
                       'couplings':{(0, 0):'GG'},
                       'orders':{'QCD':1}}))
 
@@ -621,7 +621,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                                              antiu, \
                                              a]),
                       'color': ['C1'],
-                      'lorentz':['L1'],
+                      'lorentz':[''],
                       'couplings':{(0, 0):'MGVX15'},
                       'orders':{'QED':1}}))
 
@@ -633,7 +633,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                                              eplus, \
                                              a]),
                       'color': ['C1'],
-                      'lorentz':['L1'],
+                      'lorentz':[''],
                       'couplings':{(0, 0):'MGVX12'},
                       'orders':{'QED':1}}))
 
@@ -1341,7 +1341,7 @@ class HelasModelTest(unittest.TestCase):
                                              antiu, \
                                              g]),
                       'color': ['C1'],
-                      'lorentz':['L1'],
+                      'lorentz':[''],
                       'couplings':{(0, 0):'GG'},
                       'orders':{'QCD':1}}))
 
@@ -1352,7 +1352,7 @@ class HelasModelTest(unittest.TestCase):
                                              antiu, \
                                              a]),
                       'color': ['C1'],
-                      'lorentz':['L1'],
+                      'lorentz':[''],
                       'couplings':{(0, 0):'MGVX15'},
                       'orders':{'QED':1}}))
 
@@ -1364,7 +1364,7 @@ class HelasModelTest(unittest.TestCase):
                                              g, \
                                              T1]),
                       'color': ['C1'],
-                      'lorentz':['L1'],
+                      'lorentz':['A'],
                       'couplings':{(0, 0):'MGVX2'},
                       'orders':{'QCD':1}}))
 
@@ -1377,7 +1377,7 @@ class HelasModelTest(unittest.TestCase):
                                              g, \
                                              g]),
                       'color': ['C1'],
-                      'lorentz':['L1'],
+                      'lorentz':[''],
                       'couplings':{(0, 0):'MGVX1'},
                       'orders':{'QCD':1}}))
 
@@ -1389,7 +1389,7 @@ class HelasModelTest(unittest.TestCase):
                                              eplus, \
                                              a]),
                       'color': ['C1'],
-                      'lorentz':['L1'],
+                      'lorentz':[''],
                       'couplings':{(0, 0):'MGVX12'},
                       'orders':{'QED':1}}))
 
@@ -1401,7 +1401,7 @@ class HelasModelTest(unittest.TestCase):
                                              su, \
                                              antisu]),
                       'color': ['C1'],
-                      'lorentz':['L1'],
+                      'lorentz':[''],
                       'couplings':{(0, 0):'MGVX74'},
                       'orders':{'QCD':1}}))
 
@@ -1413,7 +1413,7 @@ class HelasModelTest(unittest.TestCase):
                                              u, \
                                              antisu]),
                       'color': ['C1'],
-                      'lorentz':['L1'],
+                      'lorentz':[''],
                       'couplings':{(0, 0):'MGVX570'},
                       'orders':{'QED':1}}))
 
@@ -1424,7 +1424,7 @@ class HelasModelTest(unittest.TestCase):
                                              n1, \
                                              su]),
                       'color': ['C1'],
-                      'lorentz':['L1'],
+                      'lorentz':[''],
                       'couplings':{(0, 0):'MGVX575'},
                       'orders':{'QED':1}}))
 
@@ -1436,7 +1436,7 @@ class HelasModelTest(unittest.TestCase):
                                              eminus, \
                                              seplus]),
                       'color': ['C1'],
-                      'lorentz':['L1'],
+                      'lorentz':[''],
                       'couplings':{(0, 0):'MGVX350'},
                       'orders':{'QED':1}}))
 
@@ -1447,7 +1447,7 @@ class HelasModelTest(unittest.TestCase):
                                              n1, \
                                              seminus]),
                       'color': ['C1'],
-                      'lorentz':['L1'],
+                      'lorentz':[''],
                       'couplings':{(0, 0):'MGVX494'},
                       'orders':{'QED':1}}))
 
@@ -1460,7 +1460,7 @@ class HelasModelTest(unittest.TestCase):
                                              su,
                                              antisu]),
                       'color': ['C1'],
-                      'lorentz':['L1'],
+                      'lorentz':[''],
                       'couplings':{(0, 0):'MGVX89'},
                       'orders':{'QED':1, 'QCD':1}}))
 
@@ -1473,7 +1473,7 @@ class HelasModelTest(unittest.TestCase):
                                              wplus,
                                              wminus]),
                       'color': ['C1'],
-                      'lorentz':['L1'],
+                      'lorentz':[''],
                       'couplings':{(0, 0):'MGVX6'},
                       'orders':{'QED':2}}))
 
@@ -1486,7 +1486,7 @@ class HelasModelTest(unittest.TestCase):
                                              z,
                                              z]),
                       'color': ['C1'],
-                      'lorentz':['L1'],
+                      'lorentz':[''],
                       'couplings':{(0, 0):'MGVX8'},
                       'orders':{'QED':2}}))
 
@@ -1524,13 +1524,15 @@ class HelasModelTest(unittest.TestCase):
 
         wavefunctions = {}
         # IXXXXXX.Key: (spin, state)
-        wavefunctions[tuple([-2])] = \
+        key1 = (tuple([-2]),tuple(['']))
+        wavefunctions[key1] = \
                           lambda wf: 'CALL IXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
                           (wf.get('number_external'), wf.get('mass'),
                            wf.get('number_external'), -(-1)**wf.get_with_flow('is_part'),
                            wf.get('number_external'), wf.get('number'))
         # OXXXXXX.Key: (spin, state)
-        wavefunctions[tuple([2])] = \
+        key2 = (tuple([2]),tuple(['']))
+        wavefunctions[key2] = \
                           lambda wf: 'CALL OXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
                           (wf.get('number_external'), wf.get('mass'),
                            wf.get('number_external'), 1**wf.get_with_flow('is_part'),
@@ -1543,12 +1545,17 @@ class HelasModelTest(unittest.TestCase):
         wf.set('state', 'incoming')
         wf.set('interaction_id', 0)
         wf.set('number_external', 1)
+        wf.set('lorentz', [''])
         wf.set('number', 40)
+
+        self.assertEqual(wf.get_call_key(), key1)
 
         goal = 'CALL IXXXXX(P(0,1),mu,NHEL(1),-1*IC(1),W(1,40))'
         self.assertEqual(self.mymodel.get_wavefunction_call(wf), goal)
 
         wf.set('fermionflow', -1)
+
+        self.assertEqual(wf.get_call_key(), key2)
 
         goal = 'CALL OXXXXX(P(0,1),mu,NHEL(1),1*IC(1),W(1,40))'
         self.assertEqual(self.mymodel.get_wavefunction_call(wf), goal)
@@ -1573,10 +1580,10 @@ class HelasFortranModelTest(HelasModelTest):
             '      CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))',
             '      CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))',
             '      CALL TXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,3))',
-            '      CALL JVTXXX(W(1,2),W(1,3),MGVX2,zero,zero,W(1,1))',
-            '      CALL JVTXXX(W(1,1),W(1,3),MGVX2,zero,zero,W(1,2))',
-            '      CALL UVVXXX(W(1,1),W(1,2),MGVX2,zero,zero,W(1,3))',
-            '      CALL VVTXXX(W(1,1),W(1,2),W(1,3),MGVX2,AMP(2))',
+            '      CALL JVTAXX(W(1,2),W(1,3),MGVX2,zero,zero,W(1,1))',
+            '      CALL JVTAXX(W(1,1),W(1,3),MGVX2,zero,zero,W(1,2))',
+            '      CALL UVVAXX(W(1,1),W(1,2),MGVX2,zero,zero,zero,W(1,3))',
+            '      CALL VVTAXX(W(1,1),W(1,2),W(1,3),MGVX2,zero,AMP(2))',
             '      CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))',
             '      CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))',
             '      CALL SXXXXX(P(0,3),-1*IC(3),W(1,3))',
@@ -1899,70 +1906,70 @@ class HelasFortranModelTest(HelasModelTest):
       CALL JIOXXX(W(1,5),W(1,4),MGVX12,zero,zero,W(1,7))
       CALL IOVXXX(W(1,1),W(1,6),W(1,7),MGVX15,AMP(2))""")
 
-#    def test_generate_helas_diagrams_uux_ggg(self):
-#        """Test calls for u u~ > g g g"""
-#        
-#        myleglist = base_objects.LegList()
-#
-#        myleglist.append(base_objects.Leg({'id':2,
-#                                         'state':'initial'}))
-#        myleglist.append(base_objects.Leg({'id':-2,
-#                                         'state':'initial'}))
-#        myleglist.append(base_objects.Leg({'id':21,
-#                                         'state':'final'}))
-#        myleglist.append(base_objects.Leg({'id':21,
-#                                         'state':'final'}))
-#        myleglist.append(base_objects.Leg({'id':21,
-#                                         'state':'final'}))
-#
-#        myproc = base_objects.Process({'legs':myleglist,
-#                                       'model':self.mybasemodel})
-#
-#        myamplitude = diagram_generation.Amplitude({'process': myproc})
-#
-#        matrix_element = helas_objects.HelasMatrixElement(myamplitude)
-#        
-#        # The expression below should be correct, if the color factors
-#        # for gluon pairs are correctly ordered.
-#
-#        self.assertEqual("\n".join(helas_objects.HelasFortranModel().\
-#                        get_matrix_element_calls(matrix_element)),
-#                    """      CALL IXXXXX(P(0,1),mu,NHEL(1),1*IC(1),W(1,1))
-#      CALL OXXXXX(P(0,2),mu,NHEL(2),-1*IC(2),W(1,2))
-#      CALL VXXXXX(P(0,3),zero,NHEL(3),1*IC(3),W(1,3))
-#      CALL VXXXXX(P(0,4),zero,NHEL(4),1*IC(4),W(1,4))
-#      CALL VXXXXX(P(0,5),zero,NHEL(5),1*IC(5),W(1,5))
-#      CALL JIOXXX(W(1,1),W(1,2),GG,zero,zero,W(1,6))
-#      CALL UVVaXX(W(1,3),W(1,4),MGVX2,zero,zero,zero,W(1,7))
-#      CALL VVTaXX(W(1,6),W(1,5),W(1,7),MGVX2,zero,AMP(1))
-#      CALL JVVXXX(W(1,3),W(1,4),MGVX1,zero,zero,W(1,8))
-#      CALL VVVXXX(W(1,6),W(1,8),W(1,5),MGVX1,AMP(2))
-#      CALL UVVaXX(W(1,3),W(1,5),MGVX2,zero,zero,zero,W(1,9))
-#      CALL VVTaXX(W(1,6),W(1,4),W(1,9),MGVX2,zero,AMP(3))
-#      CALL JVVXXX(W(1,3),W(1,5),MGVX1,zero,zero,W(1,10))
-#      CALL VVVXXX(W(1,6),W(1,10),W(1,4),MGVX1,AMP(4))
-#      CALL UVVaXX(W(1,4),W(1,5),MGVX2,zero,zero,zero,W(1,11))
-#      CALL VVTaXX(W(1,6),W(1,3),W(1,11),MGVX2,zero,AMP(5))
-#      CALL JVVXXX(W(1,4),W(1,5),MGVX1,zero,zero,W(1,12))
-#      CALL VVVXXX(W(1,6),W(1,3),W(1,12),MGVX1,AMP(6))
-#      CALL FVIXXX(W(1,1),W(1,3),GG,mu,zero,W(1,13))
-#      CALL FVOXXX(W(1,2),W(1,4),GG,mu,zero,W(1,14))
-#      CALL IOVXXX(W(1,13),W(1,14),W(1,5),GG,AMP(7))
-#      CALL FVOXXX(W(1,2),W(1,5),GG,mu,zero,W(1,15))
-#      CALL IOVXXX(W(1,13),W(1,15),W(1,4),GG,AMP(8))
-#      CALL IOVXXX(W(1,13),W(1,2),W(1,12),GG,AMP(9))
-#      CALL FVIXXX(W(1,1),W(1,4),GG,mu,zero,W(1,16))
-#      CALL FVOXXX(W(1,2),W(1,3),GG,mu,zero,W(1,17))
-#      CALL IOVXXX(W(1,16),W(1,17),W(1,5),GG,AMP(10))
-#      CALL IOVXXX(W(1,16),W(1,15),W(1,3),GG,AMP(11))
-#      CALL IOVXXX(W(1,16),W(1,2),W(1,10),GG,AMP(12))
-#      CALL FVIXXX(W(1,1),W(1,5),GG,mu,zero,W(1,18))
-#      CALL IOVXXX(W(1,18),W(1,17),W(1,4),GG,AMP(13))
-#      CALL IOVXXX(W(1,18),W(1,14),W(1,3),GG,AMP(14))
-#      CALL IOVXXX(W(1,18),W(1,2),W(1,8),GG,AMP(15))
-#      CALL IOVXXX(W(1,1),W(1,17),W(1,12),GG,AMP(16))
-#      CALL IOVXXX(W(1,1),W(1,14),W(1,10),GG,AMP(17))
-#      CALL IOVXXX(W(1,1),W(1,15),W(1,8),GG,AMP(18))""")
+    def test_generate_helas_diagrams_uux_ggg(self):
+        """Test calls for u u~ > g g g"""
+        
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mybasemodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude)
+        
+        # The expression below should be correct, if the color factors
+        # for gluon pairs are correctly ordered.
+
+        self.assertEqual("\n".join(helas_objects.HelasFortranModel().\
+                        get_matrix_element_calls(matrix_element)),
+                    """      CALL IXXXXX(P(0,1),mu,NHEL(1),1*IC(1),W(1,1))
+      CALL OXXXXX(P(0,2),mu,NHEL(2),-1*IC(2),W(1,2))
+      CALL VXXXXX(P(0,3),zero,NHEL(3),1*IC(3),W(1,3))
+      CALL VXXXXX(P(0,4),zero,NHEL(4),1*IC(4),W(1,4))
+      CALL VXXXXX(P(0,5),zero,NHEL(5),1*IC(5),W(1,5))
+      CALL JIOXXX(W(1,1),W(1,2),GG,zero,zero,W(1,6))
+      CALL UVVAXX(W(1,3),W(1,4),MGVX2,zero,zero,zero,W(1,7))
+      CALL VVTAXX(W(1,6),W(1,5),W(1,7),MGVX2,zero,AMP(1))
+      CALL JVVXXX(W(1,3),W(1,4),MGVX1,zero,zero,W(1,8))
+      CALL VVVXXX(W(1,6),W(1,8),W(1,5),MGVX1,AMP(2))
+      CALL UVVAXX(W(1,3),W(1,5),MGVX2,zero,zero,zero,W(1,9))
+      CALL VVTAXX(W(1,6),W(1,4),W(1,9),MGVX2,zero,AMP(3))
+      CALL JVVXXX(W(1,3),W(1,5),MGVX1,zero,zero,W(1,10))
+      CALL VVVXXX(W(1,6),W(1,10),W(1,4),MGVX1,AMP(4))
+      CALL UVVAXX(W(1,4),W(1,5),MGVX2,zero,zero,zero,W(1,11))
+      CALL VVTAXX(W(1,6),W(1,3),W(1,11),MGVX2,zero,AMP(5))
+      CALL JVVXXX(W(1,4),W(1,5),MGVX1,zero,zero,W(1,12))
+      CALL VVVXXX(W(1,6),W(1,3),W(1,12),MGVX1,AMP(6))
+      CALL FVIXXX(W(1,1),W(1,3),GG,mu,zero,W(1,13))
+      CALL FVOXXX(W(1,2),W(1,4),GG,mu,zero,W(1,14))
+      CALL IOVXXX(W(1,13),W(1,14),W(1,5),GG,AMP(7))
+      CALL FVOXXX(W(1,2),W(1,5),GG,mu,zero,W(1,15))
+      CALL IOVXXX(W(1,13),W(1,15),W(1,4),GG,AMP(8))
+      CALL IOVXXX(W(1,13),W(1,2),W(1,12),GG,AMP(9))
+      CALL FVIXXX(W(1,1),W(1,4),GG,mu,zero,W(1,16))
+      CALL FVOXXX(W(1,2),W(1,3),GG,mu,zero,W(1,17))
+      CALL IOVXXX(W(1,16),W(1,17),W(1,5),GG,AMP(10))
+      CALL IOVXXX(W(1,16),W(1,15),W(1,3),GG,AMP(11))
+      CALL IOVXXX(W(1,16),W(1,2),W(1,10),GG,AMP(12))
+      CALL FVIXXX(W(1,1),W(1,5),GG,mu,zero,W(1,18))
+      CALL IOVXXX(W(1,18),W(1,17),W(1,4),GG,AMP(13))
+      CALL IOVXXX(W(1,18),W(1,14),W(1,3),GG,AMP(14))
+      CALL IOVXXX(W(1,18),W(1,2),W(1,8),GG,AMP(15))
+      CALL IOVXXX(W(1,1),W(1,17),W(1,12),GG,AMP(16))
+      CALL IOVXXX(W(1,1),W(1,14),W(1,10),GG,AMP(17))
+      CALL IOVXXX(W(1,1),W(1,15),W(1,8),GG,AMP(18))""")
 
     def test_generate_helas_diagrams_uu_susu(self):
         """Testing the helas diagram generation based on Diagrams
@@ -2074,7 +2081,7 @@ class HelasFortranModelTest(HelasModelTest):
                                              eminus, \
                                              seplus]),
                       'color': ['C1'],
-                      'lorentz':['L1'],
+                      'lorentz':[''],
                       'couplings':{(0, 0):'MGVX350'},
                       'orders':{'QED':1}}))
 
@@ -2085,7 +2092,7 @@ class HelasFortranModelTest(HelasModelTest):
                                              n1, \
                                              seminus]),
                       'color': ['C1'],
-                      'lorentz':['L1'],
+                      'lorentz':[''],
                       'couplings':{(0, 0):'MGVX494'},
                       'orders':{'QED':1}}))
 
@@ -2280,7 +2287,7 @@ class HelasFortranModelTest(HelasModelTest):
                                              nu, \
                                              Wminus]),
             'color': ['C1'],
-            'lorentz':['L1'],
+            'lorentz':[''],
             'couplings':{(0, 0):'MGVX27'},
             'orders':{'QED':1}}))
         myinterlist.append(base_objects.Interaction({
@@ -2290,7 +2297,7 @@ class HelasFortranModelTest(HelasModelTest):
                                              eminus, \
                                              Wplus]),
             'color': ['C1'],
-            'lorentz':['L1'],
+            'lorentz':[''],
             'couplings':{(0, 0):'MGVX27'},
             'orders':{'QED':1}}))
 
@@ -2326,3 +2333,145 @@ class HelasFortranModelTest(HelasModelTest):
       CALL IXXXXX(P(0,4),zero,NHEL(4),-1*IC(4),W(1,4))
       CALL JIOXXX(W(1,1),W(1,2),MGVX27,MW,WW,W(1,5))
       CALL IOVXXX(W(1,4),W(1,3),W(1,5),MGVX27,AMP(1))""")
+
+    def test_generate_helas_diagrams_WWWW(self):
+        """Testing the helas diagram generation based on Diagrams
+        using the processes W+ W- > W+ W-
+        """
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A W
+        mypartlist.append(base_objects.Particle({'name':'W+',
+                      'antiname':'W-',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MW',
+                      'width':'WW',
+                      'texname':'W^+',
+                      'antitexname':'W^-',
+                      'line':'wavy',
+                      'charge':1.,
+                      'pdg_code':24,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        Wplus = mypartlist[len(mypartlist)-1]
+        Wminus = copy.copy(Wplus)
+        Wminus.set('is_part', False)
+
+        # A photon
+        mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        a = mypartlist[len(mypartlist)-1]
+
+        # Z
+        mypartlist.append(base_objects.Particle({'name':'Z',
+                      'antiname':'Z',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MZ',
+                      'width':'WZ',
+                      'texname':'Z',
+                      'antitexname':'Z',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':23,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        Z = mypartlist[len(mypartlist)-1]
+
+
+        # WWZ and WWa couplings
+
+        myinterlist.append(base_objects.Interaction({
+            'id': 1,
+            'particles': base_objects.ParticleList(\
+                                            [Wplus, \
+                                             Wminus, \
+                                             a]),
+            'color': ['C1'],
+            'lorentz':['WWV'],
+            'couplings':{(0, 0):'MGVX3'},
+            'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+            'id': 2,
+            'particles': base_objects.ParticleList(\
+                                            [Wplus, \
+                                             Wminus, \
+                                             Z]),
+            'color': ['C1'],
+            'lorentz':['WWV'],
+            'couplings':{(0, 0):'MGVX5'},
+            'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+            'id': 3,
+            'particles': base_objects.ParticleList(\
+                                            [Wplus, \
+                                             Wminus, \
+                                             Wplus,
+                                             Wminus]),
+            'color': ['C1'],
+            'lorentz':['WWWWN',''],
+            'couplings':{(0, 0):'MGVX6',(0,1):'DUM0'},
+            'orders':{'QED':2}}))
+
+        mybasemodel = base_objects.Model()
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':24,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-24,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':24,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-24,
+                                         'state':'final'}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mybasemodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        print myamplitude.get('process').nice_string()
+        print myamplitude.get('diagrams').nice_string()
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
+
+        #print "Diagrams: ",matrix_element
+        #print "Keys:"
+        #for diagram in matrix_element.get('diagrams'):
+        #    for wf in diagram.get('wavefunctions'):
+        #        print wf.get_call_key()
+        #    print diagram.get('amplitude').get_call_key()
+            
+
+        print "\n".join(helas_objects.HelasFortranModel().\
+                        get_matrix_element_calls(matrix_element))
+
+        # I have checked that the resulting Helas calls
+        # below give identical result as MG4
+        #self.assertEqual("\n".join(helas_objects.HelasFortranModel().\
+        #                           get_matrix_element_calls(matrix_element)),
+        #                 """""")
