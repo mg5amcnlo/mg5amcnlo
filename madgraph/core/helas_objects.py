@@ -58,6 +58,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['self_antipart'] = False
         # Properties related to the interaction generating the propagator
         self['interaction_id'] = 0
+        self['pdg_codes'] = []
         self['inter_color'] = []
         self['lorentz'] = []
         self['couplings'] = { (0, 0):'none'}
@@ -157,6 +158,16 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid integer for wavefunction interaction id" % str(value)
 
+        if name == 'pdg_codes':
+            #Should be a list of strings
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list of integers" % str(value)
+            for mystr in value:
+                if not isinstance(mystr, int):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid integer" % str(mystr)
+
         if name in ['inter_color', 'lorentz']:
             #Should be a list of strings
             if not isinstance(value, list):
@@ -250,6 +261,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 self.set('interaction_id', value)
                 if value > 0:
                     inter = arguments[2].get('interaction_dict')[value]
+                    self.set('pdg_codes',
+                             [part.get_pdg_code() for part in \
+                              inter.get('particles')])
                     self.set('inter_color', inter.get('color'))
                     self.set('lorentz', inter.get('lorentz'))
                     self.set('couplings', inter.get('couplings'))
@@ -277,7 +291,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return ['pdg_code', 'name', 'antiname', 'spin', 'color',
                 'mass', 'width', 'is_part', 'self_antipart',
-                'interaction_id', 'inter_color', 'lorentz',
+                'interaction_id', 'pdg_codes', 'inter_color', 'lorentz',
                 'couplings', 'state', 'number_external', 'number',
                 'fermionflow', 'mothers']
 
@@ -289,6 +303,41 @@ class HelasWavefunction(base_objects.PhysicsObject):
     def is_boson(self):
         return not self.is_fermion()
     
+    def get_pdg_code_outgoing(self):
+        """Generate the corresponding pdg_code for an outgoing particle,
+        taking into account fermion flow, for mother wavefunctions"""
+ 
+        if self.get('self_antipart'):
+            return self.get('pdg_code')
+ 
+        if self.get('state') not in ['incoming', 'outgoing']:
+            # This is a boson
+            return self.get('pdg_code')
+ 
+        if (self.get('state') == 'incoming' and self.get('is_part') \
+                or self.get('state') == 'outgoing' and not self.get('is_part')):
+            return -self.get('pdg_code')
+        else:
+            return self.get('pdg_code')
+
+    def get_pdg_code_incoming(self):
+        """Generate the corresponding pdg_code for an incoming particle,
+        taking into account fermion flow, for mother wavefunctions"""
+ 
+        if self.get('self_antipart'):
+            return self.get('pdg_code')
+ 
+        if self.get('state') not in ['incoming', 'outgoing']:
+            # This is a boson
+            return -self.get('pdg_code')
+ 
+        if (self.get('state') == 'outgoing' and self.get('is_part') \
+                or self.get('state') == 'incoming' and not self.get('is_part')):
+            return -self.get('pdg_code')
+        else:
+            return self.get('pdg_code')
+
+
     def set_state_and_particle(self, model):
         """Set incoming/outgoing state according to mother states and
         Lorentz structure of the interaction, and set PDG code
@@ -713,6 +762,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         # Properties related to the interaction generating the propagator
         self['interaction_id'] = 0
+        self['pdg_codes'] = []
         self['inter_color'] = []
         self['lorentz'] = []
         self['couplings'] = { (0, 0):'none'}
@@ -747,6 +797,16 @@ class HelasAmplitude(base_objects.PhysicsObject):
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid integer for wavefunction interaction id" % str(value)
+
+        if name == 'pdg_codes':
+            #Should be a list of strings
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list of integers" % str(value)
+            for mystr in value:
+                if not isinstance(mystr, int):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid integer" % str(mystr)
 
         if name in ['inter_color', 'lorentz']:
             #Should be a list of strings
@@ -823,6 +883,9 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 self.set('interaction_id', value)
                 if value > 0:
                     inter = arguments[2].get('interaction_dict')[value]
+                    self.set('pdg_codes',
+                             [part.get_pdg_code() for part in \
+                              inter.get('particles')])
                     self.set('inter_color', inter.get('color'))
                     self.set('lorentz', inter.get('lorentz'))
                     self.set('couplings', inter.get('couplings'))
@@ -836,8 +899,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['interaction_id', 'inter_color', 'lorentz', 'couplings', 
-                'number', 'mothers']
+        return ['interaction_id', 'pdg_codes', 'inter_color', 'lorentz',
+                'couplings', 'number', 'mothers']
 
 
     # Helper functions
@@ -1448,40 +1511,32 @@ class HelasFortranModel(HelasModel):
                          amp.get('number'))
         self.add_amplitude(key,call_function)
 
-        # WWZ/a 3-vertices. Note that W+ and W- have switched places
-        # compared to the directions in the vvvxxx file.
-        key = ((3,3,3),tuple(['WWV']))
-        call_function = lambda amp: \
-                        "      CALL VVVXXX(W(1,%d),W(1,%d),W(1,%d),%s,AMP(%d))" % \
-                        (HelasFortranModel.get_wplus(amp)[0].get('number'),
-                         HelasFortranModel.get_wminus(amp)[0].get('number'),
-                         HelasFortranModel.get_gamma_z(amp)[0].get('number'),
-                         amp.get('couplings')[(0,0)],
-                         amp.get('number'))
-        self.add_amplitude(key,call_function)
-
-        key = ((3,3,3),tuple(['WWV']))
-        call_function = HelasFortranModel.wwv_jvv
-        self.add_wavefunction(key,call_function)
-
-
         # W boson 4-vertices. Note that W+ and W- have switched places
         # compared to the directions in the wwwwnx file.
 
         key = ((3,3,3,3),('WWWWN',''))
         call_function = lambda amp: \
                         "      CALL WWWWNX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,%s,AMP(%d))" % \
-                        (HelasFortranModel.get_wplus(amp)[0].get('number'),
-                         HelasFortranModel.get_wminus(amp)[0].get('number'),
-                         HelasFortranModel.get_wplus(amp)[1].get('number'),
-                         HelasFortranModel.get_wminus(amp)[1].get('number'),
+                        (HelasFortranModel.sorted_mothers(amp)[0].get('number'),
+                         HelasFortranModel.sorted_mothers(amp)[1].get('number'),
+                         HelasFortranModel.sorted_mothers(amp)[2].get('number'),
+                         HelasFortranModel.sorted_mothers(amp)[3].get('number'),
                          amp.get('couplings')[(0,0)],
                          amp.get('couplings')[(0,1)],
                          amp.get('number'))
         self.add_amplitude(key,call_function)
 
         key = ((3,3,3,3),('WWWWN',''))
-        call_function = HelasFortranModel.wwww_jwww
+        call_function = lambda wf: \
+                        "      CALL JWWWNX(W(1,%d),W(1,%d),W(1,%d),%s,%s,%s,%s,W(1,%d))" % \
+                        (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
+                         HelasFortranModel.sorted_mothers(wf)[1].get('number'),
+                         HelasFortranModel.sorted_mothers(wf)[2].get('number'),
+                         wf.get('couplings')[(0,0)],
+                         wf.get('couplings')[(0,1)],
+                         wf.get('mass'),
+                         wf.get('width'),
+                         wf.get('number'))
         self.add_wavefunction(key,call_function)
 
         # WWVV vertices. Note that W+ and W- have switched places
@@ -1490,120 +1545,27 @@ class HelasFortranModel(HelasModel):
         key = ((3,3,3,3),('WWVVN',''))
         call_function = lambda amp: \
                         "      CALL W3W3NX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,%s,AMP(%d))" % \
-                        (HelasFortranModel.get_wplus(amp)[0].get('number'),
-                         HelasFortranModel.get_gamma_z(amp)[0].get('number'),
-                         HelasFortranModel.get_wminus(amp)[0].get('number'),
-                         HelasFortranModel.get_gamma_z(amp)[1].get('number'),
+                        (HelasFortranModel.sorted_mothers(amp)[0].get('number'),
+                         HelasFortranModel.sorted_mothers(amp)[1].get('number'),
+                         HelasFortranModel.sorted_mothers(amp)[2].get('number'),
+                         HelasFortranModel.sorted_mothers(amp)[3].get('number'),
                          amp.get('couplings')[(0,0)],
                          amp.get('couplings')[(0,1)],
                          amp.get('number'))
         self.add_amplitude(key,call_function)
         key = ((3,3,3,3),('WWVVN',''))
-        call_function = HelasFortranModel.wwvvn_jw3w
+        call_function = lambda wf: \
+                        "      CALL JW3WNX(W(1,%d),W(1,%d),W(1,%d),%s,%s,%s,%s,W(1,%d))" % \
+                        (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
+                         HelasFortranModel.sorted_mothers(wf)[1].get('number'),
+                         HelasFortranModel.sorted_mothers(wf)[2].get('number'),
+                         wf.get('couplings')[(0,0)],
+                         wf.get('couplings')[(0,1)],
+                         wf.get('mass'),
+                         wf.get('width'),
+                         wf.get('number'))
         self.add_wavefunction(key,call_function)
 
-
-    # Definitions of slightly more complicated Helas calls, which
-    # require if statements
-
-    @staticmethod
-    def wwv_jvv(wf):
-        """JVVXXX call for WWV-type vertices. Note that W+ and W-
-        have switched places compared to the directions in the jwwwnx
-        file."""
-        wminus = HelasFortranModel.get_wminus(wf)
-        wplus = HelasFortranModel.get_wplus(wf)
-        gamma_z = HelasFortranModel.get_gamma_z(wf)
-        call = "      CALL JVVXXX(W(1,%d),W(1,%d),%s,%s,%s,W(1,%d))"
-        if not gamma_z:
-            return call % \
-          (wplus[0].get('number'),
-           wminus[0].get('number'),
-           wf.get('couplings')[(0,0)],
-           wf.get('mass'),
-           wf.get('width'),
-           wf.get('number'))
-        if not wminus:
-            return call % \
-          (wplus[0].get('number'),
-           gamma_z[0].get('number'),
-           wf.get('couplings')[(0,0)],
-           wf.get('mass'),
-           wf.get('width'),
-           wf.get('number'))
-        if not wplus:
-            return call % \
-          (gamma_z[0].get('number'),
-           wminus[0].get('number'),
-           wf.get('couplings')[(0,0)],
-           wf.get('mass'),
-           wf.get('width'),
-           wf.get('number'))
-
-    @staticmethod
-    def wwww_jwww(wf):
-        """JWWWNX call for WWWWN-type vertices."""
-        wminus = HelasFortranModel.get_wminus(wf)
-        wplus = HelasFortranModel.get_wplus(wf)
-        call = "      CALL JWWWNX(W(1,%d),W(1,%d),W(1,%d),%s,%s,%s,%s,W(1,%d))"
-        if len(wminus) == 2:
-            return call % \
-          (wminus[0].get('number'),
-           wplus[0].get('number'),
-           wminus[1].get('number'),
-           wf.get('couplings')[(0,0)],
-           wf.get('couplings')[(0,1)],
-           wf.get('mass'),
-           wf.get('width'),
-           wf.get('number'))
-        if len(wplus) == 2:
-            return call % \
-          (wplus[0].get('number'),
-           wminus[0].get('number'),
-           wplus[1].get('number'),
-           wf.get('couplings')[(0,0)],
-           wf.get('couplings')[(0,1)],
-           wf.get('mass'),
-           wf.get('width'),
-           wf.get('number'))
-
-    @staticmethod
-    def wwvvn_jw3w(wf):
-        """JW3WNX call for WWVVN-type vertices."""
-        wminus = HelasFortranModel.get_wminus(wf)
-        wplus = HelasFortranModel.get_wplus(wf)
-        gamma_z = HelasFortranModel.get_gamma_z(wf)
-        call = "      CALL JW3WNX(W(1,%d),W(1,%d),W(1,%d),%s,%s,%s,%s,W(1,%d))"
-        if len(gamma_z) == 1:
-            return call % \
-          (wminus[0].get('number'),
-           gamma_z[0].get('number'),
-           wplus[0].get('number'),
-           wf.get('couplings')[(0,0)],
-           wf.get('couplings')[(0,1)],
-           wf.get('mass'),
-           wf.get('width'),
-           wf.get('number'))
-        if not wminus:
-            return call % \
-          (gamma_z[0].get('number'),
-           wplus[0].get('number'),
-           gamma_z[1].get('number'),
-           wf.get('couplings')[(0,0)],
-           wf.get('couplings')[(0,1)],
-           wf.get('mass'),
-           wf.get('width'),
-           wf.get('number'))
-        if not wplus:
-            return call % \
-          (gamma_z[0].get('number'),
-           wminus[0].get('number'),
-           gamma_z[1].get('number'),
-           wf.get('couplings')[(0,0)],
-           wf.get('couplings')[(0,1)],
-           wf.get('mass'),
-           wf.get('width'),
-           wf.get('number'))
 
     def get_wavefunction_call(self, wavefunction):
         """Return the function for writing the wavefunction
@@ -1738,7 +1700,6 @@ class HelasFortranModel(HelasModel):
                     call_function = lambda wf: call % \
                                     (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
                                      HelasFortranModel.sorted_mothers(wf)[1].get('number'),
-                                     #wf.get_coupling_conjugate().values()[0],
                                      wf.get_with_flow('couplings')[(0,0)],
                                      wf.get('mass'),
                                      wf.get('width'),
@@ -1748,7 +1709,6 @@ class HelasFortranModel(HelasModel):
                                     (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
                                      HelasFortranModel.sorted_mothers(wf)[1].get('number'),
                                      HelasFortranModel.sorted_mothers(wf)[2].get('number'),
-                                     #wf.get_coupling_conjugate().values()[0],
                                      wf.get_with_flow('couplings')[(0,0)],
                                      wf.get('mass'),
                                      wf.get('width'),
@@ -1760,7 +1720,6 @@ class HelasFortranModel(HelasModel):
                                     (HelasFortranModel.sorted_mothers(amp)[0].get('number'),
                                      HelasFortranModel.sorted_mothers(amp)[1].get('number'),
                                      HelasFortranModel.sorted_mothers(amp)[2].get('number'),
-                                     #amp.get_coupling_conjugate().values()[0],
                                      amp.get('couplings')[(0,0)],
                                      amp.get('number'))
                 else:
@@ -1769,7 +1728,6 @@ class HelasFortranModel(HelasModel):
                                      HelasFortranModel.sorted_mothers(amp)[1].get('number'),
                                      HelasFortranModel.sorted_mothers(amp)[2].get('number'),
                                      HelasFortranModel.sorted_mothers(amp)[3].get('number'),
-                                     #amp.get_coupling_conjugate().values()[0],
                                      amp.get('couplings')[(0,0)],
                                      amp.get('number'))
 
@@ -1784,19 +1742,46 @@ class HelasFortranModel(HelasModel):
     def sorted_mothers(arg):
         """Gives a list of mother wavefunctions sorted according to
         1. the spin order needed in the Fortran Helas calls and
-        2. the number for the external leg"""
+        2. the order of the particles in the interaction (cyclic)
+        3. the number for the external leg"""
 
         if isinstance(arg, HelasWavefunction) or \
            isinstance(arg, HelasAmplitude):
-            return HelasWavefunctionList(sorted(arg.get('mothers'),
-                                                lambda wf1, wf2: \
-                                                HelasFortranModel.sort_amp[\
-                HelasFortranModel.mother_dict[wf2.get_spin_state_number()]]\
-                                                - HelasFortranModel.sort_amp[\
-                HelasFortranModel.mother_dict[wf1.get_spin_state_number()]]\
-                                                or wf1.get('number_external') - \
-                                                wf2.get('number_external')))
-    
+            # First sort according to number_external number
+            sorted_mothers1 = sorted(arg.get('mothers'),
+                                     lambda wf1, wf2: \
+                                     wf1.get('number_external') - \
+                                     wf2.get('number_external'))
+            # Next sort according to interaction pdg codes
+            mother_codes = [ wf.get_pdg_code_outgoing() for wf in sorted_mothers1 ]
+            pdg_codes = copy.copy(arg.get('pdg_codes'))
+            if isinstance(arg, HelasWavefunction):
+                my_code = arg.get_pdg_code_incoming()
+                # We need to create the cyclic pdg_codes
+                missing_index = pdg_codes.index(my_code)
+                pdg_codes_cycl = pdg_codes[missing_index+1:]
+                pdg_codes_cycl.extend(pdg_codes[:missing_index])
+            else:
+                pdg_codes_cycl = pdg_codes
+
+            sorted_mothers2 = HelasWavefunctionList()
+            for code in pdg_codes_cycl:
+                index = mother_codes.index(code)
+                mother_codes.pop(index)
+                sorted_mothers2.append(sorted_mothers1.pop(index))
+
+            if sorted_mothers1:
+                raise HelasFortranModel.PhysicsObjectError,\
+                          "Mismatch of pdg codes, %s != %s" % \
+                          (repr(mother_codes),repr(pdg_codes_cycl))
+
+            # Next sort according to spin_state_number
+            return sorted(sorted_mothers2, lambda wf1, wf2: \
+                          HelasFortranModel.sort_amp[\
+                          HelasFortranModel.mother_dict[wf2.get_spin_state_number()]]\
+                          - HelasFortranModel.sort_amp[\
+                          HelasFortranModel.mother_dict[wf1.get_spin_state_number()]])
+        
     @staticmethod
     def sorted_letters(arg):
         """Gives a list of letters sorted according to
@@ -1817,30 +1802,12 @@ class HelasFortranModel(HelasModel):
                           HelasFortranModel.sort_amp[l1])
     
     @staticmethod
-    def get_wminus(arg):
-        """Extracts outgoing W- from mothers"""
+    def sort_mothers(arg):
+        """Sort mothers according to cyclic permutations of
+        interaction pdg codes"""
 
         if isinstance(arg, HelasWavefunction) or \
            isinstance(arg, HelasAmplitude):
             return filter(lambda wf: wf.get('pdg_code') == -24,
                           arg.get('mothers'))
 
-    @staticmethod
-    def get_wplus(arg):
-        """Extracts outgoing W+ from mothers"""
-
-        if isinstance(arg, HelasWavefunction) or \
-           isinstance(arg, HelasAmplitude):
-            return filter(lambda wf: wf.get('pdg_code') == 24,
-                          arg.get('mothers'))
-
-    @staticmethod
-    def get_gamma_z(arg):
-        """Extracts W+ from mothers"""
-
-        if isinstance(arg, HelasWavefunction) or \
-           isinstance(arg, HelasAmplitude):
-            return sorted(filter(lambda wf: wf.get('pdg_code') == 22 or \
-                          wf.get('pdg_code') == 23,
-                          arg.get('mothers')),
-                          lambda wf1,wf2: wf2.get('pdg_code') - wf1.get('pdg_code'))

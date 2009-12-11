@@ -50,6 +50,7 @@ class HelasWavefunctionTest(unittest.TestCase):
                        'self_antipart': False,
                        'mothers': self.mymothers,
                        'interaction_id': 2,
+                       'pdg_codes':[1,2,3],
                        'inter_color': [],
                        'lorentz': [],
                        'couplings': { (0, 0):'none'},
@@ -142,6 +143,7 @@ class HelasWavefunctionTest(unittest.TestCase):
         goal = goal + "    \'is_part\': True,\n"
         goal = goal + "    \'self_antipart\': False,\n"
         goal = goal + "    \'interaction_id\': 2,\n"
+        goal = goal + "    \'pdg_codes\': [1, 2, 3],\n"
         goal = goal + "    \'inter_color\': [],\n"
         goal = goal + "    \'lorentz\': [],\n"
         goal = goal + "    \'couplings\': {(0, 0): \'none\'},\n"
@@ -226,6 +228,7 @@ class HelasAmplitudeTest(unittest.TestCase):
                   'is_part': True,
                   'self_antipart': False,
                   'interaction_id': 2,
+                  'pdg_codes':[1,2,3],
                   'inter_color': [],
                   'lorentz': [],
                   'couplings': { (0, 0):'none'},
@@ -238,6 +241,7 @@ class HelasAmplitudeTest(unittest.TestCase):
 
         self.mydict = {'mothers': self.mywavefunctions,
                        'interaction_id': 2,
+                       'pdg_codes':[1,2,3],
                        'inter_color': [],
                        'lorentz': [],
                        'couplings': { (0, 0):'none'},
@@ -315,6 +319,7 @@ class HelasAmplitudeTest(unittest.TestCase):
 
         goal = "{\n"
         goal = goal + "    \'interaction_id\': 2,\n"
+        goal = goal + "    \'pdg_codes\': [1, 2, 3],\n"
         goal = goal + "    \'inter_color\': [],\n"
         goal = goal + "    \'lorentz\': [],\n"
         goal = goal + "    \'couplings\': {(0, 0): \'none\'},\n"
@@ -1940,9 +1945,9 @@ class HelasFortranModelTest(HelasModelTest):
             '      CALL SXXXXX(P(0,4),-1*IC(4),W(1,4))',
             '      CALL JVSSXX(W(1,2),W(1,3),W(1,4),MGVX89,zero,zero,W(1,1))',
             '      CALL JVSSXX(W(1,1),W(1,3),W(1,4),MGVX89,zero,zero,W(1,2))',
-            '      CALL HVVSXX(W(1,1),W(1,2),W(1,4),MGVX89,Musq2,Wusq2,W(1,3))',
-            '      CALL HVVSXX(W(1,1),W(1,2),W(1,3),MGVX89,Musq2,Wusq2,W(1,4))',
-            '      CALL VVSSXX(W(1,1),W(1,2),W(1,3),W(1,4),MGVX89,AMP(1))']
+            '      CALL HVVSXX(W(1,2),W(1,1),W(1,4),MGVX89,Musq2,Wusq2,W(1,3))',
+            '      CALL HVVSXX(W(1,2),W(1,1),W(1,3),MGVX89,Musq2,Wusq2,W(1,4))',
+            '      CALL VVSSXX(W(1,2),W(1,1),W(1,3),W(1,4),MGVX89,AMP(1))']
 
         myleglist = base_objects.LegList()
 
@@ -1974,8 +1979,12 @@ class HelasFortranModelTest(HelasModelTest):
             mothers = copy.copy(wfs)
             mothers.remove(wf)
             wf.set('mothers',mothers)
+            if not wf.get('self_antipart'):
+                wf.set('pdg_code',-wf.get('pdg_code'))
             self.assertEqual(fortran_model.get_wavefunction_call(wf),
                              goal[goal_counter])
+            if not wf.get('self_antipart'):
+                wf.set('pdg_code',-wf.get('pdg_code'))
             goal_counter = goal_counter + 1
 
         amplitude = helas_objects.HelasAmplitude({\
@@ -2022,50 +2031,6 @@ class HelasFortranModelTest(HelasModelTest):
             'mothers': wfs,
             'number': 2})
         amplitude.set('interaction_id', 5, self.mybasemodel)
-        self.assertEqual(fortran_model.get_amplitude_call(amplitude),
-                         goal[goal_counter])
-        goal_counter = goal_counter + 1
-
-
-        myleglist = base_objects.LegList()
-
-        myleglist.append(base_objects.Leg({'id':21,
-                                           'number': 1,
-                                           'state':'initial'}))
-        myleglist.append(base_objects.Leg({'id':22,
-                                           'number': 2,
-                                         'state':'initial'}))
-        myleglist.append(base_objects.Leg({'id': 1000002,
-                                           'number': 3,
-                                         'state':'initial'}))
-        myleglist.append(base_objects.Leg({'id': -1000002,
-                                           'number': 4,
-                                         'state':'initial'}))
-
-        wfs = helas_objects.HelasWavefunctionList(\
-            [ helas_objects.HelasWavefunction(leg, 100,
-                                              self.mybasemodel) \
-              for leg in myleglist ])
-
-        fortran_model = helas_objects.HelasFortranModel()
-
-        for wf in wfs:
-            self.assertEqual(fortran_model.get_wavefunction_call(wf),
-                             goal[goal_counter])
-            goal_counter = goal_counter + 1
-
-        for wf in wfs:
-            mothers = copy.copy(wfs)
-            mothers.remove(wf)
-            wf.set('mothers',mothers)
-            self.assertEqual(fortran_model.get_wavefunction_call(wf),
-                             goal[goal_counter])
-            goal_counter = goal_counter + 1
-
-        amplitude = helas_objects.HelasAmplitude({\
-            'mothers': wfs,
-            'number': 1})
-        amplitude.set('interaction_id', 100, self.mybasemodel)
         self.assertEqual(fortran_model.get_amplitude_call(amplitude),
                          goal[goal_counter])
         goal_counter = goal_counter + 1
@@ -2757,7 +2722,7 @@ class HelasFortranModelTest(HelasModelTest):
                                              Wminus, \
                                              a]),
             'color': ['C1'],
-            'lorentz':['WWV'],
+            'lorentz':[''],
             'couplings':{(0, 0):'MGVX3'},
             'orders':{'QED':1}}))
 
@@ -2768,7 +2733,7 @@ class HelasFortranModelTest(HelasModelTest):
                                              Wminus, \
                                              Z]),
             'color': ['C1'],
-            'lorentz':['WWV'],
+            'lorentz':[''],
             'couplings':{(0, 0):'MGVX5'},
             'orders':{'QED':1}}))
 
@@ -2898,18 +2863,18 @@ class HelasFortranModelTest(HelasModelTest):
                                              Wminus, \
                                              a]),
             'color': ['C1'],
-            'lorentz':['WWV'],
+            'lorentz':[''],
             'couplings':{(0, 0):'MGVX3'},
             'orders':{'QED':1}}))
 
         myinterlist.append(base_objects.Interaction({
             'id': 2,
             'particles': base_objects.ParticleList(\
-                                            [Wplus, \
-                                             Wminus, \
+                                            [Wminus, \
+                                             Wplus, \
                                              Z]),
             'color': ['C1'],
-            'lorentz':['WWV'],
+            'lorentz':[''],
             'couplings':{(0, 0):'MGVX5'},
             'orders':{'QED':1}}))
 
@@ -2992,11 +2957,167 @@ class HelasFortranModelTest(HelasModelTest):
       CALL VXXXXX(P(0,2),MW,NHEL(2),-1*IC(2),W(1,2))
       CALL VXXXXX(P(0,3),MZ,NHEL(3),1*IC(3),W(1,3))
       CALL VXXXXX(P(0,4),zero,NHEL(4),1*IC(4),W(1,4))
-      CALL W3W3NX(W(1,2),W(1,3),W(1,1),W(1,4),MGVX7,DUM0,AMP(1))
+      CALL W3W3NX(W(1,2),W(1,4),W(1,1),W(1,3),MGVX7,DUM0,AMP(1))
       CALL JVVXXX(W(1,3),W(1,1),MGVX5,MW,WW,W(1,5))
       CALL VVVXXX(W(1,2),W(1,5),W(1,4),MGVX3,AMP(2))
-      CALL JVVXXX(W(1,4),W(1,1),MGVX3,MW,WW,W(1,6))
-      CALL VVVXXX(W(1,2),W(1,6),W(1,3),MGVX5,AMP(3))""")
+      CALL JVVXXX(W(1,1),W(1,4),MGVX3,MW,WW,W(1,6))
+      CALL VVVXXX(W(1,6),W(1,2),W(1,3),MGVX5,AMP(3))""")
+
+    def test_sorted_mothers(self):
+        """Testing the helas diagram generation based on Diagrams
+        using the processes W+ W- > W+ W- a
+        """
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A W
+        mypartlist.append(base_objects.Particle({'name':'W+',
+                      'antiname':'W-',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MW',
+                      'width':'WW',
+                      'texname':'W^+',
+                      'antitexname':'W^-',
+                      'line':'wavy',
+                      'charge':1.,
+                      'pdg_code':24,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        Wplus = mypartlist[len(mypartlist)-1]
+        Wminus = copy.copy(Wplus)
+        Wminus.set('is_part', False)
+
+        # A photon
+        mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        a = mypartlist[len(mypartlist)-1]
+
+        # Z
+        mypartlist.append(base_objects.Particle({'name':'Z',
+                      'antiname':'Z',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MZ',
+                      'width':'WZ',
+                      'texname':'Z',
+                      'antitexname':'Z',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':23,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        Z = mypartlist[len(mypartlist)-1]
+
+
+        # WWZ and WWa couplings
+
+        myinterlist.append(base_objects.Interaction({
+            'id': 3,
+            'particles': base_objects.ParticleList(\
+                                            [Wplus, \
+                                             Wminus, \
+                                             Wplus,
+                                             Wminus]),
+            'color': ['C1'],
+            'lorentz':['WWWWN',''],
+            'couplings':{(0, 0):'MGVX6',(0,1):'DUM0'},
+            'orders':{'QED':2}}))
+
+        myinterlist.append(base_objects.Interaction({
+            'id': 4,
+            'particles': base_objects.ParticleList(\
+                                            [Wplus, \
+                                             a, \
+                                             Wminus,
+                                             a]),
+            'color': ['C1'],
+            'lorentz':['WWVVN',''],
+            'couplings':{(0, 0):'MGVX4',(0,1):'DUM0'},
+            'orders':{'QED':2}}))
+
+        myinterlist.append(base_objects.Interaction({
+            'id': 5,
+            'particles': base_objects.ParticleList(\
+                                            [Wminus, \
+                                             a, \
+                                             Wplus,
+                                             Z]),
+            'color': ['C1'],
+            'lorentz':['WWVVN',''],
+            'couplings':{(0, 0):'MGVX7',(0,1):'DUM0'},
+            'orders':{'QED':2}}))
+
+        myinterlist.append(base_objects.Interaction({
+            'id': 6,
+            'particles': base_objects.ParticleList(\
+                                            [Wminus, \
+                                             Z, \
+                                             Wplus,
+                                             Z]),
+            'color': ['C1'],
+            'lorentz':['WWVVN',''],
+            'couplings':{(0, 0):'MGVX8',(0,1):'DUM0'},
+            'orders':{'QED':2}}))
+
+
+        mybasemodel = base_objects.Model()
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':24,
+                                           'state':'initial',
+                                           'number': 1}))
+        myleglist.append(base_objects.Leg({'id':23,
+                                         'state':'final',
+                                           'number': 2}))
+        myleglist.append(base_objects.Leg({'id':-24,
+                                         'state':'initial',
+                                           'number': 3}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final',
+                                           'number': 5}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final',
+                                           'number': 4}))
+
+        mymothers = helas_objects.HelasWavefunctionList(\
+            [helas_objects.HelasWavefunction(leg, 0, mybasemodel) for leg in myleglist[:4]])
+
+        amplitude = helas_objects.HelasAmplitude()
+        amplitude.set('interaction_id', 5, mybasemodel)
+        amplitude.set('mothers',mymothers)
+        self.assertEqual(helas_objects.HelasFortranModel.sorted_mothers(amplitude),
+                         [mymothers[2], mymothers[3], mymothers[0], mymothers[1]])
+        mymothers = helas_objects.HelasWavefunctionList(\
+            [helas_objects.HelasWavefunction(leg, 0, mybasemodel) for leg in myleglist[2:]])
+
+        wavefunction = helas_objects.HelasWavefunction(myleglist[2],
+                                                       4, mybasemodel)
+        wavefunction.set('mothers', mymothers)
+        self.assertEqual(helas_objects.HelasFortranModel.\
+                         sorted_mothers(wavefunction),
+                         [mymothers[2], mymothers[0], mymothers[1]])
+        
 
     def test_generate_helas_diagrams_WWWWA(self):
         """Testing the helas diagram generation based on Diagrams
@@ -3071,18 +3192,18 @@ class HelasFortranModelTest(HelasModelTest):
                                              Wminus, \
                                              a]),
             'color': ['C1'],
-            'lorentz':['WWV'],
+            'lorentz':[''],
             'couplings':{(0, 0):'MGVX3'},
             'orders':{'QED':1}}))
 
         myinterlist.append(base_objects.Interaction({
             'id': 2,
             'particles': base_objects.ParticleList(\
-                                            [Wplus, \
-                                             Wminus, \
+                                            [Wminus, \
+                                             Wplus, \
                                              Z]),
             'color': ['C1'],
-            'lorentz':['WWV'],
+            'lorentz':[''],
             'couplings':{(0, 0):'MGVX5'},
             'orders':{'QED':1}}))
 
@@ -3168,12 +3289,59 @@ class HelasFortranModelTest(HelasModelTest):
         #        print wf.get_call_key()
         #    print diagram.get('amplitude').get_call_key()
             
-
-        #print "\n".join(helas_objects.HelasFortranModel().\
-        #                get_matrix_element_calls(matrix_element))
-
         # I have checked that the resulting Helas calls below give
         # identical result as MG4.
-        #self.assertEqual("\n".join(helas_objects.HelasFortranModel().\
-        #                           get_matrix_element_calls(matrix_element)),
-        #                 """      CALL VXXXXX(P(0,1),MW,NHEL(1),-1*IC(1),W(1,1))
+        self.assertEqual("\n".join(helas_objects.HelasFortranModel().\
+                                   get_matrix_element_calls(matrix_element)),
+                         """      CALL VXXXXX(P(0,1),MW,NHEL(1),-1*IC(1),W(1,1))
+      CALL VXXXXX(P(0,2),MW,NHEL(2),-1*IC(2),W(1,2))
+      CALL VXXXXX(P(0,3),MW,NHEL(3),1*IC(3),W(1,3))
+      CALL VXXXXX(P(0,4),MW,NHEL(4),1*IC(4),W(1,4))
+      CALL VXXXXX(P(0,5),zero,NHEL(5),1*IC(5),W(1,5))
+      CALL JVVXXX(W(1,2),W(1,1),MGVX3,zero,zero,W(1,6))
+      CALL JVVXXX(W(1,5),W(1,3),MGVX3,MW,WW,W(1,7))
+      CALL VVVXXX(W(1,7),W(1,4),W(1,6),MGVX3,AMP(1))
+      CALL JVVXXX(W(1,1),W(1,2),MGVX5,MZ,WZ,W(1,8))
+      CALL VVVXXX(W(1,4),W(1,7),W(1,8),MGVX5,AMP(2))
+      CALL JVVXXX(W(1,4),W(1,5),MGVX3,MW,WW,W(1,9))
+      CALL VVVXXX(W(1,3),W(1,9),W(1,6),MGVX3,AMP(3))
+      CALL VVVXXX(W(1,9),W(1,3),W(1,8),MGVX5,AMP(4))
+      CALL W3W3NX(W(1,3),W(1,6),W(1,4),W(1,5),MGVX4,DUM0,AMP(5))
+      CALL W3W3NX(W(1,3),W(1,5),W(1,4),W(1,8),MGVX7,DUM0,AMP(6))
+      CALL JVVXXX(W(1,3),W(1,1),MGVX3,zero,zero,W(1,10))
+      CALL JVVXXX(W(1,5),W(1,2),MGVX3,MW,WW,W(1,11))
+      CALL VVVXXX(W(1,11),W(1,4),W(1,10),MGVX3,AMP(7))
+      CALL JVVXXX(W(1,1),W(1,3),MGVX5,MZ,WZ,W(1,12))
+      CALL VVVXXX(W(1,4),W(1,11),W(1,12),MGVX5,AMP(8))
+      CALL VVVXXX(W(1,2),W(1,9),W(1,10),MGVX3,AMP(9))
+      CALL VVVXXX(W(1,9),W(1,2),W(1,12),MGVX5,AMP(10))
+      CALL W3W3NX(W(1,2),W(1,10),W(1,4),W(1,5),MGVX4,DUM0,AMP(11))
+      CALL W3W3NX(W(1,2),W(1,5),W(1,4),W(1,12),MGVX7,DUM0,AMP(12))
+      CALL JVVXXX(W(1,1),W(1,5),MGVX3,MW,WW,W(1,13))
+      CALL JVVXXX(W(1,2),W(1,4),MGVX3,zero,zero,W(1,14))
+      CALL VVVXXX(W(1,3),W(1,13),W(1,14),MGVX3,AMP(13))
+      CALL JVVXXX(W(1,4),W(1,2),MGVX5,MZ,WZ,W(1,15))
+      CALL VVVXXX(W(1,13),W(1,3),W(1,15),MGVX5,AMP(14))
+      CALL JVVXXX(W(1,3),W(1,4),MGVX3,zero,zero,W(1,16))
+      CALL VVVXXX(W(1,2),W(1,13),W(1,16),MGVX3,AMP(15))
+      CALL JVVXXX(W(1,4),W(1,3),MGVX5,MZ,WZ,W(1,17))
+      CALL VVVXXX(W(1,13),W(1,2),W(1,17),MGVX5,AMP(16))
+      CALL WWWWNX(W(1,2),W(1,13),W(1,3),W(1,4),MGVX6,DUM0,AMP(17))
+      CALL VVVXXX(W(1,7),W(1,1),W(1,14),MGVX3,AMP(18))
+      CALL VVVXXX(W(1,1),W(1,7),W(1,15),MGVX5,AMP(19))
+      CALL VVVXXX(W(1,11),W(1,1),W(1,16),MGVX3,AMP(20))
+      CALL VVVXXX(W(1,1),W(1,11),W(1,17),MGVX5,AMP(21))
+      CALL JWWWNX(W(1,2),W(1,1),W(1,3),MGVX6,DUM0,MW,WW,W(1,18))
+      CALL VVVXXX(W(1,18),W(1,4),W(1,5),MGVX3,AMP(22))
+      CALL JWWWNX(W(1,1),W(1,2),W(1,4),MGVX6,DUM0,MW,WW,W(1,19))
+      CALL VVVXXX(W(1,3),W(1,19),W(1,5),MGVX3,AMP(23))
+      CALL JW3WNX(W(1,1),W(1,5),W(1,2),MGVX4,DUM0,zero,zero,W(1,20))
+      CALL VVVXXX(W(1,3),W(1,4),W(1,20),MGVX3,AMP(24))
+      CALL JW3WNX(W(1,2),W(1,5),W(1,1),MGVX7,DUM0,MZ,WZ,W(1,21))
+      CALL VVVXXX(W(1,4),W(1,3),W(1,21),MGVX5,AMP(25))
+      CALL JWWWNX(W(1,1),W(1,3),W(1,4),MGVX6,DUM0,MW,WW,W(1,22))
+      CALL VVVXXX(W(1,2),W(1,22),W(1,5),MGVX3,AMP(26))
+      CALL JW3WNX(W(1,1),W(1,5),W(1,3),MGVX4,DUM0,zero,zero,W(1,23))
+      CALL VVVXXX(W(1,2),W(1,4),W(1,23),MGVX3,AMP(27))
+      CALL JW3WNX(W(1,3),W(1,5),W(1,1),MGVX7,DUM0,MZ,WZ,W(1,24))
+      CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
