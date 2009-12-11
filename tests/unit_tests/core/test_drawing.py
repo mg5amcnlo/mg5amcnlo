@@ -399,6 +399,12 @@ class TestVertexPoint(unittest.TestCase):
         self.assertTrue('pos_x' in my_vertex.keys())
         self.assertTrue('pos_y' in my_vertex.keys())
         
+        my_vertex2 = drawing.Vertex_Point(self.vertex)
+        self.assertFalse(my_vertex2 is self.vertex)
+        self.assertFalse(my_vertex2 is my_vertex)
+        my_vertex.add_line(self.line1)
+        self.assertFalse(self.line1 in my_vertex2['line'])
+        
  
  
     def testdef_position(self):
@@ -482,7 +488,17 @@ class TestVertexPoint(unittest.TestCase):
         self.assertRaises(drawing.Vertex_Point.VertexPointError, \
                           my_vertex.def_level, '3')
                           
-                          
+    def test_isexternal(self):
+        """ check if the vertex is an artificial vertex created to fix the 
+            external particles position 
+        """
+        
+        vertex = base_objects.Vertex({'id':0, 'legs':base_objects.LegList([])})
+        vertex_point = drawing.Vertex_Point(vertex)
+        
+        self.assertTrue(vertex_point.is_external())
+        
+        
 #===============================================================================
 # TestVertex
 #===============================================================================
@@ -636,33 +652,93 @@ class TestFeynman_Diagram(unittest.TestCase):
         
         #order: initial-external-vertex in diagram order                                 
         level_solution = [1, 1, 1, 2, 0, 2, 0, 2, 3, 3]
+        number_of_line = [3, 3, 3, 3, 1, 1, 1, 1, 1, 1]
         # the ordering is not important but we test it anyway in order 
         # to ensure that we don't have an incorect permutation
-        
+        self.assertEquals(self.mix_drawing.max_level,3)
         for i in range(0, 10):
             self.assertEquals(self.mix_drawing.VertexList[i]['level'], \
                                                             level_solution[i])
+            self.assertEquals(len(self.mix_drawing.VertexList[i]['line']), \
+                                                            number_of_line[i])
             
         self.s_drawing.charge_diagram()
         self.s_drawing.define_level()
 
         #order: initial-external-vertex in diagram order                                 
-        level_solution = [0, 0, 3, 3, 1, 2] 
+        level_solution = [1, 2, 0, 0, 3, 3] 
 
         for i in range(0, 6):
-             level_solution.remove(self.s_drawing.VertexList[i]['level'])
-        
-        
+            self.assertEquals(self.s_drawing.VertexList[i]['level'], \
+                                                            level_solution[i])
+        self.assertEquals(self.s_drawing.max_level,3)
+                
         self.t_drawing.charge_diagram()       
         self.t_drawing.define_level()
         
         #order: initial-external-vertex in diagram order                                 
-        level_solution = [0, 0, 2, 2, 1, 1] 
-                                     
+        level_solution = [1,1,0,2,0,2]
+        self.assertEquals(self.t_drawing.max_level,2)
         for i in range(0, 6):
-             level_solution.remove(self.t_drawing.VertexList[i]['level'])
+            self.assertEquals(self.t_drawing.VertexList[i]['level'], \
+                                                            level_solution[i]) 
+
+
+    def test_find_vertex_at_level(self):
+        """ check that the program can evolve correctly from one level to
+            the next one. check in the same time the position assignation 
+            on a ordered list of vertex
+        """
+        
+        self.mix_drawing.charge_diagram()
+        self.mix_drawing.define_level()
+        
+        #define by hand level 0:
+        vertexlist_l0=[vertex for vertex in self.mix_drawing.VertexList if\
+                                                         vertex['level'] == 0 ]
+
+        #define by hand level 1:
+        sol_l1=[vertex for vertex in self.mix_drawing.VertexList if\
+                                                         vertex['level'] == 1 ]
+        #wrong order
+        sol_l1[1],sol_l1[2] = sol_l1[2], sol_l1[1]
+        
+        #ask to find level 1 from level 0
+        vertexlist_l1=self.mix_drawing.find_vertex_at_level(vertexlist_l0)
+        self.assertEquals(len(vertexlist_l1),len(sol_l1))
+        for i in range(0,len(sol_l1)):
+            self.assertEquals(vertexlist_l1[i],sol_l1[i])
+        
+        #redo this step but add the position to those vertex
+        self.mix_drawing.find_vertex_position_at_level(vertexlist_l0, 1, auto=0)   
+            
+        sol=[[1/3,1/6], [1/3,1/2], [1/3,5/6]]
+        for i in range(0,len(vertexlist_l1)):
+            vertex=vertexlist_l1[i]
+           
+            self.assertAlmostEquals(vertex['pos_x'],sol[i][0])
+            self.assertAlmostEquals(vertex['pos_y'],sol[i][1])
+                   
+        vertexlist_l2=self.mix_drawing.find_vertex_at_level(vertexlist_l1)
+        self.assertEquals(len(vertexlist_l2),3)
+        
+        #ask to update of level 2 +check that wa can assign position
+        self.mix_drawing.find_vertex_position_at_level(vertexlist_l1, 2, auto=0)
     
-    
+        #check position
+        vertexlist=[vertex for vertex in self.mix_drawing.VertexList if\
+                                                         vertex['level'] == 2 ]
+        sol=[[2/3,0.5],[2/3,0],[2/3,1]]
+        ext=[False,True,True]
+        for i in range(0,len(vertexlist)):
+            vertex=vertexlist[i]
+            
+            self.assertEquals(vertex['pos_x'],sol[i][0])
+            self.assertEquals(vertex['pos_y'],sol[i][1])
+            self.assertEquals(vertex.is_external(),ext[i]) #more a test of the \
+                # order and of is_external
+            
+            
     def test_find_initial_vertex_position(self):
         """ find a position to each vertex. all the vertex with the same level
             will have the same x coordinate. All external particules will be
@@ -675,14 +751,26 @@ class TestFeynman_Diagram(unittest.TestCase):
         self.mix_drawing.define_level()        
         self.mix_drawing.find_initial_vertex_position()
 
+        level =      [1  , 1  , 1  , 2  , 0  , 2  , 0  , 2  , 3  , 3 ]
         x_position = [1/3, 1/3, 1/3, 2/3, 0.0, 2/3, 0.0, 2/3, 1.0, 1.0]
-        y_position = [3/4, 1/4, 1/2, 1/2, 1.0, 1.0, 0.0, 1/2, 0.0, 0.0]       
+        y_position = [1/6, 5/6, 1/2, 1/2, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0]       
 
+        print 'progress'
         for i in range(0, 10):
-            self.assertEquals(self.mix_drawing.VertexList[i]['pos_x'], \
+            print (self.mix_drawing.VertexList[i]['level'], self.mix_drawing.VertexList[i]['pos_x'], \
+                   self.mix_drawing.VertexList[i]['pos_y']),
+            print '=?=',(level[i],x_position[i],y_position[i]) 
+            self.assertEquals(self.mix_drawing.VertexList[i]['level'], \
+                              level[i])         
+            self.assertAlmostEquals(self.mix_drawing.VertexList[i]['pos_x'], \
                               x_position[i])
-            self.assertEquals(self.mix_drawing.VertexList[i]['pos_y'], \
-                              y_position[i])                     
+            self.assertAlmostEquals(self.mix_drawing.VertexList[i]['pos_y'], \
+                              y_position[i])
+            
+    def test_isexternal(self):
+        """ check if the vertex is a external one or not """
+        pass
+                             
                             
                           
                           

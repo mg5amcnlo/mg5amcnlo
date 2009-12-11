@@ -263,7 +263,7 @@ class Vertex_Point(base_objects.Vertex):
         """ (re)define the position of the vertex in a square (1,1) """
         if(not(0 <= x <= 1 and 0 <= y <= 1)):
             raise self.VertexPointError, 'vertex coordinate should be in' + \
-                    '0,1 interval introduce value ({0:4},{0:4})'.format(x, y)
+                    '0,1 interval introduce value ({0},{1})'.format(x, y)
 
         return self._def_position(x, y)
     
@@ -308,11 +308,25 @@ class Vertex_Point(base_objects.Vertex):
             raise self.VertexPointError, 'trying to attribute non integer level'
         
         self['level'] = level
+        
+    def is_external(self):
+        """ 
+            check if this vertex is a vertex associate to an external particle
+        """
+        
+        if len(self['line']) <=2:
+            return True
+        else:
+            return False
     
 class Feynman_Diagram:
     """ object which compute the position of the vertex/line for a given
         Diagram object
     """
+    
+    class FeynamDiagramError(Exception):
+        """ class for internal error """
+        pass
     
     def __init__(self, diagram):
         """ compute the position of the vertex/line for this diagram """
@@ -322,6 +336,7 @@ class Feynman_Diagram:
         self.LineList = []
         self._treated_legs = []
         self._vertex_assigned_to_level =[] 
+        self.max_level=0
         
     def main(self):
         #define all the vertex/line 
@@ -444,9 +459,10 @@ class Feynman_Diagram:
             if line.end['level']!=-1:
                 continue
             if line['state']=='initial':
-                line.end.def_level(max(level,1))
+                line.end.def_level(1) # T channel always at level 1
             else:
                 line.end.def_level(level+1)
+                self.max_level=max(self.max_level,level+1) 
             self._def_next_level_from(line.end)
             
     def find_initial_vertex_position(self):
@@ -456,10 +472,100 @@ class Feynman_Diagram:
             such that some external particles lines cuts sometimes some 
             propagator. This will be resolve in a second step 
         """
-        pass
+        initial_vertex=[vertex for vertex in self.VertexList if\
+                                                         vertex['level'] == 0 ]
+        
+        if len(initial_vertex)==2:
+            initial_vertex[0].def_position(0,0)
+            initial_vertex[1].def_position(0,1)
+        else:
+            raise self.Feynman_DiagramError, 'only for two initial particles'
+
+        self.find_vertex_position_at_level(initial_vertex,1)
     
-    def find_vertex_position_at_level(self, level):
+    def find_vertex_position_at_level(self, vertexlist, level, auto=True):
         """ find the vertex for the next level """
+        
+        
+        vertex_at_level = self.find_vertex_at_level(vertexlist)
+        if not vertex_at_level:
+            return    
+        self._assign_position_for_level(vertex_at_level, level)
+        
+        #recursive mode
+        if auto:
+            self.find_vertex_position_at_level(vertex_at_level, level+1)
+            
+            
+    def find_vertex_at_level(self,previous_level):
+        """
+        return the vertex at next level starting from the lowest to the highest 
+        previous level should be ordinate in the exact same way
+        """
+        
+        vertex_at_level=[]
+        if previous_level[0]['level'] != 0: 
+            # treat separetaly level 1due to t-channel possibility
+            
+            for vertex in previous_level:
+                for line in vertex['line']:
+                    if  line['state']=='final' and line.start==vertex:
+                        vertex_at_level.append(line.end)
+        else:
+            #special level one case
+                    
+            t_vertex = previous_level[0]
+            tline = ''
+            while 1:
+                #find the next t-channel particle
+                tline=[line for line in t_vertex['line'] if \
+                                     line['state'] == 'initial' and \
+                                     line != tline ]     
+                if not tline:
+                    del vertex_at_level[-1]
+                    break
+                tline=tline[0]
+                
+                #find the new vertex associate to it
+                t_vertex=[vertex for vertex in[tline.start, tline.end] if\
+                                      vertex!=t_vertex  ][0]                                
+                vertex_at_level.append(t_vertex)
+                        
+        return vertex_at_level        
+                  
+                
+                
+                
+                
+                
+                
+    def _assign_position_for_level(self,vertex_at_level,level):
+        """ 
+            assign position in ascendant order for the vertex at level given 
+        """
+        print 'level',level
+        begin_gap, end_gap= 0.5, 0.5
+        if vertex_at_level[0].is_external():
+            begin_gap=0
+        if vertex_at_level[-1].is_external():
+            end_gap=0
+        print 'begin-end',begin_gap/0.5,end_gap/0.5
+        gap=1/(begin_gap+end_gap+len(vertex_at_level)-1)
+        print 'gap',gap
+        i=0
+        for vertex in vertex_at_level:
+            vertex.def_position(level/self.max_level,gap*(begin_gap+i))
+            i+=1        
+            
+            
+            
+            
+            
+        
+        
+        
+        
+        
      
     def avoid_crossing(self):
         """  modify the position of any vertex in order to avoid any line 
