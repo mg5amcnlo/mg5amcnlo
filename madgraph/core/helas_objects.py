@@ -467,6 +467,60 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Return the new (or old) wavefunction
         return new_wf
 
+    def get_fermion_order(self):
+        """Recursive function to get a list of fermion numbers
+        corresponding to the order of fermions along fermion lines
+        connected to this wavefunction, in the form [n1,n2,...] for a
+        boson, and [N,[n1,n2,...]] for a fermion line"""
+
+        # End recursion if external wavefunction
+        if not self.get('mothers'):
+            if self.is_fermion():
+                return [self.get('number_external'),[]]
+            else:
+                return []
+
+        # Pick out fermion mothers
+        out_fermions = filter(lambda wf: wf.get('state') == 'outgoing',
+                              self.get('mothers'))
+        in_fermions = filter(lambda wf: wf.get('state') == 'incoming',
+                              self.get('mothers'))
+        # Pick out bosons
+        bosons = filter(lambda wf: wf.is_boson(), self.get('mothers'))
+
+        if self.is_boson() and len(in_fermions) + len(out_fermions) > 2\
+               or self.is_fermion() and \
+               len(in_fermions) + len(out_fermions) > 1:
+            raise self.PhysicsObjectError,\
+                  "Multifermion vertices not implemented"
+
+        fermion_number_list = []
+
+        for boson in bosons:
+            # Bosons return a list [n1,n2,...]
+            fermion_number_list.extend(boson.get_fermion_order())
+
+        if self.is_fermion():
+            # Fermions return the result N from their mother
+            # and the list from bosons, so [N,[n1,n2,...]]
+            fermion_mother = filter(lambda wf: wf.is_fermion(),
+                                    self.get('mothers'))[0]
+            mother_list = fermion_mother.get_fermion_order()
+            fermion_number_list.extend(mother_list[1])
+            return [mother_list[0], fermion_number_list]
+        elif in_fermions and out_fermions:
+            # Combine the incoming and outgoing fermion numbers
+            # and add the bosonic numbers: [NI,NO,n1,n2,...]
+            in_list = in_fermions[0].get_fermion_order()
+            out_list = out_fermions[0].get_fermion_order()
+            # Combine to get [N1,N2,n1,n2,...]
+            fermion_number_list.append(in_list[0])
+            fermion_number_list.append(out_list[0])
+            fermion_number_list.extend(in_list[1])
+            fermion_number_list.extend(out_list[1])
+            
+        return fermion_number_list
+
     def needs_hermitian_conjugate(self):
         """Returns true if there is a fermion flow clash, i.e.,
         there is an odd number of negative fermion flows"""
@@ -831,10 +885,35 @@ class HelasAmplitude(base_objects.PhysicsObject):
         to this amplitude"""
 
         # Pick out fermion mothers
-        fermions = filter(lambda wf: wf.is_fermion(), self.get('mothers'))
+        out_fermions = filter(lambda wf: wf.get('state') == 'outgoing',
+                              self.get('mothers'))
+        in_fermions = filter(lambda wf: wf.get('state') == 'incoming',
+                              self.get('mothers'))
+        # Pick out bosons
         bosons = filter(lambda wf: wf.is_boson(), self.get('mothers'))
 
-        return 0
+        if len(in_fermions) + len(out_fermions) > 2:
+            raise self.PhysicsObjectError,\
+                  "Multifermion vertices not implemented"
+
+        fermion_number_list = []
+
+        for boson in bosons:
+            # Bosons return a list [n1,n2,...]
+            fermion_number_list.extend(boson.get_fermion_order())
+
+        if in_fermions and out_fermions:
+            # Fermions return the result N from their mother
+            # and the list from bosons, so [N,[n1,n2,...]]
+            in_list = in_fermions[0].get_fermion_order()
+            out_list = out_fermions[0].get_fermion_order()
+            # Combine to get [N1,N2,n1,n2,...]
+            fermion_number_list.append(in_list[0])
+            fermion_number_list.append(out_list[0])
+            fermion_number_list.extend(in_list[1])
+            fermion_number_list.extend(out_list[1])
+
+        return self.sign_flips_to_order(fermion_number_list)
 
     def sign_flips_to_order(self, fermions):
         """Gives the sign corresponding to the number of flips needed
@@ -1369,12 +1448,13 @@ class HelasFortranModel(HelasModel):
                          amp.get('number'))
         self.add_amplitude(key,call_function)
 
-        # WWZ/a 3-vertices
+        # WWZ/a 3-vertices. Note that W+ and W- have switched places
+        # compared to the directions in the vvvxxx file.
         key = ((3,3,3),tuple(['WWV']))
         call_function = lambda amp: \
                         "      CALL VVVXXX(W(1,%d),W(1,%d),W(1,%d),%s,AMP(%d))" % \
-                        (HelasFortranModel.get_wminus(amp)[0].get('number'),
-                         HelasFortranModel.get_wplus(amp)[0].get('number'),
+                        (HelasFortranModel.get_wplus(amp)[0].get('number'),
+                         HelasFortranModel.get_wminus(amp)[0].get('number'),
                          HelasFortranModel.get_gamma_z(amp)[0].get('number'),
                          amp.get('couplings')[(0,0)],
                          amp.get('number'))
@@ -1385,33 +1465,60 @@ class HelasFortranModel(HelasModel):
         self.add_wavefunction(key,call_function)
 
 
-        # W boson 4-vertices
+        # W boson 4-vertices. Note that W+ and W- have switched places
+        # compared to the directions in the wwwwnx file.
 
         key = ((3,3,3,3),('WWWWN',''))
         call_function = lambda amp: \
                         "      CALL WWWWNX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,%s,AMP(%d))" % \
-                        (HelasFortranModel.get_wminus(amp)[0].get('number'),
-                         HelasFortranModel.get_wplus(amp)[0].get('number'),
-                         HelasFortranModel.get_wminus(amp)[1].get('number'),
+                        (HelasFortranModel.get_wplus(amp)[0].get('number'),
+                         HelasFortranModel.get_wminus(amp)[0].get('number'),
                          HelasFortranModel.get_wplus(amp)[1].get('number'),
+                         HelasFortranModel.get_wminus(amp)[1].get('number'),
                          amp.get('couplings')[(0,0)],
                          amp.get('couplings')[(0,1)],
                          amp.get('number'))
         self.add_amplitude(key,call_function)
+
+        key = ((3,3,3,3),('WWWWN',''))
+        call_function = HelasFortranModel.wwww_jwww
+        self.add_wavefunction(key,call_function)
+
+        # WWVV vertices. Note that W+ and W- have switched places
+        # compared to the directions in the jwwwnx file.
+        
+        key = ((3,3,3,3),('WWVVN',''))
+        call_function = lambda amp: \
+                        "      CALL W3W3NX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,%s,AMP(%d))" % \
+                        (HelasFortranModel.get_wplus(amp)[0].get('number'),
+                         HelasFortranModel.get_gamma_z(amp)[0].get('number'),
+                         HelasFortranModel.get_wminus(amp)[0].get('number'),
+                         HelasFortranModel.get_gamma_z(amp)[1].get('number'),
+                         amp.get('couplings')[(0,0)],
+                         amp.get('couplings')[(0,1)],
+                         amp.get('number'))
+        self.add_amplitude(key,call_function)
+        key = ((3,3,3,3),('WWVVN',''))
+        call_function = HelasFortranModel.wwvvn_jw3w
+        self.add_wavefunction(key,call_function)
+
 
     # Definitions of slightly more complicated Helas calls, which
     # require if statements
 
     @staticmethod
     def wwv_jvv(wf):
+        """JVVXXX call for WWV-type vertices. Note that W+ and W-
+        have switched places compared to the directions in the jwwwnx
+        file."""
         wminus = HelasFortranModel.get_wminus(wf)
         wplus = HelasFortranModel.get_wplus(wf)
         gamma_z = HelasFortranModel.get_gamma_z(wf)
         call = "      CALL JVVXXX(W(1,%d),W(1,%d),%s,%s,%s,W(1,%d))"
         if not gamma_z:
             return call % \
-          (wminus[0].get('number'),
-           wplus[0].get('number'),
+          (wplus[0].get('number'),
+           wminus[0].get('number'),
            wf.get('couplings')[(0,0)],
            wf.get('mass'),
            wf.get('width'),
@@ -1429,6 +1536,71 @@ class HelasFortranModel(HelasModel):
           (gamma_z[0].get('number'),
            wminus[0].get('number'),
            wf.get('couplings')[(0,0)],
+           wf.get('mass'),
+           wf.get('width'),
+           wf.get('number'))
+
+    @staticmethod
+    def wwww_jwww(wf):
+        """JWWWNX call for WWWWN-type vertices."""
+        wminus = HelasFortranModel.get_wminus(wf)
+        wplus = HelasFortranModel.get_wplus(wf)
+        call = "      CALL JWWWNX(W(1,%d),W(1,%d),W(1,%d),%s,%s,%s,%s,W(1,%d))"
+        if len(wminus) == 2:
+            return call % \
+          (wminus[0].get('number'),
+           wplus[0].get('number'),
+           wminus[1].get('number'),
+           wf.get('couplings')[(0,0)],
+           wf.get('couplings')[(0,1)],
+           wf.get('mass'),
+           wf.get('width'),
+           wf.get('number'))
+        if len(wplus) == 2:
+            return call % \
+          (wplus[0].get('number'),
+           wminus[0].get('number'),
+           wplus[1].get('number'),
+           wf.get('couplings')[(0,0)],
+           wf.get('couplings')[(0,1)],
+           wf.get('mass'),
+           wf.get('width'),
+           wf.get('number'))
+
+    @staticmethod
+    def wwvvn_jw3w(wf):
+        """JW3WNX call for WWVVN-type vertices."""
+        wminus = HelasFortranModel.get_wminus(wf)
+        wplus = HelasFortranModel.get_wplus(wf)
+        gamma_z = HelasFortranModel.get_gamma_z(wf)
+        call = "      CALL JW3WNX(W(1,%d),W(1,%d),W(1,%d),%s,%s,%s,%s,W(1,%d))"
+        if len(gamma_z) == 1:
+            return call % \
+          (wminus[0].get('number'),
+           gamma_z[0].get('number'),
+           wplus[0].get('number'),
+           wf.get('couplings')[(0,0)],
+           wf.get('couplings')[(0,1)],
+           wf.get('mass'),
+           wf.get('width'),
+           wf.get('number'))
+        if not wminus:
+            return call % \
+          (gamma_z[0].get('number'),
+           wplus[0].get('number'),
+           gamma_z[1].get('number'),
+           wf.get('couplings')[(0,0)],
+           wf.get('couplings')[(0,1)],
+           wf.get('mass'),
+           wf.get('width'),
+           wf.get('number'))
+        if not wplus:
+            return call % \
+          (gamma_z[0].get('number'),
+           wminus[0].get('number'),
+           gamma_z[1].get('number'),
+           wf.get('couplings')[(0,0)],
+           wf.get('couplings')[(0,1)],
            wf.get('mass'),
            wf.get('width'),
            wf.get('number'))
@@ -1646,7 +1818,7 @@ class HelasFortranModel(HelasModel):
     
     @staticmethod
     def get_wminus(arg):
-        """Extracts W- from mothers"""
+        """Extracts outgoing W- from mothers"""
 
         if isinstance(arg, HelasWavefunction) or \
            isinstance(arg, HelasAmplitude):
@@ -1655,7 +1827,7 @@ class HelasFortranModel(HelasModel):
 
     @staticmethod
     def get_wplus(arg):
-        """Extracts W+ from mothers"""
+        """Extracts outgoing W+ from mothers"""
 
         if isinstance(arg, HelasWavefunction) or \
            isinstance(arg, HelasAmplitude):
@@ -1668,6 +1840,7 @@ class HelasFortranModel(HelasModel):
 
         if isinstance(arg, HelasWavefunction) or \
            isinstance(arg, HelasAmplitude):
-            return filter(lambda wf: wf.get('pdg_code') == 22 or \
+            return sorted(filter(lambda wf: wf.get('pdg_code') == 22 or \
                           wf.get('pdg_code') == 23,
-                          arg.get('mothers'))
+                          arg.get('mothers')),
+                          lambda wf1,wf2: wf2.get('pdg_code') - wf1.get('pdg_code'))
