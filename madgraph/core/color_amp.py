@@ -134,25 +134,21 @@ def clean_str(mystr):
                    r'\g<start>\g<index>',
                    mystr)
 
-def build_color_basis(list_col_fact):
-    """Takes a list of color factors and returns a dictionary with keys being
+def build_color_basis(col_fact, color_basis, index):
+    """Takes color factor and update a color_basis dictionary with keys being
     the different structures (now tuple of strings, not ColorString!) 
     and values being a list of pairs with first element the coefficient 
-    of the color factor and the second one its index."""
+    of the color factor and the second one its index given as an input."""
 
-    color_basis = {}
+    for col_str in col_fact:
+        coeff, remain = col_str.extract_coeff()
+        remain.sort()
+        remain = tuple(remain)
+        if remain in color_basis.keys():
+            color_basis[remain].append((coeff, index))
+        else:
+            color_basis[remain] = [(coeff, index)]
 
-    for index, col_fact in enumerate(list_col_fact):
-        for col_str in col_fact:
-            coeff, remain = col_str.extract_coeff()
-            remain.sort()
-            remain = tuple(remain)
-            if remain in color_basis.keys():
-                color_basis[remain].append((coeff, index))
-            else:
-                color_basis[remain] = [(coeff, index)]
-
-    return color_basis
 
 
 

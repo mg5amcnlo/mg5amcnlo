@@ -328,7 +328,7 @@ class ColorAmpTest(unittest.TestCase):
                                          'state':'initial'}))
 
         myleglist.extend([base_objects.Leg({'id':21,
-                                            'state':'final'})] * 2)
+                                            'state':'final'})] * 3)
 
         myprocess = base_objects.Process({'legs':myleglist,
                                         'model':self.mymodel})
@@ -342,10 +342,14 @@ class ColorAmpTest(unittest.TestCase):
         col_fact_list = [color_amp.colorize(diag, self.mymodel) \
                          for diag in myamplitude['diagrams']]
 
-        map(lambda x:x.simplify(), col_fact_list)
-
-        res = color_amp.build_color_basis(col_fact_list)
-        for k, v in res.items():
+        color_basis = {}
+        for index, diag in enumerate(myamplitude['diagrams']):
+            col_fact = color_amp.colorize(diag, self.mymodel)
+            col_fact.simplify()
+            color_amp.build_color_basis(col_fact,
+                                        color_basis,
+                                        index)
+        for k, v in color_basis.items():
             print k, v
 
     def test_build_basis_uux_ddxg(self):
@@ -377,8 +381,12 @@ class ColorAmpTest(unittest.TestCase):
         col_fact_list = [color_amp.colorize(diag, self.mymodel) \
                          for diag in myamplitude['diagrams']]
 
-        map(lambda x:x.simplify(), col_fact_list)
-
-        res = color_amp.build_color_basis(col_fact_list)
-        for k, v in res.items():
+        color_basis = {}
+        for index, diag in enumerate(myamplitude['diagrams']):
+            col_fact = color_amp.colorize(diag, self.mymodel)
+            col_fact.simplify()
+            color_amp.build_color_basis(col_fact,
+                                        color_basis,
+                                        index)
+        for k, v in color_basis.items():
             print k, v
