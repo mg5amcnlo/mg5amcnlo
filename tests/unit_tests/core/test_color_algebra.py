@@ -388,6 +388,16 @@ class ColorStringTest(unittest.TestCase):
                          color.ColorString(['T(3,101,4,102,103)',
                                               'T(5,101,6,104,105)']))
 
+    def test_complex_conjugate(self):
+        """Test the complex conjugation of a color string"""
+
+        my_color_string = color.ColorString(['I', 'T(3,4,102,103)',
+                                              'Tr(1,2,3)'])
+
+        self.assertEqual(my_color_string.complex_conjugate(),
+                         color.ColorString(['-1', 'I',
+                                            'T(4,3,103,102)', 'Tr(1,3,2)']))
+
 class ColorFactorTest(unittest.TestCase):
     """Test class for code parts related to ColorFactor objects"""
 

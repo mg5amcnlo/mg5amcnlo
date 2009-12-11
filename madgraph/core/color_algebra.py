@@ -123,6 +123,13 @@ re_T_product = re.compile(r"""^T\((?P<a>(-?\d+,)*)
                                 (?P<d>(-?\d+,)*)
                                 (?P<id3>-?\d+),(?P<id4>-?\d+)\)$""", re.VERBOSE)
 
+# Match T(...,i1,i2), ... being indices
+re_T = re.compile(r"""^T\((?P<indices>(-?\d+,)*)
+                            (?P<id1>-?\d+),(?P<id2>-?\d+)\)$""", re.VERBOSE)
+
+# Match Tr(...), ... being indices
+re_Tr = re.compile(r"^Tr\((?P<indices>(-?\d+,)*-?\d+)\)$")
+
 #===============================================================================
 # ColorString
 #===============================================================================
@@ -400,7 +407,7 @@ class ColorString(list):
 
     def expand_trace_internal_sum(self):
         """Expand the first encountered term with an internal sum in a trace
-        using Tr(a,x,b,x,c) = 1/2(T(a,c)Tr(b)-1/Nc T(a,b,c)) and 
+        using Tr(a,x,b,x,c) = 1/2(Tr(a,c)Tr(b)-1/Nc Tr(a,b,c)) and 
         returns the corresponding list of ColorString objects. 
         This method will NOT modify the current color string. If nothing
         to expand is found, returns an empty list."""
@@ -643,6 +650,40 @@ class ColorString(list):
             self[0] = "%i" % numerator
         else:
             del self[0]
+
+    def complex_conjugate(self):
+        """Returns a new color string, complex conjugate of self."""
+
+        ret_str = ColorString()
+
+        for col_obj in self:
+
+            m = re_Tr.match(col_obj)
+            if m:
+                list_index = m.group('indices').split(',')
+                list_index.reverse()
+                ret_str.append('Tr(%s)' % self.__clean_commas(','.join(list_index)))
+                continue
+
+            m = re_T.match(col_obj)
+            if m:
+                list_index = self.__clean_commas(m.group('indices')).split(',')
+                list_index.reverse()
+                Tr_arg = self.__clean_commas(','.join(list_index) + ',' + \
+                                                 m.group('id2') + ',' + \
+                                                 m.group('id1'))
+                ret_str.append('T(%s)' % Tr_arg)
+                continue
+
+            if col_obj == 'I':
+                ret_str.append('-1')
+                ret_str.append('I')
+                continue
+
+        ret_str.simplify()
+
+        return ret_str
+
 #===============================================================================
 # ColorFactor
 #===============================================================================
@@ -747,3 +788,13 @@ class ColorFactor(list):
             # Iterate until the result does not change anymore
             if self == original:
                 break
+
+    def fix_Nc(self, Nc=3):
+        """Replace all Nc factors by a given value (3 by default) and simplify
+        the whole color factor. This affects self!"""
+
+        for col_str in self:
+            for index, col_obj in enumerate(col_str):
+                col_str[index] = col_obj.replace('Nc', '3')
+
+        self.simplify()

@@ -239,33 +239,6 @@ class ColorAmpTest(unittest.TestCase):
         self.assertEqual(col_fact, goal_fact)
         goal_fact.simplify()
 
-    def test_colorize_gg_gggg(self):
-        """Test the colorize function for gg > gggg"""
-
-        myleglist = base_objects.LegList()
-
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'initial'}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'initial'}))
-
-        myleglist.extend([base_objects.Leg({'id':21,
-                                            'state':'final'})] * 4)
-
-        myprocess = base_objects.Process({'legs':myleglist,
-                                        'model':self.mymodel})
-
-        myamplitude = diagram_generation.Amplitude()
-
-        myamplitude.set('process', myprocess)
-
-        myamplitude.generate_diagrams()
-
-#        for diag in myamplitude['diagrams']:
-#            col_fact = color_amp.colorize(diag, self.mymodel)
-#            col_fact.simplify()
-#            print col_fact
-
     def test_colorize_uux_ddxg(self):
         """Test the colorize function for uu~ > dd~g"""
 
@@ -328,7 +301,7 @@ class ColorAmpTest(unittest.TestCase):
                                          'state':'initial'}))
 
         myleglist.extend([base_objects.Leg({'id':21,
-                                            'state':'final'})] * 3)
+                                            'state':'final'})] * 2)
 
         myprocess = base_objects.Process({'legs':myleglist,
                                         'model':self.mymodel})
@@ -349,8 +322,8 @@ class ColorAmpTest(unittest.TestCase):
             color_amp.build_color_basis(col_fact,
                                         color_basis,
                                         index)
-        for k, v in color_basis.items():
-            print k, v
+#        for k, v in color_basis.items():
+#            print k, v
 
     def test_build_basis_uux_ddxg(self):
         """Test the build_basis function for uu~ > dd~g"""
@@ -388,5 +361,5 @@ class ColorAmpTest(unittest.TestCase):
             color_amp.build_color_basis(col_fact,
                                         color_basis,
                                         index)
-        for k, v in color_basis.items():
-            print k, v
+#        for k, v in color_basis.items():
+#            print k, v
