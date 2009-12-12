@@ -1744,6 +1744,27 @@ class HelasFortranModel(HelasModel):
         else:
             self.add_amplitude(argument.get_call_key(),call_function)
             
+    def get_JAMP_line(self, matrix_element):
+        """Return the JAMP(1) = sum(fermionfactor * AMP(i)) line"""
+
+        if not isinstance(matrix_element, HelasMatrixElement):
+            raise self.PhysicsObjectError, \
+                  "%s not valid argument for get_matrix_element_calls" % \
+                  repr(matrix_element)
+
+        res = "      JAMP(1)="
+        # Add all amplitudes with correct fermion factor
+        for diagram in matrix_element.get('diagrams'):
+            res = res + "%sAMP(%d)" % (sign(diagram.get('fermionfactor')),
+                                         diagram.get('amplitude').get('number'))
+        # Break line in appropriate places
+        flength = 0
+        while len(res) - flength > 71:
+            res = res[:(flength + 71)] + "\n     &  " + res[(flength + 71):]
+            flength = flength + 71
+        
+        return res
+
     # Static helper functions
 
     @staticmethod
@@ -1808,4 +1829,16 @@ class HelasFortranModel(HelasModel):
                           lambda l1, l2: \
                           HelasFortranModel.sort_amp[l2] - \
                           HelasFortranModel.sort_amp[l1])
+    
+#===============================================================================
+# Global helper methods
+#===============================================================================
+
+def sign(number):
+    """Returns '+' if positive, '-' if negative"""
+
+    if number > 0:
+        return '+'
+    if number < 0:
+        return '-'
     

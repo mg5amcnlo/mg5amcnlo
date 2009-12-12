@@ -2437,8 +2437,16 @@ class HelasFortranModelTest(HelasModelTest):
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
 
-        # I have checked that the resulting Helas calls
-        # below give identical result as MG4, apart from sign! (AMP 6,7)
+        #print myamplitude.get('process').nice_string()
+        #print "\n".join(helas_objects.HelasFortranModel().\
+        #                get_matrix_element_calls(matrix_element))
+        #print helas_objects.HelasFortranModel().get_JAMP_line(matrix_element)
+            
+
+
+        # I have checked that the resulting Helas calls below give
+        # identical result as MG4 (when fermionfactors are taken into
+        # account)
         self.assertEqual("\n".join(helas_objects.HelasFortranModel().\
                                    get_matrix_element_calls(matrix_element)),
                          """      CALL OXXXXX(P(0,1),me,NHEL(1),-1*IC(1),W(1,1))
@@ -3288,7 +3296,7 @@ class HelasFortranModelTest(HelasModelTest):
         #    for wf in diagram.get('wavefunctions'):
         #        print wf.get_call_key()
         #    print diagram.get('amplitude').get_call_key()
-            
+
         # I have checked that the resulting Helas calls below give
         # identical result as MG4.
         self.assertEqual("\n".join(helas_objects.HelasFortranModel().\
