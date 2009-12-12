@@ -159,10 +159,34 @@ def read_interactions_v4(fsock, ref_part_list):
                 # Those will have to be replaced by a proper guess!
 
                 myinter.set('color', ['guess'])
-                myinter.set('lorentz', ['guess'])
+
+                # Set the Lorentz structure. Default for 3-particle
+                # vertices is empty string, for 4-particle pair of
+                # empty strings
+                if len(part_list) == 3:
+                    myinter.set('lorentz', [''])
+                else:
+                    myinter.set('lorentz', ['', ''])                    
+                pdg_codes = sorted([part.get_pdg_code() for part in part_list])
+                spins = sorted([part.get('spin') for part in part_list])
+                # WWWW and WWVV
+                if pdg_codes ==  [-24,-24,24,24]:
+                    myinter.set('lorentz', ['WWWW', ''])
+                elif spins == [3,3,3,3] and \
+                             24 in pdg_codes and -24 in pdg_codes: 
+                    myinter.set('lorentz', ['WWVV', ''])
+                # If extra flag, add this to Lorentz    
+                if len(values) > 3 * len(part_list) - 4:
+                    myinter.get('lorentz')[0] =\
+                                              myinter.get('lorentz')[0]\
+                                              + values[3 * len(part_list) - 4].upper()
 
                 # Use the other strings to fill variable names and tags
-                myinter.set('couplings', {(0, 0):values[len(part_list)]})
+                if len(part_list) == 3:
+                    myinter.set('couplings', {(0, 0):values[len(part_list)]})
+                else:
+                    myinter.set('couplings', {(0, 0):values[len(part_list)],
+                                              (0, 1):values[len(part_list) + 1]})
 
                 order_list = values[2 * len(part_list) - 2: \
                                    3 * len(part_list) - 4]
@@ -175,6 +199,7 @@ def read_interactions_v4(fsock, ref_part_list):
                     return ret_dict
 
                 myinter.set('orders', count_duplicates_in_list(order_list))
+
                 myinter.set('id', len(myinterlist) + 1)
 
                 myinterlist.append(myinter)

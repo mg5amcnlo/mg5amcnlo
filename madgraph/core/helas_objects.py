@@ -1684,7 +1684,13 @@ class HelasFortranModel(HelasModel):
             call = call + "W(1,%d)," * len(argument.get('mothers'))
             # Couplings
             call = call + "%s,"
-
+            # Second coupling if 4-vertex
+            if isinstance(argument, HelasWavefunction) and \
+               len(argument.get('mothers')) > 2 or \
+               isinstance(argument, HelasWavefunction) and \
+               len(argument.get('mothers')) > 3:
+                call = call + "%s,"
+                   
             if isinstance(argument, HelasWavefunction):
                 # Mass and width
                 call = call + "%s,%s,"
@@ -1710,6 +1716,7 @@ class HelasFortranModel(HelasModel):
                                      HelasFortranModel.sorted_mothers(wf)[1].get('number'),
                                      HelasFortranModel.sorted_mothers(wf)[2].get('number'),
                                      wf.get_with_flow('couplings')[(0,0)],
+                                     wf.get_with_flow('couplings')[(0,1)],
                                      wf.get('mass'),
                                      wf.get('width'),
                                      wf.get('number'))
@@ -1729,6 +1736,7 @@ class HelasFortranModel(HelasModel):
                                      HelasFortranModel.sorted_mothers(amp)[2].get('number'),
                                      HelasFortranModel.sorted_mothers(amp)[3].get('number'),
                                      amp.get('couplings')[(0,0)],
+                                     wf.get_with_flow('couplings')[(0,1)],
                                      amp.get('number'))
 
         if isinstance(argument,HelasWavefunction):
@@ -1801,13 +1809,3 @@ class HelasFortranModel(HelasModel):
                           HelasFortranModel.sort_amp[l2] - \
                           HelasFortranModel.sort_amp[l1])
     
-    @staticmethod
-    def sort_mothers(arg):
-        """Sort mothers according to cyclic permutations of
-        interaction pdg codes"""
-
-        if isinstance(arg, HelasWavefunction) or \
-           isinstance(arg, HelasAmplitude):
-            return filter(lambda wf: wf.get('pdg_code') == -24,
-                          arg.get('mothers'))
-

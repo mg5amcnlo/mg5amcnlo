@@ -2002,10 +2002,10 @@ class HelasFortranModelTest(HelasModelTest):
                                            'state':'initial'}))
         myleglist.append(base_objects.Leg({'id':21,
                                            'number': 2,
-                                         'state':'initial'}))
+                                           'state':'initial'}))
         myleglist.append(base_objects.Leg({'id': 8000002,
                                            'number': 3,
-                                         'state':'initial'}))
+                                           'state':'initial'}))
 
         wfs = helas_objects.HelasWavefunctionList(\
             [ helas_objects.HelasWavefunction(leg, 5,
