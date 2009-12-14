@@ -634,24 +634,23 @@ class HelasWavefunction(base_objects.PhysicsObject):
             return False
 
         # Check relevant directly defined properties
-        if self['spin'] != other['spin'] or \
-           self['color'] != other['color'] or \
-           self['mass'] != other['mass'] or \
-           self['width'] != other['width'] or \
+        if self['number_external'] != other['number_external'] or \
+           self['spin'] != other['spin'] or \
            self['is_part'] != other['is_part'] or \
            self['self_antipart'] != other['self_antipart'] or \
+           self['fermionflow'] != other['fermionflow'] or \
+           self['mass'] != other['mass'] or \
+           self['width'] != other['width'] or \
+           self['color'] != other['color'] or \
            self['inter_color'] != other['inter_color'] or \
            self['lorentz'] != other['lorentz'] or \
-           self['number_external'] != other['number_external'] or \
            self['couplings'] != other['couplings'] or \
-           self['fermionflow'] != other['fermionflow'] or \
            self['state'] != other['state']:
             return False
 
         # Check that mothers have the same numbers (only relevant info)
         return [ mother.get('number') for mother in self['mothers'] ] == \
                [ mother.get('number') for mother in other['mothers'] ]
-    
 
     def __ne__(self, other):
         """Overloading the nonequality operator, to make comparison easy"""
@@ -705,7 +704,7 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                                  self)
         if my_state in ['incoming', 'outgoing'] and len(fermion_mothers) > 1\
            or len(fermion_mothers) > 2:
-            raise self.PhysicsObjectError, \
+            raise self.PhysicsObjectListError, \
                       """Multifermion vertices not implemented.
                       Please decompose your vertex into 2-fermion
                       vertices to get fermion flow correct."""

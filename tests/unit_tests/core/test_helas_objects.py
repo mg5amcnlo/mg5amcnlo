@@ -886,7 +886,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         e- e+ > e- e+ e- e+
         Time estimates for e+e->e+e-e+e-e+e- (1728 diagrams):
         Diagram generation: 18 s
-        Helas call generation (with optimization): 79 s
+        Helas call generation (with optimization): 58 s
         Helas call generation (without optimization): 23 s
         Fermion factor calculation: 0 s
         """
