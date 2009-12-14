@@ -525,7 +525,8 @@ class HelasMatrixElementTest(unittest.TestCase):
                   'fermionfactor': 1}
         
         self.mydiagrams = helas_objects.HelasDiagramList([helas_objects.HelasDiagram(mydict)] * 4)
-        self.mydict = {'diagrams': self.mydiagrams}
+        self.mydict = {'processes': base_objects.ProcessList(),
+                       'diagrams': self.mydiagrams}
         self.mymatrixelement = helas_objects.HelasMatrixElement(self.mydict)
 
         # Set up model
@@ -770,10 +771,39 @@ class HelasMatrixElementTest(unittest.TestCase):
         """Test matrix_element object string representation."""
 
         goal = "{\n"
+        goal = goal + "    \'processes\': [],\n"
         goal = goal + "    \'diagrams\': " + repr(self.mydiagrams) + "\n}"
 
         self.assertEqual(goal, str(self.mymatrixelement))
 
+
+    def test_process_init(self):
+        """Testing the process initialization using the process
+        e- e+ > e- e+
+        """
+
+        # Test e+ e- > e+ e-
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':'final'}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude)
+        
+        self.assertEqual(matrix_element.get('processes')[0],
+                         myamplitude.get('process'))
 
     def test_fermionfactor_emep_emep(self):
         """Testing the fermion factor using the process  e- e+ > e- e+

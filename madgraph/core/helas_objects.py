@@ -1109,11 +1109,16 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     def default_setup(self):
         """Default values for all properties"""
 
+        self['processes'] = base_objects.ProcessList()
         self['diagrams'] = HelasDiagramList()
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
 
+        if name == 'processes':
+            if not isinstance(value, base_objects.ProcessList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid ProcessList object" % str(value)
         if name == 'diagrams':
             if not isinstance(value, HelasDiagramList):
                 raise self.PhysicsObjectError, \
@@ -1123,7 +1128,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['diagrams']
+        return ['processes', 'diagrams']
     
     # Customized constructor
     def __init__(self, *arguments):
@@ -1140,6 +1145,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 if len(arguments) > 1 and isinstance(arguments[1],int):
                     optimization = arguments[1]
 
+                self.get('processes').append(amplitude.get('process'))
                 self.generate_helas_diagrams(amplitude, optimization)
                 self.calculate_fermionfactors(amplitude)
             else:
