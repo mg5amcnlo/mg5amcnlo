@@ -741,10 +741,11 @@ class ColorFactor(list):
                     self[i1].add(col_str2)
                     del self[i1 + i2 + 1][:]
 
-    def simplify(self):
+    def simplify(self, simplify_T_products=True):
         """Simplify the current ColorFactor. First apply simplification rules
         on all ColorStrings, then expand first composite terms and apply the
-        golden rule. Iterate until the result does not change anymore"""
+        golden rule. Iterate until the result does not change anymore. If
+        simplify_T_products is False, don't simplify T products."""
 
         while True:
 
@@ -766,7 +767,7 @@ class ColorFactor(list):
                     result = col_str.expand_trace_product()
                 if not result:
                     result = col_str.expand_trace_T_product()
-                if not result:
+                if not result and simplify_T_products:
                     result = col_str.expand_T_product()
                 if result:
                     del self[index][:]

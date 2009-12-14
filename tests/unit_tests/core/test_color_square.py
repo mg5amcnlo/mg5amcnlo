@@ -136,6 +136,7 @@ class ColorSquareTest(unittest.TestCase):
         self.mymodel.set('particles', self.mypartlist)
         self.mymodel.set('interactions', self.myinterlist)
 
+
     def test_square_basis_uux_ddxg(self):
         """Test the build_basis function for uu~ > dd~g"""
 
@@ -152,6 +153,7 @@ class ColorSquareTest(unittest.TestCase):
                                          'state':'final'}))
         myleglist.append(base_objects.Leg({'id':21,
                                          'state':'final'}))
+
 
         myprocess = base_objects.Process({'legs':myleglist,
                                         'model':self.mymodel})
@@ -172,11 +174,13 @@ class ColorSquareTest(unittest.TestCase):
             color_amp.build_color_basis(col_fact,
                                         color_basis,
                                         index)
-        color_mat = color_square.build_color_matrix(color_basis, color_basis)
+        color = color_square.build_color_matrix(color_basis, color_basis)
 
-        for line in color_mat:
-            map(lambda x:x.fix_Nc(), line)
-            print line
+#        for line in color[0]:
+#            map(lambda x:x.fix_Nc(), line)
+#            print line
+#
+#        print color[1]
 
     def test_square_basis_gg_gg(self):
         """Test the build_basis function for gg >gg"""
@@ -210,8 +214,13 @@ class ColorSquareTest(unittest.TestCase):
             color_amp.build_color_basis(col_fact,
                                         color_basis,
                                         index)
-        color_mat = color_square.build_color_matrix(color_basis, color_basis)
 
-        for line in color_mat:
-            map(lambda x:x.fix_Nc(), line)
-            print line
+        color = color_square.build_color_matrix(color_basis,
+                                                    color_basis,
+                                                    equal=False)
+
+#        for line in color[0]:
+#            map(lambda x:x.fix_Nc(), line)
+#            print line
+#
+#        print color[1]

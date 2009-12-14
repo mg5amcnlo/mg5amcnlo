@@ -85,6 +85,38 @@ class ColorAmpTest(unittest.TestCase):
         antid = copy.copy(self.mypartlist[2])
         antid.set('is_part', False)
 
+        # A photon
+        self.mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        # A Higgs
+        self.mypartlist.append(base_objects.Particle({'name':'h',
+                      'antiname':'h',
+                      'spin':1,
+                      'color':1,
+                      'mass':'mh',
+                      'width':'wh',
+                      'texname':'h',
+                      'antitexname':'h',
+                      'line':'dashed',
+                      'charge':0.,
+                      'pdg_code':25,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
         # 3 gluon vertiex
         self.myinterlist.append(base_objects.Interaction({
                       'id': 1,
@@ -131,6 +163,28 @@ class ColorAmpTest(unittest.TestCase):
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
+
+        self.myinterlist.append(base_objects.Interaction({
+                      'id': 5,
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[1], \
+                                             antiu, \
+                                             self.mypartlist[3]]),
+                      'color': [['T(0,1)']],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        self.myinterlist.append(base_objects.Interaction({
+                      'id': 6,
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[0],
+                                             self.mypartlist[0],
+                                             self.mypartlist[4]]),
+                      'color': [['2', 'Tr(0,1)']],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GGH'},
+                      'orders':{'HIGGS':1}}))
 
         self.mymodel.set('particles', self.mypartlist)
         self.mymodel.set('interactions', self.myinterlist)
@@ -188,56 +242,56 @@ class ColorAmpTest(unittest.TestCase):
         self.assertEqual(col_fact, goal_fact)
 
 
-    def test_colorize_uu_ggg(self):
-        """Test the colorize function for uu~ > ggg"""
-
-        myleglist = base_objects.LegList()
-
-        myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':'initial'}))
-        myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
-
-        myleglist.extend([base_objects.Leg({'id':21,
-                                            'state':'final'})] * 3)
-
-        myprocess = base_objects.Process({'legs':myleglist,
-                                        'model':self.mymodel})
-
-        myamplitude = diagram_generation.Amplitude()
-
-        myamplitude.set('process', myprocess)
-
-        myamplitude.generate_diagrams()
-
-        # First diagram with two 3-gluon vertices
-        col_fact = color_amp.colorize(myamplitude['diagrams'][0],
-                                     self.mymodel)
-
-        goal_fact = color_algebra.ColorFactor([\
-                            color_algebra.ColorString(['T(-100,1,2)',
-                                                        'f(-101,4,3)',
-                                                        'f(5,-101,-100)'])])
-
-        self.assertEqual(col_fact, goal_fact)
-
-        # Diagram with one 4-gluon vertex
-        col_fact = color_amp.colorize(myamplitude['diagrams'][3],
-                                     self.mymodel)
-
-        goal_fact = color_algebra.ColorFactor([\
-                            color_algebra.ColorString(['T(-100,1,2)',
-                                                       'f(-1,-100,4)',
-                                                       'f(-1,5,3)']),
-                            color_algebra.ColorString(['T(-100,1,2)',
-                                                       'f(-1,-100,3)',
-                                                       'f(-1,5,4)']),
-                            color_algebra.ColorString(['T(-100,1,2)',
-                                                       'f(-1,-100,5)',
-                                                       'f(-1,4,3)'])])
-
-        self.assertEqual(col_fact, goal_fact)
-        goal_fact.simplify()
+#    def test_colorize_uu_ggg(self):
+#        """Test the colorize function for uu~ > ggg"""
+#
+#        myleglist = base_objects.LegList()
+#
+#        myleglist.append(base_objects.Leg({'id':-2,
+#                                         'state':'initial'}))
+#        myleglist.append(base_objects.Leg({'id':2,
+#                                         'state':'initial'}))
+#
+#        myleglist.extend([base_objects.Leg({'id':21,
+#                                            'state':'final'})] * 3)
+#
+#        myprocess = base_objects.Process({'legs':myleglist,
+#                                        'model':self.mymodel})
+#
+#        myamplitude = diagram_generation.Amplitude()
+#
+#        myamplitude.set('process', myprocess)
+#
+#        myamplitude.generate_diagrams()
+#
+#        # First diagram with two 3-gluon vertices
+#        col_fact = color_amp.colorize(myamplitude['diagrams'][0],
+#                                     self.mymodel)
+#
+#        goal_fact = color_algebra.ColorFactor([\
+#                            color_algebra.ColorString(['T(-100,1,2)',
+#                                                        'f(-101,4,3)',
+#                                                        'f(5,-101,-100)'])])
+#
+#        self.assertEqual(col_fact, goal_fact)
+#
+#        # Diagram with one 4-gluon vertex
+#        col_fact = color_amp.colorize(myamplitude['diagrams'][3],
+#                                     self.mymodel)
+#
+#        goal_fact = color_algebra.ColorFactor([\
+#                            color_algebra.ColorString(['T(-100,1,2)',
+#                                                       'f(-1,-100,4)',
+#                                                       'f(-1,5,3)']),
+#                            color_algebra.ColorString(['T(-100,1,2)',
+#                                                       'f(-1,-100,3)',
+#                                                       'f(-1,5,4)']),
+#                            color_algebra.ColorString(['T(-100,1,2)',
+#                                                       'f(-1,-100,5)',
+#                                                       'f(-1,4,3)'])])
+#
+#        self.assertEqual(col_fact, goal_fact)
+#        goal_fact.simplify()
 
     def test_colorize_uux_ddxg(self):
         """Test the colorize function for uu~ > dd~g"""
@@ -318,7 +372,6 @@ class ColorAmpTest(unittest.TestCase):
         color_basis = {}
         for index, diag in enumerate(myamplitude['diagrams']):
             col_fact = color_amp.colorize(diag, self.mymodel)
-            col_fact.simplify()
             color_amp.build_color_basis(col_fact,
                                         color_basis,
                                         index)
@@ -357,9 +410,53 @@ class ColorAmpTest(unittest.TestCase):
         color_basis = {}
         for index, diag in enumerate(myamplitude['diagrams']):
             col_fact = color_amp.colorize(diag, self.mymodel)
-            col_fact.simplify()
             color_amp.build_color_basis(col_fact,
                                         color_basis,
                                         index)
 #        for k, v in color_basis.items():
 #            print k, v
+
+    def test_build_basis_uux_ddxga(self):
+        """Test the build_basis function for uu~ > dd~gha"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':'initial'}))
+
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':25,
+                                         'state':'final'}))
+
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+
+
+        myprocess = base_objects.Process({'legs':myleglist,
+                                        'model':self.mymodel})
+
+        myamplitude = diagram_generation.Amplitude()
+
+        myamplitude.set('process', myprocess)
+
+        myamplitude.generate_diagrams()
+
+        col_fact_list = [color_amp.colorize(diag, self.mymodel) \
+                         for diag in myamplitude['diagrams']]
+
+        color_basis = {}
+        for index, diag in enumerate(myamplitude['diagrams']):
+            col_fact = color_amp.colorize(diag, self.mymodel)
+            color_amp.build_color_basis(col_fact,
+                                        color_basis,
+                                        index)
+#        for k, v in color_basis.items():
+#            print k, v
+

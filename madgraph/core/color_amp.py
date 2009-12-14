@@ -140,6 +140,7 @@ def build_color_basis(col_fact, color_basis, index):
     and values being a list of pairs with first element the coefficient 
     of the color factor and the second one its index given as an input."""
 
+    col_fact.simplify(simplify_T_products=False)
     for col_str in col_fact:
         coeff, remain = col_str.extract_coeff()
         remain.sort()
