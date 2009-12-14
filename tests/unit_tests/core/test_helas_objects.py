@@ -884,6 +884,11 @@ class HelasMatrixElementTest(unittest.TestCase):
     def test_fermionfactor_emep_emepemep(self):
         """Testing the fermion factor using the process
         e- e+ > e- e+ e- e+
+        Time estimates for e+e->e+e-e+e-e+e- (1728 diagrams):
+        Diagram generation: 18 s
+        Helas call generation (with optimization): 79 s
+        Helas call generation (without optimization): 23 s
+        Fermion factor calculation: 0 s
         """
 
         myleglist = base_objects.LegList()
@@ -906,14 +911,18 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
+        #print myamplitude.get('process').nice_string()
+
         myamplitude.get('diagrams')
+
+        #print "diagrams: ", myamplitude.get('diagrams').nice_string()
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude)
 
-        #print myamplitude.get('process').nice_string()
-        #print "diagrams: ", myamplitude.get('diagrams').nice_string()
         #print "\n".join(helas_objects.HelasFortranModel().\
         #      get_matrix_element_calls(matrix_element))
+        #print helas_objects.HelasFortranModel().\
+        #      get_JAMP_line(matrix_element)
         
         diagrams = matrix_element.get('diagrams')
 

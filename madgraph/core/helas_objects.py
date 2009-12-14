@@ -1206,7 +1206,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # Single out last vertex, since this will give amplitude
             lastvx = vertices.pop()
 
-            # Check if last vertex is indentity vertex
+            # Check if last vertex is identity vertex
             if lastvx.get('id') == 0:
                 # Need to "glue together" last and next-to-last
                 # vertext, by replacing the (incoming) last leg of the
@@ -1517,62 +1517,6 @@ class HelasFortranModel(HelasModel):
                          amp.get('number'))
         self.add_amplitude(key,call_function)
 
-        # W boson 4-vertices. Note that W+ and W- have switched places
-        # compared to the directions in the wwwwnx file.
-
-        key = ((3,3,3,3),('WWWWN',''))
-        call_function = lambda amp: \
-                        "      CALL WWWWNX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,%s,AMP(%d))" % \
-                        (HelasFortranModel.sorted_mothers(amp)[0].get('number'),
-                         HelasFortranModel.sorted_mothers(amp)[1].get('number'),
-                         HelasFortranModel.sorted_mothers(amp)[2].get('number'),
-                         HelasFortranModel.sorted_mothers(amp)[3].get('number'),
-                         amp.get('couplings')[(0,0)],
-                         amp.get('couplings')[(0,1)],
-                         amp.get('number'))
-        self.add_amplitude(key,call_function)
-
-        key = ((3,3,3,3),('WWWWN',''))
-        call_function = lambda wf: \
-                        "      CALL JWWWNX(W(1,%d),W(1,%d),W(1,%d),%s,%s,%s,%s,W(1,%d))" % \
-                        (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
-                         HelasFortranModel.sorted_mothers(wf)[1].get('number'),
-                         HelasFortranModel.sorted_mothers(wf)[2].get('number'),
-                         wf.get('couplings')[(0,0)],
-                         wf.get('couplings')[(0,1)],
-                         wf.get('mass'),
-                         wf.get('width'),
-                         wf.get('number'))
-        self.add_wavefunction(key,call_function)
-
-        # WWVV vertices. Note that W+ and W- have switched places
-        # compared to the directions in the jwwwnx file.
-        
-        key = ((3,3,3,3),('WWVVN',''))
-        call_function = lambda amp: \
-                        "      CALL W3W3NX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,%s,AMP(%d))" % \
-                        (HelasFortranModel.sorted_mothers(amp)[0].get('number'),
-                         HelasFortranModel.sorted_mothers(amp)[1].get('number'),
-                         HelasFortranModel.sorted_mothers(amp)[2].get('number'),
-                         HelasFortranModel.sorted_mothers(amp)[3].get('number'),
-                         amp.get('couplings')[(0,0)],
-                         amp.get('couplings')[(0,1)],
-                         amp.get('number'))
-        self.add_amplitude(key,call_function)
-        key = ((3,3,3,3),('WWVVN',''))
-        call_function = lambda wf: \
-                        "      CALL JW3WNX(W(1,%d),W(1,%d),W(1,%d),%s,%s,%s,%s,W(1,%d))" % \
-                        (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
-                         HelasFortranModel.sorted_mothers(wf)[1].get('number'),
-                         HelasFortranModel.sorted_mothers(wf)[2].get('number'),
-                         wf.get('couplings')[(0,0)],
-                         wf.get('couplings')[(0,1)],
-                         wf.get('mass'),
-                         wf.get('width'),
-                         wf.get('number'))
-        self.add_wavefunction(key,call_function)
-
-
     def get_wavefunction_call(self, wavefunction):
         """Return the function for writing the wavefunction
         corresponding to the key"""
@@ -1668,13 +1612,22 @@ class HelasFortranModel(HelasModel):
 
             mother_letters = HelasFortranModel.sorted_letters(argument)
 
-            call = call +''.join(mother_letters)
+            # If Lorentz structure is given, by default add this
+            # to call name
+            addition = argument.get('lorentz')[0]
 
-            # Add C and other addition (for HEFT etc) if needed
-            if argument.get('lorentz')[0]:
-                # If Lorentz structure is given, by default add this
-                # to call name
-                call = call + argument.get('lorentz')[0]
+            # Take care of special case: WWWW or WWVV calls
+            if len(argument.get('lorentz')[0]) > 3 and \
+                   argument.get('lorentz')[0][:2] == "WW":
+                if argument.get('lorentz')[0][:4] == "WWWW":
+                    mother_letters = "WWWW"[:len(mother_letters)]
+                if argument.get('lorentz')[0][:4] == "WWVV":
+                    mother_letters = "W3W3"[:len(mother_letters)]
+                addition = argument.get('lorentz')[0][4:]
+
+            call = call + mother_letters
+            call = call + addition
+
             # Check if we need to append a charge conjugation flag
             if argument.needs_hermitian_conjugate():
                 call = call + 'C'
@@ -1689,14 +1642,8 @@ class HelasFortranModel(HelasModel):
             # Wavefunctions
             call = call + "W(1,%d)," * len(argument.get('mothers'))
             # Couplings
-            call = call + "%s,"
-            # Second coupling if 4-vertex
-            if isinstance(argument, HelasWavefunction) and \
-               len(argument.get('mothers')) > 2 or \
-               isinstance(argument, HelasWavefunction) and \
-               len(argument.get('mothers')) > 3:
-                call = call + "%s,"
-                   
+            call = call + "%s," * min(2,len(argument.get('couplings').keys()))
+
             if isinstance(argument, HelasWavefunction):
                 # Mass and width
                 call = call + "%s,%s,"
@@ -1708,7 +1655,7 @@ class HelasFortranModel(HelasModel):
 
             if isinstance(argument,HelasWavefunction):
                 # Create call for wavefunction
-                if len(argument.get('mothers')) == 2:
+                if len(argument.get('couplings').keys()) == 1:
                     call_function = lambda wf: call % \
                                     (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
                                      HelasFortranModel.sorted_mothers(wf)[1].get('number'),
@@ -1728,7 +1675,7 @@ class HelasFortranModel(HelasModel):
                                      wf.get('number'))
             else:
                 # Create call for amplitude
-                if len(argument.get('mothers')) == 3:
+                if len(argument.get('couplings').keys()) == 1:
                     call_function = lambda amp: call % \
                                     (HelasFortranModel.sorted_mothers(amp)[0].get('number'),
                                      HelasFortranModel.sorted_mothers(amp)[1].get('number'),
@@ -1742,9 +1689,10 @@ class HelasFortranModel(HelasModel):
                                      HelasFortranModel.sorted_mothers(amp)[2].get('number'),
                                      HelasFortranModel.sorted_mothers(amp)[3].get('number'),
                                      amp.get('couplings')[(0,0)],
-                                     wf.get_with_flow('couplings')[(0,1)],
+                                     amp.get('couplings')[(0,1)],
                                      amp.get('number'))
 
+        # Add the constructed function to wavefunction or amplitude dictionary
         if isinstance(argument,HelasWavefunction):
             self.add_wavefunction(argument.get_call_key(),call_function)
         else:
@@ -1823,18 +1771,18 @@ class HelasFortranModel(HelasModel):
         the order of letters in the Fortran Helas calls"""
 
         if isinstance(arg, HelasWavefunction):
-            return sorted([HelasFortranModel.mother_dict[\
+            return "".join(sorted([HelasFortranModel.mother_dict[\
             wf.get_spin_state_number()] for wf in arg.get('mothers')],
                           lambda l1, l2: \
                           HelasFortranModel.sort_wf[l2] - \
-                          HelasFortranModel.sort_wf[l1])
+                          HelasFortranModel.sort_wf[l1]))
 
         if isinstance(arg, HelasAmplitude):
-            return sorted([HelasFortranModel.mother_dict[\
+            return "".join(sorted([HelasFortranModel.mother_dict[\
             wf.get_spin_state_number()] for wf in arg.get('mothers')],
                           lambda l1, l2: \
                           HelasFortranModel.sort_amp[l2] - \
-                          HelasFortranModel.sort_amp[l1])
+                          HelasFortranModel.sort_amp[l1]))
     
 #===============================================================================
 # Global helper methods
