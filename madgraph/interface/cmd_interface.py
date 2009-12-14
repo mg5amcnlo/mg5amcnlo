@@ -32,6 +32,7 @@ import madgraph.iolibs.import_v4 as import_v4
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.core.helas_objects as helas_objects
 
 #===============================================================================
 # MadGraphCmd
@@ -41,8 +42,11 @@ class MadGraphCmd(cmd.Cmd):
 
     __curr_model = base_objects.Model()
     __curr_amp = diagram_generation.Amplitude()
+    __curr_matrix_element = helas_objects.HelasMatrixElement()
+    __curr_fortran_model = helas_objects.HelasFortranModel()
 
     __import_formats = ['v4']
+    __export_formats = ['v4']
 
     def split_arg(self, line):
         """Split a line of arguments"""
@@ -276,6 +280,9 @@ class MadGraphCmd(cmd.Cmd):
             " please create one first!"
             return False
 
+        # Reset Helas matrix elements
+        self.__curr_matrix_element = helas_objects.HelasMatrixElement()
+
         myleglist = base_objects.LegList()
         state = 'initial'
         number = 1
@@ -314,6 +321,81 @@ class MadGraphCmd(cmd.Cmd):
 
         else:
             print "Empty or wrong format process, please try again."
+
+    # Generate a new amplitude
+    def do_export(self, line):
+        """Export a generated amplitude to file"""
+
+        def export_v4me(self, filepath):
+            """Helper function to write a v4 file to file path filepath"""
+            if os.path.dirname(filepath) and \
+                   not os.path.isdir(os.path.dirname(filepath)):
+                print "%s is not a valid directory for export file" % os.path.dirname(filepath)
+            if os.path.isfile(filepath):
+                print "Overwriting existing file %s" % filepath
+            else:
+                print "Creating new file %s" % filepath
+                
+
+            if not self.__curr_matrix_element.get('diagrams'):
+                cpu_time1 = time.time()
+                self.__curr_matrix_element = helas_objects.HelasMatrixElement(\
+                 self.__curr_amp)
+                cpu_time2 = time.time()
+                
+                print "Generated helas calls for %d diagrams in %0.3f s" % (\
+                    len(self.__curr_matrix_element.get('diagrams')),
+                    (cpu_time2 - cpu_time1))
+
+            outfile = open(filepath, 'w')
+
+            helas_calls = self.__curr_fortran_model.get_matrix_element_calls(\
+                self.__curr_matrix_element)
+
+            for call in helas_calls:
+                outfile.write(call + '\n')
+
+            outfile.write('\n')
+            outfile.write(self.__curr_fortran_model.get_JAMP_line(\
+                self.__curr_matrix_element))
+            outfile.close()
+            print "Wrote %d helas calls to file %s." % (len(helas_calls),
+                                                        filepath)
+
+        args = self.split_arg(line)
+
+        if len(args) < 1:
+            self.help_display()
+            return False
+
+        if len(self.__curr_amp['diagrams']) == 0:
+            print "No process generated, please generate a process!"
+            return False
+
+        if len(args) != 2:
+            self.help_export()
+            return False
+
+        if args[0] == 'v4':
+            export_v4me(self, args[1])
+
+    def complete_export(self, text, line, begidx, endidx):
+        "Complete the export command"
+
+        # Format
+        if len(self.split_arg(line[0:begidx])) == 1:
+            return self.list_completion(text, ['v4'])
+
+        # Filename if directory is not given
+        if len(self.split_arg(line[0:begidx])) == 2:
+            return self.path_completion(text)
+
+        # Filename if directory is given
+        if len(self.split_arg(line[0:begidx])) == 3:
+            return self.path_completion(text,
+                                        base_dir=\
+                                          self.split_arg(line[0:begidx])[2])
+
 
     # Quit
     def do_quit(self, line):
