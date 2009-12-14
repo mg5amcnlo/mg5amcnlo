@@ -898,7 +898,7 @@ class DiagramGenerationTest(unittest.TestCase):
         goal_list = [[1, 2, 5, 6, 7], [1, 2, 5, 8, 9], [3, 4, 5, 6, 7],
                      [3, 4, 5, 8, 9]]
         self.assertEqual(diagram_generation.expand_list_list(mylist), goal_list)
-        
+
     def test_diagram_generation_ue_dve(self):
         """Test the number of diagram generated for ue->dve (t channel)
         """
@@ -1042,6 +1042,19 @@ class DiagramGenerationTest(unittest.TestCase):
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
 
+        # Coupling of nu_e and e+ to W
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 11,
+                      'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             nue, \
+                                             wminus]),
+                      'color': ['C1'],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
         mymodel = base_objects.Model()
         mymodel.set('particles', mypartlist)
         mymodel.set('interactions', myinterlist)
@@ -1064,7 +1077,7 @@ class DiagramGenerationTest(unittest.TestCase):
         myamplitude.set('process', myproc)
 
         self.assertEqual(len(myamplitude.get('diagrams')), 1)
-        
+
 #===============================================================================
 # Muliparticle test
 #===============================================================================
