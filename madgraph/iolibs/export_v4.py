@@ -47,16 +47,24 @@ class FortranWriter():
     """Routines for writing fortran lines. Keeps track of indentation
     and splitting of long lines"""
 
-    keyword_pairs = {'^if.+then': ('^endif', 2),
-                     '^do': ('^enddo', 2),
-                     '^subroutine': ('^end', 0),
-                     'function': ('^end', 0)}
+    # Parameters defining the output of the Fortran writer
+    keyword_pairs = {'^if.+then\s*$': ('^endif', 2),
+                     '^do': ('^enddo\s*$', 2),
+                     '^subroutine': ('^end\s*$', 0),
+                     'function': ('^end\s*$', 0)}
+    single_indents = {'^else\s*$': -2,
+                      '^else\s*if.+then\s*$': -2}
     line_cont_char = '$'
-    downcase = True
+    comment_char = 'c'
+    downcase = False
     line_length = 71
-    
-    indent = 0
-    keyword_list = []
+    max_split = 10
+    split_characters = "+-*/, "
+    comment_split_characters = " "
+
+    # Private variables
+    __indent = 0
+    __keyword_list = []
     
     def write_fortran_line(self, fsock, line):
         """Write a fortran line, with correct indent and line splits"""
@@ -65,47 +73,97 @@ class FortranWriter():
             raise FortranWriterError,\
                   "write_fortran_line must have a single line as argument"
 
-        # Strip leading spaces from line
-        myline = line.lstrip()
-
         # Check if this line is a comment
         comment = False
+        if re.search("^#", line.lstrip()) or \
+               re.search("^c     ", line, re.IGNORECASE):
+            # This is a comment
+            myline = " " * (5 + self.__indent) + line.lstrip()[1:].lstrip()
+            if self.downcase:
+                self.comment_char = self.comment_char.lower()
+            else:
+                self.comment_char = self.comment_char.upper()
+            myline = self.comment_char + myline
+            res = [myline]
+            part = ""
+            post_comment = ""
+            # Break line in appropriate places
+            # defined (in priority order) by the characters in split_characters
+            while len(res[len(res) - 1]) > self.line_length:
+                split_at = self.line_length
+                for character in self.split_characters:
+                    index = res[len(res) - 1][(self.line_length - self.max_split):\
+                                              self.line_length].rfind(character)
+                    if index >= 0:
+                        split_at = self.line_length - self.max_split + index
+                        break
+                    
+                res.append(self.comment_char + " " * (5 + self.__indent) + \
+                           res[len(res) - 1][split_at:])
+                res[len(res) - 2] = res[len(res) - 2][:split_at]
+        else:
+            # This is a regular Fortran line
 
-        # Convert to upper or lower case (unless comment)
-        if not comment:
+            # Strip leading spaces from line
+            myline = line.lstrip()
+
+            # Convert to upper or lower case (unless comment)
+            (myline, part, post_comment) = myline.partition("!")
             if self.downcase:
                 myline = myline.lower()
             else:
                 myline = myline.upper()
 
-        # Check if line starts with dual keyword and adjust indent 
-        if self.keyword_list:
-            if re.search(self.keyword_pairs[\
-                self.keyword_list[len(self.keyword_list) - 1]][0],
-                         myline.lower()):
-                key = self.keyword_list.pop()
-                self.indent = self.indent - self.keyword_pairs[key][1]
+            # Check if line starts with dual keyword and adjust indent 
+            if self.__keyword_list and re.search(self.keyword_pairs[\
+                self.__keyword_list[len(self.__keyword_list) - 1]][0],
+                                               myline.lower()):
+                key = self.__keyword_list.pop()
+                self.__indent = self.__indent - self.keyword_pairs[key][1]
 
-        # Strip leading spaces and use our own indent
-        res = [" " * (6 + self.indent) + myline]
+            # Check for else and else if
+            single_indent = 0
+            for key in self.single_indents.keys():
+                if re.search(key, myline.lower()):
+                    self.__indent = self.__indent + self.single_indents[key]
+                    single_indent = -self.single_indents[key]
+                    break
+                
+            # Use our own indent
+            res = [" " * (6 + self.__indent) + myline]
 
-        # Break line in appropriate places
-        while len(res[len(res) - 1]) > self.line_length:
-            res.append(" " * 5 + self.line_cont_char + \
-                       " " * (self.indent + 1) + \
-                       res[len(res) - 1][self.line_length:])
-            res[len(res) - 2] = res[len(res) - 2][:self.line_length]
+            # Break line in appropriate places
+            # defined (in priority order) by the characters in split_characters
+            while len(res[len(res) - 1]) > self.line_length:
+                split_at = self.line_length
+                for character in self.split_characters:
+                    index = res[len(res) - 1][(self.line_length - self.max_split):\
+                                              self.line_length].rfind(character)
+                    if index >= 0:
+                        split_at = self.line_length - self.max_split + index
+                        break
+                    
+                res.append(" " * 5 + self.line_cont_char + \
+                           " " * (self.__indent + 1) + \
+                           res[len(res) - 1][split_at:])
+                res[len(res) - 2] = res[len(res) - 2][:split_at]
 
-        # Check if line starts with keyword and adjust indent 
-        for key in self.keyword_pairs.keys():
-            if re.search(key, myline.lower()):
-                self.keyword_list.append(key)
-                self.indent = self.indent + self.keyword_pairs[key][1]
+            # Check if line starts with keyword and adjust indent 
+            for key in self.keyword_pairs.keys():
+                if re.search(key, myline.lower()):
+                    self.__keyword_list.append(key)
+                    self.__indent = self.__indent + self.keyword_pairs[key][1]
+                    break
+        
+            # Correct back for else and else if
+            if single_indent != None:
+                self.__indent = self.__indent + single_indent
+                single_indent = None
 
         # Write line(s) to file
-        fsock.write("\n".join(res)+"\n")
+        fsock.write("\n".join(res)+ part + post_comment + "\n")
 
-        return False
+        return True
 
 #===============================================================================
 # HelasFortranModel
@@ -131,7 +189,7 @@ class HelasFortranModel(helas_objects.HelasModel):
         # Gluon 4-vertex division tensor calls ggT for the FR sm and mssm
         key = ((3,3,5),tuple('A'))
         call_function = lambda wf: \
-                        "      CALL UVVAXX(W(1,%d),W(1,%d),%s,zero,zero,zero,W(1,%d))" % \
+                        "CALL UVVAXX(W(1,%d),W(1,%d),%s,zero,zero,zero,W(1,%d))" % \
                         (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
                          HelasFortranModel.sorted_mothers(wf)[1].get('number'),
                          wf.get('couplings')[(0,0)],
@@ -140,7 +198,7 @@ class HelasFortranModel(helas_objects.HelasModel):
 
         key = ((3,5,3),tuple('A'))
         call_function = lambda wf: \
-                        "      CALL JVTAXX(W(1,%d),W(1,%d),%s,zero,zero,W(1,%d))" % \
+                        "CALL JVTAXX(W(1,%d),W(1,%d),%s,zero,zero,W(1,%d))" % \
                         (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
                          HelasFortranModel.sorted_mothers(wf)[1].get('number'),
                          wf.get('couplings')[(0,0)],
@@ -149,7 +207,7 @@ class HelasFortranModel(helas_objects.HelasModel):
 
         key = ((3,3,5),tuple('A'))
         call_function = lambda amp: \
-                        "      CALL VVTAXX(W(1,%d),W(1,%d),W(1,%d),%s,zero,AMP(%d))" % \
+                        "CALL VVTAXX(W(1,%d),W(1,%d),W(1,%d),%s,zero,AMP(%d))" % \
                         (HelasFortranModel.sorted_mothers(amp)[0].get('number'),
                          HelasFortranModel.sorted_mothers(amp)[1].get('number'),
                          HelasFortranModel.sorted_mothers(amp)[2].get('number'),
@@ -202,7 +260,7 @@ class HelasFortranModel(helas_objects.HelasModel):
             raise self.PhysicsObjectError, \
                   "get_helas_call must be called with wavefunction or amplitude"
 
-        call = "      CALL "
+        call = "CALL "
 
         call_function = None
             
@@ -212,7 +270,7 @@ class HelasFortranModel(helas_objects.HelasModel):
             call = call + HelasFortranModel.mother_dict[\
                 argument.get_spin_state_number()]
             # Fill out with X up to 6 positions
-            call = call + 'X' * (17 - len(call))
+            call = call + 'X' * (11 - len(call))
             call = call + "(P(0,%d),"
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity
@@ -272,13 +330,13 @@ class HelasFortranModel(helas_objects.HelasModel):
             if argument.needs_hermitian_conjugate():
                 call = call + 'C'
 
-            if len(call) > 17:
+            if len(call) > 11:
                 raise self.PhysicsObjectError, \
                       "Too long call to Helas routine %s, should be maximum 6 characters" \
-                      % call[11:]
+                      % call[5:]
 
             # Fill out with X up to 6 positions
-            call = call + 'X' * (17 - len(call)) + '('
+            call = call + 'X' * (11 - len(call)) + '('
             # Wavefunctions
             call = call + "W(1,%d)," * len(argument.get('mothers'))
             # Couplings
@@ -346,7 +404,7 @@ class HelasFortranModel(helas_objects.HelasModel):
                   "%s not valid argument for get_matrix_element_calls" % \
                   repr(matrix_element)
 
-        res = "      JAMP(1)="
+        res = "JAMP(1)="
         # Add all amplitudes with correct fermion factor
         for diagram in matrix_element.get('diagrams'):
             res = res + "%sAMP(%d)" % (sign(diagram.get('fermionfactor')),
