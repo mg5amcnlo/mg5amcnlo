@@ -63,7 +63,8 @@ class FortranWriterTest(unittest.TestCase):
         lines.append("  IF (Test) then")
         lines.append(" if(mutt) call hej")
         lines.append(" else if(test) then")
-        lines.append("c      Test")
+        lines.append("c Test")
+        lines.append("c = hej")
         lines.append(" Call hej")
         lines.append("# Test")
         lines.append("else")
@@ -77,6 +78,7 @@ class FortranWriterTest(unittest.TestCase):
         IF(MUTT) CALL HEJ
       ELSE IF(TEST) THEN
 C       Test
+        C = HEJ
         CALL HEJ
 C       Test
       ELSE
