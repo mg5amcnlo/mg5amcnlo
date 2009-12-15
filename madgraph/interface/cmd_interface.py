@@ -333,7 +333,7 @@ class MadGraphCmd(cmd.Cmd):
             if not self.__curr_matrix_element.get('diagrams'):
                 cpu_time1 = time.time()
                 self.__curr_matrix_element = helas_objects.HelasMatrixElement(\
-                 self.__curr_amp, 0)
+                 self.__curr_amp)
                 cpu_time2 = time.time()
                 
                 print "Generated helas calls for %d diagrams in %0.3f s" % (\

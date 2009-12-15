@@ -503,7 +503,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 new_wf.set('state', filter(lambda state: \
                                            state != new_wf.get('state'),
                                            ['incoming', 'outgoing'])[0])
-                new_wf.set('is_part', 1 - new_wf.get('is_part'))
+                new_wf.set('is_part', not new_wf.get('is_part'))
                 if not new_wf.get('self_antipart'):
                     new_wf.set('pdg_code', -new_wf.get('pdg_code'))
 
@@ -587,7 +587,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         
         # If fermionflow is -1, need to flip state
         if name == 'is_part':
-            return 1 - self.get('is_part')
+            return not self.get('is_part')
         if name == 'state':
             return filter(lambda state: state != self.get('state'),
                           ['incoming', 'outgoing'])[0]
