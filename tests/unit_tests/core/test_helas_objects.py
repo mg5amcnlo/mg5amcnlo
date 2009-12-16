@@ -805,6 +805,163 @@ class HelasMatrixElementTest(unittest.TestCase):
         self.assertEqual(matrix_element.get('processes')[0],
                          myamplitude.get('process'))
 
+    def test_get_helicity_matrix(self):
+        """Testing helicity matrix using the process
+        e- e+ > z a
+        """
+
+        # A Z
+        self.mymodel.get('particles').append(base_objects.Particle({'name':'Z',
+                      'antiname':'Z',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MZ',
+                      'width':'WZ',
+                      'texname':'Z',
+                      'antitexname':'Z',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':23,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        # A Higgs
+        self.mymodel.get('particles').append(base_objects.Particle({'name':'H',
+                      'antiname':'H',
+                      'spin':1,
+                      'color':1,
+                      'mass':'MH',
+                      'width':'WH',
+                      'texname':'H',
+                      'antitexname':'H',
+                      'line':'dashed',
+                      'charge':0.,
+                      'pdg_code':25,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        self.mymodel.set('particle_dict',
+                         self.mymodel.get('particles').generate_dict())
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':23,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':25,
+                                         'state':'final'}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        matrix_element = helas_objects.HelasMatrixElement()
+        matrix_element.set('processes', base_objects.ProcessList([ myproc ]))
+
+        self.assertEqual(matrix_element.get_helicity_combinations(), 24)
+
+        goal_prods = [(-1, -1, -1, -1, 0),
+                      (-1, -1, -1, 1, 0),
+                      (-1, -1, 0, -1, 0),
+                      (-1, -1, 0, 1, 0),
+                      (-1, -1, 1, -1, 0),
+                      (-1, -1, 1, 1, 0),
+                      (-1, 1, -1, -1, 0),
+                      (-1, 1, -1, 1, 0),
+                      (-1, 1, 0, -1, 0),
+                      (-1, 1, 0, 1, 0),
+                      (-1, 1, 1, -1, 0),
+                      (-1, 1, 1, 1, 0),
+                      (1, -1, -1, -1, 0),
+                      (1, -1, -1, 1, 0),
+                      (1, -1, 0, -1, 0),
+                      (1, -1, 0, 1, 0),
+                      (1, -1, 1, -1, 0),
+                      (1, -1, 1, 1, 0),
+                      (1, 1, -1, -1, 0),
+                      (1, 1, -1, 1, 0),
+                      (1, 1, 0, -1, 0),
+                      (1, 1, 0, 1, 0),
+                      (1, 1, 1, -1, 0),
+                      (1, 1, 1, 1, 0)]
+
+        i = 0
+        for prod in matrix_element.get_helicity_matrix():
+            self.assertEqual(prod, goal_prods[i])
+            i = i + 1
+        
+    def test_get_den_factor(self):
+        """Testing helicity matrix using the process
+        u u~ > a a a
+        """
+
+        # A Z
+        self.mymodel.get('particles').append(base_objects.Particle({'name':'Z',
+                      'antiname':'Z',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MZ',
+                      'width':'WZ',
+                      'texname':'Z',
+                      'antitexname':'Z',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':23,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        self.mymodel.set('particle_dict',
+                         self.mymodel.get('particles').generate_dict())
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final'}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        matrix_element = helas_objects.HelasMatrixElement()
+        matrix_element.set('processes', base_objects.ProcessList([ myproc ]))
+
+        self.assertEqual(matrix_element.get_denominator_factor(), 9 * 4 * 6)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':23,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final'}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        matrix_element = helas_objects.HelasMatrixElement()
+        matrix_element.set('processes', base_objects.ProcessList([ myproc ]))
+
+        self.assertEqual(matrix_element.get_denominator_factor(), 1 * 6 * 6)
+
     def test_fermionfactor_emep_emep(self):
         """Testing the fermion factor using the process  e- e+ > e- e+
         """
