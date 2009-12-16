@@ -41,9 +41,7 @@ class IOExportV4Test(unittest.TestCase):
         """Test the result of exporting a matrix element to file"""
 
         fsock = StringIO.StringIO()
-
-        line = " call aaaaaa(bbb, ccc, ddd, eee, fff, ggg, hhhhhhhhhh + asdasdasdasd, wspedfteispd)"
-
+        
         #self.assertEqual(import_v4.read_particles_v4(fsock), goal_part_list)
 
 #===============================================================================
@@ -60,6 +58,8 @@ class FortranWriterTest(unittest.TestCase):
         lines = []
         lines.append(" call aaaaaa(bbb, ccc, ddd, eee, fff, ggg, hhhhhhhhhhhhhh+asdasd, wspedfteispd)")
 
+        lines.append('  include "test.inc"')
+        lines.append(' print *, \'Hej \\"Da\\" Mo\'')
         lines.append("  IF (Test) then")
         lines.append(" if(mutt) call hej")
         lines.append(" else if(test) then")
@@ -74,6 +74,8 @@ class FortranWriterTest(unittest.TestCase):
 
         goal_string = """      CALL AAAAAA(BBB, CCC, DDD, EEE, FFF, GGG, HHHHHHHHHHHHHH
      $ +ASDASD, WSPEDFTEISPD)
+      INCLUDE 'test.inc'
+      PRINT *, 'Hej \\'Da\\' Mo'
       IF (TEST) THEN
         IF(MUTT) CALL HEJ
       ELSE IF(TEST) THEN
