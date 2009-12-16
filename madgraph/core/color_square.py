@@ -27,27 +27,24 @@ def build_color_matrix(col_basis1, col_basis2, equal=False):
 
     color_matrix = []
     color_dict = {}
-#    if equal:
-#        color_line = []
-#        k1, v1 = col_basis1.items()[0]
-#        for k2, v2 in col_basis2.items():
-#            col_str = color_algebra.ColorString(list(k1))
-#            col_str2 = color_algebra.ColorString(list(k2))
-#            col_str.extend(col_str2.complex_conjugate())
-#            col_fact = color_algebra.ColorFactor([col_str])
-#            col_fact.simplify()
-#            color_line.append(col_fact)
-#        for i in range(len(color_line)):
-#            color_matrix.append(color_line[-i:] + color_line[:-i])
-#        return color_matrix
 
     for i1, (k1, v1) in enumerate(col_basis1.items()):
         color_line = []
         for i2, (k2, v2) in enumerate(col_basis2.items()):
-            col_str = color_algebra.ColorString(list(k1))
+            # First we create color factor for each string
+            col_str1 = color_algebra.ColorString(list(k1))
             col_str2 = color_algebra.ColorString(list(k2))
-            col_str.extend(col_str2.complex_conjugate())
-            col_fact = color_algebra.ColorFactor([col_str])
+            col_fact1 = color_algebra.ColorFactor([col_str1])
+            col_fact2 = \
+                color_algebra.ColorFactor([col_str2.complex_conjugate()])
+            # We simplify them, INCLUDING T product simplification
+            col_fact1.simplify()
+            col_fact2.simplify()
+
+            col_fact = color_algebra.ColorFactor()
+            for col_str1 in col_fact1:
+                for col_str2 in col_fact2:
+                    col_fact.append(color_algebra.ColorString(col_str1 + col_str2))
             col_fact.simplify()
             color_line.append(col_fact)
             col_fact.sort()
@@ -60,6 +57,7 @@ def build_color_matrix(col_basis1, col_basis2, equal=False):
         color_matrix.append(color_line)
 
     return (color_matrix, color_dict)
+
 
 
 

@@ -783,9 +783,9 @@ class ColorFactor(list):
                 elem.simplify()
 
             empty = ColorString()
-            # zero = ColorString(['0'])
+
             while(empty in self): self.remove(empty)
-            # while(zero in self): self.remove(zero)
+
             # Iterate until the result does not change anymore
             if self == original:
                 break
