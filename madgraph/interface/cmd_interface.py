@@ -29,9 +29,11 @@ import atexit
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.files as files
 import madgraph.iolibs.import_v4 as import_v4
+import madgraph.iolibs.export_v4 as export_v4
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.core.helas_objects as helas_objects
 
 #===============================================================================
 # MadGraphCmd
@@ -41,8 +43,14 @@ class MadGraphCmd(cmd.Cmd):
 
     __curr_model = base_objects.Model()
     __curr_amp = diagram_generation.Amplitude()
+    __curr_matrix_element = helas_objects.HelasMatrixElement()
+    __curr_fortran_model = export_v4.HelasFortranModel()
 
+    __display_opts = ['particles',
+                      'interactions',
+                      'amplitude']
     __import_formats = ['v4']
+    __export_formats = ['v4standalone']
 
     def split_arg(self, line):
         """Split a line of arguments"""
@@ -182,7 +190,7 @@ class MadGraphCmd(cmd.Cmd):
 
         # Format
         if len(self.split_arg(line[0:begidx])) == 1:
-            return self.list_completion(text, ['v4'])
+            return self.list_completion(text, self.__import_formats)
 
         # Filename if directory is not given
         if len(self.split_arg(line[0:begidx])) == 2:
@@ -237,12 +245,9 @@ class MadGraphCmd(cmd.Cmd):
     def complete_display(self, text, line, begidx, endidx):
         "Complete the display command"
 
-        display_opts = ['particles',
-                        'interactions',
-                        'amplitude']
         # Format
         if len(self.split_arg(line[0:begidx])) == 1:
-            return self.list_completion(text, display_opts)
+            return self.list_completion(text, self.__display_opts)
 
     # Access to shell
     def do_shell(self, line):
@@ -275,6 +280,9 @@ class MadGraphCmd(cmd.Cmd):
             print "No interaction list currently active," + \
             " please create one first!"
             return False
+
+        # Reset Helas matrix elements
+        self.__curr_matrix_element = helas_objects.HelasMatrixElement()
 
         myleglist = base_objects.LegList()
         state = 'initial'
@@ -315,23 +323,97 @@ class MadGraphCmd(cmd.Cmd):
         else:
             print "Empty or wrong format process, please try again."
 
+    # Generate a new amplitude
+    def do_export(self, line):
+        """Export a generated amplitude to file"""
+
+        def export_v4standalone(self, filepath):
+            """Helper function to write a v4 file to file path filepath"""
+
+            if not self.__curr_matrix_element.get('diagrams'):
+                cpu_time1 = time.time()
+                self.__curr_matrix_element = helas_objects.HelasMatrixElement(\
+                 self.__curr_amp)
+                cpu_time2 = time.time()
+                
+                print "Generated helas calls for %d diagrams in %0.3f s" % (\
+                    len(self.__curr_matrix_element.get('diagrams')),
+                    (cpu_time2 - cpu_time1))
+
+            calls = files.write_to_file(filepath,
+                                        export_v4.write_matrix_element_v4_standalone,
+                                        self.__curr_matrix_element,
+                                        self.__curr_fortran_model)
+
+            print "Wrote %d helas calls to file %s." % (calls,
+                                                        filepath)
+
+        args = self.split_arg(line)
+
+        if len(args) < 1:
+            self.help_export()
+            return False
+
+        if len(args) != 2 or args[0] not in self.__export_formats:
+            self.help_export()
+            return False
+
+        if len(self.__curr_amp['diagrams']) == 0:
+            print "No process generated, please generate a process!"
+            return False
+
+        if os.path.dirname(args[1]) and \
+               not os.path.isdir(os.path.dirname(args[1])):
+            print "%s is not a valid directory for export file" % os.path.dirname(args[1])
+        if os.path.isfile(args[1]):
+            print "Overwriting existing file %s" % args[1]
+        else:
+            print "Creating new file %s" % args[1]
+                
+        if args[0] == 'v4standalone':
+            export_v4standalone(self, args[1])
+
+    def complete_export(self, text, line, begidx, endidx):
+        "Complete the export command"
+
+        # Format
+        if len(self.split_arg(line[0:begidx])) == 1:
+            return self.list_completion(text, self.__export_formats)
+
+        # Filename if directory is not given
+        if len(self.split_arg(line[0:begidx])) == 2:
+            return self.path_completion(text)
+
+        # Filename if directory is given
+        if len(self.split_arg(line[0:begidx])) == 3:
+            return self.path_completion(text,
+                                        base_dir=\
+                                          self.split_arg(line[0:begidx])[2])
+
+
     # Quit
     def do_quit(self, line):
         sys.exit(1)
 
     # In-line help
     def help_import(self):
-        print "syntax: import v4|... FILENAME"
+        print "syntax: import " + "|".join(self.__import_formats) + \
+              " FILENAME"
         print "-- imports file(s) in various formats"
 
     def help_display(self):
-        print "syntax: display particles|interactions|amplitude"
+        print "syntax: display " + "|".join(self.__display_opts)
         print "-- display a the status of various internal state variables"
 
     def help_generate(self):
         print "syntax: generate INITIAL STATE > FINAL STATE"
         print "-- generate amplitude for a given process"
         print "   Example: u d~ > m+ vm g"
+
+    def help_export(self):
+        print "syntax: export " + "|".join(self.__export_formats) + \
+              " FILENAME"
+        print "-- export matrix element in various formats"
 
     def help_shell(self):
         print "syntax: shell CMD (or ! CMD)"

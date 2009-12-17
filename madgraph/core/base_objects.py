@@ -278,6 +278,8 @@ class Particle(PhysicsObject):
                 'texname', 'antitexname', 'line', 'propagating',
                 'is_part', 'self_antipart']
 
+    # Helper functions
+
     def get_pdg_code(self):
         """Return the PDG code with a correct minus sign if the particle is its
         own antiparticle"""
@@ -295,6 +297,26 @@ class Particle(PhysicsObject):
             return - self.get_pdg_code()
         else:
             return self['pdg_code']
+
+    def get_helicity_states(self):
+        """Return a list of the helicity states for the onshell particle"""
+
+        spin = self.get('spin')
+        if spin == 1:
+            # Scalar
+            return [ 0 ]
+        if spin == 2:
+            # Spinor
+            return [ -1, 1 ]
+        if spin == 3 and self.get('mass').lower() == 'zero':
+            # Massless vector
+            return [ -1, 1 ]
+        if spin == 3:
+            # Massive vector
+            return [ -1, 0, 1 ]
+
+        raise self.PhysicsObjectError, \
+              "No helicity state assignment for spin %d particles" % spin
 
 #===============================================================================
 # ParticleList

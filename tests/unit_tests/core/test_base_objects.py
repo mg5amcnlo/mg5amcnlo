@@ -183,6 +183,22 @@ class ParticleTest(unittest.TestCase):
         test_part.set('self_antipart', True)
         self.assertEqual(test_part.get_pdg_code(), 6)
 
+    def test_get_helicity_states(self):
+        """Test the get_anti_pdg_code function of Particle"""
+
+        test_part = copy.copy(self.mypart)
+        self.assertEqual(test_part.get_helicity_states(), [-1, 1])
+        test_part.set('spin', 1)
+        self.assertEqual(test_part.get_helicity_states(), [0])
+        test_part.set('spin', 3)
+        self.assertEqual(test_part.get_helicity_states(), [-1, 0, 1])
+        test_part.set('mass', 'Zero')
+        self.assertEqual(test_part.get_helicity_states(), [-1, 1])
+        test_part.set('spin', 5)
+        self.assertRaises(test_part.PhysicsObjectError,
+                          test_part.get_helicity_states)
+
+
     def test_particle_list(self):
         """Test particle list initialization, search and dict generation
         functions."""

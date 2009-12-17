@@ -150,7 +150,7 @@ class IOImportV4Test(unittest.TestCase):
                                                                 wmin,
                                                                 photon]),
                                      'color':['guess'],
-                                     'lorentz':['guess'],
+                                     'lorentz':[''],
                                      'couplings':{(0, 0):'MGVX3'},
                                      'orders':{'QED':1}}),
                      base_objects.Interaction(
@@ -160,7 +160,7 @@ class IOImportV4Test(unittest.TestCase):
                                                                 gluon,
                                                                 t1]),
                                      'color':['guess'],
-                                     'lorentz':['guess'],
+                                     'lorentz':['A'],
                                      'couplings':{(0, 0):'MGVX2'},
                                      'orders':{'QCD':1}}),
                      base_objects.Interaction(
@@ -171,8 +171,9 @@ class IOImportV4Test(unittest.TestCase):
                                                                 wplus,
                                                                 wmin]),
                                      'color':['guess'],
-                                     'lorentz':['guess'],
-                                     'couplings':{(0, 0):'MGVX6'},
+                                     'lorentz':['WWWWN', ''],
+                                     'couplings':{(0, 0):'MGVX6',
+                                                  (0, 1):'DUM0'},
                                      'orders':{'QED':2}}),
 
                      base_objects.Interaction(
@@ -182,7 +183,7 @@ class IOImportV4Test(unittest.TestCase):
                                                                 enu,
                                                                 wmin]),
                                      'color':['guess'],
-                                     'lorentz':['guess'],
+                                     'lorentz':[''],
                                      'couplings':{(0, 0):'MGVX24'},
                                      'orders':{'QED':1}})])
 
