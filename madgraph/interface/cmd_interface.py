@@ -42,13 +42,15 @@ class MadGraphCmd(cmd.Cmd):
     """The command line processor of MadGraph"""
 
     __curr_model = base_objects.Model()
-    __curr_amp = diagram_generation.Amplitude()
-    __curr_matrix_element = helas_objects.HelasMatrixElement()
+    __curr_amps = diagram_generation.AmplitudeList()
+    __curr_matrix_elements = helas_objects.HelasMultiProcess()
     __curr_fortran_model = export_v4.HelasFortranModel()
-
+    __multiparticles = {}
+    
     __display_opts = ['particles',
                       'interactions',
-                      'amplitude']
+                      'processes',
+                      'multiparticles']
     __import_formats = ['v4']
     __export_formats = ['v4standalone']
 
@@ -238,9 +240,16 @@ class MadGraphCmd(cmd.Cmd):
                         print part['antiname'],
                 print
 
-        if args[0] == 'amplitude':
-            print self.__curr_amp['process'].nice_string()
-            print self.__curr_amp['diagrams'].nice_string()
+        if args[0] == 'processes':
+            for amp in filter(lambda amp: amp.get("diagrams"),
+                              self.__curr_amps):
+                print amp.get('process').nice_string()
+                print amp.get('diagrams').nice_string()
+
+        if args[0] == 'multiparticles':
+            print 'Multiparticle labels:'
+            for key in self.__multiparticles:
+                print key," = ",self.__multiparticles[key]
 
     def complete_display(self, text, line, begidx, endidx):
         "Complete the display command"
@@ -282,9 +291,9 @@ class MadGraphCmd(cmd.Cmd):
             return False
 
         # Reset Helas matrix elements
-        self.__curr_matrix_element = helas_objects.HelasMatrixElement()
+        self.__curr_matrix_elements = helas_objects.HelasMultiProcess()
 
-        myleglist = base_objects.LegList()
+        myleglist = base_objects.MultiLegList()
         state = 'initial'
         number = 1
 
@@ -297,28 +306,37 @@ class MadGraphCmd(cmd.Cmd):
                 state = 'final'
                 continue
 
-            mypart = self.__curr_model['particles'].find_name(part_name)
-
-            if mypart:
-                myleglist.append(base_objects.Leg({'id':mypart.get_pdg_code(),
-                                                   'number':number,
-                                                   'state':state}))
-                number = number + 1
+            mylegids = []
+            if part_name in self.__multiparticles:
+                mylegids.extend(self.__multiparticles[part_name])
             else:
-                print "Error with particle %s: skipped" % part_name
+                mypart = self.__curr_model['particles'].find_name(part_name)
+                if mypart:
+                    mylegids.append(mypart.get_pdg_code())
 
-        if myleglist and state == 'final':
-            myproc = base_objects.Process({'legs':myleglist,
-                                            'orders':{},
-                                            'model':self.__curr_model})
-            self.__curr_amp.set('process', myproc)
+            if mylegids:
+                myleglist.append(base_objects.MultiLeg({'ids':mylegids,
+                                                        'state':state}))
+            else:
+                print "No particle %s in model: skipped" % part_name
+
+        if filter(lambda leg: leg.get('state') == 'final',myleglist):
+            myprocdef = base_objects.ProcessDefinitionList([\
+                base_objects.ProcessDefinition({'legs': myleglist,
+                                                'model': self.__curr_model})])
+            myproc = diagram_generation.MultiProcess({'process_definitions':\
+                                                      myprocdef})
 
             cpu_time1 = time.time()
-            ndiags = len(self.__curr_amp.generate_diagrams())
+            self.__curr_amps = myproc.get('amplitudes')
             cpu_time2 = time.time()
 
-            print "%i diagrams generated in %0.3f s" % (ndiags, (cpu_time2 - \
-                                                               cpu_time1))
+            nprocs = len(filter(lambda amp: amp.get("diagrams"),
+                                self.__curr_amps))
+            ndiags = sum([len(amp.get('diagrams')) for \
+                              amp in self.__curr_amps])
+            print "%i processes with %i diagrams generated in %0.3f s" % \
+                  (nprocs, ndiags, (cpu_time2 - cpu_time1))
 
         else:
             print "Empty or wrong format process, please try again."
@@ -330,23 +348,35 @@ class MadGraphCmd(cmd.Cmd):
         def export_v4standalone(self, filepath):
             """Helper function to write a v4 file to file path filepath"""
 
-            if not self.__curr_matrix_element.get('diagrams'):
+            if not self.__curr_matrix_elements.get('matrix_elements'):
                 cpu_time1 = time.time()
-                self.__curr_matrix_element = helas_objects.HelasMatrixElement(\
-                 self.__curr_amp)
+                self.__curr_matrix_elements = \
+                             helas_objects.HelasMultiProcess(\
+                                           self.__curr_amps)
                 cpu_time2 = time.time()
                 
-                print "Generated helas calls for %d diagrams in %0.3f s" % (\
-                    len(self.__curr_matrix_element.get('diagrams')),
-                    (cpu_time2 - cpu_time1))
+                ndiags = sum([len(me.get('diagrams')) for \
+                              me in self.__curr_matrix_elements.\
+                              get('matrix_elements')])
+                print "Generated helas calls for %d subprocesses (%d diagrams) in %0.3f s" % \
+                      (len(self.__curr_matrix_elements.get('matrix_elements')),
+                       ndiags,
+                       (cpu_time2 - cpu_time1))
 
-            calls = files.write_to_file(filepath,
-                                        export_v4.write_matrix_element_v4_standalone,
-                                        self.__curr_matrix_element,
-                                        self.__curr_fortran_model)
+            calls = 0
+            for me in self.__curr_matrix_elements.get('matrix_elements'):
+                filename = filepath + '/matrix_' + \
+                           me.get('processes')[0].shell_string() + ".f"
+                if os.path.isfile(filename):
+                    print "Overwriting existing file %s" % filename
+                else:
+                    print "Creating new file %s" % filename
+                calls = calls + files.write_to_file(filename,
+                                                    export_v4.write_matrix_element_v4_standalone,
+                                                    me,
+                                                    self.__curr_fortran_model)
 
-            print "Wrote %d helas calls to file %s." % (calls,
-                                                        filepath)
+            print "Wrote %d helas calls" % calls
 
         args = self.split_arg(line)
 
@@ -358,18 +388,13 @@ class MadGraphCmd(cmd.Cmd):
             self.help_export()
             return False
 
-        if len(self.__curr_amp['diagrams']) == 0:
+        if not filter(lambda amp: amp.get("diagrams"), self.__curr_amps):
             print "No process generated, please generate a process!"
             return False
 
-        if os.path.dirname(args[1]) and \
-               not os.path.isdir(os.path.dirname(args[1])):
-            print "%s is not a valid directory for export file" % os.path.dirname(args[1])
-        if os.path.isfile(args[1]):
-            print "Overwriting existing file %s" % args[1]
-        else:
-            print "Creating new file %s" % args[1]
-                
+        if not os.path.isdir(args[1]):
+            print "%s is not a valid directory for export file" % args[1]
+
         if args[0] == 'v4standalone':
             export_v4standalone(self, args[1])
 
@@ -390,6 +415,40 @@ class MadGraphCmd(cmd.Cmd):
                                         base_dir=\
                                           self.split_arg(line[0:begidx])[2])
 
+    # Define a multiparticle label
+    def do_define(self, line):
+        """Define a multiparticle"""
+
+        # Particle names always lowercase
+        line = line.lower()
+
+        args = self.split_arg(line)
+
+        if len(args) < 1:
+            self.help_define()
+            return False
+
+        if len(self.__curr_model['particles']) == 0:
+            print "No particle list currently active, please create one first!"
+            return False
+
+        label = args[0]
+        pdg_list = []
+
+        for part_name in args[1:]:
+
+            mypart = self.__curr_model['particles'].find_name(part_name)
+
+            if mypart:
+                pdg_list.append(mypart.get_pdg_code())
+            else:
+                print "No particle %s in model: skipped" % part_name
+
+        if not pdg_list:
+            print """Empty or wrong format for multiparticle.
+            Please try again."""
+
+        self.__multiparticles[label] = pdg_list
 
     # Quit
     def do_quit(self, line):
@@ -410,10 +469,16 @@ class MadGraphCmd(cmd.Cmd):
         print "-- generate amplitude for a given process"
         print "   Example: u d~ > m+ vm g"
 
+    def help_define(self):
+        print "syntax: define multipart_name [ part_name_list ]"
+        print "-- define a multiparticle"
+        print "   Example: define p u u~ c c~ d d~ s s~"
+
     def help_export(self):
         print "syntax: export " + "|".join(self.__export_formats) + \
-              " FILENAME"
-        print "-- export matrix element in various formats"
+              " FILEPATH"
+        print """-- export matrix element in various formats. The resulting
+        file will be FILEPATH/matrix_process_string.f"""
 
     def help_shell(self):
         print "syntax: shell CMD (or ! CMD)"

@@ -37,6 +37,20 @@ class Amplitude(base_objects.PhysicsObject):
         self['process'] = base_objects.Process()
         self['diagrams'] = None
 
+    def __init__(self, argument = None):
+        """Allow initialization with Process"""
+        
+        if isinstance(argument, base_objects.Process):
+            super(Amplitude, self).__init__()
+            self.set('process', argument)
+            self.generate_diagrams()
+        elif argument != None:
+            # call the mother routine
+            super(Amplitude, self).__init__(argument)
+        else:
+            # call the mother routine
+            super(Amplitude, self).__init__()
+
     def filter(self, name, value):
         """Filter for valid amplitude property values."""
 
@@ -102,6 +116,11 @@ class Amplitude(base_objects.PhysicsObject):
         """
 
         model = self['process'].get('model')
+
+        if not model.get('particles') or not model.get('interactions'):
+            raise self.PhysicsObjectError, \
+                  "%s is missing particles or interactions" % repr(model)
+
         res = base_objects.DiagramList()
 
         # First check that the number of fermions is even
@@ -383,14 +402,138 @@ class AmplitudeList(base_objects.PhysicsObjectList):
         
         return isinstance(obj, Amplitude)
 
-    def __init__(self, argument = None):
-        if isinstance(argument, base_objects.MultiProcess):
-            list.__init__(self)
-            self.extend([Amplitude(\
-                {'process': process})  for process in argument.get('processes')])
-        else:
-            # call the mother routine
-            list.__init__(self, argument)
+#===============================================================================
+# MultiProcess
+#===============================================================================
+class MultiProcess(base_objects.PhysicsObject):
+    """MultiProcess: list of process definitions
+                     list of processes (after cleaning)
+                     list of amplitudes (after generation)
+    """
+
+    __failed_procs = []
+
+    def default_setup(self):
+        """Default values for all properties"""
+
+        self['process_definitions'] = base_objects.ProcessDefinitionList()
+        self['processes'] = base_objects.ProcessList()
+        self['amplitudes'] = AmplitudeList()
+
+    def filter(self, name, value):
+        """Filter for valid process property values."""
+
+        if name == 'process_definitions':
+            if not isinstance(value, base_objects.ProcessDefinitionList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid ProcessDefinitionList object" % str(value)
+
+        if name == 'process':
+            if not isinstance(value, base_objects.ProcessList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid ProcessList object" % str(value)
+
+        return True
+
+    def get(self, name):
+        """Get the value of the property name."""
+
+        if (name == 'processes') and not self[name]:
+            if self['process_definitions']:
+                self.clean_processes()
+
+        if (name == 'amplitudes') and not self[name]:
+            if self.get('processes'):
+                self.generate_amplitudes()
+
+        return MultiProcess.__bases__[0].get(self, name) # call the mother routine
+
+    def get_sorted_keys(self):
+        """Return process property names as a nicely sorted list."""
+
+        return ['process_definitions', 'processes']
+
+    def nice_string(self):
+        """Returns a nicely formated string about current process
+        content"""
+        
+        mystr = "MultiProcess: "
+        prevleg = None
+        for leg in self['legs']:
+            mypart = self['model'].get('particle_dict')[leg['id']]
+            if prevleg and prevleg['state'] == 'initial' \
+                   and leg['state'] == 'final':
+                # Separate initial and final legs by ">"
+                mystr = mystr + '> '
+            if mypart['is_part']:
+                mystr = mystr + mypart['name']
+            else:
+                mystr = mystr + mypart['antiname']
+            mystr = mystr + '(%i) ' % leg['number']
+            prevleg = leg
+
+        # Remove last space
+        return mystr[:-1]
+
+
+    def clean_processes(self):
+        """Routine for removing identical processes in Multiprocess list"""
+
+        processes = base_objects.ProcessList()
+
+        for process_def in self['process_definitions']:
+
+            model = process_def['model']            
+
+            isids = [leg['ids'] for leg in \
+                     filter(lambda leg: leg['state'] == 'initial',process_def['legs'])]
+            fsids = [leg['ids'] for leg in \
+                     filter(lambda leg: leg['state'] == 'final',process_def['legs'])]
+
+            # Generate all combinations for the initial state
+
+            islist = []
+
+            for prod in apply(itertools.product,isids):
+                islist.append(base_objects.LegList([\
+                    base_objects.Leg({'id':id,'state': 'initial'}) \
+                                       for id in prod]))
+
+            # Generate all combinations for the final state
+            
+            fsidlist = []
+
+            for prod in apply(itertools.product,fsids):
+                fsidlist.append([id for id in prod])
+
+            # Now remove all double counting in the final state
+            red_fsidlist = []
+            fslist = []
+            for ids in fsidlist:
+                if tuple(sorted(ids)) not in red_fsidlist:
+                    fslist.append(base_objects.LegList([\
+                        base_objects.Leg({'id':id,'state': 'final'}) \
+                                           for id in ids]))
+                    red_fsidlist.append(tuple(sorted(ids)));
+
+            # Combine IS and FS particles
+            leg_lists = []
+            for islegs in islist:
+                for fslegs in fslist:
+                    leg_list = [copy.copy(leg) for leg in islegs]
+                    leg_list.extend([copy.copy(leg) for leg in fslegs])
+                    # Check that process has even number of fermions
+                    if len(filter(lambda leg: leg.is_fermion(model),leg_list)) % 2 == 0:
+                        leg_lists.append(base_objects.LegList(leg_list))
+
+            # Setup processes
+            processes.extend([base_objects.Process({\
+                                       'legs':legs,
+                                       'model':process_def.get('model'),
+                                       'id': process_def.get('id')}) \
+                              for legs in leg_lists])
+            
+        self.set('processes', processes)
 
     def generate_amplitudes(self):
         """Generate amplitudes in a semi-efficient way.
@@ -401,24 +544,22 @@ class AmplitudeList(base_objects.PhysicsObjectList):
         """
 
         # Check for crossed processes
-        failed_procs = []
-        for amplitude in self:
-            process = amplitude.get('process')
+        self.__failed_procs = []
+        for process in self.get('processes'):
             model = process.get('model')
             legs = process.get('legs')
             sorted_legs = sorted(legs.get_outgoing_id_list(model))
             # Check if crossed process has already failed
             # In that case don't check process
             # Remember to turn this off if we require or forbid s-channel propagators
-            if tuple(sorted_legs) in failed_procs:
-                # Need to set empty DiagramList, since otherwise
-                # generate_diagrams will be called every time get('diagrams')
-                # is called
-                amplitude.set('diagrams',base_objects.DiagramList()) 
-            elif len(amplitude.get('diagrams')) == 0:
-                # Add process to failed_proc
-                failed_procs.append(tuple(sorted_legs))
-                    
+            if not tuple(sorted_legs) in self.__failed_procs:
+                amplitude = Amplitude(process)
+                if amplitude.get('diagrams'):
+                    self['amplitudes'].append(amplitude)
+                else:
+                    # Add process to failed_procs
+                    self.__failed_procs.append(tuple(sorted_legs))
+            
 #===============================================================================
 # Global helper methods
 #===============================================================================

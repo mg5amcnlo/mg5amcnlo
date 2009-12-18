@@ -1026,6 +1026,30 @@ class Process(PhysicsObject):
         # Remove last space
         return mystr[:-1]
 
+    def shell_string(self):
+        """Returns process as string with '~' -> 'x' and '>' -> '_'"""
+
+        mystr = ""
+        prevleg = None
+        for leg in self['legs']:
+            mypart = self['model'].get('particle_dict')[leg['id']]
+            if prevleg and prevleg['state'] == 'initial' \
+                   and leg['state'] == 'final':
+                # Separate initial and final legs by ">"
+                mystr = mystr + '_'
+            if mypart['is_part']:
+                mystr = mystr + mypart['name']
+            else:
+                mystr = mystr + mypart['antiname']
+            prevleg = leg
+
+        # Replace '~' with 'x'
+        mystr = mystr.replace('~', 'x')
+        # Just to be safe, remove all spaces
+        mystr = mystr.replace(' ', '')
+
+        return mystr
+
 #===============================================================================
 # ProcessList
 #===============================================================================
@@ -1092,126 +1116,3 @@ class ProcessDefinitionList(PhysicsObjectList):
         """Test if object obj is a valid ProcessDefinition for the list."""
         
         return isinstance(obj, ProcessDefinition)
-
-#===============================================================================
-# MultiProcess
-#===============================================================================
-class MultiProcess(PhysicsObject):
-    """MultiProcess: list of process definitions
-                     list of processes (after cleaning)
-    """
-
-    def default_setup(self):
-        """Default values for all properties"""
-
-        self['process_definitions'] = ProcessDefinitionList()
-        self['processes'] = ProcessList()
-
-    def filter(self, name, value):
-        """Filter for valid process property values."""
-
-        if name == 'process_definitions':
-            if not isinstance(value, ProcessDefinitionList):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid ProcessDefinitionList object" % str(value)
-
-        if name == 'process':
-            if not isinstance(value, ProcessList):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid ProcessList object" % str(value)
-
-        return True
-
-    def get_sorted_keys(self):
-        """Return process property names as a nicely sorted list."""
-
-        return ['process_definitions', 'processes']
-
-    def nice_string(self):
-        """Returns a nicely formated string about current process
-        content"""
-        
-        mystr = "MultiProcess: "
-        prevleg = None
-        for leg in self['legs']:
-            mypart = self['model'].get('particle_dict')[leg['id']]
-            if prevleg and prevleg['state'] == 'initial' \
-                   and leg['state'] == 'final':
-                # Separate initial and final legs by ">"
-                mystr = mystr + '> '
-            if mypart['is_part']:
-                mystr = mystr + mypart['name']
-            else:
-                mystr = mystr + mypart['antiname']
-            mystr = mystr + '(%i) ' % leg['number']
-            prevleg = leg
-
-        # Remove last space
-        return mystr[:-1]
-
-    def get(self, name):
-        """Get the value of the property name."""
-
-        if (name == 'processes') and not self[name]:
-            if self['process_definitions']:
-                self['processes'] = self.clean_processes()
-
-        return MultiProcess.__bases__[0].get(self, name) # call the mother routine
-
-
-    def clean_processes(self):
-        """Routine for removing identical processes in Multiprocess list"""
-
-        processes = ProcessList()
-
-        for process_def in self['process_definitions']:
-
-            model = process_def['model']            
-
-            isids = [leg['ids'] for leg in \
-                     filter(lambda leg: leg['state'] == 'initial',process_def['legs'])]
-            fsids = [leg['ids'] for leg in \
-                     filter(lambda leg: leg['state'] == 'final',process_def['legs'])]
-
-            # Generate all combinations for the initial state
-
-            islist = []
-
-            for prod in apply(itertools.product,isids):
-                islist.append(LegList([Leg({'id':id,'state': 'initial'}) \
-                                       for id in prod]))
-
-            # Generate all combinations for the final state
-            
-            fsidlist = []
-
-            for prod in apply(itertools.product,fsids):
-                fsidlist.append([id for id in prod])
-
-            # Now remove all double counting in the final state
-            red_fsidlist = []
-            fslist = []
-            for ids in fsidlist:
-                if tuple(sorted(ids)) not in red_fsidlist:
-                    fslist.append(LegList([Leg({'id':id,'state': 'final'}) \
-                                           for id in ids]))
-                    red_fsidlist.append(tuple(sorted(ids)));
-
-            # Combine IS and FS particles
-            leg_lists = []
-            for islegs in islist:
-                for fslegs in fslist:
-                    leg_list = [copy.copy(leg) for leg in islegs]
-                    leg_list.extend([copy.copy(leg) for leg in fslegs])
-                    # Check that process has even number of fermions
-                    if len(filter(lambda leg: leg.is_fermion(model),leg_list)) % 2 == 0:
-                        leg_lists.append(LegList(leg_list))
-
-            # Setup processes
-            processes.extend([Process({'legs':legs,
-                                       'model':process_def.get('model'),
-                                       'id': process_def.get('id')}) \
-                              for legs in leg_lists])
-            
-        return processes
-

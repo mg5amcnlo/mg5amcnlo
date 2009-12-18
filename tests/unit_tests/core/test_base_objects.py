@@ -1210,6 +1210,14 @@ class ProcessTest(unittest.TestCase):
 
         self.assertEqual(goal_str, self.myprocess.nice_string())
 
+    def test_shell_string(self):
+        """Test Process shell_string representation"""
+
+        self.myprocess.get('legs')[2].set('id', -3)
+        goal_str = "cc_cxcc"
+
+        self.assertEqual(goal_str, self.myprocess.shell_string())
+
 #===============================================================================
 # ProcessDefinitionTest
 #===============================================================================
@@ -1317,138 +1325,3 @@ class ProcessDefinitionTest(unittest.TestCase):
 
         self.assertEqual(goal, str(self.my_process_definition))
 
-#===============================================================================
-# MultiProcessTest
-#===============================================================================
-class MultiProcessTest(unittest.TestCase):
-    """Test class for the MultiProcess object"""
-
-    mydict = {}
-    my_process_definition = None
-    mymodel = base_objects.Model()
-    my_multi_leglist = base_objects.MultiLegList()
-    my_process_definitions = base_objects.ProcessDefinitionList()
-    my_processes = base_objects.ProcessList()
-    my_multi_process = base_objects.MultiProcess()
-    
-    def setUp(self):
-
-        mypartlist = base_objects.ParticleList([ \
-                     base_objects.Particle({'name':'d',
-                                            'antiname':'dc~',
-                                            'spin':2,
-                                            'pdg_code':1}),
-                     base_objects.Particle({'name':'u',
-                                            'antiname':'u~',
-                                            'spin':2,
-                                            'pdg_code':2}),
-                     base_objects.Particle({'name':'g',
-                                            'antiname':'g',
-                                            'self_antipart':True,
-                                            'spin':3,
-                                            'pdg_code':21}),
-                     base_objects.Particle({'name':'a',
-                                            'antiname':'a',
-                                            'self_antipart':True,
-                                            'spin':3,
-                                            'pdg_code':22}) \
-                     ])
-
-        self.mymodel.set('particles', mypartlist)
-
-        self.my_multi_leglist = base_objects.MultiLegList(\
-            [copy.copy(base_objects.MultiLeg({'ids':[3,4,5],
-                                              'state':'final'})) for \
-             dummy in range(5)])
-        
-        self.my_multi_leglist[0].set('state', 'initial')
-        self.my_multi_leglist[1].set('state', 'initial')
-
-        mydict = {'legs':self.my_multi_leglist,
-                  'orders':{'QCD':5, 'QED':1},
-                  'model':self.mymodel,
-                  'id':3}
-
-        self.my_process_definition = base_objects.ProcessDefinition(self.mydict)
-        self.my_process_definitions = base_objects.ProcessDefinitionList(\
-            [self.my_process_definition])
-        
-        self.mydict = {'process_definitions':self.my_process_definitions,
-                       'processes':base_objects.ProcessList()}
-        
-        self.my_multi_process = base_objects.MultiProcess(\
-            self.mydict)
-
-    def test_setget_process_correct(self):
-        "Test correct MultiProcess object __init__, get and set"
-
-        myprocess2 = base_objects.MultiProcess()
-
-        for prop in self.mydict.keys():
-            myprocess2.set(prop, self.mydict[prop])
-
-        self.assertEqual(self.my_multi_process, myprocess2)
-
-
-    def test_setget_process_exceptions(self):
-        "Test error raising in MultiProcess __init__, get and set"
-
-        wrong_dict = self.mydict
-        wrong_dict['wrongparam'] = 'wrongvalue'
-
-        a_number = 0
-
-        # Test init
-        self.assertRaises(base_objects.MultiProcess.PhysicsObjectError,
-                          base_objects.MultiProcess,
-                          wrong_dict)
-        self.assertRaises(base_objects.MultiProcess.PhysicsObjectError,
-                          base_objects.MultiProcess,
-                          a_number)
-
-        # Test get
-        self.assertRaises(base_objects.MultiProcess.PhysicsObjectError,
-                          self.my_multi_process.get,
-                          a_number)
-        self.assertRaises(base_objects.MultiProcess.PhysicsObjectError,
-                          self.my_multi_process.get,
-                          'wrongparam')
-
-        # Test set
-        self.assertRaises(base_objects.MultiProcess.PhysicsObjectError,
-                          self.my_multi_process.set,
-                          a_number, 0)
-        self.assertRaises(base_objects.MultiProcess.PhysicsObjectError,
-                          self.my_multi_process.set,
-                          'wrongparam', 0)
-
-    def test_representation(self):
-        """Test process object string representation."""
-
-        goal = "{\n"
-        goal = goal + "    \'process_definitions\': %s,\n" % repr(self.my_process_definitions)
-        goal = goal + "    \'processes\': %s\n}" % repr(base_objects.ProcessList())
-
-        self.assertEqual(goal, str(self.my_multi_process))
-
-    def test_clean_processes(self):
-        """Test cleaning of processes to remove duplicates"""
-
-        p = [1, -1, 2, -2, 21]
-
-        my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': 'final'});
-        my_single_leg = base_objects.MultiLeg({'ids': [22],'state': 'final'});
-
-        my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * 5])
-        my_multi_leglist.append(my_single_leg)
-
-        my_multi_leglist[0].set('state','initial')
-        my_multi_leglist[1].set('state','initial')
-
-        my_process_definition = base_objects.ProcessDefinition({'legs': my_multi_leglist,
-                                                                'model':self.mymodel})
-
-        my_multi_process = base_objects.MultiProcess(\
-            {'process_definitions': base_objects.ProcessDefinitionList([my_process_definition])})
-
-        self.assertEqual(len(my_multi_process.get('processes')), 379)

@@ -1467,9 +1467,15 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         if isinstance(argument, diagram_generation.AmplitudeList):
             super(HelasMultiProcess, self).__init__()
             self.generate_matrix_elements(argument)
-        else:
+        elif isinstance(argument, diagram_generation.MultiProcess):
+            super(HelasMultiProcess, self).__init__()
+            self.generate_matrix_elements(argument.get('amplitudes'))
+        elif argument:
             # call the mother routine
             super(HelasMultiProcess, self).__init__(argument)
+        else:
+            # call the mother routine
+            super(HelasMultiProcess, self).__init__()
 
     def generate_matrix_elements(self, amplitudes):
         """Generate the HelasMatrixElements for the Amplitudes,
@@ -1486,7 +1492,8 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             if matrix_element in matrix_elements:
                 matrix_elements[matrix_elements.index(matrix_element)].\
                        get('processes').append(amplitude.get('process'))
-            elif matrix_element.get('diagrams'):
+            elif matrix_element.get('processes') and \
+                     matrix_element.get('diagrams'):
                 matrix_elements.append(matrix_element)
         
 

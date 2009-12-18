@@ -123,8 +123,8 @@ C
 C  
 C CONSTANTS
 C  
-      integer    nexternal
-      parameter (nexternal=%(nexternal)d)
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER                 NCOMB         
       PARAMETER (             NCOMB=%(ncomb)d)
 C  
@@ -180,8 +180,8 @@ C CONSTANTS
 C  
       INTEGER    NGRAPHS, NEIGEN 
       PARAMETER (NGRAPHS=%(ngraphs)d, NEIGEN=%(neigen)d) 
-      integer    nexternal
-      parameter (nexternal=%(nexternal)d)
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS, NCOLOR
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
       REAL*8     ZERO
@@ -219,7 +219,7 @@ C ----------
           DO J = 1, NCOLOR
               ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
           ENDDO
-          MATRIX =MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
+          MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
       ENDDO
 C      CALL GAUGECHECK(JAMP,ZTEMP,EIGEN_VEC,EIGEN_VAL,NCOLOR,NEIGEN) 
       END""" % replace_dict

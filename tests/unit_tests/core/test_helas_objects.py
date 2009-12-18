@@ -1887,26 +1887,11 @@ class HelasMultiProcessTest(unittest.TestCase):
 
             my_process_definition = base_objects.ProcessDefinition({'legs':my_multi_leglist,
                                                                     'model':self.mymodel})
-            my_multiprocess = base_objects.MultiProcess(\
+            my_multiprocess = diagram_generation.MultiProcess(\
                 {'process_definitions':\
                  base_objects.ProcessDefinitionList([my_process_definition])})
 
-            nproc = 0
-
-            # Calculate diagrams for all processes
-            
-            amplitudes = diagram_generation.AmplitudeList(my_multiprocess)
-
-            amplitudes.generate_amplitudes()
-
-            valid_procs = [([leg.get('id') for leg in \
-                             amplitude.get('process').get('legs')],
-                            len(amplitude.get('diagrams'))) \
-                           for amplitude in amplitudes]
-
-            valid_procs = filter(lambda item: item[1] > 0, valid_procs)
-
-            helas_multi_proc = helas_objects.HelasMultiProcess(amplitudes)
+            helas_multi_proc = helas_objects.HelasMultiProcess(my_multiprocess)
 
             if nfs <= 3:
                 self.assertEqual(len(helas_multi_proc.get('matrix_elements')),
