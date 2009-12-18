@@ -1126,7 +1126,8 @@ class ProcessTest(unittest.TestCase):
 
         self.mydict = {'legs':self.myleglist,
                        'orders':{'QCD':5, 'QED':1},
-                       'model':self.mymodel}
+                       'model':self.mymodel,
+                       'id': 1}
 
         self.myprocess = base_objects.Process(self.mydict)
 
@@ -1197,7 +1198,8 @@ class ProcessTest(unittest.TestCase):
         goal = "{\n"
         goal = goal + "    \'legs\': %s,\n" % repr(self.myleglist)
         goal = goal + "    \'orders\': %s,\n" % repr(self.myprocess['orders'])
-        goal = goal + "    \'model\': %s\n}" % repr(self.myprocess['model'])
+        goal = goal + "    \'model\': %s,\n" % repr(self.myprocess['model'])
+        goal = goal + "    \'id\': 1\n}"
 
         self.assertEqual(goal, str(self.myprocess))
 

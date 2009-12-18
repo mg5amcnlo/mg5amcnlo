@@ -394,10 +394,10 @@ class AmplitudeList(base_objects.PhysicsObjectList):
 
     def generate_amplitudes(self):
         """Generate amplitudes in a semi-efficient way.
-        Make use of crossing symmetry for processes that fail diagram generation,
-        but not for processes that succeed diagram generation.
-        Doing so will risk making it impossible to identify processes with
-        identical amplitudes.
+        Make use of crossing symmetry for processes that fail diagram
+        generation, but not for processes that succeed diagram
+        generation.  Doing so will risk making it impossible to
+        identify processes with identical amplitudes.
         """
 
         # Check for crossed processes

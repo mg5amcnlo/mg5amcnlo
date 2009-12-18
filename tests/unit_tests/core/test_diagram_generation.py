@@ -1382,7 +1382,8 @@ class MultiparticleTest(unittest.TestCase):
             amplitudes = diagram_generation.AmplitudeList(my_multiprocess)
 
             if nfs <= 2:
-                self.assertEqual(len(amplitudes),goal_number_processes[nfs - 2])
+                self.assertEqual(len(amplitudes),
+                                 goal_number_processes[nfs - 2])
             
             amplitudes.generate_amplitudes()
 

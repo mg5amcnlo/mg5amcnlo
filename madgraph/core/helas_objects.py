@@ -1133,7 +1133,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     # Customized constructor
     def __init__(self, *arguments):
         """Constructor for the HelasMatrixElement. In particular allows
-        generating a HelasMatrixElement from a DiagramList, with
+        generating a HelasMatrixElement from an Amplitude, with
         automatic generation of the necessary wavefunctions
         """
 
@@ -1153,6 +1153,30 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         else:
             super(HelasMatrixElement, self).__init__()
    
+    # Comparison between different amplitudes, to allow check for
+    # identical processes. Note that we are then not interested in
+    # interaction id, but in all other properties.
+    def __eq__(self, other):
+        """Comparison between different matrix elements, to allow check for
+        identical processes.
+        """
+        
+        if not isinstance(other,HelasMatrixElement):
+            return False
+
+        # Should only check if diagrams and process id are identical
+        if self['processes'] and not other['processes'] or \
+               self['processes'] and \
+               self['processes'][0]['id'] != other['processes'][0]['id'] or \
+               self['diagrams'] != other['diagrams']:
+            return False
+
+        return True
+
+    def __ne__(self, other):
+        """Overloading the nonequality operator, to make comparison easy"""
+        return not self.__eq__(other)
+
     def generate_helas_diagrams(self, amplitude, optimization = 1):
         """Starting from a list of Diagrams from the diagram
         generation, generate the corresponding HelasDiagrams, i.e.,
@@ -1165,6 +1189,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                not isinstance(optimization,int):
             raise self.PhysicsObjectError,\
                   "Missing or erraneous arguments for generate_helas_diagrams"
+
         diagram_list = amplitude.get('diagrams')
         process = amplitude.get('process')
         model = process.get('model')
@@ -1212,7 +1237,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 # vertext, by replacing the (incoming) last leg of the
                 # next-to-last vertex with the (outgoing) leg in the
                 # last vertex
-                nexttolastvertex = vertices.pop()
+                nexttolastvertex = copy.deepcopy(vertices.pop())
                 legs = nexttolastvertex.get('legs')
                 ntlnumber = legs[len(legs)-1].get('number')
                 lastleg = filter(lambda leg: leg.get('number') != ntlnumber,
@@ -1395,6 +1420,75 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                     identical_indices.values() ])
 
         return spin_factor * color_factor * identical_factor
+
+#===============================================================================
+# HelasMatrixElementList
+#===============================================================================
+class HelasMatrixElementList(base_objects.PhysicsObjectList):
+    """List of HelasMatrixElement objects
+    """
+
+    def is_valid_element(self, obj):
+        """Test if object obj is a valid HelasMatrixElement for the list."""
+
+        return isinstance(obj, HelasMatrixElement)
+    
+#===============================================================================
+# HelasMultiProcess
+#===============================================================================
+class HelasMultiProcess(base_objects.PhysicsObject):
+    """HelasMultiProcess: Given an AmplitudeList, generate the
+    HelasMatrixElements for the Amplitudes, identifying processes with
+    identical matrix elements"""
+
+    def default_setup(self):
+        """Default values for all properties"""
+
+        self['matrix_elements'] = HelasMatrixElementList()
+
+    def filter(self, name, value):
+        """Filter for valid process property values."""
+
+        if name == 'matrix_elements':
+            if not isinstance(value, HelasMatrixElementList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid HelasMatrixElementList object" % str(value)
+
+        return True
+
+    def get_sorted_keys(self):
+        """Return process property names as a nicely sorted list."""
+
+        return ['matrix_elements']
+
+    def __init__(self, argument = None):
+        """Allow initialization with AmplitudeList"""
+        
+        if isinstance(argument, diagram_generation.AmplitudeList):
+            super(HelasMultiProcess, self).__init__()
+            self.generate_matrix_elements(argument)
+        else:
+            # call the mother routine
+            super(HelasMultiProcess, self).__init__(argument)
+
+    def generate_matrix_elements(self, amplitudes):
+        """Generate the HelasMatrixElements for the Amplitudes,
+        identifying processes with identical matrix elements"""
+
+        if not isinstance(amplitudes, diagram_generation.AmplitudeList):
+            raise self.HelasMultiProcessError, \
+                  "%s is not valid AmplitudeList" % repr(amplitudes)
+
+        matrix_elements = self.get('matrix_elements')
+
+        for amplitude in amplitudes:
+            matrix_element = HelasMatrixElement(amplitude)
+            if matrix_element in matrix_elements:
+                matrix_elements[matrix_elements.index(matrix_element)].\
+                       get('processes').append(amplitude.get('process'))
+            elif matrix_element.get('diagrams'):
+                matrix_elements.append(matrix_element)
+        
 
 #===============================================================================
 # HelasModel

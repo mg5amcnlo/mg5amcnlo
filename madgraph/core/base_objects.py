@@ -966,6 +966,7 @@ class Process(PhysicsObject):
     """Process: list of legs (ordered)
                 dictionary of orders
                 model
+                process id
     """
 
     def default_setup(self):
@@ -974,6 +975,8 @@ class Process(PhysicsObject):
         self['legs'] = LegList()
         self['orders'] = {}
         self['model'] = Model()
+        # Optional number to identify the process
+        self['id'] = 0
 
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -989,14 +992,17 @@ class Process(PhysicsObject):
             if not isinstance(value, Model):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid Model object" % str(value)
-
+        if name is 'id':
+            if not isinstance(value, int):
+                raise self.PhysicsObjectError, \
+                    "Process id %s is not an integer" % repr(value)
 
         return True
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return ['legs', 'orders', 'model']
+        return ['legs', 'orders', 'model', 'id']
 
     def nice_string(self):
         """Returns a nicely formated string about current process
@@ -1093,8 +1099,6 @@ class ProcessDefinitionList(PhysicsObjectList):
 class MultiProcess(PhysicsObject):
     """MultiProcess: list of process definitions
                      list of processes (after cleaning)
-                     dictionary of orders
-                     model
     """
 
     def default_setup(self):
@@ -1205,7 +1209,8 @@ class MultiProcess(PhysicsObject):
 
             # Setup processes
             processes.extend([Process({'legs':legs,
-                                       'model':process_def.get('model')}) \
+                                       'model':process_def.get('model'),
+                                       'id': process_def.get('id')}) \
                               for legs in leg_lists])
             
         return processes

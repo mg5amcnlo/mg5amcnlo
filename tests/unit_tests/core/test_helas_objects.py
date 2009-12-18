@@ -1687,6 +1687,232 @@ class HelasMatrixElementTest(unittest.TestCase):
         self.assertEqual(matrix_element.get('diagrams'), mydiagrams)
 
 #===============================================================================
+# HelasMultiProcessTest
+#===============================================================================
+class HelasMultiProcessTest(unittest.TestCase):
+    """Test class for the HelasMultiProcess object"""
+
+    mydict = {}
+    mywavefunctions = None
+    myamplitude = None
+    mydiagrams = None
+    mymatrixelement = None
+    mymodel = base_objects.Model()
+
+
+    def setUp(self):
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        g = mypartlist[len(mypartlist)-1]
+
+        # A quark U and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[len(mypartlist)-1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        # A quark D and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'d',
+                      'antiname':'d~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'d',
+                      'antitexname':'\bar d',
+                      'line':'straight',
+                      'charge':-1./3.,
+                      'pdg_code':1,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        d = mypartlist[len(mypartlist)-1]
+        antid = copy.copy(d)
+        antid.set('is_part', False)
+
+        # Gluon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [u, \
+                                             antiu, \
+                                             g]),
+                      'color': ['C1'],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [d, \
+                                             antid, \
+                                             g]),
+                      'color': ['C1'],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        # 3-Gluon coupling
+        myinterlist.append(base_objects.Interaction({
+                      'id': 5,
+                      'particles': base_objects.ParticleList(\
+                                            [g, \
+                                             g, \
+                                             g]),
+                      'color': ['C1'],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'MGVX1'},
+                      'orders':{'QCD':1}}))
+
+
+        self.mymodel.set('particles', mypartlist)
+        self.mymodel.set('interactions', myinterlist)        
+
+
+    def test_helas_multi_process(self):
+        """Test the HelasMultiProcess with the processes uu~>uu~
+        and dd~>dd~"""
+        
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':'final'}))
+
+        myproc1 = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        myamplitude1 = diagram_generation.Amplitude({'process': myproc1})
+
+        myamplitude1.get('diagrams')
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':'final'}))
+
+        myproc2 = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        myamplitude2 = diagram_generation.Amplitude({'process': myproc2})
+
+        myamplitude2.get('diagrams')
+
+        myamplitudes = diagram_generation.AmplitudeList([ myamplitude1,
+                                                          myamplitude2 ])
+
+        my_matrix_element1 = helas_objects.HelasMatrixElement(myamplitude1)
+        my_multiprocess = helas_objects.HelasMultiProcess(myamplitudes)
+
+        self.assertEqual(len(my_multiprocess.get('matrix_elements')), 1)
+        self.assertEqual(my_multiprocess.get('matrix_elements')[0].\
+                         get('processes'),
+                         base_objects.ProcessList([ myproc1, myproc2 ]))
+        self.assertEqual(my_multiprocess.get('matrix_elements')[0].\
+                         get('diagrams'),
+                         my_matrix_element1.get('diagrams'))
+
+        myamplitudes[0].get('process').set('id', 10)
+
+        my_multiprocess = helas_objects.HelasMultiProcess(myamplitudes)
+        self.assertEqual(len(my_multiprocess.get('matrix_elements')), 2)
+
+
+    def test_helas_multiprocess_pp_nj(self):
+        """Setting up and testing pp > nj based on multiparticle lists,
+        using the amplitude functionality of MultiProcess
+        (which makes partial use of crossing symmetries)
+        """
+
+        max_fs = 2 # 3
+
+        p = [1, -1, 2, -2, 21]
+
+        my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': 'final'});
+
+        goal_number_matrix_elements = [22,34]
+
+        for nfs in range(2, max_fs + 1):
+
+            # Define the multiprocess
+            my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * (2 + nfs)])
+
+            my_multi_leglist[0].set('state','initial')
+            my_multi_leglist[1].set('state','initial')
+
+            my_process_definition = base_objects.ProcessDefinition({'legs':my_multi_leglist,
+                                                                    'model':self.mymodel})
+            my_multiprocess = base_objects.MultiProcess(\
+                {'process_definitions':\
+                 base_objects.ProcessDefinitionList([my_process_definition])})
+
+            nproc = 0
+
+            # Calculate diagrams for all processes
+            
+            amplitudes = diagram_generation.AmplitudeList(my_multiprocess)
+
+            amplitudes.generate_amplitudes()
+
+            valid_procs = [([leg.get('id') for leg in \
+                             amplitude.get('process').get('legs')],
+                            len(amplitude.get('diagrams'))) \
+                           for amplitude in amplitudes]
+
+            valid_procs = filter(lambda item: item[1] > 0, valid_procs)
+
+            helas_multi_proc = helas_objects.HelasMultiProcess(amplitudes)
+
+            if nfs <= 3:
+                self.assertEqual(len(helas_multi_proc.get('matrix_elements')),
+                                     goal_number_matrix_elements[nfs - 2])
+
+#===============================================================================
 # HelasModelTest
 #===============================================================================
 class HelasModelTest(unittest.TestCase):
