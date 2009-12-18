@@ -13,9 +13,10 @@
 #
 ################################################################################
 
-"""Classes and methods required for all calculations related 
-to QCD color algebra."""
+"""Classes and methods required for all calculations related to SU(N) color 
+algebra."""
 
+import array
 import copy
 import fractions
 import itertools
@@ -23,64 +24,39 @@ import itertools
 #===============================================================================
 # ColorObject
 #===============================================================================
-class ColorObject(list):
-    """Parent class for all color objects like T, Tr, f, d, ... By default,
-    implement a list of color indices (with get and set) and template for 
-    simplify and pair_simplify. Any new color object MUST inherit
-    from this class!"""
+class ColorObject(array.array):
+    """Parent class for all color objects like T, Tr, f, d, ... Any new color 
+    object MUST inherit from this class!"""
 
-    def __init__(self, *args):
-        """Initialize a color object. Any number of argument can be used, all
-        of them being considered as color indices."""
+    def __new__(self, *args):
+        """Create a new ColorObject, assuming an integer array"""
 
-        list.__init__(self)
-        self.set_indices(*args)
-
-    def append_index(self, index):
-        """Append an index at the end of the current ColorObject"""
-        # Check if the input value is an integer
-        if not isinstance(index, int):
-            raise TypeError, \
-                "Object %s is not a valid integer for color index" % str(index)
-        self.append(index)
-
-    def set_indices(self, *args):
-        """Use arguments (any number) to set  the current indices. Previous
-        indices are lost."""
-
-        # Remove all existing elements
-        del self[:]
-        # Append new ones
-        for index in args:
-            self.append_index(index)
-
-    def get_indices(self):
-        """Returns a list of indices."""
-
-        return list(self)
+        return super(ColorObject, self).__new__(self, 'i', args)
 
     def __str__(self):
-        """Returns a standard string representation. Can be overwritten for
-        each specific child."""
+        """Returns a standard string representation."""
 
         return '%s(%s)' % (self.__class__.__name__,
                            ','.join([str(i) for i in self]))
 
+    __repr__ = __str__
+
     def simplify(self):
-        """Called to simplify the current object. Default behavior is to return
-        None, but should be overwritten for each child. Should return a 
-        ColorFactor containing the ColorStrings corresponding to the 
-        simplification"""
-
+        """Simplification rules, to be overwritten for each new color object!
+        Should return a color factor or None if no simplification is possible"""
         return None
 
-    def pair_simplify(self, col_obj):
-        """Called to simplify a pair of (multiplied) ColorObject. 
-        Default behavior is to return None, but should be overwritten 
-        for each child. Should return a ColorFactor containing the ColorStrings 
-        corresponding to the simplification"""
-
+    def pair_simplify(self, other):
+        """Pair simplification rules, to be overwritten for each new color 
+        object! Should return a color factor or None if no simplification 
+        is possible"""
         return None
+
+    def complex_conjugate(self):
+        """Complex conjugation. By default, the ordering of color index is
+        reversed. Can be overwritten for specific color objects like T,..."""
+
+        self.reverse()
 
 #===============================================================================
 # Tr
@@ -94,33 +70,33 @@ class Tr(ColorObject):
 
         # Tr(a)=0
         if len(self) == 1:
-            col_str = ColorString()
-            col_str.set_coeff(fractions.Fraction(0, 1))
-            return ColorFactor(col_str)
+            return ColorFactor()
+
         #Tr()=Nc
         if len(self) == 0:
             col_str = ColorString()
-            col_str.set_Nc_power(1)
-            return ColorFactor(col_str)
+            col_str.Nc_power = 1
+            return ColorFactor([col_str])
+
         #Always order starting from smallest index
         if self[0] != min(self):
-            pos = self.get_indices().index(min(self))
-            new = self.get_indices()[pos:] + self.get_indices()[:pos]
-            return ColorFactor(ColorString(Tr(*new)))
+            pos = self.index(min(self))
+            new = self[pos:] + self[:pos]
+            return ColorFactor([ColorString([Tr(*new)])])
 
         # Tr(a,x,b,x,c) = 1/2(Tr(a,c)Tr(b)-1/Nc Tr(a,b,c))
-        for i1, index1 in enumerate(self.get_indices()):
-            for i2, index2 in enumerate(self.get_indices()[i1 + 1:]):
+        for i1, index1 in enumerate(self):
+            for i2, index2 in enumerate(self[i1 + 1:]):
                 if index1 == index2:
-                    a = self.get_indices()[:i1]
-                    b = self.get_indices()[i1 + 1:i1 + i2 + 1]
-                    c = self.get_indices()[i1 + i2 + 2:]
-                    col_str1 = ColorString(Tr(*(a + c)), Tr(*b))
-                    col_str2 = ColorString(Tr(*(a + b + c)))
-                    col_str1.set_coeff(fractions.Fraction(1, 2))
-                    col_str2.set_coeff(fractions.Fraction(-1, 2))
-                    col_str2.set_Nc_power(-1)
-                    return ColorFactor(col_str1, col_str2)
+                    a = self[:i1]
+                    b = self[i1 + 1:i1 + i2 + 1]
+                    c = self[i1 + i2 + 2:]
+                    col_str1 = ColorString([Tr(*(a + c)), Tr(*b)])
+                    col_str2 = ColorString([Tr(*(a + b + c))])
+                    col_str1.coeff = fractions.Fraction(1, 2)
+                    col_str2.coeff = fractions.Fraction(-1, 2)
+                    col_str2.Nc_power = -1
+                    return ColorFactor([col_str1, col_str2])
 
         return None
 
@@ -129,28 +105,36 @@ class Tr(ColorObject):
         Tr(a,x,b)Tr(c,x,d) = 1/2(Tr(a,d,c,b)-1/Nc Tr(a,b)Tr(c,d)) and
         Tr(a,x,b)T(c,x,d,i,j) = 1/2(T(c,b,a,d,i,j)-1/Nc Tr(a,b)T(c,d,i,j))"""
 
-        if isinstance(col_obj, Tr) or isinstance(col_obj, T):
-            for i1, index1 in enumerate(self.get_indices()):
-                for i2, index2 in enumerate(col_obj.get_indices()):
+        if isinstance(col_obj, Tr):
+            for i1, index1 in enumerate(self):
+                for i2, index2 in enumerate(col_obj):
                     if index1 == index2:
-                        a = self.get_indices()[:i1]
-                        b = self.get_indices()[i1 + 1:]
-                        c = col_obj.get_indices()[:i2]
-                        d = col_obj.get_indices()[i2 + 1:]
-                        if isinstance(col_obj, Tr):
-                            col_str1 = ColorString(Tr(*(a + d + c + b)))
-                        else:
-                            ij = col_obj.get_ij()
-                            col_str1 = ColorString(T(*(a + d + c + b + ij)))
-                        if isinstance(col_obj, Tr):
-                            col_str2 = ColorString(Tr(*(a + b)), Tr(*(c + d)))
-                        else:
-                            col_str2 = ColorString(Tr(*(a + b)),
-                                                   T(*(c + d) + ij))
-                        col_str1.set_coeff(fractions.Fraction(1, 2))
-                        col_str2.set_coeff(fractions.Fraction(-1, 2))
-                        col_str2.set_Nc_power(-1)
-                        return ColorFactor(col_str1, col_str2)
+                        a = self[:i1]
+                        b = self[i1 + 1:]
+                        c = col_obj[:i2]
+                        d = col_obj[i2 + 1:]
+                        col_str1 = ColorString([Tr(*(a + d + c + b))])
+                        col_str2 = ColorString([Tr(*(a + b)), Tr(*(c + d))])
+                        col_str1.coeff = fractions.Fraction(1, 2)
+                        col_str2.coeff = fractions.Fraction(-1, 2)
+                        col_str2.Nc_power = -1
+                        return ColorFactor([col_str1, col_str2])
+
+        if isinstance(col_obj, T):
+            for i1, index1 in enumerate(self):
+                for i2, index2 in enumerate(col_obj[:-2]):
+                    if index1 == index2:
+                        a = self[:i1]
+                        b = self[i1 + 1:]
+                        c = col_obj[:i2]
+                        d = col_obj[i2 + 1:-2]
+                        ij = col_obj[-2:]
+                        col_str1 = ColorString([T(*(a + d + c + b + ij))])
+                        col_str2 = ColorString([Tr(*(a + b)), T(*(c + d) + ij)])
+                        col_str1.coeff = fractions.Fraction(1, 2)
+                        col_str2.coeff = fractions.Fraction(-1, 2)
+                        col_str2.Nc_power = -1
+                        return ColorFactor([col_str1, col_str2])
 
         return None
 
@@ -158,68 +142,38 @@ class Tr(ColorObject):
 # T
 #===============================================================================
 class T(ColorObject):
-    """The T color object. Implement two additional indices i and j"""
-
-    _ij = [0, 0]
+    """The T color object. Last two indices have a special meaning"""
 
     def __init__(self, *args):
-        """Initialize a T object. Any number of argument can be used, all
-        of them being considered as color indices except the two last one."""
+        """Check for at least two indices"""
 
-        list.__init__(self)
+        super(T, self).__init__()
         if len(args) < 2:
             raise ValueError, \
-                "T objects have at least two indices!"
-
-        self.set_ij(*args[-2:])
-        self.set_indices(*args[:-2])
-
-    def set_ij(self, i, j):
-        """Set the two last indices"""
-        if not isinstance(i, int) or not isinstance(j, int):
-            raise TypeError, \
-                "Object %s is not a valid integer for index i,j" % str(index)
-        self._ij = [i, j]
-
-    def get_ij(self):
-        """Returns the two last indices"""
-        return self._ij
-
-    def __str__(self):
-        """Returns a T string representation."""
-
-        return '%s(%s;%s)' % (self.__class__.__name__,
-                           ','.join([str(i) for i in self]),
-                           ','.join([str(i) for i in self._ij]))
-
-    def __eq__(self, other):
-        """Compare deeply!"""
-        return self.get_ij() == other.get_ij() and \
-               self.get_indices() == other.get_indices()
+                "T objects must have at least two indices!"
 
     def simplify(self):
         """Implement T(a,b,c,...,i,i) = Tr(a,b,c,...) and
         T(a,x,b,x,c,i,j) = 1/2(T(a,c,i,j)Tr(b)-1/Nc T(a,b,c,i,j))"""
 
-        ij = self.get_ij()
-
         # T(a,b,c,...,i,i) = Tr(a,b,c,...)
-        if ij[0] == ij[1]:
-            return ColorFactor(ColorString(Tr(*self.get_indices())))
+        if self[-2] == self[-1]:
+            return ColorFactor([ColorString([Tr(*self[:-2])])])
 
         # T(a,x,b,x,c,i,j) = 1/2(T(a,c,i,j)Tr(b)-1/Nc T(a,b,c,i,j))
-        for i1, index1 in enumerate(self.get_indices()):
-            for i2, index2 in enumerate(self.get_indices()[i1 + 1:]):
+        for i1, index1 in enumerate(self[:-2]):
+            for i2, index2 in enumerate(self[i1 + 1:-2]):
                 if index1 == index2:
-                    a = self.get_indices()[:i1]
-                    b = self.get_indices()[i1 + 1:i1 + i2 + 1]
-                    c = self.get_indices()[i1 + i2 + 2:]
-                    col_str1 = ColorString(T(*(a + c + ij)), Tr(*b))
-                    col_str2 = ColorString(T(*(a + b + c + ij)))
-                    col_str1.set_coeff(fractions.Fraction(1, 2))
-                    col_str2.set_coeff(fractions.Fraction(-1, 2))
-                    col_str2.set_Nc_power(-1)
-                    return ColorFactor(col_str1, col_str2)
+                    a = self[:i1]
+                    b = self[i1 + 1:i1 + i2 + 1]
+                    c = self[i1 + i2 + 2:-2]
+                    ij = self[-2:]
+                    col_str1 = ColorString([T(*(a + c + ij)), Tr(*b)])
+                    col_str2 = ColorString([T(*(a + b + c + ij))])
+                    col_str1.coeff = fractions.Fraction(1, 2)
+                    col_str2.coeff = fractions.Fraction(-1, 2)
+                    col_str2.Nc_power = -1
+                    return ColorFactor([col_str1, col_str2])
 
         return None
 
@@ -230,33 +184,52 @@ class T(ColorObject):
         but only if the simplify_T_product tag is True."""
 
         if isinstance(col_obj, T):
-            ij1 = self.get_ij()
-            ij2 = col_obj.get_ij()
+            ij1 = self[-2:]
+            ij2 = col_obj[-2:]
 
+            # T(a,...,i,j)T(b,...,j,k) = T(a,...,b,...,i,k)
             if ij1[1] == ij2[0]:
-                return ColorFactor(ColorString(T(*(self.get_indices() + \
-                                                   col_obj.get_indices() + \
-                                                   [ij1[0], ij2[1]]))))
+                return ColorFactor([ColorString([T(*(self[:-2] + \
+                                                   col_obj[:-2] + \
+                                                   array.array('i', [ij1[0],
+                                                               ij2[1]])))])])
+            # T(a,x,b,i,j)T(c,x,d,k,l) = 1/2(T(a,d,i,l)T(c,b,k,j)    
+            #                          -1/Nc T(a,b,i,j)T(c,d,k,l))
             if simplify_T_product:
-                for i1, index1 in enumerate(self.get_indices()):
-                    for i2, index2 in enumerate(col_obj.get_indices()):
+                for i1, index1 in enumerate(self[:-2]):
+                    for i2, index2 in enumerate(col_obj[:-2]):
                         if index1 == index2:
-                            a = self.get_indices()[:i1]
-                            b = self.get_indices()[i1 + 1:]
-                            c = col_obj.get_indices()[:i2]
-                            d = col_obj.get_indices()[i2 + 1:]
-                            col_str1 = ColorString(T(*(a + d + \
-                                                       [ij1[0], ij2[1]])),
+                            a = self[:i1]
+                            b = self[i1 + 1:-2]
+                            c = col_obj[:i2]
+                            d = col_obj[i2 + 1:-2]
+                            col_str1 = ColorString([T(*(a + d + \
+                                                       array.array('i',
+                                                        [ij1[0], ij2[1]]))),
                                                    T(*(c + b + \
-                                                       [ij2[0], ij1[1]])))
-                            col_str2 = ColorString(T(*(a + b + \
-                                                       [ij1[0], ij1[1]])),
+                                                       array.array('i',
+                                                        [ij2[0], ij1[1]])))])
+                            col_str2 = ColorString([T(*(a + b + \
+                                                       array.array('i',
+                                                        [ij1[0], ij1[1]]))),
                                                    T(*(c + d + \
-                                                       [ij2[0], ij2[1]])))
-                            col_str1.set_coeff(fractions.Fraction(1, 2))
-                            col_str2.set_coeff(fractions.Fraction(-1, 2))
-                            col_str2.set_Nc_power(-1)
-                            return ColorFactor(col_str1, col_str2)
+                                                       array.array('i',
+                                                        [ij2[0], ij2[1]])))])
+                            col_str1.coeff = fractions.Fraction(1, 2)
+                            col_str2.coeff = fractions.Fraction(-1, 2)
+                            col_str2.Nc_power = -1
+                            return ColorFactor([col_str1, col_str2])
+
+    def complex_conjugate(self):
+        """Complex conjugation. Overwritten here because the two last indices
+        should be treated differently"""
+
+        # T(a,b,c,i,j)* = T(c,b,a,j,i)
+        l1 = self[:-2]
+        l1.reverse()
+        l2 = self[-2:]
+        l2.reverse()
+        self[:] = l1 + l2
 
 #===============================================================================
 # f
@@ -264,33 +237,30 @@ class T(ColorObject):
 class f(ColorObject):
     """The f color object"""
 
-    def set_indices(self, *args):
-        """Overwrite default to check that there are only 3 indices"""
+    def __init__(self, *args):
+        """Ensure f and d objects have strictly 3 indices"""
+
+        super(f, self).__init__()
         if len(args) != 3:
             raise ValueError, \
-                "F objects should have exactly 3 color indices!"
-        # Remove all existing elements
-        del self[:]
-        # Append new ones
-        for index in args:
-            self.append_index(index)
+                "f and d objects must have three indices!"
 
     def simplify(self):
         """Implement only the replacement rule 
         f(a,b,c)=-2ITr(a,b,c)+2ITr(c,b,a)"""
 
-        indices = self.get_indices()
-        col_str1 = ColorString(Tr(*indices))
+        indices = self[:]
+        col_str1 = ColorString([Tr(*indices)])
         indices.reverse()
-        col_str2 = ColorString(Tr(*indices))
+        col_str2 = ColorString([Tr(*indices)])
 
-        col_str1.set_coeff(fractions.Fraction(-2, 1))
-        col_str2.set_coeff(fractions.Fraction(2, 1))
+        col_str1.coeff = fractions.Fraction(-2, 1)
+        col_str2.coeff = fractions.Fraction(2, 1)
 
-        col_str1.set_is_imaginary(True)
-        col_str2.set_is_imaginary(True)
+        col_str1.is_imaginary = True
+        col_str2.is_imaginary = True
 
-        return ColorFactor(col_str1, col_str2)
+        return ColorFactor([col_str1, col_str2])
 
 #===============================================================================
 # d
@@ -302,15 +272,15 @@ class d(f):
         """Implement only the replacement rule 
         d(a,b,c)=2Tr(a,b,c)+2Tr(c,b,a)"""
 
-        indices = self.get_indices()
-        col_str1 = ColorString(Tr(*indices))
+        indices = self[:]
+        col_str1 = ColorString([Tr(*indices)])
         indices.reverse()
-        col_str2 = ColorString(Tr(*indices))
+        col_str2 = ColorString([Tr(*indices)])
 
-        col_str1.set_coeff(fractions.Fraction(2, 1))
-        col_str2.set_coeff(fractions.Fraction(2, 1))
+        col_str1.coeff = fractions.Fraction(2, 1)
+        col_str2.coeff = fractions.Fraction(2, 1)
 
-        return ColorFactor(col_str1, col_str2)
+        return ColorFactor([col_str1, col_str2])
 
 #===============================================================================
 # ColorString
@@ -321,176 +291,101 @@ class ColorString(list):
     to indicate if the coefficient is real or imaginary. ColorStrings can be
     simplified, by simplifying their elements."""
 
-    _coeff = fractions.Fraction(1, 1)
-    _is_imaginary = False
-    _Nc_power = 0
-
-    def __init__(self, *args):
-        """Creates a new color string starting from one or several color
-        objects."""
-
-        list.__init__(self)
-        self.set_color_objects(*args)
-
-    def append_color_object(self, col_obj):
-        """Append a color object at the end of the current ColorString"""
-        # Check if the input value is a child of ColorObject
-        if not isinstance(col_obj, ColorObject):
-            raise TypeError, \
-                "Object %s is not a valid ColorObject child" % \
-                                                           str(col_obj)
-        self.append(col_obj)
-
-    def get_color_objects(self):
-        """Returns a list of color objects."""
-
-        return list(self)
-
-    def set_color_objects(self, *args):
-        """Use arguments (any number) to set  the current color objects.
-        Previous color objects are lost."""
-
-        # Remove all existing elements
-        del self[:]
-        # Append new ones
-        for col_obj in args:
-            self.append_color_object(col_obj)
+    coeff = fractions.Fraction(1, 1)
+    is_imaginary = False
+    Nc_power = 0
 
     def __str__(self):
         """Returns a standard string representation based on color object
         representations"""
 
-        coeff_str = str(self._coeff)
-        if self._is_imaginary:
+        coeff_str = str(self.coeff)
+        if self.is_imaginary:
             coeff_str += ' I'
-        if self._Nc_power > 0:
-            coeff_str += ' Nc^%i' % self._Nc_power
-        elif self._Nc_power < 0:
-            coeff_str += ' 1/Nc^%i' % abs(self._Nc_power)
+        if self.Nc_power > 0:
+            coeff_str += ' Nc^%i' % self.Nc_power
+        elif self.Nc_power < 0:
+            coeff_str += ' 1/Nc^%i' % abs(self.Nc_power)
         return '%s %s' % (coeff_str,
                          ' '.join([str(col_obj) for col_obj in self]))
 
-    def set_coeff(self, frac):
-        """Set the coefficient of the ColorString"""
-
-        if not isinstance(frac, fractions.Fraction):
-            raise TypeError, \
-                "Object %s is not a valid fraction for coefficient" % \
-                                                                str(frac)
-        self._coeff = frac
-
-    def get_coeff(self):
-        """Get the coefficient of the ColorString"""
-        return self._coeff
-
-    def set_Nc_power(self, power):
-        """Set the Nc power of the ColorString"""
-
-        if not isinstance(power, int):
-            raise TypeError, \
-                "Object %s is not a valid int for Nc power" % str(power)
-        self._Nc_power = power
-
-    def get_Nc_power(self):
-        """Get the Nc power of the ColorString"""
-        return self._Nc_power
-
-    def set_is_imaginary(self, is_imaginary):
-        """Set the is_imaginary flag of the ColorString"""
-
-        if not isinstance(is_imaginary, bool):
-            raise TypeError, \
-                "Object %s is not a valid boolean for is_imaginary flag" % \
-                                                            str(is_imaginary)
-        self._is_imaginary = is_imaginary
-
-    def is_imaginary(self):
-        """Is the ColorString imaginary ?"""
-        return self._is_imaginary
-
-    def __eq__(self, other):
-        """Compare deeply!"""
-
-        return self.get_coeff() == other.get_coeff() and \
-               self.get_Nc_power() == other.get_Nc_power() and \
-               self.is_imaginary() == other.is_imaginary() and \
-               self.get_color_objects() == other.get_color_objects()
+    __repr__ = __str__
 
     def product(self, other):
-        """Multiply two ColorStrings and returns the result."""
+        """Multiply self with other."""
 
-        res_coeff = self.get_coeff() * other.get_coeff()
+        self.coeff = self.coeff * other.coeff
 
-        res_Nc_power = self.get_Nc_power() + other.get_Nc_power()
+        self.Nc_power = self.Nc_power + other.Nc_power
 
-        res_imaginary = False
-        if all([self.is_imaginary(), other.is_imaginary()]):
-            res_coeff = -res_coeff
-        elif any([self.is_imaginary(), other.is_imaginary()]):
-            res_imaginary = True
+        # Complex algebra
+        if self.is_imaginary and other.is_imaginary:
+            self.is_imaginary = False
+            self.coeff = -self.coeff
+        elif self.is_imaginary or other.is_imaginary:
+            self.is_imaginary = True
 
-        res_col_str = ColorString(*(self.get_color_objects() + \
-                                  other.get_color_objects()))
-
-        res_col_str.set_coeff(res_coeff)
-        res_col_str.set_Nc_power(res_Nc_power)
-        res_col_str.set_is_imaginary(res_imaginary)
-
-        return res_col_str
+        self.extend(other)
 
     def simplify(self):
         """Simplify the current ColorString by applying simplify rules on
         each element and building a new ColorFactor to return if necessary"""
 
-        # First try to simplify single elements
-        for i, col_obj in enumerate(self):
-            res = col_obj.simplify()
+        # First, try sto simplify element by element
+        for i1, col_obj1 in enumerate(self):
+            res = col_obj1.simplify()
+            # If a simplification possibility is found...
             if res:
+                # Create a color factor to store the answer...
                 res_col_factor = ColorFactor()
-                first_col_str = copy.deepcopy(self)
-                del first_col_str[i]
+                # Obtained my multiplying the initial string minus the color
+                # object to simplify with all color strings in the result
                 for second_col_str in res:
-                    prod = first_col_str.product(second_col_str)
-                    prod.sort()
-                    res_col_factor.append_color_string(prod)
+                    first_col_str = copy.copy(self)
+                    del first_col_str[i1]
+                    first_col_str.product(second_col_str)
+                    # This sort is necessary to ensure ordering of ColorObjects
+                    # remains the same
+                    first_col_str.sort()
+                    res_col_factor.append(first_col_str)
                 return res_col_factor
 
         # Second, try to simplify pairs
-        for i1, col_obj1 in enumerate(self.get_color_objects()):
-            for i2, col_obj2 in enumerate(self.get_color_objects()[i1 + 1:]):
+        for i1, col_obj1 in enumerate(self):
+
+            for i2, col_obj2 in enumerate(self[i1 + 1:]):
                 res = col_obj1.pair_simplify(col_obj2)
                 # Try both pairing
                 if not res:
                     res = col_obj2.pair_simplify(col_obj1)
                 if res:
                     res_col_factor = ColorFactor()
-                    first_col_str = copy.deepcopy(self)
-                    del first_col_str[i1]
-                    del first_col_str[i1 + i2]
                     for second_col_str in res:
-                        prod = first_col_str.product(second_col_str)
-                        prod.sort()
-                        res_col_factor.append_color_string(prod)
+                        first_col_str = copy.copy(self)
+                        del first_col_str[i1]
+                        del first_col_str[i1 + i2]
+                        first_col_str.product(second_col_str)
+                        first_col_str.sort()
+                        res_col_factor.append(first_col_str)
                     return res_col_factor
 
         return None
 
-    def is_similar(self, other):
-        """Returns true if two color strings differ only by their coefficients,
-        False otherwise. Only two similar strings can be added."""
-
-        return self.get_Nc_power() == other.get_Nc_power() and \
-               self.is_imaginary() == other.is_imaginary() and \
-               self.get_color_objects() == other.get_color_objects()
-
     def add(self, other):
-        """Returns the sum of two strings, i.e. a copy of the first one with
-        the two coefficients added. ONLY USE WITH SIMILAR STRINGS!"""
+        """Add string other to current string. ONLY USE WITH SIMILAR STRINGS!"""
 
-        col_str = copy.deepcopy(self)
-        col_str.set_coeff(self.get_coeff() + other.get_coeff())
+        self.coeff = self.coeff + other.coeff
 
-        return col_str
+    def complex_conjugate(self):
+        """Returns the complex conjugate of the current color string"""
+
+        compl_conj_str = copy.copy(self)
+        for col_obj in self:
+            col_obj.complex_conjugate()
+        if compl_conj_str.is_imaginary:
+            compl_conj_str.coeff = -compl_conj_str.coeff
+
+        return compl_conj_str
 #===============================================================================
 # ColorFactor
 #===============================================================================
@@ -498,76 +393,63 @@ class ColorFactor(list):
     """ColorFactor objects are list of ColorString with an implicit summation.
     They can be simplified by simplifying all their elements."""
 
-    def __init__(self, *args):
-        """Creates a new color factor starting from one or several color
-        strings."""
-
-        list.__init__(self)
-        self.set_color_strings(*args)
-
-    def append_color_string(self, col_str):
-        """Append a color string at the end of the current ColorFactor"""
-        # Check if the input value is a child of ColorString
-        if not isinstance(col_str, ColorString):
-            raise TypeError, \
-                "Object %s is not a valid ColorString " % str(col_str)
-        self.append(col_str)
-
-    def extend(self, col_fact):
-        """Extend with a ColorFactor (or a list of ColorStrings)
-        at the end of the current ColorFactor"""
-
-        for col_str in col_fact:
-            self.append_color_string(col_str)
-
-    def set_color_strings(self, *args):
-        """Use arguments (any number) to set  the current color strings.
-        Previous color strings are lost."""
-
-        # Remove all existing elements
-        del self[:]
-        # Append new ones
-        for col_str in args:
-            self.append_color_string(col_str)
-
     def __str__(self):
         """Returns a nice string for print"""
 
         return '+'.join(['(%s)' % str(col_str) for col_str in self])
+
+    def append_str(self, new_str):
+        """Special append taking care of adding new string to strings already
+        existing with the same structure."""
+
+        for col_str in self:
+            # Check if strings are similar
+            if col_str == new_str and \
+               col_str.Nc_power == new_str.Nc_power and\
+               col_str.is_imaginary == new_str.is_imaginary:
+                # Add them
+                col_str.add(new_str)
+                # Remove result if coeff is now 0
+                if col_str.coeff == 0:
+                    self.remove(col_str)
+                return True
+
+        # If no correspondence is found, append anyway
+        self.append(new_str)
+        return False
+
+    def extend_str(self, new_col_fact):
+        """Special extend taking care of adding new strings to strings already
+        existing with the same structure."""
+
+        for col_str in new_col_fact:
+            self.append_str(col_str)
 
     def simplify(self):
         """Returns a new color factor where each color string has been
         simplified once and similar strings have been added."""
 
         new_col_factor = ColorFactor()
-
         # Simplify
         for col_str in self:
             res = col_str.simplify()
             if res:
-                new_col_factor.extend([col_str for col_str in res \
-                                       if col_str.get_coeff() != 0])
-            elif col_str.get_coeff() != 0:
-                new_col_factor.append_color_string(copy.deepcopy(col_str))
-
-        for i1, col_str1 in enumerate(new_col_factor):
-            for i2, col_str2 in enumerate(new_col_factor[i1 + 1:]):
-                if col_str1.is_similar(col_str2):
-                    new_col_factor[i1] = col_str1.add(col_str2)
-                    new_col_factor[i1 + i2 + 1].set_coeff(fractions.Fraction(0, 1))
+                new_col_factor.extend_str(res)
+            else:
+                new_col_factor.append_str(col_str)
 
         return new_col_factor
 
     def full_simplify(self):
         """Simplify the current color factor until the result is stable"""
 
+        result = copy.copy(self)
         while(True):
-            ref = copy.deepcopy(self)
+            ref = copy.copy(result)
+            result = result.simplify()
+            if result == ref:
+                return result
 
-            self = self.simplify()
-            if self == ref:
-                print self
-                break
 
 
 
