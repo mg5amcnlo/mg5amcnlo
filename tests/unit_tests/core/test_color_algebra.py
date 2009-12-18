@@ -224,19 +224,86 @@ class ColorStringTest(unittest.TestCase):
 class ColorFactorTest(unittest.TestCase):
     """Test class for the ColorFactor objects"""
 
+    def test_f_d_sum(self):
+        """Test f and d sum with the right weights giving a Tr"""
+
+        col_str1 = color.ColorString([color.d(1, 2, 3)])
+        col_str1.coeff = fractions.Fraction(1, 4)
+        col_str2 = color.ColorString([color.f(1, 2, 3)])
+        col_str2.coeff = fractions.Fraction(1, 4)
+        col_str2.is_imaginary = True
+
+        my_color_factor = color.ColorFactor([col_str1, col_str2])
+
+        self.assertEqual(str(my_color_factor.full_simplify()),
+                         '(1 Tr(1,2,3))')
+
+    def test_f_product(self):
+        """Test the fully contracted product of two f's"""
+
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.f(1, 2, 3), color.f(1, 2, 3)])])
+
+        self.assertEqual(str(my_color_factor.full_simplify()),
+                         '(-1 Nc^1 )+(1 Nc^3 )')
+
+
+    def test_d_product(self):
+        """Test the fully contracted product of two d's"""
+
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.d(1, 2, 3), color.d(1, 2, 3)])])
+
+
+        self.assertEqual(str(my_color_factor.full_simplify()),
+                         '(-5 Nc^1 )+(4 1/Nc^1 )+(1 Nc^3 )')
+
+    def test_f_d_product(self):
+        """Test the fully contracted product of f and d"""
+
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.f(1, 2, 3), color.d(1, 2, 3)])])
+
+
+        self.assertEqual(str(my_color_factor.full_simplify()), '')
+
+    def test_three_f_chain(self):
+        """Test a chain of three f's"""
+
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.f(1, 2, -1),
+                                       color.f(-1, 3, -2),
+                                       color.f(-2, 4, 5)])])
+
+        self.assertEqual(str(my_color_factor.full_simplify()),
+        "(2 I Tr(1,2,3,4,5))+(-2 I Tr(1,2,4,5,3))+(-2 I Tr(1,2,3,5,4))" + \
+        "+(2 I Tr(1,2,5,4,3))+(-2 I Tr(1,3,4,5,2))+(2 I Tr(1,4,5,3,2))" + \
+        "+(2 I Tr(1,3,5,4,2))+(-2 I Tr(1,5,4,3,2))")
+
+    def test_Tr_product(self):
+        """Test a non trivial product of two traces"""
+
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Tr(1, 2, 3, 4, 5, 6, 7),
+                                       color.Tr(1, 7, 6, 5, 4, 3, 2)])])
+
+        self.assertEqual(str(my_color_factor.full_simplify()),
+        "(1/128 Nc^7 )+(-7/128 Nc^5 )+(21/128 Nc^3 )+(-35/128 Nc^1 )" + \
+        "+(35/128 1/Nc^1 )+(-21/128 1/Nc^3 )+(3/64 1/Nc^5 )")
+
     def test_gluons(self):
         """Test simplification of chains of f"""
 
-#        my_col_fact = color.ColorFactor([color.ColorString([
-#                                    color.f(1, 2, -1),
-#                                    color.f(-1, 3, -2),
-#                                    color.f(-2, 4, -3),
-#                                    color.f(-3, 5, -4),
-#                                    color.f(-4, 6, -5),
-#                                    color.f(-5, 7, -6),
-#                                    color.f(-6, 8, -7),
-#                                    color.f(-7, 9, -8),
-#                                    color.f(-8, 10, -9),
-#                                    color.f(-9, 11, 12)])])
-#
-#        print my_col_fact.full_simplify()
+        my_col_fact = color.ColorFactor([color.ColorString([
+                                    color.f(1, 2, -1),
+                                    color.f(-1, 3, -2),
+                                    color.f(-2, 4, -3),
+                                    color.f(-3, 5, -4),
+                                    color.f(-4, 6, -5),
+                                    color.f(-5, 7, -6),
+                                    color.f(-6, 8, -7),
+                                    color.f(-7, 9, -8),
+                                    color.f(-8, 10, -9),
+                                    color.f(-9, 11, 12)])])
+
+        print my_col_fact.full_simplify()

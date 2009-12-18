@@ -345,7 +345,7 @@ class ColorString(list):
                     del first_col_str[i1]
                     first_col_str.product(second_col_str)
                     # This sort is necessary to ensure ordering of ColorObjects
-                    # remains the same
+                    # remains the same for comparison
                     first_col_str.sort()
                     res_col_factor.append(first_col_str)
                 return res_col_factor
@@ -386,6 +386,8 @@ class ColorString(list):
             compl_conj_str.coeff = -compl_conj_str.coeff
 
         return compl_conj_str
+
+
 #===============================================================================
 # ColorFactor
 #===============================================================================
@@ -403,15 +405,14 @@ class ColorFactor(list):
         existing with the same structure."""
 
         for col_str in self:
-            # Check if strings are similar
+            # Check if strings are similar, this IS the optimal way of doing
+            # it. Note that first line only compare the lists, not the 
+            # properties associated
             if col_str == new_str and \
-               col_str.Nc_power == new_str.Nc_power and\
+               col_str.Nc_power == new_str.Nc_power and \
                col_str.is_imaginary == new_str.is_imaginary:
                 # Add them
                 col_str.add(new_str)
-                # Remove result if coeff is now 0
-                if col_str.coeff == 0:
-                    self.remove(col_str)
                 return True
 
         # If no correspondence is found, append anyway
@@ -438,7 +439,9 @@ class ColorFactor(list):
             else:
                 new_col_factor.append_str(col_str)
 
-        return new_col_factor
+        # Only returns non zero elements
+        return ColorFactor([col_str for col_str in \
+                            new_col_factor if col_str.coeff != 0])
 
     def full_simplify(self):
         """Simplify the current color factor until the result is stable"""
