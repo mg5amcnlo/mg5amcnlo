@@ -39,8 +39,8 @@ import madgraph.core.diagram_generation as diagram_generation
 class MadGraphCmd(cmd.Cmd):
     """The command line processor of MadGraph"""
 
-    __curr_model = base_objects.Model()
-    __curr_amp = diagram_generation.Amplitude()
+    curr_model = base_objects.Model()
+    curr_amp = diagram_generation.Amplitude()
 
     __import_formats = ['v4']
 
@@ -133,24 +133,24 @@ class MadGraphCmd(cmd.Cmd):
             """Helper function to load a v4 file from file path filepath"""
             filename = os.path.basename(filepath)
             if filename == 'particles.dat':
-                self.__curr_model.set('particles',
+                self.curr_model.set('particles',
                                      files.read_from_file(
                                             filepath,
                                             import_v4.read_particles_v4))
                 print "%d particles imported" % \
-                      len(self.__curr_model['particles'])
+                      len(self.curr_model['particles'])
             if filename == 'interactions.dat':
-                if len(self.__curr_model['particles']) == 0:
+                if len(self.curr_model['particles']) == 0:
                     print "No particle list currently active,",
                     print "please create one first!"
                     return False
-                self.__curr_model.set('interactions',
+                self.curr_model.set('interactions',
                                      files.read_from_file(
                                             filepath,
                                             import_v4.read_interactions_v4,
-                                            self.__curr_model['particles']))
+                                            self.curr_model['particles']))
                 print "%d interactions imported" % \
-                      len(self.__curr_model['interactions'])
+                      len(self.curr_model['interactions'])
 
         args = self.split_arg(line)
         if len(args) != 2:
@@ -206,10 +206,10 @@ class MadGraphCmd(cmd.Cmd):
 
         if args[0] == 'particles':
             print "Current model contains %i particles:" % \
-                    len(self.__curr_model['particles'])
-            part_antipart = [part for part in self.__curr_model['particles'] \
+                    len(self.curr_model['particles'])
+            part_antipart = [part for part in self.curr_model['particles'] \
                              if not part['self_antipart']]
-            part_self = [part for part in self.__curr_model['particles'] \
+            part_self = [part for part in self.curr_model['particles'] \
                              if part['self_antipart']]
             for part in part_antipart:
                 print part['name'] + '/' + part['antiname'],
@@ -220,8 +220,8 @@ class MadGraphCmd(cmd.Cmd):
 
         if args[0] == 'interactions':
             print "Current model contains %i interactions" % \
-                    len(self.__curr_model['interactions'])
-            for inter in self.__curr_model['interactions']:
+                    len(self.curr_model['interactions'])
+            for inter in self.curr_model['interactions']:
                 print str(inter['id']) + ':',
                 for part in inter['particles']:
                     if part['is_part']:
@@ -231,8 +231,8 @@ class MadGraphCmd(cmd.Cmd):
                 print
 
         if args[0] == 'amplitude':
-            print self.__curr_amp['process'].nice_string()
-            print self.__curr_amp['diagrams'].nice_string()
+            print self.curr_amp['process'].nice_string()
+            print self.curr_amp['diagrams'].nice_string()
 
     def complete_display(self, text, line, begidx, endidx):
         "Complete the display command"
@@ -267,11 +267,11 @@ class MadGraphCmd(cmd.Cmd):
             self.help_display()
             return False
 
-        if len(self.__curr_model['particles']) == 0:
+        if len(self.curr_model['particles']) == 0:
             print "No particle list currently active, please create one first!"
             return False
 
-        if len(self.__curr_model['interactions']) == 0:
+        if len(self.curr_model['interactions']) == 0:
             print "No interaction list currently active," + \
             " please create one first!"
             return False
@@ -289,7 +289,7 @@ class MadGraphCmd(cmd.Cmd):
                 state = 'final'
                 continue
 
-            mypart = self.__curr_model['particles'].find_name(part_name)
+            mypart = self.curr_model['particles'].find_name(part_name)
 
             if mypart:
                 myleglist.append(base_objects.Leg({'id':mypart.get_pdg_code(),
@@ -302,11 +302,11 @@ class MadGraphCmd(cmd.Cmd):
         if myleglist and state == 'final':
             myproc = base_objects.Process({'legs':myleglist,
                                             'orders':{},
-                                            'model':self.__curr_model})
-            self.__curr_amp.set('process', myproc)
+                                            'model':self.curr_model})
+            self.curr_amp.set('process', myproc)
 
             cpu_time1 = time.time()
-            ndiags = len(self.__curr_amp.generate_diagrams())
+            ndiags = len(self.curr_amp.generate_diagrams())
             cpu_time2 = time.time()
 
             print "%i diagrams generated in %0.3f s" % (ndiags, (cpu_time2 - \

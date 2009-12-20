@@ -102,7 +102,24 @@ class PhysicsObject(dict):
         alphabetical."""
 
         return self.keys().sort()
+    
+    def def_model(self,model):
+        """ 
+        make a link between the  present object and the associate model 
+        """
+        
+        if isinstance(model, Model):
+            self._def_model(model)
+        else:
+            raise self.PhysicsObjectError(' try to assign a non model obect')
 
+    def _def_model(self,model):
+        """
+        make a link between the  present object and the associate model 
+        no class verification
+        """
+        self.model=model
+        
     def __str__(self):
         """String representation of the object. Outputs valid Python 
         with improved format."""
@@ -635,6 +652,7 @@ class Model(PhysicsObject):
     def get_interaction(self, id):
         """Return the interaction corresponding to the id"""
 
+        
         if id in self.get("interaction_dict").keys():
             return self["interaction_dict"][id]
         else:

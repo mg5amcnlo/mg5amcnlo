@@ -57,10 +57,35 @@ class Feynman_line(base_objects.Leg):
         vertex.add_line(self)
         return 
     
-    def has_type(self):
-        """ return the spin of the feynman line """
-        pass
+    def get_info(self,name):
+        """ return the model information  associated to the line """
+        pid=self['pid']
+        
+        result = self.model.get_particle(pid)
+        if result:
+            return result[name]
+        else:
+            pid=-1*pid #in case of auto anti-particle
+            return self.model.get_particle(pid)[name]
 
+    def get_name(self,name='name'):
+        """ return the name associate to the particle """
+        
+        pid=self['pid']
+        model_info = self.model.get_particle(pid)
+ 
+        if pid>0:
+            return model_info[name]
+        elif model_info:
+            return model_info['anti'+name]
+        else:
+            # particle is self anti particle
+            return self.model.get_particle(-1*pid)[name]
+ 
+      
+        
+
+         
     def has_intersection(self, line):
         """ check if the two line intersects 
             return True/False
@@ -291,14 +316,14 @@ class Vertex_Point(base_objects.Vertex):
         """ remove a line from the linelist"""
 
         if not isinstance(line, Feynman_line):
-            raise self.VertexPointError, 'trying to remove in a Vertex_Point' + \
-                            ' a non FeynmanLine Object'
+            raise self.VertexPointError, 'trying to remove in a ' + \
+                            'Vertex_Point a non FeynmanLine Object'
                             
         try:
             pos = self['line'].index(line)
         except ValueError:
-            raise self.VertexPointError, 'trying to remove in a Vertex_Point' + \
-                            ' a non present Feynman_Line'
+            raise self.VertexPointError, 'trying to remove in a ' + \
+                            'Vertex_Point a non present Feynman_Line'
         del self['line'][pos]
         
     def def_level(self, level):
@@ -328,10 +353,20 @@ class Feynman_Diagram:
         """ class for internal error """
         pass
     
-    def __init__(self, diagram):
+    def __init__(self, diagram, model):
         """ compute the position of the vertex/line for this diagram """
         
-        self.diagram = diagram
+        if isinstance(diagram, base_objects.Diagram):
+            self.diagram = diagram
+        else:
+            raise self.FeynamDiagramError( 'first arg should derivates' + \
+                                          ' form Diagram object')
+        if isinstance(model, base_objects.Model):
+            self.model = model
+        else:
+            raise self.FeynamDiagramError( 'second arg should derivates' + \
+                                          ' form Modela object')
+        
         self.VertexList = []
         self.LineList = []
         self._treated_legs = []
@@ -376,7 +411,8 @@ class Feynman_Diagram:
                     vertex_point.def_level(0)
                 else:
                     line.def_end_point(vertex_point)
-                
+           
+        self.assign_model_to_line() #associate the model obj to all line
                 
     def _load_vertex(self, vertex):
         """
@@ -420,8 +456,12 @@ class Feynman_Diagram:
         line1 = self.LineList[pos1]
         line2 = self.LineList[pos2]
         
+#        print 'line to fuse'
+#        print line1.start['id'],line1.end['id']
+#        print line2.start['id'],line2.end['id']
+        
         #case 1 one of the particule is a external particule
-        if line1.end or line2.end:
+        if line1.end==0 or line2.end==0:
             internal=line1
             external=line2
             if line2.end:
@@ -432,11 +472,20 @@ class Feynman_Diagram:
             self.LineList.remove(internal)
             self.VertexList.remove(last_vertex)
         else:
+            print 'no external'
             line1.def_end_point(line2.start)
             line2.start.remove_line(line2)
             del self.LineList[pos2]
             self.VertexList.remove(last_vertex)       
+#       print 'result',
+#       print line1.start['id'],line1.end['id']
+#       print line2.start['id'],line2.end['id']
+        print        
         
+    def assign_model_to_line(self):
+        
+        for line in self.LineList:
+            line._def_model(self.model)
     
     def define_level(self):
         """ assign to each vertex a level:
@@ -446,24 +495,35 @@ class Feynman_Diagram:
         
         initial_vertex=[vertex for vertex in self.VertexList if\
                                                          vertex['level'] == 0 ]
+        print 'initial vertex', len(initial_vertex)
         #print 'initial vertex', initial_vertex
         for vertex in initial_vertex:
             self._def_next_level_from(vertex)
             #auto recursive operation
         
-    def _def_next_level_from(self,vertex):
+    def _def_next_level_from(self,vertex,data=[]):
         
+        data.append('')
         level=vertex['level']
-        outgoing_line=[line for line in vertex['line'] if line.start == vertex]
+        print 'search form level',level
+        outgoing_line=[line for line in vertex['line']]
+        print 'number of outgoing line from this vertex',len(outgoing_line)
+        print 'external ?'+ ' '.join([str(line.end.is_external() or line.start.is_external()) for line in outgoing_line])
+        print 'status ?'+ ' '.join([line['state'] for line in outgoing_line])
         for line in outgoing_line:
-            if line.end['level']!=-1:
+            if line.end['level']!=-1 and line.start['level']!=-1:
                 continue
+            direction='end'
+            if line.end['level']!=-1:
+                direction='start'
             if line['state']=='initial':
+                print 'find a T vertex'
                 line.end.def_level(1) # T channel always at level 1
             else:
-                line.end.def_level(level+1)
-                self.max_level=max(self.max_level,level+1) 
-            self._def_next_level_from(line.end)
+                print 'find one vertex at level ',level+1
+                getattr(line, direction).def_level(level+1)
+                self.max_level=max(self.max_level,level+1)                 
+            self._def_next_level_from(getattr(line,direction))
             
     def find_initial_vertex_position(self):
         """ find a position to each vertex. all the vertex with the same level
@@ -543,19 +603,19 @@ class Feynman_Diagram:
         """ 
             assign position in ascendant order for the vertex at level given 
         """
-        print 'level',level
+        
         begin_gap, end_gap= 0.5, 0.5
         if vertex_at_level[0].is_external():
             begin_gap=0
         if vertex_at_level[-1].is_external():
             end_gap=0
-        print 'begin-end',begin_gap/0.5,end_gap/0.5
+        
         gap=1/(begin_gap+end_gap+len(vertex_at_level)-1)
-        print 'gap',gap
-        i=0
-        for vertex in vertex_at_level:
+        
+        for i in range(0,len(vertex_at_level)):
+            vertex=vertex_at_level[i]
             vertex.def_position(level/self.max_level,gap*(begin_gap+i))
-            i+=1        
+                    
             
             
             
@@ -585,12 +645,14 @@ if __name__ == '__main__':
     i = 0
     while i < 300:
         i += 1
-        data = cmd._MadGraphCmd__curr_amp['diagrams'][i]['vertices']
+        data = cmd.curr_amp['diagrams'][i]['vertices']
         if [leg['number'] for leg in data[0]['legs'] if leg['number'] not in [1, 2]]:
             break
-    for info in data:
-        for leg in info['legs']:
-            print dict.__str__(leg)
+#    for info in data:
+#        for leg in info['legs']:
+#            print dict.__str__(leg)
+            
+    print cmd.curr_model.get_particle(-2)
     
     
     
