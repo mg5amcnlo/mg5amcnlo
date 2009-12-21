@@ -358,10 +358,6 @@ class MadGraphCmd(cmd.Cmd):
                 ndiags = sum([len(me.get('diagrams')) for \
                               me in self.__curr_matrix_elements.\
                               get('matrix_elements')])
-                print "Generated helas calls for %d subprocesses (%d diagrams) in %0.3f s" % \
-                      (len(self.__curr_matrix_elements.get('matrix_elements')),
-                       ndiags,
-                       (cpu_time2 - cpu_time1))
 
             calls = 0
             for me in self.__curr_matrix_elements.get('matrix_elements'):
@@ -375,6 +371,11 @@ class MadGraphCmd(cmd.Cmd):
                                                     export_v4.write_matrix_element_v4_standalone,
                                                     me,
                                                     self.__curr_fortran_model)
+
+            print "Generated helas calls for %d subprocesses (%d diagrams) in %0.3f s" % \
+                  (len(self.__curr_matrix_elements.get('matrix_elements')),
+                   ndiags,
+                   (cpu_time2 - cpu_time1))
 
             print "Wrote %d helas calls" % calls
 

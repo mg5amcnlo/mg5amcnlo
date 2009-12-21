@@ -1359,6 +1359,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         return sum([ len(d.get('wavefunctions')) for d in \
                        self.get('diagrams')])
 
+    def get_nexternal_ninitial(self):
+        """Gives (number or external particles, number of
+        incoming particles)"""
+        return (len(self.get('processes')[0].get('legs')),
+                len(filter(lambda leg: leg.get('state') == 'initial',
+                           self.get('processes')[0].get('legs'))))
+
     def get_helicity_combinations(self):
         """Gives the number of helicity combinations for external
         wavefunctions"""

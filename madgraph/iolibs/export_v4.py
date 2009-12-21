@@ -43,12 +43,11 @@ def write_matrix_element_v4_standalone(fsock, matrix_element, fortran_model):
     replace_dict['info_lines'] = info_lines
 
     # Extract process info lines
-    process_lines = "\n".join([ "C " + process.nice_string() for process in \
-                                matrix_element.get('processes')])
+    process_lines = get_process_info_lines(matrix_element)
     replace_dict['process_lines'] = process_lines
 
     # Extract number of external particles
-    nexternal = len(matrix_element.get('processes')[0].get('legs'))
+    (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
     replace_dict['nexternal'] = nexternal
 
     # Extract ncomb
@@ -56,23 +55,12 @@ def write_matrix_element_v4_standalone(fsock, matrix_element, fortran_model):
     replace_dict['ncomb'] = ncomb
 
     # Extract helicity lines
-    helicity_line_list = []
-    i = 0
-    for helicities in matrix_element.get_helicity_matrix():
-        i = i + 1
-        int_list = [i, len(helicities)]
-        int_list.extend(helicities)
-        helicity_line_list.append(\
-            ("DATA (NHEL(IHEL,%4r),IHEL=1,%d) /" + \
-             ",".join(['%2r'] * len(helicities)) + "/") % tuple(int_list))
-
-    helicity_lines = "\n".join(helicity_line_list)
+    helicity_lines = get_helicity_lines(matrix_element)
     replace_dict['helicity_lines'] = helicity_lines
     
     # Extract overall denominator
     # Averaging initial state color, spin, and identical FS particles
-    den_factor_line = "DATA IDEN/%2r/" % \
-                       matrix_element.get_denominator_factor()
+    den_factor_line = get_den_factor_line(matrix_element)
     replace_dict['den_factor_line'] = den_factor_line
 
     # Extract ngraphs
@@ -230,6 +218,9 @@ C      CALL GAUGECHECK(JAMP,ZTEMP,EIGEN_VEC,EIGEN_VAL,NCOLOR,NEIGEN)
 
     return len(helas_call_list)
 
+#===============================================================================
+# Helper functions
+#===============================================================================
 def get_mg5_info_lines():
     """Return info lines for MG5, suitable to place at beginning of Fortran files"""
     info = misc.get_pkg_info()
@@ -242,6 +233,33 @@ def get_mg5_info_lines():
                      "C  Please visit us at https://launchpad.net/madgraph5"
     return info_lines
 
+def get_process_info_lines(matrix_element):
+    """Return info lines describing the processes for this matrix element"""
+    
+    return"\n".join([ "C " + process.nice_string() for process in \
+                                matrix_element.get('processes')])
+
+
+def get_helicity_lines(matrix_element):
+    """Return the Helicity matrix definition lines for this matrix element"""
+
+    helicity_line_list = []
+    i = 0
+    for helicities in matrix_element.get_helicity_matrix():
+        i = i + 1
+        int_list = [i, len(helicities)]
+        int_list.extend(helicities)
+        helicity_line_list.append(\
+            ("DATA (NHEL(IHEL,%4r),IHEL=1,%d) /" + \
+             ",".join(['%2r'] * len(helicities)) + "/") % tuple(int_list))
+
+    return "\n".join(helicity_line_list)
+    
+def get_den_factor_line(matrix_element):
+    """Return the denominator factor line for this matrix element"""
+
+    return "DATA IDEN/%2r/" % \
+           matrix_element.get_denominator_factor()
 
 #===============================================================================
 # FortranWriter
