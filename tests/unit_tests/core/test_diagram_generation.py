@@ -1078,6 +1078,66 @@ class DiagramGenerationTest(unittest.TestCase):
 
         self.assertEqual(len(myamplitude.get('diagrams')), 1)
 
+    def test_coupling_orders_uux_ddxng(self):
+        """Test the number of diagrams uu~>dd~+ng with different QCD
+        and QED coupling orders
+        """
+        goal_ndiags20 = [1, 0, 0]
+        goal_ndiags02 = [1, 0, 0]
+        goal_ndiags21 = [1, 4, 0]
+        goal_ndiags22 = [2, 4, 24]
+
+        for ngluons in range(0, 3):
+
+            myleglist = base_objects.LegList()
+
+            myleglist.append(base_objects.Leg({'id':-1,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':-2,
+                                             'state':'final'}))
+            myleglist.append(base_objects.Leg({'id':2,
+                                             'state':'final'}))
+            myleglist.extend([base_objects.Leg({'id':21,
+                                                 'state':'final'})] * ngluons)
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'orders': {'QED':2, 'QCD':0}})
+
+            self.myamplitude.set('process', myproc)
+
+            self.assertEqual(len(self.myamplitude.generate_diagrams()),
+                             goal_ndiags20[ngluons])
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'orders': {'QED':0, 'QCD':2}})
+
+            self.myamplitude.set('process', myproc)
+
+            self.assertEqual(len(self.myamplitude.generate_diagrams()),
+                             goal_ndiags02[ngluons])
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'orders': {'QED':2, 'QCD':1}})
+
+            self.myamplitude.set('process', myproc)
+
+            self.assertEqual(len(self.myamplitude.generate_diagrams()),
+                             goal_ndiags21[ngluons])
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'orders': {'QED':2, 'QCD':2}})
+
+            self.myamplitude.set('process', myproc)
+
+            self.assertEqual(len(self.myamplitude.generate_diagrams()),
+                             goal_ndiags22[ngluons])
+
 #===============================================================================
 # Muliparticle test
 #===============================================================================

@@ -165,7 +165,9 @@ class Amplitude(base_objects.PhysicsObject):
         # list of vertices
 
         reduced_leglist = self.reduce_leglist(leglist,
-                                              max_multi_to1)
+                                              max_multi_to1,
+                                              self.get('process').get('orders'))
+
         for vertex_list in reduced_leglist:
             res.append(base_objects.Diagram(
                             {'vertices':base_objects.VertexList(vertex_list)}))
@@ -173,7 +175,8 @@ class Amplitude(base_objects.PhysicsObject):
         self['diagrams'] = res
         return res
 
-    def reduce_leglist(self, curr_leglist, max_multi_to1):
+    def reduce_leglist(self, curr_leglist, max_multi_to1,
+                       coupling_orders = None):
         """Recursive function to reduce N LegList to N-1
            For algorithm, see doc for generate_diagrams.
         """
@@ -188,8 +191,10 @@ class Amplitude(base_objects.PhysicsObject):
             return None
 
         # Extract ref dict information
+        model = self['process'].get('model')
         ref_dict_to0 = self['process'].get('model').get('ref_dict_to0')
         ref_dict_to1 = self['process'].get('model').get('ref_dict_to1')
+
 
         # If all legs can be combined in one single vertex, add this
         # vertex to res and continue
@@ -200,7 +205,10 @@ class Amplitude(base_objects.PhysicsObject):
 
             final_vertex = base_objects.Vertex({'legs':curr_leglist,
                                                 'id':vertex_id})
-            res.append([final_vertex])
+            # Check for coupling orders. If orders < 0, skip vertex
+            if self.reduce_orders(coupling_orders, model,
+                                  [final_vertex.get('id')]) != False:
+                res.append([final_vertex])
         # Stop condition 2: if the leglist contained exactly two particles,
         # return the result, if any, and stop.
         if len(curr_leglist) == 2:
@@ -218,10 +226,20 @@ class Amplitude(base_objects.PhysicsObject):
 
         # Consider all the pairs
         for leg_vertex_tuple in leg_vertex_list:
+            # Check for coupling orders. If couplings < 0, skip recursion.
+            new_coupling_orders = self.reduce_orders(coupling_orders,
+                                                     model,
+                                                     [vertex.get('id') for vertex in \
+                                                      leg_vertex_tuple[1]])
+            if new_coupling_orders == False:
+                # Some coupling order < 0
+                continue
+
             # This is where recursion happens
             # First, reduce again the leg part
             reduced_diagram = self.reduce_leglist(leg_vertex_tuple[0],
-                                                  max_multi_to1)
+                                                  max_multi_to1,
+                                                  new_coupling_orders)
             # If there is a reduced diagram
             if reduced_diagram:
                 vertex_list_list = [list(leg_vertex_tuple[1])]
@@ -231,6 +249,34 @@ class Amplitude(base_objects.PhysicsObject):
 
         return res
 
+    def reduce_orders(self, coupling_orders, model, vertex_id_list):
+        """Return False if the coupling orders for any coupling is <
+        0, otherwise return the new coupling orders with the vertex
+        orders subtracted. If coupling_orders is not given, return
+        None (which counts as success)"""
+
+        if not coupling_orders:
+            return None
+
+        present_couplings = copy.copy(coupling_orders)
+        for id in vertex_id_list:
+            # Don't check for identity vertex (id = 0)
+            if not id:
+                continue
+            inter = model.get("interaction_dict")[id]
+            for coupling in inter.get('orders').keys():
+                # Note that we don't consider a missing coupling as a
+                # constraint
+                if coupling in present_couplings:
+                    # Reduce the number of couplings that are left
+                    present_couplings[coupling] = \
+                             present_couplings[coupling] - \
+                             inter.get('orders')[coupling]
+                    if present_couplings[coupling] < 0:
+                        # We have too many couplings of this type
+                        return False
+
+        return present_couplings
 
     def combine_legs(self, list_legs, ref_dict_to1, max_multi_to1):
         """Recursive function. Take a list of legs as an input, with
@@ -314,6 +360,7 @@ class Amplitude(base_objects.PhysicsObject):
         particles are included). For each list, give the list of vertices
         corresponding to the executed merging, group the two as a tuple.
         """
+
         res = []
 
         for comb_list in comb_lists:
@@ -369,6 +416,7 @@ class Amplitude(base_objects.PhysicsObject):
                         vlist.append(base_objects.Vertex(
                                          {'legs':myleglist,
                                           'id':vert_ids[mylegs.index(myleg)]}))
+                        
                     vertex_list.append(vlist)
 
                 # If entry is not a combination, switch the from_group flag
@@ -379,7 +427,6 @@ class Amplitude(base_objects.PhysicsObject):
                     reduced_list.append(cp_entry)
 
             # Flatten the obtained leg and vertex lists
-
             flat_red_lists = expand_list(reduced_list)
             flat_vx_lists = expand_list(vertex_list)
 

@@ -887,11 +887,25 @@ class VertexList(PhysicsObjectList):
     """List of Vertex objects
     """
 
+    orders = {}
+
     def is_valid_element(self, obj):
         """Test if object obj is a valid Vertex for the list."""
         
         return isinstance(obj, Vertex)
 
+    def __init__(self, init_list = None, orders = None):
+        """Creates a new list object, with an optional dictionary of
+        coupling orders."""
+
+        list.__init__(self)
+
+        if init_list is not None:
+            for object in init_list:
+                self.append(object)
+
+        if isinstance(orders, dict):
+            self.orders = orders
 
 #===============================================================================
 # Diagram
