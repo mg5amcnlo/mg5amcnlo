@@ -1086,7 +1086,7 @@ class DiagramTest(unittest.TestCase):
         mylist = [self.mydiagram] * 10
         mydiagramlist = base_objects.DiagramList(mylist)
 
-        goal_string = "  (" + "(5,5,5,5,5,5,5,5,5>5,id:3),"*10
+        goal_string = "  (" + "(5(3),5(3),5(3),5(3),5(3),5(3),5(3),5(3),5(3)>5(3),id:3),"*10
         goal_string = goal_string[:-1] + ")\n"
         goal_string = goal_string * 10
 

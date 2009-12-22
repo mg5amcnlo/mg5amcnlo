@@ -244,19 +244,11 @@ class Amplitude(base_objects.PhysicsObject):
                     continue
 
             # Remove forbidden s-channel particles
-            if self['process'].get('forbidden_s_channels'):
-                for vertex in leg_vertex_tuple[1]:
-                    if vertex.get('id') != 0 and \
-                        vertex.get('legs')[-1].get('state') == 'final':
-                        if vertex.get('legs')[0].get('state') == 'final':
-                                if vertex.get('legs')[-1].get('id') in \
-                                    self['process'].get('forbidden_s_channels'):
-                                    continue
-                        else:
-                            if self['process'].get('model').get('particle_dict')[\
-                                vertex.get('legs')[-1].get('id')].get_anti_pdg_code() in \
-                                    self['process'].get('forbidden_s_channels'):
-                                    continue
+            if self['process'].get('forbidden_s_channels') and \
+                any([vertex.get_s_channel_id(self['process'].get('model')) in \
+                self['process'].get('forbidden_s_channels') \
+                for vertex in leg_vertex_tuple[1]]):
+                    continue
 
             # Check for coupling orders. If couplings < 0, skip recursion.
             new_coupling_orders = self.reduce_orders(coupling_orders,
@@ -633,11 +625,16 @@ class MultiProcess(base_objects.PhysicsObject):
             # Remember to turn this off if we require or forbid s-channel propagators
             if not tuple(sorted_legs) in self.__failed_procs:
                 amplitude = Amplitude({"process": process})
-                if amplitude.generate_diagrams():
-                    self['amplitudes'].append(amplitude)
-                else:
+                if not process.get('forbidden_s_channels') and \
+                       not amplitude.generate_diagrams():
                     # Add process to failed_procs
+                    # Note that this should not be done if we forbid s-channel
+                    # particles, since we then might have a failed proc whose
+                    # crossing can succeed
                     self.__failed_procs.append(tuple(sorted_legs))
+                if amplitude.get('diagrams'):
+                    self['amplitudes'].append(amplitude)
+                    
 
 #===============================================================================
 # Global helper methods

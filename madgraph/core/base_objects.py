@@ -879,6 +879,26 @@ class Vertex(PhysicsObject):
 
         return ['id', 'legs']
 
+    def get_s_channel_id(self, model):
+        """Returns the id for the last leg as an outgoing
+        s-channel. Returns 0 if leg is t-channel, or if identity
+        vertex. Used to check for required and forbidden s-channel
+        particles."""
+
+        leg = self.get('legs')[-1]
+        
+        if self.get('id') == 0 or \
+           leg.get('state') == 'initial':
+            # identity vertex or t-channel particle
+            return 0
+
+        # Check if the other legs are incoming or outgoing.
+        # If the latter, return leg id, if the former, return -leg id
+        if self.get('legs')[0].get('state') == 'final':
+            return leg.get('id')
+        else:
+            return model.get('particle_dict')[leg.get('id')].\
+                       get_anti_pdg_code()
 
 #===============================================================================
 # VertexList
@@ -1015,8 +1035,19 @@ class Process(PhysicsObject):
                     "Process id %s is not an integer" % repr(value)
 
         if name in ['required_s_channels',
-                    'forbidden_s_channels',
-                    'forbidden_particles']:
+                    'forbidden_s_channels']:
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list" % str(value)
+            for i in value:
+                if not isinstance(i, int):
+                    raise self.PhysicsObjectError, \
+                          "%s is not a valid list of integers" % str(value)
+                if i == 0:
+                    raise self.PhysicsObjectError, \
+                      "Not valid PDG code %d for s-channel particle" % str(value)
+
+        if name == 'forbidden_particles':
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list" % str(value)
@@ -1026,7 +1057,7 @@ class Process(PhysicsObject):
                           "%s is not a valid list of integers" % str(value)
                 if i <= 0:
                     raise self.PhysicsObjectError, \
-                      "Forbidden particles should have a positive PDG code!" % str(value)
+                      "Forbidden particles should have a positive PDG code" % str(value)
 
         return True
 

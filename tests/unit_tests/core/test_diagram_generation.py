@@ -1211,8 +1211,9 @@ class DiagramGenerationTest(unittest.TestCase):
         forbidden s channel particles.
         """
 
-        goal_no_photon = [3, 10]
-        goal_no_photon_quark = [2, 2]
+        goal_no_photon = [3, 14]
+        goal_no_quark = [1, 2]
+        goal_no_antiquark = [2, 6]
 
         for ngluons in range(2):
 
@@ -1240,16 +1241,42 @@ class DiagramGenerationTest(unittest.TestCase):
             self.assertEqual(len(self.myamplitude.get('diagrams')),
                              goal_no_photon[ngluons])
 
+            # Test with u a > u a (+ g)
+
+            myleglist = base_objects.LegList()
+
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':22,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'state':'final'}))
+            myleglist.append(base_objects.Leg({'id':22,
+                                             'state':'final'}))
+            myleglist.extend([base_objects.Leg({'id':21,
+                                                 'state':'final'})] * ngluons)
+
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
-                                           'forbidden_s_channels':[22, 1]})
+                                           'forbidden_s_channels':[1]})
 
             self.myamplitude.set('process', myproc)
 
             self.myamplitude.generate_diagrams()
 
             self.assertEqual(len(self.myamplitude.get('diagrams')),
-                             goal_no_photon_quark[ngluons])
+                             goal_no_quark[ngluons])
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'forbidden_s_channels':[-1]})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.generate_diagrams()
+
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
+                             goal_no_antiquark[ngluons])
 
 
 #===============================================================================
