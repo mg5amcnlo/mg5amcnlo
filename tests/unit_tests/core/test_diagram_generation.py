@@ -600,7 +600,8 @@ class DiagramGenerationTest(unittest.TestCase):
             self.myamplitude.set('process', myproc)
 
             # Call generate_diagram and output number of diagrams
-            ndiags = len(self.myamplitude.generate_diagrams())
+            self.myamplitude.generate_diagrams()
+            ndiags = len(self.myamplitude.get('diagrams'))
 
             logging.debug("Number of diagrams for %d gluons: %d" % (ngluon,
                                                             ndiags))
@@ -627,7 +628,8 @@ class DiagramGenerationTest(unittest.TestCase):
 
         self.myamplitude.set('process', myproc)
 
-        self.assertEqual(len(self.myamplitude.generate_diagrams()), 3)
+        self.myamplitude.generate_diagrams()
+        self.assertEqual(len(self.myamplitude.get('diagrams')), 3)
 
     def test_diagram_generation_uux_uuxng(self):
         """Test the number of diagram generated for uu~>uu~+ng with n up to 2
@@ -654,7 +656,8 @@ class DiagramGenerationTest(unittest.TestCase):
 
             self.myamplitude.set('process', myproc)
 
-            self.assertEqual(len(self.myamplitude.generate_diagrams()),
+            self.myamplitude.generate_diagrams()
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
                              goal_ndiags[ngluons])
 
     def test_diagram_generation_uux_ddxng(self):
@@ -682,7 +685,8 @@ class DiagramGenerationTest(unittest.TestCase):
 
             self.myamplitude.set('process', myproc)
 
-            self.assertEqual(len(self.myamplitude.generate_diagrams()),
+            self.myamplitude.generate_diagrams()
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
                              goal_ndiags[ngluons])
 
     def test_diagram_generation_diagrams_ddx_uuxg(self):
@@ -712,7 +716,8 @@ class DiagramGenerationTest(unittest.TestCase):
 
         self.myamplitude.set('process', myproc)
 
-        mydiagrams = self.myamplitude.generate_diagrams()
+        self.myamplitude.generate_diagrams()
+        mydiagrams = self.myamplitude.get('diagrams')
 
         for leg in myleglist:
             leg.set('from_group', True)
@@ -788,7 +793,8 @@ class DiagramGenerationTest(unittest.TestCase):
 
             self.myamplitude.set('process', myproc)
 
-            self.assertEqual(len(self.myamplitude.generate_diagrams()), 0)
+            self.myamplitude.generate_diagrams()
+            self.assertEqual(len(self.myamplitude.get('diagrams')), 0)
 
     def test_diagram_generation_photons(self):
         """Test the number of diagram generated for uu~>na with n up to 6"""
@@ -814,7 +820,8 @@ class DiagramGenerationTest(unittest.TestCase):
             self.myamplitude.set('process', myproc)
 
             # Call generate_diagram and output number of diagrams
-            ndiags = len(self.myamplitude.generate_diagrams())
+            self.myamplitude.generate_diagrams()
+            ndiags = len(self.myamplitude.get('diagrams'))
 
             logging.debug("Number of diagrams for %d photons: %d" % (nphot,
                                                             ndiags))
@@ -848,7 +855,8 @@ class DiagramGenerationTest(unittest.TestCase):
             self.myamplitude.set('process', myproc)
 
             # Call generate_diagram and output number of diagrams
-            ndiags = len(self.myamplitude.generate_diagrams())
+            self.myamplitude.generate_diagrams()
+            ndiags = len(self.myamplitude.get('diagrams'))
 
             logging.debug("Number of diagrams for %d electron pairs: %d" % \
                           (npairs, ndiags))
@@ -1086,6 +1094,7 @@ class DiagramGenerationTest(unittest.TestCase):
         goal_ndiags02 = [1, 0, 0]
         goal_ndiags21 = [1, 4, 0]
         goal_ndiags22 = [2, 4, 24]
+        goal_ndiags04 = [1, 5, 36]
 
         for ngluons in range(0, 3):
 
@@ -1108,7 +1117,8 @@ class DiagramGenerationTest(unittest.TestCase):
 
             self.myamplitude.set('process', myproc)
 
-            self.assertEqual(len(self.myamplitude.generate_diagrams()),
+            self.myamplitude.generate_diagrams()
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
                              goal_ndiags20[ngluons])
 
             myproc = base_objects.Process({'legs':myleglist,
@@ -1117,7 +1127,8 @@ class DiagramGenerationTest(unittest.TestCase):
 
             self.myamplitude.set('process', myproc)
 
-            self.assertEqual(len(self.myamplitude.generate_diagrams()),
+            self.myamplitude.generate_diagrams()
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
                              goal_ndiags02[ngluons])
 
             myproc = base_objects.Process({'legs':myleglist,
@@ -1126,7 +1137,8 @@ class DiagramGenerationTest(unittest.TestCase):
 
             self.myamplitude.set('process', myproc)
 
-            self.assertEqual(len(self.myamplitude.generate_diagrams()),
+            self.myamplitude.generate_diagrams()
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
                              goal_ndiags21[ngluons])
 
             myproc = base_objects.Process({'legs':myleglist,
@@ -1135,8 +1147,19 @@ class DiagramGenerationTest(unittest.TestCase):
 
             self.myamplitude.set('process', myproc)
 
-            self.assertEqual(len(self.myamplitude.generate_diagrams()),
+            self.myamplitude.generate_diagrams()
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
                              goal_ndiags22[ngluons])
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'orders': {'QED':0, 'QCD':4}})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.generate_diagrams()
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
+                             goal_ndiags04[ngluons])
 
 #===============================================================================
 # Muliparticle test

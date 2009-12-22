@@ -70,7 +70,7 @@ class Amplitude(base_objects.PhysicsObject):
         if name == 'diagrams' and self[name] == None:
             # Have not yet generated diagrams for this process
             if self['process']:
-                self['diagrams'] = self.generate_diagrams()
+                self.generate_diagrams()
 
         return Amplitude.__bases__[0].get(self, name)  #return the mother routine
 
@@ -172,8 +172,17 @@ class Amplitude(base_objects.PhysicsObject):
             res.append(base_objects.Diagram(
                             {'vertices':base_objects.VertexList(vertex_list)}))
 
+        # Record whether or not we failed generation before required
+        # s-channel propagators are taken into account
+        failed_crossing = not res
+
+        # Check for required s-channel propagators
+
+
+        # Set diagrams to res
         self['diagrams'] = res
-        return res
+
+        return not failed_crossing
 
     def reduce_leglist(self, curr_leglist, max_multi_to1,
                        coupling_orders = None):
@@ -600,8 +609,8 @@ class MultiProcess(base_objects.PhysicsObject):
             # In that case don't check process
             # Remember to turn this off if we require or forbid s-channel propagators
             if not tuple(sorted_legs) in self.__failed_procs:
-                amplitude = Amplitude(process)
-                if amplitude.get('diagrams'):
+                amplitude = Amplitude({"process": process})
+                if amplitude.generate_diagrams():
                     self['amplitudes'].append(amplitude)
                 else:
                     # Add process to failed_procs
