@@ -178,6 +178,12 @@ class Amplitude(base_objects.PhysicsObject):
 
         # Check for required s-channel propagators
 
+        if self['process'].get('required_s_channels'):
+            res = base_objects.DiagramList(\
+                filter(lambda diagram: \
+                       any([vertex.get_s_channel_id(self['process'].get('model')) in \
+                            self['process'].get('required_s_channels') \
+                            for vertex in diagram.get('vertices')[:-1]]), res))
 
         # Set diagrams to res
         self['diagrams'] = res

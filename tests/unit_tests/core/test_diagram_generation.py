@@ -1279,6 +1279,79 @@ class DiagramGenerationTest(unittest.TestCase):
                              goal_no_antiquark[ngluons])
 
 
+    def test_required_s_channel_uux_uuxng(self):
+        """Test the number of diagrams uu~>uu~+g with different 
+        required s channel particles.
+        """
+
+        goal_req_photon = [1, 4]
+        goal_req_quark = [1, 4]
+        goal_req_antiquark = [0, 0]
+
+        for ngluons in range(2):
+
+            myleglist = base_objects.LegList()
+
+            myleglist.append(base_objects.Leg({'id':-1,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':-1,
+                                             'state':'final'}))
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'state':'final'}))
+            myleglist.extend([base_objects.Leg({'id':21,
+                                                 'state':'final'})] * ngluons)
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'required_s_channels':[22]})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.generate_diagrams()
+
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
+                             goal_req_photon[ngluons])
+
+            # Test with u a > u a (+ g)
+
+            myleglist = base_objects.LegList()
+
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':22,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'state':'final'}))
+            myleglist.append(base_objects.Leg({'id':22,
+                                             'state':'final'}))
+            myleglist.extend([base_objects.Leg({'id':21,
+                                                 'state':'final'})] * ngluons)
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'required_s_channels':[1]})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.generate_diagrams()
+
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
+                             goal_req_quark[ngluons])
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'required_s_channels':[-1]})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.generate_diagrams()
+
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
+                             goal_req_antiquark[ngluons])
+
+
 #===============================================================================
 # Muliparticle test
 #===============================================================================
