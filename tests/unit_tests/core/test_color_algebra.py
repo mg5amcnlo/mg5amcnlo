@@ -38,7 +38,8 @@ class ColorObjectTest(unittest.TestCase):
         """Test simplification of trace objects"""
 
         # Test Tr(a)=0
-        self.assertEqual(color.Tr(-1).simplify(), color.ColorFactor())
+        self.assertEqual(color.Tr(-1).simplify(),
+                         color.ColorFactor([color.ColorString(coeff=0)]))
 
         # Test Tr()=Nc
         col_str = color.ColorString()
@@ -88,7 +89,7 @@ class ColorObjectTest(unittest.TestCase):
         self.assertEqual(my_Tr1.pair_simplify(my_Tr2),
                          color.ColorFactor([col_str1, col_str2]))
 
-        col_str1 = color.ColorString([color.T(1, 5, 4, 3, 101, 102)])
+        col_str1 = color.ColorString([color.T(4, 3, 1, 5, 101, 102)])
         col_str2 = color.ColorString([color.Tr(1, 3), color.T(4, 5, 101, 102)])
         self.assertEqual(my_Tr1.pair_simplify(my_T),
                          color.ColorFactor([col_str1, col_str2]))
@@ -182,11 +183,10 @@ class ColorStringTest(unittest.TestCase):
         test_f = color.f(1, 2, 3)
         test_d = color.d(4, 5, 6)
 
-        self.my_col_string = color.ColorString([test_f, test_d])
-
-        self.my_col_string.coeff = fractions.Fraction(2, 3)
-        self.my_col_string.Nc_power = -2
-        self.my_col_string.is_imaginary = True
+        self.my_col_string = color.ColorString([test_f, test_d],
+                                               coeff=fractions.Fraction(2, 3),
+                                               Nc_power= -2,
+                                               is_imaginary=True)
 
     def test_representation(self):
         """Test ColorString representation"""
@@ -219,7 +219,23 @@ class ColorStringTest(unittest.TestCase):
         self.assertEqual(str(my_color_string.complex_conjugate()),
                          '-1 I T(4,3,103,102) Tr(3,2,1)')
 
+    def test_to_immutable(self):
+        """Test the immutable representation of a color string structure"""
 
+        self.assertEqual(self.my_col_string.to_immutable(),
+                         (('f', (1, 2, 3)), ('d', (4, 5, 6))))
+
+    def test_replace_indices(self):
+        """Test indices replacement"""
+
+        repl_dict = {1:2, 2:3, 3:1}
+
+        my_color_string = color.ColorString([color.T(1, 2, 3, 4),
+                                             color.Tr(3, 2, 1)])
+
+        my_color_string.replace_indices(repl_dict)
+        self.assertEqual(str(my_color_string),
+                         '1 T(2,3,1,4) Tr(1,3,2)')
 
 class ColorFactorTest(unittest.TestCase):
     """Test class for the ColorFactor objects"""
@@ -291,19 +307,40 @@ class ColorFactorTest(unittest.TestCase):
         "(1/128 Nc^7 )+(-7/128 Nc^5 )+(21/128 Nc^3 )+(-35/128 Nc^1 )" + \
         "+(35/128 1/Nc^1 )+(-21/128 1/Nc^3 )+(3/64 1/Nc^5 )")
 
+    def test_T_f_product(self):
+        """Test a non trivial T f f product"""
+
+        my_color_factor = color.ColorFactor([\
+                                    color.ColorString([color.T(-1000, 1, 2),
+                                               color.f(-1, -1000, 5),
+                                               color.f(-1, 4, 3)])])
+
+        print my_color_factor.full_simplify()
+
+#    def test_gluons(self):
+#        """Test simplification of chains of f"""
+#
+#        my_col_fact = color.ColorFactor([color.ColorString([
+#                                    color.f(1, 2, -1),
+#                                    color.f(-1, 3, -2),
+#                                    color.f(-2, 4, -3),
+#                                    color.f(-3, 5, -4),
+#                                    color.f(-4, 6, -5),
+#                                    color.f(-5, 7, -6),
+#                                    color.f(-6, 8, -7),
+#                                    color.f(-7, 9, -8),
+#                                    color.f(-8, 10, -9),
+#                                    color.f(-9, 11, 12)])])
+#
+#        print my_col_fact.full_simplify()
+
     def test_gluons(self):
         """Test simplification of chains of f"""
 
-        my_col_fact = color.ColorFactor([color.ColorString([
-                                    color.f(1, 2, -1),
-                                    color.f(-1, 3, -2),
-                                    color.f(-2, 4, -3),
-                                    color.f(-3, 5, -4),
-                                    color.f(-4, 6, -5),
-                                    color.f(-5, 7, -6),
-                                    color.f(-6, 8, -7),
-                                    color.f(-7, 9, -8),
-                                    color.f(-8, 10, -9),
-                                    color.f(-9, 11, 12)])])
+        my_col_fact = color.ColorFactor([color.ColorString([color.T(-3, 5, 6),
+                                    color.f(-1, 0, 1),
+                                    color.f(-1, 2, -3)
+                                    ])])
 
         print my_col_fact.full_simplify()
+

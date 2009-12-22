@@ -58,6 +58,21 @@ class ColorObject(array.array):
 
         self.reverse()
 
+    def replace_indices(self, repl_dict):
+        """Replace current indices following the rules listed in the replacement
+        dictionary written as {old_index:new_index,...}. Deals correctly with
+        the replacement by allowing only one single replacement."""
+
+        for i, index in enumerate(self):
+            if index in repl_dict.keys():
+                self[i] = repl_dict[index]
+
+    def create_copy(self):
+        """Return a real copy of the current object."""
+        return globals()[self.__class__.__name__](*self)
+
+    __copy__ = create_copy
+
 #===============================================================================
 # Tr
 #===============================================================================
@@ -70,7 +85,9 @@ class Tr(ColorObject):
 
         # Tr(a)=0
         if len(self) == 1:
-            return ColorFactor()
+            col_str = ColorString()
+            col_str.coeff = fractions.Fraction(0, 1)
+            return ColorFactor([col_str])
 
         #Tr()=Nc
         if len(self) == 0:
@@ -129,7 +146,7 @@ class Tr(ColorObject):
                         c = col_obj[:i2]
                         d = col_obj[i2 + 1:-2]
                         ij = col_obj[-2:]
-                        col_str1 = ColorString([T(*(a + d + c + b + ij))])
+                        col_str1 = ColorString([T(*(c + b + a + d + ij))])
                         col_str2 = ColorString([Tr(*(a + b)), T(*(c + d) + ij)])
                         col_str1.coeff = fractions.Fraction(1, 2)
                         col_str2.coeff = fractions.Fraction(-1, 2)
@@ -295,6 +312,18 @@ class ColorString(list):
     is_imaginary = False
     Nc_power = 0
 
+    def __init__(self, init_list=[],
+                 coeff=fractions.Fraction(1, 1),
+                 is_imaginary=False, Nc_power=0):
+        """Overrides norm list constructor to implement easy modification
+        of coeff, is_imaginary and Nc_power"""
+
+        if init_list:
+            self.extend(init_list)
+        self.coeff = coeff
+        self.is_imaginary = is_imaginary
+        self.Nc_power = Nc_power
+
     def __str__(self):
         """Returns a standard string representation based on color object
         representations"""
@@ -380,14 +409,43 @@ class ColorString(list):
         """Returns the complex conjugate of the current color string"""
 
         compl_conj_str = copy.copy(self)
-        for col_obj in self:
+        for col_obj in compl_conj_str:
             col_obj.complex_conjugate()
         if compl_conj_str.is_imaginary:
             compl_conj_str.coeff = -compl_conj_str.coeff
 
         return compl_conj_str
 
+    def to_immutable(self):
+        """Returns an immutable object summarizing the color structure of the
+        current color string. Format is ((name1,indices1),...) where name is the
+        class name of the color object and indices a tuple corresponding to its
+        indices."""
 
+        return tuple([(col_obj.__class__.__name__, tuple(col_obj)) \
+                        for col_obj in self])
+
+    def replace_indices(self, repl_dict):
+        """Replace current indices following the rules listed in the replacement
+        dictionary written as {old_index:new_index,...}, does that for ALL 
+        color objects."""
+
+        map(lambda col_obj:col_obj.replace_indices(repl_dict), self)
+
+    def create_copy(self):
+        """Returns a real copy of self, non trivial because bug in 
+        copy.deepcopy"""
+
+        res = ColorString()
+        for col_obj in self:
+            res.append(col_obj.create_copy())
+        res.coeff = self.coeff
+        res.is_imaginary = self.is_imaginary
+        res.Nc_power = self.Nc_power
+
+        return res
+
+    __copy__ = create_copy
 #===============================================================================
 # ColorFactor
 #===============================================================================

@@ -20,6 +20,8 @@ import copy
 import logging
 import re
 
+import madgraph.core.color_algebra as color
+
 #===============================================================================
 # PhysicsObject
 #===============================================================================
@@ -417,15 +419,11 @@ class Interaction(PhysicsObject):
             #Should be a list of list strings
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid list of list" % str(value)
-            for mylist in value:
-                if not isinstance(mylist, list):
+                        "%s is not a valid list of Color Strings" % str(value)
+            for mycolstring in value:
+                if not isinstance(mycolstring, color.ColorString):
                     raise self.PhysicsObjectError, \
-                            "%s is not a valid list of list" % str(value)
-                for mystr in mylist:
-                    if not isinstance(mystr, str):
-                        raise self.PhysicsObjectError, \
-                            "%s is not a valid string" % str(mystr)
+                            "%s is not a valid list of Color Strings" % str(value)
 
         if name in ['lorentz']:
             #Should be a list of list strings
