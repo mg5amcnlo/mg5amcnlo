@@ -2121,3 +2121,81 @@ class MultiProcessTest(unittest.TestCase):
             #print 'Valid processes: ',len(filter(lambda item: item[1] > 0, valid_procs))
             #print 'Attempted processes: ',len(amplitudes)
 
+    def test_multiparticle_pp_nj_with_required_s_channel(self):
+        """Setting up and testing pp > nj with required photon s-channel
+        """
+
+        max_fs = 2 # 3
+
+        p = [1, -1, 2, -2, 21]
+
+        my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': 'final'});
+
+        goal_number_processes = [8, 24]
+
+        goal_valid_procs = []
+        goal_valid_procs.append([([1, -1, 1, -1], 1),
+                                 ([1, -1, 2, -2], 1),
+                                 ([-1, 1, 1, -1], 1),
+                                 ([-1, 1, 2, -2], 1),
+                                 ([2, -2, 1, -1], 1),
+                                 ([2, -2, 2, -2], 1),
+                                 ([-2, 2, 1, -1], 1),
+                                 ([-2, 2, 2, -2], 1)])
+        goal_valid_procs.append([([1, -1, 1, -1, 21], 4),
+                                 ([1, -1, 2, -2, 21], 4),
+                                 ([1, 21, 1, 1, -1], 4),
+                                 ([1, 21, 1, 2, -2], 2),
+                                 ([-1, 1, 1, -1, 21], 4),
+                                 ([-1, 1, 2, -2, 21], 4),
+                                 ([-1, 21, 1, -1, -1], 4),
+                                 ([-1, 21, -1, 2, -2], 2),
+                                 ([2, -2, 1, -1, 21], 4),
+                                 ([2, -2, 2, -2, 21], 4),
+                                 ([2, 21, 1, -1, 2], 2),
+                                 ([2, 21, 2, 2, -2], 4),
+                                 ([-2, 2, 1, -1, 21], 4),
+                                 ([-2, 2, 2, -2, 21], 4),
+                                 ([-2, 21, 1, -1, -2], 2),
+                                 ([-2, 21, 2, -2, -2], 4),
+                                 ([21, 1, 1, 1, -1], 4),
+                                 ([21, 1, 1, 2, -2], 2),
+                                 ([21, -1, 1, -1, -1], 4),
+                                 ([21, -1, -1, 2, -2], 2),
+                                 ([21, 2, 1, -1, 2], 2),
+                                 ([21, 2, 2, 2, -2], 4),
+                                 ([21, -2, 1, -1, -2], 2),
+                                 ([21, -2, 2, -2, -2], 4)])
+
+
+        for nfs in range(2, max_fs + 1):
+
+            # Define the multiprocess
+            my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * (2 + nfs)])
+
+            my_multi_leglist[0].set('state', 'initial')
+            my_multi_leglist[1].set('state', 'initial')
+
+            my_process_definition = base_objects.ProcessDefinition({'legs':my_multi_leglist,
+                                                                    'model':self.mymodel,
+                                                                    'required_s_channels': [22]})
+            my_multiprocess = diagram_generation.MultiProcess(\
+                {'process_definitions':\
+                 base_objects.ProcessDefinitionList([my_process_definition])})
+
+            if nfs <= 3:
+                self.assertEqual(len(my_multiprocess.get('amplitudes')),
+                                 goal_number_processes[nfs - 2])
+
+            # Calculate diagrams for all processes
+
+            #amplitudes = my_multiprocess.get('amplitudes')
+
+            valid_procs = [([leg.get('id') for leg in \
+                             amplitude.get('process').get('legs')],
+                            len(amplitude.get('diagrams'))) \
+                           for amplitude in my_multiprocess.get('amplitudes')]
+
+            if nfs <= 3:
+                self.assertEqual(valid_procs, goal_valid_procs[nfs - 2])
+

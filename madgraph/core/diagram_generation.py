@@ -609,7 +609,13 @@ class MultiProcess(base_objects.PhysicsObject):
             processes.extend([base_objects.Process({\
                                        'legs':legs,
                                        'model':process_def.get('model'),
-                                       'id': process_def.get('id')}) \
+                                       'id': process_def.get('id'),
+                                       'required_s_channels': \
+                                        process_def.get('required_s_channels'),
+                                       'forbidden_s_channels': \
+                                        process_def.get('forbidden_s_channels'),
+                                       'forbidden_particles': \
+                                        process_def.get('forbidden_particles')}) \
                               for legs in leg_lists])
 
         self.set('processes', processes)
