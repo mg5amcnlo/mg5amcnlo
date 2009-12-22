@@ -572,11 +572,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return fermion_number_list
 
     def needs_hermitian_conjugate(self):
-        """Returns true if there is a fermion flow clash, i.e.,
-        there is an odd number of negative fermion flows"""
+        """Returns true if any of the mothers have negative
+        fermionflow"""
         
-        return filter(lambda wf: wf.get('fermionflow') < 0,
-                      self.get('mothers'))
+        return any([wf.get('fermionflow') < 0 for wf in \
+                    self.get('mothers')])
 
     def get_with_flow(self, name):
         """Generate the is_part and state needed for writing out
@@ -920,11 +920,11 @@ class HelasAmplitude(base_objects.PhysicsObject):
                                    'nostate')
 
     def needs_hermitian_conjugate(self):
-        """Returns true if there is a fermion flow clash, i.e.,
-        there is an odd number of negative fermion flows"""
-
-        return filter(lambda wf: wf.get('fermionflow') < 0,
-                      self.get('mothers'))
+        """Returns true if any of the mothers have negative
+        fermionflow"""
+        
+        return any([wf.get('fermionflow') < 0 for wf in \
+                    self.get('mothers')])
 
     def get_call_key(self):
         """Generate the (spin, state) tuples used as key for the helas call
@@ -1239,11 +1239,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 # last vertex
                 nexttolastvertex = copy.deepcopy(vertices.pop())
                 legs = nexttolastvertex.get('legs')
-                ntlnumber = legs[len(legs)-1].get('number')
+                ntlnumber = legs[-1].get('number')
                 lastleg = filter(lambda leg: leg.get('number') != ntlnumber,
                                  lastvx.get('legs'))[0]
                 # Replace the last leg of nexttolastvertex
-                legs[len(legs)-1] = lastleg
+                legs[-1] = lastleg
                 lastvx = nexttolastvertex
                 # Sort the legs, to get right order of wave functions
                 lastvx.get('legs').sort(lambda leg1, leg2: \

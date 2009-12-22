@@ -177,7 +177,9 @@ class Amplitude(base_objects.PhysicsObject):
         failed_crossing = not res
 
         # Check for required s-channel propagators
-
+        
+        # Note that we shouldn't look at the last vertex in each
+        # diagram, since that is the n->0 vertex
         if self['process'].get('required_s_channels'):
             res = base_objects.DiagramList(\
                 filter(lambda diagram: \
