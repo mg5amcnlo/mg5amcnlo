@@ -799,11 +799,9 @@ class TestFeynman_Diagram(unittest.TestCase):
             '/Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/interactions.dat')             
         _cmd.do_generate('u d~ > c s~')
         diagram = _cmd.curr_amp['diagrams'][0]
-        print diagram
         diagram = drawing.Feynman_Diagram(diagram, _cmd.curr_model)
         
         diagram.charge_diagram()
-        print 'nb_vertex',len(diagram.VertexList)
         diagram.define_level()
         level_solution = [1, 2, 0, 0, 3, 3]                          
         for i in range(0, 6):
@@ -827,4 +825,70 @@ class TestFeynman_Diagram(unittest.TestCase):
             self.assertNotEquals(line.start, None)
             self.assertNotEquals(line.end, None)
                                                 
-                          
+    def test_notion_of_egality(self):
+        """ this routine test gg>gg
+            the presence of only gluon and of identical type of line-vertex
+            impose that the usual equality (dict equality) cann't be use.
+            so we must force pointer equality 
+        """
+        
+        _cmd.do_import('v4 ' + \
+            '/Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/interactions.dat')             
+        _cmd.do_generate('g g > g g')
+        
+        #test the S-channel
+        diagram = _cmd.curr_amp['diagrams'][1]
+        diagram = drawing.Feynman_Diagram(diagram, _cmd.curr_model)
+        
+        diagram.charge_diagram()
+        diagram.define_level()
+        level_solution = [1, 2, 0, 0, 3, 3]                         
+        for i in range(0, 6):
+            self.assertEquals(diagram.VertexList[i]['level'], \
+                              level_solution[i])                     
+        #print diagram.LineList
+        #print diagram.VertexList
+        diagram.find_initial_vertex_position()                         
+        x_position = [1/3, 2/3, 0, 0, 1, 1]
+        y_position = [1/2,1/2, 0, 1, 0, 1]
+        self.assertEquals(len(diagram.VertexList),6)
+        for i in range(0, 6):
+            self.assertEquals(diagram.VertexList[i]['level'], \
+                              level_solution[i])         
+            self.assertAlmostEquals(diagram.VertexList[i]['pos_x'], \
+                              x_position[i])
+            self.assertAlmostEquals(diagram.VertexList[i]['pos_y'], \
+                              y_position[i])
+        for line in diagram.LineList:
+            self.assertNotEquals(line.start, None)
+            self.assertNotEquals(line.end, None)                          
+
+        #test the T-channel
+        diagram = _cmd.curr_amp['diagrams'][2]
+        diagram = drawing.Feynman_Diagram(diagram, _cmd.curr_model)
+        
+        diagram.charge_diagram()
+        diagram.define_level()
+        level_solution = [1,1,0,2,0,2] 
+        for i in range(0, 6):
+            self.assertEquals(diagram.VertexList[i]['level'], \
+                              level_solution[i])                     
+        #print diagram.LineList
+        #print diagram.VertexList
+        diagram.find_initial_vertex_position()
+                                 
+        x_position = [1/2, 1/2, 0, 1, 0, 1]
+        y_position = [1/4,3/4, 0, 0, 1, 1]
+        self.assertEquals(len(diagram.VertexList),6)
+        for i in range(0, 6):
+            self.assertEquals(diagram.VertexList[i]['level'], \
+                              level_solution[i])         
+            self.assertAlmostEquals(diagram.VertexList[i]['pos_x'], \
+                              x_position[i])
+            self.assertAlmostEquals(diagram.VertexList[i]['pos_y'], \
+                              y_position[i])
+        for line in diagram.LineList:
+            self.assertNotEquals(line.start, None)
+            self.assertNotEquals(line.end, None)                          
+
+

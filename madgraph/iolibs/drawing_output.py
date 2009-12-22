@@ -56,9 +56,8 @@ class draw_diagram:
     
     def draw_line(self,line):
         """ return the code associate tho this line """
-        print 'pass here'
+        
         line_type=line.get_info('line')
-        print type(line),line.start['level'],line.end['level']
         getattr(self,'draw_'+line_type)(line)
                         
         name=line.get_name()
@@ -75,8 +74,12 @@ class draw_diagram_eps(draw_diagram):
     """ all the routine need to write a given diagram in eps format """
     
     width=450
-    height=650
+    height=450
     npage=1
+    x_min=150
+    y_min=450
+    x_max=450
+    y_max=750
            
     def initialize(self):
         """ def the header of the file """
@@ -96,22 +99,28 @@ class draw_diagram_eps(draw_diagram):
 
         #write the diagram.
         draw_diagram.conclude(self)
+    
+
+    def rescale(self, x, y):
+        """ rescale the x, y coordinates of the point (belong to 0,1 interval)
+            to the relative position of the image box
+        """
+        x=self.x_min+(self.x_max-self.x_min)*x
+        y=self.y_min+(self.y_max-self.y_min)*y
         
-    @staticmethod    
-    def line_format( x1, y1, x2, y2, name):
+        return x,y
+         
+           
+    def line_format(self, x1, y1, x2, y2, name):
         """return the line in the correct format """
-        x1=100+100*x1
-        x2=100+100*x2
-        y1=500+100*y1
-        y2=500+100*y2
-        
+        x1, y1 = self.rescale(x1, y1)
+        x2, y2 = self.rescale(x2, y2)
+                
         return " %s %s %s %s %s \n" % (x1, y1, x2, y2, name)
         
     def draw_straight(self,line):
         """ return the code associate to this fermionic line """
         
-        print line.start['pos_x'], line.start['pos_y'], \
-                         line.end['pos_x'], line.end['pos_y'], 'Ffermion'
         self.text += self.line_format(line.start['pos_x'], line.start['pos_y'], \
                          line.end['pos_x'], line.end['pos_y'], 'Ffermion')
         
@@ -133,7 +142,7 @@ class draw_diagram_eps(draw_diagram):
     def draw_curly(self,line):
         """ return the code associate to the spin 1 line """
         
-        print line.start, line.end
+        #print line.start, line.end
         self.text += self.line_format(line.start['pos_x'], line.start['pos_y'], \
                          line.end['pos_x'], line.end['pos_y'], '0 Fgluon')
  
@@ -144,6 +153,7 @@ class draw_diagram_eps(draw_diagram):
         x1, y1 = line.start['pos_x'], line.start['pos_y']
         x2, y2 = line.end['pos_x'], line.end['pos_y']
 
+        print '(%s,%s) , (%s, %s)' %(x1,y1,x2,y2)
         d  = math.sqrt((x1-x2)**2+(y1-y2)**2)
         dx = (x1-x2)/d
         dy = (y1-y2)/d        
@@ -151,11 +161,23 @@ class draw_diagram_eps(draw_diagram):
         if dy < 0:
             dx, dy = -dx, -dy
         
-        x_pos = (x1 + x2) / 2 + 5 * dy
-        y_pos = (y1 + y2) / 2 - 5 * dx      
+        x_pos = (x1 + x2) / 2 + 0.05  * dy
+        y_pos = (y1 + y2) / 2 - 0.05 * dx      
 
-        #self.text += ' %s, %s moveto \n' % (x_pos,y_pos)  
-        #self.text += '(' + name+ ')   show\n'
+        x_pos, y_pos =self.rescale(x_pos, y_pos)
+        self.text += ' %s  %s moveto \n' % (x_pos,y_pos)  
+        self.text += '(' + name+ ')   show\n'
+
+
+class draw_diagrams_eps(draw_diagram_eps):
+    """ all the routine need to write a set of diagrams in eps format """
+    
+    x_min=50
+    y_min=600
+    x_max=200
+    y_max=750
+
+
 
 
 if __name__ == '__main__':
@@ -165,7 +187,7 @@ if __name__ == '__main__':
     cmd = MadGraphCmd()
     cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/particles.dat')
     cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/interactions.dat')
-    cmd.do_generate(' u d~ > c s~')
+    cmd.do_generate(' g g > g g')
     
     len(cmd.curr_amp['diagrams'])
     for i in range(0, len(cmd.curr_amp['diagrams'])):
@@ -173,13 +195,15 @@ if __name__ == '__main__':
         start=time.time()
         upgrade_diagram = draw.Feynman_Diagram(diagram,cmd.curr_model)
         upgrade_diagram.charge_diagram()
+        print 'len', len(upgrade_diagram.LineList), len(upgrade_diagram.VertexList)
         upgrade_diagram.define_level()        
-        print 'len', len(upgrade_diagram.LineList)
+        print 'len', len(upgrade_diagram.LineList), len(upgrade_diagram.VertexList)
+        #print diagram
         upgrade_diagram.find_initial_vertex_position()
-        print time.time()-start, 'time to upgrade diagram'
-        plot = draw_diagram_eps(upgrade_diagram,'diagram_%s.eps' % (i) )
-        for vertex in upgrade_diagram.VertexList:
-            print vertex['pos_x'],vertex['pos_y']
+        print upgrade_diagram._debug_position()
+        #print time.time()-start, 'time to upgrade diagram'
+        plot = draw_diagrams_eps(upgrade_diagram,'diagram_%s.eps' % (i) )
+
         plot.draw()
         print time.time()-start, 'full time to draw a diagram'
     print 'done'
