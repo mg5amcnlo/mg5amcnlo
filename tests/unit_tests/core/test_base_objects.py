@@ -771,7 +771,7 @@ class MultiLegTest(unittest.TestCase):
 
     def setUp(self):
 
-        self.mydict = {'ids':[3,2,5],
+        self.mydict = {'ids':[3, 2, 5],
                       'state':'final'}
 
         self.my_multi_leg = base_objects.MultiLeg(self.mydict)
@@ -826,7 +826,7 @@ class MultiLegTest(unittest.TestCase):
 
         test_values = [
                        {'prop':'ids',
-                        'right_list':[[0], [3,4,5]],
+                        'right_list':[[0], [3, 4, 5]],
                         'wrong_list':['', 1, 0.0]},
                        {'prop':'state',
                         'right_list':['initial', 'final'],
@@ -1120,14 +1120,17 @@ class ProcessTest(unittest.TestCase):
                                          'state':'final',
                                          'from_group':False})) for \
              dummy in range(5)])
-        
+
         self.myleglist[0].set('state', 'initial')
         self.myleglist[1].set('state', 'initial')
 
         self.mydict = {'legs':self.myleglist,
                        'orders':{'QCD':5, 'QED':1},
                        'model':self.mymodel,
-                       'id': 1}
+                       'id': 1,
+                       'required_s_channels':[],
+                       'forbidden_s_channels':[],
+                       'forbidden_particles':[]}
 
         self.myprocess = base_objects.Process(self.mydict)
 
@@ -1199,7 +1202,10 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'legs\': %s,\n" % repr(self.myleglist)
         goal = goal + "    \'orders\': %s,\n" % repr(self.myprocess['orders'])
         goal = goal + "    \'model\': %s,\n" % repr(self.myprocess['model'])
-        goal = goal + "    \'id\': 1\n}"
+        goal = goal + "    \'id\': 1,\n"
+        goal = goal + "    \'required_s_channels\': [],\n"
+        goal = goal + "    \'forbidden_s_channels\': [],\n"
+        goal = goal + "    \'forbidden_particles\': []\n}"
 
         self.assertEqual(goal, str(self.myprocess))
 
@@ -1228,9 +1234,9 @@ class ProcessDefinitionTest(unittest.TestCase):
     my_process_definition = None
     mymodel = base_objects.Model()
     my_multi_leglist = base_objects.MultiLegList()
-    
+
     def setUp(self):
-        
+
         mypartlist = base_objects.ParticleList([
                      base_objects.Particle({'name':'c',
                                              'antiname':'c~',
@@ -1239,17 +1245,20 @@ class ProcessDefinitionTest(unittest.TestCase):
         self.mymodel.set('particles', mypartlist)
 
         self.my_multi_leglist = base_objects.MultiLegList(\
-            [copy.copy(base_objects.MultiLeg({'ids':[3,4,5],
+            [copy.copy(base_objects.MultiLeg({'ids':[3, 4, 5],
                                               'state':'final'})) for \
              dummy in range(5)])
-        
+
         self.my_multi_leglist[0].set('state', 'initial')
         self.my_multi_leglist[1].set('state', 'initial')
 
         self.mydict = {'legs':self.my_multi_leglist,
                        'orders':{'QCD':5, 'QED':1},
                        'model':self.mymodel,
-                       'id':3}
+                       'id':3,
+                       'required_s_channels':[],
+                       'forbidden_s_channels':[],
+                       'forbidden_particles':[]}
 
         self.my_process_definition = base_objects.ProcessDefinition(self.mydict)
 
@@ -1321,7 +1330,9 @@ class ProcessDefinitionTest(unittest.TestCase):
         goal = goal + "    \'legs\': %s,\n" % repr(self.my_multi_leglist)
         goal = goal + "    \'orders\': %s,\n" % repr(self.my_process_definition['orders'])
         goal = goal + "    \'model\': %s,\n" % repr(self.my_process_definition['model'])
-        goal = goal + "    \'id\': %s\n}" % repr(self.my_process_definition['id'])
-
+        goal = goal + "    \'id\': %s,\n" % repr(self.my_process_definition['id'])
+        goal = goal + "    \'required_s_channels\': [],\n"
+        goal = goal + "    \'forbidden_s_channels\': [],\n"
+        goal = goal + "    \'forbidden_particles\': []\n}"
         self.assertEqual(goal, str(self.my_process_definition))
 

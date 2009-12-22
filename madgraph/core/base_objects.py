@@ -46,13 +46,13 @@ class PhysicsObject(dict):
 
         for item in init_dict.keys():
             self.set(item, init_dict[item])
-            
-    def __getitem__(self,name):
+
+    def __getitem__(self, name):
         """ force the check that the property exist before returning the 
             value associated to value. This ensure that the correct error 
             is always raise
         """
-        
+
         if self.is_valid_prop(name):
             return dict.__getitem__(self, name)
 
@@ -643,7 +643,7 @@ class Model(PhysicsObject):
                 self['interaction_dict'] = self['interactions'].generate_dict()
 
         return Model.__bases__[0].get(self, name) # call the mother routine
-    
+
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
@@ -717,16 +717,16 @@ class Leg(PhysicsObject):
 
         return ['id', 'number', 'state', 'from_group']
 
-    def is_fermion(self,model):
+    def is_fermion(self, model):
         """Returns True if the particle corresponding to the leg is a fermion"""
 
-        if not isinstance(model,Model):
+        if not isinstance(model, Model):
             raise self.PhysicsObjectError, \
                   "%s is not a model" % \
                                                                     str(model)
-            
-        
-        return model.get('particle_dict')[self['id']].get('spin') in [2,4]        
+
+
+        return model.get('particle_dict')[self['id']].get('spin') in [2, 4]
 
 #===============================================================================
 # LegList
@@ -737,24 +737,24 @@ class LegList(PhysicsObjectList):
 
     def is_valid_element(self, obj):
         """Test if object obj is a valid Leg for the list."""
-        
+
         return isinstance(obj, Leg)
 
     # Helper methods for diagram generation
 
     def from_group_elements(self):
         """Return all elements which have 'from_group' True"""
-        
+
         return filter(lambda leg: leg.get('from_group'), self)
 
     def minimum_one_from_group(self):
         """Return True if at least one element has 'from_group' True"""
-        
+
         return len(self.from_group_elements()) > 0
 
     def minimum_two_from_group(self):
         """Return True if at least two elements have 'from_group' True"""
-        
+
         return len(self.from_group_elements()) > 1
 
     def can_combine_to_1(self, ref_dict_to1):
@@ -773,8 +773,8 @@ class LegList(PhysicsObjectList):
             return ref_dict_to0.has_key(tuple(sorted([leg.get('id') for leg in self])))
         else:
             return False
-    
-    def get_outgoing_id_list(self,model):
+
+    def get_outgoing_id_list(self, model):
         """Returns the list of ids corresponding to the leglist with
         all particles outgoing"""
 
@@ -783,7 +783,7 @@ class LegList(PhysicsObjectList):
         if not isinstance(model, Model):
             print "Error! model not model"
             return res
-        
+
         for leg in self:
             if leg.get('state') == 'initial':
                 res.append(model.get('particle_dict')[leg.get('id')].get_anti_pdg_code())
@@ -813,10 +813,10 @@ class MultiLeg(PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list" % str(value)
             for i in value:
-                if not isinstance(i,int):
+                if not isinstance(i, int):
                     raise self.PhysicsObjectError, \
                           "%s is not a valid list of integers" % str(value)
-            
+
         if name == 'state':
             if not isinstance(value, str):
                 raise self.PhysicsObjectError, \
@@ -843,7 +843,7 @@ class MultiLegList(PhysicsObjectList):
 
     def is_valid_element(self, obj):
         """Test if object obj is a valid MultiLeg for the list."""
-        
+
         return isinstance(obj, MultiLeg)
 
 #===============================================================================
@@ -891,10 +891,10 @@ class VertexList(PhysicsObjectList):
 
     def is_valid_element(self, obj):
         """Test if object obj is a valid Vertex for the list."""
-        
+
         return isinstance(obj, Vertex)
 
-    def __init__(self, init_list = None, orders = None):
+    def __init__(self, init_list=None, orders=None):
         """Creates a new list object, with an optional dictionary of
         coupling orders."""
 
@@ -933,20 +933,20 @@ class Diagram(PhysicsObject):
         """Return particle property names as a nicely sorted list."""
 
         return ['vertices']
-    
+
     def nice_string(self):
         """Returns a nicely formatted string of the diagram content."""
-        
+
         if self['vertices']:
             mystr = '('
             for vert in self['vertices']:
                 mystr = mystr + '('
                 for leg in vert['legs'][:-1]:
-                    mystr = mystr + str(leg['number']) + ','    
+                    mystr = mystr + str(leg['number']) + '(%s)' % str(leg['id']) + ','
                 if self['vertices'].index(vert) < len(self['vertices']) - 1:
                     # Do not want ">" in the last vertex
                     mystr = mystr[:-1] + '>'
-                mystr = mystr + str(vert['legs'][-1]['number']) + ','
+                mystr = mystr + str(vert['legs'][-1]['number']) + '(%s)' % str(vert['legs'][-1]['id']) + ','
                 mystr = mystr + 'id:' + str(vert['id']) + '),'
             mystr = mystr[:-1] + ')'
             return mystr
@@ -964,14 +964,14 @@ class DiagramList(PhysicsObjectList):
         """Test if object obj is a valid Diagram for the list."""
 
         return isinstance(obj, Diagram)
-    
+
     def nice_string(self):
         """Returns a nicely formatted string"""
         mystr = str(len(self)) + ' diagrams:\n'
         for diag in self:
             mystr = mystr + "  " + diag.nice_string() + '\n'
         return mystr[:-1]
-   
+
 
 #===============================================================================
 # Process
@@ -991,6 +991,9 @@ class Process(PhysicsObject):
         self['model'] = Model()
         # Optional number to identify the process
         self['id'] = 0
+        self['required_s_channels'] = []
+        self['forbidden_s_channels'] = []
+        self['forbidden_particles'] = []
 
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -1006,22 +1009,38 @@ class Process(PhysicsObject):
             if not isinstance(value, Model):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid Model object" % str(value)
-        if name is 'id':
+        if name == 'id':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                     "Process id %s is not an integer" % repr(value)
+
+        if name in ['required_s_channels',
+                    'forbidden_s_channels',
+                    'forbidden_particles']:
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list" % str(value)
+            for i in value:
+                if not isinstance(i, int):
+                    raise self.PhysicsObjectError, \
+                          "%s is not a valid list of integers" % str(value)
+                if i <= 0:
+                    raise self.PhysicsObjectError, \
+                      "Forbidden particles should have a positive PDG code!" % str(value)
 
         return True
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return ['legs', 'orders', 'model', 'id']
+        return ['legs', 'orders', 'model', 'id',
+                'required_s_channels', 'forbidden_s_channels',
+                'forbidden_particles']
 
     def nice_string(self):
         """Returns a nicely formated string about current process
         content"""
-        
+
         mystr = "Process: "
         prevleg = None
         for leg in self['legs']:
@@ -1073,7 +1092,7 @@ class ProcessList(PhysicsObjectList):
 
     def is_valid_element(self, obj):
         """Test if object obj is a valid Process for the list."""
-        
+
         return isinstance(obj, Process)
 
 #===============================================================================
@@ -1093,6 +1112,9 @@ class ProcessDefinition(PhysicsObject):
         self['orders'] = {}
         self['model'] = Model()
         self['id'] = 0
+        self['required_s_channels'] = []
+        self['forbidden_s_channels'] = []
+        self['forbidden_particles'] = []
 
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -1112,12 +1134,29 @@ class ProcessDefinition(PhysicsObject):
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                     "Process id %s is not an integer" % repr(value)
+
+        if name in ['required_s_channels',
+                    'forbidden_s_channels',
+                    'forbidden_particles']:
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list" % str(value)
+            for i in value:
+                if not isinstance(i, int):
+                    raise self.PhysicsObjectError, \
+                          "%s is not a valid list of integers" % str(value)
+                if i <= 0:
+                    raise self.PhysicsObjectError, \
+                          "Forbidden particles should have a positive PDG code!" % str(value)
+
         return True
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return ['legs', 'orders', 'model', 'id']
+        return ['legs', 'orders', 'model', 'id',
+                'required_s_channels', 'forbidden_s_channels',
+                'forbidden_particles']
 
 #===============================================================================
 # ProcessDefinitionList
@@ -1128,5 +1167,5 @@ class ProcessDefinitionList(PhysicsObjectList):
 
     def is_valid_element(self, obj):
         """Test if object obj is a valid ProcessDefinition for the list."""
-        
+
         return isinstance(obj, ProcessDefinition)

@@ -913,7 +913,7 @@ class DiagramGenerationTest(unittest.TestCase):
 
         mypartlist = base_objects.ParticleList();
         myinterlist = base_objects.InteractionList();
-        
+
         # A quark U and its antiparticle
         mypartlist.append(base_objects.Particle({'name':'u',
                       'antiname':'u~',
@@ -967,7 +967,7 @@ class DiagramGenerationTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        
+
         eminus = mypartlist[len(mypartlist) - 1]
         eplus = copy.copy(eminus)
         eplus.set('is_part', False)
@@ -1160,6 +1160,97 @@ class DiagramGenerationTest(unittest.TestCase):
             self.myamplitude.generate_diagrams()
             self.assertEqual(len(self.myamplitude.get('diagrams')),
                              goal_ndiags04[ngluons])
+
+    def test_forbidden_particles_uux_uuxng(self):
+        """Test the number of diagrams uu~>uu~+g with different 
+        forbidden particles.
+        """
+
+        goal_no_photon = [2, 10]
+        goal_no_photon_quark = [2, 2]
+
+        for ngluons in range(2):
+
+            myleglist = base_objects.LegList()
+
+            myleglist.append(base_objects.Leg({'id':-1,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':-1,
+                                             'state':'final'}))
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'state':'final'}))
+            myleglist.extend([base_objects.Leg({'id':21,
+                                                 'state':'final'})] * ngluons)
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'forbidden_particles':[22]})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.generate_diagrams()
+
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
+                             goal_no_photon[ngluons])
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'forbidden_particles':[22, 1]})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.generate_diagrams()
+
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
+                             goal_no_photon_quark[ngluons])
+
+    def test_forbidden_s_channel_uux_uuxng(self):
+        """Test the number of diagrams uu~>uu~+g with different 
+        forbidden s channel particles.
+        """
+
+        goal_no_photon = [3, 10]
+        goal_no_photon_quark = [2, 2]
+
+        for ngluons in range(2):
+
+            myleglist = base_objects.LegList()
+
+            myleglist.append(base_objects.Leg({'id':-1,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':-1,
+                                             'state':'final'}))
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'state':'final'}))
+            myleglist.extend([base_objects.Leg({'id':21,
+                                                 'state':'final'})] * ngluons)
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'forbidden_s_channels':[22]})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.generate_diagrams()
+
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
+                             goal_no_photon[ngluons])
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'forbidden_s_channels':[22, 1]})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.generate_diagrams()
+
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
+                             goal_no_photon_quark[ngluons])
+
 
 #===============================================================================
 # Muliparticle test
@@ -1449,8 +1540,8 @@ class MultiparticleTest(unittest.TestCase):
             # Define the multiprocess
             my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * (2 + nfs)])
 
-            my_multi_leglist[0].set('state','initial')
-            my_multi_leglist[1].set('state','initial')
+            my_multi_leglist[0].set('state', 'initial')
+            my_multi_leglist[1].set('state', 'initial')
 
             my_process_definition = base_objects.ProcessDefinition({'legs':my_multi_leglist,
                                                                     'model':self.mymodel})
@@ -1521,7 +1612,7 @@ class MultiProcessTest(unittest.TestCase):
     my_process_definitions = base_objects.ProcessDefinitionList()
     my_processes = base_objects.ProcessList()
     my_multi_process = diagram_generation.MultiProcess()
-    
+
     def setUp(self):
 
         mypartlist = base_objects.ParticleList()
@@ -1695,10 +1786,10 @@ class MultiProcessTest(unittest.TestCase):
         self.mymodel.set('interactions', myinterlist)
 
         self.my_multi_leglist = base_objects.MultiLegList(\
-            [copy.copy(base_objects.MultiLeg({'ids':[3,4,5],
+            [copy.copy(base_objects.MultiLeg({'ids':[3, 4, 5],
                                               'state':'final'})) for \
              dummy in range(5)])
-        
+
         self.my_multi_leglist[0].set('state', 'initial')
         self.my_multi_leglist[1].set('state', 'initial')
 
@@ -1710,10 +1801,10 @@ class MultiProcessTest(unittest.TestCase):
         self.my_process_definition = base_objects.ProcessDefinition(self.mydict)
         self.my_process_definitions = base_objects.ProcessDefinitionList(\
             [self.my_process_definition])
-        
+
         self.mydict = {'process_definitions':self.my_process_definitions,
                        'processes':base_objects.ProcessList()}
-        
+
         self.my_multi_process = diagram_generation.MultiProcess(\
             self.mydict)
 
@@ -1775,13 +1866,13 @@ class MultiProcessTest(unittest.TestCase):
         p = [1, -1, 2, -2, 21]
 
         my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': 'final'});
-        my_single_leg = base_objects.MultiLeg({'ids': [22],'state': 'final'});
+        my_single_leg = base_objects.MultiLeg({'ids': [22], 'state': 'final'});
 
         my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * 5])
         my_multi_leglist.append(my_single_leg)
 
-        my_multi_leglist[0].set('state','initial')
-        my_multi_leglist[1].set('state','initial')
+        my_multi_leglist[0].set('state', 'initial')
+        my_multi_leglist[1].set('state', 'initial')
 
         my_process_definition = base_objects.ProcessDefinition({'legs': my_multi_leglist,
                                                                 'model':self.mymodel})
@@ -1899,8 +1990,8 @@ class MultiProcessTest(unittest.TestCase):
             # Define the multiprocess
             my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * (2 + nfs)])
 
-            my_multi_leglist[0].set('state','initial')
-            my_multi_leglist[1].set('state','initial')
+            my_multi_leglist[0].set('state', 'initial')
+            my_multi_leglist[1].set('state', 'initial')
 
             my_process_definition = base_objects.ProcessDefinition({'legs':my_multi_leglist,
                                                                     'model':self.mymodel})
@@ -1913,9 +2004,9 @@ class MultiProcessTest(unittest.TestCase):
             if nfs <= 3:
                 self.assertEqual(len(my_multiprocess.get('processes')),
                                  goal_number_processes[nfs - 2])
-            
+
             # Calculate diagrams for all processes
-            
+
             amplitudes = my_multiprocess.get('amplitudes')
 
             valid_procs = [([leg.get('id') for leg in \

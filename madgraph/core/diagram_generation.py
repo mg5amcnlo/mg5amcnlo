@@ -37,9 +37,9 @@ class Amplitude(base_objects.PhysicsObject):
         self['process'] = base_objects.Process()
         self['diagrams'] = None
 
-    def __init__(self, argument = None):
+    def __init__(self, argument=None):
         """Allow initialization with Process"""
-        
+
         if isinstance(argument, base_objects.Process):
             super(Amplitude, self).__init__()
             self.set('process', argument)
@@ -125,11 +125,11 @@ class Amplitude(base_objects.PhysicsObject):
 
         # First check that the number of fermions is even
         if len(filter(lambda leg: model.get('particle_dict')[\
-                        leg.get('id')].get('spin') in [2,4],
+                        leg.get('id')].get('spin') in [2, 4],
                       self.get('process').get('legs'))) % 2 == 1:
             self['diagrams'] = res
             return res
-        
+
         # Give numbers to legs in process
         for i in range(0, len(self['process'].get('legs'))):
             # Make sure legs are unique
@@ -185,7 +185,7 @@ class Amplitude(base_objects.PhysicsObject):
         return not failed_crossing
 
     def reduce_leglist(self, curr_leglist, max_multi_to1,
-                       coupling_orders = None):
+                       coupling_orders=None):
         """Recursive function to reduce N LegList to N-1
            For algorithm, see doc for generate_diagrams.
         """
@@ -235,6 +235,29 @@ class Amplitude(base_objects.PhysicsObject):
 
         # Consider all the pairs
         for leg_vertex_tuple in leg_vertex_list:
+
+            # Remove forbidden particles
+            if self['process'].get('forbidden_particles') and \
+                any([abs(vertex.get('legs')[-1].get('id')) in \
+                self['process'].get('forbidden_particles') \
+                for vertex in leg_vertex_tuple[1]]):
+                    continue
+
+            # Remove forbidden s-channel particles
+            if self['process'].get('forbidden_s_channels'):
+                for vertex in leg_vertex_tuple[1]:
+                    if vertex.get('id') != 0 and \
+                        vertex.get('legs')[-1].get('state') == 'final':
+                        if vertex.get('legs')[0].get('state') == 'final':
+                                if vertex.get('legs')[-1].get('id') in \
+                                    self['process'].get('forbidden_s_channels'):
+                                    continue
+                        else:
+                            if self['process'].get('model').get('particle_dict')[\
+                                vertex.get('legs')[-1].get('id')].get_anti_pdg_code() in \
+                                    self['process'].get('forbidden_s_channels'):
+                                    continue
+
             # Check for coupling orders. If couplings < 0, skip recursion.
             new_coupling_orders = self.reduce_orders(coupling_orders,
                                                      model,
@@ -425,7 +448,7 @@ class Amplitude(base_objects.PhysicsObject):
                         vlist.append(base_objects.Vertex(
                                          {'legs':myleglist,
                                           'id':vert_ids[mylegs.index(myleg)]}))
-                        
+
                     vertex_list.append(vlist)
 
                 # If entry is not a combination, switch the from_group flag
@@ -455,7 +478,7 @@ class AmplitudeList(base_objects.PhysicsObjectList):
 
     def is_valid_element(self, obj):
         """Test if object obj is a valid Amplitude for the list."""
-        
+
         return isinstance(obj, Amplitude)
 
 #===============================================================================
@@ -512,7 +535,7 @@ class MultiProcess(base_objects.PhysicsObject):
     def nice_string(self):
         """Returns a nicely formated string about current process
         content"""
-        
+
         mystr = "MultiProcess: "
         prevleg = None
         for leg in self['legs']:
@@ -539,27 +562,27 @@ class MultiProcess(base_objects.PhysicsObject):
 
         for process_def in self['process_definitions']:
 
-            model = process_def['model']            
+            model = process_def['model']
 
             isids = [leg['ids'] for leg in \
-                     filter(lambda leg: leg['state'] == 'initial',process_def['legs'])]
+                     filter(lambda leg: leg['state'] == 'initial', process_def['legs'])]
             fsids = [leg['ids'] for leg in \
-                     filter(lambda leg: leg['state'] == 'final',process_def['legs'])]
+                     filter(lambda leg: leg['state'] == 'final', process_def['legs'])]
 
             # Generate all combinations for the initial state
 
             islist = []
 
-            for prod in apply(itertools.product,isids):
+            for prod in apply(itertools.product, isids):
                 islist.append(base_objects.LegList([\
-                    base_objects.Leg({'id':id,'state': 'initial'}) \
+                    base_objects.Leg({'id':id, 'state': 'initial'}) \
                                        for id in prod]))
 
             # Generate all combinations for the final state
-            
+
             fsidlist = []
 
-            for prod in apply(itertools.product,fsids):
+            for prod in apply(itertools.product, fsids):
                 fsidlist.append([id for id in prod])
 
             # Now remove all double counting in the final state
@@ -568,7 +591,7 @@ class MultiProcess(base_objects.PhysicsObject):
             for ids in fsidlist:
                 if tuple(sorted(ids)) not in red_fsidlist:
                     fslist.append(base_objects.LegList([\
-                        base_objects.Leg({'id':id,'state': 'final'}) \
+                        base_objects.Leg({'id':id, 'state': 'final'}) \
                                            for id in ids]))
                     red_fsidlist.append(tuple(sorted(ids)));
 
@@ -579,7 +602,7 @@ class MultiProcess(base_objects.PhysicsObject):
                     leg_list = [copy.copy(leg) for leg in islegs]
                     leg_list.extend([copy.copy(leg) for leg in fslegs])
                     # Check that process has even number of fermions
-                    if len(filter(lambda leg: leg.is_fermion(model),leg_list)) % 2 == 0:
+                    if len(filter(lambda leg: leg.is_fermion(model), leg_list)) % 2 == 0:
                         leg_lists.append(base_objects.LegList(leg_list))
 
             # Setup processes
@@ -588,7 +611,7 @@ class MultiProcess(base_objects.PhysicsObject):
                                        'model':process_def.get('model'),
                                        'id': process_def.get('id')}) \
                               for legs in leg_lists])
-            
+
         self.set('processes', processes)
 
     def generate_amplitudes(self):
@@ -615,7 +638,7 @@ class MultiProcess(base_objects.PhysicsObject):
                 else:
                     # Add process to failed_procs
                     self.__failed_procs.append(tuple(sorted_legs))
-            
+
 #===============================================================================
 # Global helper methods
 #===============================================================================

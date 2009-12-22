@@ -46,7 +46,7 @@ class MadGraphCmd(cmd.Cmd):
     __curr_matrix_elements = helas_objects.HelasMultiProcess()
     __curr_fortran_model = export_v4.HelasFortranModel()
     __multiparticles = {}
-    
+
     __display_opts = ['particles',
                       'interactions',
                       'processes',
@@ -249,7 +249,7 @@ class MadGraphCmd(cmd.Cmd):
         if args[0] == 'multiparticles':
             print 'Multiparticle labels:'
             for key in self.__multiparticles:
-                print key," = ",self.__multiparticles[key]
+                print key, " = ", self.__multiparticles[key]
 
     def complete_display(self, text, line, begidx, endidx):
         "Complete the display command"
@@ -320,7 +320,7 @@ class MadGraphCmd(cmd.Cmd):
             else:
                 print "No particle %s in model: skipped" % part_name
 
-        if filter(lambda leg: leg.get('state') == 'final',myleglist):
+        if filter(lambda leg: leg.get('state') == 'final', myleglist):
             myprocdef = base_objects.ProcessDefinitionList([\
                 base_objects.ProcessDefinition({'legs': myleglist,
                                                 'model': self.__curr_model})])
@@ -354,7 +354,7 @@ class MadGraphCmd(cmd.Cmd):
                              helas_objects.HelasMultiProcess(\
                                            self.__curr_amps)
                 cpu_time2 = time.time()
-                
+
                 ndiags = sum([len(me.get('diagrams')) for \
                               me in self.__curr_matrix_elements.\
                               get('matrix_elements')])
