@@ -16,29 +16,70 @@ from __future__ import division
 import math
 import os
 import time
+import madgraph.iolibs.drawing_lib as Draw 
 print os.path.realpath(__file__)
 print os.path.dirname(os.path.realpath(__file__))
 print os.path.split(os.path.dirname(os.path.realpath(__file__)))
 _root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]+'/'
 print _root_path
 
-class draw_diagram:
+class Draw_diagram:
     """ all generic routine in order to written diagram """
+    
+    
+    class Draw_diagram_Error(Exception):
+        """ error raise if something unexpected appear """
 
-    def __init__(self,diagram='',file='diagram.eps'):
+    def __init__(self,diagram='',file='diagram.eps', model='', amplitude=''):
         """ load the data and assign the output file """
         
-        self.text=''
-        self.diagram=diagram
-        self.file=file    
-    
+        self.text = ''
+        self.diagram = diagram
+        self.file = file  
+        self.model = model         # use for automatic conversion of graph
+        self.amplitude = amplitude # use for automatic conversion of graph
+          
+    def convert_diagram(self,diagram='',model='', amplitude=''):
+        """ 
+            check if the diagram is a Feynman diagram and not a basic one
+            if it is a basic one upgrade it!!
+        """
+        
+        if diagram == '':
+            diagram = self.diagram
+            
+        if model == '':
+            model = self.model
+            if not model:
+                raise self.Draw_diagram_Error('The model is required for'+  \
+                                'diagram conversion in routine convert_diagram')
+        
+        if  not isinstance(diagram, Draw.Feynman_Diagram):
+            diagram=Draw.Feynman_Diagram(diagram, model)
+            diagram.charge_diagram()
+            diagram.define_level()        
+            diagram.find_initial_vertex_position()
+        return diagram
+        
+        
+
     def draw(self):
         """ draw the diagram """
         
+        self.convert_diagram()
+        self.draw_diagram(self.diagram)
         self.initialize()
-        for line in self.diagram.LineList:
-            self.draw_line(line)
+        
         self.conclude()
+
+    def draw_diagram(self,diagram):
+        """ draw a given diagram no input-output """
+        
+        diagram = self.convert_diagram(diagram, self.model, self.amplitude)
+        print 'adding diagram',diagram.LineList
+        for line in diagram.LineList:
+            print 'adding line'
+            self.draw_line(line)
 
     def initialize(self):
         """ start the initialization of the diagram """
@@ -70,7 +111,7 @@ class draw_diagram:
         """ place the name of the line at the correct position """
         pass
     
-class draw_diagram_eps(draw_diagram):
+class Draw_diagram_eps(Draw_diagram):
     """ all the routine need to write a given diagram in eps format """
     
     width=450
@@ -98,7 +139,7 @@ class draw_diagram_eps(draw_diagram):
         self.text+='%%trailer\n'
 
         #write the diagram.
-        draw_diagram.conclude(self)
+        Draw_diagram.conclude(self)
     
 
     def rescale(self, x, y):
@@ -153,31 +194,92 @@ class draw_diagram_eps(draw_diagram):
         x1, y1 = line.start['pos_x'], line.start['pos_y']
         x2, y2 = line.end['pos_x'], line.end['pos_y']
 
-        print '(%s,%s) , (%s, %s)' %(x1,y1,x2,y2)
         d  = math.sqrt((x1-x2)**2+(y1-y2)**2)
+        if d==0: return
         dx = (x1-x2)/d
         dy = (y1-y2)/d        
         
+
         if dy < 0:
             dx, dy = -dx, -dy
         
-        x_pos = (x1 + x2) / 2 + 0.05  * dy
-        y_pos = (y1 + y2) / 2 - 0.05 * dx      
+        x_pos = (x1 + x2) / 2 + 0.06  * dy
+        y_pos = (y1 + y2) / 2 - 0.06 * dx      
 
         x_pos, y_pos =self.rescale(x_pos, y_pos)
         self.text += ' %s  %s moveto \n' % (x_pos,y_pos)  
         self.text += '(' + name+ ')   show\n'
 
-
-class draw_diagrams_eps(draw_diagram_eps):
+################################################################################
+class Draw_diagrams_eps(Draw_diagram_eps):
     """ all the routine need to write a set of diagrams in eps format """
     
-    x_min=50
+    x_min=75
+    x_width=200
+    x_gap=75
     y_min=600
-    x_max=200
-    y_max=750
+    y_width=150
+    y_gap=50
 
+    nb_line=3
+    nb_col=2
+    
+    def __init__(self, diagramlist='', file='diagram.eps', \
+                  model='', amplitude=''):
+        
+        Draw_diagram_eps.__init__(self,'', file, model, amplitude)
+        self.block_nb=0
+        self.npage= 1+len(diagramlist)//(self.nb_col*self.nb_line)
+        self.diagramlist = diagramlist
+        
+    def rescale(self, x, y):
+        """ rescale the x, y coordinates of the point (belong to 0,1 interval)
+            to the relative position of the image box
+        """
+        block_pos=self.block_nb %(self.nb_col*self.nb_line)
+        line_pos = block_pos //self.nb_col 
+        col_pos = block_pos % self.nb_col
+        
+        x_min = self.x_min+(self.x_width+self.x_gap)*col_pos
+        x_max = self.x_min+self.x_gap * (col_pos) + self.x_width * (col_pos+1)
+        y_min = self.y_min-(self.y_width+self.y_gap)*line_pos
+        y_max = self.y_min-self.y_gap * (line_pos) - self.y_width * (line_pos-1)
+        
+        x=x_min+(x_max-x_min)*x
+        y=y_min+(y_max-y_min)*y
+        
+        return x,y    
+ 
+    def draw_diagram(self,diagram):
+        """ draw the diagram no input-output """
+        
+        Draw_diagram_eps.draw_diagram(self,diagram)
+        self.block_nb += 1
+        
+    def draw(self):
+        """ draw the diagram """
+        
+        self.initialize()
+        for diagram in self.diagramlist:
+            print 'add a diagram'
+            self.draw_diagram(diagram)
+            
+            if self.block_nb % (self.nb_col*self.nb_line) == 0:
+                self.pass_to_next_page()
+        self.conclude()
+        
+    def pass_to_next_page(self):
+        """ insert text in order to pass to next page """
+        self.text += 'showpage\n'
+        new_page = 1 + self.block_nb // (self.nb_col*self.nb_line)
+        self.text += '%%Page: %s %s \n' % (new_page,new_page)
+        self.text += '%%PageBoundingBox:-20 -20 600 800\n'
+        self.text += '%%PageFonts: Helvetica\n'
+        self.text += '/Helvetica findfont 10 scalefont setfont\n'
+        self.text += ' 240         770  moveto\n'
+        self.text += ' (Diagrams by MadGraph) show\n'
 
+        pass
 
 
 if __name__ == '__main__':
@@ -187,9 +289,16 @@ if __name__ == '__main__':
     cmd = MadGraphCmd()
     cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/particles.dat')
     cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/interactions.dat')
-    cmd.do_generate(' g g > g g')
+    cmd.do_generate('g g > g g ')
     
     len(cmd.curr_amp['diagrams'])
+    plot = Draw_diagrams_eps(cmd.curr_amp['diagrams'], 'diagram.eps', 
+                             model= cmd.curr_model,
+                             amplitude='')
+    plot.draw()
+    print 'done'
+    import sys
+    sys.exit()
     for i in range(0, len(cmd.curr_amp['diagrams'])):
         diagram = cmd.curr_amp['diagrams'][i]
         start=time.time()
@@ -202,7 +311,7 @@ if __name__ == '__main__':
         upgrade_diagram.find_initial_vertex_position()
         print upgrade_diagram._debug_position()
         #print time.time()-start, 'time to upgrade diagram'
-        plot = draw_diagrams_eps(upgrade_diagram,'diagram_%s.eps' % (i) )
+        plot = Draw_diagrams_eps(upgrade_diagram,'diagram_%s.eps' % (i) )
 
         plot.draw()
         print time.time()-start, 'full time to draw a diagram'
