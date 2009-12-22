@@ -137,90 +137,90 @@ class ColorSquareTest(unittest.TestCase):
         self.mymodel.set('interactions', self.myinterlist)
 
 
-    def test_square_basis_uux_ddxddx(self):
-        """Test the build_basis function for uu~ > dd~dd~"""
-
-        myleglist = base_objects.LegList()
-
-        myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
-        myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':'initial'}))
-
-        myleglist.append(base_objects.Leg({'id':1,
-                                         'state':'final'}))
-        myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':'final'}))
-        myleglist.append(base_objects.Leg({'id':1,
-                                         'state':'final'}))
-        myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':'final'}))
-
-
-        myprocess = base_objects.Process({'legs':myleglist,
-                                        'model':self.mymodel})
-
-        myamplitude = diagram_generation.Amplitude()
-
-        myamplitude.set('process', myprocess)
-
-        myamplitude.generate_diagrams()
-
-        col_fact_list = [color_amp.colorize(diag, self.mymodel) \
-                         for diag in myamplitude['diagrams']]
-
-        color_basis = {}
-        for index, diag in enumerate(myamplitude['diagrams']):
-            col_fact = color_amp.colorize(diag, self.mymodel)
-            color_amp.build_color_basis(col_fact,
-                                        color_basis,
-                                        index)
-        color = color_square.build_color_matrix(color_basis, color_basis)
-
-        for line in color[0]:
-            map(lambda x:x.fix_Nc(), line)
-            print line
-
-        print color[1]
-
-    def test_square_basis_gg_gg(self):
-        """Test the build_basis function for gg >gg"""
-
-        myleglist = base_objects.LegList()
-
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'initial'}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'initial'}))
-
-        myleglist.extend([base_objects.Leg({'id':21,
-                                         'state':'final'})] * 3)
-
-        myprocess = base_objects.Process({'legs':myleglist,
-                                        'model':self.mymodel})
-
-        myamplitude = diagram_generation.Amplitude()
-
-        myamplitude.set('process', myprocess)
-
-        myamplitude.generate_diagrams()
-
-        col_fact_list = [color_amp.colorize(diag, self.mymodel) \
-                         for diag in myamplitude['diagrams']]
-
-        color_basis = {}
-        for index, diag in enumerate(myamplitude['diagrams']):
-            col_fact = color_amp.colorize(diag, self.mymodel)
-            color_amp.build_color_basis(col_fact,
-                                        color_basis,
-                                        index)
-
-        color = color_square.build_color_matrix(color_basis,
-                                                    color_basis,
-                                                    equal=False)
-
-        for line in color[0]:
-            map(lambda x:x.fix_Nc(), line)
-            print line
-
-        print color[1]
+#    def test_square_basis_uux_ddxddx(self):
+#        """Test the build_basis function for uu~ > dd~dd~"""
+#
+#        myleglist = base_objects.LegList()
+#
+#        myleglist.append(base_objects.Leg({'id':2,
+#                                         'state':'initial'}))
+#        myleglist.append(base_objects.Leg({'id':-2,
+#                                         'state':'initial'}))
+#
+#        myleglist.append(base_objects.Leg({'id':1,
+#                                         'state':'final'}))
+#        myleglist.append(base_objects.Leg({'id':-1,
+#                                         'state':'final'}))
+#        myleglist.append(base_objects.Leg({'id':1,
+#                                         'state':'final'}))
+#        myleglist.append(base_objects.Leg({'id':-1,
+#                                         'state':'final'}))
+#
+#
+#        myprocess = base_objects.Process({'legs':myleglist,
+#                                        'model':self.mymodel})
+#
+#        myamplitude = diagram_generation.Amplitude()
+#
+#        myamplitude.set('process', myprocess)
+#
+#        myamplitude.generate_diagrams()
+#
+#        col_fact_list = [color_amp.colorize(diag, self.mymodel) \
+#                         for diag in myamplitude['diagrams']]
+#
+#        color_basis = {}
+#        for index, diag in enumerate(myamplitude['diagrams']):
+#            col_fact = color_amp.colorize(diag, self.mymodel)
+#            color_amp.build_color_basis(col_fact,
+#                                        color_basis,
+#                                        index)
+#        color = color_square.build_color_matrix(color_basis, color_basis)
+#
+#        for line in color[0]:
+#            map(lambda x:x.fix_Nc(), line)
+#            print line
+#
+#        print color[1]
+#
+#    def test_square_basis_gg_gg(self):
+#        """Test the build_basis function for gg >gg"""
+#
+#        myleglist = base_objects.LegList()
+#
+#        myleglist.append(base_objects.Leg({'id':21,
+#                                         'state':'initial'}))
+#        myleglist.append(base_objects.Leg({'id':21,
+#                                         'state':'initial'}))
+#
+#        myleglist.extend([base_objects.Leg({'id':21,
+#                                         'state':'final'})] * 3)
+#
+#        myprocess = base_objects.Process({'legs':myleglist,
+#                                        'model':self.mymodel})
+#
+#        myamplitude = diagram_generation.Amplitude()
+#
+#        myamplitude.set('process', myprocess)
+#
+#        myamplitude.generate_diagrams()
+#
+#        col_fact_list = [color_amp.colorize(diag, self.mymodel) \
+#                         for diag in myamplitude['diagrams']]
+#
+#        color_basis = {}
+#        for index, diag in enumerate(myamplitude['diagrams']):
+#            col_fact = color_amp.colorize(diag, self.mymodel)
+#            color_amp.build_color_basis(col_fact,
+#                                        color_basis,
+#                                        index)
+#
+#        color = color_square.build_color_matrix(color_basis,
+#                                                    color_basis,
+#                                                    equal=False)
+#
+#        for line in color[0]:
+#            map(lambda x:x.fix_Nc(), line)
+#            print line
+#
+#        print color[1]

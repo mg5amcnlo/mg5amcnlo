@@ -315,32 +315,20 @@ class ColorFactorTest(unittest.TestCase):
                                                color.f(-1, -1000, 5),
                                                color.f(-1, 4, 3)])])
 
-        print my_color_factor.full_simplify()
+        self.assertEqual(str(my_color_factor.full_simplify()),
+        "(-1 T(5,4,3,1,2))+(1 T(5,3,4,1,2))+(1 T(4,3,5,1,2))+(-1 T(3,4,5,1,2))")
 
-#    def test_gluons(self):
-#        """Test simplification of chains of f"""
-#
-#        my_col_fact = color.ColorFactor([color.ColorString([
-#                                    color.f(1, 2, -1),
-#                                    color.f(-1, 3, -2),
-#                                    color.f(-2, 4, -3),
-#                                    color.f(-3, 5, -4),
-#                                    color.f(-4, 6, -5),
-#                                    color.f(-5, 7, -6),
-#                                    color.f(-6, 8, -7),
-#                                    color.f(-7, 9, -8),
-#                                    color.f(-8, 10, -9),
-#                                    color.f(-9, 11, 12)])])
-#
-#        print my_col_fact.full_simplify()
 
     def test_gluons(self):
         """Test simplification of chains of f"""
 
-        my_col_fact = color.ColorFactor([color.ColorString([color.T(-3, 5, 6),
-                                    color.f(-1, 0, 1),
-                                    color.f(-1, 2, -3)
+        my_col_fact = color.ColorFactor([color.ColorString([color.f(-3, 1, 2),
+                                    color.f(-1, 3, 4),
+                                    color.f(-1, 5, -3)
                                     ])])
 
-        print my_col_fact.full_simplify()
+        self.assertEqual(str(my_col_fact.full_simplify()),
+        '(2 I Tr(1,2,3,4,5))+(-2 I Tr(1,2,5,3,4))+(-2 I Tr(1,2,4,3,5))+' + \
+        '(2 I Tr(1,2,5,4,3))+(-2 I Tr(1,3,4,5,2))+(2 I Tr(1,5,3,4,2))+' + \
+        '(2 I Tr(1,4,3,5,2))+(-2 I Tr(1,5,4,3,2))')
 

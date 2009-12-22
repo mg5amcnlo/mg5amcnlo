@@ -139,7 +139,7 @@ class ColorAmpTest(unittest.TestCase):
                                                    color.f(-1, 1, 2)]),
                                 color.ColorString([color.f(-1, 0, 1),
                                                    color.f(-1, 2, 3)])],
-                      'lorentz':['L1', 'L2', 'L3'],
+                      'lorentz':['L(p1,p2,p3)', 'L(p2,p3,p1)', 'L3'],
                       'couplings':{(0, 0):'G^2',
                                    (1, 1):'G^2',
                                    (2, 2):'G^2'},
@@ -179,18 +179,6 @@ class ColorAmpTest(unittest.TestCase):
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
-
-#        self.myinterlist.append(base_objects.Interaction({
-#                      'id': 6,
-#                      'particles': base_objects.ParticleList(\
-#                                            [self.mypartlist[0],
-#                                             self.mypartlist[0],
-#                                             self.mypartlist[4]]),
-#                      'color': [color.ColorString([color.T(0, 1)],
-#                                                  coeff=fractions.Fraction(2, 1))],
-#                      'lorentz':['L1'],
-#                      'couplings':{(0, 0):'GGH'},
-#                      'orders':{'HIGGS':1}}))
 
         self.mymodel.set('particles', self.mypartlist)
         self.mymodel.set('interactions', self.myinterlist)
@@ -246,7 +234,7 @@ class ColorAmpTest(unittest.TestCase):
 
         self.assertEqual(col_dict, goal_dict)
 
-    def test_colorize_uu_ggg(self):
+    def test_colorize_uux_ggg(self):
         """Test the colorize function for uu~ > ggg"""
 
         myleglist = base_objects.LegList()
@@ -285,21 +273,47 @@ class ColorAmpTest(unittest.TestCase):
                                      self.mymodel)
 
         goal_dict = {(0, 0):color.ColorString([color.T(-1000, 1, 2),
-                                               color.f(-1, -1000, 4),
-                                               color.f(-1, 5, 3)]),
+                                               color.f(-1002, -1000, 4),
+                                               color.f(-1002, 5, 3)]),
                      (0, 1):color.ColorString([color.T(-1000, 1, 2),
-                                               color.f(-1, -1000, 3),
-                                               color.f(-1, 5, 4)]),
+                                               color.f(-1003, -1000, 3),
+                                               color.f(-1003, 5, 4)]),
                      (0, 2):color.ColorString([color.T(-1000, 1, 2),
-                                               color.f(-1, -1000, 5),
-                                               color.f(-1, 4, 3)])}
+                                               color.f(-1004, -1000, 5),
+                                               color.f(-1004, 4, 3)])}
 
         self.assertEqual(col_dict, goal_dict)
 
-#        new_col_basis = color_amp.ColorBasis(myamplitude, self.mymodel)
-#
-#        print new_col_basis
-#
+    def test_color_basis_uux_aggg(self):
+        """Test the color basis building for uu~ > aggg (3! elements)"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':'initial'}))
+
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final'}))
+        myleglist.extend([base_objects.Leg({'id':21,
+                                            'state':'final'})] * 3)
+
+        myprocess = base_objects.Process({'legs':myleglist,
+                                        'model':self.mymodel})
+
+        myamplitude = diagram_generation.Amplitude()
+
+        myamplitude.set('process', myprocess)
+
+        myamplitude.generate_diagrams()
+
+        my_col_basis = color_amp.ColorBasis()
+
+        new_col_basis = color_amp.ColorBasis(myamplitude, self.mymodel)
+
+        self.assertEqual(len(new_col_basis), 6)
+
 #    def test_colorize_uux_ddxg(self):
 #        """Test the colorize function for uu~ > dd~g"""
 #

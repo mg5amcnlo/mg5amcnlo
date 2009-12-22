@@ -104,6 +104,19 @@ class ColorBasis(dict):
                     enumerate(model.get_interaction(vertex['id'])['color']):
                 # Build the new element
                 mod_col_str = col_str.create_copy()
+
+                # Replace summed (negative) internal indices
+                list_neg = []
+                for col_obj in mod_col_str:
+                    list_neg.extend([ind for ind in col_obj if ind < 0])
+                internal_indices_dict = {}
+                # This notation is to remove duplicates
+                for index in list(set(list_neg)):
+                    internal_indices_dict[index] = min_index
+                    min_index = min_index - 1
+                mod_col_str.replace_indices(internal_indices_dict)
+
+                # Replace other (positive) indices using the match_dic
                 mod_col_str.replace_indices(match_dict)
                 # If we are considering the first vertex, simply create
                 # new entries
