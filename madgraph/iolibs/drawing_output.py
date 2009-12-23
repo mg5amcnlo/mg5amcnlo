@@ -75,9 +75,10 @@ class Draw_diagram:
     def draw_diagram(self,diagram):
         """ draw a given diagram no input-output """
         
-        diagram = self.convert_diagram(diagram, self.model, self.amplitude)
-        print 'adding diagram',diagram.LineList
-        for line in diagram.LineList:
+        self.diagram = self.convert_diagram(diagram, self.model, self.amplitude)
+        
+        print 'adding diagram',self.diagram.LineList
+        for line in self.diagram.LineList:
             print 'adding line'
             self.draw_line(line)
 
@@ -184,9 +185,19 @@ class Draw_diagram_eps(Draw_diagram):
         """ return the code associate to the spin 1 line """
         
         #print line.start, line.end
-        self.text += self.line_format(line.start['pos_x'], line.start['pos_y'], \
-                         line.end['pos_x'], line.end['pos_y'], '0 Fgluon')
- 
+        if line.start['pos_x']< line.end['pos_x']:
+            self.text += self.line_format(line.start['pos_x'], 
+                        line.start['pos_y'], line.end['pos_x'], 
+                        line.end['pos_y'], '0 Fgluon')
+        elif line.start['pos_x'] == line.end['pos_x'] and \
+                        line.start['pos_y'] > line.end['pos_y']:
+            self.text += self.line_format(line.start['pos_x'], 
+                        line.start['pos_y'], line.end['pos_x'], 
+                        line.end['pos_y'], '0 Fgluon')
+        else:
+            self.text += self.line_format(line.end['pos_x'], 
+                        line.end['pos_y'], line.start['pos_x'], 
+                        line.start['pos_y'], '0 Fgluon')                       
  
     def associate_name(self,line,name):
         """ place the name of the line at the correct position """
@@ -195,7 +206,9 @@ class Draw_diagram_eps(Draw_diagram):
         x2, y2 = line.end['pos_x'], line.end['pos_y']
 
         d  = math.sqrt((x1-x2)**2+(y1-y2)**2)
-        if d==0: return
+        if d==0:
+            print self.diagram._debug_position()
+            sys.exit()
         dx = (x1-x2)/d
         dy = (y1-y2)/d        
         
@@ -253,6 +266,7 @@ class Draw_diagrams_eps(Draw_diagram_eps):
     def draw_diagram(self,diagram):
         """ draw the diagram no input-output """
         
+        self.diagram = diagram
         Draw_diagram_eps.draw_diagram(self,diagram)
         self.block_nb += 1
         
@@ -272,7 +286,7 @@ class Draw_diagrams_eps(Draw_diagram_eps):
         """ insert text in order to pass to next page """
         self.text += 'showpage\n'
         new_page = 1 + self.block_nb // (self.nb_col*self.nb_line)
-        self.text += '%%Page: %s %s \n' % (new_page,new_page)
+        self.text += '%%%%Page: %s %s \n' % (new_page,new_page)
         self.text += '%%PageBoundingBox:-20 -20 600 800\n'
         self.text += '%%PageFonts: Helvetica\n'
         self.text += '/Helvetica findfont 10 scalefont setfont\n'
@@ -289,7 +303,7 @@ if __name__ == '__main__':
     cmd = MadGraphCmd()
     cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/particles.dat')
     cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/interactions.dat')
-    cmd.do_generate('g g > g g ')
+    cmd.do_generate(' t > w+ b')
     
     len(cmd.curr_amp['diagrams'])
     plot = Draw_diagrams_eps(cmd.curr_amp['diagrams'], 'diagram.eps', 
