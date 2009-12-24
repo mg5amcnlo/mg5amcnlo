@@ -618,6 +618,7 @@ class MultiProcess(base_objects.PhysicsObject):
                                        'legs':legs,
                                        'model':process_def.get('model'),
                                        'id': process_def.get('id'),
+                                       'orders': process_def.get('orders'),
                                        'required_s_channels': \
                                         process_def.get('required_s_channels'),
                                        'forbidden_s_channels': \

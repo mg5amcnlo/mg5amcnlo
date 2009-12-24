@@ -298,6 +298,14 @@ class Particle(PhysicsObject):
         else:
             return self['pdg_code']
 
+    def get_name(self):
+        """Return the name if particle, antiname if antiparticle"""
+
+        if not self['is_part'] and not self['self_antipart']:
+            return self['antiname']
+        else:
+            return self['name']
+
     def get_helicity_states(self):
         """Return a list of the helicity states for the onshell particle"""
 
@@ -1090,13 +1098,36 @@ class Process(PhysicsObject):
                    and leg['state'] == 'final':
                 # Separate initial and final legs by ">"
                 mystr = mystr + '> '
-            if mypart['is_part']:
-                mystr = mystr + mypart['name']
-            else:
-                mystr = mystr + mypart['antiname']
+                # Check for required s-channels
+                if self['required_s_channels']:
+                    for req_id in self['required_s_channels']:
+                        reqpart = self['model'].get('particle_dict')[req_id]
+                        mystr = mystr + reqpart.get_name() + ' '
+                    mystr = mystr + '> '
+
+            mystr = mystr + mypart.get_name()
             mystr = mystr + '(%i) ' % leg['number']
             prevleg = leg
 
+        # Check for forbidden s-channels
+        if self['forbidden_s_channels']:
+            mystr = mystr + '$ '
+            for forb_id in self['forbidden_s_channels']:
+                forbpart = self['model'].get('particle_dict')[forb_id]
+                mystr = mystr + forbpart.get_name() + ' '
+
+        # Check for forbidden particles
+        if self['forbidden_particles']:
+            mystr = mystr + '/ '
+            for forb_id in self['forbidden_particles']:
+                forbpart = self['model'].get('particle_dict')[forb_id]
+                mystr = mystr + forbpart.get_name() + ' '
+
+        if self['orders']:
+            mystr = mystr[:-1] + "\n"
+            mystr = mystr + 'Orders: '
+            mystr = mystr + ", ".join([key+'='+repr(self['orders'][key]) \
+                       for key in self['orders']]) + ' '
         # Remove last space
         return mystr[:-1]
 

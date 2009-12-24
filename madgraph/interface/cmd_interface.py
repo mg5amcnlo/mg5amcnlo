@@ -24,7 +24,7 @@ import sys
 import time
 import readline
 import atexit
-
+import re
 
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.files as files
@@ -272,13 +272,8 @@ class MadGraphCmd(cmd.Cmd):
     def do_generate(self, line):
         """Generate an amplitude for a given process"""
 
-        # Particle names always lowercase
-        line = line.lower()
-
-        args = self.split_arg(line)
-
-        if len(args) < 1:
-            self.help_display()
+        if len(line) < 1:
+            self.help_generate()
             return False
 
         if len(self.__curr_model['particles']) == 0:
@@ -290,6 +285,46 @@ class MadGraphCmd(cmd.Cmd):
             " please create one first!"
             return False
 
+        # Use regular expressions to extract s-channel propagators,
+        # forbidden s-channel propagators/particles, coupling orders
+        # starting from the back
+
+        # Start with coupling orders (identified by "=")
+        order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
+        order_re = order_pattern.match(line)
+        orders = {}
+        while order_re:
+            orders[order_re.group(2)] = int(order_re.group(3))
+            line = order_re.group(1)
+            order_re = order_pattern.match(line)
+
+        # Particle names always lowercase
+        line = line.lower()
+
+        # Now check for forbidden particles, specified using "/"
+        forbidden_particles_re = re.match("^(.+)\s*/\s*(.+)\s*$", line)
+        forbidden_particles = ""
+        if forbidden_particles_re:
+            forbidden_particles = forbidden_particles_re.group(2)
+            line = forbidden_particles_re.group(1)
+
+        # Now check for forbidden schannels, specified using "$"
+        forbidden_schannels_re = re.match("^(.+)\s*\$\s*(.+)\s*$", line)
+        forbidden_schannels = ""
+        if forbidden_schannels_re:
+            forbidden_schannels = forbidden_schannels_re.group(2)
+            line = forbidden_schannels_re.group(1)
+
+        # Now check for required schannels, specified using "> >"
+        required_schannels_re = re.match("^(.+?)>(.+?)>(.+)$", line)
+        required_schannels = ""
+        if required_schannels_re:
+            required_schannels = required_schannels_re.group(2)
+            line = required_schannels_re.group(1) + ">" + \
+                   required_schannels_re.group(3)
+
+        args = self.split_arg(line)
+
         # Reset Helas matrix elements
         self.__curr_matrix_elements = helas_objects.HelasMultiProcess()
 
@@ -297,6 +332,7 @@ class MadGraphCmd(cmd.Cmd):
         state = 'initial'
         number = 1
 
+        # Extract process
         for part_name in args:
 
             if part_name == '>':
@@ -321,9 +357,53 @@ class MadGraphCmd(cmd.Cmd):
                 print "No particle %s in model: skipped" % part_name
 
         if filter(lambda leg: leg.get('state') == 'final', myleglist):
+            # We have a valid process
+
+            # Now extract restrictions
+            forbidden_particle_ids = []
+            forbidden_schannel_ids = []
+            required_schannel_ids = []
+            
+            if forbidden_particles:
+                args = self.split_arg(forbidden_particles)
+                for part_name in args:
+                    if part_name in self.__multiparticles:
+                        forbidden_particle_ids.extend(self.__multiparticles[part_name])
+                    else:
+                        mypart = self.__curr_model['particles'].find_name(part_name)
+                        if mypart:
+                            forbidden_particle_ids.append(mypart.get_pdg_code())
+
+            if forbidden_schannels:
+                args = self.split_arg(forbidden_schannels)
+                for part_name in args:
+                    if part_name in self.__multiparticles:
+                        forbidden_schannel_ids.extend(self.__multiparticles[part_name])
+                    else:
+                        mypart = self.__curr_model['particles'].find_name(part_name)
+                        if mypart:
+                            forbidden_schannel_ids.append(mypart.get_pdg_code())
+
+            if required_schannels:
+                args = self.split_arg(required_schannels)
+                for part_name in args:
+                    if part_name in self.__multiparticles:
+                        required_schannel_ids.extend(self.__multiparticles[part_name])
+                    else:
+                        mypart = self.__curr_model['particles'].find_name(part_name)
+                        if mypart:
+                            required_schannel_ids.append(mypart.get_pdg_code())
+
+                
+
             myprocdef = base_objects.ProcessDefinitionList([\
                 base_objects.ProcessDefinition({'legs': myleglist,
-                                                'model': self.__curr_model})])
+                                                'model': self.__curr_model,
+                                                'orders': orders,
+                                                'forbidden_particles': forbidden_particle_ids,
+                                                'forbidden_s_channels': forbidden_schannel_ids,
+                                                'required_s_channels': required_schannel_ids \
+                                                })])
             myproc = diagram_generation.MultiProcess({'process_definitions':\
                                                       myprocdef})
 
@@ -466,9 +546,9 @@ class MadGraphCmd(cmd.Cmd):
         print "-- display a the status of various internal state variables"
 
     def help_generate(self):
-        print "syntax: generate INITIAL STATE > FINAL STATE"
-        print "-- generate amplitude for a given process"
-        print "   Example: u d~ > m+ vm g"
+        print "syntax: generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2"
+        print "-- generate diagrams for a given process"
+        print "   Example: u d~ > w+ > m+ vm g $ a / z h QED=3 QCD=0"
 
     def help_define(self):
         print "syntax: define multipart_name [ part_name_list ]"
@@ -478,8 +558,8 @@ class MadGraphCmd(cmd.Cmd):
     def help_export(self):
         print "syntax: export " + "|".join(self.__export_formats) + \
               " FILEPATH"
-        print """-- export matrix element in various formats. The resulting
-        file will be FILEPATH/matrix_process_string.f"""
+        print """-- export matrix elements in various formats. The resulting
+        file will be FILEPATH/matrix_\"process_string\".f"""
 
     def help_shell(self):
         print "syntax: shell CMD (or ! CMD)"
