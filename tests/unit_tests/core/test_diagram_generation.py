@@ -1352,6 +1352,85 @@ class DiagramGenerationTest(unittest.TestCase):
                              goal_req_antiquark[ngluons])
 
 
+    def test_required_s_channel_decay(self):
+        """Test the number of diagrams for decay processes with different 
+        required s channel particles.
+        """
+
+        goal_req_photon = [1, 4]
+        goal_req_d = [0, 2]
+        goal_req_u = [0, 1]
+        goal_req_antiquark = [0, 0]
+
+        for nphotons in range(2):
+
+            myleglist = base_objects.LegList()
+
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'state':'final'}))
+            myleglist.append(base_objects.Leg({'id':2,
+                                             'state':'final'}))
+            myleglist.append(base_objects.Leg({'id':-2,
+                                             'state':'final'}))
+            myleglist.extend([base_objects.Leg({'id':22,
+                                                 'state':'final'})] * nphotons)
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'required_s_channels':[22]})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.generate_diagrams()
+
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
+                             goal_req_photon[nphotons])
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'required_s_channels':[21]})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.generate_diagrams()
+
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
+                             goal_req_photon[nphotons])
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'required_s_channels':[1, 22]})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.generate_diagrams()
+
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
+                             goal_req_d[nphotons])
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'required_s_channels':[2, 22]})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.generate_diagrams()
+
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
+                             goal_req_u[nphotons])
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'required_s_channels':[-1]})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.generate_diagrams()
+
+            self.assertEqual(len(self.myamplitude.get('diagrams')), 0)
+
 #===============================================================================
 # Muliparticle test
 #===============================================================================

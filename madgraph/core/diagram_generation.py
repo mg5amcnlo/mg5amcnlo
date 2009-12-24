@@ -176,16 +176,21 @@ class Amplitude(base_objects.PhysicsObject):
         # s-channel propagators are taken into account
         failed_crossing = not res
 
-        # Check for required s-channel propagators
-        
+        # Select the diagrams where all required s-channel propagators
+        # are present.
         # Note that we shouldn't look at the last vertex in each
         # diagram, since that is the n->0 vertex
         if self['process'].get('required_s_channels'):
+            ninitial = len(filter(lambda leg: leg.get('state') == 'initial',
+                              self['process'].get('legs')))
             res = base_objects.DiagramList(\
                 filter(lambda diagram: \
-                       any([vertex.get_s_channel_id(self['process'].get('model')) in \
-                            self['process'].get('required_s_channels') \
-                            for vertex in diagram.get('vertices')[:-1]]), res))
+                       all([req_s_channel in \
+                            [vertex.get_s_channel_id(\
+                            self['process'].get('model'), ninitial) \
+                            for vertex in diagram.get('vertices')[:-1]] \
+                            for req_s_channel in \
+                            self['process'].get('required_s_channels')]), res))
 
         # Set diagrams to res
         self['diagrams'] = res
@@ -252,8 +257,11 @@ class Amplitude(base_objects.PhysicsObject):
                     continue
 
             # Remove forbidden s-channel particles
+            ninitial = len(filter(lambda leg: leg.get('state') == 'initial',
+                                  self['process'].get('legs')))
             if self['process'].get('forbidden_s_channels') and \
-                any([vertex.get_s_channel_id(self['process'].get('model')) in \
+                any([vertex.get_s_channel_id(self['process'].get('model'),
+                                             ninitial) in \
                 self['process'].get('forbidden_s_channels') \
                 for vertex in leg_vertex_tuple[1]]):
                     continue

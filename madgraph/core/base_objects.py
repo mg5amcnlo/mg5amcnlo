@@ -879,7 +879,7 @@ class Vertex(PhysicsObject):
 
         return ['id', 'legs']
 
-    def get_s_channel_id(self, model):
+    def get_s_channel_id(self, model, ninitial):
         """Returns the id for the last leg as an outgoing
         s-channel. Returns 0 if leg is t-channel, or if identity
         vertex. Used to check for required and forbidden s-channel
@@ -887,6 +887,16 @@ class Vertex(PhysicsObject):
 
         leg = self.get('legs')[-1]
         
+        if ninitial == 1:
+            # For one initial particle, all legs are s-channel
+            # Only need to flip particle id if state is 'initial'
+            if leg.get('state') == 'final':
+                return leg.get('id')
+            else:
+                return model.get('particle_dict')[leg.get('id')].\
+                       get_anti_pdg_code()
+
+        # Number of initial particles is at least 2
         if self.get('id') == 0 or \
            leg.get('state') == 'initial':
             # identity vertex or t-channel particle
