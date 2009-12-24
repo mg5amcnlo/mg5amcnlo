@@ -15,6 +15,7 @@
 
 import copy
 import itertools
+import logging
 
 import madgraph.core.base_objects as base_objects
 
@@ -498,8 +499,6 @@ class MultiProcess(base_objects.PhysicsObject):
                      list of amplitudes (after generation)
     """
 
-    __failed_procs = []
-
     def default_setup(self):
         """Default values for all properties"""
 
@@ -638,15 +637,16 @@ class MultiProcess(base_objects.PhysicsObject):
         """
 
         # Check for crossed processes
-        self.__failed_procs = []
+        failed_procs = []
         for process in self.get('processes'):
+            logging.info("Trying %s " % process.nice_string())
             model = process.get('model')
             legs = process.get('legs')
             sorted_legs = sorted(legs.get_outgoing_id_list(model))
             # Check if crossed process has already failed
             # In that case don't check process
             # Remember to turn this off if we require or forbid s-channel propagators
-            if not tuple(sorted_legs) in self.__failed_procs:
+            if not tuple(sorted_legs) in failed_procs:
                 amplitude = Amplitude({"process": process})
                 if not process.get('forbidden_s_channels') and \
                        not amplitude.generate_diagrams():
@@ -654,9 +654,10 @@ class MultiProcess(base_objects.PhysicsObject):
                     # Note that this should not be done if we forbid s-channel
                     # particles, since we then might have a failed proc whose
                     # crossing can succeed
-                    self.__failed_procs.append(tuple(sorted_legs))
+                    failed_procs.append(tuple(sorted_legs))
                 if amplitude.get('diagrams'):
                     self['amplitudes'].append(amplitude)
+                    logging.info("Process has %d diagrams" % len(amplitude.get('diagrams')))
                     
 
 #===============================================================================

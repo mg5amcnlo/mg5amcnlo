@@ -1208,8 +1208,19 @@ class ProcessDefinition(PhysicsObject):
                     "Process id %s is not an integer" % repr(value)
 
         if name in ['required_s_channels',
-                    'forbidden_s_channels',
-                    'forbidden_particles']:
+                    'forbidden_s_channels']:
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list" % str(value)
+            for i in value:
+                if not isinstance(i, int):
+                    raise self.PhysicsObjectError, \
+                          "%s is not a valid list of integers" % str(value)
+                if i == 0:
+                    raise self.PhysicsObjectError, \
+                      "Not valid PDG code %d for s-channel particle" % str(value)
+
+        if name == 'forbidden_particles':
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list" % str(value)
@@ -1219,7 +1230,7 @@ class ProcessDefinition(PhysicsObject):
                           "%s is not a valid list of integers" % str(value)
                 if i <= 0:
                     raise self.PhysicsObjectError, \
-                          "Forbidden particles should have a positive PDG code!" % str(value)
+                      "Forbidden particles should have a positive PDG code" % str(value)
 
         return True
 
