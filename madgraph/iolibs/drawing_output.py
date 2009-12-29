@@ -16,12 +16,9 @@ from __future__ import division
 import math
 import os
 import time
+import sys
 import madgraph.iolibs.drawing_lib as Draw 
-print os.path.realpath(__file__)
-print os.path.dirname(os.path.realpath(__file__))
-print os.path.split(os.path.dirname(os.path.realpath(__file__)))
 _root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]+'/'
-print _root_path
 
 class Draw_diagram:
     """ all generic routine in order to written diagram """
@@ -55,7 +52,7 @@ class Draw_diagram:
                                 'diagram conversion in routine convert_diagram')
         
         if  not isinstance(diagram, Draw.Feynman_Diagram):
-            diagram=Draw.Feynman_Diagram(diagram, model)
+            diagram=Draw.Feynman_Diagram_horizontal(diagram, model)
             diagram.charge_diagram()
             diagram.define_level()        
             diagram.find_initial_vertex_position()
@@ -72,15 +69,15 @@ class Draw_diagram:
         
         self.conclude()
 
-    def draw_diagram(self,diagram):
+    def draw_diagram(self,diagram,number=1):
         """ draw a given diagram no input-output """
         
         self.diagram = self.convert_diagram(diagram, self.model, self.amplitude)
         
-        print 'adding diagram',self.diagram.LineList
-        for line in self.diagram.LineList:
-            print 'adding line'
+        for line in self.diagram.lineList:
             self.draw_line(line)
+        self.put_diagram_number(number)
+        self.put_particle_number()
 
     def initialize(self):
         """ start the initialization of the diagram """
@@ -110,6 +107,14 @@ class Draw_diagram:
         
     def associate_name(self,line,name):
         """ place the name of the line at the correct position """
+        pass
+    
+    def put_diagram_number(self,number=1):
+        """ add the diagram number related to this diagram """
+        pass
+    
+    def put_particle_number(self):
+        """ add the MG number associate to each particle """
         pass
     
 class Draw_diagram_eps(Draw_diagram):
@@ -197,7 +202,39 @@ class Draw_diagram_eps(Draw_diagram):
         else:
             self.text += self.line_format(line.end['pos_x'], 
                         line.end['pos_y'], line.start['pos_x'], 
-                        line.start['pos_y'], '0 Fgluon')                       
+                        line.start['pos_y'], '0 Fgluon')
+            
+    def put_diagram_number(self,number=1):
+        """ place the diagram number for this diagram """                       
+        
+        x=0.42
+        y=-0.15
+        x,y=self.rescale(x, y)
+        self.text += ' %s  %s moveto \n' % (x,y)  
+        self.text += '( diagram %s )   show\n' % (number)
+
+    def put_particle_number(self):
+        """ add the MG number associate to each particle """
+        
+        
+        for vertex in self.diagram.vertexList:
+            if vertex.is_external():
+                x = vertex['pos_x']
+                y = vertex['pos_y']
+                if x ==0:
+                    x= -0.04
+                elif x == 1:
+                    x = 1.04
+                if y == 0:
+                    y = -0.06
+                elif y == 1:
+                    y = 1.04
+                #else:
+                #    self.Draw_diagram_Error('not possible to assign line ' +  \
+                #                            'tag inside the diagram')
+                x, y = self.rescale(x, y)
+                self.text += ' %s  %s moveto \n' % (x,y)  
+                self.text += '(%s)   show\n' % (vertex['line'][0]['number'])                 
  
     def associate_name(self,line,name):
         """ place the name of the line at the correct position """
@@ -207,17 +244,21 @@ class Draw_diagram_eps(Draw_diagram):
 
         d  = math.sqrt((x1-x2)**2+(y1-y2)**2)
         if d==0:
-            print self.diagram._debug_position()
-            sys.exit()
+            print 'problem at diagram',self.block_nb
+            return
+            #raise self.Draw_diagram_Error('one line has 0 length')
+        
         dx = (x1-x2)/d
         dy = (y1-y2)/d        
         
 
-        if dy < 0:
-            dx, dy = -dx, -dy
+        if dx > 0:
+            dx, dy = -1 * dx, -1 * dy
+        elif dx == 0:
+            dy=abs(dy)
         
-        x_pos = (x1 + x2) / 2 + 0.06  * dy
-        y_pos = (y1 + y2) / 2 - 0.06 * dx      
+        x_pos = (x1 + x2) / 2 + 0.04  * dy
+        y_pos = (y1 + y2) / 2 - 0.03 * dx      
 
         x_pos, y_pos =self.rescale(x_pos, y_pos)
         self.text += ' %s  %s moveto \n' % (x_pos,y_pos)  
@@ -267,7 +308,7 @@ class Draw_diagrams_eps(Draw_diagram_eps):
         """ draw the diagram no input-output """
         
         self.diagram = diagram
-        Draw_diagram_eps.draw_diagram(self,diagram)
+        Draw_diagram_eps.draw_diagram(self,diagram,self.block_nb)
         self.block_nb += 1
         
     def draw(self):
@@ -275,7 +316,6 @@ class Draw_diagrams_eps(Draw_diagram_eps):
         
         self.initialize()
         for diagram in self.diagramlist:
-            print 'add a diagram'
             self.draw_diagram(diagram)
             
             if self.block_nb % (self.nb_col*self.nb_line) == 0:
@@ -303,30 +343,16 @@ if __name__ == '__main__':
     cmd = MadGraphCmd()
     cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/particles.dat')
     cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/interactions.dat')
-    cmd.do_generate(' t > w+ b')
+    cmd.do_generate('g g > g g g g g g')
     
     len(cmd.curr_amp['diagrams'])
-    plot = Draw_diagrams_eps(cmd.curr_amp['diagrams'], 'diagram.eps', 
+    while 1:
+        start=time.time()
+        plot = Draw_diagrams_eps(cmd.curr_amp['diagrams'][73:74], 'diagram.eps', 
                              model= cmd.curr_model,
                              amplitude='')
-    plot.draw()
-    print 'done'
-    import sys
-    sys.exit()
-    for i in range(0, len(cmd.curr_amp['diagrams'])):
-        diagram = cmd.curr_amp['diagrams'][i]
         start=time.time()
-        upgrade_diagram = draw.Feynman_Diagram(diagram,cmd.curr_model)
-        upgrade_diagram.charge_diagram()
-        print 'len', len(upgrade_diagram.LineList), len(upgrade_diagram.VertexList)
-        upgrade_diagram.define_level()        
-        print 'len', len(upgrade_diagram.LineList), len(upgrade_diagram.VertexList)
-        #print diagram
-        upgrade_diagram.find_initial_vertex_position()
-        print upgrade_diagram._debug_position()
-        #print time.time()-start, 'time to upgrade diagram'
-        plot = Draw_diagrams_eps(upgrade_diagram,'diagram_%s.eps' % (i) )
-
         plot.draw()
-        print time.time()-start, 'full time to draw a diagram'
-    print 'done'
+        stop=time.time()
+        print 'time to draw',stop-start
+        print 'done'
