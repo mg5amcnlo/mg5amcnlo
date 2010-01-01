@@ -1495,10 +1495,16 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         matrix_elements = self.get('matrix_elements')
 
         for amplitude in amplitudes:
+            logging.info("Generating Helas calls for %s" % \
+                         amplitude.get('process').nice_string().replace('Process', 'process'))
             matrix_element = HelasMatrixElement(amplitude)
             if matrix_element in matrix_elements:
-                matrix_elements[matrix_elements.index(matrix_element)].\
-                       get('processes').append(amplitude.get('process'))
+                other_processes = matrix_elements[\
+                    matrix_elements.index(matrix_element)].get('processes')
+                logging.info("Combining process with %s" % \
+                             other_processes[0].nice_string().replace('Process: ',''))
+                other_processes.append(amplitude.get('process'))
+                
             elif matrix_element.get('processes') and \
                      matrix_element.get('diagrams'):
                 matrix_elements.append(matrix_element)
