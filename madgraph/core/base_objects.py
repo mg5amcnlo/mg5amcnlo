@@ -326,6 +326,11 @@ class Particle(PhysicsObject):
         raise self.PhysicsObjectError, \
               "No helicity state assignment for spin %d particles" % spin
 
+    def is_fermion(self):
+        """Returns True if this is a fermion, False if boson"""
+
+        return self['spin'] % 2 == 0
+
 #===============================================================================
 # ParticleList
 #===============================================================================
@@ -588,6 +593,7 @@ class Model(PhysicsObject):
         self['interaction_dict'] = {}
         self['ref_dict_to0'] = {}
         self['ref_dict_to1'] = {}
+        self['got_majoranas'] = None
 
     def filter(self, name, value):
         """Filter for model property values"""
@@ -629,6 +635,12 @@ class Model(PhysicsObject):
                     "Object of type %s is not a dictionary" % \
                                                         type(value)
 
+        if name == 'got_majoranas':
+            if not isinstance(value, bool):
+                raise self.PhysicsObjectError, \
+                    "Object of type %s is not a boolean" % \
+                                                        type(value)
+
         return True
 
     def get(self, name):
@@ -650,7 +662,27 @@ class Model(PhysicsObject):
             if self['interactions']:
                 self['interaction_dict'] = self['interactions'].generate_dict()
 
+        if (name == 'got_majoranas') and self[name] == None:
+            if self['particles']:
+                self['got_majoranas'] = self.check_majoranas()
+
         return Model.__bases__[0].get(self, name) # call the mother routine
+
+    def set(self, name, value):
+        """Special set for particles and interactions - need to
+        regenerate dictionaries."""
+
+        if name == 'particles':
+            self['particle_dict'] = {}
+            self['ref_dict_to0'] = {}
+            self['got_majoranas'] = None
+
+        if name == 'interactions':
+            self['interaction_dict'] = {}
+            self['ref_dict_to1'] = {}
+            self['ref_dict_to0'] = {}
+
+        Model.__bases__[0].set(self, name, value) # call the mother routine
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
@@ -673,6 +705,25 @@ class Model(PhysicsObject):
             return self["interaction_dict"][id]
         else:
             return None
+
+    def check_majoranas(self):
+        """Return True if there are Majorana fermions, False otherwise"""
+
+        return any([part.is_fermion() and part.get('self_antipart') \
+                    for part in self.get('particles')])
+
+    def reset_dictionaries(self):
+        """Reset all dictionaries and got_majoranas. This is necessary
+        whenever the particle or interaction content has changed. If
+        particles or interactions are set using the set routine, this
+        is done automatically."""
+
+        self['particle_dict'] = {}
+        self['ref_dict_to0'] = {}
+        self['got_majoranas'] = None
+        self['interaction_dict'] = {}
+        self['ref_dict_to1'] = {}
+        self['ref_dict_to0'] = {}
 
 #===============================================================================
 # Classes used in diagram generation and process definition:
@@ -726,15 +777,40 @@ class Leg(PhysicsObject):
         return ['id', 'number', 'state', 'from_group']
 
     def is_fermion(self, model):
-        """Returns True if the particle corresponding to the leg is a fermion"""
+        """Returns True if the particle corresponding to the leg is a
+        fermion"""
 
         if not isinstance(model, Model):
             raise self.PhysicsObjectError, \
-                  "%s is not a model" % \
-                                                                    str(model)
+                  "%s is not a model" % str(model)
 
+        return model.get('particle_dict')[self['id']].is_fermion()
 
-        return model.get('particle_dict')[self['id']].get('spin') in [2, 4]
+    def is_incoming(self, model):
+        """Returns True if leg is an incoming fermion, i.e., initial
+        particle or final antiparticle"""
+
+        if not isinstance(model, Model):
+            raise self.PhysicsObjectError, \
+                  "%s is not a model" % str(model)
+
+        part = model.get('particle_dict')[self['id']]
+        return part.is_fermion() and \
+               (self.get('state') == 'initial' and part.get('is_part') or \
+                self.get('state') == 'final' and not part.get('is_part'))
+
+    def is_outgoing(self, model):
+        """Returns True if leg is an outgoing fermion, i.e., initial
+        antiparticle or final particle"""
+
+        if not isinstance(model, Model):
+            raise self.PhysicsObjectError, \
+                  "%s is not a model" % str(model)
+
+        part = model.get('particle_dict')[self['id']]
+        return part.is_fermion() and \
+               (self.get('state') == 'final' and part.get('is_part') or \
+                self.get('state') == 'initial' and not part.get('is_part'))
 
 #===============================================================================
 # LegList
@@ -910,13 +986,21 @@ class Vertex(PhysicsObject):
             # identity vertex or t-channel particle
             return 0
 
-        # Check if the other legs are incoming or outgoing.
-        # If the latter, return leg id, if the former, return -leg id
-        if self.get('legs')[0].get('state') == 'final':
+        # Check if the particle number is <= ninitial
+        # In that case it comes from initial and we should switch direction
+        if leg.get('number') > ninitial:
             return leg.get('id')
         else:
             return model.get('particle_dict')[leg.get('id')].\
                        get_anti_pdg_code()
+        
+        ## Check if the other legs are initial or final.
+        ## If the latter, return leg id, if the former, return -leg id
+        #if self.get('legs')[0].get('state') == 'final':
+        #    return leg.get('id')
+        #else:
+        #    return model.get('particle_dict')[leg.get('id')].\
+        #               get_anti_pdg_code()
 
 #===============================================================================
 # VertexList
@@ -1105,8 +1189,8 @@ class Process(PhysicsObject):
                         mystr = mystr + reqpart.get_name() + ' '
                     mystr = mystr + '> '
 
-            mystr = mystr + mypart.get_name()
-            mystr = mystr + '(%i) ' % leg['number']
+            mystr = mystr + mypart.get_name() + ' '
+            #mystr = mystr + '(%i) ' % leg['number']
             prevleg = leg
 
         # Check for forbidden s-channels

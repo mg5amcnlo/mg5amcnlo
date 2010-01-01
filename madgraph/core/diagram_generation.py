@@ -117,6 +117,7 @@ class Amplitude(base_objects.PhysicsObject):
         """
 
         model = self['process'].get('model')
+        legs = self['process'].get('legs')
 
         if not model.get('particles') or not model.get('interactions'):
             raise self.PhysicsObjectError, \
@@ -126,10 +127,19 @@ class Amplitude(base_objects.PhysicsObject):
 
         # First check that the number of fermions is even
         if len(filter(lambda leg: model.get('particle_dict')[\
-                        leg.get('id')].get('spin') in [2, 4],
-                      self.get('process').get('legs'))) % 2 == 1:
+                        leg.get('id')].is_fermion(), legs)) % 2 == 1:
             self['diagrams'] = res
             return res
+
+        # Then check same number of incoming and outgoing fermions (if
+        # no Majorana particles in model)
+        if not model.get('got_majoranas') and \
+           len(filter(lambda leg: leg.is_incoming(model), legs)) != \
+           len(filter(lambda leg: leg.is_outgoing(model), legs)):
+            self['diagrams'] = res
+            return res
+
+        logging.info("Trying %s " % self['process'].nice_string().replace('Process', 'process'))
 
         # Give numbers to legs in process
         for i in range(0, len(self['process'].get('legs'))):
@@ -195,6 +205,9 @@ class Amplitude(base_objects.PhysicsObject):
 
         # Set diagrams to res
         self['diagrams'] = res
+
+        if res:
+            logging.info("Process has %d diagrams" % len(res))
 
         return not failed_crossing
 
@@ -639,7 +652,6 @@ class MultiProcess(base_objects.PhysicsObject):
         # Check for crossed processes
         failed_procs = []
         for process in self.get('processes'):
-            logging.info("Trying %s " % process.nice_string())
             model = process.get('model')
             legs = process.get('legs')
             sorted_legs = sorted(legs.get_outgoing_id_list(model))
@@ -657,7 +669,6 @@ class MultiProcess(base_objects.PhysicsObject):
                     failed_procs.append(tuple(sorted_legs))
                 if amplitude.get('diagrams'):
                     self['amplitudes'].append(amplitude)
-                    logging.info("Process has %d diagrams" % len(amplitude.get('diagrams')))
                     
 
 #===============================================================================

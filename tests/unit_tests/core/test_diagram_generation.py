@@ -1431,6 +1431,7 @@ class DiagramGenerationTest(unittest.TestCase):
 
             self.assertEqual(len(self.myamplitude.get('diagrams')), 0)
 
+
 #===============================================================================
 # Muliparticle test
 #===============================================================================

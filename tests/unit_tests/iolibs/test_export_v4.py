@@ -135,7 +135,7 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: e+(1) e-(2) > a(3) a(4) a(5)
+C     Process: e+ e- > a a a
 C     
       IMPLICIT NONE
 C     
@@ -223,7 +223,7 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: e+(1) e-(2) > a(3) a(4) a(5)
+C     Process: e+ e- > a a a
 C     
       IMPLICIT NONE
 C     
