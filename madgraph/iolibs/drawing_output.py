@@ -343,12 +343,12 @@ if __name__ == '__main__':
     cmd = MadGraphCmd()
     cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/particles.dat')
     cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/interactions.dat')
-    cmd.do_generate('g g > g g g g g g')
+    cmd.do_generate('g g > g g g g g ')
     
     len(cmd.curr_amp['diagrams'])
-    while 1:
+    for i in range(0,34):
         start=time.time()
-        plot = Draw_diagrams_eps(cmd.curr_amp['diagrams'][73:74], 'diagram.eps', 
+        plot = Draw_diagrams_eps(cmd.curr_amp['diagrams'][1494:1495], 'diagram2_5.eps', 
                              model= cmd.curr_model,
                              amplitude='')
         start=time.time()
@@ -356,3 +356,4 @@ if __name__ == '__main__':
         stop=time.time()
         print 'time to draw',stop-start
         print 'done'
+        #a=raw_input('press a key to continue')

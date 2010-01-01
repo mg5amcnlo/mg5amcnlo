@@ -643,25 +643,25 @@ class TestFeynman_Diagram(unittest.TestCase):
         
         # check len of output
         self.mix_drawing.charge_diagram()
-        self.assertEqual(len(self.mix_drawing.VertexList), 10)
-        self.assertEqual(len(self.mix_drawing.LineList), 9)
+        self.assertEqual(len(self.mix_drawing.vertexList), 10)
+        self.assertEqual(len(self.mix_drawing.lineList), 9)
         
         self.t_drawing.charge_diagram()
-        self.assertEqual(len(self.t_drawing.VertexList), 6)
-        self.assertEqual(len(self.t_drawing.LineList), 5)
+        self.assertEqual(len(self.t_drawing.vertexList), 6)
+        self.assertEqual(len(self.t_drawing.lineList), 5)
         
         self.s_drawing.charge_diagram()
-        self.assertEqual(len(self.s_drawing.VertexList), 6)
-        self.assertEqual(len(self.s_drawing.LineList), 5) 
+        self.assertEqual(len(self.s_drawing.vertexList), 6)
+        self.assertEqual(len(self.s_drawing.lineList), 5) 
         
         #check type of object
-        for obj in self.mix_drawing.VertexList:
+        for obj in self.mix_drawing.vertexList:
             self.assertTrue(isinstance(obj, drawing.Vertex_Point))
-        for obj in self.mix_drawing.LineList:
+        for obj in self.mix_drawing.lineList:
             self.assertTrue(isinstance(obj, drawing.Feynman_line))
             
         #check that the load corrctly assign the model to the Line
-        for line in self.mix_drawing.LineList:
+        for line in self.mix_drawing.lineList:
             self.assertTrue(hasattr(line, 'model'))
             
                 
@@ -680,9 +680,9 @@ class TestFeynman_Diagram(unittest.TestCase):
         # to ensure that we don't have an incorect permutation
         self.assertEquals(self.mix_drawing.max_level,3)
         for i in range(0, 10):
-            self.assertEquals(self.mix_drawing.VertexList[i]['level'], \
+            self.assertEquals(self.mix_drawing.vertexList[i]['level'], \
                                                             level_solution[i])
-            self.assertEquals(len(self.mix_drawing.VertexList[i]['line']), \
+            self.assertEquals(len(self.mix_drawing.vertexList[i]['line']), \
                                                             number_of_line[i])
             
         self.s_drawing.charge_diagram()
@@ -692,7 +692,7 @@ class TestFeynman_Diagram(unittest.TestCase):
         level_solution = [1, 2, 0, 0, 3, 3] 
 
         for i in range(0, 6):
-            self.assertEquals(self.s_drawing.VertexList[i]['level'], \
+            self.assertEquals(self.s_drawing.vertexList[i]['level'], \
                                                             level_solution[i])
         self.assertEquals(self.s_drawing.max_level,3)
                 
@@ -703,7 +703,7 @@ class TestFeynman_Diagram(unittest.TestCase):
         level_solution = [1,1,0,2,0,2]
         self.assertEquals(self.t_drawing.max_level,2)
         for i in range(0, 6):
-            self.assertEquals(self.t_drawing.VertexList[i]['level'], \
+            self.assertEquals(self.t_drawing.vertexList[i]['level'], \
                                                             level_solution[i]) 
 
 
@@ -717,23 +717,23 @@ class TestFeynman_Diagram(unittest.TestCase):
         self.mix_drawing.define_level()
         
         #define by hand level 0:
-        vertexlist_l0=[vertex for vertex in self.mix_drawing.VertexList if\
+        vertexlist_l0=[vertex for vertex in self.mix_drawing.vertexList if\
                                                          vertex['level'] == 0 ]
 
         #define by hand level 1:
-        sol_l1=[vertex for vertex in self.mix_drawing.VertexList if\
+        sol_l1=[vertex for vertex in self.mix_drawing.vertexList if\
                                                          vertex['level'] == 1 ]
         #wrong order
         sol_l1[1],sol_l1[2] = sol_l1[2], sol_l1[1]
         
         #ask to find level 1 from level 0
-        vertexlist_l1=self.mix_drawing.find_vertex_at_level(vertexlist_l0)
+        vertexlist_l1=self.mix_drawing.find_t_channel_vertex(vertexlist_l0)
         self.assertEquals(len(vertexlist_l1),len(sol_l1))
         for i in range(0,len(sol_l1)):
             self.assertEquals(vertexlist_l1[i],sol_l1[i])
         
         #redo this step but add the position to those vertex
-        self.mix_drawing.find_vertex_position_at_level(vertexlist_l0, 1, auto=0)   
+        self.mix_drawing.find_vertex_position_tchannel(vertexlist_l0)   
             
         sol=[[1/3,1/6], [1/3,1/2], [1/3,5/6]]
         for i in range(0,len(vertexlist_l1)):
@@ -749,7 +749,7 @@ class TestFeynman_Diagram(unittest.TestCase):
         self.mix_drawing.find_vertex_position_at_level(vertexlist_l1, 2, auto=0)
     
         #check position
-        vertexlist=[vertex for vertex in self.mix_drawing.VertexList if\
+        vertexlist=[vertex for vertex in self.mix_drawing.vertexList if\
                                                          vertex['level'] == 2 ]
         sol=[[2/3,0.5],[2/3,0],[2/3,1]]
         ext=[False,True,True]
@@ -776,15 +776,15 @@ class TestFeynman_Diagram(unittest.TestCase):
 
         level =      [1  , 1  , 1  , 2  , 0  , 2  , 0  , 2  , 3  , 3 ]
         x_position = [1/3, 1/3, 1/3, 2/3, 0.0, 2/3, 0.0, 2/3, 1.0, 1.0]
-        y_position = [1/6, 5/6, 1/2, 1/2, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0]       
+        y_position = [5/6, 1/6, 1/2, 1/2, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0]       
 
 
         for i in range(0, 10):
-            self.assertEquals(self.mix_drawing.VertexList[i]['level'], \
+            self.assertEquals(self.mix_drawing.vertexList[i]['level'], \
                               level[i])         
-            self.assertAlmostEquals(self.mix_drawing.VertexList[i]['pos_x'], \
+            self.assertAlmostEquals(self.mix_drawing.vertexList[i]['pos_x'], \
                               x_position[i])
-            self.assertAlmostEquals(self.mix_drawing.VertexList[i]['pos_y'], \
+            self.assertAlmostEquals(self.mix_drawing.vertexList[i]['pos_y'], \
                               y_position[i])
             
     def test_isexternal(self):
@@ -805,23 +805,23 @@ class TestFeynman_Diagram(unittest.TestCase):
         diagram.define_level()
         level_solution = [1, 2, 0, 0, 3, 3]                          
         for i in range(0, 6):
-            self.assertEquals(diagram.VertexList[i]['level'], \
+            self.assertEquals(diagram.vertexList[i]['level'], \
                               level_solution[i])                     
-        #print diagram.LineList
-        #print diagram.VertexList
+        #print diagram.lineList
+        #print diagram.vertexList
         diagram.find_initial_vertex_position()
         level_solution = [1, 2, 0, 0, 3, 3]                          
         x_position = [1/3, 2/3, 0, 0, 1, 1]
-        y_position = [1/2,1/2, 0, 1, 0, 1]
-        self.assertEquals(len(diagram.VertexList),6)
+        y_position = [1/2,1/2, 1, 0, 0, 1]
+        self.assertEquals(len(diagram.vertexList),6)
         for i in range(0, 6):
-            self.assertEquals(diagram.VertexList[i]['level'], \
+            self.assertEquals(diagram.vertexList[i]['level'], \
                               level_solution[i])         
-            self.assertAlmostEquals(diagram.VertexList[i]['pos_x'], \
+            self.assertAlmostEquals(diagram.vertexList[i]['pos_x'], \
                               x_position[i])
-            self.assertAlmostEquals(diagram.VertexList[i]['pos_y'], \
+            self.assertAlmostEquals(diagram.vertexList[i]['pos_y'], \
                               y_position[i])
-        for line in diagram.LineList:
+        for line in diagram.lineList:
             self.assertNotEquals(line.start, None)
             self.assertNotEquals(line.end, None)
                                                 
@@ -844,22 +844,22 @@ class TestFeynman_Diagram(unittest.TestCase):
         diagram.define_level()
         level_solution = [1, 2, 0, 0, 3, 3]                         
         for i in range(0, 6):
-            self.assertEquals(diagram.VertexList[i]['level'], \
+            self.assertEquals(diagram.vertexList[i]['level'], \
                               level_solution[i])                     
-        #print diagram.LineList
-        #print diagram.VertexList
+        #print diagram.lineList
+        #print diagram.vertexList
         diagram.find_initial_vertex_position()                         
         x_position = [1/3, 2/3, 0, 0, 1, 1]
-        y_position = [1/2,1/2, 0, 1, 0, 1]
-        self.assertEquals(len(diagram.VertexList),6)
+        y_position = [1/2,1/2, 1, 0, 0, 1]
+        self.assertEquals(len(diagram.vertexList),6)
         for i in range(0, 6):
-            self.assertEquals(diagram.VertexList[i]['level'], \
+            self.assertEquals(diagram.vertexList[i]['level'], \
                               level_solution[i])         
-            self.assertAlmostEquals(diagram.VertexList[i]['pos_x'], \
+            self.assertAlmostEquals(diagram.vertexList[i]['pos_x'], \
                               x_position[i])
-            self.assertAlmostEquals(diagram.VertexList[i]['pos_y'], \
+            self.assertAlmostEquals(diagram.vertexList[i]['pos_y'], \
                               y_position[i])
-        for line in diagram.LineList:
+        for line in diagram.lineList:
             self.assertNotEquals(line.start, None)
             self.assertNotEquals(line.end, None)                          
 
@@ -871,23 +871,23 @@ class TestFeynman_Diagram(unittest.TestCase):
         diagram.define_level()
         level_solution = [1,1,0,2,0,2] 
         for i in range(0, 6):
-            self.assertEquals(diagram.VertexList[i]['level'], \
+            self.assertEquals(diagram.vertexList[i]['level'], \
                               level_solution[i])                     
-        #print diagram.LineList
-        #print diagram.VertexList
+        #print diagram.lineList
+        #print diagram.vertexList
         diagram.find_initial_vertex_position()
                                  
         x_position = [1/2, 1/2, 0, 1, 0, 1]
-        y_position = [1/4,3/4, 0, 0, 1, 1]
-        self.assertEquals(len(diagram.VertexList),6)
+        y_position = [3/4,1/4, 1, 1, 0, 0]
+        self.assertEquals(len(diagram.vertexList),6)
         for i in range(0, 6):
-            self.assertEquals(diagram.VertexList[i]['level'], \
+            self.assertEquals(diagram.vertexList[i]['level'], \
                               level_solution[i])         
-            self.assertAlmostEquals(diagram.VertexList[i]['pos_x'], \
+            self.assertAlmostEquals(diagram.vertexList[i]['pos_x'], \
                               x_position[i])
-            self.assertAlmostEquals(diagram.VertexList[i]['pos_y'], \
+            self.assertAlmostEquals(diagram.vertexList[i]['pos_y'], \
                               y_position[i])
-        for line in diagram.LineList:
+        for line in diagram.lineList:
             self.assertNotEquals(line.start, None)
             self.assertNotEquals(line.end, None)                          
 
