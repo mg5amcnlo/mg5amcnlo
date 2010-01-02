@@ -801,15 +801,15 @@ class Feynman_Diagram_horizontal(Feynman_Diagram):
     def find_vertex_position_at_level(self, vertexlist, level, auto=True):
         """ find the vertex for the next level """        
     
-        self.vertex_at_level = self.find_vertex_at_level(vertexlist)
-        print 'particle at level',level,':', len(self.vertex_at_level)
+        vertex_at_level = self.find_vertex_at_level(vertexlist)
+        print 'particle at level',level,':', len(vertex_at_level)
         if level == 1 or level == self.max_level :
-            if not self.vertex_at_level:
+            if not vertex_at_level:
                 return   
-            self._assign_position_for_level(self.vertex_at_level, level)
+            self._assign_position_for_level(vertex_at_level, level)
             #recursive mode
             if auto :
-                self.find_vertex_position_at_level(self.vertex_at_level, level + 1)
+                self.find_vertex_position_at_level(vertex_at_level, level + 1)
             return
         min_pos=0
         list_unforce_vertex=[]
@@ -820,8 +820,12 @@ class Feynman_Diagram_horizontal(Feynman_Diagram):
             s_prop = 0
             new_vertex = 0
             for line in vertex['line']:
+                if vertex.is_external():
+                    print 'vertex is external'
+                    print line.end==vertex
+                    print line.end in vertex_at_level 
                 
-                if line.start == vertex and line.end in self.vertex_at_level :
+                if line.start == vertex and line.end in vertex_at_level :
                     new_vertex += 1
                     if not line.end.is_external():
                         s_prop = -1 * s_prop + 1
@@ -836,7 +840,7 @@ class Feynman_Diagram_horizontal(Feynman_Diagram):
                             s_prop = -s_prop
                     else:
                         list_unforce_vertex.append(line.end)                         
-                elif line.end == vertex and line.start in self.vertex_at_level :
+                elif line.end == vertex and (line.start in vertex_at_level):
                     new_vertex += 1
                     if not line.start.is_external():
                         s_prop = -1 * s_prop + 1
@@ -850,11 +854,15 @@ class Feynman_Diagram_horizontal(Feynman_Diagram):
                             pos = ''
                             s_prop= -2
                     else:
-                        list_unforce_vertex.append(line.start) 
+                        list_unforce_vertex.append(line.start)
+                elif line.end == vertex and (vertex in vertex_at_level):
+                    list_unforce_vertex.append(vertex)
+                    print vertex.is_external()
+                    print 'YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY' 
           
             if force_vertex:
                 force_vertex.def_position(level / self.max_level, pos)
-                if new_vertex > 2 or new_vertex ==2 and vertex['pos_y']>=0.5:
+                if new_vertex > 2 or (new_vertex ==2 and vertex['pos_y']>=0.5):
                     self.assign_position_between(list_unforce_vertex[:-1],min_pos,pos,level)
                     list_unforce_vertex = [list_unforce_vertex[-1]]
                 else:
@@ -865,8 +873,8 @@ class Feynman_Diagram_horizontal(Feynman_Diagram):
             print 'nb_data',len(list_unforce_vertex)
             self.assign_position_between(list_unforce_vertex,min_pos, 1 ,level)
 
-        if auto and self.vertex_at_level:
-            self.find_vertex_position_at_level( self.vertex_at_level, level+1)
+        if auto and vertex_at_level:
+            self.find_vertex_position_at_level(vertex_at_level, level+1)
             
         
         
