@@ -521,7 +521,6 @@ class MultiProcess(base_objects.PhysicsObject):
         """Default values for all properties"""
 
         self['process_definitions'] = base_objects.ProcessDefinitionList()
-        self['processes'] = base_objects.ProcessList()
         self['amplitudes'] = AmplitudeList()
 
     def filter(self, name, value):
@@ -542,12 +541,8 @@ class MultiProcess(base_objects.PhysicsObject):
     def get(self, name):
         """Get the value of the property name."""
 
-        if (name == 'processes') and not self[name]:
-            if self['process_definitions']:
-                self.clean_processes()
-
         if (name == 'amplitudes') and not self[name]:
-            if self.get('processes'):
+            if self.get('process_definitions'):
                 self.generate_amplitudes()
 
         return MultiProcess.__bases__[0].get(self, name) # call the mother routine
@@ -555,96 +550,7 @@ class MultiProcess(base_objects.PhysicsObject):
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return ['process_definitions', 'processes']
-
-    def nice_string(self):
-        """Returns a nicely formated string about current process
-        content"""
-
-        mystr = "MultiProcess: "
-        prevleg = None
-        for leg in self['legs']:
-            mypart = self['model'].get('particle_dict')[leg['id']]
-            if prevleg and prevleg['state'] == 'initial' \
-                   and leg['state'] == 'final':
-                # Separate initial and final legs by ">"
-                mystr = mystr + '> '
-            if mypart['is_part']:
-                mystr = mystr + mypart['name']
-            else:
-                mystr = mystr + mypart['antiname']
-            mystr = mystr + '(%i) ' % leg['number']
-            prevleg = leg
-
-        # Remove last space
-        return mystr[:-1]
-
-
-    def clean_processes(self):
-        """Routine for removing identical processes in Multiprocess list"""
-
-        processes = base_objects.ProcessList()
-
-        for process_def in self['process_definitions']:
-
-            model = process_def['model']
-
-            isids = [leg['ids'] for leg in \
-                     filter(lambda leg: leg['state'] == 'initial', process_def['legs'])]
-            fsids = [leg['ids'] for leg in \
-                     filter(lambda leg: leg['state'] == 'final', process_def['legs'])]
-
-            # Generate all combinations for the initial state
-
-            islist = []
-
-            for prod in apply(itertools.product, isids):
-                islist.append(base_objects.LegList([\
-                    base_objects.Leg({'id':id, 'state': 'initial'}) \
-                                       for id in prod]))
-
-            # Generate all combinations for the final state
-
-            fsidlist = []
-
-            for prod in apply(itertools.product, fsids):
-                fsidlist.append([id for id in prod])
-
-            # Now remove all double counting in the final state
-            red_fsidlist = []
-            fslist = []
-            for ids in fsidlist:
-                if tuple(sorted(ids)) not in red_fsidlist:
-                    fslist.append(base_objects.LegList([\
-                        base_objects.Leg({'id':id, 'state': 'final'}) \
-                                           for id in ids]))
-                    red_fsidlist.append(tuple(sorted(ids)));
-
-            # Combine IS and FS particles
-            leg_lists = []
-            for islegs in islist:
-                for fslegs in fslist:
-                    leg_list = [copy.copy(leg) for leg in islegs]
-                    leg_list.extend([copy.copy(leg) for leg in fslegs])
-                    # Check that process has even number of fermions
-                    if len(filter(lambda leg: leg.is_fermion(model), leg_list)) % 2 == 0:
-                        leg_lists.append(base_objects.LegList(leg_list))
-
-            # Setup processes
-            processes.extend([base_objects.Process({\
-                                       'legs':legs,
-                                       'model':process_def.get('model'),
-                                       'id': process_def.get('id'),
-                                       'orders': process_def.get('orders'),
-                                       'required_s_channels': \
-                                        process_def.get('required_s_channels'),
-                                       'forbidden_s_channels': \
-                                        process_def.get('forbidden_s_channels'),
-                                       'forbidden_particles': \
-                                        process_def.get('forbidden_particles')}) \
-                              for legs in leg_lists])
-
-        self.set('processes', processes)
+        return ['process_definitions', 'amplitudes']
 
     def generate_amplitudes(self):
         """Generate amplitudes in a semi-efficient way.
@@ -654,25 +560,77 @@ class MultiProcess(base_objects.PhysicsObject):
         identify processes with identical amplitudes.
         """
 
-        # Check for crossed processes
-        failed_procs = []
-        for process in self.get('processes'):
-            model = process.get('model')
-            legs = process.get('legs')
-            sorted_legs = sorted(legs.get_outgoing_id_list(model))
-            # Check if crossed process has already failed
-            # In that case don't check process
-            # Remember to turn this off if we require or forbid s-channel propagators
-            if not tuple(sorted_legs) in failed_procs:
-                amplitude = Amplitude({"process": process})
-                if not amplitude.generate_diagrams():
-                    # Add process to failed_procs
-                    # Note that this should not be done if we forbid s-channel
-                    # particles, since we then might have a failed proc whose
-                    # crossing can succeed
-                    failed_procs.append(tuple(sorted_legs))
-                if amplitude.get('diagrams'):
-                    self['amplitudes'].append(amplitude)
+        # Loop over all process definitions and multilegs
+        processes = base_objects.ProcessList()
+
+        for process_def in self['process_definitions']:
+
+            # failed_procs are processes that have already failed
+            # based on crossing symmetry
+            failed_procs = []
+                    
+            model = process_def['model']
+
+            isids = [leg['ids'] for leg in \
+                     filter(lambda leg: leg['state'] == 'initial', process_def['legs'])]
+            fsids = [leg['ids'] for leg in \
+                     filter(lambda leg: leg['state'] == 'final', process_def['legs'])]
+
+            # Generate all combinations for the initial state
+
+            for prod in apply(itertools.product, isids):
+                islegs = [\
+                    base_objects.Leg({'id':id, 'state': 'initial'}) \
+                    for id in prod]
+
+                # Generate all combinations for the final state, and make
+                # sure to remove double counting
+
+                red_fsidlist = []
+
+                for prod in apply(itertools.product, fsids):
+
+                    # Remove double counting between final states
+                    if tuple(sorted(prod)) in red_fsidlist:
+                        continue
+
+                    red_fsidlist.append(tuple(sorted(prod)));
+
+                    # Generate leg list for process
+                    leg_list = [copy.copy(leg) for leg in islegs]
+
+                    leg_list.extend([\
+                        base_objects.Leg({'id':id, 'state': 'final'}) \
+                        for id in prod])
+
+                    legs = base_objects.LegList(leg_list)
+
+                    # Setup process
+                    process = base_objects.Process({\
+                                       'legs':legs,
+                                       'model':process_def.get('model'),
+                                       'id': process_def.get('id'),
+                                       'orders': process_def.get('orders'),
+                                       'required_s_channels': \
+                                       process_def.get('required_s_channels'),
+                                       'forbidden_s_channels': \
+                                       process_def.get('forbidden_s_channels'),
+                                       'forbidden_particles': \
+                                       process_def.get('forbidden_particles')})
+
+                    # Check for crossed processes
+                    sorted_legs = sorted(legs.get_outgoing_id_list(model))
+                    # Check if crossed process has already failed
+                    # In that case don't check process
+                    if tuple(sorted_legs) in failed_procs:
+                        continue
+
+                    amplitude = Amplitude({"process": process})
+                    if not amplitude.generate_diagrams():
+                        # Add process to failed_procs
+                        failed_procs.append(tuple(sorted_legs))
+                    if amplitude.get('diagrams'):
+                        self['amplitudes'].append(amplitude)
                     
 
 #===============================================================================

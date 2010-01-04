@@ -241,8 +241,7 @@ class MadGraphCmd(cmd.Cmd):
                 print
 
         if args[0] == 'processes':
-            for amp in filter(lambda amp: amp.get("diagrams"),
-                              self.__curr_amps):
+            for amp in self.__curr_amps:
                 print amp.get('process').nice_string()
                 print amp.get('diagrams').nice_string()
 
