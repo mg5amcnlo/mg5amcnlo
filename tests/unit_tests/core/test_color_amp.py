@@ -314,6 +314,10 @@ class ColorAmpTest(unittest.TestCase):
 
         self.assertEqual(len(new_col_basis), 6)
 
+#        print new_col_basis
+#
+#        print myamplitude['diagrams'][2].nice_string()
+
 #    def test_colorize_uux_ddxg(self):
 #        """Test the colorize function for uu~ > dd~g"""
 #
