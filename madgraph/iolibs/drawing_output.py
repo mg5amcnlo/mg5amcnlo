@@ -18,7 +18,7 @@ import os
 import time
 import sys
 import madgraph.iolibs.drawing_lib as Draw 
-_root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]+'/'
+_file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]+'/'
 
 class Draw_diagram:
     """ all generic routine in order to written diagram """
@@ -36,7 +36,7 @@ class Draw_diagram:
         self.model = model         # use for automatic conversion of graph
         self.amplitude = amplitude # use for automatic conversion of graph
           
-    def convert_diagram(self,diagram='',model='', amplitude=''):
+    def convert_diagram(self,diagram='',model='', amplitude='', opt={}):
         """ 
             check if the diagram is a Feynman diagram and not a basic one
             if it is a basic one upgrade it!!
@@ -50,9 +50,25 @@ class Draw_diagram:
             if not model:
                 raise self.Draw_diagram_Error('The model is required for'+  \
                                 'diagram conversion in routine convert_diagram')
+
+        if opt.has_key('external'):
+            external_on_bottom = opt['external']
+        else:
+            external_on_bottom = 1
         
+        if opt.has_key('horizontal'):
+            external_on_bottom = opt['horizontal']
+        else:
+            force_horizontal = 1
+        
+    
         if  not isinstance(diagram, Draw.Feynman_Diagram):
-            diagram=Draw.Feynman_Diagram_horizontal(diagram, model)
+            if force_horizontal:
+                diagram=Draw.Feynman_Diagram_horizontal(diagram, model, mode= 
+                                                        external_on_bottom)
+            else:
+                diagram=Draw.Feynman_Diagram(diagram, model, mode=
+                                                        external_on_bottom)
             diagram.charge_diagram()
             diagram.define_level()        
             diagram.find_initial_vertex_position()
@@ -60,19 +76,20 @@ class Draw_diagram:
         
         
 
-    def draw(self):
+    def draw(self, opt={}):
         """ draw the diagram """
         
-        self.convert_diagram()
+        self.convert_diagram(opt=opt)
         self.draw_diagram(self.diagram)
         self.initialize()
         
         self.conclude()
 
-    def draw_diagram(self,diagram,number=1):
+    def draw_diagram(self, diagram, number=1, opt={}):
         """ draw a given diagram no input-output """
         
-        self.diagram = self.convert_diagram(diagram, self.model, self.amplitude)
+        self.diagram = self.convert_diagram(diagram, self.model, 
+                                            self.amplitude, opt=opt )
         
         for line in self.diagram.lineList:
             self.draw_line(line)
@@ -131,7 +148,7 @@ class Draw_diagram_eps(Draw_diagram):
     def initialize(self):
         """ def the header of the file """
 
-        self.text=file(_root_path+'iolibs/input_file/drawing_eps_header.inc').read()
+        self.text=file(_file_path+'iolibs/input_file/drawing_eps_header.inc').read()
         #replace variable in text put inside $ $
         self.text = self.text.replace('$x$',str(self.width))
         self.text = self.text.replace('$y$',str(self.height))
@@ -252,13 +269,13 @@ class Draw_diagram_eps(Draw_diagram):
         dy = (y1-y2)/d        
         
 
-        if dx > 0:
+        if dy < 0:
             dx, dy = -1 * dx, -1 * dy
-        elif dx == 0:
-            dy=abs(dy)
+        elif dy == 0:
+            dx= 1.2
         
         x_pos = (x1 + x2) / 2 + 0.04  * dy
-        y_pos = (y1 + y2) / 2 - 0.03 * dx      
+        y_pos = (y1 + y2) / 2 - 0.04 * dx      
 
         x_pos, y_pos =self.rescale(x_pos, y_pos)
         self.text += ' %s  %s moveto \n' % (x_pos,y_pos)  
@@ -304,19 +321,19 @@ class Draw_diagrams_eps(Draw_diagram_eps):
         
         return x,y    
  
-    def draw_diagram(self,diagram):
+    def draw_diagram(self,diagram, opt={}):
         """ draw the diagram no input-output """
         
         self.diagram = diagram
-        Draw_diagram_eps.draw_diagram(self,diagram,self.block_nb)
+        Draw_diagram_eps.draw_diagram(self,diagram,self.block_nb, opt={})
         self.block_nb += 1
         
-    def draw(self):
+    def draw(self, opt={}):
         """ draw the diagram """
         
         self.initialize()
         for diagram in self.diagramlist:
-            self.draw_diagram(diagram)
+            self.draw_diagram(diagram, opt={})
             
             if self.block_nb % (self.nb_col*self.nb_line) == 0:
                 self.pass_to_next_page()
@@ -343,12 +360,12 @@ if __name__ == '__main__':
     cmd = MadGraphCmd()
     cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/particles.dat')
     cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/interactions.dat')
-    cmd.do_generate('g g > g g g g g ')
+    cmd.do_generate('g g > g g g g g g g ')
     
     len(cmd.curr_amp['diagrams'])
-    for i in range(0,34):
+    for i in range(0,1):
         start=time.time()
-        plot = Draw_diagrams_eps(cmd.curr_amp['diagrams'][1494:1495], 'diagram2_5.eps', 
+        plot = Draw_diagrams_eps(cmd.curr_amp['diagrams'][478:479], 'diagram2_7.eps', 
                              model= cmd.curr_model,
                              amplitude='')
         start=time.time()

@@ -19,11 +19,11 @@ from madgraph.interface.cmd_interface import MadGraphCmd
 import madgraph.core.base_objects as base_objects
 import madgraph.iolibs.drawing_lib as drawing
 import unittest
-
+import os
 
 _cmd = MadGraphCmd()
-_cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/particles.dat')
 _model=_cmd.curr_model
+root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]+'/'
 #===============================================================================
 # TestTestFinder
 #===============================================================================
@@ -795,8 +795,12 @@ class TestFeynman_Diagram(unittest.TestCase):
     def test_creation_from_cmd(self):
         """ check that's possible to compute diagram position from cmd """
         
-        _cmd.do_import('v4 ' + \
-            '/Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/interactions.dat')             
+        global root_path
+        
+        _cmd.do_import('v4 ' + root_path + '../input_files/v4_sm_particles.dat')
+        _cmd.do_import('v4 ' + root_path + \
+                                    '../input_files/v4_sm_interactions.dat')
+                    
         _cmd.do_generate('u d~ > c s~')
         diagram = _cmd.curr_amp['diagrams'][0]
         diagram = drawing.Feynman_Diagram(diagram, _cmd.curr_model)
@@ -832,8 +836,11 @@ class TestFeynman_Diagram(unittest.TestCase):
             so we must force pointer equality 
         """
         
-        _cmd.do_import('v4 ' + \
-            '/Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/interactions.dat')             
+        global root_path
+        
+        _cmd.do_import('v4 ' + root_path + '../input_files/v4_sm_particles.dat')
+        _cmd.do_import('v4 ' + root_path + \
+                                    '../input_files/v4_sm_interactions.dat')
         _cmd.do_generate('g g > g g')
         
         #test the S-channel

@@ -368,7 +368,7 @@ class Feynman_Diagram:
         """ class for internal error """
         pass
     
-    def __init__(self, diagram, model):
+    def __init__(self, diagram, model, mode=1):
         """ compute the position of the vertex/line for this diagram """
         
         if isinstance(diagram, base_objects.Diagram):
@@ -381,6 +381,8 @@ class Feynman_Diagram:
         else:
             raise self.FeynamDiagramError('second arg should derivates' + \
                                           ' form Modela object')
+        
+        self.mode = 1 #0 forbids particles to end in 
         
         self.vertexList = base_objects.PhysicsObjectList()
         self.lineList = base_objects.PhysicsObjectList()
@@ -675,10 +677,13 @@ class Feynman_Diagram:
             vertex_at_level.append(t_vertex)                         
         return vertex_at_level        
                        
-    def _assign_position_for_level(self, vertex_at_level, level, mode=1):
+    def _assign_position_for_level(self, vertex_at_level, level, mode=''):
         """ 
             assign position in ascendant order for the vertex at level given 
         """
+        if mode == '':
+            mode=self.mode
+        
         if level == self.max_level:
             mode=0
         
@@ -802,7 +807,6 @@ class Feynman_Diagram_horizontal(Feynman_Diagram):
         """ find the vertex for the next level """        
     
         vertex_at_level = self.find_vertex_at_level(vertexlist)
-        print 'particle at level',level,':', len(vertex_at_level)
         if level == 1 or level == self.max_level :
             if not vertex_at_level:
                 return   
@@ -820,10 +824,6 @@ class Feynman_Diagram_horizontal(Feynman_Diagram):
             s_prop = 0
             new_vertex = 0
             for line in vertex['line']:
-                if vertex.is_external():
-                    print 'vertex is external'
-                    print line.end==vertex
-                    print line.end in vertex_at_level 
                 
                 if line.start == vertex and line.end in vertex_at_level :
                     new_vertex += 1
@@ -856,9 +856,8 @@ class Feynman_Diagram_horizontal(Feynman_Diagram):
                     else:
                         list_unforce_vertex.append(line.start)
                 elif line.end == vertex and (vertex in vertex_at_level):
+                    #case for external particles moves from one level
                     list_unforce_vertex.append(vertex)
-                    print vertex.is_external()
-                    print 'YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY' 
           
             if force_vertex:
                 force_vertex.def_position(level / self.max_level, pos)
@@ -870,7 +869,6 @@ class Feynman_Diagram_horizontal(Feynman_Diagram):
                     list_unforce_vertex = []
                 min_pos = pos
         if list_unforce_vertex:
-            print 'nb_data',len(list_unforce_vertex)
             self.assign_position_between(list_unforce_vertex,min_pos, 1 ,level)
 
         if auto and vertex_at_level:
@@ -878,7 +876,7 @@ class Feynman_Diagram_horizontal(Feynman_Diagram):
             
         
         
-    def assign_position_between(self,vertex_at_level,min,max,level,mode=1):
+    def assign_position_between(self,vertex_at_level,min,max,level,mode=''):
         """
         assign the position to vertex at vertex_at_level. 
         the x coordination is linked to the level
@@ -889,6 +887,9 @@ class Feynman_Diagram_horizontal(Feynman_Diagram):
         if not vertex_at_level:
             return
         
+        if mode == '':
+            mode = self.mode
+            
         if level == self.max_level:
             mode=0
         
