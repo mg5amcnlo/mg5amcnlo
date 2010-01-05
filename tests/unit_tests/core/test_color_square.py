@@ -17,6 +17,7 @@
 color information."""
 
 import copy
+import fractions
 import unittest
 
 import madgraph.core.base_objects as base_objects
@@ -184,30 +185,74 @@ class ColorSquareTest(unittest.TestCase):
         self.mymodel.set('interactions', self.myinterlist)
 
     def test_color_matrix_multi_gluons(self):
-        """Test the color basis building for gg > n*g"""
+        """Test the color basis building for gg > n*g with n up to 3"""
 
-        myleglist = base_objects.LegList()
+        goal = [fractions.Fraction(7, 3),
+                fractions.Fraction(19, 6),
+                fractions.Fraction(455, 108)]
 
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'initial'}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'initial'}))
+        for n in range(3):
+            myleglist = base_objects.LegList()
 
-        myleglist.extend([base_objects.Leg({'id':2,
-                                            'state':'final'})] * 1)
-        myleglist.extend([base_objects.Leg({'id':-2,
-                                            'state':'final'})] * 1)
-        myprocess = base_objects.Process({'legs':myleglist,
-                                        'model':self.mymodel})
+            myleglist.append(base_objects.Leg({'id':21,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':21,
+                                             'state':'initial'}))
 
-        myamplitude = diagram_generation.Amplitude()
+            myleglist.extend([base_objects.Leg({'id':21,
+                                                'state':'final'})] * (n + 1))
 
-        myamplitude.set('process', myprocess)
+            myprocess = base_objects.Process({'legs':myleglist,
+                                            'model':self.mymodel})
 
-        myamplitude.generate_diagrams()
+            myamplitude = diagram_generation.Amplitude()
 
-        col_basis = color_amp.ColorBasis(myamplitude, self.mymodel)
+            myamplitude.set('process', myprocess)
 
-        col_matrix = color_square.ColorMatrix(col_basis, Nc=3, Nc_limit=None)
+            myamplitude.generate_diagrams()
 
-        print col_matrix
+            col_basis = color_amp.ColorBasis(myamplitude, self.mymodel)
+
+            col_matrix = color_square.ColorMatrix(col_basis, Nc=3)
+
+            for i in range(len(col_basis.items())):
+                self.assertEqual(col_matrix.col_matrix_fixed_Nc[(i, i)],
+                                 (goal[n], 0))
+
+    def test_color_matrix_Nc_restrictions(self):
+        """Test the Nc power restriction during color basis building """
+
+        goal = [fractions.Fraction(3, 8),
+                fractions.Fraction(-9, 4),
+                fractions.Fraction(45, 16)]
+
+        for n in range(3):
+            myleglist = base_objects.LegList()
+
+            myleglist.append(base_objects.Leg({'id':21,
+                                             'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':21,
+                                             'state':'initial'}))
+
+            myleglist.extend([base_objects.Leg({'id':21,
+                                                'state':'final'})] * 2)
+
+            myprocess = base_objects.Process({'legs':myleglist,
+                                            'model':self.mymodel})
+
+            myamplitude = diagram_generation.Amplitude()
+
+            myamplitude.set('process', myprocess)
+
+            myamplitude.generate_diagrams()
+
+            col_basis = color_amp.ColorBasis(myamplitude, self.mymodel)
+
+            col_matrix = color_square.ColorMatrix(col_basis, Nc=3,
+                                                  Nc_power_min=n,
+                                                  Nc_power_max=2 * n)
+
+            for i in range(len(col_basis.items())):
+                self.assertEqual(col_matrix.col_matrix_fixed_Nc[(i, i)],
+                                 (goal[n], 0))
+

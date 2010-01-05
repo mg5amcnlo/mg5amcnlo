@@ -35,11 +35,12 @@ class ColorMatrix(dict):
     col_matrix_fixed_Nc = {}
     inverted_col_matrix = {}
 
-    def __init__(self, col_basis, col_basis2=None, Nc=3, Nc_limit=None):
+    def __init__(self, col_basis, col_basis2=None,
+                 Nc=3, Nc_power_min=None, Nc_power_max=None):
         """Initialize a color matrix with one or two color basis objects. If
         only one color basis is given, the other one is assumed to be equal.
-        As options, any value of Nc and minimal power of Nc can also be 
-        provided. Be careful that the minimal power constraint is applied
+        As options, any value of Nc and minimal/maximal power of Nc can also be 
+        provided. Be careful that the min/max power constraint is applied
         only at the end, so that it does NOT speed up the calculation."""
 
         self._col_basis1 = col_basis
@@ -48,11 +49,11 @@ class ColorMatrix(dict):
         else:
             self._col_basis2 = col_basis
 
-        self.build_matrix(Nc, Nc_limit)
+        self.build_matrix(Nc, Nc_power_min, Nc_power_max)
 
-    def build_matrix(self, Nc=3, Nc_limit=None):
+    def build_matrix(self, Nc=3, Nc_power_min=None, Nc_power_max=None):
         """Create the matrix using internal color basis objects. Use the stored
-        color basis objects and takes Nc and Nc_limit parameters as __init__."""
+        color basis objects and takes Nc and Nc_min/max parameters as __init__."""
 
         for i1, (struct1, contrib_list1) in \
                     enumerate(self._col_basis1.items()):
@@ -74,10 +75,13 @@ class ColorMatrix(dict):
                 col_fact = color_algebra.ColorFactor([col_str])
                 result = col_fact.full_simplify()
 
-                # Keep only terms with Nc power >= Nc_limit
-                if Nc_limit is not None:
+                # Keep only terms with Nc_max >= Nc power >= Nc_min
+                if Nc_power_min is not None:
                     result[:] = [col_str for col_str in result \
-                                 if col_str.Nc_power >= Nc_limit]
+                                 if col_str.Nc_power >= Nc_power_min]
+                if Nc_power_max is not None:
+                    result[:] = [col_str for col_str in result \
+                                 if col_str.Nc_power <= Nc_power_max]
 
                 # Calculate the fixed Nc representation
                 result_fixed_Nc = result.set_Nc(Nc)
