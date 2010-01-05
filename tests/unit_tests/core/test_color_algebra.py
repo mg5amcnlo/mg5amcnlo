@@ -225,6 +225,14 @@ class ColorStringTest(unittest.TestCase):
         self.assertEqual(self.my_col_string.to_immutable(),
                          (('f', (1, 2, 3)), ('d', (4, 5, 6))))
 
+    def test_from_immutable(self):
+        """Test the creation of a color string using its immutable rep"""
+
+        test_str = copy.copy(self.my_col_string)
+        test_str.from_immutable(self.my_col_string.to_immutable())
+
+        self.assertEqual(test_str, self.my_col_string)
+
     def test_replace_indices(self):
         """Test indices replacement"""
 

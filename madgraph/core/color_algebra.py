@@ -425,6 +425,15 @@ class ColorString(list):
         return tuple([(col_obj.__class__.__name__, tuple(col_obj)) \
                         for col_obj in self])
 
+    def from_immutable(self, immutable_rep):
+        """Fill the current object with Color Objects created using an immutable
+        representation."""
+
+        del self[:]
+
+        for col_tuple in immutable_rep:
+            self.append(globals()[col_tuple[0]](*col_tuple[1]))
+
     def replace_indices(self, repl_dict):
         """Replace current indices following the rules listed in the replacement
         dictionary written as {old_index:new_index,...}, does that for ALL 
@@ -446,6 +455,25 @@ class ColorString(list):
         return res
 
     __copy__ = create_copy
+
+    def set_Nc(self, Nc=3):
+        """Returns a tuple, with the first entry being the string coefficient 
+        with Nc replaced (by default by 3), and the second one being True
+        or False if the coefficient is imaginary or not. Raise an error if there
+        are still non trivial color objects."""
+
+        if self:
+            raise ValueError, \
+                "String %s cannot be simplified to a number!" % str(self)
+
+        if self.Nc_power >= 0:
+            return (self.coeff * fractions.Fraction(\
+                                            int(Nc ** self.Nc_power), 1),
+                    self.is_imaginary)
+        else:
+            return (self.coeff * fractions.Fraction(\
+                                            1, int(Nc ** abs(self.Nc_power))),
+                    self.is_imaginary)
 #===============================================================================
 # ColorFactor
 #===============================================================================
@@ -510,6 +538,13 @@ class ColorFactor(list):
             result = result.simplify()
             if result == ref:
                 return result
+
+    def set_Nc(self, Nc=3):
+        """Returns a tuple containing real and imaginary parts of the current
+        color factor, when Nc is replaced (3 by default)."""
+
+        return (sum([cs.set_Nc(Nc)[0] for cs in self if not cs.is_imaginary]),
+                sum([cs.set_Nc(Nc)[0] for cs in self if cs.is_imaginary]))
 
 
 

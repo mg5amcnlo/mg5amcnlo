@@ -20,44 +20,92 @@ import itertools
 
 import madgraph.core.color_algebra as color_algebra
 
-#def build_color_matrix(col_basis1, col_basis2, equal=False):
-#    """Create a color matrix NxM starting from color_basis dictionaries of size
-#    N and M. Also returns (in a pair) a dictionary summarizing the color matrix
-#    entries by only storing elements which are actually different."""
-#
-#    color_matrix = []
-#    color_dict = {}
-#
-#    for i1, (k1, v1) in enumerate(col_basis1.items()):
-#        color_line = []
-#        for i2, (k2, v2) in enumerate(col_basis2.items()):
-#            # First we create color factor for each string
-#            col_str1 = color_algebra.ColorString(list(k1))
-#            col_str2 = color_algebra.ColorString(list(k2))
-#            col_fact1 = color_algebra.ColorFactor([col_str1])
-#            col_fact2 = \
-#                color_algebra.ColorFactor([col_str2.complex_conjugate()])
-#            # We simplify them, INCLUDING T product simplification
-#            col_fact1.simplify()
-#            col_fact2.simplify()
-#
-#            col_fact = color_algebra.ColorFactor()
-#            for col_str1 in col_fact1:
-#                for col_str2 in col_fact2:
-#                    col_fact.append(color_algebra.ColorString(col_str1 + col_str2))
-#            col_fact.simplify()
-#            color_line.append(col_fact)
-#            col_fact.sort()
-#            tuple_col_fact = tuple([tuple(x) for x in col_fact])
-#
-#            if tuple_col_fact and tuple_col_fact not in color_dict.keys():
-#                color_dict[tuple_col_fact] = [(i1, i2)]
-#            elif col_fact:
-#                color_dict[tuple_col_fact].append((i1, i2))
-#        color_matrix.append(color_line)
-#
-#    return (color_matrix, color_dict)
+#===============================================================================
+# ColorMatrix
+#===============================================================================
+class ColorMatrix(dict):
+    """A color matrix, i.e. a dictionary with pairs (i,j) as keys where i
+    and j refer to elements of color basis objects. Values are Color Factor
+    objects. Also contains two additional dictonaries, one with the fixed Nc
+    representation of the matrix, and the other one with the "inverted" matrix,
+    i.e. a dictionary where keys are values of the color matrix."""
 
+    _col_basis1 = None
+    _col_basis2 = None
+    col_matrix_fixed_Nc = {}
+    inverted_col_matrix = {}
 
+    def __init__(self, col_basis, col_basis2=None, Nc=3, Nc_limit=None):
+        """Initialize a color matrix with one or two color basis objects. If
+        only one color basis is given, the other one is assumed to be equal.
+        As options, any value of Nc and minimal power of Nc can also be 
+        provided. Be careful that the minimal power constraint is applied
+        only at the end, so that it does NOT speed up the calculation."""
 
+        self._col_basis1 = col_basis
+        if col_basis2:
+            self._col_basis2 = col_basis2
+        else:
+            self._col_basis2 = col_basis
 
+        self.build_matrix(Nc, Nc_limit)
+
+    def build_matrix(self, Nc=3, Nc_limit=None):
+        """Create the matrix using internal color basis objects. Use the stored
+        color basis objects and takes Nc and Nc_limit parameters as __init__."""
+
+        for i1, (struct1, contrib_list1) in \
+                    enumerate(self._col_basis1.items()):
+            for i2, (struct2, contrib_list2) in \
+                    enumerate(self._col_basis2.items()):
+
+                # Create color string objects corresponding to color basis keys
+                col_str = color_algebra.ColorString()
+                col_str.from_immutable(struct1)
+
+                col_str2 = color_algebra.ColorString()
+                col_str2.from_immutable(struct2)
+
+                # Complex conjugate the second one and multiply the two
+                col_str.product(col_str2.complex_conjugate())
+
+                # Create a color factor to store the result and simplify it
+                # taking into account the limit on Nc
+                col_fact = color_algebra.ColorFactor([col_str])
+                result = col_fact.full_simplify()
+
+                # Keep only terms with Nc power >= Nc_limit
+                if Nc_limit is not None:
+                    result[:] = [col_str for col_str in result \
+                                 if col_str.Nc_power >= Nc_limit]
+
+                # Calculate the fixed Nc representation
+                result_fixed_Nc = result.set_Nc(Nc)
+
+                # Store the full result...
+                self[(i1, i2)] = result
+
+                # the fixed Nc one ...
+                self.col_matrix_fixed_Nc[(i1, i2)] = result_fixed_Nc
+
+                # and update the inverted dict
+                if result_fixed_Nc in self.inverted_col_matrix.keys():
+                    self.inverted_col_matrix[result_fixed_Nc].append((i1, i2))
+                else:
+                    self.inverted_col_matrix[result_fixed_Nc] = [(i1, i2)]
+
+    def __str__(self):
+        """Returns a nicely formatted string with the fixed Nc representation
+        of the current matrix (only the real part)"""
+
+        mystr = '\n\t' + '\t'.join([str(i) for i in \
+                                    range(len(self._col_basis2))])
+
+        for i1 in range(len(self._col_basis1)):
+            mystr = mystr + '\n' + str(i1) + '\t'
+            mystr = mystr + '\t'.join(['%i/%i' % \
+                        (self.col_matrix_fixed_Nc[(i1, i2)][0].numerator,
+                        self.col_matrix_fixed_Nc[(i1, i2)][0].denominator) \
+                        for i2 in range(len(self._col_basis2))])
+
+        return mystr
