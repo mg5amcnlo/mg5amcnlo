@@ -360,13 +360,13 @@ if __name__ == '__main__':
     cmd = MadGraphCmd()
     cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/particles.dat')
     cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/interactions.dat')
-    cmd.do_generate('g g > g g g g g g g g')
+    cmd.do_generate('g g > g g g g g')
     
     len(cmd.curr_amp['diagrams'])
     for i in range(0,1):
         start=time.time()
         try:
-            plot = Draw_diagrams_eps(cmd.curr_amp['diagrams'], 'diagram2_8.eps', 
+            plot = Draw_diagrams_eps(cmd.curr_amp['diagrams'], 'diagram2_5.eps', 
                              model= cmd.curr_model,
                              amplitude='')
             start=time.time()
