@@ -189,9 +189,10 @@ class ColorSquareTest(unittest.TestCase):
 
         goal = [fractions.Fraction(7, 3),
                 fractions.Fraction(19, 6),
-                fractions.Fraction(455, 108)]
+                fractions.Fraction(455, 108),
+                fractions.Fraction(3641, 648)]
 
-        for n in range(3):
+        for n in range(4):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':21,
@@ -255,4 +256,14 @@ class ColorSquareTest(unittest.TestCase):
             for i in range(len(col_basis.items())):
                 self.assertEqual(col_matrix.col_matrix_fixed_Nc[(i, i)],
                                  (goal[n], 0))
+
+    def test_color_matrix_canonical(self):
+        """Test the canonical representation of a immutable color string"""
+
+        immutable1 = (('f', (2, 3, 4)), ('T', (4, 2, 5)))
+        immutable2 = (('T', (3, 5)),)
+
+        self.assertEqual(color_square.ColorMatrix.to_canonical(immutable1,
+                                                               immutable2),
+                         (('T', (2, 4)), ('T', (3, 1, 4)), ('f', (1, 2, 3))))
 

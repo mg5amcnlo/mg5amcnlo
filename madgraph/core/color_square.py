@@ -55,36 +55,52 @@ class ColorMatrix(dict):
         """Create the matrix using internal color basis objects. Use the stored
         color basis objects and takes Nc and Nc_min/max parameters as __init__."""
 
+        canonical_dict = {}
+
         for i1, (struct1, contrib_list1) in \
                     enumerate(self._col_basis1.items()):
             for i2, (struct2, contrib_list2) in \
                     enumerate(self._col_basis2.items()):
+                print i1, i2
+                # Build a canonical representation of the two immutable struct
+                canonical_entry = self.to_canonical(struct1, struct2)
 
-                # Create color string objects corresponding to color basis keys
-                col_str = color_algebra.ColorString()
-                col_str.from_immutable(struct1)
+                try:
+                    # If this has already been calculated, use the result
+                    result = canonical_dict[canonical_entry][0]
+                    result_fixed_Nc = canonical_dict[canonical_entry][1]
 
-                col_str2 = color_algebra.ColorString()
-                col_str2.from_immutable(struct2)
+                except:
+                    # Otherwise calculate the result
 
-                # Complex conjugate the second one and multiply the two
-                col_str.product(col_str2.complex_conjugate())
+                    # Create color string objects corresponding to color basis keys
+                    col_str = color_algebra.ColorString()
+                    col_str.from_immutable(struct1)
 
-                # Create a color factor to store the result and simplify it
-                # taking into account the limit on Nc
-                col_fact = color_algebra.ColorFactor([col_str])
-                result = col_fact.full_simplify()
+                    col_str2 = color_algebra.ColorString()
+                    col_str2.from_immutable(struct2)
 
-                # Keep only terms with Nc_max >= Nc power >= Nc_min
-                if Nc_power_min is not None:
-                    result[:] = [col_str for col_str in result \
-                                 if col_str.Nc_power >= Nc_power_min]
-                if Nc_power_max is not None:
-                    result[:] = [col_str for col_str in result \
-                                 if col_str.Nc_power <= Nc_power_max]
+                    # Complex conjugate the second one and multiply the two
+                    col_str.product(col_str2.complex_conjugate())
 
-                # Calculate the fixed Nc representation
-                result_fixed_Nc = result.set_Nc(Nc)
+                    # Create a color factor to store the result and simplify it
+                    # taking into account the limit on Nc
+                    col_fact = color_algebra.ColorFactor([col_str])
+                    result = col_fact.full_simplify()
+
+                    # Keep only terms with Nc_max >= Nc power >= Nc_min
+                    if Nc_power_min is not None:
+                        result[:] = [col_str for col_str in result \
+                                     if col_str.Nc_power >= Nc_power_min]
+                    if Nc_power_max is not None:
+                        result[:] = [col_str for col_str in result \
+                                     if col_str.Nc_power <= Nc_power_max]
+
+                    # Calculate the fixed Nc representation
+                    result_fixed_Nc = result.set_Nc(Nc)
+
+                    # Store both results
+                    canonical_dict[canonical_entry] = (result, result_fixed_Nc)
 
                 # Store the full result...
                 self[(i1, i2)] = result
@@ -113,3 +129,29 @@ class ColorMatrix(dict):
                         for i2 in range(len(self._col_basis2))])
 
         return mystr
+
+    @classmethod
+    def to_canonical(self, immutable1, immutable2):
+        """Returns a pair (canonical1,canonical2) where canonical corresponds
+        to the canonical representation of the immutable representation (i.e.,
+        first index is 1, ...)"""
+
+        replaced_indices = {}
+        curr_ind = 1
+        return_list = []
+
+        for elem in immutable1 + immutable2:
+            can_elem = [elem[0], []]
+            for index in elem[1]:
+                try:
+                    new_index = replaced_indices[index]
+                except:
+                    new_index = curr_ind
+                    curr_ind += 1
+                    replaced_indices[index] = new_index
+                can_elem[1].append(new_index)
+            return_list.append((can_elem[0], tuple(can_elem[1])))
+
+        return_list.sort()
+
+        return tuple(return_list)
