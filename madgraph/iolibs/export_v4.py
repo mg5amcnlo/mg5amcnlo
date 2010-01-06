@@ -370,7 +370,7 @@ class FortranWriter():
                            res[len(res) - 1][split_at:])
                 res[len(res) - 2] = res[len(res) - 2][:split_at]
 
-            # Check if line starts with keyword and adjust indent 
+            # Check if line starts with keyword and adjust indent for next line
             for key in self.keyword_pairs.keys():
                 if re.search(key, myline.lower()):
                     self.__keyword_list.append(key)
