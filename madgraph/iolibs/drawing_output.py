@@ -272,10 +272,10 @@ class Draw_diagram_eps(Draw_diagram):
         if dy < 0:
             dx, dy = -1 * dx, -1 * dy
         elif dy == 0:
-            dx= 1.2
+            dx= 1.5
         
         x_pos = (x1 + x2) / 2 + 0.04  * dy
-        y_pos = (y1 + y2) / 2 - 0.04 * dx      
+        y_pos = (y1 + y2) / 2 - 0.055 * dx      
 
         x_pos, y_pos =self.rescale(x_pos, y_pos)
         self.text += ' %s  %s moveto \n' % (x_pos,y_pos)  
@@ -360,17 +360,20 @@ if __name__ == '__main__':
     cmd = MadGraphCmd()
     cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/particles.dat')
     cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/interactions.dat')
-    cmd.do_generate('g g > g g g g g g g ')
+    cmd.do_generate('g g > g g g g g g g g')
     
     len(cmd.curr_amp['diagrams'])
     for i in range(0,1):
         start=time.time()
-        plot = Draw_diagrams_eps(cmd.curr_amp['diagrams'][478:479], 'diagram2_7.eps', 
+        try:
+            plot = Draw_diagrams_eps(cmd.curr_amp['diagrams'], 'diagram2_8.eps', 
                              model= cmd.curr_model,
                              amplitude='')
-        start=time.time()
-        plot.draw()
-        stop=time.time()
-        print 'time to draw',stop-start
-        print 'done'
+            start=time.time()
+            plot.draw()
+            stop=time.time()
+            print 'time to draw',stop-start
+            print 'done'
+        except:
+            raise
         #a=raw_input('press a key to continue')

@@ -418,7 +418,7 @@ class Feynman_Diagram:
         else:
             # check that the last line is not a fake
             for line in last_vertex['line']:
-                self._deal_last_line(line, len(last_vertex['line']))
+                self._deal_last_line(line)
             
 
         #external particles have only one vertex attach to the line
@@ -435,6 +435,42 @@ class Feynman_Diagram:
                     line.def_end_point(vertex_point)      
            
         self.assign_model_to_line() #associate the model obj to all line
+        
+    def _find_leg_id(self, leg, equal=0, end=0):
+        """ find the position of leg in self._treated_legs
+            
+            if equal=0 returns the last occurence of number in the list
+            otherwise check that leg is the occurence in self._treated_legs
+            
+            the two methods provides if leg is not in self._treated_legs
+            (equal=0 send sometimes a result when equal=1 doesn't)
+            both output are needed in different part of the code
+            
+            To my understanding equal=1 is suppose to be sufficient but 
+            gg> 7x( g ) forces to use equal 0 mode as well
+            
+            end removes the comparaison for the 'end' last element of 
+            self._treated_legs
+        
+        """
+        
+        if equal:
+            return self._find_leg_id2(leg, end=end)
+
+        for i in range(len(self.lineList)-1-end,-1,-1):
+            if leg['number'] == self.lineList[i]['number']:
+
+                return i 
+
+        return None
+                      
+    def _find_leg_id2(self,leg,end=0):
+        """ find the position of leg in self._treated_legs
+            use object equality to find the position 
+        """
+        for i in range(len(self.lineList)-1-end,-1,-1):
+            if  (self._treated_legs[i] is leg):
+                return i
                 
     def _load_vertex(self, vertex):
         """
@@ -442,27 +478,36 @@ class Feynman_Diagram:
         add this one in self.vertexList
         assign the leg to the vertex (always in first available position
         position for initial particle will be change later
-        """
+        """ 
         
         vertex_point = Vertex_Point(vertex)
         self.vertexList.append(vertex_point)
-
-        for leg in vertex['legs']:
-            is_present = [i for i in range(0, len(self._treated_legs)) \
-                                         if self._treated_legs[i] is leg]
-            #use this method because self._treated_legs.index(leg) use simple 
-            #equality and didn't check that the pointer is the same.
+        for i in range(0,len(vertex['legs'])):
+            leg=vertex['legs'][i] 
             
-            if is_present:
-                line = self.lineList[is_present[0]]
+            #check legs status (old/new)
+            if i+1 != len(vertex['legs']):
+                # find last occurence in self._treated_legs with same number
+                # returns the position in that list 
+                id = self._find_leg_id(leg)
+            else:
+                # find if leg is in self._treated_legs
+                # returns the position in that list
+                id = self._find_leg_id(leg, equal=1) 
+            
+            #define the line associate to this leg 
+            print id  , i != len(vertex['legs'])                 
+            if id:
+                line = self.lineList[id]
             else:
                 line = self._load_leg(leg)
  
-                    
+            #associate the vertex to the line
             if line.start == 0:
                 line.def_begin_point(vertex_point)
             else:
-                line.def_end_point(vertex_point)         
+                line.def_end_point(vertex_point)
+         
     
     def _load_leg(self, leg):
         """ 
@@ -481,17 +526,10 @@ class Feynman_Diagram:
         remove connection vertex and reconnect correctly the different pieces
         """
         
-        pos1, pos2 = None, None
-        for i in range(0, len(self._treated_legs)):
-            if self._treated_legs[i] is last_vertex['legs'][0]:
-                pos1 = i
-                if pos2:
-                    break
-            if self._treated_legs[i] is last_vertex['legs'][1]:
-                pos2 = i
-                if pos1:
-                    break           
-                   
+        pos1 = self._find_leg_id(last_vertex['legs'][0],equal=0)
+        pos2 = self._find_leg_id(last_vertex['legs'][1],equal=0)
+        print 'equal line',pos1,pos2
+                             
         line1 = self.lineList[pos1]
         line2 = self.lineList[pos2]
         
@@ -513,23 +551,33 @@ class Feynman_Diagram:
             del self.lineList[pos1]
             self.vertexList.remove(last_vertex)     
             
-    def _deal_last_line(self, last_line, nb_line):
+    def _deal_last_line(self, last_line):
         """ 
         remove connection vertex and reconnect correctly the different pieces
-        """             
+        """
+                     
         if last_line.end==0:
-            number = last_line['number']
-            is_internal = [i for i in range(0,len(self.lineList)-nb_line) \
+            # find the position of the line in self._treated_legs
+            id1 = self._find_leg_id(last_line)
+            print id1, len(self._treated_legs)
+            # find if they are a second call to this line
+            id2 = self._find_leg_id(last_line, end=len(self._treated_legs)-id1)
+            
+            #old method
+            number=last_line['number']
+            is_internal = [i for i in range(0,len(self.lineList)-3) \
                                         if self.lineList[i]['number']==number]
-            if is_internal:
+            
+            if id2 is not None:
+                print id2==is_internal[-1]
                 #line is duplicate in linelist => remove this duplication
-                pos=is_internal[-1]
-                line = self.lineList[pos]
+                line = self.lineList[id2]
                 line.def_end_point(last_line.start)
                 last_line.start.remove_line(last_line)
                 pos=self.pos_to_line(last_line)
                 del self.lineList[pos]              
             else:
+                print len(is_internal)==0,id2,is_internal
                 return #this is an external line => everything is ok
 
     def assign_model_to_line(self):
