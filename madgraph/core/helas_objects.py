@@ -47,6 +47,16 @@ class HelasWavefunction(base_objects.PhysicsObject):
         """Default values for all properties"""
 
         # Properties related to the particle propagator
+        # For an electron, would have the following values
+        # pdg_code = 11
+        # name = 'e-'
+        # antiname = 'e+'
+        # spin = '1'   defined as 2 x spin + 1  
+        # color = '1'  1= singlet, 3 = triplet, 8=octet
+        # mass = 'zero'
+        # width = 'zero'
+        # is_part = 'true'    Particle not antiparticle
+        # self_antipart='false'   gluon, photo, h, or majorana would be true
         self['pdg_code'] = 0
         self['name'] = 'none'
         self['antiname'] = 'none'
@@ -57,12 +67,21 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['is_part'] = True
         self['self_antipart'] = False
         # Properties related to the interaction generating the propagator
+        # For an e- produced from an e+e-A vertex would have the following proporties
+        # interaction_id = ????? is this based on the model or the diagram?
+        # pdg_codes = [11,22]  please confirm
+        # inter_cololr = ?????
+        # lorentz = ????
+        # couplings = ???? 
         self['interaction_id'] = 0
         self['pdg_codes'] = []
         self['inter_color'] = []
         self['lorentz'] = []
         self['couplings'] = { (0, 0):'none'}
         # Properties relating to the leg/vertex
+        # state = ???  what are choices, incoming/outgoing and none?
+        # number_external = 2   if the electron and photon are external???
+        # fermionflow = 1    fermions have +-1 for flow. 
         self['state'] = 'incoming'
         self['mothers'] = HelasWavefunctionList()
         self['number_external'] = 0
@@ -308,10 +327,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
         taking into account fermion flow, for mother wavefunctions"""
  
         if self.get('self_antipart'):
+            #This is its own antiparticle e.g. a gluon
             return self.get('pdg_code')
  
         if self.get('state') not in ['incoming', 'outgoing']:
-            # This is a boson
+            # This is a boson (why not just use the is_boson function?)
             return self.get('pdg_code')
  
         if (self.get('state') == 'incoming' and self.get('is_part') \
@@ -325,10 +345,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
         taking into account fermion flow, for mother wavefunctions"""
  
         if self.get('self_antipart'):
+            #This is its own antiparticle e.g. gluon
             return self.get('pdg_code')
  
         if self.get('state') not in ['incoming', 'outgoing']:
-            # This is a boson
+            # This is a boson so just flip with antiparticle
             return -self.get('pdg_code')
  
         if (self.get('state') == 'outgoing' and self.get('is_part') \
