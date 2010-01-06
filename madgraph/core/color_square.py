@@ -16,7 +16,6 @@
 """Classes, methods and functions required to square a QCD color string for
 squared diagrams and interference terms."""
 
-import itertools
 import operator
 
 import madgraph.core.color_algebra as color_algebra
@@ -47,14 +46,23 @@ class ColorMatrix(dict):
         self._col_basis1 = col_basis
         if col_basis2:
             self._col_basis2 = col_basis2
+            self.build_matrix(Nc, Nc_power_min, Nc_power_max)
         else:
             self._col_basis2 = col_basis
+            # If the two color basis are equal, assumes the color matrix is 
+            # symmetric
+            self.build_matrix(Nc, Nc_power_min, Nc_power_max, is_symmetric=True)
 
         self.build_matrix(Nc, Nc_power_min, Nc_power_max)
 
-    def build_matrix(self, Nc=3, Nc_power_min=None, Nc_power_max=None):
+    def build_matrix(self, Nc=3,
+                     Nc_power_min=None,
+                     Nc_power_max=None,
+                     is_symmetric=False):
         """Create the matrix using internal color basis objects. Use the stored
-        color basis objects and takes Nc and Nc_min/max parameters as __init__."""
+        color basis objects and takes Nc and Nc_min/max parameters as __init__.
+        If is_isymmetric is True, build only half of the matrix which is assumed
+        to be symmetric."""
 
         canonical_dict = {}
 
@@ -62,6 +70,10 @@ class ColorMatrix(dict):
                     enumerate(self._col_basis1.items()):
             for i2, (struct2, contrib_list2) in \
                     enumerate(self._col_basis2.items()):
+
+                # Only scan upper right triangle if symmetric
+                if is_symmetric and i2 < i1:
+                    continue
 
                 # Fix indices in struct2 knowing summed indices in struct1
                 # to avoid duplicates
@@ -75,10 +87,11 @@ class ColorMatrix(dict):
                     result = canonical_dict[canonical_entry][0]
                     result_fixed_Nc = canonical_dict[canonical_entry][1]
 
-                except:
+                except KeyError:
                     # Otherwise calculate the result
 
-                    # Create color string objects corresponding to color basis keys
+                    # Create color string objects corresponding to color basis 
+                    # keys
                     col_str = color_algebra.ColorString()
                     col_str.from_immutable(struct1)
 
@@ -109,15 +122,23 @@ class ColorMatrix(dict):
 
                 # Store the full result...
                 self[(i1, i2)] = result
+                if is_symmetric:
+                    self[(i2, i1)] = result
 
                 # the fixed Nc one ...
                 self.col_matrix_fixed_Nc[(i1, i2)] = result_fixed_Nc
 
                 # and update the inverted dict
                 if result_fixed_Nc in self.inverted_col_matrix.keys():
-                    self.inverted_col_matrix[result_fixed_Nc].append((i1, i2))
+                    self.inverted_col_matrix[result_fixed_Nc].append((i1,
+                                                                      i2))
+                    if is_symmetric:
+                        self.inverted_col_matrix[result_fixed_Nc].append((i2,
+                                                                          i1))
                 else:
                     self.inverted_col_matrix[result_fixed_Nc] = [(i1, i2)]
+                    if is_symmetric:
+                        self.inverted_col_matrix[result_fixed_Nc] = [(i2, i1)]
 
     def __str__(self):
         """Returns a nicely formatted string with the fixed Nc representation
@@ -150,7 +171,7 @@ class ColorMatrix(dict):
             for index in elem[1]:
                 try:
                     new_index = replaced_indices[index]
-                except:
+                except KeyError:
                     new_index = curr_ind
                     curr_ind += 1
                     replaced_indices[index] = new_index

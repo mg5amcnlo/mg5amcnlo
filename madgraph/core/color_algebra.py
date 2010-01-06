@@ -89,13 +89,13 @@ class Tr(ColorObject):
             col_str.coeff = fractions.Fraction(0, 1)
             return ColorFactor([col_str])
 
-        #Tr()=Nc
+        # Tr()=Nc
         if len(self) == 0:
             col_str = ColorString()
             col_str.Nc_power = 1
             return ColorFactor([col_str])
 
-        #Always order starting from smallest index
+        # Always order starting from smallest index
         if self[0] != min(self):
             pos = self.index(min(self))
             new = self[pos:] + self[:pos]
@@ -122,6 +122,7 @@ class Tr(ColorObject):
         Tr(a,x,b)Tr(c,x,d) = 1/2(Tr(a,d,c,b)-1/Nc Tr(a,b)Tr(c,d)) and
         Tr(a,x,b)T(c,x,d,i,j) = 1/2(T(c,b,a,d,i,j)-1/Nc Tr(a,b)T(c,d,i,j))"""
 
+        # Tr(a,x,b)Tr(c,x,d) = 1/2(Tr(a,d,c,b)-1/Nc Tr(a,b)Tr(c,d))
         if isinstance(col_obj, Tr):
             for i1, index1 in enumerate(self):
                 for i2, index2 in enumerate(col_obj):
@@ -137,6 +138,7 @@ class Tr(ColorObject):
                         col_str2.Nc_power = -1
                         return ColorFactor([col_str1, col_str2])
 
+        # Tr(a,x,b)T(c,x,d,i,j) = 1/2(T(c,b,a,d,i,j)-1/Nc Tr(a,b)T(c,d,i,j))
         if isinstance(col_obj, T):
             for i1, index1 in enumerate(self):
                 for i2, index2 in enumerate(col_obj[:-2]):

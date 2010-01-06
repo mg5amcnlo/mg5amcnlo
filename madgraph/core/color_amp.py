@@ -51,10 +51,14 @@ class ColorBasis(dict):
                 old_num = vertex.get('legs')[1].get('number')
                 new_num = vertex.get('legs')[0].get('number')
                 # Be careful i1 or i2 might have been replaced themselves
-                if old_num in repl_dict.keys():
+                try:
                     old_num = repl_dict[old_num]
-                if new_num in repl_dict.keys():
+                except KeyError:
+                    pass
+                try:
                     new_num = repl_dict[new_num]
+                except KeyError:
+                    pass
                 # Do the replacement
                 for (ind_chain, col_str_chain) in res_dict.items():
                     col_str_chain.replace_indices({old_num:new_num})
@@ -83,11 +87,13 @@ class ColorBasis(dict):
                         model.get('particle_dict')[curr_pdg].get_anti_pdg_code()
                     repl_dict[curr_num] = min_index
                     min_index = min_index - 1
-                if curr_num in repl_dict.keys():
+                try:
                     curr_num = repl_dict[curr_num]
-                if curr_pdg in dict_pdg_leg.keys():
+                except KeyError:
+                    pass
+                try:
                     dict_pdg_leg[curr_pdg].append(curr_num)
-                else:
+                except KeyError:
                     dict_pdg_leg[curr_pdg] = [curr_num]
 
             # Create a list of associated leg number following the same order
@@ -157,9 +163,9 @@ class ColorBasis(dict):
                                 col_str.coeff,
                                 col_str.is_imaginary,
                                 col_str.Nc_power)
-                if immutable_col_str in self.keys():
+                try:
                     self[immutable_col_str].append(basis_entry)
-                else:
+                except KeyError:
                     self[immutable_col_str] = [basis_entry]
 
     def build(self, amplitude, model):

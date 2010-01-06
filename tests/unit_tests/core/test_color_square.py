@@ -192,6 +192,23 @@ class ColorSquareTest(unittest.TestCase):
                 fractions.Fraction(455, 108),
                 fractions.Fraction(3641, 648)]
 
+        goal_line1 = [(fractions.Fraction(7, 3), fractions.Fraction(-2, 3)),
+                      (fractions.Fraction(19, 6), fractions.Fraction(-1, 3),
+                       fractions.Fraction(-1, 3), fractions.Fraction(-1, 3),
+                       fractions.Fraction(2, 3), fractions.Fraction(-1, 3)),
+                    (fractions.Fraction(455, 108), fractions.Fraction(-29, 54),
+                       fractions.Fraction(17, 27), fractions.Fraction(7, 54),
+                       fractions.Fraction(-1, 27), fractions.Fraction(17, 27),
+                       fractions.Fraction(5, 108), fractions.Fraction(7, 54),
+                       fractions.Fraction(7, 54), fractions.Fraction(-1, 27),
+                       fractions.Fraction(7, 54), fractions.Fraction(5, 108),
+                       fractions.Fraction(-10, 27), fractions.Fraction(-29, 54),
+                       fractions.Fraction(-29, 54), fractions.Fraction(-29, 54),
+                       fractions.Fraction(-29, 54), fractions.Fraction(7, 54),
+                       fractions.Fraction(17, 27), fractions.Fraction(-1, 27),
+                       fractions.Fraction(-1, 27), fractions.Fraction(17, 27),
+                       fractions.Fraction(-1, 27), fractions.Fraction(17, 27))]
+
         for n in range(3):
             myleglist = base_objects.LegList()
 
@@ -215,11 +232,16 @@ class ColorSquareTest(unittest.TestCase):
             col_basis = color_amp.ColorBasis(myamplitude, self.mymodel)
 
             col_matrix = color_square.ColorMatrix(col_basis, Nc=3)
-            print col_matrix
 
+            # Check diagonal
             for i in range(len(col_basis.items())):
                 self.assertEqual(col_matrix.col_matrix_fixed_Nc[(i, i)],
                                  (goal[n], 0))
+
+            # Check first line
+            for i in range(len(col_basis.items())):
+                self.assertEqual(col_matrix.col_matrix_fixed_Nc[(0, i)],
+                                 (goal_line1[n][i], 0))
 
     def test_color_matrix_Nc_restrictions(self):
         """Test the Nc power restriction during color basis building """
