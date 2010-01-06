@@ -311,7 +311,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if self.get('self_antipart'):
             return self.get('pdg_code')
  
-        if self.get('state') not in ['incoming', 'outgoing']:
+        if self.is_boson():
             # This is a boson
             return self.get('pdg_code')
  
@@ -328,7 +328,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if self.get('self_antipart'):
             return self.get('pdg_code')
  
-        if self.get('state') not in ['incoming', 'outgoing']:
+        if self.is_boson():
             # This is a boson
             return -self.get('pdg_code')
  
@@ -531,9 +531,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 return []
 
         # Pick out fermion mothers
-        out_fermions = filter(lambda wf: wf.get('state') == 'outgoing',
+        out_fermions = filter(lambda wf: wf.get_with_flow('state') == 'outgoing',
                               self.get('mothers'))
-        in_fermions = filter(lambda wf: wf.get('state') == 'incoming',
+        in_fermions = filter(lambda wf: wf.get_with_flow('state') == 'incoming',
                               self.get('mothers'))
         # Pick out bosons
         bosons = filter(lambda wf: wf.is_boson(), self.get('mothers'))
@@ -568,6 +568,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
             fermion_number_list.append(out_list[0])
             fermion_number_list.extend(in_list[1])
             fermion_number_list.extend(out_list[1])
+        elif len(in_fermions) != len(out_fermions):
+            raise self.HelasWavefunctionError, \
+                  "Error: %d incoming fermions != %d outgoing fermions" % \
+                  (len(in_fermions),len(out_fermions))
+            
             
         return fermion_number_list
 
@@ -586,7 +591,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             # Just return (spin, state)
             return self.get(name)
         
-        # If fermionflow is -1, need to flip state
+        # If fermionflow is -1, need to flip particle identity and state
         if name == 'is_part':
             return not self.get('is_part')
         if name == 'state':
@@ -948,9 +953,9 @@ class HelasAmplitude(base_objects.PhysicsObject):
         to this amplitude"""
 
         # Pick out fermion mothers
-        out_fermions = filter(lambda wf: wf.get('state') == 'outgoing',
+        out_fermions = filter(lambda wf: wf.get_with_flow('state') == 'outgoing',
                               self.get('mothers'))
-        in_fermions = filter(lambda wf: wf.get('state') == 'incoming',
+        in_fermions = filter(lambda wf: wf.get_with_flow('state') == 'incoming',
                               self.get('mothers'))
         # Pick out bosons
         bosons = filter(lambda wf: wf.is_boson(), self.get('mothers'))
@@ -975,6 +980,10 @@ class HelasAmplitude(base_objects.PhysicsObject):
             fermion_number_list.append(out_list[0])
             fermion_number_list.extend(in_list[1])
             fermion_number_list.extend(out_list[1])
+        elif len(in_fermions) != len(out_fermions):
+            raise self.HelasWavefunctionError, \
+                  "Error: %d incoming fermions != %d outgoing fermions" % \
+                  (len(in_fermions),len(out_fermions))
 
         return self.sign_flips_to_order(fermion_number_list)
 
