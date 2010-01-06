@@ -176,13 +176,17 @@ class Amplitude(base_objects.PhysicsObject):
         # list of vertices
 
         # Set is_decay_chain to True if this is a 1->N decay process
-        # as part of a decay chain.  Note that this works only if the
-        # decaying particle does NOT occur among the final state
-        # particles
+        # as part of a decay chain.
         is_decay_chain = True
         if is_decay_chain:
             part = model.get('particle_dict')[leglist[0].get('id')]
+            # For decay chain legs, we want everything to combine to
+            # the initial leg. This is done by only allowing the
+            # initial leg to combine as a final identity.
             ref_dict_to0 = {(part.get_pdg_code(),part.get_anti_pdg_code()):0}
+            # Need to set initial leg from_group to None, to make sure
+            # it can only be combined at the end.
+            leglist[0].set('from_group', None)
             reduced_leglist = self.reduce_leglist(leglist,
                                                   max_multi_to1,
                                                   ref_dict_to0,
@@ -263,7 +267,8 @@ class Amplitude(base_objects.PhysicsObject):
 
 
         # If all legs can be combined in one single vertex, add this
-        # vertex to res and continue
+        # vertex to res and continue.
+        # Special treatment for decay chain legs
         if curr_leglist.can_combine_to_0(ref_dict_to0, is_decay_chain):
             # Extract the interaction id associated to the vertex 
             vertex_id = ref_dict_to0[tuple(sorted([leg.get('id') for \
@@ -499,7 +504,11 @@ class Amplitude(base_objects.PhysicsObject):
                 # and add it
                 else:
                     cp_entry = copy.copy(entry)
-                    cp_entry.set('from_group', False)
+                    # Need special case for from_group == None; this
+                    # is for initial state leg of decay chain process
+                    # (see Leg.can_combine_to_0)
+                    if cp_entry.get('from_group') != None:
+                        cp_entry.set('from_group', False)
                     reduced_list.append(cp_entry)
 
             # Flatten the obtained leg and vertex lists

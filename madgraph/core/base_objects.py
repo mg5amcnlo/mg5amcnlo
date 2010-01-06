@@ -764,7 +764,7 @@ class Leg(PhysicsObject):
                                                                     str(value)
 
         if name == 'from_group':
-            if not isinstance(value, bool):
+            if not isinstance(value, bool) and value != None:
                 raise self.PhysicsObjectError, \
                         "%s is not a valid boolean for leg flag from_group" % \
                                                                     str(value)
@@ -854,7 +854,11 @@ class LegList(PhysicsObjectList):
            return the vertex (with id from ref_dict_to0), otherwise return None
            """
         if is_decay_chain:
-            return len(self.from_group_elements()) == 1 and \
+            # Special treatment - here we only allow combination to 0
+            # if the initial leg (marked by from_group = None) is
+            # unclustered, since we want this to stay until the very
+            # end.
+            return any(leg.get('from_group') == None for leg in self) and \
                    ref_dict_to0.has_key(tuple(sorted([leg.get('id') \
                                                       for leg in self])))
 
