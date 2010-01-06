@@ -849,10 +849,15 @@ class LegList(PhysicsObjectList):
         else:
             return False
 
-    def can_combine_to_0(self, ref_dict_to0):
+    def can_combine_to_0(self, ref_dict_to0, is_decay_chain):
         """If has at least two 'from_group' True and in ref_dict_to0,
            return the vertex (with id from ref_dict_to0), otherwise return None
            """
+        if is_decay_chain:
+            return len(self.from_group_elements()) == 1 and \
+                   ref_dict_to0.has_key(tuple(sorted([leg.get('id') \
+                                                      for leg in self])))
+
         if self.minimum_two_from_group():
             return ref_dict_to0.has_key(tuple(sorted([leg.get('id') for leg in self])))
         else:
