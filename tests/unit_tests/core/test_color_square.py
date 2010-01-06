@@ -192,7 +192,7 @@ class ColorSquareTest(unittest.TestCase):
                 fractions.Fraction(455, 108),
                 fractions.Fraction(3641, 648)]
 
-        for n in range(4):
+        for n in range(3):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':21,
@@ -215,6 +215,7 @@ class ColorSquareTest(unittest.TestCase):
             col_basis = color_amp.ColorBasis(myamplitude, self.mymodel)
 
             col_matrix = color_square.ColorMatrix(col_basis, Nc=3)
+            print col_matrix
 
             for i in range(len(col_basis.items())):
                 self.assertEqual(col_matrix.col_matrix_fixed_Nc[(i, i)],
@@ -267,3 +268,12 @@ class ColorSquareTest(unittest.TestCase):
                                                                immutable2),
                          (('T', (2, 4)), ('T', (3, 1, 4)), ('f', (1, 2, 3))))
 
+    def test_color_matrix_fixed_indices(self):
+        """Test index fixing for immutable color string"""
+
+        immutable1 = (('f', (1, -1, -3)), ('T', (-1, -3, 4)))
+        immutable2 = (('d', (1, -2, -1)), ('T', (-1, -2, 4)))
+
+        self.assertEqual(color_square.ColorMatrix.fix_summed_indices(immutable1,
+                                                               immutable2),
+                         (('d', (1, -2, -5)), ('T', (-5, -2, 4))))

@@ -17,6 +17,7 @@
 squared diagrams and interference terms."""
 
 import itertools
+import operator
 
 import madgraph.core.color_algebra as color_algebra
 
@@ -61,9 +62,13 @@ class ColorMatrix(dict):
                     enumerate(self._col_basis1.items()):
             for i2, (struct2, contrib_list2) in \
                     enumerate(self._col_basis2.items()):
-                print i1, i2
+
+                # Fix indices in struct2 knowing summed indices in struct1
+                # to avoid duplicates
+                new_struct2 = self.fix_summed_indices(struct1, struct2)
+
                 # Build a canonical representation of the two immutable struct
-                canonical_entry = self.to_canonical(struct1, struct2)
+                canonical_entry = self.to_canonical(struct1, new_struct2)
 
                 try:
                     # If this has already been calculated, use the result
@@ -78,7 +83,7 @@ class ColorMatrix(dict):
                     col_str.from_immutable(struct1)
 
                     col_str2 = color_algebra.ColorString()
-                    col_str2.from_immutable(struct2)
+                    col_str2.from_immutable(new_struct2)
 
                     # Complex conjugate the second one and multiply the two
                     col_str.product(col_str2.complex_conjugate())
@@ -153,5 +158,37 @@ class ColorMatrix(dict):
             return_list.append((can_elem[0], tuple(can_elem[1])))
 
         return_list.sort()
+
+        return tuple(return_list)
+
+    @classmethod
+    def fix_summed_indices(self, struct1, struct2):
+        """Returns a copy of the immutable Color String representation struct2 
+        where summed indices are modified to avoid duplicates with those
+        appearing in struct1. Assumes internal summed indices are negative."""
+
+        # First, determines what is the smallest index appearing in struct1
+        min_index = min(reduce(operator.add,
+                                [list(elem[1]) for elem in struct1])) - 1
+        # Second, determines the summed indices in struct2 and create a 
+        # replacement dictionary
+        repl_dict = {}
+        list2 = reduce(operator.add,
+                       [list(elem[1]) for elem in struct1])
+        for summed_index in list(set([i for i in list2 \
+                                      if list2.count(i) == 2])):
+            repl_dict[summed_index] = min_index
+            min_index -= 1
+
+        # Three, create a new immutable struct by doing replacements in struct2
+        return_list = []
+        for elem in struct2:
+            fix_elem = [elem[0], []]
+            for index in elem[1]:
+                try:
+                    fix_elem[1].append(repl_dict[index])
+                except:
+                    fix_elem[1].append(index)
+            return_list.append((elem[0], tuple(fix_elem[1])))
 
         return tuple(return_list)
