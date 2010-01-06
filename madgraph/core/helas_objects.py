@@ -17,6 +17,7 @@ import copy
 import logging
 import re
 import itertools
+from math import factorial as factorial
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -1348,6 +1349,73 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             mothers.append(wf)
 
         return mothers
+
+    def get_number_of_wavefunctions(self):
+        """Gives the total number of wavefunctions for this amplitude"""
+        return sum([ len(d.get('wavefunctions')) for d in \
+                       self.get('diagrams')])
+
+    def get_helicity_combinations(self):
+        """Gives the number of helicity combinations for external
+        wavefunctions"""
+
+        if not self.get('processes'):
+            return None
+        
+        model = self.get('processes')[0].get('model')
+
+        return reduce(lambda x, y: x * y,
+                      [ len(model.get('particle_dict')[leg.get('id')].\
+                            get_helicity_states())\
+                        for leg in self.get('processes')[0].get('legs') ])
+
+    def get_helicity_matrix(self):
+        """Gives the helicity matrix for external wavefunctions"""
+
+        if not self.get('processes'):
+            return None
+        
+        process = self.get('processes')[0]
+        model = process.get('model')
+
+        return apply(itertools.product,[ model.get('particle_dict')[\
+                                         leg.get('id')].get_helicity_states()\
+                                         for leg in process.get('legs') ])
+
+    def get_denominator_factor(self):
+        """Calculate the denominator factor due:
+        Averaging initial state color and spin, and identical final state particles"""
+        
+        model = self.get('processes')[0].get('model')
+
+        initial_legs = filter(lambda leg: leg.get('state') == 'initial', \
+                              self.get('processes')[0].get('legs'))
+
+        spin_factor = reduce(lambda x, y: x * y,
+                             [ len(model.get('particle_dict')[leg.get('id')].\
+                                   get_helicity_states())\
+                               for leg in initial_legs ])        
+
+        color_factor = reduce(lambda x, y: x * y,
+                              [ model.get('particle_dict')[leg.get('id')].\
+                                    get('color')\
+                                for leg in initial_legs ])        
+
+        final_legs = filter(lambda leg: leg.get('state') == 'final', \
+                              self.get('processes')[0].get('legs'))
+
+        identical_indices = {}
+        for leg in final_legs:
+            if leg.get('id') in identical_indices:
+                identical_indices[leg.get('id')] = \
+                                    identical_indices[leg.get('id')] + 1
+            else:
+                identical_indices[leg.get('id')] = 1
+        identical_factor = reduce(lambda x, y: x * y,
+                                  [ factorial(val) for val in \
+                                    identical_indices.values() ])
+
+        return spin_factor * color_factor * identical_factor
 
 #===============================================================================
 # HelasModel

@@ -20,25 +20,228 @@ import copy
 import re
 
 import madgraph.core.helas_objects as helas_objects
+import madgraph.iolibs.misc as misc
 
 #===============================================================================
 # write_amplitude_v4_standalone
 #===============================================================================
 def write_matrix_element_v4_standalone(fsock, matrix_element, fortran_model):
-    """Export a matrix element to a matrix.f file for MG4 standalone"""
+    """Export a matrix element to a matrix.f file in MG4 standalone format"""
  
-    helas_calls = fortran_model.get_matrix_element_calls(\
-                matrix_element)
+    if not matrix_element.get('processes') or \
+           not matrix_element.get('diagrams'):
+        return 0
 
     writer = FortranWriter()
-    
-    for call in helas_calls:
-        writer.write_fortran_line(fsock, call)
-        
-    writer.write_fortran_line(fsock,
-                              fortran_model.get_JAMP_line(matrix_element))
+    # Set lowercase/uppercase Fortran code
+    writer.downcase = False
 
-    return len(helas_calls)
+    replace_dict = {}
+
+    # Extract version number and date from VERSION file
+    info_lines = get_mg5_info_lines()
+    replace_dict['info_lines'] = info_lines
+
+    # Extract process info lines
+    process_lines = "\n".join([ "C " + process.nice_string() for process in \
+                                matrix_element.get('processes')])
+    replace_dict['process_lines'] = process_lines
+
+    # Extract number of external particles
+    nexternal = len(matrix_element.get('processes')[0].get('legs'))
+    replace_dict['nexternal'] = nexternal
+
+    # Extract ncomb
+    ncomb = matrix_element.get_helicity_combinations()
+    replace_dict['ncomb'] = ncomb
+
+    # Extract helicity lines
+    helicity_line_list = []
+    i = 0
+    for helicities in matrix_element.get_helicity_matrix():
+        i = i + 1
+        int_list = [i, len(helicities)]
+        int_list.extend(helicities)
+        helicity_line_list.append(\
+            ("DATA (NHEL(IHEL,%4r),IHEL=1,%d) /" + \
+             ",".join(['%2r'] * len(helicities)) + "/") % tuple(int_list))
+
+    helicity_lines = "\n".join(helicity_line_list)
+    replace_dict['helicity_lines'] = helicity_lines
+    
+    # Extract overall denominator
+    # Averaging initial state color, spin, and identical FS particles
+    den_factor_line = "DATA IDEN/%2r/" % \
+                       matrix_element.get_denominator_factor()
+    replace_dict['den_factor_line'] = den_factor_line
+
+    # Extract ngraphs
+    ngraphs = len(matrix_element.get('diagrams'))
+    replace_dict['ngraphs'] = ngraphs
+
+    # Extract nwavefuncs
+    nwavefuncs = matrix_element.get_number_of_wavefunctions()
+    replace_dict['nwavefuncs'] = nwavefuncs
+
+    # Extract neigen - FIX
+    neigen = 1
+    replace_dict['neigen'] = neigen
+
+    # Extract ncolor - FIX!
+    ncolor = 1
+    replace_dict['ncolor'] = ncolor
+
+    # Extract color data lines - FIX!
+    color_data_lines = """DATA Denom(1)/1/
+                          DATA (CF(i,1),i=1,1) /1/"""
+    replace_dict['color_data_lines'] = color_data_lines
+
+    # Extract helas calls
+    helas_call_list = fortran_model.get_matrix_element_calls(\
+                matrix_element)
+    helas_calls = "\n".join(helas_call_list)
+    replace_dict['helas_calls'] = helas_calls
+
+    # Extract JAMP lines
+    jamp_lines = fortran_model.get_JAMP_line(matrix_element)
+    replace_dict['jamp_lines'] = jamp_lines
+
+    file = \
+"""      SUBROUTINE SMATRIX(P,ANS)
+C  
+%(info_lines)s
+C 
+C MadGraph StandAlone Version
+C 
+C Returns amplitude squared summed/avg over colors
+c and helicities
+c for the point in phase space P(0:3,NEXTERNAL)
+C  
+%(process_lines)s
+C  
+      IMPLICIT NONE
+C  
+C CONSTANTS
+C  
+      integer    nexternal
+      parameter (nexternal=%(nexternal)d)
+      INTEGER                 NCOMB         
+      PARAMETER (             NCOMB=%(ncomb)d)
+C  
+C ARGUMENTS 
+C  
+      REAL*8 P(0:3,NEXTERNAL),ANS
+C  
+C LOCAL VARIABLES 
+C  
+      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
+      REAL*8 T
+      REAL*8 MATRIX
+      INTEGER IHEL,IDEN, I
+      INTEGER JC(NEXTERNAL)
+      LOGICAL GOODHEL(NCOMB)
+      DATA NTRY/0/
+      DATA GOODHEL/NCOMB*.FALSE./
+%(helicity_lines)s
+%(den_factor_line)s
+C ----------
+C BEGIN CODE
+C ----------
+      NTRY=NTRY+1
+      DO IHEL=1,NEXTERNAL
+         JC(IHEL) = +1
+      ENDDO
+      ANS = 0D0
+          DO IHEL=1,NCOMB
+             IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
+                 T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
+               ANS=ANS+T
+               IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
+                   GOODHEL(IHEL)=.TRUE.
+               ENDIF
+             ENDIF
+          ENDDO
+      ANS=ANS/DBLE(IDEN)
+      END
+       
+       
+      REAL*8 FUNCTION MATRIX(P,NHEL,IC)
+C  
+%(info_lines)s
+C
+C Returns amplitude squared summed/avg over colors
+c for the point with external lines W(0:6,NEXTERNAL)
+C  
+%(process_lines)s
+C  
+      IMPLICIT NONE
+C  
+C CONSTANTS
+C  
+      INTEGER    NGRAPHS, NEIGEN 
+      PARAMETER (NGRAPHS=%(ngraphs)d, NEIGEN=%(neigen)d) 
+      integer    nexternal
+      parameter (nexternal=%(nexternal)d)
+      INTEGER    NWAVEFUNCS, NCOLOR
+      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
+      REAL*8     ZERO
+      PARAMETER (ZERO=0D0)
+C  
+C ARGUMENTS 
+C  
+      REAL*8 P(0:3,NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+C  
+C LOCAL VARIABLES 
+C  
+      INTEGER I,J
+      COMPLEX*16 ZTEMP
+      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
+      COMPLEX*16 W(18,NWAVEFUNCS)
+C  
+C GLOBAL VARIABLES
+C  
+      include "coupl.inc"
+C  
+C COLOR DATA
+C  
+%(color_data_lines)s
+C ----------
+C BEGIN CODE
+C ----------
+%(helas_calls)s
+%(jamp_lines)s
+
+      MATRIX = 0.D0 
+      DO I = 1, NCOLOR
+          ZTEMP = (0.D0,0.D0)
+          DO J = 1, NCOLOR
+              ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
+          ENDDO
+          MATRIX =MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
+      ENDDO
+C      CALL GAUGECHECK(JAMP,ZTEMP,EIGEN_VEC,EIGEN_VAL,NCOLOR,NEIGEN) 
+      END""" % replace_dict
+
+    # Write the file
+    for line in file.split('\n'):
+        writer.write_fortran_line(fsock, line)
+
+    return len(helas_call_list)
+
+def get_mg5_info_lines():
+    """Return info lines for MG5, suitable to place at beginning of Fortran files"""
+    info = misc.get_pkg_info()
+    info_lines = ""
+    if info.has_key('version') and  info.has_key('date'):
+        info_lines = "C  Generated by MadGraph 5 v. %s, %s\n" % \
+                     (info['version'], info['date'])
+        info_lines = info_lines + \
+                     "C  By the MadGraph Development Team\n" + \
+                     "C  Please visit us at https://launchpad.net/madgraph5"
+    return info_lines
+
 
 #===============================================================================
 # FortranWriter
@@ -47,16 +250,24 @@ class FortranWriter():
     """Routines for writing fortran lines. Keeps track of indentation
     and splitting of long lines"""
 
-    keyword_pairs = {'^if.+then': ('^endif', 2),
-                     '^do': ('^enddo', 2),
-                     '^subroutine': ('^end', 0),
-                     'function': ('^end', 0)}
+    # Parameters defining the output of the Fortran writer
+    keyword_pairs = {'^if.+then\s*$': ('^endif', 2),
+                     '^do': ('^enddo\s*$', 2),
+                     '^subroutine': ('^end\s*$', 0),
+                     'function': ('^end\s*$', 0)}
+    single_indents = {'^else\s*$': -2,
+                      '^else\s*if.+then\s*$': -2}
     line_cont_char = '$'
-    downcase = True
+    comment_char = 'c'
+    downcase = False
     line_length = 71
-    
-    indent = 0
-    keyword_list = []
+    max_split = 10
+    split_characters = "+-*/, "
+    comment_split_characters = " "
+
+    # Private variables
+    __indent = 0
+    __keyword_list = []
     
     def write_fortran_line(self, fsock, line):
         """Write a fortran line, with correct indent and line splits"""
@@ -65,47 +276,116 @@ class FortranWriter():
             raise FortranWriterError,\
                   "write_fortran_line must have a single line as argument"
 
-        # Strip leading spaces from line
-        myline = line.lstrip()
-
         # Check if this line is a comment
         comment = False
-
-        # Convert to upper or lower case (unless comment)
-        if not comment:
+        if re.search("^#", line.lstrip()) or \
+           re.search("^c$", line, re.IGNORECASE) or \
+               re.search("^c\s+", line, re.IGNORECASE) and \
+               not re.search("^c\s+=", line, re.IGNORECASE):
+            # This is a comment
+            myline = " " * (5 + self.__indent) + line.lstrip()[1:].lstrip()
             if self.downcase:
-                myline = myline.lower()
+                self.comment_char = self.comment_char.lower()
             else:
-                myline = myline.upper()
+                self.comment_char = self.comment_char.upper()
+            myline = self.comment_char + myline
+            res = [myline]
+            part = ""
+            post_comment = ""
+            # Break line in appropriate places
+            # defined (in priority order) by the characters in split_characters
+            while len(res[len(res) - 1]) > self.line_length:
+                split_at = self.line_length
+                for character in self.split_characters:
+                    index = res[len(res) - 1][(self.line_length - self.max_split):\
+                                              self.line_length].rfind(character)
+                    if index >= 0:
+                        split_at = self.line_length - self.max_split + index
+                        break
+                    
+                res.append(self.comment_char + " " * (5 + self.__indent) + \
+                           res[len(res) - 1][split_at:])
+                res[len(res) - 2] = res[len(res) - 2][:split_at]
+        else:
+            # This is a regular Fortran line
 
-        # Check if line starts with dual keyword and adjust indent 
-        if self.keyword_list:
-            if re.search(self.keyword_pairs[\
-                self.keyword_list[len(self.keyword_list) - 1]][0],
-                         myline.lower()):
-                key = self.keyword_list.pop()
-                self.indent = self.indent - self.keyword_pairs[key][1]
+            # Strip leading spaces from line
+            myline = line.lstrip()
 
-        # Strip leading spaces and use our own indent
-        res = [" " * (6 + self.indent) + myline]
+            # Convert to upper or lower case
+            # Here we need to make exception for anything within quotes.
+            (myline, part, post_comment) = myline.partition("!")
+            # Replace all double quotes by single quotes
+            myline = myline.replace('\"','\'')
+            # Downcase or upcase Fortran code, except for quotes
+            splitline = myline.split('\'')
+            myline = ""
+            i = 0
+            while i < len(splitline):
+                if i % 2 == 1:
+                    # This is a quote - check for escaped \'s
+                    while splitline[i][len(splitline[i]) - 1] == '\\':
+                        splitline[i] = splitline[i] + '\'' + splitline.pop(i+1)
+                else:
+                    # Otherwise downcase/upcase
+                    if self.downcase:
+                        splitline[i] = splitline[i].lower()
+                    else:
+                        splitline[i] = splitline[i].upper()
+                i = i + 1
 
-        # Break line in appropriate places
-        while len(res[len(res) - 1]) > self.line_length:
-            res.append(" " * 5 + self.line_cont_char + \
-                       " " * (self.indent + 1) + \
-                       res[len(res) - 1][self.line_length:])
-            res[len(res) - 2] = res[len(res) - 2][:self.line_length]
+            myline = "\'".join(splitline).rstrip()
 
-        # Check if line starts with keyword and adjust indent 
-        for key in self.keyword_pairs.keys():
-            if re.search(key, myline.lower()):
-                self.keyword_list.append(key)
-                self.indent = self.indent + self.keyword_pairs[key][1]
+            # Check if line starts with dual keyword and adjust indent 
+            if self.__keyword_list and re.search(self.keyword_pairs[\
+                self.__keyword_list[len(self.__keyword_list) - 1]][0],
+                                               myline.lower()):
+                key = self.__keyword_list.pop()
+                self.__indent = self.__indent - self.keyword_pairs[key][1]
+
+            # Check for else and else if
+            single_indent = 0
+            for key in self.single_indents.keys():
+                if re.search(key, myline.lower()):
+                    self.__indent = self.__indent + self.single_indents[key]
+                    single_indent = -self.single_indents[key]
+                    break
+                
+            # Use our own indent
+            res = [" " * (6 + self.__indent) + myline]
+
+            # Break line in appropriate places
+            # defined (in priority order) by the characters in split_characters
+            while len(res[len(res) - 1]) > self.line_length:
+                split_at = self.line_length
+                for character in self.split_characters:
+                    index = res[len(res) - 1][(self.line_length - self.max_split):\
+                                              self.line_length].rfind(character)
+                    if index >= 0:
+                        split_at = self.line_length - self.max_split + index
+                        break
+                    
+                res.append(" " * 5 + self.line_cont_char + \
+                           " " * (self.__indent + 1) + \
+                           res[len(res) - 1][split_at:])
+                res[len(res) - 2] = res[len(res) - 2][:split_at]
+
+            # Check if line starts with keyword and adjust indent 
+            for key in self.keyword_pairs.keys():
+                if re.search(key, myline.lower()):
+                    self.__keyword_list.append(key)
+                    self.__indent = self.__indent + self.keyword_pairs[key][1]
+                    break
+        
+            # Correct back for else and else if
+            if single_indent != None:
+                self.__indent = self.__indent + single_indent
+                single_indent = None
 
         # Write line(s) to file
-        fsock.write("\n".join(res)+"\n")
+        fsock.write("\n".join(res)+ part + post_comment + "\n")
 
-        return False
+        return True
 
 #===============================================================================
 # HelasFortranModel
@@ -131,7 +411,7 @@ class HelasFortranModel(helas_objects.HelasModel):
         # Gluon 4-vertex division tensor calls ggT for the FR sm and mssm
         key = ((3,3,5),tuple('A'))
         call_function = lambda wf: \
-                        "      CALL UVVAXX(W(1,%d),W(1,%d),%s,zero,zero,zero,W(1,%d))" % \
+                        "CALL UVVAXX(W(1,%d),W(1,%d),%s,zero,zero,zero,W(1,%d))" % \
                         (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
                          HelasFortranModel.sorted_mothers(wf)[1].get('number'),
                          wf.get('couplings')[(0,0)],
@@ -140,7 +420,7 @@ class HelasFortranModel(helas_objects.HelasModel):
 
         key = ((3,5,3),tuple('A'))
         call_function = lambda wf: \
-                        "      CALL JVTAXX(W(1,%d),W(1,%d),%s,zero,zero,W(1,%d))" % \
+                        "CALL JVTAXX(W(1,%d),W(1,%d),%s,zero,zero,W(1,%d))" % \
                         (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
                          HelasFortranModel.sorted_mothers(wf)[1].get('number'),
                          wf.get('couplings')[(0,0)],
@@ -149,7 +429,7 @@ class HelasFortranModel(helas_objects.HelasModel):
 
         key = ((3,3,5),tuple('A'))
         call_function = lambda amp: \
-                        "      CALL VVTAXX(W(1,%d),W(1,%d),W(1,%d),%s,zero,AMP(%d))" % \
+                        "CALL VVTAXX(W(1,%d),W(1,%d),W(1,%d),%s,zero,AMP(%d))" % \
                         (HelasFortranModel.sorted_mothers(amp)[0].get('number'),
                          HelasFortranModel.sorted_mothers(amp)[1].get('number'),
                          HelasFortranModel.sorted_mothers(amp)[2].get('number'),
@@ -202,7 +482,7 @@ class HelasFortranModel(helas_objects.HelasModel):
             raise self.PhysicsObjectError, \
                   "get_helas_call must be called with wavefunction or amplitude"
 
-        call = "      CALL "
+        call = "CALL "
 
         call_function = None
             
@@ -212,12 +492,12 @@ class HelasFortranModel(helas_objects.HelasModel):
             call = call + HelasFortranModel.mother_dict[\
                 argument.get_spin_state_number()]
             # Fill out with X up to 6 positions
-            call = call + 'X' * (17 - len(call))
+            call = call + 'X' * (11 - len(call))
             call = call + "(P(0,%d),"
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity
                 call = call + "%s,NHEL(%d),"
-            call = call + "%d*IC(%d),W(1,%d))"
+            call = call + "%+d*IC(%d),W(1,%d))"
             if argument.get('spin') == 1:
                 call_function = lambda wf: call % \
                                 (wf.get('number_external'),
@@ -272,13 +552,13 @@ class HelasFortranModel(helas_objects.HelasModel):
             if argument.needs_hermitian_conjugate():
                 call = call + 'C'
 
-            if len(call) > 17:
+            if len(call) > 11:
                 raise self.PhysicsObjectError, \
                       "Too long call to Helas routine %s, should be maximum 6 characters" \
-                      % call[11:]
+                      % call[5:]
 
             # Fill out with X up to 6 positions
-            call = call + 'X' * (17 - len(call)) + '('
+            call = call + 'X' * (11 - len(call)) + '('
             # Wavefunctions
             call = call + "W(1,%d)," * len(argument.get('mothers'))
             # Couplings
@@ -346,7 +626,7 @@ class HelasFortranModel(helas_objects.HelasModel):
                   "%s not valid argument for get_matrix_element_calls" % \
                   repr(matrix_element)
 
-        res = "      JAMP(1)="
+        res = "JAMP(1)="
         # Add all amplitudes with correct fermion factor
         for diagram in matrix_element.get('diagrams'):
             res = res + "%sAMP(%d)" % (sign(diagram.get('fermionfactor')),
