@@ -183,7 +183,8 @@ class Amplitude(base_objects.PhysicsObject):
             # For decay chain legs, we want everything to combine to
             # the initial leg. This is done by only allowing the
             # initial leg to combine as a final identity.
-            ref_dict_to0 = {(part.get_pdg_code(),part.get_anti_pdg_code()):0}
+            ref_dict_to0 = {(part.get_pdg_code(),part.get_anti_pdg_code()):0,
+                            (part.get_anti_pdg_code(),part.get_pdg_code()):0}
             # Need to set initial leg from_group to None, to make sure
             # it can only be combined at the end.
             leglist[0].set('from_group', None)
