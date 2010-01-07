@@ -198,7 +198,7 @@ class T(ColorObject):
 
         return None
 
-    def pair_simplify(self, col_obj, simplify_T_product=True):
+    def pair_simplify(self, col_obj, simplify_T_product=False):
         """Implement T(a,...,i,j)T(b,...,j,k) = T(a,...,b,...,i,k)
         and T(a,x,b,i,j)T(c,x,d,k,l) = 1/2(T(a,d,i,l)T(c,b,k,j)    
                                         -1/Nc T(a,b,i,j)T(c,d,k,l))
@@ -426,8 +426,10 @@ class ColorString(list):
         class name of the color object and indices a tuple corresponding to its
         indices."""
 
-        return tuple([(col_obj.__class__.__name__, tuple(col_obj)) \
-                        for col_obj in self])
+        ret_list = [(col_obj.__class__.__name__, tuple(col_obj)) \
+                        for col_obj in self]
+        ret_list.sort()
+        return tuple(ret_list)
 
     def from_immutable(self, immutable_rep):
         """Fill the current object with Color Objects created using an immutable

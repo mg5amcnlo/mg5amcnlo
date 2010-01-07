@@ -176,6 +176,9 @@ class ColorBasis(dict):
                 canonical_col_fact.replace_indices(rep_dict)
                 self._canonical_dict[canonical_rep] = canonical_col_fact
 
+#            col_fact = color_algebra.ColorFactor([col_str])
+#            col_fact = col_fact.full_simplify()
+
             # loop over color strings in the resulting color factor
             for col_str in col_fact:
                 immutable_col_str = col_str.to_immutable()
@@ -225,7 +228,7 @@ class ColorBasis(dict):
                     imag_str = 'I'
                 my_str = my_str + '(diag:%i, chain:%s, coeff:%s%s, Nc:%i) ' % \
                                     (contrib[0], contrib[1], contrib[2],
-                                     imag_str, contrib[3])
+                                     imag_str, contrib[4])
             my_str = my_str + '\n'
         return my_str
 

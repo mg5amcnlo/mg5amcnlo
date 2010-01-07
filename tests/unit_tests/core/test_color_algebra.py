@@ -131,7 +131,7 @@ class ColorObjectTest(unittest.TestCase):
         col_str1.coeff = fractions.Fraction(1, 2)
         col_str2.coeff = fractions.Fraction(-1, 2)
         col_str2.Nc_power = -1
-        self.assertEqual(my_T1.pair_simplify(my_T3),
+        self.assertEqual(my_T1.pair_simplify(my_T3, simplify_T_product=True),
                          color.ColorFactor([col_str1, col_str2]))
 
     def test_f_object(self):
@@ -223,13 +223,13 @@ class ColorStringTest(unittest.TestCase):
         """Test the immutable representation of a color string structure"""
 
         self.assertEqual(self.my_col_string.to_immutable(),
-                         (('f', (1, 2, 3)), ('d', (4, 5, 6))))
+                         (('d', (4, 5, 6)), ('f', (1, 2, 3))))
 
     def test_from_immutable(self):
         """Test the creation of a color string using its immutable rep"""
 
         test_str = copy.copy(self.my_col_string)
-        test_str.from_immutable(self.my_col_string.to_immutable())
+        test_str.from_immutable((('f', (1, 2, 3)), ('d', (4, 5, 6))))
 
         self.assertEqual(test_str, self.my_col_string)
 
