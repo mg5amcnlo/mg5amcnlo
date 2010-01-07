@@ -69,20 +69,26 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['self_antipart'] = False
         # Properties related to the interaction generating the propagator
         # For an e- produced from an e+e-A vertex would have the following proporties
-        # interaction_id = ????? is this based on the model or the diagram?
-        # pdg_codes = [11,22]  please confirm
-        # inter_cololr = ?????
-        # lorentz = ????
-        # couplings = ???? 
+        # interaction_id = the id of the interaction in the model
+        # pdg_codes = the pdg_codes property of the interaction, [11, -11, 22]
+        # inter_color = the 'color' property of the interaction: ['C1']
+        # lorentz = the 'lorentz' property of the interaction: ['']
+        # couplings = the coupling names from the interaction: {(0,0):'MGVX12'}
         self['interaction_id'] = 0
         self['pdg_codes'] = []
         self['inter_color'] = []
         self['lorentz'] = []
         self['couplings'] = { (0, 0):'none'}
         # Properties relating to the leg/vertex
-        # state = ???  what are choices, incoming/outgoing and none?
-        # number_external = 2   if the electron and photon are external???
-        # fermionflow = 1    fermions have +-1 for flow. 
+        # state = initial/final (for external bosons),
+        #         intermediate (for intermediate bosons),
+        #         incoming/outgoing (for fermions)
+        # number_external = the 'number' property of the corresponding Leg,
+        #                   corresponds to the number of the first external
+        #                   particle contributing to this leg
+        # fermionflow = 1    fermions have +-1 for flow,
+        #                    -1 is used only if there is a fermion flow clash
+        #                    due to a Majorana particle 
         self['state'] = 'incoming'
         self['mothers'] = HelasWavefunctionList()
         self['number_external'] = 0
