@@ -185,7 +185,7 @@ class ColorSquareTest(unittest.TestCase):
         self.mymodel.set('interactions', self.myinterlist)
 
     def test_color_matrix_multi_gluons(self):
-        """Test the color basis building for gg > n*g with n up to 3"""
+        """Test the color matrix building for gg > n*g with n up to 3"""
 
         goal = [fractions.Fraction(7, 3),
                 fractions.Fraction(19, 6),
@@ -280,15 +280,6 @@ class ColorSquareTest(unittest.TestCase):
                 self.assertEqual(col_matrix.col_matrix_fixed_Nc[(i, i)],
                                  (goal[n], 0))
 
-    def test_color_matrix_canonical(self):
-        """Test the canonical representation of a immutable color string"""
-
-        immutable1 = (('f', (2, 3, 4)), ('T', (4, 2, 5)))
-        immutable2 = (('T', (3, 5)),)
-
-        self.assertEqual(color_square.ColorMatrix.to_canonical(immutable1,
-                                                               immutable2),
-                         (('T', (2, 4)), ('T', (3, 1, 4)), ('f', (1, 2, 3))))
 
     def test_color_matrix_fixed_indices(self):
         """Test index fixing for immutable color string"""

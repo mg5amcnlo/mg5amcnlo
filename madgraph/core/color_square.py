@@ -53,8 +53,6 @@ class ColorMatrix(dict):
             # symmetric
             self.build_matrix(Nc, Nc_power_min, Nc_power_max, is_symmetric=True)
 
-        self.build_matrix(Nc, Nc_power_min, Nc_power_max)
-
     def build_matrix(self, Nc=3,
                      Nc_power_min=None,
                      Nc_power_max=None,
@@ -80,7 +78,9 @@ class ColorMatrix(dict):
                 new_struct2 = self.fix_summed_indices(struct1, struct2)
 
                 # Build a canonical representation of the two immutable struct
-                canonical_entry = self.to_canonical(struct1, new_struct2)
+                canonical_entry, dummy = \
+                            color_algebra.ColorString().to_canonical(struct1 + \
+                                                                   new_struct2)
 
                 try:
                     # If this has already been calculated, use the result
@@ -127,7 +127,8 @@ class ColorMatrix(dict):
 
                 # the fixed Nc one ...
                 self.col_matrix_fixed_Nc[(i1, i2)] = result_fixed_Nc
-
+                if is_symmetric:
+                    self.col_matrix_fixed_Nc[(i2, i1)] = result_fixed_Nc
                 # and update the inverted dict
                 if result_fixed_Nc in self.inverted_col_matrix.keys():
                     self.inverted_col_matrix[result_fixed_Nc].append((i1,
@@ -155,32 +156,6 @@ class ColorMatrix(dict):
                         for i2 in range(len(self._col_basis2))])
 
         return mystr
-
-    @classmethod
-    def to_canonical(self, immutable1, immutable2):
-        """Returns a pair (canonical1,canonical2) where canonical corresponds
-        to the canonical representation of the immutable representation (i.e.,
-        first index is 1, ...)"""
-
-        replaced_indices = {}
-        curr_ind = 1
-        return_list = []
-
-        for elem in immutable1 + immutable2:
-            can_elem = [elem[0], []]
-            for index in elem[1]:
-                try:
-                    new_index = replaced_indices[index]
-                except KeyError:
-                    new_index = curr_ind
-                    curr_ind += 1
-                    replaced_indices[index] = new_index
-                can_elem[1].append(new_index)
-            return_list.append((can_elem[0], tuple(can_elem[1])))
-
-        return_list.sort()
-
-        return tuple(return_list)
 
     @classmethod
     def fix_summed_indices(self, struct1, struct2):

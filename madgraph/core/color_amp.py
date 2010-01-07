@@ -30,6 +30,9 @@ class ColorBasis(dict):
     diagram, coeff the corresponding coefficient (a fraction), is_imaginary
     if this contribution is real or complex, and Nc_power the Nc power."""
 
+    # Dictionary to save simplifications already done in a canonical form
+    _canonical_dict = {}
+
     def colorize(self, diagram, model):
         """Takes a diagram and a model and outputs a dictionary with keys being
         color coefficient index tuples and values a color string (before 
@@ -144,14 +147,34 @@ class ColorBasis(dict):
     def update_color_basis(self, colorize_dict, index):
         """Update the current color basis by adding information from 
         the colorize dictionary (produced by the colorize routine)
-        associated to diagram with index index"""
+        associated to diagram with index index. Keep track of simplification
+        results for maximal optimization."""
 
         # loop over possible color chains
         for col_chain, col_str in colorize_dict.items():
 
-            # Create and simplify a color factor for the conisdered chain
-            col_fact = color_algebra.ColorFactor([col_str])
-            col_fact = col_fact.full_simplify()
+            # Create a canonical immutable representation of the the string
+            canonical_rep, rep_dict = col_str.to_canonical()
+            try:
+                # If this representation has already been considered,
+                # recycle the result. Note that we have to replace back
+                # the indices to match the initial convention. 
+                col_fact = copy.copy(self._canonical_dict[canonical_rep])
+                col_fact.replace_indices(self._invert_dict(rep_dict))
+                # Must simplify once to put traces in a canonical ordering
+                col_fact = col_fact.simplify()
+
+            except KeyError:
+                # If the representation is really new
+
+                # Create and simplify a color factor for the considered chain
+                col_fact = color_algebra.ColorFactor([col_str])
+                col_fact = col_fact.full_simplify()
+
+                # Save the result for further use
+                canonical_col_fact = copy.copy(col_fact)
+                canonical_col_fact.replace_indices(rep_dict)
+                self._canonical_dict[canonical_rep] = canonical_col_fact
 
             # loop over color strings in the resulting color factor
             for col_str in col_fact:
@@ -206,4 +229,7 @@ class ColorBasis(dict):
             my_str = my_str + '\n'
         return my_str
 
+    def _invert_dict(self, mydict):
+        """Helper method to invert dictionary dict"""
 
+        return dict([v, k] for k, v in mydict.items())

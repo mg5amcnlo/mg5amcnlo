@@ -245,6 +245,16 @@ class ColorStringTest(unittest.TestCase):
         self.assertEqual(str(my_color_string),
                          '1 T(2,3,1,4) Tr(1,3,2)')
 
+    def test_color_string_canonical(self):
+        """Test the canonical representation of a immutable color string"""
+
+        immutable1 = (('f', (2, 3, 4)), ('T', (4, 2, 5)))
+        immutable2 = (('T', (3, 5)),)
+
+        self.assertEqual(color.ColorString().to_canonical(immutable1 + \
+                                                               immutable2)[0],
+                         (('T', (2, 4)), ('T', (3, 1, 4)), ('f', (1, 2, 3))))
+
 class ColorFactorTest(unittest.TestCase):
     """Test class for the ColorFactor objects"""
 

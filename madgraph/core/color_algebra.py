@@ -64,8 +64,10 @@ class ColorObject(array.array):
         the replacement by allowing only one single replacement."""
 
         for i, index in enumerate(self):
-            if index in repl_dict.keys():
+            try:
                 self[i] = repl_dict[index]
+            except KeyError:
+                continue
 
     def create_copy(self):
         """Return a real copy of the current object."""
@@ -476,6 +478,34 @@ class ColorString(list):
             return (self.coeff * fractions.Fraction(\
                                             1, int(Nc ** abs(self.Nc_power))),
                     self.is_imaginary)
+
+    def to_canonical(self, immutable=None):
+        """Returns the canonical representation of the immutable representation 
+        (i.e., first index is 1, ...). Also returns the conversion dictionary.
+        If no immutable representation is given, use the one build from self."""
+
+        if not immutable:
+            immutable = self.to_immutable()
+
+        replaced_indices = {}
+        curr_ind = 1
+        return_list = []
+
+        for elem in immutable:
+            can_elem = [elem[0], []]
+            for index in elem[1]:
+                try:
+                    new_index = replaced_indices[index]
+                except KeyError:
+                    new_index = curr_ind
+                    curr_ind += 1
+                    replaced_indices[index] = new_index
+                can_elem[1].append(new_index)
+            return_list.append((can_elem[0], tuple(can_elem[1])))
+
+        return_list.sort()
+
+        return (tuple(return_list), replaced_indices)
 #===============================================================================
 # ColorFactor
 #===============================================================================
@@ -549,7 +579,23 @@ class ColorFactor(list):
                 sum([cs.set_Nc(Nc)[0] for cs in self if cs.is_imaginary]))
 
 
+    def replace_indices(self, repl_dict):
+        """Replace current indices following the rules listed in the replacement
+        dictionary written as {old_index:new_index,...}, does that for ALL 
+        color strings."""
 
+        map(lambda col_str:col_str.replace_indices(repl_dict), self)
 
+    def create_copy(self):
+        """Returns a real copy of self, non trivial because bug in 
+        copy.deepcopy"""
+
+        res = ColorFactor()
+        for col_str in self:
+            res.append(col_str.create_copy())
+
+        return res
+
+    __copy__ = create_copy
 
 

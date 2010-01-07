@@ -308,8 +308,6 @@ class ColorAmpTest(unittest.TestCase):
 
         myamplitude.generate_diagrams()
 
-        my_col_basis = color_amp.ColorBasis()
-
         new_col_basis = color_amp.ColorBasis(myamplitude, self.mymodel)
 
         self.assertEqual(len(new_col_basis), 6)
