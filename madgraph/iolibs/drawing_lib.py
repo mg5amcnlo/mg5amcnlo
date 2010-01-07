@@ -165,6 +165,40 @@ class Feynman_line(base_objects.Leg):
             return True
         else:
             return False
+    
+    def _testinverse_pid(self,inversetype='straight'):
+        """ change the particle in his anti-particle if this is a fermion """
+        
+        model_info = self.model.get_particle(self['pid'])
+        if model_info['line'] == inversetype:
+            self._inverse_part_antipart()
+    
+    def _inverse_part_antipart(self):
+        """ pass particle into an anti-particule this is needed for 
+            initial state particles (usually wrongly defined) and for some
+            fermion flow resolution problem
+        """
+        
+        self['pid'] = -1*self['pid']
+        
+    def _inverse_begin_end(self):
+        """ invert the orientation of the line
+            this is needed to have correct fermion flow
+        """
+        
+        self.start, self.end = self.end, self.start
+        
+    def _define_line_orientation(self,mode=0):
+        """
+            define the line orientation
+            if mode == 0: use the following rules:
+                particles move to right, anti-particules to left
+        """
+        
+        if mode == 0: 
+            if (self['pid']>0 and self.start['level'] > self.end['level']) or \
+                    (self['pid']<0 and self.start['level'] < self.end['level']):
+                self._inverse_begin_end()
 
     def domain_intersection(self, line, axis='x'):
         """ return x1,x2 where both line and self are defined 
@@ -398,6 +432,8 @@ class Feynman_Diagram:
         self.define_level()
         #define a first position for each vertex
         self.find_initial_vertex_position()
+        # flip the particule such that fermion-flow is correct
+        self.solve_line_direction()
         #avoid any crossing
         self.avoid_crossing()
         #additional update
@@ -434,7 +470,10 @@ class Feynman_Diagram:
                 else:
                     line.def_end_point(vertex_point)      
            
-        self.assign_model_to_line() #associate the model obj to all line
+        #self.assign_model_to_line() #associate the model obj to all line
+        #put line in correct direction
+        #self._solve_line_direction()
+            
         
     def _find_leg_id(self, leg, equal=0, end=0):
         """ find the position of leg in self._treated_legs
@@ -495,8 +534,7 @@ class Feynman_Diagram:
                 # returns the position in that list
                 id = self._find_leg_id(leg, equal=1) 
             
-            #define the line associate to this leg 
-            print id  , i != len(vertex['legs'])                 
+            #define the line associate to this leg                  
             if id:
                 line = self.lineList[id]
             else:
@@ -507,6 +545,9 @@ class Feynman_Diagram:
                 line.def_begin_point(vertex_point)
             else:
                 line.def_end_point(vertex_point)
+        #flip the last entry
+        if line['number'] ==1 :# in [1,2]:
+            line._inverse_part_antipart()
          
     
     def _load_leg(self, leg):
@@ -519,6 +560,8 @@ class Feynman_Diagram:
         line = Feynman_line(leg['id'], base_objects.Leg(leg)) 
         self._treated_legs.append(leg)
         self.lineList.append(line)
+        line._def_model(self.model)
+        line._testinverse_pid(inversetype='wavy')
         return line
  
     def _deal_special_vertex(self, last_vertex):
@@ -528,7 +571,6 @@ class Feynman_Diagram:
         
         pos1 = self._find_leg_id(last_vertex['legs'][0],equal=0)
         pos2 = self._find_leg_id(last_vertex['legs'][1],equal=0)
-        print 'equal line',pos1,pos2
                              
         line1 = self.lineList[pos1]
         line2 = self.lineList[pos2]
@@ -559,7 +601,6 @@ class Feynman_Diagram:
         if last_line.end==0:
             # find the position of the line in self._treated_legs
             id1 = self._find_leg_id(last_line)
-            print id1, len(self._treated_legs)
             # find if they are a second call to this line
             id2 = self._find_leg_id(last_line, end=len(self._treated_legs)-id1)
             
@@ -569,7 +610,6 @@ class Feynman_Diagram:
                                         if self.lineList[i]['number']==number]
             
             if id2 is not None:
-                print id2==is_internal[-1]
                 #line is duplicate in linelist => remove this duplication
                 line = self.lineList[id2]
                 line.def_end_point(last_line.start)
@@ -577,10 +617,10 @@ class Feynman_Diagram:
                 pos=self.pos_to_line(last_line)
                 del self.lineList[pos]              
             else:
-                print len(is_internal)==0,id2,is_internal
                 return #this is an external line => everything is ok
 
     def assign_model_to_line(self):
+        return
         
         for line in self.lineList:
             line._def_model(self.model)
@@ -593,7 +633,7 @@ class Feynman_Diagram:
         
         initial_vertex = [vertex for vertex in self.vertexList if \
                                                          vertex['level'] == 0 ]
-        #print 'initial vertex', len(initial_vertex)
+
         #print 'initial vertex', initial_vertex
         for vertex in initial_vertex:
             self._def_next_level_from(vertex)
@@ -620,7 +660,7 @@ class Feynman_Diagram:
             if line['state'] == 'initial' and \
                len([1 for vertex in self.vertexList if vertex['level']==0]) == 2:
                 #print 'find a T vertex'
-                line.end.def_level(1) # T channel always at level 1
+                getattr(line, direction).def_level(1)# T channel => level 1
             else:
                 #print 'find one vertex at level ',level+1
                 getattr(line, direction).def_level(level + 1)
@@ -640,11 +680,16 @@ class Feynman_Diagram:
         if len(initial_vertex) == 2:
             initial_vertex[0].def_position(0, 1)
             initial_vertex[1].def_position(0, 0)
-            initial_vertex.reverse()
+            initial_vertex.reverse() #change order in order to draw from bottom
+            #initial state are wrongly consider as outgoing for fermion-> solve:
+            initial_vertex[0]['line'][0]._inverse_part_antipart()
+            initial_vertex[1]['line'][0]._inverse_part_antipart()       
             t_vertex=self.find_vertex_position_tchannel(initial_vertex)
             self.find_vertex_position_at_level(t_vertex,2)
         elif len(initial_vertex) == 1:
             initial_vertex[0].def_position(0, 0.5)
+            #initial state are wrongly consider as outgoing -> solve:
+            initial_vertex[0]['line'][0]._inverse_part_antipart()
             self.find_vertex_position_at_level(initial_vertex, 1)
         else:
             raise self.Feynman_DiagramError, \
@@ -676,6 +721,7 @@ class Feynman_Diagram:
         """
         return the vertex at next level starting from the lowest to the highest 
         previous level should be ordinate in the exact same way
+        and call for solving line orientation
         """   
  
         
@@ -703,6 +749,7 @@ class Feynman_Diagram:
         """
         return the vertex at next level starting from the lowest to the highest 
         previous level should be ordinate in the exact same way
+        and call for solving line orientation
         """            
         
         vertex_at_level = []
@@ -722,7 +769,7 @@ class Feynman_Diagram:
             #find the new vertex associate to it
             t_vertex = [vertex for vertex in[tline.start, tline.end] if\
                                       vertex != t_vertex  ][0]                    
-            vertex_at_level.append(t_vertex)                         
+            vertex_at_level.append(t_vertex)
         return vertex_at_level        
                        
     def _assign_position_for_level(self, vertex_at_level, level, mode=''):
@@ -764,6 +811,14 @@ class Feynman_Diagram:
                     'assigned %s is lower than level %s' % (self.max_level,level) 
             vertex.def_position(level / self.max_level, gap * (begin_gap + i))
             
+    def solve_line_direction(self):
+        """ solve the direction of the line. some line need to be flipped 
+            in order to agreed with fermion flow- 
+        """ 
+        for line in self.lineList:
+                line._define_line_orientation()
+        return
+             
     def _debug_charge_diagram(self):
         """ return a string to check to conversion of format for the diagram 
             this is a debug function

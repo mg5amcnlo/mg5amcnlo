@@ -32,7 +32,8 @@ class Draw_diagram:
         
         self.text = ''
         self.diagram = diagram
-        self.file = file  
+        self.filename = file
+        self.file = 0  
         self.model = model         # use for automatic conversion of graph
         self.amplitude = amplitude # use for automatic conversion of graph
           
@@ -69,9 +70,8 @@ class Draw_diagram:
             else:
                 diagram=Draw.Feynman_Diagram(diagram, model, mode=
                                                         external_on_bottom)
-            diagram.charge_diagram()
-            diagram.define_level()        
-            diagram.find_initial_vertex_position()
+            diagram.main()
+
         return diagram
         
         
@@ -80,9 +80,8 @@ class Draw_diagram:
         """ draw the diagram """
         
         self.convert_diagram(opt=opt)
-        self.draw_diagram(self.diagram)
         self.initialize()
-        
+        self.draw_diagram(self.diagram)
         self.conclude()
 
     def draw_diagram(self, diagram, number=1, opt={}):
@@ -95,6 +94,9 @@ class Draw_diagram:
             self.draw_line(line)
         self.put_diagram_number(number)
         self.put_particle_number()
+        if self.file:
+            self.file.writelines(self.text)
+            self.text=""
 
     def initialize(self):
         """ start the initialization of the diagram """
@@ -104,10 +106,11 @@ class Draw_diagram:
         """ last operation, writing the file
             default write the file
         """
-        
-        image_file=open(self.file,'w')
-        image_file.writelines(self.text)
-        image_file.close()
+        #image_file=open(self.file,'w')
+        #image_file.writelines(self.text)
+        if self.file:
+            self.file.writelines(self.text)
+            self.file.close()
         return
     
     def draw_line(self,line):
@@ -148,18 +151,23 @@ class Draw_diagram_eps(Draw_diagram):
     def initialize(self):
         """ def the header of the file """
 
-        self.text=file(_file_path+'iolibs/input_file/drawing_eps_header.inc').read()
+        text=file(_file_path+'iolibs/input_file/drawing_eps_header.inc').read()
         #replace variable in text put inside $ $
-        self.text = self.text.replace('$x$',str(self.width))
-        self.text = self.text.replace('$y$',str(self.height))
-        self.text = self.text.replace('$npages$',str(self.npage))
+        text = text.replace('$x$',str(self.width))
+        text = text.replace('$y$',str(self.height))
+        text = text.replace('$npages$',str(self.npage))
+        
+        self.file=open(self.filename,'w')
+        self.file.writelines(text)
         
     
     def conclude(self):
         """ def the footer of the file """
         
-        self.text+='showpage\n'
+        self.text='showpage\n'
         self.text+='%%trailer\n'
+
+        #self.file.writelines(text)
 
         #write the diagram.
         Draw_diagram.conclude(self)
@@ -328,6 +336,7 @@ class Draw_diagrams_eps(Draw_diagram_eps):
         Draw_diagram_eps.draw_diagram(self,diagram,self.block_nb, opt={})
         self.block_nb += 1
         
+        
     def draw(self, opt={}):
         """ draw the diagram """
         
@@ -360,13 +369,14 @@ if __name__ == '__main__':
     cmd = MadGraphCmd()
     cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/particles.dat')
     cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/interactions.dat')
-    cmd.do_generate('g g > g g g g g')
-    
+    cmd.do_generate('w+ w- > mu+ w- z vm z')
+    #cmd.do_generate('w+ w- > w+ w- a')
+    #cmd.do_generate( 'g g > g g' )
     len(cmd.curr_amp['diagrams'])
     for i in range(0,1):
         start=time.time()
         try:
-            plot = Draw_diagrams_eps(cmd.curr_amp['diagrams'], 'diagram2_5.eps', 
+            plot = Draw_diagrams_eps(cmd.curr_amp['diagrams'], 'diagram_evex3.eps', 
                              model= cmd.curr_model,
                              amplitude='')
             start=time.time()

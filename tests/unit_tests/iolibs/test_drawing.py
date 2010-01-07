@@ -525,7 +525,9 @@ class TestFeynman_Diagram(unittest.TestCase):
     """ Test the object which compute the position of the vertex/line 
         for a given Diagram object
     """
-    
+    _cmd.do_import('v4 ' + root_path + '../input_files/v4_sm_particles.dat')
+    _cmd.do_import('v4 ' + root_path + \
+                                    '../input_files/v4_sm_interactions.dat')
     #test diagram gg>g(g>jj)g via a T-channel   
     leg1 = base_objects.Leg({'id':22, 'number':1, 'state':'initial',
                             'from_group':False})
@@ -796,11 +798,7 @@ class TestFeynman_Diagram(unittest.TestCase):
         """ check that's possible to compute diagram position from cmd """
         
         global root_path
-        
-        _cmd.do_import('v4 ' + root_path + '../input_files/v4_sm_particles.dat')
-        _cmd.do_import('v4 ' + root_path + \
-                                    '../input_files/v4_sm_interactions.dat')
-                    
+                            
         _cmd.do_generate('u d~ > c s~')
         diagram = _cmd.curr_amp['diagrams'][0]
         diagram = drawing.Feynman_Diagram(diagram, _cmd.curr_model)
@@ -838,9 +836,6 @@ class TestFeynman_Diagram(unittest.TestCase):
         
         global root_path
         
-        _cmd.do_import('v4 ' + root_path + '../input_files/v4_sm_particles.dat')
-        _cmd.do_import('v4 ' + root_path + \
-                                    '../input_files/v4_sm_interactions.dat')
         _cmd.do_generate('g g > g g')
         
         #test the S-channel
