@@ -87,38 +87,6 @@ class ColorSquareTest(unittest.TestCase):
         antid = copy.copy(self.mypartlist[2])
         antid.set('is_part', False)
 
-#        # A photon
-#        self.mypartlist.append(base_objects.Particle({'name':'a',
-#                      'antiname':'a',
-#                      'spin':3,
-#                      'color':1,
-#                      'mass':'zero',
-#                      'width':'zero',
-#                      'texname':'\gamma',
-#                      'antitexname':'\gamma',
-#                      'line':'wavy',
-#                      'charge':0.,
-#                      'pdg_code':22,
-#                      'propagating':True,
-#                      'is_part':True,
-#                      'self_antipart':True}))
-#
-#        # A Higgs
-#        self.mypartlist.append(base_objects.Particle({'name':'h',
-#                      'antiname':'h',
-#                      'spin':1,
-#                      'color':1,
-#                      'mass':'mh',
-#                      'width':'wh',
-#                      'texname':'h',
-#                      'antitexname':'h',
-#                      'line':'dashed',
-#                      'charge':0.,
-#                      'pdg_code':25,
-#                      'propagating':True,
-#                      'is_part':True,
-#                      'self_antipart':True}))
-
         # 3 gluon vertiex
         self.myinterlist.append(base_objects.Interaction({
                       'id': 1,
@@ -169,17 +137,6 @@ class ColorSquareTest(unittest.TestCase):
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
 
-#        # Photon coupling to up
-#        self.myinterlist.append(base_objects.Interaction({
-#                      'id': 5,
-#                      'particles': base_objects.ParticleList(\
-#                                            [self.mypartlist[1], \
-#                                             antiu, \
-#                                             self.mypartlist[3]]),
-#                      'color': [color.ColorString([color.T(0, 1)])],
-#                      'lorentz':['L1'],
-#                      'couplings':{(0, 0):'GQED'},
-#                      'orders':{'QED':1}}))
 
         self.mymodel.set('particles', self.mypartlist)
         self.mymodel.set('interactions', self.myinterlist)
