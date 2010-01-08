@@ -367,11 +367,17 @@ if __name__ == '__main__':
     from madgraph.interface.cmd_interface import MadGraphCmd
     import drawing_lib as draw
     cmd = MadGraphCmd()
-    cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/particles.dat')
-    cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/interactions.dat')
-    cmd.do_generate('mu+ mu- > mu+ vm z z mu- vm~')
+    #root_path = MadGraphCmd.root_path
+    cmd.do_import('v4 ' + _file_path + '../tests/input_files/v4_heft_particles.dat')
+    cmd.do_import('v4 ' + _file_path + \
+                                    '../tests/input_files/v4_heft_interactions.dat')
+    t_part=cmd.curr_model.get_particle(99)
+    t_part['propagating'] = False
+    #cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/particles.dat')
+    #cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/interactions.dat')
+    #cmd.do_generate('mu+ mu- > mu+ vm z z mu- vm~')
     #cmd.do_generate('w+ w- > w+ w- a')
-    #cmd.do_generate( 'g g > g g' )
+    cmd.do_generate( 'g g > g g' )
     len(cmd.curr_amp['diagrams'])
     for i in range(0,1):
         start=time.time()

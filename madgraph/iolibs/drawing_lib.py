@@ -16,8 +16,6 @@ from __future__ import division
 import madgraph.core.base_objects as base_objects
 
 
-
-
 class Feynman_line(base_objects.Leg):
     """ all the information about a line in a feynman diagram
         i.e. begin-end/type/tag
@@ -166,13 +164,13 @@ class Feynman_line(base_objects.Leg):
         else:
             return False
     
-    def _testinverse_pid(self,inversetype='straight'):
-        """ change the particle in his anti-particle if this is a fermion """
+    def _inverse_pid_for_type(self,inversetype='straight'):
+        """ change the particle in his anti-particle if this is inversetype """
         
-        model_info = self.model.get_particle(self['pid'])
-        if model_info['line'] == inversetype:
+        type=self.get_info('line')
+        if type == inversetype:
             self._inverse_part_antipart()
-    
+
     def _inverse_part_antipart(self):
         """ pass particle into an anti-particule this is needed for 
             initial state particles (usually wrongly defined) and for some
@@ -194,7 +192,7 @@ class Feynman_line(base_objects.Leg):
         model_info = self.model.get_particle(abs(self['pid']))
         if model_info['line'] == 'straight':
             return True
-        
+
         
     def _define_line_orientation(self,mode=0):
         """
@@ -352,6 +350,26 @@ class Vertex_Point(base_objects.Vertex):
         
         for line in self['line']:
             line.ordinate_fct = 0    
+            
+    def _fuse_vertex(self,vertex,common_line=''):
+        """ 
+            import the line of the second vertex in the first one
+            this mean 
+            A) change the 'line' of this vertex
+            B) change the start-end position of line to point on this vertex
+            C) remove common_line (if defined)
+        """
+        for line in vertex['line']:
+            if line is common_line:
+                self['line'].remove(line)
+                continue
+            self['line'].append(line)
+            if line.start is vertex:
+                line.def_begin_point(self)
+            else:
+                line.def_end_point(self)
+        return
+        
     
     def add_line(self, line):
         """add the line in linelist """
@@ -429,6 +447,7 @@ class Feynman_Diagram:
         self.vertexList = base_objects.PhysicsObjectList()
         self.lineList = base_objects.PhysicsObjectList()
         self._treated_legs = []
+        self._unpropa_legs = []
         self._vertex_assigned_to_level = [] 
         self.max_level = 0
         
@@ -447,9 +466,10 @@ class Feynman_Diagram:
         #additional update
         #self.optimize()
         
-    def charge_diagram(self):
+    def charge_diagram(self, fuseUnPropa=True):
         """ define all the object for the Feynman Diagram Drawing (Vertex and 
-            Line) following the data include in 'diagram' 
+            Line) following the data include in 'self.diagram'
+            if fuseUnPropa=1 
         """
         
         for vertex in self.diagram['vertices']: #treat the last separately     
@@ -463,6 +483,10 @@ class Feynman_Diagram:
             # check that the last line is not a fake
             for line in last_vertex['line']:
                 self._deal_last_line(line)
+                
+        if fuseUnPropa:
+            #contract the unpropagating particle and fuse vertex
+            self._fuse_non_propa_particule()
             
 
         #external particles have only one vertex attach to the line
@@ -534,7 +558,7 @@ class Feynman_Diagram:
             
             #check legs status (old/new)
             if i+1 != len(vertex['legs']):
-                # find last occurence in self._treated_legs with same number
+                # find last item in self._treated_legs with same number
                 # returns the position in that list 
                 id = self._find_leg_id(leg)
             else:
@@ -556,7 +580,7 @@ class Feynman_Diagram:
         #flip the last entry
         if line['number'] ==1 :# in [1,2]:
             line._inverse_part_antipart()
-         
+            
     
     def _load_leg(self, leg):
         """ 
@@ -566,11 +590,14 @@ class Feynman_Diagram:
         
         #extend the leg to FeynmanLine Object
         line = Feynman_line(leg['id'], base_objects.Leg(leg)) 
+        line._def_model(self.model)
+        
         self._treated_legs.append(leg)
         self.lineList.append(line)
-        line._def_model(self.model)
-        line._testinverse_pid(inversetype='wavy')
+
+        line._inverse_pid_for_type(inversetype='wavy')
         return line
+        
  
     def _deal_special_vertex(self, last_vertex):
         """ 
@@ -626,7 +653,35 @@ class Feynman_Diagram:
                 del self.lineList[pos]              
             else:
                 return #this is an external line => everything is ok
-
+    
+    def _fuse_non_propa_particule(self):
+        """ fuse all the non propagating line
+            step:
+            1) find those line
+            2) fuse the vertex
+            3) remove one vertex from self.vertexList
+            4) remove the line/leg from self.lineList/self._treated_leg
+        """
+        
+        # look for all line in backward mode in order to delete entry in the 
+        # same time without creating trouble 
+        for i in range(len(self.lineList)-1,-1,-1):
+            if self.lineList[i].get_info('propagating'):
+                continue
+            else:
+                line=self.lineList[i]
+                first_vertex, second_vertex = line.start, line.end
+                              
+                first_vertex._fuse_vertex(second_vertex,common_line=line)
+                self.vertexList.remove(second_vertex)
+                del self._treated_legs[i]
+                del self.lineList[i]
+            
+        
+        
+        
+        
+        
     def assign_model_to_line(self):
         return
         

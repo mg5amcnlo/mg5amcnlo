@@ -45,10 +45,10 @@ class TestFeynman_line(unittest.TestCase):
         self.my_vertex2 = drawing.Vertex_Point(self.vertex)
 
     @staticmethod
-    def def_line(begin, end):
+    def def_line(begin=[0,0], end=[1,1],id=11):
         """ fast way to have line with begin-end (each are list) """
 
-        myleglist = base_objects.LegList([base_objects.Leg({'id':3,
+        myleglist = base_objects.LegList([base_objects.Leg({'id':id,
                                       'number':5,
                                       'state':'final',
                                       'from_group':False})] * 10)
@@ -56,7 +56,7 @@ class TestFeynman_line(unittest.TestCase):
                       'legs':myleglist}
         vertex = base_objects.Vertex(mydict)
                     
-        my_line = drawing.Feynman_line(11)
+        my_line = drawing.Feynman_line(id)
         my_vertex = drawing.Vertex_Point(vertex)
         my_vertex.def_position(begin[0], begin[1])
         my_line.def_begin_point(my_vertex)
@@ -66,12 +66,31 @@ class TestFeynman_line(unittest.TestCase):
         my_line.def_end_point(my_vertex)
         return my_line
 
+    @staticmethod
+    def def_model_line(id=22):
+        """ fast way to create a line with a link to a model """
 
-
-
+        leg = base_objects.Leg({'id': id, 'number': 1, 'state':'initial',
+                            'from_group':False})
+        #extend the leg to FeynmanLine Object
+        my_line = drawing.Feynman_line(leg['id'], base_objects.Leg(leg)) 
+        my_line._def_model(_model)
+        
+        return my_line
+    
+    def def_full_line(self,id=22,begin=[0,0],end=[1,1]):
+        """ fast way to define a complete line """
+        my_line = self.def_model_line(id)
+        temp_line = self.def_line(begin, end)
+        my_line.def_begin_point(temp_line.start)
+        my_line.def_end_point(temp_line.end) 
+        
+        return my_line
         
     def  test_def_begin_end_point(self):
-        """ test if you can correctly assign/reassign begin vertex to a line """
+        """ test if you can correctly assign/reassign begin vertex to a line 
+            test also if the begin-end switch works correctly
+        """
         
         #test begin point 
         self.my_line.def_begin_point(self.my_vertex)
@@ -80,14 +99,23 @@ class TestFeynman_line(unittest.TestCase):
         self.assertTrue(self.my_line.start is self.my_vertex2)
         
         #test end point
-        self.my_line.def_end_point(self.my_vertex)
-        self.assertTrue(self.my_line.end is self.my_vertex)
         self.my_line.def_end_point(self.my_vertex2)
         self.assertTrue(self.my_line.end is self.my_vertex2)
+        self.my_line.def_end_point(self.my_vertex)
+        self.assertTrue(self.my_line.end is self.my_vertex)
         
         #test if the vertex references the line correctly
         self.assertTrue(self.my_line in self.my_vertex['line'])
         self.assertTrue(self.my_line in self.my_vertex2['line'])        
+        
+        #check that the swithching method runs fine.
+        self.my_line._inverse_begin_end()
+        self.assertTrue(self.my_line.start is self.my_vertex)
+        self.assertTrue(self.my_line.end is self.my_vertex2)
+        
+        
+        
+        
         
     def test_begin_end_wrong_input(self):
         """ test that begin/end routines forbids wrong entry """
@@ -128,7 +156,84 @@ class TestFeynman_line(unittest.TestCase):
             my_line.def_model(_model)
             self.assertEquals(my_line.get_name('name'), solution[i])  
             
+                    
+    def test_line_orientation(self):
+        """ 
+            check the auto-adjustement for line orientation 
+            (particules going to right,anti-particles to left
+        """
+        
+        line = self.def_line(id=-22)
+        line.start.def_level(0)
+        line.end.def_level(1)
+        
+        line._define_line_orientation() 
+        self.assertEqual(line.start['pos_x'],1)
+        self.assertEqual(line.start['pos_y'],1)
+        self.assertEqual(line.end['pos_x'],0)
+        self.assertEqual(line.end['pos_y'],0)
+        
+        line._define_line_orientation()
+        self.assertEqual(line.start['pos_x'],1)
+        self.assertEqual(line.start['pos_y'],1)
+        self.assertEqual(line.end['pos_x'],0)
+        self.assertEqual(line.end['pos_y'],0)
+        
+        line._inverse_part_antipart()
+        line._define_line_orientation()        
+        self.assertEqual(line.start['pos_x'],0)
+        self.assertEqual(line.start['pos_y'],0)
+        self.assertEqual(line.end['pos_x'],1)
+        self.assertEqual(line.end['pos_y'],1)
+        
+        line._define_line_orientation()
+        self.assertEqual(line.start['pos_x'],0)
+        self.assertEqual(line.start['pos_y'],0)
+        self.assertEqual(line.end['pos_x'],1)
+        self.assertEqual(line.end['pos_y'],1)                
+    
+    def test_inverse_part_antipart(self):
+        """
+            check if the pid is correctly modify
+        """
+        
+        line=self.def_line([0,0],[0,0])
+
+        line._inverse_part_antipart()
+        self.assertEquals(line['pid'],-11)
+        line._inverse_part_antipart()
+        self.assertEquals(line['pid'],11)
             
+    def test_inverse_pid_for_type(self):
+        """
+            check that pid is inverse for a type of particle
+        """
+        
+        line1 = self.def_model_line(id=24)
+        line2 = self.def_model_line(id=-24)
+        line3 = self.def_model_line(id=22)
+        line4 = self.def_model_line(id=1)
+        
+        line1._inverse_pid_for_type('wavy')
+        line2._inverse_pid_for_type('wavy')
+        line3._inverse_pid_for_type('wavy')
+        line4._inverse_pid_for_type('wavy')
+        
+        self.assertEquals(line1['pid'], -24)
+        self.assertEquals(line2['pid'], 24)
+        self.assertEquals(line3['pid'], -22)
+        self.assertEquals(line4['pid'], 1)
+                
+        line1._inverse_pid_for_type()
+        line2._inverse_pid_for_type()
+        line3._inverse_pid_for_type()
+        line4._inverse_pid_for_type()            
+
+        self.assertEquals(line1['pid'], -24)
+        self.assertEquals(line2['pid'], 24)
+        self.assertEquals(line3['pid'], -22)
+        self.assertEquals(line4['pid'], -1)
+    
     def test_domain_intersection(self):
         """ test if domain intersection works correctly """
         
@@ -516,6 +621,65 @@ class TestVertexPoint(unittest.TestCase):
         vertex_point = drawing.Vertex_Point(vertex)
         
         self.assertTrue(vertex_point.is_external())
+        
+    def test_fuse_vertex(self):
+        """
+            test if it's possible to fuse two vertex
+        """
+
+        #test diagram gg>gg via a S-channel
+        leg1 = base_objects.Leg({'id':22, 'number':1, 'state':'initial',
+                            'from_group':False})
+        leg2 = base_objects.Leg({'id':22, 'number':2, 'state':'initial',
+                            'from_group':False})
+        leg3 = base_objects.Leg({'id':22, 'number':3, 'state':'final',
+                            'from_group':False})
+        leg4 = base_objects.Leg({'id':22, 'number':4, 'state':'final',
+                            'from_group':False})    
+   
+        #intermediate particle +vertex associate
+        leg_s = base_objects.Leg({'id':22, 'number':1, 'state':'final',
+                        'from_group':True}) 
+        vertex1 = base_objects.Vertex({'id':1, \
+                        'legs':base_objects.LegList([leg1, leg2, leg_s])})
+       
+       
+        vertex2 = base_objects.Vertex({'id':2, \
+                        'legs':base_objects.LegList([leg_s, leg3, leg4])})
+
+        #pass in Drawing object
+        vertex1=drawing.Vertex_Point(vertex1)
+        vertex2=drawing.Vertex_Point(vertex2)
+        line1 = drawing.Feynman_line(22, leg1)
+        line2 = drawing.Feynman_line(22, leg2)
+        line3 = drawing.Feynman_line(22, leg3)
+        line4 = drawing.Feynman_line(22, leg4)
+        line_s = drawing.Feynman_line(22, leg_s)
+        
+        #link object
+        line1.def_end_point(vertex1)
+        line2.def_end_point(vertex1)
+        line_s.def_begin_point(vertex1)
+        line_s.def_end_point(vertex2)
+        line3.def_begin_point(vertex2)
+        line4.def_begin_point(vertex2)
+        
+        #fuse the two vertex
+        vertex1._fuse_vertex(vertex2,line_s)
+        
+        #check that vertex1['line'] is correctly modify
+        self.assertEqual(len(vertex1['line']),4)
+        self.assertEqual(len([l for l in vertex1['line'] if l is line1]),1)
+        self.assertEqual(len([l for l in vertex1['line'] if l is line2]),1)
+        self.assertEqual(len([l for l in vertex1['line'] if l is line3]),1)
+        self.assertEqual(len([l for l in vertex1['line'] if l is line4]),1)
+        self.assertEqual(len([l for l in vertex1['line'] if l is line_s]),0)
+        
+        #check that line3-line4 begin vertex are correctly modify
+        self.assertTrue(vertex1 is line3.start)
+        self.assertTrue(vertex1 is line4.start)
+        self.assertTrue(vertex1 is line1.end)
+        self.assertTrue(vertex1 is line2.end)
         
         
 #===============================================================================
