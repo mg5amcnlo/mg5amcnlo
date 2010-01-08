@@ -369,7 +369,7 @@ if __name__ == '__main__':
     cmd = MadGraphCmd()
     cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/particles.dat')
     cmd.do_import('v4 /Users/omatt/fynu/MadWeight/MG_ME_MW/Models/sm/interactions.dat')
-    cmd.do_generate('w+ w- > mu+ w- z vm z')
+    cmd.do_generate('mu+ mu- > mu+ vm z z mu- vm~')
     #cmd.do_generate('w+ w- > w+ w- a')
     #cmd.do_generate( 'g g > g g' )
     len(cmd.curr_amp['diagrams'])

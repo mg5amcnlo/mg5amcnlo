@@ -188,6 +188,14 @@ class Feynman_line(base_objects.Leg):
         
         self.start, self.end = self.end, self.start
         
+    def _is_fermion(self):
+        """ return true if the particle is a fermion """
+        
+        model_info = self.model.get_particle(abs(self['pid']))
+        if model_info['line'] == 'straight':
+            return True
+        
+        
     def _define_line_orientation(self,mode=0):
         """
             define the line orientation
@@ -300,9 +308,9 @@ class Feynman_line(base_objects.Leg):
         """ check if this particles is an external particles or not """
 
         if self.end:
-            return self.end.is_external()
+            return self.end.is_external() or self.start.is_external()
         else:
-            return None
+            return self.start.is_external()
         
 class Vertex_Point(base_objects.Vertex):
     """ extension of the class Vertex in order to store the information 
@@ -749,28 +757,36 @@ class Feynman_Diagram:
         """
         return the vertex at next level starting from the lowest to the highest 
         previous level should be ordinate in the exact same way
-        and call for solving line orientation
         """            
         
         vertex_at_level = []
         t_vertex = previous_level[0]
         tline = ''
         while 1:
-            #find the next t-channel particle
-            tline = [line for line in t_vertex['line'] if \
-                                     line['state'] == 'initial' and \
-                                     line is not tline ]     
-            if not tline:
-                if vertex_at_level[-1]['level'] != 1:
-                    del vertex_at_level[-1]
-                break
-            tline = tline[0]
-                
-            #find the new vertex associate to it
-            t_vertex = [vertex for vertex in[tline.start, tline.end] if\
-                                      vertex != t_vertex  ][0]                    
-            vertex_at_level.append(t_vertex)
-        return vertex_at_level        
+            tline,t_vertex=self._find_next_t_channel_vertex(t_vertex, tline)
+            if t_vertex:
+                vertex_at_level.append(t_vertex)
+            else:
+                return vertex_at_level        
+    
+    def _find_next_t_channel_vertex(self,t_vertex,t_line):
+        """
+            returns the next t_vertex,t_line in the Tvertex-line serie
+        """
+
+        #find the next t-channel particle
+        t_line = [line for line in t_vertex['line'] if \
+                                line['state'] == 'initial' and \
+                                line is not t_line ][0]   
+        
+        #find the new vertex associate to it
+        t_vertex = [vertex for vertex in[t_line.start, t_line.end] if\
+                                      vertex != t_vertex  ][0]
+                                      
+        if t_vertex['level']==1:
+            return t_line,t_vertex
+        else:
+            return None, None
                        
     def _assign_position_for_level(self, vertex_at_level, level, mode=''):
         """ 
@@ -817,6 +833,47 @@ class Feynman_Diagram:
         """ 
         for line in self.lineList:
                 line._define_line_orientation()
+    
+        # the define line orientation use level information and in consequence 
+        # fails on T-Channel. So in consequence we still have to fix T-channel
+        # line
+        t_vertex = [vertex for vertex in self.vertexList if vertex['level'] == 0]
+        
+        t_vertex = t_vertex[1]
+        t_line = ''
+        #t_line, t_vertex = self._find_next_t_channel_vertex(t_vertex,t_line)
+        while 1:
+            t_line, t_vertex = self._find_next_t_channel_vertex(t_vertex,t_line)
+            
+            if t_vertex == None:
+                return
+            #look the total for the other
+            incoming = 0  
+            t_dir= 0
+            t_next=''
+            for line in t_vertex['line']:
+                direction=0
+                if line['state']=='internal' and line is not t_line:
+                    t_next = line 
+                if not line._is_fermion():
+                    continue
+                if (line.start is t_vertex):
+                    direction+=1
+                elif line.end is t_vertex:
+                    direction-=1
+                if line['state']=='initial' and line is not t_line:
+                    t_next = line 
+                    t_dir = direction
+                else:
+                    incoming += direction
+                
+            if t_next == '':
+                continue   
+
+
+            if incoming == t_dir:
+                t_next._inverse_begin_end()
+        
         return
              
     def _debug_charge_diagram(self):
