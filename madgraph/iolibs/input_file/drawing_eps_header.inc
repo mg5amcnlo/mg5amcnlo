@@ -335,3 +335,5 @@ gsave x1 y1 x2 y2 wedge fill grestore} def
 %%PageBoundingBox:-20 -20 600 800
 %%PageFonts: Helvetica
 /Helvetica findfont 10 scalefont setfont
+ 240         770  moveto
+ (Diagrams by MadGraph) show

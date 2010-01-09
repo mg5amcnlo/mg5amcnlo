@@ -168,11 +168,11 @@ class MadGraphCmd(cmd.Cmd):
                         import_v4file(self, os.path.join(args[1], filename))
 
             elif os.path.isfile(args[1]):
-                suceed=0
-                for i in range(0,len(files_to_import)):
+                suceed = 0
+                for i in range(0, len(files_to_import)):
                     if args[1].endswith(files_to_import[i]):
                         import_v4file(self, args[1])
-                        suceed=1
+                        suceed = 1
                 if not suceed:
 #                if os.path.basename(args[1]) in files_to_import:
 #                    import_v4file(self, args[1])
@@ -199,7 +199,19 @@ class MadGraphCmd(cmd.Cmd):
             return self.path_completion(text,
                                         base_dir=\
                                           self.split_arg(line[0:begidx])[2])
-
+            
+    def complete_draw(self, text, line, begidx, endidx):
+        "Complete the import command"  
+        
+        # Format
+        if len(self.split_arg(line[0:begidx])) == 1:
+            return self.path_completion(text)
+        
+        
+        #option
+        if len(self.split_arg(line[0:begidx])) >= 2:
+            return self.list_completion(text,
+                            ['external=', 'horizontal=', 'non_propagating='])
     # Display
     def do_display(self, line):
         """Display current internal status"""
@@ -321,7 +333,7 @@ class MadGraphCmd(cmd.Cmd):
         else:
             print "Empty or wrong format process, please try again."
             
-    def do_draw(self,line):
+    def do_draw(self, line):
         """ draw the Feynman diagram for the given process """
         
         args = self.split_arg(line)
@@ -334,20 +346,20 @@ class MadGraphCmd(cmd.Cmd):
             print "No Diagram to draw. Please generate some diagrams first"
             return False
         
-        plot = Draw.Draw_diagrams_eps(self.curr_amp['diagrams'], args[0], 
-                             model= self.curr_model, amplitude='')
-        if len(args)==1:
+        plot = Draw.Draw_diagrams_eps(self.curr_amp['diagrams'], args[0],
+                             model=self.curr_model, amplitude='')
+        if len(args) == 1:
             plot.draw()
         else:
-            opt={}
+            opt = {}
             for data in args[1:]:
                 try:
-                    key,value = data.split('=')
+                    key, value = data.split('=')
                 except:
                     print 'invalid option %s. Please try again'
                     self.help_draw()
                     return False
-                opt[key]=value
+                opt[key] = value
             plot.draw(opt=opt)
             print args
             
