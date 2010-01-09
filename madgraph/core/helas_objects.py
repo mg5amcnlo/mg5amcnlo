@@ -48,6 +48,16 @@ class HelasWavefunction(base_objects.PhysicsObject):
         """Default values for all properties"""
 
         # Properties related to the particle propagator
+        # For an electron, would have the following values
+        # pdg_code = 11
+        # name = 'e-'
+        # antiname = 'e+'
+        # spin = '1'   defined as 2 x spin + 1  
+        # color = '1'  1= singlet, 3 = triplet, 8=octet
+        # mass = 'zero'
+        # width = 'zero'
+        # is_part = 'true'    Particle not antiparticle
+        # self_antipart='false'   gluon, photo, h, or majorana would be true
         self['pdg_code'] = 0
         self['name'] = 'none'
         self['antiname'] = 'none'
@@ -58,12 +68,27 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['is_part'] = True
         self['self_antipart'] = False
         # Properties related to the interaction generating the propagator
+        # For an e- produced from an e+e-A vertex would have the following proporties
+        # interaction_id = the id of the interaction in the model
+        # pdg_codes = the pdg_codes property of the interaction, [11, -11, 22]
+        # inter_color = the 'color' property of the interaction: ['C1']
+        # lorentz = the 'lorentz' property of the interaction: ['']
+        # couplings = the coupling names from the interaction: {(0,0):'MGVX12'}
         self['interaction_id'] = 0
         self['pdg_codes'] = []
         self['inter_color'] = []
         self['lorentz'] = []
         self['couplings'] = { (0, 0):'none'}
         # Properties relating to the leg/vertex
+        # state = initial/final (for external bosons),
+        #         intermediate (for intermediate bosons),
+        #         incoming/outgoing (for fermions)
+        # number_external = the 'number' property of the corresponding Leg,
+        #                   corresponds to the number of the first external
+        #                   particle contributing to this leg
+        # fermionflow = 1    fermions have +-1 for flow,
+        #                    -1 is used only if there is a fermion flow clash
+        #                    due to a Majorana particle 
         self['state'] = 'incoming'
         self['mothers'] = HelasWavefunctionList()
         self['number_external'] = 0
@@ -309,6 +334,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         taking into account fermion flow, for mother wavefunctions"""
  
         if self.get('self_antipart'):
+            #This is its own antiparticle e.g. a gluon
             return self.get('pdg_code')
  
         if self.is_boson():
@@ -326,6 +352,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         taking into account fermion flow, for mother wavefunctions"""
  
         if self.get('self_antipart'):
+            #This is its own antiparticle e.g. gluon
             return self.get('pdg_code')
  
         if self.is_boson():
