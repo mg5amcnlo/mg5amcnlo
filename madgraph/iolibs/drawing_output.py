@@ -381,8 +381,8 @@ if __name__ == '__main__':
     cmd.do_import('v4 ' + _file_path + \
                                 '../tests/input_files/v4_sm_interactions.dat')
     #cmd.do_generate('mu+ mu- > mu+ vm z z mu- vm~')
-    cmd.do_generate('w+ w- > w+ w- a')
-    #cmd.do_generate('g g > g g')
+    #cmd.do_generate('w+ w- > w+ w- a')
+    cmd.do_generate('g g > g g g g g g g')
     len(cmd.curr_amp['diagrams'])
     for i in range(0, 1):
         start = time.time()

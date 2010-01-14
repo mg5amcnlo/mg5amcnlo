@@ -12,30 +12,66 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+
+"""All the routines to assignate the position to each vertex and the 
+direction for particles. All those class are output type independant.
+
+This file contains 4 class:
+    * FeynmanLine which extend the Leg with positioning information
+    * VertexPoint which extend the vertex with position and line information.
+        Coordinates belongs to [0,1] interval
+    * FeynmanDiagram which
+            1) extends a diagram to have position information - load_diagram 
+            2) his able to structure the vertex in level - define_level 
+                level are the number of s_channel line-initial particles
+                separating the vertex from the initial particles starting point.
+            3) attributes position to each vertex - find_initial_vertex_position
+    * FeynmanDiagramHorizontal
+        is a child of FeynmanDiagram which assign position in a different way.
+
+    The x-coordinate will proportional to the level, both in FeynmanDiagram and 
+        in FeynmanDiagramHorizontal
+    
+    In FeynmanDiagram, the y-coordinate of external particles are put (if 
+        possible and if option autorizes) to 0,1. all other y-coordinate are 
+        assign such that the y-distance is equal between all vertex at he same 
+        level. 
+    
+    In FeynmanDiagramHorizontal, an additional rules apply: if only one 
+        S-channel is going from level to the next, then this S-channel shoud be
+        horizontal."""
+
 from __future__ import division
+
 import madgraph.core.base_objects as base_objects
 
 
-class Feynman_line(base_objects.Leg):
-    """ all the information about a line in a feynman diagram
-        i.e. begin-end/type/tag
-    """
+class FeynmanLine(base_objects.Leg):
+    """All the information about a line in a feynman diagram
+    i.e. begin-end/type/tag."""
     
     class FeynmanLineError(Exception):
         """Exception raised if an error occurs in the definition
         or the execution of a Feynam_line."""
-        pass
 
     def __init__(self, pid, init_dict={}):
-        """ initialize the Feynam line"""        
-        base_objects.Leg.__init__(self, init_dict)
-        self['pid'] = pid
-        self.ordinate_fct = 0 #no function assign
+        """Initialize the FeynmanLine content."""
+        
+        super(FeynmanLine, self).__init__(init_dict)
+        self.set('pid', pid)
         self.start = 0
         self.end = 0
         
+    def is_valid_prop(self,name):
+        """Check if a given property name is valid."""
+
+        if name == 'pid':
+            return True
+        else:
+            return super(FeynmanLine,self).is_valid_prop(name)
+        
     def def_begin_point(self, vertex):
-        """ (re)define the starting point of the line """
+        """-Re-Define the starting point of the line."""
 
         if not isinstance(vertex, Vertex_Point):
             raise self.FeynmanLineError, 'The begin point should be a ' + \
@@ -46,7 +82,7 @@ class Feynman_line(base_objects.Leg):
         return 
     
     def def_end_point(self, vertex):
-        """ (re)define the starting point of the line """
+        """-Re-Define the starting point of the line."""
  
         if not isinstance(vertex, Vertex_Point):
             raise self.FeynmanLineError, 'The end point should be a ' + \
@@ -56,40 +92,86 @@ class Feynman_line(base_objects.Leg):
         vertex.add_line(self)
         return 
     
+    def define_line_orientation(self):
+        """Define the line orientation. Use the following rules:
+        Particles move to right directions when anti-particules  moves to left.
+        """
+         
+        if (self.get('pid') > 0 and \
+                    self.start.get('level') > self.end.get('level')) or \
+           (self.get('pid') < 0 and \
+                    self.start.get('level') < self.end.get('level')):
+            self.inverse_begin_end()
+    
+    def inverse_pid_for_type(self, inversetype='straight'):
+        """Change the particle in his anti-particle if this type is 
+        equal to 'inversetype'."""
+        
+        type = self.get_info('line')
+        if type == inversetype:
+            self.inverse_part_antipart()
+
+    def inverse_part_antipart(self):
+        """Pass particle into an anti-particule this is needed for initial state 
+        particles (usually wrongly defined) and for some fermion flow resolution 
+        problem."""
+        
+        self.set('pid', -1 * self.get('pid'))
+        
+    def inverse_begin_end(self):
+        """Invert the orientation of the line. This is needed to have correct 
+        fermion flow."""
+        
+        self.start, self.end = self.end, self.start    
+
     def get_info(self, name):
-        """ return the model information  associated to the line """
-        pid = self['pid']
+        """Return the model information  associated to the line."""
+        pid = self.get('pid')
         
         result = self.model.get_particle(pid)
         if result:
-            return result[name]
+            return result.get(name)
         else:
             pid = -1 * pid #in case of auto anti-particle
-            return self.model.get_particle(pid)[name]
+            return self.model.get_particle(pid).get(name)
 
     def get_name(self, name='name'):
-        """ return the name associate to the particle """
+        """Return the name associate to the particle."""
         
-        pid = self['pid']
+        pid = self.get('pid')
         model_info = self.model.get_particle(pid)
  
         if pid > 0:
-            return model_info[name]
+            return model_info.get(name)
         elif model_info:
-            return model_info['anti' + name]
+            return model_info.get('anti' + name)
         else:
             # particle is self anti particle
-            return self.model.get_particle(-1 * pid)[name]
- 
-      
-        
-
+            return self.model.get_particle(-1 * pid).get(name)
          
+    def is_fermion(self):
+        """Returns True if the particle is a fermion."""
+        
+        model_info = self.model.get_particle(abs(self.get('pid')))
+        if model_info.get('line') == 'straight':
+            return True
+        
+    def is_external(self):
+        """Check if this line represent an external particles or not."""
+
+        if self.end:
+            return self.end.is_external() or self.start.is_external()
+        else:
+            return self.start.is_external()
+
+    # Debugging Routines linked to FeynmanLine ---------------------------------
+
     def has_intersection(self, line):
-        """ check if the two line intersects 
-            return True/False
-            contains the check consistency
-        """
+        """Check if the two line intersects and returns status. A common vertex 
+        is not consider as an intersection.
+        This routine first check input validity. 
+        
+        At current status this is use for debugging only."""
         
         self.check_position_exist()
         line.check_position_exist()
@@ -97,121 +179,101 @@ class Feynman_line(base_objects.Leg):
         return self._has_intersection(line)
 
     def _has_intersection(self, line):
-        """ check if the two line intersects 
-            return True/False
-        """
+        """Check if the two line intersects and returns status. A common vertex 
+        is not consider as an intersection.
         
+        At current status this is use for debugging only.""" 
+        
+        # Find the x-range where both line are defined  
         min, max = self._domain_intersection(line)
+        
+        # No x-value where both line are defined
         if min == None:
             return False
         
+        # Only one x value is common for both line
         if min == max :
-            if self.start['pos_x'] != self.end['pos_x']:
-                if line.start['pos_x'] != line.end['pos_x']: #no vertical line
+            # Check if self is normal line (not vertical)
+            if self.start.get('pos_x') != self.end.get('pos_x'):
+                # Check if line is normal line (not vertical)
+                if line.start.get('pos_x') != line.end.get('pos_x'):
+                    # No vertical line => one vertex in common
                     return False
                 #line is vertical but not self:
                 return self._intersection_with_vertical_line(line)           
-                
-            elif (line.start['pos_x'] != line.end['pos_x']):
+            
+            # Check if line is normal line (not vertical)    
+            elif (line.start.get('pos_x') != line.end.get('pos_x')):
                 # self is vertical but not line
                 return line._intersection_with_vertical_line(self)
+            
+            # both vertical case
             else:
-                #both vertical line
+                # Find the y-range where both line are defined
                 min, max = self._domain_intersection(line, 'y')
                 if min == None or min == max:
                     return False
                 else:
                     return True
-        
-        xS0 = self.start['pos_x']
-        yS0 = self.start['pos_y']
-        xS1 = self.end['pos_x']
-        yS1 = self.end['pos_y']
 
-        xL0 = line.start['pos_x']        
-        yL0 = line.start['pos_y']
-        xL1 = line.end['pos_x']  
-        yL1 = line.end['pos_y']
+        # No vertical line -> resolve angular coefficient
+        xS0 = self.start.get('pos_x')
+        yS0 = self.start.get('pos_y')
+        xS1 = self.end.get('pos_x')
+        yS1 = self.end.get('pos_y')
+
+        xL0 = line.start.get('pos_x')        
+        yL0 = line.start.get('pos_y')
+        xL1 = line.end.get('pos_x')  
+        yL1 = line.end.get('pos_y')
                 
         coef1 = (yS1 - yS0) / (xS1 - xS0)
         coef2 = (yL1 - yL0) / (xL1 - xL0)
         
-        if coef1 == coef2: #parralel line
+        # Check if the line are parallel
+        if coef1 == coef2:
+            # Check if one point in common in the domain
             if line._has_ordinate(min) == self._has_ordinate(min):
                 return True
             else:
                 return False
+        
+        # Intersecting line -> find point of intersection (commonX, commonY)
         commonX = (yS0 - yL0 - coef1 * xS0 + coef2 * xL0) / (coef2 - coef1)
+        
+        #check if the intersection is in the x-domain
         if (commonX >= min) == (commonX >= max):
             return False
         
         commonY = self._has_ordinate(commonX)
-        if self._is_end_point(commonX, commonY):
-            if line._is_end_point(commonX, commonY):
+        
+        #check if intersection is a common vertex
+        if self.is_end_point(commonX, commonY):
+            if line.is_end_point(commonX, commonY):
                 return False
             else:
                 return True 
         else:
             return True
         
-    def _is_end_point(self, x, y):
-        """ check if this is the end point coordinate """
+    def is_end_point(self, x, y):
+        """Check if 'x','y' are one of the end point coordinates of the line."""
 
-        if x == self.start['pos_x'] and y == self.start['pos_y']:
+        if x == self.start.get('pos_x') and y == self.start.get('pos_y'):
             return True
-        elif x == self.end['pos_x'] and y == self.end['pos_y']:
+        elif x == self.end.get('pos_x') and y == self.end.get('pos_y'):
             return True
         else:
             return False
-    
-    def _inverse_pid_for_type(self, inversetype='straight'):
-        """ change the particle in his anti-particle if this is inversetype """
-        
-        type = self.get_info('line')
-        if type == inversetype:
-            self._inverse_part_antipart()
-
-    def _inverse_part_antipart(self):
-        """ pass particle into an anti-particule this is needed for 
-            initial state particles (usually wrongly defined) and for some
-            fermion flow resolution problem
-        """
-        
-        self['pid'] = -1 * self['pid']
-        
-    def _inverse_begin_end(self):
-        """ invert the orientation of the line
-            this is needed to have correct fermion flow
-        """
-        
-        self.start, self.end = self.end, self.start
-        
-    def _is_fermion(self):
-        """ return true if the particle is a fermion """
-        
-        model_info = self.model.get_particle(abs(self['pid']))
-        if model_info['line'] == 'straight':
-            return True
-
-        
-    def _define_line_orientation(self, mode=0):
-        """
-            define the line orientation
-            if mode == 0: use the following rules:
-                particles move to right, anti-particules to left
-        """
-        
-        if mode == 0: 
-            if (self['pid'] > 0 and self.start['level'] > self.end['level']) or \
-                    (self['pid'] < 0 and self.start['level'] < self.end['level']):
-                self._inverse_begin_end()
 
     def domain_intersection(self, line, axis='x'):
-        """ return x1,x2 where both line and self are defined 
-            return None,None if no such domain 
-        """
+        """Returns x1,x2 where both line and self are defined. 
+        Returns None, None if this domain is empty.
+        This routine contains self consistency check
         
-        if not isinstance(line, Feynman_line):
+        At current status this is use for debugging only."""
+        
+        if not isinstance(line, FeynmanLine):
             raise self.FeynmanLineError, ' domain intersection are between ' + \
                 'Feynman_line object only and not {0} object'.format(type(line))
                
@@ -220,14 +282,17 @@ class Feynman_line(base_objects.Leg):
         return self._domain_intersection(line, axis)
     
     def _domain_intersection(self, line, axis='x'):
-        """ return x1,x2 where both line and self are defined 
-            return None,None if no such domain 
-            whithout existence test
-        """
+        """Returns x1,x2 where both line and self are defined. 
+        Returns None, None if this domain is empty.
+        This routine doesn't contain self consistency check.
         
-        min_self, max_self = self._border_on_axis(axis)
-        min_line, max_line = line._border_on_axis(axis)
+        At current status this is use for debugging only."""
         
+        #find domain for each line
+        min_self, max_self = self.border_on_axis(axis)
+        min_line, max_line = line.border_on_axis(axis)
+        
+        #find intersection
         start = max(min_self, min_line)
         end = min(max_self, max_line)
         if start <= end:
@@ -235,23 +300,31 @@ class Feynman_line(base_objects.Leg):
         else:
             return None, None
         
-    def _border_on_axis(self, axis='x'):
-        """ 
-            return the axis coordinate for the begin-end point in a order way 
-        """
+    def border_on_axis(self, axis='x'):
+        """ Returns the two value of the domain interval for the given axis.
+        
+        At current status this is use for debugging only."""
   
-        data = [self.start['pos_' + axis], self.end['pos_' + axis]] 
+        data = [self.start.get('pos_' + axis), self.end.get('pos_' + axis)] 
         data.sort()
         return data
     
     def _intersection_with_vertical_line(self, line): 
-        """ deal with case where line is vertical but self is not \
-            vertical (no check of that)"""
-                
-        y_self = self._has_ordinate(line.start['pos_x'])
-        ymin, ymax = line._border_on_axis('y')
+        """Checks if line intersect self. Line SHOULD be a vertical line and 
+        self COULDN'T. No test are done to check those conditions.
+        
+        At current status this is use for debugging only."""
+        
+        # Find the y coordinate for the x-value corresping to line x-position                
+        y_self = self._has_ordinate(line.start.get('pos_x'))
+        
+        # Find the y range for line. This is done in order to check that the 
+        #intersection point is not a common vertex
+        ymin, ymax = line.border_on_axis('y')
+        
+        # Search intersection status
         if (ymin == y_self or ymax == y_self):
-            if self._is_end_point(line.start['pos_x'], y_self):
+            if self.is_end_point(line.start.get('pos_x'), y_self):
                 return False
             else:
                 return True
@@ -261,22 +334,28 @@ class Feynman_line(base_objects.Leg):
             return False            
    
     def check_position_exist(self):
-        """ check if the begin-end position are defined """
+        """Check that the begin-end position are defined.
+        
+        At current status this is use for debugging only."""
  
         try:
-            min = self.start['pos_x']
-            max = self.end['pos_y']
+            min = self.start.get('pos_x')
+            max = self.end.get('pos_y')
         except:
             raise self.FeynmanLineError, 'No vertex in begin-end position ' + \
                         ' or no position attach at one of those vertex '       
         return
             
     def has_ordinate(self, x):
-        """ return the y associate to the x """
+        """Returns the y associate to the x value in the line
+        Raises FeynmanLineError if point oustide interval or result not unique.
+        This routines contains check consistency.
+        
+        At current status this is use for debugging only."""
         
         self.check_position_exist()
-        min = self.start['pos_x']
-        max = self.end['pos_x']
+        min = self.start.get('pos_x')
+        max = self.end.get('pos_x')
 
         if min == max:
             raise self.FeynmanLineError, 'Vertical line: no unique solution'
@@ -287,28 +366,25 @@ class Feynman_line(base_objects.Leg):
         return self._has_ordinate(x)
 
     def _has_ordinate(self, x):
-        """ hidden routine whithout checks validation """
+        """Returns the y associate to the x value in the line
+        This routines doesn't contain check consistency.
+        
+        At current status this is use for debugging only."""
 
-        if self.ordinate_fct:
+        #check if the function is already computed
+        if hasattr(self, 'ordinate_fct'):
             return self.ordinate_fct(x)
         
-        x_0 = self.start['pos_x']
-        y_0 = self.start['pos_y']
-        x_1 = self.end['pos_x']
-        y_1 = self.end['pos_y']
+        #calculate the angular coefficient
+        x_0 = self.start.get('pos_x')
+        y_0 = self.start.get('pos_y')
+        x_1 = self.end.get('pos_x')
+        y_1 = self.end.get('pos_y')
         
         alpha = (y_1 - y_0) / (x_1 - x_0) #x1 always diff of x0
         
         self.ordinate_fct = lambda X: y_0 + alpha * (X - x_0)
         return self.ordinate_fct(x)
-    
-    def is_external(self):
-        """ check if this particles is an external particles or not """
-
-        if self.end:
-            return self.end.is_external() or self.start.is_external()
-        else:
-            return self.start.is_external()
         
 class Vertex_Point(base_objects.Vertex):
     """ extension of the class Vertex in order to store the information 
@@ -349,7 +425,10 @@ class Vertex_Point(base_objects.Vertex):
         self['pos_y'] = y
         
         for line in self['line']:
-            line.ordinate_fct = 0    
+            try:
+                del line.ordinate_fct    
+            except:
+                pass
             
     def _fuse_vertex(self, vertex, common_line=''):
         """ 
@@ -374,7 +453,7 @@ class Vertex_Point(base_objects.Vertex):
     def add_line(self, line):
         """add the line in linelist """
         
-        if not isinstance(line, Feynman_line):
+        if not isinstance(line, FeynmanLine):
             raise self.VertexPointError, ' trying to add in a Vertex a non' + \
                             ' FeynmanLine Object'
 
@@ -387,7 +466,7 @@ class Vertex_Point(base_objects.Vertex):
     def remove_line(self, line):
         """ remove a line from the linelist"""
 
-        if not isinstance(line, Feynman_line):
+        if not isinstance(line, FeynmanLine):
             raise self.VertexPointError, 'trying to remove in a ' + \
                             'Vertex_Point a non FeynmanLine Object'
         
@@ -553,8 +632,7 @@ class Feynman_Diagram:
         
         vertex_point = Vertex_Point(vertex)
         self.vertexList.append(vertex_point)
-        for i in range(0, len(vertex['legs'])):
-            leg = vertex['legs'][i] 
+        for i, leg in enumerate(vertex['legs']): 
             
             #check legs status (old/new)
             if i + 1 != len(vertex['legs']):
@@ -579,7 +657,7 @@ class Feynman_Diagram:
                 line.def_end_point(vertex_point)
         #flip the last entry
         if line['number'] == 1 :# in [1,2]:
-            line._inverse_part_antipart()
+            line.inverse_part_antipart()
             
     
     def _load_leg(self, leg):
@@ -589,13 +667,13 @@ class Feynman_Diagram:
         """
         
         #extend the leg to FeynmanLine Object
-        line = Feynman_line(leg['id'], base_objects.Leg(leg)) 
+        line = FeynmanLine(leg['id'], base_objects.Leg(leg)) 
         line._def_model(self.model)
         
         self._treated_legs.append(leg)
         self.lineList.append(line)
 
-        line._inverse_pid_for_type(inversetype='wavy')
+        line.inverse_pid_for_type(inversetype='wavy')
         return line
         
  
@@ -640,9 +718,9 @@ class Feynman_Diagram:
             id2 = self._find_leg_id(last_line, end=len(self._treated_legs) - id1)
             
             #old method
-            number = last_line['number']
-            is_internal = [i for i in range(0, len(self.lineList) - 3) \
-                                        if self.lineList[i]['number'] == number]
+            #number = last_line['number']
+            #is_internal = [i for i in range(0, len(self.lineList) - 3) \
+            #                            if self.lineList[i]['number'] == number]
             
             if id2 is not None:
                 #line is duplicate in linelist => remove this duplication
@@ -745,14 +823,14 @@ class Feynman_Diagram:
             initial_vertex[1].def_position(0, 0)
             initial_vertex.reverse() #change order in order to draw from bottom
             #initial state are wrongly consider as outgoing for fermion-> solve:
-            initial_vertex[0]['line'][0]._inverse_part_antipart()
-            initial_vertex[1]['line'][0]._inverse_part_antipart()       
+            initial_vertex[0]['line'][0].inverse_part_antipart()
+            initial_vertex[1]['line'][0].inverse_part_antipart()       
             t_vertex = self.find_vertex_position_tchannel(initial_vertex)
             self.find_vertex_position_at_level(t_vertex, 2)
         elif len(initial_vertex) == 1:
             initial_vertex[0].def_position(0, 0.5)
             #initial state are wrongly consider as outgoing -> solve:
-            initial_vertex[0]['line'][0]._inverse_part_antipart()
+            initial_vertex[0]['line'][0].inverse_part_antipart()
             self.find_vertex_position_at_level(initial_vertex, 1)
         else:
             raise self.Feynman_DiagramError, \
@@ -927,7 +1005,7 @@ class Feynman_Diagram:
 
 
             if incoming == t_dir:
-                t_next._inverse_begin_end()
+                t_next.inverse_begin_end()
         
         return
              
@@ -1159,12 +1237,15 @@ if __name__ == '__main__':
     while i < 300:
         i += 1
         data = cmd.curr_amp['diagrams'][i]['vertices']
+        #print cmd.curr_model['particles']
+        
+        #break
         if [leg['number'] for leg in data[0]['legs'] if leg['number'] not in [1, 2]]:
             break
-#    for info in data:
-#        for leg in info['legs']:
-#            print dict.__str__(leg)
+        for info in data:
+            for leg in info['legs']:
+                print dict.__str__(leg)
             
-    print cmd.curr_model.get_particle(-2)
+                #print cmd.curr_model.get_particle(-2)
     
     
