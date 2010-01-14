@@ -424,7 +424,9 @@ class ColorString(list):
         """Returns an immutable object summarizing the color structure of the
         current color string. Format is ((name1,indices1),...) where name is the
         class name of the color object and indices a tuple corresponding to its
-        indices."""
+        indices. An immutable object, in Python, is built on tuples, strings and
+        numbers, i.e. objects which cannot be modified. Their crucial property
+        is that they can be used as dictionary keys!"""
 
         ret_list = [(col_obj.__class__.__name__, tuple(col_obj)) \
                         for col_obj in self]
@@ -445,7 +447,7 @@ class ColorString(list):
         dictionary written as {old_index:new_index,...}, does that for ALL 
         color objects."""
 
-        map(lambda col_obj:col_obj.replace_indices(repl_dict), self)
+        map(lambda col_obj: col_obj.replace_indices(repl_dict), self)
 
     def create_copy(self):
         """Returns a real copy of self, non trivial because bug in 
@@ -483,7 +485,9 @@ class ColorString(list):
 
     def to_canonical(self, immutable=None):
         """Returns the canonical representation of the immutable representation 
-        (i.e., first index is 1, ...). Also returns the conversion dictionary.
+        (i.e., first index is 1, ...). This allow for an easy comparison of
+        two color strings, i.e. independently of the actual index names (only
+        relative positions matter). Also returns the conversion dictionary.
         If no immutable representation is given, use the one build from self."""
 
         if not immutable:

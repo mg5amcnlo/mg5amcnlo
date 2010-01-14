@@ -48,101 +48,115 @@ class ColorBasis(dict):
         for vertex in diagram.get('vertices'):
 
         # SPECIAL VERTEX WITH ID = 0 -------------------------------------------
-            if vertex['id'] == 0:
 
-                # For vertex (i1,i2), replace all i2 by i1
-                old_num = vertex.get('legs')[1].get('number')
-                new_num = vertex.get('legs')[0].get('number')
-                # Be careful i1 or i2 might have been replaced themselves
-                try:
-                    old_num = repl_dict[old_num]
-                except KeyError:
-                    pass
-                try:
-                    new_num = repl_dict[new_num]
-                except KeyError:
-                    pass
-                # Do the replacement
-                for (ind_chain, col_str_chain) in res_dict.items():
-                    col_str_chain.replace_indices({old_num:new_num})
+            if vertex['id'] == 0:
+                self.add_vertex_id_0(vertex, repl_dict, res_dict)
                 # Return since this must be the last vertex
                 return res_dict
 
         # NORMAL VERTICES WITH ID != 0 -----------------------------------------
+            min_index, res_dict = self.add_vertex(vertex, diagram, model,
+                            repl_dict, res_dict, min_index)
 
-            # Create a list of pdg codes entering the vertex ordered as in
-            # interactions.py
-            list_pdg = [part.get_pdg_code() for part in \
-                   model.get_interaction(vertex.get('id')).get('particles')]
-
-            # Create a dictionary pdg code --> leg(s)
-            dict_pdg_leg = {}
-            for index, leg in enumerate(vertex.get('legs')):
-                curr_num = leg.get('number')
-                curr_pdg = leg.get('id')
-                # If this is the last leg and not the last vertex, 
-                # flip part/antipart, and replace last index by a new 
-                # summed index
-                if index == len(vertex.get('legs')) - 1 and \
-                    vertex != diagram.get('vertices')[-1]:
-                    part = model.get('particle_dict')[curr_pdg]
-                    curr_pdg = \
-                        model.get('particle_dict')[curr_pdg].get_anti_pdg_code()
-                    repl_dict[curr_num] = min_index
-                    min_index = min_index - 1
-                try:
-                    curr_num = repl_dict[curr_num]
-                except KeyError:
-                    pass
-                try:
-                    dict_pdg_leg[curr_pdg].append(curr_num)
-                except KeyError:
-                    dict_pdg_leg[curr_pdg] = [curr_num]
-
-            # Create a list of associated leg number following the same order
-            list_numbers = []
-            for pdg_code in list_pdg:
-                list_numbers.append(dict_pdg_leg[pdg_code].pop())
-            # ... and the associated dictionary for replacement
-            match_dict = dict(enumerate(list_numbers))
-
-            # Update the result dict using the current vertex ColorString object
-            # If more than one, create different entries
-            new_res_dict = {}
-            for i, col_str in \
-                    enumerate(model.get_interaction(vertex['id'])['color']):
-                # Build the new element
-                mod_col_str = col_str.create_copy()
-
-                # Replace summed (negative) internal indices
-                list_neg = []
-                for col_obj in mod_col_str:
-                    list_neg.extend([ind for ind in col_obj if ind < 0])
-                internal_indices_dict = {}
-                # This notation is to remove duplicates
-                for index in list(set(list_neg)):
-                    internal_indices_dict[index] = min_index
-                    min_index = min_index - 1
-                mod_col_str.replace_indices(internal_indices_dict)
-
-                # Replace other (positive) indices using the match_dic
-                mod_col_str.replace_indices(match_dict)
-                # If we are considering the first vertex, simply create
-                # new entries
-                if not res_dict:
-                    new_res_dict[tuple([i])] = mod_col_str
-                #... otherwise, loop over existing elements and multiply
-                # the color strings
-                else:
-                    for ind_chain, col_str_chain in res_dict.items():
-                        new_col_str_chain = col_str_chain.create_copy()
-                        new_col_str_chain.product(mod_col_str)
-                        new_res_dict[tuple(list(ind_chain) + [i])] = \
-                            new_col_str_chain
-            res_dict = new_res_dict
-
-        # For diagrams with no id=0 vertex
         return res_dict
+
+    def add_vertex_id_0(self, vertex, repl_dict, res_dict):
+        """Update the repl_dict and res_dict when vertex has id=0, i.e. for
+        the special case of an identity vertex."""
+
+        # For vertex (i1,i2), replace all i2 by i1
+        old_num = vertex.get('legs')[1].get('number')
+        new_num = vertex.get('legs')[0].get('number')
+        # Be careful i1 or i2 might have been replaced themselves
+        try:
+            old_num = repl_dict[old_num]
+        except KeyError:
+            pass
+        try:
+            new_num = repl_dict[new_num]
+        except KeyError:
+            pass
+        # Do the replacement
+        for (ind_chain, col_str_chain) in res_dict.items():
+            col_str_chain.replace_indices({old_num:new_num})
+
+    def add_vertex(self, vertex, diagram, model,
+                   repl_dict, res_dict, min_index):
+        """Update repl_dict, res_dict and min_index for normal vertices.
+        Returns the min_index reached and the result dictionary in a tuple."""
+
+        # Create a list of pdg codes entering the vertex ordered as in
+        # interactions.py
+        list_pdg = [part.get_pdg_code() for part in \
+               model.get_interaction(vertex.get('id')).get('particles')]
+
+        # Create a dictionary pdg code --> leg(s)
+        dict_pdg_leg = {}
+        for index, leg in enumerate(vertex.get('legs')):
+            curr_num = leg.get('number')
+            curr_pdg = leg.get('id')
+            # If this is the last leg and not the last vertex, 
+            # flip part/antipart, and replace last index by a new 
+            # summed index
+            if index == len(vertex.get('legs')) - 1 and \
+                vertex != diagram.get('vertices')[-1]:
+                part = model.get('particle_dict')[curr_pdg]
+                curr_pdg = \
+                    model.get('particle_dict')[curr_pdg].get_anti_pdg_code()
+                repl_dict[curr_num] = min_index
+                min_index = min_index - 1
+            try:
+                curr_num = repl_dict[curr_num]
+            except KeyError:
+                pass
+            try:
+                dict_pdg_leg[curr_pdg].append(curr_num)
+            except KeyError:
+                dict_pdg_leg[curr_pdg] = [curr_num]
+
+        # Create a list of associated leg number following the same order
+        list_numbers = []
+        for pdg_code in list_pdg:
+            list_numbers.append(dict_pdg_leg[pdg_code].pop())
+        # ... and the associated dictionary for replacement
+        match_dict = dict(enumerate(list_numbers))
+
+        # Update the result dict using the current vertex ColorString object
+        # If more than one, create different entries
+        new_res_dict = {}
+        for i, col_str in \
+                enumerate(model.get_interaction(vertex['id'])['color']):
+            # Build the new element
+            mod_col_str = col_str.create_copy()
+
+            # Replace summed (negative) internal indices
+            list_neg = []
+            for col_obj in mod_col_str:
+                list_neg.extend([ind for ind in col_obj if ind < 0])
+            internal_indices_dict = {}
+            # This notation is to remove duplicates
+            for index in list(set(list_neg)):
+                internal_indices_dict[index] = min_index
+                min_index = min_index - 1
+            mod_col_str.replace_indices(internal_indices_dict)
+
+            # Replace other (positive) indices using the match_dic
+            mod_col_str.replace_indices(match_dict)
+            # If we are considering the first vertex, simply create
+            # new entries
+            if not res_dict:
+                new_res_dict[tuple([i])] = mod_col_str
+            #... otherwise, loop over existing elements and multiply
+            # the color strings
+            else:
+                for ind_chain, col_str_chain in res_dict.items():
+                    new_col_str_chain = col_str_chain.create_copy()
+                    new_col_str_chain.product(mod_col_str)
+                    new_res_dict[tuple(list(ind_chain) + [i])] = \
+                        new_col_str_chain
+
+        return (min_index, new_res_dict)
+
 
     def update_color_basis(self, colorize_dict, index):
         """Update the current color basis by adding information from 
@@ -157,12 +171,8 @@ class ColorBasis(dict):
             canonical_rep, rep_dict = col_str.to_canonical()
             try:
                 # If this representation has already been considered,
-                # recycle the result. Note that we have to replace back
-                # the indices to match the initial convention. 
+                # recycle the result. 
                 col_fact = copy.copy(self._canonical_dict[canonical_rep])
-                col_fact.replace_indices(self._invert_dict(rep_dict))
-                # Must simplify once to put traces in a canonical ordering
-                col_fact = col_fact.simplify()
 
             except KeyError:
                 # If the representation is really new
@@ -176,8 +186,14 @@ class ColorBasis(dict):
                 canonical_col_fact.replace_indices(rep_dict)
                 self._canonical_dict[canonical_rep] = canonical_col_fact
 
-#            col_fact = color_algebra.ColorFactor([col_str])
-#            col_fact = col_fact.full_simplify()
+            else:
+                # If this representation has already been considered,
+                # adapt the result
+                # Note that we have to replace back
+                # the indices to match the initial convention. 
+                col_fact.replace_indices(self._invert_dict(rep_dict))
+                # Must simplify once to put traces in a canonical ordering
+                col_fact = col_fact.simplify()
 
             # loop over color strings in the resulting color factor
             for col_str in col_fact:

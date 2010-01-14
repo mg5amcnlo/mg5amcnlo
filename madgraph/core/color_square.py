@@ -64,10 +64,10 @@ class ColorMatrix(dict):
 
         canonical_dict = {}
 
-        for i1, (struct1, contrib_list1) in \
-                    enumerate(self._col_basis1.items()):
-            for i2, (struct2, contrib_list2) in \
-                    enumerate(self._col_basis2.items()):
+        for i1, struct1 in \
+                    enumerate(self._col_basis1.keys()):
+            for i2, struct2 in \
+                    enumerate(self._col_basis2.keys()):
 
                 # Only scan upper right triangle if symmetric
                 if is_symmetric and i2 < i1:
@@ -84,39 +84,16 @@ class ColorMatrix(dict):
 
                 try:
                     # If this has already been calculated, use the result
-                    result = canonical_dict[canonical_entry][0]
-                    result_fixed_Nc = canonical_dict[canonical_entry][1]
+                    result, result_fixed_Nc = canonical_dict[canonical_entry]
 
                 except KeyError:
                     # Otherwise calculate the result
-
-                    # Create color string objects corresponding to color basis 
-                    # keys
-                    col_str = color_algebra.ColorString()
-                    col_str.from_immutable(struct1)
-
-                    col_str2 = color_algebra.ColorString()
-                    col_str2.from_immutable(new_struct2)
-
-                    # Complex conjugate the second one and multiply the two
-                    col_str.product(col_str2.complex_conjugate())
-
-                    # Create a color factor to store the result and simplify it
-                    # taking into account the limit on Nc
-                    col_fact = color_algebra.ColorFactor([col_str])
-                    result = col_fact.full_simplify()
-
-                    # Keep only terms with Nc_max >= Nc power >= Nc_min
-                    if Nc_power_min is not None:
-                        result[:] = [col_str for col_str in result \
-                                     if col_str.Nc_power >= Nc_power_min]
-                    if Nc_power_max is not None:
-                        result[:] = [col_str for col_str in result \
-                                     if col_str.Nc_power <= Nc_power_max]
-
-                    # Calculate the fixed Nc representation
-                    result_fixed_Nc = result.set_Nc(Nc)
-
+                    result, result_fixed_Nc = \
+                            self.create_new_entry(struct1,
+                                                  new_struct2,
+                                                  Nc_power_min,
+                                                  Nc_power_max,
+                                                  Nc)
                     # Store both results
                     canonical_dict[canonical_entry] = (result, result_fixed_Nc)
 
@@ -140,6 +117,40 @@ class ColorMatrix(dict):
                     self.inverted_col_matrix[result_fixed_Nc] = [(i1, i2)]
                     if is_symmetric:
                         self.inverted_col_matrix[result_fixed_Nc] = [(i2, i1)]
+
+    def create_new_entry(self, struct1, struct2,
+                         Nc_power_min, Nc_power_max, Nc):
+        """ Create a new product result, and result with fixed Nc for two color
+        basis entries. Implement Nc power limits."""
+
+        # Create color string objects corresponding to color basis 
+        # keys
+        col_str = color_algebra.ColorString()
+        col_str.from_immutable(struct1)
+
+        col_str2 = color_algebra.ColorString()
+        col_str2.from_immutable(struct2)
+
+        # Complex conjugate the second one and multiply the two
+        col_str.product(col_str2.complex_conjugate())
+
+        # Create a color factor to store the result and simplify it
+        # taking into account the limit on Nc
+        col_fact = color_algebra.ColorFactor([col_str])
+        result = col_fact.full_simplify()
+
+        # Keep only terms with Nc_max >= Nc power >= Nc_min
+        if Nc_power_min is not None:
+            result[:] = [col_str for col_str in result \
+                         if col_str.Nc_power >= Nc_power_min]
+        if Nc_power_max is not None:
+            result[:] = [col_str for col_str in result \
+                         if col_str.Nc_power <= Nc_power_max]
+
+        # Calculate the fixed Nc representation
+        result_fixed_Nc = result.set_Nc(Nc)
+
+        return result, result_fixed_Nc
 
     def __str__(self):
         """Returns a nicely formatted string with the fixed Nc representation
