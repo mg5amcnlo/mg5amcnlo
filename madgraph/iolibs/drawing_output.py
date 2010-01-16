@@ -58,7 +58,7 @@ class Draw_diagram:
             external_on_bottom = 1
         
         if opt.has_key('horizontal'):
-            external_on_bottom = opt['horizontal']
+            force_horizontal = opt['horizontal']
         else:
             force_horizontal = 1
             
@@ -68,13 +68,13 @@ class Draw_diagram:
             contract_unpropa = 1
         
     
-        if  not isinstance(diagram, Draw.Feynman_Diagram):
+        if  not isinstance(diagram, Draw.FeynmanDiagram):
             if force_horizontal:
-                diagram = Draw.Feynman_Diagram_horizontal(diagram, model, mode=
-                                                        external_on_bottom)
+                diagram = Draw.FeynmanDiagramHorizontal(diagram, model, \
+                                                drawing_mode=external_on_bottom)
             else:
-                diagram = Draw.Feynman_Diagram(diagram, model, mode=
-                                                        external_on_bottom)
+                diagram = Draw.FeynmanDiagram(diagram, model, \
+                                              drawing_mode=external_on_bottom)
             diagram.main(contract=contract_unpropa)
 
         return diagram
@@ -199,41 +199,41 @@ class Draw_diagram_eps(Draw_diagram):
     def draw_straight(self, line):
         """ return the code associate to this fermionic line """
         
-        self.text += self.line_format(line.start['pos_x'], line.start['pos_y'], 
-                         line.end['pos_x'], line.end['pos_y'], 'Ffermion')
+        self.text += self.line_format(line.start.pos_x, line.start.pos_y, 
+                         line.end.pos_x, line.end.pos_y, 'Ffermion')
         
         
     def draw_dashed(self, line):
         """ return the code associate to this spin 0 line """
 
-        self.text += self.line_format(line.start['pos_x'], line.start['pos_y'], 
-                         line.end['pos_x'], line.end['pos_y'], 'Fhiggs')
+        self.text += self.line_format(line.start.pos_x, line.start.pos_y, 
+                         line.end.pos_x, line.end.pos_y, 'Fhiggs')
  
         
     def draw_wavy(self, line):
         """ return the code associate to the spin 1 line """
 
-        self.text += self.line_format(line.start['pos_x'], line.start['pos_y'], 
-                         line.end['pos_x'], line.end['pos_y'], '0 Fphotond')
+        self.text += self.line_format(line.start.pos_x, line.start.pos_y, 
+                         line.end.pos_x, line.end.pos_y, '0 Fphotond')
 
 
     def draw_curly(self, line):
         """ return the code associate to the spin 1 line """
         
         #print line.start, line.end
-        if line.start['pos_x'] < line.end['pos_x']:
-            self.text += self.line_format(line.start['pos_x'],
-                        line.start['pos_y'], line.end['pos_x'],
-                        line.end['pos_y'], '0 Fgluon')
-        elif line.start['pos_x'] == line.end['pos_x'] and \
-                        line.start['pos_y'] > line.end['pos_y']:
-            self.text += self.line_format(line.start['pos_x'],
-                        line.start['pos_y'], line.end['pos_x'],
-                        line.end['pos_y'], '0 Fgluon')
+        if line.start.pos_x < line.end.pos_x:
+            self.text += self.line_format(line.start.pos_x,
+                        line.start.pos_y, line.end.pos_x,
+                        line.end.pos_y, '0 Fgluon')
+        elif line.start.pos_x == line.end.pos_x and \
+                        line.start.pos_y > line.end.pos_y:
+            self.text += self.line_format(line.start.pos_x,
+                        line.start.pos_y, line.end.pos_x,
+                        line.end.pos_y, '0 Fgluon')
         else:
-            self.text += self.line_format(line.end['pos_x'],
-                        line.end['pos_y'], line.start['pos_x'],
-                        line.start['pos_y'], '0 Fgluon')
+            self.text += self.line_format(line.end.pos_x,
+                        line.end.pos_y, line.start.pos_x,
+                        line.start.pos_y, '0 Fgluon')
             
     def put_diagram_number(self, number=1):
         """ place the diagram number for this diagram """                       
@@ -250,8 +250,8 @@ class Draw_diagram_eps(Draw_diagram):
         
         for vertex in self.diagram.vertexList:
             if vertex.is_external():
-                x = vertex['pos_x']
-                y = vertex['pos_y']
+                x = vertex.pos_x
+                y = vertex.pos_y
                 if x == 0:
                     x = -0.04
                 elif x == 1:
@@ -265,13 +265,13 @@ class Draw_diagram_eps(Draw_diagram):
                 #                            'tag inside the diagram')
                 x, y = self.rescale(x, y)
                 self.text += ' %s  %s moveto \n' % (x, y)  
-                self.text += '(%s)   show\n' % (vertex['line'][0]['number'])                 
+                self.text += '(%s)   show\n' % (vertex.line[0]['number'])                 
  
     def associate_name(self, line, name):
         """ place the name of the line at the correct position """
 
-        x1, y1 = line.start['pos_x'], line.start['pos_y']
-        x2, y2 = line.end['pos_x'], line.end['pos_y']
+        x1, y1 = line.start.pos_x, line.start.pos_y
+        x2, y2 = line.end.pos_x, line.end.pos_y
 
         d = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
         if d == 0:
@@ -380,9 +380,9 @@ if __name__ == '__main__':
                                     '../tests/input_files/v4_sm_particles.dat')
     cmd.do_import('v4 ' + _file_path + \
                                 '../tests/input_files/v4_sm_interactions.dat')
-    #cmd.do_generate('mu+ mu- > mu+ vm z z mu- vm~')
-    #cmd.do_generate('w+ w- > w+ w- a')
-    cmd.do_generate('g g > g g g g g g g')
+    cmd.do_generate('mu+ mu- > W+ W- mu+ mu- mu+ mu-')
+    #cmd.do_generate('g g > g g g g g g g')
+    #cmd.do_generate('g g > g g g g g g g')
     len(cmd.curr_amp['diagrams'])
     for i in range(0, 1):
         start = time.time()
@@ -391,7 +391,7 @@ if __name__ == '__main__':
                              model=cmd.curr_model,
                              amplitude='')
             start = time.time()
-            plot.draw()
+            plot.draw( opt={'horizontal':1})
             stop = time.time()
             print 'time to draw', stop - start
             print 'done'
