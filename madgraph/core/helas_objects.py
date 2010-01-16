@@ -1565,7 +1565,8 @@ class HelasMultiProcess(base_objects.PhysicsObject):
 
     def generate_matrix_elements(self, amplitudes):
         """Generate the HelasMatrixElements for the Amplitudes,
-        identifying processes with identical matrix elements"""
+        identifying processes with identical matrix elements, as
+        defined by HelasMatrixElement.__eq__"""
 
         if not isinstance(amplitudes, diagram_generation.AmplitudeList):
             raise self.HelasMultiProcessError, \
@@ -1577,16 +1578,22 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             logging.info("Generating Helas calls for %s" % \
                          amplitude.get('process').nice_string().replace('Process', 'process'))
             matrix_element = HelasMatrixElement(amplitude)
-            if matrix_element in matrix_elements:
+            try:
+                # If an identical matrix element is already in the list,
+                # then simply add this process to the list of
+                # processes for that matrix element
                 other_processes = matrix_elements[\
                     matrix_elements.index(matrix_element)].get('processes')
                 logging.info("Combining process with %s" % \
                              other_processes[0].nice_string().replace('Process: ',''))
                 other_processes.append(amplitude.get('process'))
                 
-            elif matrix_element.get('processes') and \
-                     matrix_element.get('diagrams'):
-                matrix_elements.append(matrix_element)
+            except ValueError:
+                # Otherwise, if the matrix element has any diagrams,
+                # add this matrix element.
+                if matrix_element.get('processes') and \
+                       matrix_element.get('diagrams'):
+                    matrix_elements.append(matrix_element)
         
 
 #===============================================================================

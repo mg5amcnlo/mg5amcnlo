@@ -134,8 +134,8 @@ class Amplitude(base_objects.PhysicsObject):
         # Then check same number of incoming and outgoing fermions (if
         # no Majorana particles in model)
         if not model.get('got_majoranas') and \
-           len(filter(lambda leg: leg.is_incoming(model), legs)) != \
-           len(filter(lambda leg: leg.is_outgoing(model), legs)):
+           len(filter(lambda leg: leg.is_incoming_fermion(model), legs)) != \
+           len(filter(lambda leg: leg.is_outgoing_fermion(model), legs)):
             self['diagrams'] = res
             return res
 

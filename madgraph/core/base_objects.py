@@ -786,7 +786,7 @@ class Leg(PhysicsObject):
 
         return model.get('particle_dict')[self['id']].is_fermion()
 
-    def is_incoming(self, model):
+    def is_incoming_fermion(self, model):
         """Returns True if leg is an incoming fermion, i.e., initial
         particle or final antiparticle"""
 
@@ -799,7 +799,7 @@ class Leg(PhysicsObject):
                (self.get('state') == 'initial' and part.get('is_part') or \
                 self.get('state') == 'final' and not part.get('is_part'))
 
-    def is_outgoing(self, model):
+    def is_outgoing_fermion(self, model):
         """Returns True if leg is an outgoing fermion, i.e., initial
         antiparticle or final particle"""
 
