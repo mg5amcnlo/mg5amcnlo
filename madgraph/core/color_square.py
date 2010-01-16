@@ -40,7 +40,7 @@ class ColorMatrix(dict):
         """Initialize a color matrix with one or two color basis objects. If
         only one color basis is given, the other one is assumed to be equal.
         As options, any value of Nc and minimal/maximal power of Nc can also be 
-        provided. Be careful that the min/max power constraint is applied
+        provided. Note that the min/max power constraint is applied
         only at the end, so that it does NOT speed up the calculation."""
 
         self._col_basis1 = col_basis
