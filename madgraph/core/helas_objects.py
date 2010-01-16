@@ -334,6 +334,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return not self.is_fermion()
     
     def to_array(self):
+        """Generate an array with the information needed to uniquely
+        determine if a wavefunction has been used before: interaction
+        id and mother wavefunction numbers."""
+        
         array_rep = array.array('i',[self['interaction_id']])
         array_rep.extend([mother.get('number') for \
                           mother in self['mothers']])
@@ -1290,9 +1294,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         if not diagram_list:
             return
 
-        # wavefunctions has all the previously defined wavefunctions
+        # All the previously defined wavefunctions
         wavefunctions = []
+        # List of minimal information for comparison with previous
+        # wavefunctions
         wf_mother_arrays = []
+        # Keep track of wavefunction number
         wf_number = 0
 
         # Generate wavefunctions for the external particles
@@ -1380,7 +1387,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     wf.set('number', wf_number)
                     # Store wavefunction
                     try:
-                        #wf = wavefunctions[wavefunctions.index(wf)]
+                        # Use wf_mother_arrays to locate existing wavefunction
                         wf = wavefunctions[wf_mother_arrays.index(wf.to_array())]
                         # Since we reuse the old wavefunction, reset wf_number
                         wf_number = wf_number - 1
