@@ -453,7 +453,7 @@ class VertexPoint(base_objects.Vertex):
             A) change the 'line' of this vertex
             B) change the start-end position of line to point on this vertex
             C) remove common_line (if defined)."""
-            
+        
         for line in vertex.line:
             #remove common line. They are shrink to a single point
             if line is common_line:

@@ -20,7 +20,7 @@ import sys
 import madgraph.iolibs.drawing_lib as Draw 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 
-class Draw_diagram:
+class DrawDiagram:
     """ all generic routine in order to written one diagram """
     
     
@@ -37,63 +37,66 @@ class Draw_diagram:
         self.model = model         # use for automatic conversion of graph
         self.amplitude = amplitude # use for automatic conversion of graph
           
-    def convert_diagram(self, diagram='', model='', amplitude='', opt={}):
-        """ 
-            check if the diagram is a Feynman diagram and not a basic one
-            if it is a basic one upgrade it!!
-        """
-        
+    def convert_diagram(self, diagram='', model='', amplitude='', **opt):
+        """If diagram is a basic diagram and not a FeynmanDiagram convert him
+        to a FeynmanDiagram one. 'opt' keeps track of possible option of drawing.
+        recognize options:
+            external [True] : authorizes external particles to finish on 
+                horizontal limit of the square
+            horizontal [True]: if on true use FeynmanDiagramHorizontal to 
+                convert the diagram. otherwise use FeynmanDiagram
+            non_propagating [True] : removes the non propagating particles 
+                present in the diagram."""
+ 
         if diagram == '':
             diagram = self.diagram
-            
+        
+        #if already a valid diagram. nothing to do
+        if isinstance(diagram, Draw.FeynmanDiagram):
+            return 
+        
+        # check validity of input
         if model == '':
             model = self.model
             if not model:
-                raise self.Draw_diagram_Error('The model is required for' + \
+                raise self.DrawDiagramError('The model is required for' + \
                                 'diagram conversion in routine convert_diagram')
 
-        if opt.has_key('external'):
-            external_on_bottom = opt['external']
-        else:
-            external_on_bottom = 1
+        # Put default values for options
+        authorize_options = ['external','horizontal','non_propagating']
+        for key in authorize_options:
+            if not opt.has_key(key):
+                opt[key] = True
         
-        if opt.has_key('horizontal'):
-            force_horizontal = opt['horizontal']
+        
+        # Upgrade diagram to FeynmanDiagram Type
+        if opt['horizontal']:
+            diagram = Draw.FeynmanDiagramHorizontal(diagram, model, \
+                                                drawing_mode=opt['external'])
         else:
-            force_horizontal = 1
+            diagram = Draw.FeynmanDiagram(diagram, model, \
+                                              drawing_mode=opt['external'])
             
-        if opt.has_key('non_propagating'):
-            contract_unpropa = opt['non_propagating']
-        else:
-            contract_unpropa = 1
-        
-    
-        if  not isinstance(diagram, Draw.FeynmanDiagram):
-            if force_horizontal:
-                diagram = Draw.FeynmanDiagramHorizontal(diagram, model, \
-                                                drawing_mode=external_on_bottom)
-            else:
-                diagram = Draw.FeynmanDiagram(diagram, model, \
-                                              drawing_mode=external_on_bottom)
-            diagram.main(contract=contract_unpropa)
+        # Find the position of all vertex and all line orientation
+        diagram.main(contract=opt['non_propagating'])
 
         return diagram
         
         
 
-    def draw(self, opt={}):
+    def draw(self, **opt):
         """ draw the diagram """
         
-        self.convert_diagram(opt=opt)
+        self.convert_diagram(**opt)
         self.initialize()
         self.draw_diagram(self.diagram)
         self.conclude()
 
-    def draw_diagram(self, diagram, number=1, opt={}):
+    def draw_diagram(self, diagram, number=1, **opt):
         """ draw a given diagram no input-output """
         
         self.diagram = self.convert_diagram(diagram, self.model,
-                                            self.amplitude, opt=opt)
+                                            self.amplitude, **opt)
         
         for line in self.diagram.lineList:
             self.draw_line(line)
@@ -142,7 +145,7 @@ class Draw_diagram:
         """ add the MG number associate to each particle """
         pass
     
-class Draw_diagram_eps(Draw_diagram):
+class DrawDiagramEps(DrawDiagram):
     """ all the routine need to write a given diagram in eps format """
     
     width = 450
@@ -176,7 +179,7 @@ class Draw_diagram_eps(Draw_diagram):
         #self.file.writelines(text)
 
         #write the diagram.
-        Draw_diagram.conclude(self)
+        DrawDiagram.conclude(self)
     
 
     def rescale(self, x, y):
@@ -296,7 +299,7 @@ class Draw_diagram_eps(Draw_diagram):
         self.text += '(' + name + ')   show\n'
 
 ################################################################################
-class Draw_diagrams_eps(Draw_diagram_eps):
+class DrawDiagramsEps(DrawDiagramEps):
     """ all the routine need to write a set of diagrams in eps format """
     
     x_min = 75
@@ -312,7 +315,7 @@ class Draw_diagrams_eps(Draw_diagram_eps):
     def __init__(self, diagramlist='', file='diagram.eps', \
                   model='', amplitude=''):
         
-        Draw_diagram_eps.__init__(self, '', file, model, amplitude)
+        DrawDiagramEps.__init__(self, '', file, model, amplitude)
         self.block_nb = 0
         self.npage = 1 + len(diagramlist) // (self.nb_col * self.nb_line)
         self.diagramlist = diagramlist
@@ -337,20 +340,20 @@ class Draw_diagrams_eps(Draw_diagram_eps):
         
         return x, y    
  
-    def draw_diagram(self, diagram, opt={}):
+    def draw_diagram(self, diagram, **opt):
         """ draw the diagram no input-output """
         
         self.diagram = diagram
-        Draw_diagram_eps.draw_diagram(self, diagram, self.block_nb, opt=opt)
+        DrawDiagramEps.draw_diagram(self, diagram, self.block_nb, **opt)
         self.block_nb += 1
         
         
-    def draw(self, opt={}):
+    def draw(self, **opt):
         """ draw the diagram """
         
         self.initialize()
         for diagram in self.diagramlist:
-            self.draw_diagram(diagram, opt=opt)
+            self.draw_diagram(diagram, **opt)
             
             if self.block_nb % (self.nb_col * self.nb_line) == 0:
                 self.pass_to_next_page()
@@ -380,14 +383,14 @@ if __name__ == '__main__':
                                     '../tests/input_files/v4_sm_particles.dat')
     cmd.do_import('v4 ' + _file_path + \
                                 '../tests/input_files/v4_sm_interactions.dat')
-    cmd.do_generate('mu+ mu- > W+ W- mu+ mu- mu+ mu-')
+    cmd.do_generate('t h > t g W+ W-')
     #cmd.do_generate('g g > g g g g g g g')
     #cmd.do_generate('g g > g g g g g g g')
     len(cmd.curr_amp['diagrams'])
     for i in range(0, 1):
         start = time.time()
         try:
-            plot = Draw_diagrams_eps(cmd.curr_amp['diagrams'], 'diagram.eps',
+            plot = DrawDiagramsEps(cmd.curr_amp['diagrams'], 'diagram.eps',
                              model=cmd.curr_model,
                              amplitude='')
             start = time.time()

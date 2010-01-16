@@ -23,6 +23,7 @@ import pickle
 from madgraph.interface.cmd_interface import MadGraphCmd
 import madgraph.core.base_objects as base_objects
 import madgraph.iolibs.drawing_lib as drawing
+import madgraph.iolibs.drawing_output as draw_output
 
 
 _cmd = MadGraphCmd()
@@ -1189,7 +1190,284 @@ class TestFeynmanDiagram(unittest.TestCase):
                 self.assertEquals((x-1)*(y)*(y-1),0)
             else:
                 self.assertNotEquals((x-1)*(y)*(y-1),0)
-                   
+                
+                
+class TestDrawingEPS(unittest.TestCase):
+    """ Class testing if we can create the files in the EPS mode.
+    
+    This test the following two points:
+    1) can we create the output file?
+    2) can we convert him in pdf? (Imagemagick is needed for this)
+        checking that the file is valid."""
+    
+    #made a set of diagram available here
+    store_diagram = TestFeynmanDiagram.store_diagram
+    
+    def setUp(self):
+        """Charge a diagram to draw"""
+        
+        self.diagram= self.store_diagram['t h > t g W+ W-'][0]
+        
+        self.plot = draw_output.DrawDiagramEps(self.diagram, 'diagram.eps', \
+                                          model=_cmd.curr_model, amplitude='')
+    
+    def output_is_valid(self,position, pdf_check = True):
+        """Check if the output files exist. Additionally if pdf_check is on True
+        check if we can convert the output file in pdf. Finally delete files."""
+        
+        #check if exist
+        self.assertTrue(os.path.isfile(position))
+        
+        #check if the file is valid
+        if pdf_check:
+            filename, ext = os.path.splitext('position')
+            os.system('convert '+position+' '+filename+'.pdf')
+     
+            #try is use to ensure that no file are left on disk
+            try:
+                self.assertTrue(os.path.isfile(filename+'.pdf'))
+            except:
+                os.remove(position)
+                raise
+            os.remove(filename+'.pdf')
+        os.remove(position)
+        return
+    
+    def testDrawDiagramEPS(self):
+        """Check the DrawDiagramEPS module. 
+        
+        Need ImageMagick."""
+        
+        self.plot.draw()
+        self.output_is_valid('diagram.eps')
+              
+    def testDrawDiagramEPS_external(self):
+        """Check the DrawDiagramEPS module (with external at end).
+        
+        Need ImageMagick."""
+        
+        self.plot.draw(external=False)
+        self.output_is_valid('diagram.eps')
+ 
+ 
+    def testDrawDiagramEPS_contract(self):
+        """Check the DrawDiagramEPS module (contract non propagating).
+        
+        Need ImageMagick."""
+                       
+        model_info = _cmd.curr_model.get_particle(5)
+        model_info.set('propagating', False)
+        self.plot.draw(non_propagating=False)
+        try:
+            self.output_is_valid('diagram.eps')       
+        except:
+            model_info.set('propagating', True)            
+            raise
+        
+    def testDrawDiagramEPS_contract_ext(self):
+        """Check the DrawDiagramEPS module (contract non propagating and 
+        external at end
+        
+        Need ImageMagick."""
+                       
+        model_info = _cmd.curr_model.get_particle(5)
+        model_info.set('propagating', False)
+        self.plot.draw(non_propagating=False, external=0)
+        try:
+            self.output_is_valid('diagram.eps')       
+        except:
+            model_info.set('propagating', True)            
+            raise       
+
+   
+    def testDrawDiagramEPS_horizontal(self):
+        """Check the DrawDiagramEPS module. 
+        
+        Need ImageMagick."""
+        
+        self.plot.draw(horizontal=True)
+        self.output_is_valid('diagram.eps')
+              
+    def testDrawDiagramEPS_external_horizontal(self):
+        """Check the DrawDiagramEPS module (with external at end).
+        
+        Need ImageMagick."""
+        
+        self.plot.draw(external=False, horizontal=True)
+        self.output_is_valid('diagram.eps')
+ 
+ 
+    def testDrawDiagramEPS_contract_horizontal(self):
+        """Check the DrawDiagramEPS module (contract non propagating).
+        
+        Need ImageMagick."""
+                       
+        model_info = _cmd.curr_model.get_particle(5)
+        model_info.set('propagating', False)
+        self.plot.draw(non_propagating=False, horizontal=True)
+        try:
+            self.output_is_valid('diagram.eps')       
+        except:
+            model_info.set('propagating', True)            
+            raise
+        
+    def testDrawDiagramEPS_contract_ext_horizontal(self):
+        """Check the DrawDiagramEPS module (contract non propagating and 
+        external at end
+        
+        Need ImageMagick."""
+                       
+        model_info = _cmd.curr_model.get_particle(5)
+        model_info.set('propagating', False)
+        self.plot.draw(non_propagating=False, external=0, horizontal=True)
+        try:
+            self.output_is_valid('diagram.eps')       
+        except:
+            model_info.set('propagating', True)            
+            raise       
+
+
+
+class TestDrawingS_EPS(unittest.TestCase):
+    """ Class testing if we can create the files in the EPS mode for a set
+        of diagrams.
+    
+    This test the following two points:
+    1) can we create the output file?
+    2) can we convert him in pdf? (Imagemagick is needed for this)
+        checking that the file is valid."""
+        
+    #made a set of diagram available here
+    store_diagram = TestFeynmanDiagram.store_diagram
+    
+
+    def setUp(self):
+        """Charge a diagram to draw"""
+        
+        self.diagram=[]
+        for i in range(7):
+            self.diagram.append(self.store_diagram['t h > t g W+ W-'][i])
+        
+        self.plot = draw_output.DrawDiagramsEps(self.diagram, 'diagram.eps', \
+                                          model=_cmd.curr_model, amplitude='') 
+        
+    def output_is_valid(self, position, pdf_check = True):
+        """Check if the output files exist. Additionally if pdf_check is on True
+        check if we can convert the output file in pdf. Finally delete files."""
+        
+        #check if exist
+        self.assertTrue(os.path.isfile(position))
+        
+        #check if the file is valid
+        if pdf_check:
+            filename, ext = os.path.splitext('position')
+            os.system('convert '+position+' '+filename+'.pdf')
+     
+            #try is use to ensure that no file are left on disk
+            try:
+                self.assertTrue(os.path.isfile(filename+'.pdf'))
+            except:
+                os.remove(position)
+                raise
+            os.remove(filename+'.pdf')
+        os.remove(position)
+        return
+    
+    def testDrawDiagramsEPS(self):
+        """Check the DrawDiagramsEPS module. 
+        
+        Need ImageMagick."""
+        
+        self.plot.draw()
+        self.output_is_valid('diagram.eps')
+              
+    def testDrawDiagramsEPS_external(self):
+        """Check the DrawDiagramsEPS module (with external at end).
+        
+        Need ImageMagick."""
+        
+        self.plot.draw(external=False)
+        self.output_is_valid('diagram.eps')
+ 
+ 
+    def testDrawDiagramsEPS_contract(self):
+        """Check the DrawDiagramsEPS module (contract non propagating).
+        
+        Need ImageMagick."""
+                       
+        model_info = _cmd.curr_model.get_particle(5)
+        model_info.set('propagating', False)
+        self.plot.draw(non_propagating=False)
+        try:
+            self.output_is_valid('diagram.eps')       
+        except:
+            model_info.set('propagating', True)            
+            raise
+        
+    def testDrawDiagramsEPS_contract_ext(self):
+        """Check the DrawDiagramsEPS module (contract non propagating and 
+        external at end
+        
+        Need ImageMagick."""
+                       
+        model_info = _cmd.curr_model.get_particle(5)
+        model_info.set('propagating', False)
+        self.plot.draw(non_propagating=False, external=0)
+        try:
+            self.output_is_valid('diagram.eps')       
+        except:
+            model_info.set('propagating', True)            
+            raise       
+
+   
+    def testDrawDiagramsEPS_horizontal(self):
+        """Check the DrawDiagramsEPS module. 
+        
+        Need ImageMagick."""
+        
+        self.plot.draw(horizontal=True)
+        self.output_is_valid('diagram.eps')
+              
+    def testDrawDiagramsEPS_external_horizontal(self):
+        """Check the DrawDiagramsEPS module (with external at end).
+        
+        Need ImageMagick."""
+        
+        self.plot.draw(external=False, horizontal=True)
+        self.output_is_valid('diagram.eps')
+ 
+ 
+    def testDrawDiagramsEPS_contract_horizontal(self):
+        """Check the DrawDiagramsEPS module (contract non propagating).
+        
+        Need ImageMagick."""
+                       
+        model_info = _cmd.curr_model.get_particle(5)
+        model_info.set('propagating', False)
+        self.plot.draw(non_propagating=False, horizontal=True)
+        try:
+            self.output_is_valid('diagram.eps')       
+        except:
+            model_info.set('propagating', True)            
+            raise
+        
+    def testDrawDiagramsEPS_contract_ext_horizontal(self):
+        """Check the DrawDiagramsEPS module (contract non propagating and 
+        external at end
+        
+        Need ImageMagick."""
+                       
+        model_info = _cmd.curr_model.get_particle(5)
+        model_info.set('propagating', False)
+        self.plot.draw(non_propagating=False, external=0, horizontal=True)
+        try:
+            self.output_is_valid('diagram.eps')       
+        except:
+            model_info.set('propagating', True)            
+            raise       
+        
+        
+               
             
 if __name__ == '__main__':
     
@@ -1202,6 +1480,7 @@ if __name__ == '__main__':
     process_diag['g g > g g g'] = [0]    
     process_diag['g g > g g g g'] = [0, 26, 92, 93, 192]
     process_diag['mu+ mu- > w+ w- a'] = [6, 7]
+    process_diag['t h > t g W+ W-'] = [0,1,2,3,4,5,6,7] 
     #process_diag['g g > g g g g g'] = [13]
     
     from madgraph.interface.cmd_interface import MadGraphCmd
@@ -1213,6 +1492,7 @@ if __name__ == '__main__':
     #create the diagrams
     diag_content={}
     for gen_line, pos_list in process_diag.items():  
+        print gen_line,':',
         cmd.do_generate(gen_line)
         diag_content[gen_line] = {}
         for pos in pos_list:
@@ -1224,7 +1504,6 @@ if __name__ == '__main__':
     pickle.dump(diag_content, file_test_diagram)
     
         
-
 
 
 
