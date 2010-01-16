@@ -17,7 +17,7 @@ import copy
 import logging
 import re
 import itertools
-from math import factorial as factorial
+import math
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -68,7 +68,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['is_part'] = True
         self['self_antipart'] = False
         # Properties related to the interaction generating the propagator
-        # For an e- produced from an e+e-A vertex would have the following proporties
+        # For an e- produced from an e+e-A vertex would have the following
+        # proporties:
         # interaction_id = the id of the interaction in the model
         # pdg_codes = the pdg_codes property of the interaction, [11, -11, 22]
         # inter_color = the 'color' property of the interaction: ['C1']
@@ -86,7 +87,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # number_external = the 'number' property of the corresponding Leg,
         #                   corresponds to the number of the first external
         #                   particle contributing to this leg
-        # fermionflow = 1    fermions have +-1 for flow,
+        # fermionflow = 1    fermions have +-1 for flow (bosons always +1),
         #                    -1 is used only if there is a fermion flow clash
         #                    due to a Majorana particle 
         self['state'] = 'incoming'
@@ -182,7 +183,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if name == 'interaction_id':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid integer for wavefunction interaction id" % str(value)
+                        "%s is not a valid integer "  % str(value) + \
+                        " for wavefunction interaction id"
 
         if name == 'pdg_codes':
             #Should be a list of strings
@@ -243,20 +245,21 @@ class HelasWavefunction(base_objects.PhysicsObject):
             if value not in ['incoming', 'outgoing',
                              'intermediate', 'initial', 'final']:
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid wavefunction state (incoming|outgoing|intermediate)" % \
-                                                                    str(value)
+                        "%s is not a valid wavefunction "  % str(value) + \
+                        "state (incoming|outgoing|intermediate)"
         if name in ['fermionflow']:
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid integer" % str(value)
             if not value in [-1,1]:
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid sign (must be -1 or 1)" % str(value)                
+                        "%s is not a valid sign (must be -1 or 1)" % str(value)
 
         if name in ['number_external', 'number']:
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid integer for wavefunction number" % str(value)
+                        "%s is not a valid integer" % str(value) + \
+                        " for wavefunction number"
 
         if name == 'mothers':
             if not isinstance(value, HelasWavefunctionList):
@@ -431,7 +434,27 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                    diagram_wavefunctions,
                                    external_wavefunctions):
         """Check for clashing fermion flow (N(incoming) !=
-        N(outgoing)) in mothers
+        N(outgoing)) in mothers. This can happen when there is a
+        Majorana particle in the diagram, which can flip the fermion
+        flow. This is detected either by a wavefunctions or an
+        amplitude, with 2 fermion mothers with same state.
+
+        In this case, we need to follow the fermion lines of the
+        mother wavefunctions until we find the outermost Majorana
+        fermion. For all fermions along the line up to (but not
+        including) the Majorana fermion, we need to flip incoming <->
+        outgoing and particle id. For all fermions after the Majorana
+        fermion, we need to flip the fermionflow property (1 <-> -1).
+
+        The reason for this is that in the Helas calls, we need to
+        keep track of where the actual fermion flow clash happens
+        (i.e., at the outermost Majorana), as well as having the
+        correct fermion flow for all particles along the fermion line.
+
+        This is done by the mothers using
+        HelasWavefunctionList.check_and_fix_fermion_flow, which in
+        turn calls the recursive function
+        check_majorana_and_flip_flow to trace the fermion lines.
         """
 
         # Use the HelasWavefunctionList helper function
@@ -491,10 +514,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
             # flip the particle id and flow state.
             # Otherwise, if mother has different fermion flow, flip
             # flow
-            flip_flow = new_mother.get('fermionflow') != self.get('fermionflow') \
-                        and not self.get('self_antipart')
-            flip_sign = new_mother.get('fermionflow') != self.get('fermionflow') \
-                        and self.get('self_antipart') or \
+            flip_flow = new_mother.get('fermionflow') != \
+                        self.get('fermionflow') and \
+                        not self.get('self_antipart')
+            flip_sign = new_mother.get('fermionflow') != \
+                        self.get('fermionflow') and \
+                        self.get('self_antipart') or \
                         new_mother.get('state') != self.get('state')
                         
             # Replace old mother with new mother
@@ -511,10 +536,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 # in wavefunctions and diagram_wavefunctions
                 number = len(external_wavefunctions) + 1
                 number = number + len(filter(lambda wf: \
-                                             wf not in external_wavefunctions.values(),
+                                             wf not in \
+                                             external_wavefunctions.values(),
                                          wavefunctions))
                 number = number + len(filter(lambda wf: \
-                                             wf not in external_wavefunctions.values(),
+                                             wf not in \
+                                             external_wavefunctions.values(),
                                          diagram_wavefunctions))
                 new_wf.set('number',number)
                 new_wf.set('mothers',mothers)
@@ -535,11 +562,13 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if not new_wf.get('self_antipart'):
                     new_wf.set('pdg_code', -new_wf.get('pdg_code'))
 
-            if new_wf in wavefunctions:
+            try:
                 # Use the copy in wavefunctions instead.
                 # Remove this copy from diagram_wavefunctions
                 new_wf = wavefunctions[wavefunctions.index(new_wf)]
                 diagram_wavefunctions.remove(new_wf)
+            except ValueError:
+                pass
 
         # Return the new (or old) wavefunction
         return new_wf
@@ -558,10 +587,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 return []
 
         # Pick out fermion mothers
-        out_fermions = filter(lambda wf: wf.get_with_flow('state') == 'outgoing',
-                              self.get('mothers'))
-        in_fermions = filter(lambda wf: wf.get_with_flow('state') == 'incoming',
-                              self.get('mothers'))
+        out_fermions = filter(lambda wf: wf.get_with_flow('state') == \
+                              'outgoing', self.get('mothers'))
+        in_fermions = filter(lambda wf: wf.get_with_flow('state') == \
+                             'incoming', self.get('mothers'))
         # Pick out bosons
         bosons = filter(lambda wf: wf.is_boson(), self.get('mothers'))
 
@@ -627,7 +656,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return self.get(name)
 
     def get_spin_state_number(self):
-
+        """Returns the number corresponding to the spin state, with a
+        minus sign for incoming fermions"""
+        
         state_number = {'incoming': -1, 'outgoing': 1,
                         'intermediate': 1, 'initial': 1, 'final': 1}
         return self.get('fermionflow')* \
@@ -722,8 +753,10 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
         # N(outgoing) after this state has been subtracted
         mother_states = [ wf.get_with_flow('state') for wf in \
                           self ]
-        if my_state in mother_states:
+        try:
             mother_states.remove(my_state)
+        except ValueError:
+            pass
 
         Nincoming = len(filter(lambda state: state == 'incoming',
                                mother_states))
@@ -765,8 +798,10 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
             # Update counters
             mother_states = [ wf.get_with_flow('state') for wf in \
                              self ]
-            if my_state in mother_states:
+            try:
                 mother_states.remove(my_state)
+            except ValueError:
+                pass
 
             Nincoming = len(filter(lambda state: state == 'incoming',
                                        mother_states))
@@ -828,7 +863,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
         if name == 'interaction_id':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid integer for wavefunction interaction id" % str(value)
+                        "%s is not a valid integer for interaction id" % \
+                        str(value)
 
         if name == 'pdg_codes':
             #Should be a list of strings
@@ -884,7 +920,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
         if name == 'number':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid integer for amplitude number" % str(value)
+                        "%s is not a valid integer for amplitude number" % \
+                        str(value)
 
         if name == 'mothers':
             if not isinstance(value, HelasWavefunctionList):
@@ -942,7 +979,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
                                    diagram_wavefunctions,
                                    external_wavefunctions):
         """Check for clashing fermion flow (N(incoming) !=
-        N(outgoing)) in mothers
+        N(outgoing)) in mothers. For documentation, check
+        HelasWavefunction.check_and_fix_fermion_flow.
         """
 
         return self.get('mothers').check_and_fix_fermion_flow(\
@@ -980,10 +1018,10 @@ class HelasAmplitude(base_objects.PhysicsObject):
         to this amplitude"""
 
         # Pick out fermion mothers
-        out_fermions = filter(lambda wf: wf.get_with_flow('state') == 'outgoing',
-                              self.get('mothers'))
-        in_fermions = filter(lambda wf: wf.get_with_flow('state') == 'incoming',
-                              self.get('mothers'))
+        out_fermions = filter(lambda wf: wf.get_with_flow('state') == \
+                              'outgoing', self.get('mothers'))
+        in_fermions = filter(lambda wf: wf.get_with_flow('state') == \
+                             'incoming', self.get('mothers'))
         # Pick out bosons
         bosons = filter(lambda wf: wf.is_boson(), self.get('mothers'))
 
@@ -1092,7 +1130,8 @@ class HelasDiagram(base_objects.PhysicsObject):
         if name == 'wavefunctions':
             if not isinstance(value, HelasWavefunctionList):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid HelasWavefunctionList object" % str(value)
+                        "%s is not a valid HelasWavefunctionList object" % \
+                        str(value)
         if name == 'amplitude':
             if not isinstance(value, HelasAmplitude):
                 raise self.PhysicsObjectError, \
@@ -1101,10 +1140,12 @@ class HelasDiagram(base_objects.PhysicsObject):
         if name == 'fermionfactor':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid integer for fermionfactor" % str(value)
+                        "%s is not a valid integer for fermionfactor" % \
+                        str(value)
             if not value in [-1,0,1]:
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid fermion factor (must be -1, 0 or 1)" % str(value)                
+                        "%s is not a valid fermion factor (-1, 0 or 1)" % \
+                        str(value)                
 
         return True
 
@@ -1216,9 +1257,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     def generate_helas_diagrams(self, amplitude, optimization = 1):
         """Starting from a list of Diagrams from the diagram
         generation, generate the corresponding HelasDiagrams, i.e.,
-        the wave functions and amplitudes. Choose
-        between default optimization (= 1) or no optimization (= 0,
-        for GPU).
+        the wave functions and amplitudes. Choose between default
+        optimization (= 1, maximum recycling of wavefunctions) or no
+        optimization (= 0, no recycling of wavefunctions, useful for
+        GPU calculations with very restricted memory).
         """
 
         if not isinstance(amplitude, diagram_generation.Amplitude) or \
@@ -1313,16 +1355,16 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 if not wf in diagram_wavefunctions:
                     number = len(external_wavefunctions) + 1
                     number = number + len(filter(lambda wf: \
-                                                 wf not in external_wavefunctions.values(),
+                             wf not in external_wavefunctions.values(),
                                                  wavefunctions))
                     number = number + len(filter(lambda wf: \
-                                                 wf not in external_wavefunctions.values(),
+                             wf not in external_wavefunctions.values(),
                                                  diagram_wavefunctions))
                     wf.set('number',number)
                     # Store wavefunction
-                    if wf in wavefunctions:
+                    try:
                         wf = wavefunctions[wavefunctions.index(wf)]
-                    else:
+                    except ValueError:
                         diagram_wavefunctions.append(wf)
                     number_to_wavefunctions[last_leg.get('number')] = wf
 
@@ -1377,15 +1419,15 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         mothers = HelasWavefunctionList()
 
         for leg in legs:
-            if not leg.get('number') in number_to_wavefunctions:
+            try:
+                # The mother is an existing wavefunction
+                wf = number_to_wavefunctions[leg.get('number')]
+            except KeyError:
                 # This is an external leg, pick from external_wavefunctions
                 wf = external_wavefunctions[leg.get('number')]
                 number_to_wavefunctions[leg.get('number')] = wf
                 if not wf in wavefunctions:
                     diagram_wavefunctions.append(wf)
-            else:
-                # The mother is an existing wavefunction
-                wf = number_to_wavefunctions[leg.get('number')]
             mothers.append(wf)
 
         return mothers
@@ -1430,8 +1472,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                          for leg in process.get('legs') ])
 
     def get_denominator_factor(self):
-        """Calculate the denominator factor due:
-        Averaging initial state color and spin, and identical final state particles"""
+        """Calculate the denominator factor due to:
+        Averaging initial state color and spin, and
+        identical final state particles"""
         
         model = self.get('processes')[0].get('model')
 
@@ -1453,13 +1496,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         identical_indices = {}
         for leg in final_legs:
-            if leg.get('id') in identical_indices:
+            try:
                 identical_indices[leg.get('id')] = \
                                     identical_indices[leg.get('id')] + 1
-            else:
+            except KeyError:
                 identical_indices[leg.get('id')] = 1
         identical_factor = reduce(lambda x, y: x * y,
-                                  [ factorial(val) for val in \
+                                  [ math.factorial(val) for val in \
                                     identical_indices.values() ])
 
         return spin_factor * color_factor * identical_factor
@@ -1591,7 +1634,7 @@ class HelasModel(base_objects.PhysicsObject):
                                                                 str(value)
 
             for key in value.keys():
-                add_amplitude(key, value[key])
+                self.add_amplitude(key, value[key])
 
         return True
 
@@ -1621,20 +1664,21 @@ class HelasModel(base_objects.PhysicsObject):
         """Return the function for writing the wavefunction
         corresponding to the key"""
 
-        if wavefunction.get_call_key() in self.get("wavefunctions").keys():
-            call = self["wavefunctions"][wavefunction.get_call_key()](wavefunction)
+        try:
+            call = self["wavefunctions"][wavefunction.get_call_key()](\
+                wavefunction)
             return call
-        else:
+        except KeyError:
             return ""
 
     def get_amplitude_call(self, amplitude):
         """Return the function for writing the amplitude
         corresponding to the key"""
 
-        if amplitude.get_call_key() in self.get("amplitudes").keys():
+        try:
             call = self["amplitudes"][amplitude.get_call_key()](amplitude)
             return call
-        else:
+        except KeyError:
             return ""
 
     def add_wavefunction(self, key, function):
