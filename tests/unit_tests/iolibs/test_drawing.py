@@ -13,22 +13,33 @@
 #
 ################################################################################
 """Unit test library for the routine creating the points position for the 
-    diagram drawing"""
+    diagram drawing and for the creation of the EPS file."""
+    
 from __future__ import division
 
-import unittest
 import os
 import pickle
+import unittest
 
-from madgraph.interface.cmd_interface import MadGraphCmd
 import madgraph.core.base_objects as base_objects
 import madgraph.iolibs.drawing_lib as drawing
 import madgraph.iolibs.drawing_output as draw_output
+import madgraph.iolibs.import_v4 as import_v4
+import madgraph.iolibs.files as files
 
+_file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
-_cmd = MadGraphCmd()
-_model=_cmd.curr_model
-root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]+'/'
+# First define a valid model for Standard Model
+_model = base_objects.Model()
+# Import Particles information
+_input_path= os.path.join(_file_path, '../input_files/v4_sm_particles.dat')
+_model.set('particles', files.read_from_file(_input_path,
+                                            import_v4.read_particles_v4))
+# Import Interaction information
+_input_path= os.path.join(_file_path , '../input_files/v4_sm_interactions.dat')
+_model.set('interactions', files.read_from_file(_input_path, \
+                           import_v4.read_interactions_v4, _model['particles']))
+
 #===============================================================================
 # TestTestFinder
 #===============================================================================
@@ -50,8 +61,8 @@ class TestFeynmanLine(unittest.TestCase):
         self.my_vertex2 = drawing.VertexPoint(self.vertex)
 
     @staticmethod
-    def def_line(begin=[0,0], end=[1,1],id=11):
-        """ fast way to have line with begin-end (each are list) """
+    def def_line(begin=[0, 0], end=[1, 1], id=11):
+        """Fast way to have line with begin-end (each are list)"""
 
         myleglist = base_objects.LegList([base_objects.Leg({'id':id,
                                       'number':5,
@@ -73,7 +84,7 @@ class TestFeynmanLine(unittest.TestCase):
 
     @staticmethod
     def def_model_line(id=22):
-        """ fast way to create a line with a link to a model """
+        """fast way to create a line with a link to a model"""
 
         leg = base_objects.Leg({'id': id, 'number': 1, 'state':'initial',
                             'from_group':False})
@@ -83,8 +94,8 @@ class TestFeynmanLine(unittest.TestCase):
         
         return my_line
     
-    def def_full_line(self,id=22,begin=[0,0],end=[1,1]):
-        """ fast way to define a complete line """
+    def def_full_line(self, id=22, begin=[0, 0], end=[1, 1]):
+        """Fast way to define a complete line"""
         my_line = self.def_model_line(id)
         temp_line = self.def_line(begin, end)
         my_line.def_begin_point(temp_line.start)
@@ -93,10 +104,8 @@ class TestFeynmanLine(unittest.TestCase):
         return my_line
         
     def  test_def_begin_end_point(self):
-        """ test if you can correctly assign/reassign begin vertex to a line 
-            test also if the begin-end switch works correctly
-        """
-        
+        """TEST assign/reassign/flip vertex associate to line"""
+               
         #test begin point 
         self.my_line.def_begin_point(self.my_vertex)
         self.assertTrue(self.my_line.start is self.my_vertex)
@@ -119,7 +128,7 @@ class TestFeynmanLine(unittest.TestCase):
         self.assertTrue(self.my_line.end is self.my_vertex2)
         
     def test_begin_end_wrong_input(self):
-        """ test that begin/end routines forbids wrong entry """
+        """TEST associate vertex fails on wrong input"""
     
         self.assertRaises(drawing.FeynmanLine.FeynmanLineError, \
                           self.my_line.def_begin_point, [0, 0])
@@ -127,7 +136,7 @@ class TestFeynmanLine(unittest.TestCase):
                           self.my_line.def_end_point, [0, 0])
         
     def test_get_type(self):
-        """ test if we found the correct type of line for some basic line """
+        """TEST associate line to the correct drawing mode"""
         
         #need to load SM?
         for id in [1, 2, 3, 4, 5, 6, 11, 12, 13, 14, 15]:
@@ -150,68 +159,61 @@ class TestFeynmanLine(unittest.TestCase):
             my_line.def_model(_model)
             self.assertEquals(my_line.get_info('line'), 'curly')        
         
-        id=[21, 22, 23, 24, -23, -24]
-        solution=['g', 'a', 'z', 'w-','z','w+']
-        for i in range(0,len(id)):
+        id = [21, 22, 23, 24, -23, -24]
+        solution = ['g', 'a', 'z', 'w-', 'z', 'w+']
+        for i in range(0, len(id)):
             my_line = drawing.FeynmanLine(id[i])
             my_line.def_model(_model)
             self.assertEquals(my_line.get_name('name'), solution[i])  
             
                     
     def test_line_orientation(self):
-        """ 
-            check the auto-adjustement for line orientation 
-            (particules going to right,anti-particles to left
-        """
+        """TEST define correct flow for S-channel"""
         
-        line = self.def_line(id=-22)
+        line = self.def_line(id= -22)
         line.start.def_level(0)
         line.end.def_level(1)
         
         line.define_line_orientation() 
-        self.assertEqual(line.start.pos_x,1)
-        self.assertEqual(line.start.pos_y,1)
-        self.assertEqual(line.end.pos_x,0)
-        self.assertEqual(line.end.pos_y,0)
+        self.assertEqual(line.start.pos_x, 1)
+        self.assertEqual(line.start.pos_y, 1)
+        self.assertEqual(line.end.pos_x, 0)
+        self.assertEqual(line.end.pos_y, 0)
         
         line.define_line_orientation()
-        self.assertEqual(line.start.pos_x,1)
-        self.assertEqual(line.start.pos_y,1)
-        self.assertEqual(line.end.pos_x,0)
-        self.assertEqual(line.end.pos_y,0)
+        self.assertEqual(line.start.pos_x, 1)
+        self.assertEqual(line.start.pos_y, 1)
+        self.assertEqual(line.end.pos_x, 0)
+        self.assertEqual(line.end.pos_y, 0)
         
         line.inverse_part_antipart()
         line.define_line_orientation()        
-        self.assertEqual(line.start.pos_x,0)
-        self.assertEqual(line.start.pos_y,0)
-        self.assertEqual(line.end.pos_x,1)
-        self.assertEqual(line.end.pos_y,1)
+        self.assertEqual(line.start.pos_x, 0)
+        self.assertEqual(line.start.pos_y, 0)
+        self.assertEqual(line.end.pos_x, 1)
+        self.assertEqual(line.end.pos_y, 1)
         
         line.define_line_orientation()
-        self.assertEqual(line.start.pos_x,0)
-        self.assertEqual(line.start.pos_y,0)
-        self.assertEqual(line.end.pos_x,1)
-        self.assertEqual(line.end.pos_y,1)                
+        self.assertEqual(line.start.pos_x, 0)
+        self.assertEqual(line.start.pos_y, 0)
+        self.assertEqual(line.end.pos_x, 1)
+        self.assertEqual(line.end.pos_y, 1)                
     
     def test_inverse_part_antipart(self):
-        """
-            check if the pid is correctly modify
-        """
+        """TEST change particle in anti-particle"""
         
-        line=self.def_line([0,0],[0,0])
+        line = self.def_line([0, 0], [0, 0])
 
         line.inverse_part_antipart()
-        self.assertEquals(line['pid'],-11)
+        self.assertEquals(line['pid'], -11)
         line.inverse_part_antipart()
-        self.assertEquals(line['pid'],11)
+        self.assertEquals(line['pid'], 11)
             
     def test_inverse_pid_for_type(self):
-        """
-            check that pid is inverse for a type of particle
-        """
+        """TEST change particle in anti-particle for drawing type"""
         
         line1 = self.def_model_line(id=24)
-        line2 = self.def_model_line(id=-24)
+        line2 = self.def_model_line(id= -24)
         line3 = self.def_model_line(id=22)
         line4 = self.def_model_line(id=1)
         
@@ -236,41 +238,41 @@ class TestFeynmanLine(unittest.TestCase):
         self.assertEquals(line4['pid'], -1)
     
     def test_domain_intersection(self):
-        """ test if domain intersection works correctly """
+        """ TEST domain intersection between two FeynmanLine """
         
         my_line1 = self.def_line([0, 0], [1, 1])         #diagonal
         my_line2 = self.def_line([0.5, 0.5], [0.9, 0.9]) # part of the diagonal
-        my_line3 = self.def_line([0.1, 0.5], [0.5, 1])     # parallel to the diagonal
+        my_line3 = self.def_line([0.1, 0.5], [0.5, 1])# parallel to the diagonal
         my_line4 = self.def_line([0.0, 0.0], [0.0, 1.0]) # y axis 
         my_line5 = self.def_line([0.0, 0.0], [0.3, 0.2])
                        
-        self.assertEquals(my_line1.domain_intersection(my_line1), (0, 1) )
+        self.assertEquals(my_line1.domain_intersection(my_line1), (0, 1))
         self.assertEquals(my_line1.domain_intersection(my_line2), (0.5, 0.9))
         self.assertEquals(my_line1.domain_intersection(my_line3), (0.1, 0.5))
         self.assertEquals(my_line1.domain_intersection(my_line4), (0, 0))
         self.assertEquals(my_line1.domain_intersection(my_line5), (0, 0.3))
-        self.assertEquals(my_line2.domain_intersection(my_line3), (0.5,0.5))
-        self.assertEquals(my_line2.domain_intersection(my_line4), (None ,None) )
+        self.assertEquals(my_line2.domain_intersection(my_line3), (0.5, 0.5))
+        self.assertEquals(my_line2.domain_intersection(my_line4), (None , None))
         self.assertEquals(my_line2.domain_intersection(my_line5), (None, None))
-        self.assertEquals(my_line3.domain_intersection(my_line4), (None, None) )        
+        self.assertEquals(my_line3.domain_intersection(my_line4), (None, None))        
         self.assertEquals(my_line3.domain_intersection(my_line5), (0.1, 0.3))
         
         self.assertEquals(my_line1.domain_intersection(my_line4, 'x'), (0, 0))
         self.assertEquals(my_line1.domain_intersection(my_line4, 'y'), (0, 1))        
     
     def test_domain_intersection_failure(self):
-        """ check that domain intersection send correct error on wrong data """
+        """TEST domain intersection fails on wrong input"""
         
         my_line1 = self.def_line([0, 0], [1, 1])
-        self.assertRaises( drawing.FeynmanLine.FeynmanLineError, \
-                           my_line1.domain_intersection,[0,1])
-        self.assertRaises( drawing.FeynmanLine.FeynmanLineError, \
-                           my_line1.domain_intersection,(0,1))
-        self.assertRaises( drawing.FeynmanLine.FeynmanLineError, \
-                           my_line1.domain_intersection,([0,1],1))                
+        self.assertRaises(drawing.FeynmanLine.FeynmanLineError, \
+                           my_line1.domain_intersection, [0, 1])
+        self.assertRaises(drawing.FeynmanLine.FeynmanLineError, \
+                           my_line1.domain_intersection, (0, 1))
+        self.assertRaises(drawing.FeynmanLine.FeynmanLineError, \
+                           my_line1.domain_intersection, ([0, 1], 1))                
 
     def test_hasintersection(self):
-        """ check if two lines cross-each-other works correctly"""
+        """TEST FeynmanLine intersections returns correct value"""
         
         #def a set of line
         my_line1 = self.def_line([0, 0], [1, 1])         #diagonal
@@ -282,9 +284,9 @@ class TestFeynmanLine(unittest.TestCase):
         my_line7 = self.def_line([0, 1], [0.6, 0.4])     # part of the second 
         my_line8 = self.def_line([0.6, 0.4], [0, 1])     # same part but inverse order
         my_line9 = self.def_line([0, 0.5], [0.9, 1])     # other
-        my_line10 = self.def_line([0.5,0.5], [0.5,1])    # vertical line center
-        my_line11 = self.def_line([0.5,0], [0.5,0.5])    # second part
-        my_line12 = self.def_line([0.5,0],[0.5,0.4])     # just shorther
+        my_line10 = self.def_line([0.5, 0.5], [0.5, 1])    # vertical line center
+        my_line11 = self.def_line([0.5, 0], [0.5, 0.5])    # second part
+        my_line12 = self.def_line([0.5, 0], [0.5, 0.4])     # just shorther
 
         #Line 1 intersection
         self.assertTrue(my_line1.has_intersection(my_line1))
@@ -380,7 +382,7 @@ class TestFeynmanLine(unittest.TestCase):
   
   
     def test_domainintersection(self):
-        """ check if two lines cross-each-other works correctly"""
+        """TEST Domain intersection is set correctly"""
         
         #def a set of line
         my_line1 = self.def_line([0, 0], [1, 1])         #diagonal
@@ -416,7 +418,7 @@ class TestFeynmanLine(unittest.TestCase):
                 
       
     def test_hasordinate(self):
-        """ test if the return of ordinate works correctly """
+        """TEST if we can recover the ordinate at any position""" 
         
         my_line1 = self.def_line([0.1, 0.1], [0.4, 0.1]) #horizontal
         my_line3 = self.def_line([0.1, 0.1], [0.4, 0.4]) #normal
@@ -430,14 +432,14 @@ class TestFeynmanLine(unittest.TestCase):
         self.assertEquals(my_line4.has_ordinate(0.5), 1)
         
     def test_hasordinate_wronginput(self):
-        """ check the error raises in case of incorrect input """
+        """TEST has_ordinate on incorrext input"""
         
         my_line1 = self.def_line([0.1, 0.1], [0.4, 0.2]) #random
         my_line2 = self.def_line([0.1, 0.1], [0.1, 0.4]) #vertical 
         
         #fail if asked outside range
         self.assertRaises(drawing.FeynmanLine.FeynmanLineError, \
-                          my_line1.has_ordinate,-2)
+                          my_line1.has_ordinate, -2)
         self.assertRaises(drawing.FeynmanLine.FeynmanLineError, \
                           my_line1.has_ordinate, 1.2)
         self.assertRaises(drawing.FeynmanLine.FeynmanLineError, \
@@ -467,9 +469,8 @@ class TestFeynmanLine(unittest.TestCase):
 
 
     def test_has_ordinate_failure(self):
-        """ check that the correct error is raise if no vertex
-            are assigned before doing position related operation
-        """
+        """TEST that the correct error is raise if no vertex
+            are assigned before doing position related operation"""
   
         self.assertRaises(drawing.FeynmanLine.FeynmanLineError, \
                           self.my_line.has_ordinate, 0.5)
@@ -490,7 +491,7 @@ class TestVertexPoint(unittest.TestCase):
     """The TestCase class for testing VertexPoint"""
     
     def setUp(self):
-        """ basic building of the class to test """
+        """basic building of the class to test"""
         
         self.line1 = drawing.FeynmanLine(11)
         self.line2 = drawing.FeynmanLine(11)
@@ -505,7 +506,7 @@ class TestVertexPoint(unittest.TestCase):
         self.vertex = base_objects.Vertex(self.mydict)
         
     def test_building(self):
-        """ test the correct creation of object """
+        """TEST the correct creation of FeynmanVertex object"""
         
         my_vertex = drawing.VertexPoint(self.vertex)
         self.assertTrue(isinstance(my_vertex, base_objects.Vertex))
@@ -515,9 +516,9 @@ class TestVertexPoint(unittest.TestCase):
                           drawing.VertexPoint, {'data':''})
         
         self.assertFalse(my_vertex is self.vertex)
-        my_vertex['value']=2
+        my_vertex['value'] = 2
         self.assertRaises(base_objects.PhysicsObject.PhysicsObjectError,
-                          self.vertex.__getitem__,'value')
+                          self.vertex.__getitem__, 'value')
         self.assertTrue('value' in my_vertex.keys())        
         self.assertTrue(hasattr(my_vertex, 'line'))
         self.assertTrue('id' in my_vertex.keys())
@@ -533,7 +534,7 @@ class TestVertexPoint(unittest.TestCase):
  
  
     def test_def_position(self):
-        """ test the position definition are set correctly"""
+        """TEST  assignment of a position to a vertex"""
         
         my_vertex = drawing.VertexPoint(self.vertex)
         my_vertex.def_position(0.1, 0.3)
@@ -550,19 +551,18 @@ class TestVertexPoint(unittest.TestCase):
         my_vertex.def_position(0.3, 1)      
         
         self.assertRaises(drawing.VertexPoint.VertexPointError, \
-                          my_vertex.def_position, 1.4, 0.2 )
+                          my_vertex.def_position, 1.4, 0.2)
         self.assertRaises(drawing.VertexPoint.VertexPointError, \
                           my_vertex.def_position, -1.0, 0.2)
         self.assertRaises(drawing.VertexPoint.VertexPointError, \
                           my_vertex.def_position, 0.4, 1.2)
         self.assertRaises(drawing.VertexPoint.VertexPointError, \
                           my_vertex.def_position, 0, -0.2)
-  
-  
-        
+   
     def test_redef_position(self):
-        """ test the position definition are set correctly"""        
-        #check that lambda function linked to Line are correctly remo
+        """TEST if redefine vertex position is fine"""        
+        # Check that lambda function linked to Line are correctly remove
+        #Note: This lambda function is not use anymore
         
         my_vertex = drawing.VertexPoint(self.vertex)
         my_vertex.def_position(0.1, 0.3)
@@ -570,42 +570,42 @@ class TestVertexPoint(unittest.TestCase):
         my_vertex2.def_position(0.4, 0.6)        
         self.line1.def_begin_point(my_vertex)
         self.line1.def_end_point(my_vertex2)
-        self.assertAlmostEquals(self.line1.has_ordinate(0.2),0.4)
+        self.assertAlmostEquals(self.line1.has_ordinate(0.2), 0.4)
         my_vertex2.def_position(0.3, 0.6)
         self.assertFalse(hasattr(self, "ordinate_fct"))
         #self.assertRaises(self.line1.ordinate_fct,0)
         self.assertAlmostEquals
-        (self.line1.has_ordinate(0.2),0.45)
+        (self.line1.has_ordinate(0.2), 0.45)
                 
     def test_add_line(self):
-        """check that the line is correctly added"""
+        """TEST if wa can safely add a line to a Vertex"""
         
         my_vertex = drawing.VertexPoint(self.vertex)
         my_vertex.add_line(self.line1)
         
         self.assertTrue(self.line1 in my_vertex.line) 
         my_vertex.add_line(self.line1)
-        self.assertEquals(my_vertex.line.count(self.line1),1)
+        self.assertEquals(my_vertex.line.count(self.line1), 1)
                           
         self.assertRaises(drawing.VertexPoint.VertexPointError, \
                                                     my_vertex.add_line, 'data')
         
     def test_remove_line(self):
-        """ check that a line is correctly remove """
+        """TEST that line can be safely remove"""
         
         my_vertex = drawing.VertexPoint(self.vertex)
-        my_vertex.line=[self.line1]
+        my_vertex.line = [self.line1]
         my_vertex.remove_line(self.line1)        
         self.assertFalse(self.line1 in my_vertex.line)
          
         self.assertRaises(drawing.VertexPoint.VertexPointError, \
-                          my_vertex.remove_line,self.line1)
+                          my_vertex.remove_line, self.line1)
         self.assertRaises(drawing.VertexPoint.VertexPointError, \
                                                     my_vertex.add_line, 'data')       
         
          
-    def testdef_level(self):
-        """ define the level at level """
+    def test_def_level(self):
+        """TEST the level assignment """
         
         my_vertex = drawing.VertexPoint(self.vertex)
         my_vertex.def_level(3)
@@ -615,9 +615,7 @@ class TestVertexPoint(unittest.TestCase):
                           my_vertex.def_level, '3')
                           
     def test_isexternal(self):
-        """ check if the vertex is an artificial vertex created to fix the 
-            external particles position 
-        """
+        """TEST if can distinguish the vertex type"""
         
         vertex = base_objects.Vertex({'id':0, 'legs':base_objects.LegList([])})
         vertexpoint = drawing.VertexPoint(vertex)
@@ -629,11 +627,9 @@ class TestVertexPoint(unittest.TestCase):
         self.assertTrue(vertexpoint.is_external())
         
     def test_fuse_vertex(self):
-        """
-            test if it's possible to fuse two vertex
-        """
-
-        #test diagram gg>gg via a S-channel
+        """TEST if it's possible to fuse two vertex"""
+ 
+        # Test diagram gg>gg via a S-channel
         leg1 = base_objects.Leg({'id':22, 'number':1, 'state':'initial',
                             'from_group':False})
         leg2 = base_objects.Leg({'id':22, 'number':2, 'state':'initial',
@@ -654,8 +650,8 @@ class TestVertexPoint(unittest.TestCase):
                         'legs':base_objects.LegList([leg_s, leg3, leg4])})
 
         #pass in Drawing object
-        vertex1=drawing.VertexPoint(vertex1)
-        vertex2=drawing.VertexPoint(vertex2)
+        vertex1 = drawing.VertexPoint(vertex1)
+        vertex2 = drawing.VertexPoint(vertex2)
         line1 = drawing.FeynmanLine(22, leg1)
         line2 = drawing.FeynmanLine(22, leg2)
         line3 = drawing.FeynmanLine(22, leg3)
@@ -671,15 +667,15 @@ class TestVertexPoint(unittest.TestCase):
         line4.def_begin_point(vertex2)
         
         #fuse the two vertex
-        vertex1.fuse_vertex(vertex2,line_s)
+        vertex1.fuse_vertex(vertex2, line_s)
         
         #check that vertex1.line is correctly modify
-        self.assertEqual(len(vertex1.line),4)
-        self.assertEqual(len([l for l in vertex1.line if l is line1]),1)
-        self.assertEqual(len([l for l in vertex1.line if l is line2]),1)
-        self.assertEqual(len([l for l in vertex1.line if l is line3]),1)
-        self.assertEqual(len([l for l in vertex1.line if l is line4]),1)
-        self.assertEqual(len([l for l in vertex1.line if l is line_s]),0)
+        self.assertEqual(len(vertex1.line), 4)
+        self.assertEqual(len([l for l in vertex1.line if l is line1]), 1)
+        self.assertEqual(len([l for l in vertex1.line if l is line2]), 1)
+        self.assertEqual(len([l for l in vertex1.line if l is line3]), 1)
+        self.assertEqual(len([l for l in vertex1.line if l is line4]), 1)
+        self.assertEqual(len([l for l in vertex1.line if l is line_s]), 0)
         
         #check that line3-line4 begin vertex are correctly modify
         self.assertTrue(vertex1 is line3.start)
@@ -692,49 +688,9 @@ class TestVertexPoint(unittest.TestCase):
 # TestVertex
 #===============================================================================
 class TestFeynmanDiagram(unittest.TestCase):
-    """ Test the object which compute the position of the vertex/line 
+    """Test the object which compute the position of the vertex/line 
         for a given Diagram object
     """
-        
-    _cmd.do_import('v4 ' + root_path + '../input_files/v4_sm_particles.dat')
-    _cmd.do_import('v4 ' + root_path + \
-                                    '../input_files/v4_sm_interactions.dat')
-    #test diagram gg>g(g>jj)g via a T-channel   
-    leg1 = base_objects.Leg({'id':22, 'number':1, 'state':'initial',
-                            'from_group':False})
-    leg2 = base_objects.Leg({'id':22, 'number':2, 'state':'initial',
-                            'from_group':False})
-    leg3 = base_objects.Leg({'id':22, 'number':3, 'state':'final',
-                            'from_group':False})
-    leg4 = base_objects.Leg({'id':2, 'number':4, 'state':'final',
-                            'from_group':False})    
-    leg5 = base_objects.Leg({'id':-2, 'number':5, 'state':'final',
-                            'from_group':False})
-    leg6 = base_objects.Leg({'id':22, 'number':6, 'state':'final',
-                            'from_group':False})        
-    
-    #intermediate particle +vertex associate
-    leg_t1 = base_objects.Leg({'id':22, 'number':1, 'state':'initial',
-                        'from_group':True}) 
-    vertex1 = base_objects.Vertex({'id':1, \
-                        'legs':base_objects.LegList([leg1, leg3, leg_t1])})
-    
-    leg_t2 = base_objects.Leg({'id':22, 'number':2, 'state':'initial',
-                        'from_group':True})    
-    vertex2 = base_objects.Vertex({'id':2, \
-                        'legs':base_objects.LegList([leg2, leg6, leg_t2])})
- 
-    leg_s1 = base_objects.Leg({'id':22, 'number':1, 'state':'final',
-                        'from_group':True}) 
-    vertex3 = base_objects.Vertex({'id':3, \
-                        'legs':base_objects.LegList([leg_t1, leg_t2, leg_s1])})
-    
-    vertex4 = base_objects.Vertex({'id':4, \
-                        'legs':base_objects.LegList([leg_s1, leg5, leg4])})
-
-    vertexlist = base_objects.VertexList([vertex1, vertex2, vertex3, vertex4])
-    
-    mix_diagram_dict = {'vertices':vertexlist}
     
     #test diagram gg>gg via a T-channel
     leg1 = base_objects.Leg({'id':22, 'number':1, 'state':'initial',
@@ -755,14 +711,13 @@ class TestFeynmanDiagram(unittest.TestCase):
     leg_t2 = base_objects.Leg({'id':22, 'number':2, 'state':'initial',
                         'from_group':True})    
     vertex2 = base_objects.Vertex({'id':2, \
-                        'legs':base_objects.LegList([leg2, leg6, leg_t2])})
+                        'legs':base_objects.LegList([leg2, leg4, leg_t2])})
     
     vertex3 = base_objects.Vertex({'id':0, \
                         'legs':base_objects.LegList([leg_t1, leg_t2])})
     
     vertexlist = base_objects.VertexList([vertex1, vertex2, vertex3])
     t_diagram_dict = {'vertices':vertexlist}
-    t_diagram = base_objects.Diagram(t_diagram_dict)
     
     #test diagram gg>gg via a S-channel
     leg1 = base_objects.Leg({'id':22, 'number':1, 'state':'initial',
@@ -791,23 +746,22 @@ class TestFeynmanDiagram(unittest.TestCase):
     
     vertexlist = base_objects.VertexList([vertex1, vertex2, vertex3])
     s_diagram_dict = {'vertices':vertexlist}
-    s_diagram = base_objects.Diagram(s_diagram_dict)
     
        
-    # Recover some diagram causing crashes or having some particularity
+    # Recover some diagram causing crashes or having some interesting feature
     #in order to ensure that those problem will not appear again. 
     #Those diagrams were keep in a pickle format"""
-        
-    filehandler= open(root_path + \
-                                    '../input_files/test_draw.obj', 'r') 
-    store_diagram= pickle.load(filehandler)
+    filehandler = open(os.path.join(_file_path, \
+                                    '../input_files/test_draw.obj'), 'r') 
+    store_diagram = pickle.load(filehandler)
 
+    
 
     def setUp(self):
-        """ basic building of the object needed to build the test """
+        """Basic building of the object needed to build the test"""
             
         # gg>g(g>uux)g (via a T channel)  
-        mix_diagram = base_objects.Diagram(self.mix_diagram_dict)
+        mix_diagram = self.store_diagram['g g > g g u u~'][18]
         self.mix_drawing = drawing.FeynmanDiagram(mix_diagram, _model)
         
         # gg>gg (via a T channel)
@@ -819,9 +773,7 @@ class TestFeynmanDiagram(unittest.TestCase):
         self.s_drawing = drawing.FeynmanDiagram(s_diagram, _model)
               
     def test_load_diagram(self):
-        """ define all the object for the Feynman Diagram Drawing (Vertex and 
-            Line) following the data include in 'diagram' 
-        """
+        """ TEST update of a diagram to a drawing class """
         
         # check len of output
         self.mix_drawing.load_diagram()
@@ -848,19 +800,17 @@ class TestFeynmanDiagram(unittest.TestCase):
             
                 
     def test_define_level(self):
-        """ assign to each vertex a level:
-            the level correspond to the number of visible particles and 
-            S-channel needed in order to reach the initial particules vertex
-        """
+        """ TEST level assignment """
+        
         self.mix_drawing.load_diagram()
         self.mix_drawing.define_level()
         
         #order: initial-external-vertex in diagram order                                 
-        level_solution = [1, 1, 1, 2, 0, 2, 0, 2, 3, 3]
+        level_solution = [1, 1, 2, 1, 0, 2, 0, 2, 3, 3]
         number_of_line = [3, 3, 3, 3, 1, 1, 1, 1, 1, 1]
         # the ordering is not important but we test it anyway in order 
-        # to ensure that we don't have an incorect permutation
-        self.assertEquals(self.mix_drawing.max_level,3)
+        # to ensure that we don't have any wrong permutation
+        self.assertEquals(self.mix_drawing.max_level, 3)
         for i in range(0, 10):
             self.assertEquals(self.mix_drawing.vertexList[i].level, \
                                                             level_solution[i])
@@ -876,72 +826,71 @@ class TestFeynmanDiagram(unittest.TestCase):
         for i in range(0, 6):
             self.assertEquals(self.s_drawing.vertexList[i].level, \
                                                             level_solution[i])
-        self.assertEquals(self.s_drawing.max_level,3)
+        self.assertEquals(self.s_drawing.max_level, 3)
                 
         self.t_drawing.load_diagram()       
         self.t_drawing.define_level()
         
         #order: initial-external-vertex in diagram order                                 
-        level_solution = [1,1,0,2,0,2]
-        self.assertEquals(self.t_drawing.max_level,2)
+        level_solution = [1, 1, 0, 2, 0, 2]
+        self.assertEquals(self.t_drawing.max_level, 2)
         for i in range(0, 6):
             self.assertEquals(self.t_drawing.vertexList[i].level, \
                                                             level_solution[i]) 
 
 
     def test_find_vertex_at_level(self):
-        """ check that the program can evolve correctly from one level to
-            the next one. check in the same time the position assignation 
-            on a ordered list of vertex
-        """
+        """TEST that the program can evolve correctly from one level to
+            the next one. check in the same time the position assign
+            on a ordered list of vertex."""
         
         self.mix_drawing.load_diagram()
         self.mix_drawing.define_level()
         
         #define by hand level 0:
-        vertexlist_l0=[vertex for vertex in self.mix_drawing.vertexList if\
+        vertexlist_l0 = [vertex for vertex in self.mix_drawing.vertexList if\
                                                          vertex.level == 0 ]
         vertexlist_l0.reverse()
         
         #define by hand level 1:
-        sol_l1=[vertex for vertex in self.mix_drawing.vertexList if\
+        sol_l1 = [vertex for vertex in self.mix_drawing.vertexList if\
                                                          vertex.level == 1 ]
         #wrong order
-        sol_l1[1],sol_l1[2] = sol_l1[2], sol_l1[1]
+        sol_l1[1], sol_l1[2] = sol_l1[2], sol_l1[1]
         
         #ask to find level 1 from level 0
-        vertexlist_l1=self.mix_drawing.find_t_channel_vertex(vertexlist_l0)
-        self.assertEquals(len(vertexlist_l1),len(sol_l1))
-        for i in range(0,len(sol_l1)):
-            self.assertEquals(vertexlist_l1[i],sol_l1[i])
+        vertexlist_l1 = self.mix_drawing.find_t_channel_vertex(vertexlist_l0)
+        self.assertEquals(len(vertexlist_l1), len(sol_l1))
+        for i in range(0, len(sol_l1)):
+            self.assertEquals(vertexlist_l1[i], sol_l1[i])
         
         #redo this step but add the position to those vertex
         self.mix_drawing.find_vertex_position_tchannel(vertexlist_l0)   
             
-        sol=[[1/3,1/6], [1/3,1/2], [1/3,5/6]]
-        for i in range(0,len(vertexlist_l1)):
-            vertex=vertexlist_l1[i]
+        sol = [[1 / 3, 1 / 6], [1 / 3, 1 / 2], [1 / 3, 5 / 6]]
+        for i in range(0, len(vertexlist_l1)):
+            vertex = vertexlist_l1[i]
            
-            self.assertAlmostEquals(vertex.pos_x,sol[i][0])
-            self.assertAlmostEquals(vertex.pos_y,sol[i][1])
+            self.assertAlmostEquals(vertex.pos_x, sol[i][0])
+            self.assertAlmostEquals(vertex.pos_y, sol[i][1])
                    
-        vertexlist_l2=self.mix_drawing.find_vertex_at_level(vertexlist_l1)
-        self.assertEquals(len(vertexlist_l2),3)
+        vertexlist_l2 = self.mix_drawing.find_vertex_at_level(vertexlist_l1)
+        self.assertEquals(len(vertexlist_l2), 3)
         
         #ask to update of level 2 +check that wa can assign position
         self.mix_drawing.find_vertex_position_at_level(vertexlist_l1, 2, auto=0)
     
         #check position
-        vertexlist=[vertex for vertex in self.mix_drawing.vertexList if\
+        vertexlist = [vertex for vertex in self.mix_drawing.vertexList if\
                                                          vertex.level == 2 ]
-        sol=[[2/3,0.5],[2/3,0],[2/3,1]]
-        ext=[False,True,True]
-        for i in range(0,len(vertexlist)):
-            vertex=vertexlist[i]
+        sol = [[2 / 3, 0.5], [2 / 3, 0], [2 / 3, 1]]
+        ext = [False, True, True]
+        for i in range(0, len(vertexlist)):
+            vertex = vertexlist[i]
             
-            self.assertEquals(vertex.pos_x,sol[i][0])
-            self.assertEquals(vertex.pos_y,sol[i][1])
-            self.assertEquals(vertex.is_external(),ext[i]) #more a test of the \
+            self.assertEquals(vertex.pos_x, sol[i][0])
+            self.assertEquals(vertex.pos_y, sol[i][1])
+            self.assertEquals(vertex.is_external(), ext[i]) #more a test of the \
                 # order and of is_external
                 
     def test_find_t_channel_vertex(self):
@@ -949,22 +898,20 @@ class TestFeynmanDiagram(unittest.TestCase):
         correctly."""
         
         diagram = self.store_diagram['g g > g g g g'][26]
-        diagram = drawing.FeynmanDiagram(diagram, _cmd.curr_model)
+        diagram = drawing.FeynmanDiagram(diagram, _model)
         diagram.load_diagram() 
         diagram.define_level()
         level0 = [vertex for vertex in diagram.vertexList if vertex.level == 0]
-        level1=[vertex for vertex in diagram.vertexList if vertex.level == 1]                
+        level1 = [vertex for vertex in diagram.vertexList if vertex.level == 1]                
         
         #sanity check
-        self.assertEquals(len(diagram.vertexList),10)
-        level1=[vertex for vertex in diagram.vertexList if vertex.level == 1]
-        self.assertEquals(len(level1),4)
-        level0 = [vertex for vertex in diagram.vertexList if vertex.level == 0]
+        self.assertEquals(len(diagram.vertexList), 10)
+        self.assertEquals(len(level1), 4)
         #test the routine
-        t_vertex=diagram.find_t_channel_vertex(level0)
+        t_vertex = diagram.find_t_channel_vertex(level0)
         
         for vertex in t_vertex:
-            self.assertTrue(vertex.level,1)
+            self.assertTrue(vertex.level, 1)
             self.assertFalse(vertex in level0)
             
         self.assertEquals(len(t_vertex), 4)
@@ -974,20 +921,15 @@ class TestFeynmanDiagram(unittest.TestCase):
         
             
     def test_find_initial_vertex_position(self):
-        """ find a position to each vertex. all the vertex with the same level
-            will have the same x coordinate. All external particules will be
-            on the border of the square. The implementation of the code is 
-            such that some external particles lines cuts sometimes some 
-            propagator. This will be resolve in a second step 
-        """
+        """TEST if find the correct position for vertex"""
         
         self.mix_drawing.load_diagram()
         self.mix_drawing.define_level()        
         self.mix_drawing.find_initial_vertex_position()
 
-        level =      [1  , 1  , 1  , 2  , 0  , 2  , 0  , 2  , 3  , 3 ]
-        x_position = [1/3, 1/3, 1/3, 2/3, 0.0, 2/3, 0.0, 2/3, 1.0, 1.0]
-        y_position = [5/6, 1/6, 1/2, 1/2, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0]       
+        level = [1  , 1  , 2  , 1  , 0  , 2  , 0  , 2  , 3  , 3 ]
+        x_position = [1 / 3, 1 / 3, 2 / 3, 1 / 3, 0.0, 2 / 3, 0.0, 2 / 3, 1.0, 1.0]
+        y_position = [5 / 6, 1 / 6, 1 / 2, 1 / 2, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0]       
 
 
         for i in range(0, 10):
@@ -997,21 +939,16 @@ class TestFeynmanDiagram(unittest.TestCase):
                               x_position[i])
             self.assertAlmostEquals(self.mix_drawing.vertexList[i].pos_y, \
                               y_position[i])
-            
-    def test_isexternal(self):
-        """ check if the vertex is a external one or not """
-        pass
-        #in fact this functionality is tested in test_find_vertex_at_level
         
     def test_creation_from_cmd(self):
-        """ check that's possible to compute diagram position from cmd """
+        """TEST basic diagram comming from (old) cmd works"""
         
-        global root_path
+        global _file_path
                             
         #_cmd.do_generate('u d~ > c s~')
         #diagram = _cmd.curr_amp['diagrams'][0]
         diagram = self.store_diagram['u d~ > c s~'][0]
-        diagram = drawing.FeynmanDiagram(diagram, _cmd.curr_model)
+        diagram = drawing.FeynmanDiagram(diagram, _model)
         
         diagram.load_diagram()
         diagram.define_level()
@@ -1021,9 +958,9 @@ class TestFeynmanDiagram(unittest.TestCase):
                               level_solution[i])                     
         diagram.find_initial_vertex_position()
         level_solution = [1, 2, 0, 0, 3, 3]                          
-        x_position = [1/3, 2/3, 0, 0, 1, 1]
-        y_position = [1/2,1/2, 1, 0, 0, 1]
-        self.assertEquals(len(diagram.vertexList),6)
+        x_position = [1 / 3, 2 / 3, 0, 0, 1, 1]
+        y_position = [1 / 2, 1 / 2, 1, 0, 0, 1]
+        self.assertEquals(len(diagram.vertexList), 6)
         for i in range(0, 6):
             self.assertEquals(diagram.vertexList[i].level, \
                               level_solution[i])         
@@ -1036,13 +973,9 @@ class TestFeynmanDiagram(unittest.TestCase):
             self.assertNotEquals(line.end, None)
                                                 
     def test_notion_of_egality(self):
-        """ this routine test gg>gg
-            the presence of only gluon and of identical type of line-vertex
-            impose that the usual equality (dict equality) cann't be use.
-            so we must force pointer equality 
-        """
+        """TEST if not failing on wrongly equal leg"""
         
-        global root_path
+        global _file_path
         
         #_cmd.do_generate('g g > g g')
         
@@ -1050,7 +983,7 @@ class TestFeynmanDiagram(unittest.TestCase):
         #diagram = _cmd.curr_amp['diagrams'][1]
         diagram = self.store_diagram['g g > g g'][1]
         
-        diagram = drawing.FeynmanDiagram(diagram, _cmd.curr_model)
+        diagram = drawing.FeynmanDiagram(diagram, _model)
         
         diagram.load_diagram()
         diagram.define_level()
@@ -1059,9 +992,9 @@ class TestFeynmanDiagram(unittest.TestCase):
             self.assertEquals(diagram.vertexList[i].level, \
                               level_solution[i])                     
         diagram.find_initial_vertex_position()                         
-        x_position = [1/3, 2/3, 0, 0, 1, 1]
-        y_position = [1/2,1/2, 1, 0, 0, 1]
-        self.assertEquals(len(diagram.vertexList),6)
+        x_position = [1 / 3, 2 / 3, 0, 0, 1, 1]
+        y_position = [1 / 2, 1 / 2, 1, 0, 0, 1]
+        self.assertEquals(len(diagram.vertexList), 6)
         for i in range(0, 6):
             self.assertEquals(diagram.vertexList[i].level, \
                               level_solution[i])         
@@ -1075,19 +1008,19 @@ class TestFeynmanDiagram(unittest.TestCase):
 
         #test the T-channel
         diagram = self.store_diagram['g g > g g'][2]
-        diagram = drawing.FeynmanDiagram(diagram, _cmd.curr_model)
+        diagram = drawing.FeynmanDiagram(diagram, _model)
         
         diagram.load_diagram()
         diagram.define_level()
-        level_solution = [1,1,0,2,0,2] 
+        level_solution = [1, 1, 0, 2, 0, 2] 
         for i in range(0, 6):
             self.assertEquals(diagram.vertexList[i].level, \
                               level_solution[i])                     
         diagram.find_initial_vertex_position()
                                  
-        x_position = [1/2, 1/2, 0, 1, 0, 1]
-        y_position = [3/4,1/4, 1, 1, 0, 0]
-        self.assertEquals(len(diagram.vertexList),6)
+        x_position = [1 / 2, 1 / 2, 0, 1, 0, 1]
+        y_position = [3 / 4, 1 / 4, 1, 1, 0, 0]
+        self.assertEquals(len(diagram.vertexList), 6)
         for i in range(0, 6):
             self.assertEquals(diagram.vertexList[i].level, \
                               level_solution[i])         
@@ -1100,24 +1033,24 @@ class TestFeynmanDiagram(unittest.TestCase):
             self.assertNotEquals(line.end, None)
             
     def test_fermion_flow(self):
-        """Fermion-flow is working in T-channel"""
+        """TEST Fermion-flow is working in T-channel"""
         
-        #load diagram with one fermion flow
-        diagram=self.store_diagram['mu+ mu- > w+ w- a'][7]
-        diagram = drawing.FeynmanDiagramHorizontal(diagram, _cmd.curr_model)
+        # Load diagram with one fermion flow
+        diagram = self.store_diagram['mu+ mu- > w+ w- a'][7]
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
         diagram.main()            
-        t_lines = [line for line in diagram.lineList if line.start.level ==1
+        t_lines = [line for line in diagram.lineList if line.start.level == 1
                                                 and line.end.level == 1]
 
         for line in t_lines:
             if line.is_fermion():
                 self.assertTrue(line.start.pos_y < line.end.pos_y)
  
-        #load diagram with two fermion flow
-        diagram=self.store_diagram['mu+ mu- > w+ w- a'][6]
-        diagram = drawing.FeynmanDiagramHorizontal(diagram, _cmd.curr_model)
+        # Load diagram with two fermion flow
+        diagram = self.store_diagram['mu+ mu- > w+ w- a'][6]
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
         diagram.main()            
-        t_lines = [line for line in diagram.lineList if line.start.level ==1
+        t_lines = [line for line in diagram.lineList if line.start.level == 1
                                                 and line.end.level == 1]
 
         for line in t_lines:
@@ -1130,39 +1063,39 @@ class TestFeynmanDiagram(unittest.TestCase):
         # For all diagram, first test that only initial state particle have
         #x=0 coordinate
         
-        #simply standard verification in this case.
-        diagram=self.store_diagram['g g > g g g'][0]
-        diagram = drawing.FeynmanDiagramHorizontal(diagram, _cmd.curr_model)
+        # Simply standard verification in this case.
+        diagram = self.store_diagram['g g > g g g'][0]
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
         diagram.load_diagram()
         diagram.define_level()                     
         diagram.find_initial_vertex_position()
         
-        vertex_list=[vertex for vertex in diagram.vertexList if \
-                                                              vertex.level !=0 ]
+        vertex_list = [vertex for vertex in diagram.vertexList if \
+                                                              vertex.level != 0 ]
         for vertex in vertex_list:
             self.assertFalse(vertex.pos_x == 0)
         
-        #simply standard verification in this case.
-        diagram=self.store_diagram['g g > g g g g'][192]
-        diagram = drawing.FeynmanDiagramHorizontal(diagram, _cmd.curr_model)
+        # Simply standard verification in this case.
+        diagram = self.store_diagram['g g > g g g g'][192]
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
         diagram.load_diagram()
         diagram.define_level()                     
         diagram.find_initial_vertex_position()
         
-        vertex_list=[vertex for vertex in diagram.vertexList if \
-                                                              vertex.level !=0 ]
+        vertex_list = [vertex for vertex in diagram.vertexList if \
+                                                              vertex.level != 0 ]
         for vertex in vertex_list:
             self.assertFalse(vertex.pos_x == 0)
         
         # Standard verification + test position of external particles on border
-        diagram=self.store_diagram['g g > g g g g'][93]
-        diagram = drawing.FeynmanDiagramHorizontal(diagram, _cmd.curr_model)
+        diagram = self.store_diagram['g g > g g g g'][93]
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
         diagram.load_diagram()
         diagram.define_level()                     
         diagram.find_initial_vertex_position()
         
-        vertex_list=[vertex for vertex in diagram.vertexList if \
-                                                              vertex.level !=0 ]
+        vertex_list = [vertex for vertex in diagram.vertexList if \
+                                                              vertex.level != 0 ]
         for vertex in vertex_list:
             self.assertFalse(vertex.pos_x == 0)
 
@@ -1171,25 +1104,25 @@ class TestFeynmanDiagram(unittest.TestCase):
         
         # Check if the position of the external line on the below order works 
         vertex_at_x_0 = [vertex for vertex in vertex_list if vertex.pos_y == 0]
-        self.assertEquals(len(vertex_at_x_0),2)
+        self.assertEquals(len(vertex_at_x_0), 2)
  
         # Standard verification + test external should finish on a border
-        diagram=self.store_diagram['g g > g g g g'][92]
-        diagram = drawing.FeynmanDiagramHorizontal(diagram, _cmd.curr_model)
+        diagram = self.store_diagram['g g > g g g g'][92]
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
         diagram.load_diagram()
         diagram.define_level()                     
         diagram.find_initial_vertex_position()
         
-        vertex_list=[vertex for vertex in diagram.vertexList if \
-                                                              vertex.level !=0 ]
+        vertex_list = [vertex for vertex in diagram.vertexList if \
+                                                              vertex.level != 0 ]
         for vertex in vertex_list:
             self.assertFalse(vertex.pos_x == 0)
             x = vertex.pos_x
             y = vertex.pos_y
             if vertex.is_external():
-                self.assertEquals((x-1)*(y)*(y-1),0)
+                self.assertEquals((x - 1) * (y) * (y - 1), 0)
             else:
-                self.assertNotEquals((x-1)*(y)*(y-1),0)
+                self.assertNotEquals((x - 1) * (y) * (y - 1), 0)
                 
                 
 class TestDrawingEPS(unittest.TestCase):
@@ -1200,36 +1133,36 @@ class TestDrawingEPS(unittest.TestCase):
     2) can we convert him in pdf? (Imagemagick is needed for this)
         checking that the file is valid."""
     
-    #made a set of diagram available here
+    # Made a set of diagram available here
     store_diagram = TestFeynmanDiagram.store_diagram
     
     def setUp(self):
         """Charge a diagram to draw"""
         
-        self.diagram= self.store_diagram['t h > t g W+ W-'][0]
+        self.diagram = self.store_diagram['t h > t g W+ W-'][0]
         
         self.plot = draw_output.DrawDiagramEps(self.diagram, 'diagram.eps', \
-                                          model=_cmd.curr_model, amplitude='')
+                                          model=_model, amplitude='')
     
-    def output_is_valid(self,position, pdf_check = True):
+    def output_is_valid(self, position, pdf_check=True):
         """Check if the output files exist. Additionally if pdf_check is on True
         check if we can convert the output file in pdf. Finally delete files."""
         
-        #check if exist
+        # Check if exist
         self.assertTrue(os.path.isfile(position))
         
-        #check if the file is valid
+        # Check if the file is valid
         if pdf_check:
             filename, ext = os.path.splitext('position')
-            os.system('convert '+position+' '+filename+'.pdf')
+            os.system('convert ' + position + ' ' + filename + '.pdf')
      
-            #try is use to ensure that no file are left on disk
+            # Try is use to ensure that no file are left on disk
             try:
-                self.assertTrue(os.path.isfile(filename+'.pdf'))
+                self.assertTrue(os.path.isfile(filename + '.pdf'))
             except:
                 os.remove(position)
                 raise
-            os.remove(filename+'.pdf')
+            os.remove(filename + '.pdf')
         os.remove(position)
         return
     
@@ -1257,7 +1190,7 @@ class TestDrawingEPS(unittest.TestCase):
         
         Need ImageMagick."""
                        
-        model_info = _cmd.curr_model.get_particle(5)
+        model_info = _model.get_particle(5)
         model_info.set('propagating', False)
         self.plot.draw(non_propagating=False, horizontal=False)
         try:
@@ -1272,7 +1205,7 @@ class TestDrawingEPS(unittest.TestCase):
         
         Need ImageMagick."""
                        
-        model_info = _cmd.curr_model.get_particle(5)
+        model_info = _model.get_particle(5)
         model_info.set('propagating', False)
         self.plot.draw(non_propagating=False, external=False, horizontal=False)
         try:
@@ -1306,7 +1239,7 @@ class TestDrawingEPS(unittest.TestCase):
         
         Need ImageMagick."""
                        
-        model_info = _cmd.curr_model.get_particle(5)
+        model_info = _model.get_particle(5)
         model_info.set('propagating', False)
         self.plot.draw(non_propagating=False)
         try:
@@ -1322,7 +1255,7 @@ class TestDrawingEPS(unittest.TestCase):
         
         Need ImageMagick."""
                        
-        model_info = _cmd.curr_model.get_particle(5)
+        model_info = _model.get_particle(5)
         model_info.set('propagating', False)
         self.plot.draw(non_propagating=False, external=0, horizontal=True)
         try:
@@ -1342,19 +1275,19 @@ class TestDrawingS_EPS(unittest.TestCase):
     2) can we convert him in pdf? (Imagemagick is needed for this)
         checking that the file is valid."""
         
-    #made a set of diagram available here
+    # Made a set of diagram available here
     store_diagram = TestFeynmanDiagram.store_diagram
     
 
     def setUp(self):
         """Charge a diagram to draw"""
         
-        self.diagram=[]
+        self.diagram = []
         for i in range(7):
             self.diagram.append(self.store_diagram['t h > t g W+ W-'][i])
         
         self.plot = draw_output.DrawDiagramsEps(self.diagram, 'diagram.eps', \
-                                          model=_cmd.curr_model, amplitude='') 
+                                          model=_model, amplitude='') 
         
 
 if __name__ == '__main__':
@@ -1362,34 +1295,37 @@ if __name__ == '__main__':
     # For debugging it's interesting to store problematic diagram in one file.
     #Those one are generated with cmd and store in files with pickle module.
     
-    process_diag={}
+    process_diag = {}
     process_diag['u d~ > c s~'] = [0]
-    process_diag['g g > g g'] = [1,2]
-    process_diag['g g > g g g'] = [0]    
+    process_diag['g g > g g'] = [1, 2]
+    process_diag['g g > g g g'] = [0]   
+    process_diag['g g > g g u u~'] = [18] 
     process_diag['g g > g g g g'] = [0, 26, 92, 93, 192]
     process_diag['mu+ mu- > w+ w- a'] = [6, 7]
-    process_diag['t h > t g W+ W-'] = [0,1,2,3,4,5,6,7] 
-    #process_diag['g g > g g g g g'] = [13]
+    process_diag['t h > t g W+ W-'] = [0, 1, 2, 3, 4, 5, 6, 7] 
+    
     
     from madgraph.interface.cmd_interface import MadGraphCmd
     cmd = MadGraphCmd()
-    _cmd.do_import('v4 ' + root_path + '../input_files/v4_sm_particles.dat')
-    _cmd.do_import('v4 ' + root_path + \
-                                    '../input_files/v4_sm_interactions.dat')
+    cmd.do_import('v4 ' + os.path.join(_file_path, \
+                                        '../input_files/v4_sm_particles.dat'))
+    cmd.do_import('v4 ' + os.path.join(_file_path, \
+                                    '../input_files/v4_sm_interactions.dat'))
     
-    #create the diagrams
-    diag_content={}
+    # Create the diagrams
+    diag_content = {}
     for gen_line, pos_list in process_diag.items():  
-        print gen_line,':',
+        print gen_line, ':',
         cmd.do_generate(gen_line)
         diag_content[gen_line] = {}
         for pos in pos_list:
             diag_content[gen_line][pos] = cmd.curr_amp['diagrams'][pos]
 
-    #store the diagrams  
-    file_test_diagram = open(root_path + \
-                                    '../input_files/test_draw.obj', 'w') 
+    # Store the diagrams  
+    file_test_diagram = open(os.path.join(_file_path , \
+                                    '../input_files/test_draw.obj'), 'w') 
     pickle.dump(diag_content, file_test_diagram)
+    print 'done'
     
         
 
