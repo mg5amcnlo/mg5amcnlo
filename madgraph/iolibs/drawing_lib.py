@@ -21,11 +21,11 @@ This file contains 4 class:
     * VertexPoint which extend the vertex with position and line information.
         Coordinates belongs to [0,1] interval
     * FeynmanDiagram which
-            1) extends a diagram to have position information - load_diagram 
-            2) his able to structure the vertex in level - define_level 
+            1) Extends a diagram to have position information - load_diagram 
+            2) Is able to structure the vertex in level - define_level 
                 level are the number of s_channel line-initial particles
                 separating the vertex from the initial particles starting point.
-            3) attributes position to each vertex - find_initial_vertex_position
+            3) Attributes position to each vertex - find_initial_vertex_position
     * FeynmanDiagramHorizontal
         is a child of FeynmanDiagram which assign position in a different way.
 
@@ -33,12 +33,12 @@ This file contains 4 class:
         in FeynmanDiagramHorizontal
     
     In FeynmanDiagram, the y-coordinate of external particles are put (if 
-        possible and if option autorizes) to 0,1. all other y-coordinate are 
-        assign such that the y-distance is equal between all vertex at he same 
-        level. 
+        possible and if option authorizes) to 0,1. all other y-coordinate are 
+        assign such that the distance between two neighbor of the same level    
+        are always the same. 
     
     In FeynmanDiagramHorizontal, an additional rules apply: if only one 
-        S-channel is going from level to the next, then this S-channel shoud be
+        S-channel is going from level to the next, then this S-channel should be
         horizontal."""
 
 from __future__ import division
@@ -94,7 +94,7 @@ class FeynmanLine(base_objects.Leg):
     
     def define_line_orientation(self):
         """Define the line orientation. Use the following rules:
-        Particles move to right directions when anti-particules  moves to left.
+        Particles move timelike when anti-particules  anti-timelike.
         """
          
         if (self.get('pid') > 0 and \
@@ -125,7 +125,7 @@ class FeynmanLine(base_objects.Leg):
         self.start, self.end = self.end, self.start    
 
     def get_info(self, name):
-        """Return the model information  associated to the line."""
+        """Return the model information 'name'  associated to the line."""
         pid = self.get('pid')
         
         result = self.model.get_particle(pid)
@@ -165,13 +165,13 @@ class FeynmanLine(base_objects.Leg):
             return self.start.is_external()
         
     def __eq__(self, other):
-        """Define that two line are equal when they have the same pointeur"""
+        """Define that two line are equal when they have the same pointer"""
         
         return self is other
     
     def __ne__(self, other):
         """Define that two line are different when they have different 
-        pointeur."""
+        pointer."""
         
         return self is not other
     
@@ -385,10 +385,6 @@ class FeynmanLine(base_objects.Leg):
         This routines doesn't contain check consistency.
         
         At current status this is use for debugging only."""
-
-        #check if the function is already computed
-        if hasattr(self, 'ordinate_fct'):
-            return self.ordinate_fct(x)
         
         #calculate the angular coefficient
         x_0 = self.start.pos_x
@@ -398,8 +394,9 @@ class FeynmanLine(base_objects.Leg):
         
         alpha = (y_1 - y_0) / (x_1 - x_0) #x1 always diff of x0
         
-        self.ordinate_fct = lambda X: y_0 + alpha * (X - x_0)
-        return self.ordinate_fct(x)
+        
+        ordinate_fct = lambda X: y_0 + alpha * (X - x_0)
+        return ordinate_fct(x)
         
 class VertexPoint(base_objects.Vertex):
     """Extension of the class Vertex in order to store the information 
@@ -409,15 +406,17 @@ class VertexPoint(base_objects.Vertex):
     class VertexPointError(Exception):
         """Exception raised if an error occurs in the definition
         or the execution of a VertexPoint."""
-        pass
+
        
     def __init__(self, vertex):
         """ include the vertex information."""
-        #copy data
+        
+        # Check the validity of the parameter 
         if not isinstance(vertex, base_objects.Vertex):
             raise self.VertexPointError, 'cannot extend non VertexObject to' + \
                ' Vertex_Point Object.\n type introduce {0}'.format(type(vertex))
-                    
+
+        # Copy data and add new entry                    
         base_objects.Vertex.__init__(self, vertex)
         self.line = []
         self.level = -1
@@ -432,21 +431,10 @@ class VertexPoint(base_objects.Vertex):
             raise self.VertexPointError, 'vertex coordinate should be in' + \
                     '0,1 interval introduce value ({0},{1})'.format(x, y)
 
-        return self._def_position(x, y)
-    
-    def _def_position(self, x, y):
-        """ (re)define the position of the vertex in a square (1,1) 
-            whitout testing x,y
-        """        
         self.pos_x = x
-        self.pos_y = y
-        
-        for line in self.line:
-            try:
-                del line.ordinate_fct    
-            except:
-                pass
-            
+        self.pos_y = y        
+        return       
+
     def fuse_vertex(self, vertex, common_line=''):
         """Import the line of the second vertex in the first one
             this means 
@@ -455,7 +443,7 @@ class VertexPoint(base_objects.Vertex):
             C) remove common_line (if defined)."""
         
         for line in vertex.line:
-            #remove common line. They are shrink to a single point
+            # Remove common line. They are shrink to a single point
             if line is common_line:
                 self.line.remove(line)
                 continue
@@ -492,12 +480,12 @@ class VertexPoint(base_objects.Vertex):
             raise self.VertexPointError, 'trying to remove in a ' + \
                             'Vertex_Point a non FeynmanLine Object'
         
-        # Find the occurence in the list and remove it. note that we cann't use
-        #standard delete as remove because it's 
+        # Find the first item in the list and remove it. note that we cann't use
+        #standard delete as remove because it's use '==' and not 'is'. 
         for i,line in enumerate(self.line):
             if line is line_to_del:
                 del self.line[i]
-                return # only one recurence!
+                return # only one data to remove!
         
         raise self.VertexPointError, 'trying to remove in a ' + \
                             'Vertex_Point a non present Feynman_Line'        
@@ -537,18 +525,17 @@ class FeynmanDiagram:
     1) Create the new structure needed for the diagram generation [load_diagram]
         This defines self.vertexList and self.lineList which are the list of     
         respectively all the vertex and all the line include in the diagram.
-        each line is associated to two vertex, so we have added new vertex
-        compare to the diagram object.
+        Each line is associated to two vertex, so we have added new vertex
+        compare to the diagram object (base_objects.Diagram).
     2) Associate to each vertex a level. [define_level]
         The level represents the distance between the initial vertex and the 
         current vertex. This distance is define has the number of non T-channel 
-        particles needed to connect this particles to initial states starting
+        particles needed to connect this particles to a initial state starting
         point.
     3) Compute the position of each vertex [find_initial_vertex_position]
         The x-coordinate will proportional to the level. The vertex at level=0.
         will have x=0 coordinate (vertex associate with initial state particle)
-        The vertex with the highest level value should be at x=1. (some of the 
-        vertex particles.
+        The vertex with the highest level value should be at x=1.
         
         If an external particles cann't be place at the border at the current 
         level. we will try to place it one level later, potentially up to last
@@ -570,29 +557,28 @@ class FeynmanDiagram:
     def __init__(self, diagram, model, drawing_mode=1):
         """Store the information concerning this diagram. This routines didn't
         perform any action at all.
-        diagram: the diagram object to draw
-        model: the model associate to the diagram
-        mode: if drawing_mode = 0, the external lines are authorizes to end only 
+        diagram: The diagram object to draw
+        model: The model associate to the diagram
+        drawing_mode: If 0, the external lines are authorizes to end only 
                    at the end of the diagram (in x=1 axis) -like v4 version-
-              if drawing_mode =1, the external lines can ends in lower and upper
-                   axis (y=0 and y=1). 
-        """
+              If 1, the external lines can ends in lower and upper
+                   axis (y=0 and y=1)."""
         
         #check if input are what we are expecting 
         if isinstance(diagram, base_objects.Diagram):
             self.diagram = diagram
         else:
             raise self.FeynamDiagramError('first arg should derivates' + \
-                                          ' from Diagram object and not %s') %\
-                                                    (diagram.__class__.__name__)
+                                          ' from Diagram object')
         
         if isinstance(model, base_objects.Model):
             self.model = model
         else:
             raise self.FeynamDiagramError('second arg should derivates' + \
                                           ' from Model object')
-        if drawing_mode in [0,1]:
-            self.drawing_mode = drawing_mode # See init comment for details
+            
+        self.drawing_mode = drawing_mode # See method's comment for details
+        
         
         #initialize other value to void.
         self.vertexList = base_objects.PhysicsObjectList()
@@ -608,14 +594,14 @@ class FeynmanDiagram:
         
         'contract' defines if we contract to one point the non propagating line.
         """
-        #define all the vertex/line 
-        #define self.vertexList,self.lineList
+        # Define all the vertex/line 
+        # Define self.vertexList,self.lineList
         self.load_diagram(contract=contract)
-        #define the level of each vertex
+        # Define the level of each vertex
         self.define_level()
-        #define position for each vertex
+        # Define position for each vertex
         self.find_initial_vertex_position()
-        # flip the particle orientation such that fermion-flow is correct
+        # Flip the particle orientation such that fermion-flow is correct
         self.solve_line_direction()
 
         
@@ -634,7 +620,7 @@ class FeynmanDiagram:
         # Either is not a true vertex (just identical line)
         if last_vertex.get('id') == 0:
             self.deal_special_vertex(last_vertex)
-        # Or the lines can be redundant with some other
+        # Or the lines can be redundant with some other.
         else:
             for line in last_vertex.line:
                 self.deal_last_line(line)
@@ -646,16 +632,16 @@ class FeynmanDiagram:
         # External particles have only one vertex attach to the line. (by 
         #construction it's line.start). So we will add a new vertex object
         #in order that all line are associated to two vertex. Those additional
-        #vertex will be place at the border of the square.
+        #vertex will be place, later, at the border of the square.
         vertex = base_objects.Vertex({'id':0, 'legs':base_objects.LegList([])})
         for line in self.lineList:
             if line.end == 0:
-                #create a new vertex. update the list, assign at postion
+                # Create a new vertex. update the list, assign at the line.
                 vertex_point = VertexPoint(vertex)
                 self.vertexList.append(vertex_point)
-                #if initial state particle, we need to flip begin-end
+                # If initial state particle, we will need to flip begin-end
                 if line['state'] == 'initial':
-                    line.def_end_point(line.start)    #assign at the wrong pos
+                    line.inverse_begin_end()
                     line.def_begin_point(vertex_point)
                     vertex_point.def_level(0)
                 else:
@@ -707,28 +693,28 @@ class FeynmanDiagram:
         #2) Add to the vertexList of the diagram
         self.vertexList.append(vertex_point)
         
-        #loop over the leg associate to the diagram
+        # Loop over the leg associate to the diagram
         for i, leg in enumerate(vertex['legs']): 
             
             # Search if leg exist: two case exist corresponding if it is the 
             #line of vertex or not. Corresponding to that change mode to find
             #if the leg exist or not.
             if i + 1 == len(vertex['legs']):
-                # find if leg is in self._treated_legs
-                # returns the position in that list
+                # Find if leg is in self._treated_legs and returns the position 
+                #in that list
                 id = self.find_leg_id(leg, equal=1) 
             else:
-                # find last item in self._treated_legs with same number
-                # returns the position in that list 
+                # Find  thelast item in self._treated_legs with same number and
+                #returns the position in that list 
                 id = self.find_leg_id(leg)
             
-            #define-recover the line associate to this leg                  
+            # Define-recover the line associate to this leg                  
             if id:
                 line = self.lineList[id]
             else:
                 line = self._load_leg(leg)
  
-            #associate the vertex to the line
+            # Associate the vertex to the line
             if line.start == 0:
                 line.def_begin_point(vertex_point)
             else:
@@ -736,9 +722,9 @@ class FeynmanDiagram:
                 
         # Change particule to anti-particule for last entry of vertex.line
         #doing this modification only if the vertex is the type 1 X....Z>1
-        #since in this case either the last particules will be a T-channel 
+        #since in this case either the last particles will be a T-channel 
         #and will be resolve latter (so we don't care) or we have to flip
-        #particle to antioarticule.
+        #particle to antioarticle.
         if line['number'] == 1 :
             line.inverse_part_antipart()
             
@@ -747,19 +733,18 @@ class FeynmanDiagram:
         """Extend the leg to Feynman line. Associate the line to the diagram.
         """
         
-        #extend the leg to FeynmanLine Object
+        # Extend the leg to FeynmanLine Object
         line = FeynmanLine(leg['id'], base_objects.Leg(leg)) 
         line._def_model(self.model)
         
-        # assign line and leg to the diagram
-        # storing leg is done in order to be able to check if a leg was already
-        # treated or not
+        # Assign line and leg to the diagram. Storing leg is done in order to be 
+        #able to check if a leg was already treated or not.
         self._treated_legs.append(leg)
         self.lineList.append(line)
 
-        # general inversion of pid for spin one particles
-        #it's a bit too much of flip (not need for initial particles)
-        #but those one will be reflip later anyway.
+        # General inversion of pid for spin one particles. It's a bit too much 
+        #of flip (not need for initial particles) but those one will be reflip 
+        #later anyway.
         line.inverse_pid_for_type(inversetype='wavy')
         return line
         
@@ -776,51 +761,50 @@ class FeynmanDiagram:
         line1 = self.lineList[pos1]
         line2 = self.lineList[pos2]
         
-        #case 1 one of the particle is a external particle
+        # Case 1 one of the particle is a external particle
         if line1.end == 0 or line2.end == 0:
-            #one external particles detected
+            # One external particles detected
             internal = line1
             external = line2
             if line2.end:
                 external, internal = internal, external
-            #connect correctly the line
+            # Connect correctly the line
             external.def_begin_point(internal.start)
-            #remove line completely
+            # Remove line completely
             internal.start.remove_line(internal)
             internal.end.remove_line(internal)
             self.lineList.remove(internal)
-            #remove last_vertex
+            # Remove last_vertex
             self.vertexList.remove(last_vertex)
         else:
-            #connect correctly the line
+            # Connect correctly the line
             line2.def_end_point(line1.start)
-            #remove line completely
+            # Remove line completely
             line1.start.remove_line(line1)
             del self.lineList[pos1]
-            #remove last_vertex
+            # Remove last_vertex
             self.vertexList.remove(last_vertex)     
             
     def deal_last_line(self, last_line):
-        """ The line of the last vertex breaks the rules that line before
-            '>' exist previously and the one after don't. The last one can also
-            already exist and for the one befor the '>' sometimes they arrive 
-            with a second object which is equivalent to another one but not 
-            the same object. discover those case and treat this properly."""
+        """The line of the last vertex breaks the rules that line before
+        '>' exist previously and the one after don't. The last one can also
+        already exist and for the one befor the '>' sometimes they arrive 
+        with a second object which is equivalent to another one but not 
+        the same object. discover those case and treat this properly."""
 
         # Check if the line has two vertex associte to it, if not correct.             
         if last_line.end == 0:
-            # find the position of the line in self._treated_legs
+            # Find the position of the line in self._treated_legs
             id1 = self.find_leg_id(last_line)
-            # find if they are a second call to this line
+            # Find if they are a second call to this line
             id2 = self.find_leg_id(last_line, end=len(self._treated_legs) - id1)
             
             if id2 is not None:
-                #line is duplicate in linelist => remove this duplication
+                # Line is duplicate in linelist => remove this duplication
                 line = self.lineList[id2]
                 line.def_end_point(last_line.start)
                 last_line.start.remove_line(last_line)
                 self.lineList.remove(last_line)
-                #del self.lineList[pos]              
             else:
                 return #this is an external line => everything is ok
     
@@ -852,7 +836,7 @@ class FeynmanDiagram:
         the level correspond to the number of visible particles and S-channel 
         needed in order to reach the initial particles vertex.
         
-        this is computing by search level by level starting at level 0
+        This is computing by search level by level starting at level 0.
         """
         
         initial_vertex = [vertex for vertex in self.vertexList if \
@@ -868,10 +852,10 @@ class FeynmanDiagram:
         If those vertex is already defined do noting
         Otherwise define as level+1 (level if T-channel) 
         
-        this routine defines also self.max_level.
+        This routine defines also self.max_level.
         
-        this routine is foreseen for an auto-recursive mode. So as soon as a new
-        level is defined. this routine is relaunched for this vertex."""
+        This routine is foreseen for an auto-recursive mode. So as soon as a new
+        level is defined. This routine is relaunched for this vertex."""
 
         level = vertex.level
         for line in vertex.line:
@@ -880,18 +864,18 @@ class FeynmanDiagram:
             direction = 'end'
             if line.end.level != -1:
                 direction = 'start'
-            # Check if T-channel or not. note that T-channel tag is wrongly 
+            # Check if T-channel or not. Note that T-channel tag is wrongly 
             #define if only one particle in initial state.
             if line['state'] == 'initial' and \
                len([1 for vertex in self.vertexList if vertex.level == 0]) == 2:
                 # This is T vertex. => level is 1
                 getattr(line, direction).def_level(1)
             else:
-                #define level
+                # Define level
                 getattr(line, direction).def_level(level + 1)
-                #check for update in self.max_level
+                # Check for update in self.max_level
                 self.max_level = max(self.max_level, level + 1)
-            #launch the recursion
+            # Launch the recursion
             self.def_next_level_from(getattr(line, direction))
             
 
@@ -925,11 +909,11 @@ class FeynmanDiagram:
                                 line['state'] == 'initial' and \
                                 line is not t_line ][0]
 
-        #find the new vertex associate to it
+        # Find the new vertex associate to it
         t_vertex = [vertex for vertex in[t_line.start, t_line.end] if\
                                       vertex != t_vertex  ][0]
         
-        #check that we are not going back to initial particule 2                              
+        # Check that we are not going back to initial particule 2                              
         if t_vertex.level == 1:
             return t_vertex, t_line
         else:
@@ -947,13 +931,11 @@ class FeynmanDiagram:
             vertex = previous_level[i]
             if  vertex.is_external() and level - 1 != self.max_level and \
                                     level != 1 and vertex.pos_y not in [0, 1]:
-                #move external vertex from one level to avoid external 
-                # particles finishing inside the square. 
+                # Move external vertex from one level to avoid external 
+                #particles finishing inside the square. 
                 vertex.def_level(level)
                 
             for line in vertex.line:
-                #if (line['state'] == 'initial'):
-                #    continue
                 if(line.start.level == level):
                     vertex_at_level.append(line.start)
                 elif(line.end.level == level):
@@ -972,7 +954,8 @@ class FeynmanDiagram:
         if len(initial_vertex) == 2:
             initial_vertex[0].def_position(0, 1)
             initial_vertex[1].def_position(0, 0)
-            # Change order in order to draw from bottom
+            # Change order if you want to flip position of initial state.
+            #decoment the following line in such case.
             #initial_vertex.reverse()
             # Initial state are wrongly consider as outgoing-> solve:
             initial_vertex[0].line[0].inverse_part_antipart()
@@ -1006,7 +989,7 @@ class FeynmanDiagram:
     def find_vertex_position_at_level(self, vertexlist, level, auto=True):
         """Finds the vertex position for the particle at 'level' given the 
         ordering at previous level given by the vertexlist. 
-        if auto=True pass in autorecursive mode."""
+        if auto equals True then  pass in auto-recursive mode."""
 
         # Find the order of vertex at next-level. if some external particle
         #are in vertexlist. They are replace in vertex_at_level. Such case 
@@ -1017,11 +1000,11 @@ class FeynmanDiagram:
         if not vertex_at_level:
             return
         # Assign position to vertex_at_level. In order to deal with external 
-        # particles the vertex_at_level is modify. If an external vertex has
-        # position on border it will be remove of vertex_at_level.    
+        #particles the vertex_at_level is modify. If an external vertex has
+        #position on border it will be remove of vertex_at_level.    
         self.assign_pos(vertex_at_level, level)
         
-        #recursive mode
+        # Recursive mode
         if auto and vertex_at_level:
             self.find_vertex_position_at_level(vertex_at_level, level + 1)
              
@@ -1060,60 +1043,50 @@ class FeynmanDiagram:
             return []
         
         if level > self.max_level:
-                raise self.FeynamDiagramError, 'self.max_level not correctly ' + \
-                    'assigned %s is lower than level %s' % (self.max_level, level) 
+            raise self.FeynamDiagramError, 'self.max_level not correctly ' + \
+                'assigned %s is lower than level %s' % (self.max_level, level) 
         
-        #if mode not define use the one define at __init__ time. 
+        # If mode not define use the one define at __init__ time. 
         if mode == '':
             mode = self.drawing_mode
-        
-        #at final level we should autorize min=0 and max=1 position    
+        # At final level we should autorize min=0 and max=1 position    
         if level == self.max_level:
             mode = 1
-          
-        #set default gap in dist unity
+        # Set default gap in dist unity
         begin_gap, end_gap = 1, 1
-        
-        #check the special case when min is 0 -> border
+        # Check the special case when min is 0 -> border
         if min == 0:
             if mode and vertex_at_level[0].is_external():
-                    #assign position at the border    
+                    # Assign position at the border    
                     vertex_at_level[0].def_position(level / self.max_level, 0)
-                    #remove the vertex to avoid that it will pass to next level
+                    # Remove the vertex to avoid that it will pass to next level
                     del vertex_at_level[0]
                     if not vertex_at_level:
                         return []
             else:
                 begin_gap = 0.5
         
-        #check the special case when max is 1 -> border    
+        # Check the special case when max is 1 -> border    
         if max == 1:
             if mode and vertex_at_level[-1].is_external():
-                #assign position at the border 
+                # Assign position at the border 
                 vertex_at_level[-1].def_position(level / self.max_level, 1)
-                #remove the vertex to avoid that it will pass to next level
+                # Remove the vertex to avoid that it will pass to next level
                 del vertex_at_level[-1]
                 if not vertex_at_level:
                         return []
             else:
                 end_gap = 0.5
         
-        #compute the distance between two vertex
+        # Compute the distance between two vertex
         dist =(max-min) / (begin_gap + end_gap + len(vertex_at_level) - 1)
         
-        #assign position to each vertex
+        # Assign position to each vertex
         for i, vertex in enumerate(vertex_at_level):
             vertex.def_position(level / self.max_level, min + dist * \
                                                                 (begin_gap + i))
           
         return vertex_at_level
-#    def assign_position_for_level(self, vertex_at_level, level, mode=''):
-#        """ 
-#            assign position in ascendant order for the vertex at level given 
-#        """
-#        self.assign_position_between(vertex_at_level, level, mode=mode)
-#        return
-        
                     
     def solve_line_direction(self):
         """Computes the directions of the lines of the diagrams.
@@ -1122,20 +1095,20 @@ class FeynmanDiagram:
         correct fermion flow. Majorana case are not deal correctly at this stage
         """
         
-        # Use the basic rules. assigns correctly but for T-channel
+        # Use the basic rules. Assigns correctly but for T-channel
         for line in self.lineList:
                 line.define_line_orientation()
     
         # The define line orientation use level information and in consequence 
         #fails on T-Channel. So in consequence we still have to fix T-channel
-        #line
+        #line.
         t_vertex = [vertex for vertex in self.vertexList if vertex.level == 0]
         
-        #make a loop on T-channel particles
+        # Make a loop on T-channel particles
         try:
             t_vertex = t_vertex[1]
         except:
-            return # no T-channel for 1 > X diagram
+            return # No T-channel for 1 > X diagram
         
         t_line = ''
         while 1:
@@ -1144,32 +1117,32 @@ class FeynmanDiagram:
             if t_vertex == None:
                 return
             
-            #look the total for the other
+            # Look the total for the other
             ver_flow = 0 # Current flow status for the vertex 
             t_next = ''  # Next T-channel line. the line with unfix fermion flow
             for line in t_vertex.line:
 
-                # if not fermion, no update of the fermion flow
+                # If not fermion, no update of the fermion flow
                 if not line.is_fermion():
                     continue
                                 
-                # identify the next T-channel particles
+                # Identify the next T-channel particles
                 if line['state'] == 'initial' and line is not t_line:
                     t_next = line
 
-                #update the fermion_flow    
+                # Update the fermion_flow    
                 if (line.start is t_vertex):
                     ver_flow += 1
                 elif line.end is t_vertex:
                     ver_flow -= 1
             
-            # End of the loop on the line of the vertex
-            # Check if the next T-line is a fermion or not. t_next is define
-            #only if this is a fermion.
+            # End of the loop on the line of the vertex. Check if the next 
+            #T-line is a fermion or not. t_next is define only if this is a 
+            #fermion.
             if t_next == '':
                 continue 
             
-            #check the vertex_flow=0, we were lucky, else correct the flow.
+            # Check the vertex_flow=0, we were lucky, else correct the flow.
             if ver_flow:
                 t_next.inverse_begin_end()
             
@@ -1177,8 +1150,7 @@ class FeynmanDiagram:
     def _debug_load_diagram(self):
         """Return a string to check to conversion of format for the diagram. 
         
-        This is a debug function.
-        """
+        This is a debug function."""
 
         text = 'line content :\n'
         for i in range(0, len(self.lineList)):
@@ -1243,7 +1215,7 @@ class FeynmanDiagramHorizontal(FeynmanDiagram):
     In case of vertex with one and only one S-channel going to the next level. 
     Then force this line to be horizontal. This creates sub-interval where other
     vertex can be place following the same rule as before  (equal distance 
-    between vetex) but this time sub-interval by sub-interval.""" 
+    between vertex) but this time sub-interval by sub-interval.""" 
     
     def find_vertex_position_at_level(self, vertexlist, level, auto=True):
         """Finds the vertex position for the particle at 'level' given the 
@@ -1252,11 +1224,10 @@ class FeynmanDiagramHorizontal(FeynmanDiagram):
         
         Compare to the function of FeynmanDiagram, this check the number of 
         S-channel particles going out of each vertex. If the result is one:
-        1) fix the associate vertex at the same y as the original vertex
+        1) Fix the associate vertex at the same y as the original vertex
             -> horizontal line
-        2) assign non fix vertex below the fix one in the current interval. 
-        3) continue 
-        """        
+        2) Assign non fix vertex below the fix one in the current interval. 
+        3) Continue to the next vertex."""        
         
         # If only final-initial particles no S-channel to fix => old routine
         if level == 1 or level == self.max_level :
@@ -1303,12 +1274,11 @@ class FeynmanDiagramHorizontal(FeynmanDiagram):
                     ext_vertex.append(new_vertex)
                 else:
                     s_vertex.append(new_vertex)
-                    s_line = line
             
             # Check the number of S-channel
             if len(s_vertex)!=1:
-                # Udate the list_unforce_vertex. The complex way to do it a 
-                #naive tentative of improving the look of the diagram.
+                # Udate the list_unforce_vertex. The complex way to do is a 
+                #naive attempt of improving the look of the diagram.
                 if len(ext_vertex)<=1:
                     if vertex.pos_y>=0.5:
                         list_unforce_vertex += (s_vertex + ext_vertex)
@@ -1325,7 +1295,7 @@ class FeynmanDiagramHorizontal(FeynmanDiagram):
                                                              
             list_unforce_vertex += ext_vertex
             
-            # Assign position to unforce list with some naive try of improvment
+            # Assign position to unforce list with some naive try of improvement
             if (len(ext_vertex) == 1 and v_pos >= 0.5) or len(ext_vertex) > 1:
                 vertex_at_level2 += self.assign_pos(list_unforce_vertex[:-1], \
                                                         level, min_pos, v_pos)
@@ -1336,16 +1306,14 @@ class FeynmanDiagramHorizontal(FeynmanDiagram):
                                                                  min_pos, v_pos)
                 list_unforce_vertex = []
             
-            #update value for the next interval
+            # Update value for the next interval
             min_pos = v_pos
             vertex_at_level2.append(force_vertex)
         
-        #end of the loop assign the position of unforce vertex remaining                                                        
+        # End of the loop assign the position of unforce vertex remaining                                                        
         if list_unforce_vertex:
             vertex_at_level2 += self.assign_pos(list_unforce_vertex, level, min_pos, 1)
 
         if auto and vertex_at_level2:                   
             self.find_vertex_position_at_level(vertex_at_level2, level + 1)
             
-    
-    

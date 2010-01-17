@@ -1,7 +1,3 @@
-%!PS-Adobe-2.0
-%%BoundingBox: -20 -20 450 650
-%%DocumentFonts: Helvetica
-%%Pages:  1
 %!MadGraph
 %
 % Feynman Diagrams drawn by MadGraph
@@ -335,34 +331,5 @@ gsave x1 y1 x2 y2 wedge fill grestore} def
 %%PageBoundingBox:-20 -20 600 800
 %%PageFonts: Helvetica
 /Helvetica findfont 10 scalefont setfont
-         240         770  moveto
-(Diagrams by MadGraph) show
-         370         770  moveto
-( g g -> g g  ) show
-  100.000000       737.00000       137.65433       674.50000      0  Fgluon
-   123.10995       704.33026       moveto
-(     )   show
-  100.000000       612.00000       137.65433       674.50000      0  Fgluon
-   123.10995       636.66974       moveto
-(     )   show
-   212.55144       674.50000       250.00000       737.00000      0  Fgluon
-   235.56474       699.18011       moveto
-(     )   show
-   212.55144       674.50000       250.00000       612.00000      0  Fgluon
-   235.56474       641.81989       moveto
-(     )   show
-   212.55144       674.50000       137.65433       674.50000      0  Fgluon
-   175.10287       665.50000       moveto
-(     )   show
-   160.00000       599.50000       moveto
-(graph    1)   show
-   85.000000       737.00000       moveto
- (1)   show
-   85.000000             610   moveto
- (2)   show
-   250.00000       737.00000       moveto
-(  3) show
-   250.00000       612.00000       moveto
-(  4) show
-showpage
-%%trailer
+ 240         770  moveto
+ (Diagrams by MadGraph) show

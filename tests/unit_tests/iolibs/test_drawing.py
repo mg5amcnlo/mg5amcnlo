@@ -1234,15 +1234,65 @@ class TestDrawingEPS(unittest.TestCase):
         return
     
     def testDrawDiagramEPS(self):
-        """Check the DrawDiagramEPS module. 
+        """Check the DrawDiagramEPS module (with FeynamDiagram). 
+        
+        Need ImageMagick."""
+        
+        self.plot.draw(horizontal=False)
+        self.output_is_valid('diagram.eps')
+              
+    def testDrawDiagramEPS_external(self):
+        """Check the DrawDiagramEPS module (with FeynamDiagram + external 
+        particles force to be at y=1.
+        
+        Need ImageMagick."""
+        
+        self.plot.draw(external=False, horizontal=False)
+        self.output_is_valid('diagram.eps')
+ 
+ 
+    def testDrawDiagramEPS_contract(self):
+        """Check the DrawDiagramEPS module (with FeynmanDiagram + contracts 
+        non propagating particles).
+        
+        Need ImageMagick."""
+                       
+        model_info = _cmd.curr_model.get_particle(5)
+        model_info.set('propagating', False)
+        self.plot.draw(non_propagating=False, horizontal=False)
+        try:
+            self.output_is_valid('diagram.eps')       
+        except:
+            model_info.set('propagating', True)            
+            raise
+        
+    def testDrawDiagramEPS_contract_ext(self):
+        """Check the DrawDiagramEPS module (with FeynamDiagram + contracts non 
+        propagating particles + external particles force to be at y=1.
+        
+        Need ImageMagick."""
+                       
+        model_info = _cmd.curr_model.get_particle(5)
+        model_info.set('propagating', False)
+        self.plot.draw(non_propagating=False, external=False, horizontal=False)
+        try:
+            self.output_is_valid('diagram.eps')       
+        except:
+            model_info.set('propagating', True)            
+            raise       
+
+   
+    def testDrawDiagramEPS_horizontal(self):
+        """Check the DrawDiagramEPS module (with FeynamDiagramHorizontal). 
         
         Need ImageMagick."""
         
         self.plot.draw()
         self.output_is_valid('diagram.eps')
               
-    def testDrawDiagramEPS_external(self):
-        """Check the DrawDiagramEPS module (with external at end).
+    def testDrawDiagramEPS_external_horizontal(self):
+        """Check the DrawDiagramEPS module (with FeynamDiagramHorizontal +
+        external particles force to be at y=1.
         
         Need ImageMagick."""
         
@@ -1250,8 +1300,9 @@ class TestDrawingEPS(unittest.TestCase):
         self.output_is_valid('diagram.eps')
  
  
-    def testDrawDiagramEPS_contract(self):
-        """Check the DrawDiagramEPS module (contract non propagating).
+    def testDrawDiagramEPS_contract_horizontal(self):
+        """Check the DrawDiagramEPS module (with FeynmanDiagramHorizontal + 
+        contracts non propagating particles).
         
         Need ImageMagick."""
                        
@@ -1264,56 +1315,10 @@ class TestDrawingEPS(unittest.TestCase):
             model_info.set('propagating', True)            
             raise
         
-    def testDrawDiagramEPS_contract_ext(self):
-        """Check the DrawDiagramEPS module (contract non propagating and 
-        external at end
-        
-        Need ImageMagick."""
-                       
-        model_info = _cmd.curr_model.get_particle(5)
-        model_info.set('propagating', False)
-        self.plot.draw(non_propagating=False, external=0)
-        try:
-            self.output_is_valid('diagram.eps')       
-        except:
-            model_info.set('propagating', True)            
-            raise       
-
-   
-    def testDrawDiagramEPS_horizontal(self):
-        """Check the DrawDiagramEPS module. 
-        
-        Need ImageMagick."""
-        
-        self.plot.draw(horizontal=True)
-        self.output_is_valid('diagram.eps')
-              
-    def testDrawDiagramEPS_external_horizontal(self):
-        """Check the DrawDiagramEPS module (with external at end).
-        
-        Need ImageMagick."""
-        
-        self.plot.draw(external=False, horizontal=True)
-        self.output_is_valid('diagram.eps')
- 
- 
-    def testDrawDiagramEPS_contract_horizontal(self):
-        """Check the DrawDiagramEPS module (contract non propagating).
-        
-        Need ImageMagick."""
-                       
-        model_info = _cmd.curr_model.get_particle(5)
-        model_info.set('propagating', False)
-        self.plot.draw(non_propagating=False, horizontal=True)
-        try:
-            self.output_is_valid('diagram.eps')       
-        except:
-            model_info.set('propagating', True)            
-            raise
-        
     def testDrawDiagramEPS_contract_ext_horizontal(self):
-        """Check the DrawDiagramEPS module (contract non propagating and 
-        external at end
+        """Check the DrawDiagramEPS module (with FeynamDiagramHorizontal + 
+        contracts non propagating particles + external particles force to be at 
+        y=1.
         
         Need ImageMagick."""
                        
@@ -1351,124 +1356,7 @@ class TestDrawingS_EPS(unittest.TestCase):
         self.plot = draw_output.DrawDiagramsEps(self.diagram, 'diagram.eps', \
                                           model=_cmd.curr_model, amplitude='') 
         
-    def output_is_valid(self, position, pdf_check = True):
-        """Check if the output files exist. Additionally if pdf_check is on True
-        check if we can convert the output file in pdf. Finally delete files."""
-        
-        #check if exist
-        self.assertTrue(os.path.isfile(position))
-        
-        #check if the file is valid
-        if pdf_check:
-            filename, ext = os.path.splitext('position')
-            os.system('convert '+position+' '+filename+'.pdf')
-     
-            #try is use to ensure that no file are left on disk
-            try:
-                self.assertTrue(os.path.isfile(filename+'.pdf'))
-            except:
-                os.remove(position)
-                raise
-            os.remove(filename+'.pdf')
-        os.remove(position)
-        return
-    
-    def testDrawDiagramsEPS(self):
-        """Check the DrawDiagramsEPS module. 
-        
-        Need ImageMagick."""
-        
-        self.plot.draw()
-        self.output_is_valid('diagram.eps')
-              
-    def testDrawDiagramsEPS_external(self):
-        """Check the DrawDiagramsEPS module (with external at end).
-        
-        Need ImageMagick."""
-        
-        self.plot.draw(external=False)
-        self.output_is_valid('diagram.eps')
- 
- 
-    def testDrawDiagramsEPS_contract(self):
-        """Check the DrawDiagramsEPS module (contract non propagating).
-        
-        Need ImageMagick."""
-                       
-        model_info = _cmd.curr_model.get_particle(5)
-        model_info.set('propagating', False)
-        self.plot.draw(non_propagating=False)
-        try:
-            self.output_is_valid('diagram.eps')       
-        except:
-            model_info.set('propagating', True)            
-            raise
-        
-    def testDrawDiagramsEPS_contract_ext(self):
-        """Check the DrawDiagramsEPS module (contract non propagating and 
-        external at end
-        
-        Need ImageMagick."""
-                       
-        model_info = _cmd.curr_model.get_particle(5)
-        model_info.set('propagating', False)
-        self.plot.draw(non_propagating=False, external=0)
-        try:
-            self.output_is_valid('diagram.eps')       
-        except:
-            model_info.set('propagating', True)            
-            raise       
 
-   
-    def testDrawDiagramsEPS_horizontal(self):
-        """Check the DrawDiagramsEPS module. 
-        
-        Need ImageMagick."""
-        
-        self.plot.draw(horizontal=True)
-        self.output_is_valid('diagram.eps')
-              
-    def testDrawDiagramsEPS_external_horizontal(self):
-        """Check the DrawDiagramsEPS module (with external at end).
-        
-        Need ImageMagick."""
-        
-        self.plot.draw(external=False, horizontal=True)
-        self.output_is_valid('diagram.eps')
- 
- 
-    def testDrawDiagramsEPS_contract_horizontal(self):
-        """Check the DrawDiagramsEPS module (contract non propagating).
-        
-        Need ImageMagick."""
-                       
-        model_info = _cmd.curr_model.get_particle(5)
-        model_info.set('propagating', False)
-        self.plot.draw(non_propagating=False, horizontal=True)
-        try:
-            self.output_is_valid('diagram.eps')       
-        except:
-            model_info.set('propagating', True)            
-            raise
-        
-    def testDrawDiagramsEPS_contract_ext_horizontal(self):
-        """Check the DrawDiagramsEPS module (contract non propagating and 
-        external at end
-        
-        Need ImageMagick."""
-                       
-        model_info = _cmd.curr_model.get_particle(5)
-        model_info.set('propagating', False)
-        self.plot.draw(non_propagating=False, external=0, horizontal=True)
-        try:
-            self.output_is_valid('diagram.eps')       
-        except:
-            model_info.set('propagating', True)            
-            raise       
-        
-        
-               
-            
 if __name__ == '__main__':
     
     # For debugging it's interesting to store problematic diagram in one file.

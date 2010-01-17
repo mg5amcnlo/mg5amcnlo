@@ -346,7 +346,7 @@ class MadGraphCmd(cmd.Cmd):
             print "No Diagram to draw. Please generate some diagrams first"
             return False
         
-        plot = Draw.Draw_diagrams_eps(self.curr_amp['diagrams'], args[0],
+        plot = Draw.DrawDiagramsEps(self.curr_amp['diagrams'], args[0],
                              model=self.curr_model, amplitude='')
         if len(args) == 1:
             plot.draw()
@@ -359,9 +359,10 @@ class MadGraphCmd(cmd.Cmd):
                     print 'invalid option %s. Please try again'
                     self.help_draw()
                     return False
-                opt[key] = value
-            plot.draw(opt=opt)
-            print args
+                if value in ['False','0', 0, False]:
+                    opt[key] = False
+            
+            plot.draw(**opt)
             
         
         
@@ -384,10 +385,15 @@ class MadGraphCmd(cmd.Cmd):
         print "   Example: u d~ > m+ vm g"
         
     def help_draw(self):
-        print "syntax: draw output_file.eps"
+        print "syntax: draw output_file.eps [option=0]"
         print "-- draw the diagrams in eps format "
-        print "   Example: draw e+e-_mu+mu-.eps "
-
+        print "   Example: draw output.eps "
+        print "   Possible option: "
+        print "        horizontal [1]: force S-channel to be horizontal"
+        print "        external [1]: authorizes external particles to ends"
+        print "             on horizontal segment of the square."
+        print "        non_propagating [1]:contracts non propagating lines" 
+        print "   Example: draw output.eps external=0 horizontal=0"
     def help_shell(self):
         print "syntax: shell CMD (or ! CMD)"
         print "-- run the shell command CMD and catch output"
