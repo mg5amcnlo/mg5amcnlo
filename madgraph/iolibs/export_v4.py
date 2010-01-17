@@ -298,7 +298,7 @@ class FortranWriter():
         """Write a fortran line, with correct indent and line splits"""
 
         if not isinstance(line, str) or line.find('\n') >= 0:
-            raise FortranWriterError,\
+            raise self.FortranWriterError,\
                   "write_fortran_line must have a single line as argument"
 
         # Check if this line is a comment
