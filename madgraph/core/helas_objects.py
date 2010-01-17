@@ -23,12 +23,13 @@ import array
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 
-"""Definitions of objects used to generate Helas calls (language-independent):
-HelasWavefunction, HelasAmplitude, HelasDiagram for the generation of
-wavefunctions and amplitudes;
-HelasParticle, HelasInteraction, HelasModel are language-independent
-base classes for the language-specific classes found in the
-iolibs directory"""
+"""Definitions of objects used to generate Helas calls
+(language-independent): HelasWavefunction, HelasAmplitude,
+HelasDiagram for the generation of wavefunctions and amplitudes,
+HelasMatrixElement and HelasMultiProcess for generation of complete
+matrix elements for single and multiple processes; and HelasModel,
+which is the language-independent base class for the language-specific
+classes for writing Helas calls, found in the iolibs directory"""
 
 #===============================================================================
 # 
@@ -736,7 +737,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
 # HelasWavefunctionList
 #===============================================================================
 class HelasWavefunctionList(base_objects.PhysicsObjectList):
-    """List of HelasWavefunction objects
+    """List of HelasWavefunction objects. This class has the routine
+    check_and_fix_fermion_flow, which checks for fermion flow clashes
+    among the mothers of an amplitude or wavefunction.
     """
 
     def is_valid_element(self, obj):
@@ -1134,7 +1137,8 @@ class HelasAmplitudeList(base_objects.PhysicsObjectList):
 # HelasDiagram
 #===============================================================================
 class HelasDiagram(base_objects.PhysicsObject):
-    """HelasDiagram: list of vertices (ordered)
+    """HelasDiagram: list of HelasWavefunctions and a HelasAmplitude,
+    plus the fermion factor associated with the corresponding diagram.
     """
 
     def default_setup(self):
@@ -1200,7 +1204,21 @@ class HelasDiagramList(base_objects.PhysicsObjectList):
 # HelasMatrixElement
 #===============================================================================
 class HelasMatrixElement(base_objects.PhysicsObject):
-    """HelasMatrixElement: ordered list of HelasDiagrams
+    """HelasMatrixElement: list of processes with identical Helas
+    calls, and the list of HelasDiagrams associated with the processes.
+
+    If initiated with an Amplitude, HelasMatrixElement calls
+    generate_helas_diagrams, which goes through the diagrams of the
+    Amplitude and generates the corresponding Helas calls, taking into
+    account possible fermion flow clashes due to Majorana
+    particles. The optional optimization argument determines whether
+    optimization is used (optimization = 1, default), for maximum
+    recycling of wavefunctions, or no optimization (optimization = 0)
+    when each diagram is written independently of all previous
+    diagrams (this is useful for running with restricted memory,
+    e.g. on a GPU). For processes with many diagrams, the total number
+    or wavefunctions after optimization is ~15% of the number of
+    amplitudes (diagrams).
     """
 
     def default_setup(self):
@@ -1555,9 +1573,9 @@ class HelasMatrixElementList(base_objects.PhysicsObjectList):
 # HelasMultiProcess
 #===============================================================================
 class HelasMultiProcess(base_objects.PhysicsObject):
-    """HelasMultiProcess: Given an AmplitudeList, generate the
-    HelasMatrixElements for the Amplitudes, identifying processes with
-    identical matrix elements"""
+    """HelasMultiProcess: If initiated with an AmplitudeList,
+    generates the HelasMatrixElements for the Amplitudes, identifying
+    processes with identical matrix elements"""
 
     def default_setup(self):
         """Default values for all properties"""
