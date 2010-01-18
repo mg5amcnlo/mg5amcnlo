@@ -224,6 +224,7 @@ C      CALL GAUGECHECK(JAMP,ZTEMP,EIGEN_VEC,EIGEN_VAL,NCOLOR,NEIGEN)
 def get_mg5_info_lines():
     """Return info lines for MG5, suitable to place at beginning of
     Fortran files"""
+
     info = misc.get_pkg_info()
     info_lines = ""
     if info.has_key('version') and  info.has_key('date'):
@@ -415,16 +416,25 @@ class FortranWriter():
 #===============================================================================
 class HelasFortranModel(helas_objects.HelasModel):
     """The class for writing Helas calls in Fortran, starting from
-    HelasWavefunctions and HelasAmplitudes."""
+    HelasWavefunctions and HelasAmplitudes.
 
+    Includes the function generate_helas_call, which automatically
+    generates the Fortran Helas call based on the Lorentz structure of
+    the interaction."""
+
+    # Dictionaries used for automatic generation of Helas calls
+    # Dictionaries from spin states to letters in Helas call
     mother_dict = {1: 'S', 2: 'O', -2: 'I', 3: 'V', 5: 'T'}
     self_dict = {1: 'H', 2: 'F', -2: 'F', 3: 'J', 5: 'U'}
+    # Dictionaries used for sorting the letters in the Helas call
     sort_wf = {'O': 0, 'I': 1, 'S': 2, 'T': 3, 'V': 4}
     sort_amp = {'S': 1, 'V': 2, 'T': 0, 'O': 3, 'I': 4}
 
 
     def default_setup(self):
-
+        """Set up special Helas calls (wavefunctions and amplitudes)
+        that can not be done automatically by generate_helas_call"""
+        
         super(HelasFortranModel, self).default_setup()
 
         # Add special fortran Helas calls, which are not automatically
@@ -462,7 +472,9 @@ class HelasFortranModel(helas_objects.HelasModel):
 
     def get_wavefunction_call(self, wavefunction):
         """Return the function for writing the wavefunction
-        corresponding to the key"""
+        corresponding to the key. If the function doesn't exist,
+        generate_helas_call is called to automatically create the
+        function."""
 
         val = super(HelasFortranModel, self).get_wavefunction_call(wavefunction)
 
@@ -481,8 +493,9 @@ class HelasFortranModel(helas_objects.HelasModel):
             wavefunction)
 
     def get_amplitude_call(self, amplitude):
-        """Return the function for writing the amplitude
-        corresponding to the key"""
+        """Return the function for writing the amplitude corresponding
+        to the key. If the function doesn't exist, generate_helas_call
+        is called to automatically create the function."""
 
         val = super(HelasFortranModel, self).get_amplitude_call(amplitude)
 
@@ -500,6 +513,25 @@ class HelasFortranModel(helas_objects.HelasModel):
         return super(HelasFortranModel, self).get_amplitude_call(amplitude)
 
     def generate_helas_call(self, argument):
+        """Routine for automatic generation of Fortran Helas calls
+        according to just the spin structure of the interaction.
+
+        First the call string is generated, using a dictionary to go
+        from the spin state of the calling wavefunction and its
+        mothers, or the mothers of the amplitude, to letters.
+
+        Then the call function is generated, as a lambda which fills
+        the call string with the information of the calling
+        wavefunction or amplitude. The call has different structure,
+        depending on the spin of the wavefunction and the number of
+        mothers (multiplicity of the vertex). The mother
+        wavefunctions, when entering the call, must be sorted in the
+        correct way - this is done by the sorted_mothers routine.
+
+        Finally the call function is stored in the relevant
+        dictionary, in order to be able to reuse the function the next
+        time a wavefunction with the same Lorentz structure is needed.
+        """
             
         if not isinstance(argument, helas_objects.HelasWavefunction) and \
            not isinstance(argument, helas_objects.HelasAmplitude):

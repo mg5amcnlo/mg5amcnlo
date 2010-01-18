@@ -1654,7 +1654,8 @@ class HelasModel(base_objects.PhysicsObject):
     calls are stored in two dictionaries, wavefunctions and
     amplitudes, with entries being a mapping from a set of spin,
     incoming/outgoing states and Lorentz structure to a function which
-    writes the corresponding wavefunction call."""
+    writes the corresponding wavefunction/amplitude call (taking a
+    HelasWavefunction/HelasAmplitude as argument)."""
 
     def default_setup(self):
 

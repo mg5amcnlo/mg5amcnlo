@@ -2280,6 +2280,19 @@ class HelasModelTest(unittest.TestCase):
         self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
                           mymodel.set,
                           'wrong_subclass', None)
+        # add_wavefunction and add_amplitude
+        self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
+                          mymodel.add_wavefunction,
+                          'wrong_subclass', None)
+        self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
+                          mymodel.add_wavefunction,
+                          (1,2), "not_a_function")
+        self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
+                          mymodel.add_amplitude,
+                          'wrong_subclass', None)
+        self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
+                          mymodel.add_amplitude,
+                          (1,2), "not_a_function")
 
     def test_set_wavefunctions(self):
         """Test wavefunction dictionary in HelasModel"""

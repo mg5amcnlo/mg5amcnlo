@@ -350,6 +350,19 @@ C       Test
         self.assertEqual(fsock.getvalue(),
                          goal_string)
 
+    def test_write_fortran_error(self):
+        """Test that a non-string gives an error"""
+        
+        fsock = StringIO.StringIO()
+        
+        non_strings = [1.2,["hej"]]
+
+        writer = export_v4.FortranWriter()
+        for nonstring in non_strings:
+            self.assertRaises(export_v4.FortranWriter.FortranWriterError,
+                              writer.write_fortran_line,
+                              fsock, nonstring)
+
 #===============================================================================
 # HelasFortranModelTest
 #===============================================================================
