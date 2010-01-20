@@ -53,9 +53,12 @@ class PhysicsObject(dict):
             is always raise
         """
 
-        if self.is_valid_prop(name):
+        try:
             return dict.__getitem__(self, name)
-
+        except:
+            self.is_valid_prop(name) #raise the correct error
+        
+        
     def default_setup(self):
         """Function called to create and setup default values for all object
         properties"""
