@@ -23,6 +23,9 @@ import madgraph.core.color_algebra as color_algebra
 for a diagram and build a color basis, and to square a QCD color string for
 squared diagrams and interference terms."""
 
+#===============================================================================
+# ColorBasis
+#===============================================================================
 class ColorBasis(dict):
     """The ColorBasis object is a dictionary created from an amplitude. Keys
     are the different color structures present in the amplitude. Values have
