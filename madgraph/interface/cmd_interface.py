@@ -494,8 +494,8 @@ class MadGraphCmd(cmd.Cmd):
 
             calls = 0
             for me in self.__curr_matrix_elements.get('matrix_elements'):
-                filename = filepath + '/matrix_' + \
-                           me.get('processes')[0].shell_string() + ".f"
+                filename = os.path.join(filepath, 'matrix_' + \
+                           me.get('processes')[0].shell_string() + ".f")
                 if os.path.isfile(filename):
                     print "Overwriting existing file %s" % filename
                 else:
@@ -587,38 +587,49 @@ class MadGraphCmd(cmd.Cmd):
     def do_draw(self, line):
         """ draw the Feynman diagram for the given process """
 
-        # TO BE REFACTORED!!!
+        args = self.split_arg(line)
 
-#        args = self.split_arg(line)
-#
-#        if len(args) < 1:
-#            self.help_draw()
-#            return False
-#        
-#        if not len(self.__curr_amp['diagrams']):
-#            print "No Diagram to draw. Please generate some diagrams first"
-#            return False
-#
-#        plot = draw.DrawDiagramsEps(self.curr_amp['diagrams'], args[0],
-#                             model=self.__curr_model, amplitude='')
-#        if len(args) == 1:
-#            start = time.time()
-#            plot.draw()
-#            stop = time.time()
-#            print 'time to draw', stop - start
-#        else:
-#            opt = {}
-#            for data in args[1:]:
-#                try:
-#                    key, value = data.split('=')
-#                except:
-#                    print 'invalid option %s. Please try again'
-#                    self.help_draw()
-#                    return False
-#                if value in ['False', '0', 0, False]:
-#                    opt[key] = False
-#
-#            plot.draw(**opt)
+        if len(args) < 1:
+            self.help_draw()
+            return False
+        
+        if not filter(lambda amp: amp.get("diagrams"), self.__curr_amps):
+            print "No process generated, please generate a process!"
+            return False
+
+        if not os.path.isdir(args[0]):
+            print "%s is not a valid directory for export file" % args[1]
+
+        plots = []
+        for amp in self.__curr_amps:
+            filename = os.path.join(args[0], 'diagrams_' + \
+                                    amp.get('process').shell_string() + ".eps")
+            plots.append(draw.MultiEpsDiagramDrawer(amp['diagrams'],
+                                              filename,
+                                              model=self.__curr_model,
+                                              amplitude=''))
+
+        if len(args) == 1:
+            start = time.time()
+            for plot in plots:
+                opt = {"external": 0, "horizontal": 0}
+                plot.draw(**opt)
+            stop = time.time()
+            print 'time to draw', stop - start
+        else:
+            opt = {}
+            for data in args[1:]:
+                try:
+                    key, value = data.split('=')
+                except:
+                    print 'invalid option %s. Please try again'
+                    self.help_draw()
+                    return False
+                if value in ['False', '0', 0, False]:
+                    opt[key] = False
+
+            for plot in plots:
+                plot.draw(**opt)
 
 
     # Quit
@@ -658,15 +669,16 @@ class MadGraphCmd(cmd.Cmd):
         file will be FILEPATH/matrix_\"process_string\".f"""
 
     def help_draw(self):
-        print "syntax: draw output_file.eps [option=0]"
-        print "-- draw the diagrams in eps format "
-        print "   Example: draw output.eps "
+        print "syntax: draw FILEPATH [option=0]"
+        print "-- draw the diagrams in eps format"
+        print "   Files will be FILEPATH/diagrams_\"process_string\".eps"
+        print "   Example: draw plot_dir "
         print "   Possible option: "
         print "        horizontal [1]: force S-channel to be horizontal"
-        print "        external [1]: authorizes external particles to ends"
-        print "             on horizontal segment of the square."
+        print "        external [1]: authorizes external particles to end"
+        print "             at top or bottom of diagram"
         print "        non_propagating [1]:contracts non propagating lines"
-        print "   Example: draw output.eps external=0 horizontal=0"
+        print "   Example: draw plot_dir external=0 horizontal=0"
 
     def help_shell(self):
         print "syntax: shell CMD (or ! CMD)"
