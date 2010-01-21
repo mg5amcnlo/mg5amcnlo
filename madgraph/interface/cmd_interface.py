@@ -24,14 +24,16 @@ import sys
 import time
 import readline
 import atexit
-
+import re
 
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.files as files
 import madgraph.iolibs.import_v4 as import_v4
+import madgraph.iolibs.export_v4 as export_v4
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.core.helas_objects as helas_objects
 
 #===============================================================================
 # MadGraphCmd
@@ -40,9 +42,17 @@ class MadGraphCmd(cmd.Cmd):
     """The command line processor of MadGraph"""
 
     __curr_model = base_objects.Model()
-    __curr_amp = diagram_generation.Amplitude()
+    __curr_amps = diagram_generation.AmplitudeList()
+    __curr_matrix_elements = helas_objects.HelasMultiProcess()
+    __curr_fortran_model = export_v4.HelasFortranModel()
+    __multiparticles = {}
 
+    __display_opts = ['particles',
+                      'interactions',
+                      'processes',
+                      'multiparticles']
     __import_formats = ['v4']
+    __export_formats = ['v4standalone']
 
     def split_arg(self, line):
         """Split a line of arguments"""
@@ -182,7 +192,7 @@ class MadGraphCmd(cmd.Cmd):
 
         # Format
         if len(self.split_arg(line[0:begidx])) == 1:
-            return self.list_completion(text, ['v4'])
+            return self.list_completion(text, self.__import_formats)
 
         # Filename if directory is not given
         if len(self.split_arg(line[0:begidx])) == 2:
@@ -230,19 +240,22 @@ class MadGraphCmd(cmd.Cmd):
                         print part['antiname'],
                 print
 
-        if args[0] == 'amplitude':
-            print self.__curr_amp['process'].nice_string()
-            print self.__curr_amp['diagrams'].nice_string()
+        if args[0] == 'processes':
+            for amp in self.__curr_amps:
+                print amp.get('process').nice_string()
+                print amp.get('diagrams').nice_string()
+
+        if args[0] == 'multiparticles':
+            print 'Multiparticle labels:'
+            for key in self.__multiparticles:
+                print key, " = ", self.__multiparticles[key]
 
     def complete_display(self, text, line, begidx, endidx):
         "Complete the display command"
 
-        display_opts = ['particles',
-                        'interactions',
-                        'amplitude']
         # Format
         if len(self.split_arg(line[0:begidx])) == 1:
-            return self.list_completion(text, display_opts)
+            return self.list_completion(text, self.__display_opts)
 
     # Access to shell
     def do_shell(self, line):
@@ -258,13 +271,8 @@ class MadGraphCmd(cmd.Cmd):
     def do_generate(self, line):
         """Generate an amplitude for a given process"""
 
-        # Particle names always lowercase
-        line = line.lower()
-
-        args = self.split_arg(line)
-
-        if len(args) < 1:
-            self.help_display()
+        if len(line) < 1:
+            self.help_generate()
             return False
 
         if len(self.__curr_model['particles']) == 0:
@@ -276,10 +284,54 @@ class MadGraphCmd(cmd.Cmd):
             " please create one first!"
             return False
 
-        myleglist = base_objects.LegList()
+        # Use regular expressions to extract s-channel propagators,
+        # forbidden s-channel propagators/particles, coupling orders
+        # starting from the back
+
+        # Start with coupling orders (identified by "=")
+        order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
+        order_re = order_pattern.match(line)
+        orders = {}
+        while order_re:
+            orders[order_re.group(2)] = int(order_re.group(3))
+            line = order_re.group(1)
+            order_re = order_pattern.match(line)
+
+        # Particle names always lowercase
+        line = line.lower()
+
+        # Now check for forbidden particles, specified using "/"
+        forbidden_particles_re = re.match("^(.+)\s*/\s*(.+)\s*$", line)
+        forbidden_particles = ""
+        if forbidden_particles_re:
+            forbidden_particles = forbidden_particles_re.group(2)
+            line = forbidden_particles_re.group(1)
+
+        # Now check for forbidden schannels, specified using "$"
+        forbidden_schannels_re = re.match("^(.+)\s*\$\s*(.+)\s*$", line)
+        forbidden_schannels = ""
+        if forbidden_schannels_re:
+            forbidden_schannels = forbidden_schannels_re.group(2)
+            line = forbidden_schannels_re.group(1)
+
+        # Now check for required schannels, specified using "> >"
+        required_schannels_re = re.match("^(.+?)>(.+?)>(.+)$", line)
+        required_schannels = ""
+        if required_schannels_re:
+            required_schannels = required_schannels_re.group(2)
+            line = required_schannels_re.group(1) + ">" + \
+                   required_schannels_re.group(3)
+
+        args = self.split_arg(line)
+
+        # Reset Helas matrix elements
+        self.__curr_matrix_elements = helas_objects.HelasMultiProcess()
+
+        myleglist = base_objects.MultiLegList()
         state = 'initial'
         number = 1
 
+        # Extract process
         for part_name in args:
 
             if part_name == '>':
@@ -289,31 +341,194 @@ class MadGraphCmd(cmd.Cmd):
                 state = 'final'
                 continue
 
-            mypart = self.__curr_model['particles'].find_name(part_name)
-
-            if mypart:
-                myleglist.append(base_objects.Leg({'id':mypart.get_pdg_code(),
-                                                   'number':number,
-                                                   'state':state}))
-                number = number + 1
+            mylegids = []
+            if part_name in self.__multiparticles:
+                mylegids.extend(self.__multiparticles[part_name])
             else:
-                print "Error with particle %s: skipped" % part_name
+                mypart = self.__curr_model['particles'].find_name(part_name)
+                if mypart:
+                    mylegids.append(mypart.get_pdg_code())
 
-        if myleglist and state == 'final':
-            myproc = base_objects.Process({'legs':myleglist,
-                                            'orders':{},
-                                            'model':self.__curr_model})
-            self.__curr_amp.set('process', myproc)
+            if mylegids:
+                myleglist.append(base_objects.MultiLeg({'ids':mylegids,
+                                                        'state':state}))
+            else:
+                print "No particle %s in model: skipped" % part_name
+
+        if filter(lambda leg: leg.get('state') == 'final', myleglist):
+            # We have a valid process
+
+            # Now extract restrictions
+            forbidden_particle_ids = []
+            forbidden_schannel_ids = []
+            required_schannel_ids = []
+            
+            if forbidden_particles:
+                args = self.split_arg(forbidden_particles)
+                for part_name in args:
+                    if part_name in self.__multiparticles:
+                        forbidden_particle_ids.extend(self.__multiparticles[part_name])
+                    else:
+                        mypart = self.__curr_model['particles'].find_name(part_name)
+                        if mypart:
+                            forbidden_particle_ids.append(mypart.get_pdg_code())
+
+            if forbidden_schannels:
+                args = self.split_arg(forbidden_schannels)
+                for part_name in args:
+                    if part_name in self.__multiparticles:
+                        forbidden_schannel_ids.extend(self.__multiparticles[part_name])
+                    else:
+                        mypart = self.__curr_model['particles'].find_name(part_name)
+                        if mypart:
+                            forbidden_schannel_ids.append(mypart.get_pdg_code())
+
+            if required_schannels:
+                args = self.split_arg(required_schannels)
+                for part_name in args:
+                    if part_name in self.__multiparticles:
+                        required_schannel_ids.extend(self.__multiparticles[part_name])
+                    else:
+                        mypart = self.__curr_model['particles'].find_name(part_name)
+                        if mypart:
+                            required_schannel_ids.append(mypart.get_pdg_code())
+
+                
+
+            myprocdef = base_objects.ProcessDefinitionList([\
+                base_objects.ProcessDefinition({'legs': myleglist,
+                                                'model': self.__curr_model,
+                                                'orders': orders,
+                                                'forbidden_particles': forbidden_particle_ids,
+                                                'forbidden_s_channels': forbidden_schannel_ids,
+                                                'required_s_channels': required_schannel_ids \
+                                                })])
+            myproc = diagram_generation.MultiProcess({'process_definitions':\
+                                                      myprocdef})
 
             cpu_time1 = time.time()
-            ndiags = len(self.__curr_amp.generate_diagrams())
+            self.__curr_amps = myproc.get('amplitudes')
             cpu_time2 = time.time()
 
-            print "%i diagrams generated in %0.3f s" % (ndiags, (cpu_time2 - \
-                                                               cpu_time1))
+            nprocs = len(filter(lambda amp: amp.get("diagrams"),
+                                self.__curr_amps))
+            ndiags = sum([len(amp.get('diagrams')) for \
+                              amp in self.__curr_amps])
+            print "%i processes with %i diagrams generated in %0.3f s" % \
+                  (nprocs, ndiags, (cpu_time2 - cpu_time1))
 
         else:
             print "Empty or wrong format process, please try again."
+
+    # Generate a new amplitude
+    def do_export(self, line):
+        """Export a generated amplitude to file"""
+
+        def export_v4standalone(self, filepath):
+            """Helper function to write a v4 file to file path filepath"""
+
+            if not self.__curr_matrix_elements.get('matrix_elements'):
+                cpu_time1 = time.time()
+                self.__curr_matrix_elements = \
+                             helas_objects.HelasMultiProcess(\
+                                           self.__curr_amps)
+                cpu_time2 = time.time()
+
+                ndiags = sum([len(me.get('diagrams')) for \
+                              me in self.__curr_matrix_elements.\
+                              get('matrix_elements')])
+
+            calls = 0
+            for me in self.__curr_matrix_elements.get('matrix_elements'):
+                filename = filepath + '/matrix_' + \
+                           me.get('processes')[0].shell_string() + ".f"
+                if os.path.isfile(filename):
+                    print "Overwriting existing file %s" % filename
+                else:
+                    print "Creating new file %s" % filename
+                calls = calls + files.write_to_file(filename,
+                                                    export_v4.write_matrix_element_v4_standalone,
+                                                    me,
+                                                    self.__curr_fortran_model)
+
+            print "Generated helas calls for %d subprocesses (%d diagrams) in %0.3f s" % \
+                  (len(self.__curr_matrix_elements.get('matrix_elements')),
+                   ndiags,
+                   (cpu_time2 - cpu_time1))
+
+            print "Wrote %d helas calls" % calls
+
+        args = self.split_arg(line)
+
+        if len(args) < 1:
+            self.help_export()
+            return False
+
+        if len(args) != 2 or args[0] not in self.__export_formats:
+            self.help_export()
+            return False
+
+        if not filter(lambda amp: amp.get("diagrams"), self.__curr_amps):
+            print "No process generated, please generate a process!"
+            return False
+
+        if not os.path.isdir(args[1]):
+            print "%s is not a valid directory for export file" % args[1]
+
+        if args[0] == 'v4standalone':
+            export_v4standalone(self, args[1])
+
+    def complete_export(self, text, line, begidx, endidx):
+        "Complete the export command"
+
+        # Format
+        if len(self.split_arg(line[0:begidx])) == 1:
+            return self.list_completion(text, self.__export_formats)
+
+        # Filename if directory is not given
+        if len(self.split_arg(line[0:begidx])) == 2:
+            return self.path_completion(text)
+
+        # Filename if directory is given
+        if len(self.split_arg(line[0:begidx])) == 3:
+            return self.path_completion(text,
+                                        base_dir=\
+                                          self.split_arg(line[0:begidx])[2])
+
+    # Define a multiparticle label
+    def do_define(self, line):
+        """Define a multiparticle"""
+
+        # Particle names always lowercase
+        line = line.lower()
+
+        args = self.split_arg(line)
+
+        if len(args) < 1:
+            self.help_define()
+            return False
+
+        if len(self.__curr_model['particles']) == 0:
+            print "No particle list currently active, please create one first!"
+            return False
+
+        label = args[0]
+        pdg_list = []
+
+        for part_name in args[1:]:
+
+            mypart = self.__curr_model['particles'].find_name(part_name)
+
+            if mypart:
+                pdg_list.append(mypart.get_pdg_code())
+            else:
+                print "No particle %s in model: skipped" % part_name
+
+        if not pdg_list:
+            print """Empty or wrong format for multiparticle.
+            Please try again."""
+
+        self.__multiparticles[label] = pdg_list
 
     # Quit
     def do_quit(self, line):
@@ -321,17 +536,29 @@ class MadGraphCmd(cmd.Cmd):
 
     # In-line help
     def help_import(self):
-        print "syntax: import v4|... FILENAME"
+        print "syntax: import " + "|".join(self.__import_formats) + \
+              " FILENAME"
         print "-- imports file(s) in various formats"
 
     def help_display(self):
-        print "syntax: display particles|interactions|amplitude"
+        print "syntax: display " + "|".join(self.__display_opts)
         print "-- display a the status of various internal state variables"
 
     def help_generate(self):
-        print "syntax: generate INITIAL STATE > FINAL STATE"
-        print "-- generate amplitude for a given process"
-        print "   Example: u d~ > m+ vm g"
+        print "syntax: generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2"
+        print "-- generate diagrams for a given process"
+        print "   Example: u d~ > w+ > m+ vm g $ a / z h QED=3 QCD=0"
+
+    def help_define(self):
+        print "syntax: define multipart_name [ part_name_list ]"
+        print "-- define a multiparticle"
+        print "   Example: define p u u~ c c~ d d~ s s~"
+
+    def help_export(self):
+        print "syntax: export " + "|".join(self.__export_formats) + \
+              " FILEPATH"
+        print """-- export matrix elements in various formats. The resulting
+        file will be FILEPATH/matrix_\"process_string\".f"""
 
     def help_shell(self):
         print "syntax: shell CMD (or ! CMD)"

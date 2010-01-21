@@ -12,9 +12,10 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-
+ 
 import copy
 import itertools
+import logging
 
 import madgraph.core.base_objects as base_objects
 
@@ -35,7 +36,21 @@ class Amplitude(base_objects.PhysicsObject):
         """Default values for all properties"""
 
         self['process'] = base_objects.Process()
-        self['diagrams'] = base_objects.DiagramList()
+        self['diagrams'] = None
+
+    def __init__(self, argument=None):
+        """Allow initialization with Process"""
+
+        if isinstance(argument, base_objects.Process):
+            super(Amplitude, self).__init__()
+            self.set('process', argument)
+            self.generate_diagrams()
+        elif argument != None:
+            # call the mother routine
+            super(Amplitude, self).__init__(argument)
+        else:
+            # call the mother routine
+            super(Amplitude, self).__init__()
 
     def filter(self, name, value):
         """Filter for valid amplitude property values."""
@@ -53,11 +68,13 @@ class Amplitude(base_objects.PhysicsObject):
     def get(self, name):
         """Get the value of the property name."""
 
-        if name == 'diagrams' and not self[name]:
+        if name == 'diagrams' and self[name] == None:
+            # Have not yet generated diagrams for this process
             if self['process']:
-                self['diagrams'] = self.generate_diagrams()
+                self.generate_diagrams()
 
-        return super(Amplitude, self).get(name)
+        return Amplitude.__bases__[0].get(self, name)  #return the mother routine
+
 
     def get_sorted_keys(self):
         """Return diagram property names as a nicely sorted list."""
@@ -100,9 +117,32 @@ class Amplitude(base_objects.PhysicsObject):
         """
 
         model = self['process'].get('model')
+        legs = self['process'].get('legs')
+
+        if not model.get('particles') or not model.get('interactions'):
+            raise self.PhysicsObjectError, \
+                  "%s is missing particles or interactions" % repr(model)
+
+        res = base_objects.DiagramList()
+
+        # First check that the number of fermions is even
+        if len(filter(lambda leg: model.get('particle_dict')[\
+                        leg.get('id')].is_fermion(), legs)) % 2 == 1:
+            self['diagrams'] = res
+            return res
+
+        # Then check same number of incoming and outgoing fermions (if
+        # no Majorana particles in model)
+        if not model.get('got_majoranas') and \
+           len(filter(lambda leg: leg.is_incoming_fermion(model), legs)) != \
+           len(filter(lambda leg: leg.is_outgoing_fermion(model), legs)):
+            self['diagrams'] = res
+            return res
+
+        logging.info("Trying %s " % self['process'].nice_string().replace('Process', 'process'))
 
         # Give numbers to legs in process
-        for i in range(len(self['process'].get('legs'))):
+        for i in range(0, len(self['process'].get('legs'))):
             # Make sure legs are unique
             leg = copy.copy(self['process'].get('legs')[i])
             self['process'].get('legs')[i] = leg
@@ -136,17 +176,58 @@ class Amplitude(base_objects.PhysicsObject):
         # list of vertices
 
         reduced_leglist = self.reduce_leglist(leglist,
-                                              max_multi_to1)
-        res = base_objects.DiagramList()
+                                              max_multi_to1,
+                                              self.get('process').get('orders'))
 
         for vertex_list in reduced_leglist:
             res.append(base_objects.Diagram(
                             {'vertices':base_objects.VertexList(vertex_list)}))
 
-        self['diagrams'] = res
-        return res
+        # Record whether or not we failed generation before required
+        # s-channel propagators are taken into account
+        failed_crossing = not res
 
-    def reduce_leglist(self, curr_leglist, max_multi_to1):
+        # Select the diagrams where all required s-channel propagators
+        # are present.
+        # Note that we shouldn't look at the last vertex in each
+        # diagram, since that is the n->0 vertex
+        if self['process'].get('required_s_channels'):
+            ninitial = len(filter(lambda leg: leg.get('state') == 'initial',
+                              self['process'].get('legs')))
+            res = base_objects.DiagramList(\
+                filter(lambda diagram: \
+                       all([req_s_channel in \
+                            [vertex.get_s_channel_id(\
+                            self['process'].get('model'), ninitial) \
+                            for vertex in diagram.get('vertices')[:-1]] \
+                            for req_s_channel in \
+                            self['process'].get('required_s_channels')]), res))
+
+        # Select the diagrams where no forbidden s-channel propagators
+        # are present.
+        # Note that we shouldn't look at the last vertex in each
+        # diagram, since that is the n->0 vertex
+        if self['process'].get('forbidden_s_channels'):
+            ninitial = len(filter(lambda leg: leg.get('state') == 'initial',
+                              self['process'].get('legs')))
+            res = base_objects.DiagramList(\
+                filter(lambda diagram: \
+                       not any([vertex.get_s_channel_id(\
+                                self['process'].get('model'), ninitial) \
+                                in self['process'].get('forbidden_s_channels')
+                                for vertex in diagram.get('vertices')[:-1]]),
+                       res))
+
+        # Set diagrams to res
+        self['diagrams'] = res
+
+        if res:
+            logging.info("Process has %d diagrams" % len(res))
+
+        return not failed_crossing
+
+    def reduce_leglist(self, curr_leglist, max_multi_to1,
+                       coupling_orders=None):
         """Recursive function to reduce N LegList to N-1
            For algorithm, see doc for generate_diagrams.
         """
@@ -161,8 +242,10 @@ class Amplitude(base_objects.PhysicsObject):
             return None
 
         # Extract ref dict information
+        model = self['process'].get('model')
         ref_dict_to0 = self['process'].get('model').get('ref_dict_to0')
         ref_dict_to1 = self['process'].get('model').get('ref_dict_to1')
+
 
         # If all legs can be combined in one single vertex, add this
         # vertex to res and continue
@@ -173,7 +256,10 @@ class Amplitude(base_objects.PhysicsObject):
 
             final_vertex = base_objects.Vertex({'legs':curr_leglist,
                                                 'id':vertex_id})
-            res.append([final_vertex])
+            # Check for coupling orders. If orders < 0, skip vertex
+            if self.reduce_orders(coupling_orders, model,
+                                  [final_vertex.get('id')]) != False:
+                res.append([final_vertex])
         # Stop condition 2: if the leglist contained exactly two particles,
         # return the result, if any, and stop.
         if len(curr_leglist) == 2:
@@ -191,10 +277,28 @@ class Amplitude(base_objects.PhysicsObject):
 
         # Consider all the pairs
         for leg_vertex_tuple in leg_vertex_list:
+
+            # Remove forbidden particles
+            if self['process'].get('forbidden_particles') and \
+                any([abs(vertex.get('legs')[-1].get('id')) in \
+                self['process'].get('forbidden_particles') \
+                for vertex in leg_vertex_tuple[1]]):
+                    continue
+
+            # Check for coupling orders. If couplings < 0, skip recursion.
+            new_coupling_orders = self.reduce_orders(coupling_orders,
+                                                     model,
+                                                     [vertex.get('id') for vertex in \
+                                                      leg_vertex_tuple[1]])
+            if new_coupling_orders == False:
+                # Some coupling order < 0
+                continue
+
             # This is where recursion happens
             # First, reduce again the leg part
             reduced_diagram = self.reduce_leglist(leg_vertex_tuple[0],
-                                                  max_multi_to1)
+                                                  max_multi_to1,
+                                                  new_coupling_orders)
             # If there is a reduced diagram
             if reduced_diagram:
                 vertex_list_list = [list(leg_vertex_tuple[1])]
@@ -204,6 +308,34 @@ class Amplitude(base_objects.PhysicsObject):
 
         return res
 
+    def reduce_orders(self, coupling_orders, model, vertex_id_list):
+        """Return False if the coupling orders for any coupling is <
+        0, otherwise return the new coupling orders with the vertex
+        orders subtracted. If coupling_orders is not given, return
+        None (which counts as success)"""
+
+        if not coupling_orders:
+            return None
+
+        present_couplings = copy.copy(coupling_orders)
+        for id in vertex_id_list:
+            # Don't check for identity vertex (id = 0)
+            if not id:
+                continue
+            inter = model.get("interaction_dict")[id]
+            for coupling in inter.get('orders').keys():
+                # Note that we don't consider a missing coupling as a
+                # constraint
+                if coupling in present_couplings:
+                    # Reduce the number of couplings that are left
+                    present_couplings[coupling] = \
+                             present_couplings[coupling] - \
+                             inter.get('orders')[coupling]
+                    if present_couplings[coupling] < 0:
+                        # We have too many couplings of this type
+                        return False
+
+        return present_couplings
 
     def combine_legs(self, list_legs, ref_dict_to1, max_multi_to1):
         """Recursive function. Take a list of legs as an input, with
@@ -287,6 +419,7 @@ class Amplitude(base_objects.PhysicsObject):
         particles are included). For each list, give the list of vertices
         corresponding to the executed merging, group the two as a tuple.
         """
+
         res = []
 
         for comb_list in comb_lists:
@@ -342,6 +475,7 @@ class Amplitude(base_objects.PhysicsObject):
                         vlist.append(base_objects.Vertex(
                                          {'legs':myleglist,
                                           'id':vert_ids[mylegs.index(myleg)]}))
+
                     vertex_list.append(vlist)
 
                 # If entry is not a combination, switch the from_group flag
@@ -352,7 +486,6 @@ class Amplitude(base_objects.PhysicsObject):
                     reduced_list.append(cp_entry)
 
             # Flatten the obtained leg and vertex lists
-
             flat_red_lists = expand_list(reduced_list)
             flat_vx_lists = expand_list(vertex_list)
 
@@ -363,6 +496,142 @@ class Amplitude(base_objects.PhysicsObject):
 
         return res
 
+#===============================================================================
+# AmplitudeList
+#===============================================================================
+class AmplitudeList(base_objects.PhysicsObjectList):
+    """List of Amplitude objects
+    """
+
+    def is_valid_element(self, obj):
+        """Test if object obj is a valid Amplitude for the list."""
+
+        return isinstance(obj, Amplitude)
+
+#===============================================================================
+# MultiProcess
+#===============================================================================
+class MultiProcess(base_objects.PhysicsObject):
+    """MultiProcess: list of process definitions
+                     list of processes (after cleaning)
+                     list of amplitudes (after generation)
+    """
+
+    def default_setup(self):
+        """Default values for all properties"""
+
+        self['process_definitions'] = base_objects.ProcessDefinitionList()
+        self['amplitudes'] = AmplitudeList()
+
+    def filter(self, name, value):
+        """Filter for valid process property values."""
+
+        if name == 'process_definitions':
+            if not isinstance(value, base_objects.ProcessDefinitionList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid ProcessDefinitionList object" % str(value)
+
+        if name == 'process':
+            if not isinstance(value, base_objects.ProcessList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid ProcessList object" % str(value)
+
+        return True
+
+    def get(self, name):
+        """Get the value of the property name."""
+
+        if (name == 'amplitudes') and not self[name]:
+            if self.get('process_definitions'):
+                self.generate_amplitudes()
+
+        return MultiProcess.__bases__[0].get(self, name) # call the mother routine
+
+    def get_sorted_keys(self):
+        """Return process property names as a nicely sorted list."""
+
+        return ['process_definitions', 'amplitudes']
+
+    def generate_amplitudes(self):
+        """Generate amplitudes in a semi-efficient way.
+        Make use of crossing symmetry for processes that fail diagram
+        generation, but not for processes that succeed diagram
+        generation.  Doing so will risk making it impossible to
+        identify processes with identical amplitudes.
+        """
+
+        # Loop over all process definitions and multilegs
+        processes = base_objects.ProcessList()
+
+        for process_def in self['process_definitions']:
+
+            # failed_procs are processes that have already failed
+            # based on crossing symmetry
+            failed_procs = []
+                    
+            model = process_def['model']
+
+            isids = [leg['ids'] for leg in \
+                     filter(lambda leg: leg['state'] == 'initial', process_def['legs'])]
+            fsids = [leg['ids'] for leg in \
+                     filter(lambda leg: leg['state'] == 'final', process_def['legs'])]
+
+            # Generate all combinations for the initial state
+
+            for prod in apply(itertools.product, isids):
+                islegs = [\
+                    base_objects.Leg({'id':id, 'state': 'initial'}) \
+                    for id in prod]
+
+                # Generate all combinations for the final state, and make
+                # sure to remove double counting
+
+                red_fsidlist = []
+
+                for prod in apply(itertools.product, fsids):
+
+                    # Remove double counting between final states
+                    if tuple(sorted(prod)) in red_fsidlist:
+                        continue
+
+                    red_fsidlist.append(tuple(sorted(prod)));
+
+                    # Generate leg list for process
+                    leg_list = [copy.copy(leg) for leg in islegs]
+
+                    leg_list.extend([\
+                        base_objects.Leg({'id':id, 'state': 'final'}) \
+                        for id in prod])
+
+                    legs = base_objects.LegList(leg_list)
+
+                    # Setup process
+                    process = base_objects.Process({\
+                                       'legs':legs,
+                                       'model':process_def.get('model'),
+                                       'id': process_def.get('id'),
+                                       'orders': process_def.get('orders'),
+                                       'required_s_channels': \
+                                       process_def.get('required_s_channels'),
+                                       'forbidden_s_channels': \
+                                       process_def.get('forbidden_s_channels'),
+                                       'forbidden_particles': \
+                                       process_def.get('forbidden_particles')})
+
+                    # Check for crossed processes
+                    sorted_legs = sorted(legs.get_outgoing_id_list(model))
+                    # Check if crossed process has already failed
+                    # In that case don't check process
+                    if tuple(sorted_legs) in failed_procs:
+                        continue
+
+                    amplitude = Amplitude({"process": process})
+                    if not amplitude.generate_diagrams():
+                        # Add process to failed_procs
+                        failed_procs.append(tuple(sorted_legs))
+                    if amplitude.get('diagrams'):
+                        self['amplitudes'].append(amplitude)
+                    
 
 #===============================================================================
 # Global helper methods

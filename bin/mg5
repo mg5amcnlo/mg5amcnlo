@@ -19,6 +19,8 @@
 and call immediately the command line interface scripts"""
 
 import sys
+import optparse
+import logging
 
 import os.path as path
 
@@ -27,6 +29,19 @@ import os.path as path
 
 root_path = path.split(path.dirname(path.realpath( __file__ )))[0]
 sys.path.append(root_path)
+
+# Write out nice usage message if called with -h or --help
+usage = "usage: %prog [options] "
+parser = optparse.OptionParser(usage=usage)
+parser.add_option("-l", "--logging", default='ERROR',
+                  help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
+
+(options, args) = parser.parse_args()
+if len(args) == 0:
+    args = ''
+
+# Set logging level according to the logging level given by options
+logging.basicConfig(level=vars(logging)[options.logging])
 
 import madgraph.interface.cmd_interface as cmd_interface
 

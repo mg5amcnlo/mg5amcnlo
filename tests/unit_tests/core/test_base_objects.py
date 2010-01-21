@@ -183,6 +183,22 @@ class ParticleTest(unittest.TestCase):
         test_part.set('self_antipart', True)
         self.assertEqual(test_part.get_pdg_code(), 6)
 
+    def test_get_helicity_states(self):
+        """Test the get_anti_pdg_code function of Particle"""
+
+        test_part = copy.copy(self.mypart)
+        self.assertEqual(test_part.get_helicity_states(), [-1, 1])
+        test_part.set('spin', 1)
+        self.assertEqual(test_part.get_helicity_states(), [0])
+        test_part.set('spin', 3)
+        self.assertEqual(test_part.get_helicity_states(), [-1, 0, 1])
+        test_part.set('mass', 'Zero')
+        self.assertEqual(test_part.get_helicity_states(), [-1, 1])
+        test_part.set('spin', 5)
+        self.assertRaises(test_part.PhysicsObjectError,
+                          test_part.get_helicity_states)
+
+
     def test_particle_list(self):
         """Test particle list initialization, search and dict generation
         functions."""
@@ -745,6 +761,112 @@ class LegTest(unittest.TestCase):
         self.assertTrue(myleglist.can_combine_to_0(ref_dict_to0))
 
 #===============================================================================
+# MultiLegTest
+#===============================================================================
+class MultiLegTest(unittest.TestCase):
+    """Test class for the MultiLeg object"""
+
+    mydict = {}
+    my_multi_leg = None
+
+    def setUp(self):
+
+        self.mydict = {'ids':[3, 2, 5],
+                      'state':'final'}
+
+        self.my_multi_leg = base_objects.MultiLeg(self.mydict)
+
+    def test_setget_multi_leg_correct(self):
+        "Test correct MultiLeg object __init__, get and set"
+
+        my_multi_leg2 = base_objects.MultiLeg()
+
+        for prop in self.mydict.keys():
+            my_multi_leg2.set(prop, self.mydict[prop])
+
+        self.assertEqual(self.my_multi_leg, my_multi_leg2)
+
+        for prop in self.my_multi_leg.keys():
+            self.assertEqual(self.my_multi_leg.get(prop), self.mydict[prop])
+
+    def test_setget_multi_leg_exceptions(self):
+        "Test error raising in MultiLeg __init__, get and set"
+
+        wrong_dict = self.mydict
+        wrong_dict['wrongparam'] = 'wrongvalue'
+
+        a_number = 0
+
+        # Test init
+        self.assertRaises(base_objects.MultiLeg.PhysicsObjectError,
+                          base_objects.MultiLeg,
+                          wrong_dict)
+        self.assertRaises(base_objects.MultiLeg.PhysicsObjectError,
+                          base_objects.MultiLeg,
+                          a_number)
+
+        # Test get
+        self.assertRaises(base_objects.MultiLeg.PhysicsObjectError,
+                          self.my_multi_leg.get,
+                          a_number)
+        self.assertRaises(base_objects.MultiLeg.PhysicsObjectError,
+                          self.my_multi_leg.get,
+                          'wrongparam')
+
+        # Test set
+        self.assertRaises(base_objects.MultiLeg.PhysicsObjectError,
+                          self.my_multi_leg.set,
+                          a_number, 0)
+        self.assertRaises(base_objects.MultiLeg.PhysicsObjectError,
+                          self.my_multi_leg.set,
+                          'wrongparam', 0)
+
+    def test_values_for_prop(self):
+        """Test filters for multi_leg properties"""
+
+        test_values = [
+                       {'prop':'ids',
+                        'right_list':[[0], [3, 4, 5]],
+                        'wrong_list':['', 1, 0.0]},
+                       {'prop':'state',
+                        'right_list':['initial', 'final'],
+                        'wrong_list':[0, 'wrong']}
+                       ]
+
+        temp_multi_leg = self.my_multi_leg
+
+        for test in test_values:
+            for x in test['right_list']:
+                self.assert_(temp_multi_leg.set(test['prop'], x))
+            for x in test['wrong_list']:
+                self.assertFalse(temp_multi_leg.set(test['prop'], x))
+
+    def test_representation(self):
+        """Test multi_leg object string representation."""
+
+        goal = "{\n"
+        goal = goal + "    \'ids\': [3, 2, 5],\n"
+        goal = goal + "    \'state\': \'final\'\n}"
+
+        self.assertEqual(goal, str(self.my_multi_leg))
+
+    def test_multi_leg_list(self):
+        """Test multi_leg list initialization and counting functions
+        for multi_legs with 'from_group' = True"""
+
+        mylist = [copy.copy(self.my_multi_leg) for dummy in range(1, 4) ]
+        my_multi_leglist = base_objects.MultiLegList(mylist)
+
+        not_a_multi_leg = 1
+
+        for multi_leg in my_multi_leglist:
+            self.assertEqual(multi_leg, self.my_multi_leg)
+
+        self.assertRaises(base_objects.MultiLegList.PhysicsObjectListError,
+                          my_multi_leglist.append,
+                          not_a_multi_leg)
+
+#===============================================================================
 # VertexTest
 #===============================================================================
 class VertexTest(unittest.TestCase):
@@ -964,7 +1086,7 @@ class DiagramTest(unittest.TestCase):
         mylist = [self.mydiagram] * 10
         mydiagramlist = base_objects.DiagramList(mylist)
 
-        goal_string = "  (" + "(5,5,5,5,5,5,5,5,5>5,id:3),"*10
+        goal_string = "  (" + "(5(3),5(3),5(3),5(3),5(3),5(3),5(3),5(3),5(3)>5(3),id:3),"*10
         goal_string = goal_string[:-1] + ")\n"
         goal_string = goal_string * 10
 
@@ -979,11 +1101,7 @@ class ProcessTest(unittest.TestCase):
 
     mydict = {}
     myprocess = None
-    myleglist = base_objects.LegList([copy.copy(base_objects.Leg({'id':3,
-                                      'number':5,
-                                      'state':'final',
-                                      'from_group':False})) for \
-                                                    dummy in range(5)])
+    myleglist = base_objects.LegList()
 
     mymodel = base_objects.Model()
 
@@ -996,12 +1114,23 @@ class ProcessTest(unittest.TestCase):
 
         self.mymodel.set('particles', mypartlist)
 
+        self.myleglist = base_objects.LegList(\
+            [copy.copy(base_objects.Leg({'id':3,
+                                         'number':5,
+                                         'state':'final',
+                                         'from_group':False})) for \
+             dummy in range(5)])
+
         self.myleglist[0].set('state', 'initial')
         self.myleglist[1].set('state', 'initial')
 
         self.mydict = {'legs':self.myleglist,
                        'orders':{'QCD':5, 'QED':1},
-                       'model':self.mymodel}
+                       'model':self.mymodel,
+                       'id': 1,
+                       'required_s_channels':[],
+                       'forbidden_s_channels':[],
+                       'forbidden_particles':[]}
 
         self.myprocess = base_objects.Process(self.mydict)
 
@@ -1072,13 +1201,139 @@ class ProcessTest(unittest.TestCase):
         goal = "{\n"
         goal = goal + "    \'legs\': %s,\n" % repr(self.myleglist)
         goal = goal + "    \'orders\': %s,\n" % repr(self.myprocess['orders'])
-        goal = goal + "    \'model\': %s\n}" % repr(self.myprocess['model'])
+        goal = goal + "    \'model\': %s,\n" % repr(self.myprocess['model'])
+        goal = goal + "    \'id\': 1,\n"
+        goal = goal + "    \'required_s_channels\': [],\n"
+        goal = goal + "    \'forbidden_s_channels\': [],\n"
+        goal = goal + "    \'forbidden_particles\': []\n}"
 
         self.assertEqual(goal, str(self.myprocess))
 
     def test_nice_string(self):
         """Test Process nice_string representation"""
 
-        goal_str = "Process: c(5) c(5) > c(5) c(5) c(5)"
+        goal_str = "Process: c c > c c c\n"
+        goal_str = goal_str + "Orders: QED=1, QCD=5"
 
         self.assertEqual(goal_str, self.myprocess.nice_string())
+
+    def test_shell_string(self):
+        """Test Process shell_string representation"""
+
+        self.myprocess.get('legs')[2].set('id', -3)
+        goal_str = "cc_cxcc"
+
+        self.assertEqual(goal_str, self.myprocess.shell_string())
+
+#===============================================================================
+# ProcessDefinitionTest
+#===============================================================================
+class ProcessDefinitionTest(unittest.TestCase):
+    """Test class for the ProcessDefinition object"""
+
+    mydict = {}
+    my_process_definition = None
+    mymodel = base_objects.Model()
+    my_multi_leglist = base_objects.MultiLegList()
+
+    def setUp(self):
+
+        mypartlist = base_objects.ParticleList([
+                     base_objects.Particle({'name':'c',
+                                             'antiname':'c~',
+                                             'pdg_code':3})])
+
+        self.mymodel.set('particles', mypartlist)
+
+        self.my_multi_leglist = base_objects.MultiLegList(\
+            [copy.copy(base_objects.MultiLeg({'ids':[3, 4, 5],
+                                              'state':'final'})) for \
+             dummy in range(5)])
+
+        self.my_multi_leglist[0].set('state', 'initial')
+        self.my_multi_leglist[1].set('state', 'initial')
+
+        self.mydict = {'legs':self.my_multi_leglist,
+                       'orders':{'QCD':5, 'QED':1},
+                       'model':self.mymodel,
+                       'id':3,
+                       'required_s_channels':[],
+                       'forbidden_s_channels':[],
+                       'forbidden_particles':[]}
+
+        self.my_process_definition = base_objects.ProcessDefinition(self.mydict)
+
+    def test_setget_process_definition_correct(self):
+        "Test correct ProcessDefinition object __init__, get and set"
+
+        my_process_definition2 = base_objects.ProcessDefinition()
+
+        for prop in self.mydict.keys():
+            my_process_definition2.set(prop, self.mydict[prop])
+
+        self.assertEqual(self.my_process_definition, my_process_definition2)
+
+        for prop in self.my_process_definition.keys():
+            self.assertEqual(self.my_process_definition.get(prop), self.mydict[prop])
+
+    def test_setget_process_definition_exceptions(self):
+        "Test error raising in ProcessDefinition __init__, get and set"
+
+        wrong_dict = self.mydict
+        wrong_dict['wrongparam'] = 'wrongvalue'
+
+        a_number = 0
+
+        # Test init
+        self.assertRaises(base_objects.ProcessDefinition.PhysicsObjectError,
+                          base_objects.ProcessDefinition,
+                          wrong_dict)
+        self.assertRaises(base_objects.ProcessDefinition.PhysicsObjectError,
+                          base_objects.ProcessDefinition,
+                          a_number)
+
+        # Test get
+        self.assertRaises(base_objects.ProcessDefinition.PhysicsObjectError,
+                          self.my_process_definition.get,
+                          a_number)
+        self.assertRaises(base_objects.ProcessDefinition.PhysicsObjectError,
+                          self.my_process_definition.get,
+                          'wrongparam')
+
+        # Test set
+        self.assertRaises(base_objects.ProcessDefinition.PhysicsObjectError,
+                          self.my_process_definition.set,
+                          a_number, 0)
+        self.assertRaises(base_objects.ProcessDefinition.PhysicsObjectError,
+                          self.my_process_definition.set,
+                          'wrongparam', 0)
+
+    def test_values_for_prop(self):
+        """Test filters for process properties"""
+
+        test_values = [{'prop':'legs',
+                        'right_list':[self.my_multi_leglist],
+                        'wrong_list':['a', {}]}
+                       ]
+
+        temp_process = self.my_process_definition
+
+        for test in test_values:
+            for x in test['right_list']:
+                self.assert_(temp_process.set(test['prop'], x))
+            for x in test['wrong_list']:
+                self.assertFalse(temp_process.set(test['prop'], x))
+
+    def test_representation(self):
+        """Test process object string representation."""
+
+        goal = "{\n"
+        goal = goal + "    \'legs\': %s,\n" % repr(self.my_multi_leglist)
+        goal = goal + "    \'orders\': %s,\n" % repr(self.my_process_definition['orders'])
+        goal = goal + "    \'model\': %s,\n" % repr(self.my_process_definition['model'])
+        goal = goal + "    \'id\': %s,\n" % repr(self.my_process_definition['id'])
+        goal = goal + "    \'required_s_channels\': [],\n"
+        goal = goal + "    \'forbidden_s_channels\': [],\n"
+        goal = goal + "    \'forbidden_particles\': []\n}"
+        self.assertEqual(goal, str(self.my_process_definition))
+
