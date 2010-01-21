@@ -79,6 +79,12 @@ class PhysicsObject(dict):
 
         return True
 
+    def __getitem__(self, name):
+        """ Get the value of the property name."""
+
+        if self.is_valid_prop(name):
+            return dict.__getitem__(self, name)
+
     def get(self, name):
         """Get the value of the property name."""
 
@@ -111,6 +117,23 @@ class PhysicsObject(dict):
         alphabetical."""
 
         return self.keys().sort()
+
+    def def_model(self, model):
+        """ 
+        make a link between the  present object and the associate model 
+        """
+
+        if isinstance(model, Model):
+            self._def_model(model)
+        else:
+            raise self.PhysicsObjectError(' try to assign a non model obect')
+
+    def _def_model(self, model):
+        """
+        make a link between the  present object and the associate model 
+        no class verification
+        """
+        self.model = model
 
     def __str__(self):
         """String representation of the object. Outputs valid Python 
@@ -724,6 +747,7 @@ class Model(PhysicsObject):
     def get_interaction(self, id):
         """Return the interaction corresponding to the id"""
 
+
         if id in self.get("interaction_dict").keys():
             return self["interaction_dict"][id]
         else:
@@ -1051,6 +1075,7 @@ class VertexList(PhysicsObjectList):
 
         if isinstance(orders, dict):
             self.orders = orders
+
 
 #===============================================================================
 # Diagram
