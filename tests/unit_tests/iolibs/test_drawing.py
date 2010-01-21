@@ -38,7 +38,8 @@ _model.set('particles', files.read_from_file(_input_path,
 # Import Interaction information
 _input_path= os.path.join(_file_path , '../input_files/v4_sm_interactions.dat')
 _model.set('interactions', files.read_from_file(_input_path, \
-                           import_v4.read_interactions_v4, _model['particles']))
+                                               import_v4.read_interactions_v4, \
+                                               _model.get('particles')))
 
 #===============================================================================
 # TestTestFinder
@@ -89,7 +90,7 @@ class TestFeynmanLine(unittest.TestCase):
         leg = base_objects.Leg({'id': id, 'number': 1, 'state':'initial',
                             'from_group':False})
         #extend the leg to FeynmanLine Object
-        my_line = drawing.FeynmanLine(leg['id'], base_objects.Leg(leg)) 
+        my_line = drawing.FeynmanLine(leg.get('id'), base_objects.Leg(leg)) 
         my_line._def_model(_model)
         
         return my_line
@@ -194,9 +195,9 @@ class TestFeynmanLine(unittest.TestCase):
         line = self.def_line([0, 0], [0, 0])
 
         line.inverse_part_antipart()
-        self.assertEquals(line['pid'], -11)
+        self.assertEquals(line.get('pid'), -11)
         line.inverse_part_antipart()
-        self.assertEquals(line['pid'], 11)
+        self.assertEquals(line.get('pid'), 11)
             
     def test_inverse_pid_for_type(self):
         """TEST change particle in anti-particle for drawing type"""
@@ -211,20 +212,20 @@ class TestFeynmanLine(unittest.TestCase):
         line3.inverse_pid_for_type('wavy')
         line4.inverse_pid_for_type('wavy')
         
-        self.assertEquals(line1['pid'], -24)
-        self.assertEquals(line2['pid'], 24)
-        self.assertEquals(line3['pid'], -22)
-        self.assertEquals(line4['pid'], 1)
+        self.assertEquals(line1.get('pid'), -24)
+        self.assertEquals(line2.get('pid'), 24)
+        self.assertEquals(line3.get('pid'), -22)
+        self.assertEquals(line4.get('pid'), 1)
                 
         line1.inverse_pid_for_type()
         line2.inverse_pid_for_type()
         line3.inverse_pid_for_type()
         line4.inverse_pid_for_type()            
 
-        self.assertEquals(line1['pid'], -24)
-        self.assertEquals(line2['pid'], 24)
-        self.assertEquals(line3['pid'], -22)
-        self.assertEquals(line4['pid'], -1)
+        self.assertEquals(line1.get('pid'), -24)
+        self.assertEquals(line2.get('pid'), 24)
+        self.assertEquals(line3.get('pid'), -22)
+        self.assertEquals(line4.get('pid'), -1)
     
     def test_domain_intersection(self):
         """ TEST domain intersection between two FeynmanLine """
@@ -377,22 +378,6 @@ class TestFeynmanLine(unittest.TestCase):
          
         self.assertFalse(my_line1.has_intersection(my_line2))
  
-    def test_debug(self):
-        my_line1 = self.def_line([0, 0], [1, 1])         #diagonal
-        my_line2 = self.def_line([0.5, 0.5], [0.9, 0.9]) # part of the diagonal
-        my_line3 = self.def_line([0.1, 0.1], [0.4, 0.4]) # other part of the diagonal
-        my_line4 = self.def_line([0, 0.5], [0.5, 1])     # parallel to the diagonal
-        my_line5 = self.def_line([0.0, 0.0], [0.0, 1.0]) # y axis 
-        my_line6 = self.def_line([0, 1], [1, 0])         # second diagonal
-        my_line7 = self.def_line([0, 1], [0.6, 0.4])     # part of the second 
-        my_line8 = self.def_line([0.6, 0.4], [0, 1])     # same part but inverse order
-        my_line9 = self.def_line([0, 0.5], [0.9, 1])     # other
-        my_line10 = self.def_line([0.5, 0.5], [0.5, 1])    # vertical line center
-        my_line11 = self.def_line([0.5, 0], [0.5, 0.5])    # second part
-        my_line12 = self.def_line([0.5, 0], [0.5, 0.4])     # just shorther
-        
-        self.assertTrue(my_line6.has_intersection(my_line9))
- 
   
     def test_domainintersection(self):
         """TEST Domain intersection is set correctly"""
@@ -522,25 +507,35 @@ class TestVertexPoint(unittest.TestCase):
         """TEST the correct creation of FeynmanVertex object"""
         
         my_vertex = drawing.VertexPoint(self.vertex)
+        # Test the File has the correct link with basic object
         self.assertTrue(isinstance(my_vertex, base_objects.Vertex))
         self.assertTrue(isinstance(my_vertex, drawing.VertexPoint))
         
+        # Test fail if not Vertex Input in data
         self.assertRaises(drawing.VertexPoint.VertexPointError, \
                           drawing.VertexPoint, {'data':''})
         
+        # Ensure that my_vertex and self.vertex and 100% different
         self.assertFalse(my_vertex is self.vertex)
         my_vertex['value'] = 2
         self.assertRaises(base_objects.PhysicsObject.PhysicsObjectError,
                           self.vertex.__getitem__, 'value')
-        self.assertTrue('value' in my_vertex.keys())        
+        self.assertTrue('value' in my_vertex.keys())
+        self.assertFalse('value' in self.vertex.keys())
+        
+        # Check that we have new attributes
         self.assertTrue(hasattr(my_vertex, 'line'))
         self.assertTrue('id' in my_vertex.keys())
         self.assertTrue(hasattr(my_vertex, 'pos_x'))
         self.assertTrue(hasattr(my_vertex, 'pos_x'))
         
+        # Check that we recreate a vertex from the same vertex they are 
+        #different.
         my_vertex2 = drawing.VertexPoint(self.vertex)
         self.assertFalse(my_vertex2 is self.vertex)
         self.assertFalse(my_vertex2 is my_vertex)
+        
+        # Check that adding a line acts only on one vertex.
         my_vertex.add_line(self.line1)
         self.assertFalse(self.line1 in my_vertex2.line)
         
@@ -997,11 +992,7 @@ class TestFeynmanDiagram(unittest.TestCase):
         
     def test_creation_from_cmd(self):
         """TEST basic diagram comming from (old) cmd works"""
-        
-        global _file_path
                             
-        #_cmd.do_generate('u d~ > c s~')
-        #diagram = _cmd.curr_amp['diagrams'][0]
         diagram = self.store_diagram['u d~ > c s~'][0]
         diagram = drawing.FeynmanDiagram(diagram, _model)
         
@@ -1037,6 +1028,58 @@ class TestFeynmanDiagram(unittest.TestCase):
             if vertex.pos_x == 0  and vertex.pos_y == 0:
                 nb_at_zero += 1
         self.assertEqual(nb_at_zero, 1)
+        
+  
+    def test_one_initial_state_particle(self):
+        """Test if we can create diagram for one particle in initial state."""
+        
+        diagram = self.store_diagram['mu- > vm e- ve~'][0]
+        diagram = drawing.FeynmanDiagram(diagram, _model)
+        diagram.main()
+        
+        # Check that all line are defined
+        nb_at_zero = 0
+        for vertex in diagram.vertexList:
+            if vertex.pos_x == 0  and vertex.pos_y == 0:
+                nb_at_zero += 1
+        self.assertEqual(nb_at_zero, 0)
+        
+        # Check that we didn't have T-channel
+        nb_at_level_one = 0
+        for vertex in diagram.vertexList:
+            if vertex.level == 1:
+                nb_at_level_one += 1
+        self.assertEqual(nb_at_level_one, 1)
+        
+        # Check that no line cross another
+        self.assertFalse(diagram._debug_has_intersection())  
+        
+        diagram = self.store_diagram['mu- > vm e- ve~'][0]
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
+        diagram.main()
+        
+        
+        #check that all line are defined
+        nb_at_zero = 0
+        for vertex in diagram.vertexList:
+            if vertex.pos_x == 0  and vertex.pos_y == 0:
+                nb_at_zero += 1
+        self.assertEqual(nb_at_zero, 0) 
+
+        
+        # Check that we didn't have T-channel
+        nb_at_level_one = 0
+        for vertex in diagram.vertexList:
+            if vertex.level == 1:
+                nb_at_level_one += 1
+        self.assertEqual(nb_at_level_one, 1)
+        
+        # Check that no line cross another
+        self.assertFalse(diagram._debug_has_intersection())  
+        
+        diagram = self.store_diagram['mu- > vm e- ve~'][0]
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
+        diagram.main()
         
                                    
     def test_notion_of_egality(self):
@@ -1454,6 +1497,7 @@ if __name__ == '__main__':
     #Those one are generated with cmd and store in files with pickle module.
     
     process_diag = {}
+    process_diag['mu- > vm e- ve~'] = [0]
     process_diag['u d~ > c s~'] = [0]
     process_diag['g g > g g'] = [1, 2]
     process_diag['g g > g g g'] = [0]   

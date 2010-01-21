@@ -657,7 +657,7 @@ class FeynmanDiagram:
         'contract' defines if we contract to one point the non propagating line.
         """
 
-        for vertex in self.diagram['vertices']:     
+        for vertex in self.diagram.get('vertices'):     
             self.load_vertex(vertex)
         
         # The last vertex is particular
@@ -721,7 +721,7 @@ class FeynmanDiagram:
             return self.find_leg_id2(leg, end=end)
         
         for i in range(len(self.lineList) - 1 - end, -1, -1):
-            if leg['number'] == self.lineList[i]['number']:
+            if leg.get('number') == self.lineList[i].get('number'):
                 return i 
 
         return None
@@ -786,7 +786,7 @@ class FeynmanDiagram:
         """
         
         # Extend the leg to FeynmanLine Object
-        line = FeynmanLine(leg['id'], base_objects.Leg(leg)) 
+        line = FeynmanLine(leg.get('id'), base_objects.Leg(leg)) 
         line._def_model(self.model)
         
         # Assign line and leg to the diagram. Storing leg is done in order to be 
@@ -806,8 +806,8 @@ class FeynmanDiagram:
         remove one line, define correctly start and end vertex for the second 
         one and finally remove this fake vertex."""
         
-        pos1 = self.find_leg_id(last_vertex['legs'][0], equal=0)
-        pos2 = self.find_leg_id(last_vertex['legs'][1], equal=0)
+        pos1 = self.find_leg_id(last_vertex.get('legs')[0], equal=0)
+        pos2 = self.find_leg_id(last_vertex.get('legs')[1], equal=0)
                              
         line1 = self.lineList[pos1]
         line2 = self.lineList[pos2]
@@ -919,7 +919,7 @@ class FeynmanDiagram:
                 continue
             # Check if T-channel or not. Note that T-channel tag is wrongly 
             #define if only one particle in initial state.
-            if line['state'] == 'initial':
+            if line.get('state') == 'initial':
                 # This is T vertex. => level is 1
                 line.end.def_level(1)
             else:
@@ -1001,9 +1001,12 @@ class FeynmanDiagram:
             #No T-Channel
             self.initial_vertex[0].def_position(0, 0.5)
             #initial state are wrongly consider as outgoing -> solve:
-            self.initial_vertex[0].line[0].inverse_part_antipart()
-            # Associatie position to level 1 and following (auto-recursive fct)
-            self.find_vertex_position_at_level(self.initial_vertex, 1)
+            init_line = self.initial_vertex[0].line[0]
+            init_line.inverse_part_antipart()
+            # Associate position to level 1
+            init_line.end.def_position(1/self.max_level,0.5)
+            # Associatie position to level 2 and following (auto-recursive fct)
+            self.find_vertex_position_at_level([init_line.end], 2)
         else:
             raise self.FeynamDiagramError, \
                                 'only for one or two initial particles not %s' \
@@ -1204,13 +1207,14 @@ class FeynmanDiagram:
             except:
                 external= '?'
             text += 'pos, %s ,id: %s, number: %s, external: %s, \
-                    begin at %s, end at %s \n' % (i, line['pid'], \
-                    line['number'], external, begin, end)
+                    begin at %s, end at %s \n' % (i, line.get('pid'), \
+                    line.get('number'), external, begin, end)
         text += 'vertex content : \n'
         for i in range(0, len(self.vertexList)):
             vertex = self.vertexList[i]
             text += 'pos, %s, id: %s, external: %s, uid: %s ' % \
-                       (i, vertex['id'], vertex.is_external(), vertex.get_uid())
+                       (i, vertex.get('id'), vertex.is_external(),\
+                         vertex.get_uid())
             text += 'line: ' + ','.join([str(self.lineList.index(line)) \
                                                 for line in vertex.line]) + '\n'
         return text
@@ -1244,7 +1248,7 @@ class FeynmanDiagram:
         text = ''
         for vertex in self.vertexList:
             text += 'line : '
-            text += ','.join([str(line['id']) for line in vertex.line])  
+            text += ','.join([str(line.get('id')) for line in vertex.line])  
             text += ' level : ' + str(vertex.level)
             text += ' pos : ' + str((vertex.pos_x, vertex.pos_y))
             text += '\n'
