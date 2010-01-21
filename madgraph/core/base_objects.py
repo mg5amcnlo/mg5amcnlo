@@ -21,6 +21,8 @@ import itertools
 import logging
 import re
 
+import madgraph.core.color_algebra as color
+
 #===============================================================================
 # PhysicsObject
 #===============================================================================
@@ -57,8 +59,8 @@ class PhysicsObject(dict):
             return dict.__getitem__(self, name)
         except:
             self.is_valid_prop(name) #raise the correct error
-        
-        
+
+
     def default_setup(self):
         """Function called to create and setup default values for all object
         properties"""
@@ -252,7 +254,7 @@ class Particle(PhysicsObject):
             if not isinstance(value, str):
                 raise self.PhysicsObjectError, \
                     "Line type %s is not a string" % repr(value)
-            if value not in ['dashed', 'straight', 'wavy', 'curly']:
+            if value not in ['dashed', 'straight', 'wavy', 'curly', 'double']:
                 raise self.PhysicsObjectError, \
                    "Line type %s is unknown" % value
 
@@ -427,11 +429,6 @@ class Interaction(PhysicsObject):
 
         super(Interaction, self).__init__(init_dict)
 
-        # Set couplings separately, since it needs to be set after
-        # color and lorentz
-        if 'couplings' in init_dict.keys():
-            self.set('couplings', init_dict['couplings'])
-
     def filter(self, name, value):
         """Filter for valid interaction property values."""
 
@@ -461,8 +458,18 @@ class Interaction(PhysicsObject):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid integer" % str(value[order])
 
-        if name in ['color', 'lorentz']:
-            #Should be a list of strings
+        if name in ['color']:
+            #Should be a list of list strings
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list of Color Strings" % str(value)
+            for mycolstring in value:
+                if not isinstance(mycolstring, color.ColorString):
+                    raise self.PhysicsObjectError, \
+                            "%s is not a valid list of Color Strings" % str(value)
+
+        if name in ['lorentz']:
+            #Should be a list of list strings
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list of strings" % str(value)
@@ -478,11 +485,6 @@ class Interaction(PhysicsObject):
                         "%s is not a valid dictionary for couplings" % \
                                                                 str(value)
 
-            if len(value) != len(self['color']) * len(self['lorentz']):
-                raise self.PhysicsObjectError, \
-                        "Dictionary " + str(value) + \
-                        " for couplings has not the right number of entry"
-
             for key in value.keys():
                 if not isinstance(key, tuple):
                     raise self.PhysicsObjectError, \
@@ -493,11 +495,6 @@ class Interaction(PhysicsObject):
                 if not isinstance(key[0], int) or not isinstance(key[1], int):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid tuple of integer" % str(key)
-                if key[0] < 0 or key[1] < 0 or \
-                   key[0] >= len(self['color']) or key[1] >= \
-                                                    len(self['lorentz']):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a tuple with valid range" % str(key)
                 if not isinstance(value[key], str):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid string" % str(mystr)
@@ -542,6 +539,29 @@ class Interaction(PhysicsObject):
             else:
                 ref_dict_to1[pdg_tuple] = [(pdg_part, self['id'])]
 
+    def __str__(self):
+        """String representation of an interaction. Outputs valid Python 
+        with improved format. Overrides the PhysicsObject __str__ to only
+        display PDG code of involved particles."""
+
+        mystr = '{\n'
+
+        for prop in self.get_sorted_keys():
+            if isinstance(self[prop], str):
+                mystr = mystr + '    \'' + prop + '\': \'' + \
+                        self[prop] + '\',\n'
+            elif isinstance(self[prop], float):
+                mystr = mystr + '    \'' + prop + '\': %.2f,\n' % self[prop]
+            elif isinstance(self[prop], ParticleList):
+                mystr = mystr + '    \'' + prop + '\': [%s],\n' % \
+                   ','.join([str(part.get_pdg_code()) for part in self[prop]])
+            else:
+                mystr = mystr + '    \'' + prop + '\': ' + \
+                        repr(self[prop]) + ',\n'
+        mystr = mystr.rstrip(',\n')
+        mystr = mystr + '\n}'
+
+        return mystr
 
 #===============================================================================
 # InteractionList
@@ -973,7 +993,7 @@ class Vertex(PhysicsObject):
         particles."""
 
         leg = self.get('legs')[-1]
-        
+
         if ninitial == 1:
             # For one initial particle, all legs are s-channel
             # Only need to flip particle id if state is 'initial'
@@ -996,7 +1016,7 @@ class Vertex(PhysicsObject):
         else:
             return model.get('particle_dict')[leg.get('id')].\
                        get_anti_pdg_code()
-        
+
         ## Check if the other legs are initial or final.
         ## If the latter, return leg id, if the former, return -leg id
         #if self.get('legs')[0].get('state') == 'final':
@@ -1068,6 +1088,7 @@ class Diagram(PhysicsObject):
                 mystr = mystr + '('
                 for leg in vert['legs'][:-1]:
                     mystr = mystr + str(leg['number']) + '(%s)' % str(leg['id']) + ','
+
                 if self['vertices'].index(vert) < len(self['vertices']) - 1:
                     # Do not want ">" in the last vertex
                     mystr = mystr[:-1] + '>'
@@ -1213,7 +1234,7 @@ class Process(PhysicsObject):
         if self['orders']:
             mystr = mystr[:-1] + "\n"
             mystr = mystr + 'Orders: '
-            mystr = mystr + ", ".join([key+'='+repr(self['orders'][key]) \
+            mystr = mystr + ", ".join([key + '=' + repr(self['orders'][key]) \
                        for key in self['orders']]) + ' '
         # Remove last space
         return mystr[:-1]

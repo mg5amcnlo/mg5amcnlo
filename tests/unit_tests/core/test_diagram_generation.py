@@ -231,7 +231,7 @@ class DiagramGenerationTest(unittest.TestCase):
                       'id': 1,
                       'particles': base_objects.ParticleList(\
                                             [self.mypartlist[0]] * 3),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'G'},
                       'orders':{'QCD':1}}))
@@ -241,7 +241,7 @@ class DiagramGenerationTest(unittest.TestCase):
                       'id': 2,
                       'particles': base_objects.ParticleList(\
                                             [self.mypartlist[0]] * 4),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'G^2'},
                       'orders':{'QCD':2}}))
@@ -253,7 +253,7 @@ class DiagramGenerationTest(unittest.TestCase):
                                             [self.mypartlist[1], \
                                              antiu, \
                                              self.mypartlist[0]]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
@@ -264,7 +264,7 @@ class DiagramGenerationTest(unittest.TestCase):
                                             [self.mypartlist[1], \
                                              antiu, \
                                              self.mypartlist[3]]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -275,7 +275,7 @@ class DiagramGenerationTest(unittest.TestCase):
                                             [self.mypartlist[2], \
                                              antid, \
                                              self.mypartlist[0]]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
@@ -286,7 +286,7 @@ class DiagramGenerationTest(unittest.TestCase):
                                             [self.mypartlist[2], \
                                              antid, \
                                              self.mypartlist[3]]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -299,7 +299,7 @@ class DiagramGenerationTest(unittest.TestCase):
                                             [self.mypartlist[4], \
                                              antie, \
                                              self.mypartlist[3]]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -1000,7 +1000,7 @@ class DiagramGenerationTest(unittest.TestCase):
                       'width':'WWIDTH',
                       'texname':'W^+',
                       'antitexname':'W^-',
-                      'line':'waivy',
+                      'line':'wavy',
                       'charge':1.,
                       'pdg_code':24,
                       'propagating':True,
@@ -1019,7 +1019,7 @@ class DiagramGenerationTest(unittest.TestCase):
                                             [antid, \
                                              u, \
                                              wminus]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -1032,7 +1032,7 @@ class DiagramGenerationTest(unittest.TestCase):
                                             [antiu, \
                                              d, \
                                              wplus]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -1045,7 +1045,7 @@ class DiagramGenerationTest(unittest.TestCase):
                                             [nuebar, \
                                              eminus, \
                                              wplus]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -1058,7 +1058,7 @@ class DiagramGenerationTest(unittest.TestCase):
                                             [eplus, \
                                              nue, \
                                              wminus]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -1536,7 +1536,7 @@ class MultiparticleTest(unittest.TestCase):
                       'id': 1,
                       'particles': base_objects.ParticleList(\
                                             [self.mypartlist[0]] * 3),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'G'},
                       'orders':{'QCD':1}}))
@@ -1546,7 +1546,7 @@ class MultiparticleTest(unittest.TestCase):
                       'id': 2,
                       'particles': base_objects.ParticleList(\
                                             [self.mypartlist[0]] * 4),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'G^2'},
                       'orders':{'QCD':2}}))
@@ -1558,7 +1558,7 @@ class MultiparticleTest(unittest.TestCase):
                                             [self.mypartlist[1], \
                                              antiu, \
                                              self.mypartlist[0]]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
@@ -1569,7 +1569,7 @@ class MultiparticleTest(unittest.TestCase):
                                             [self.mypartlist[1], \
                                              antiu, \
                                              self.mypartlist[3]]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -1580,7 +1580,7 @@ class MultiparticleTest(unittest.TestCase):
                                             [self.mypartlist[2], \
                                              antid, \
                                              self.mypartlist[0]]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
@@ -1591,7 +1591,7 @@ class MultiparticleTest(unittest.TestCase):
                                             [self.mypartlist[2], \
                                              antid, \
                                              self.mypartlist[3]]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -1604,7 +1604,7 @@ class MultiparticleTest(unittest.TestCase):
                                             [self.mypartlist[4], \
                                              antie, \
                                              self.mypartlist[3]]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -1722,7 +1722,7 @@ class MultiProcessTest(unittest.TestCase):
                       'id': 1,
                       'particles': base_objects.ParticleList(\
                                             [mypartlist[0]] * 3),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'G'},
                       'orders':{'QCD':1}}))
@@ -1732,7 +1732,7 @@ class MultiProcessTest(unittest.TestCase):
                       'id': 2,
                       'particles': base_objects.ParticleList(\
                                             [mypartlist[0]] * 4),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'G^2'},
                       'orders':{'QCD':2}}))
@@ -1744,7 +1744,7 @@ class MultiProcessTest(unittest.TestCase):
                                             [mypartlist[1], \
                                              antiu, \
                                              mypartlist[0]]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
@@ -1755,7 +1755,7 @@ class MultiProcessTest(unittest.TestCase):
                                             [mypartlist[1], \
                                              antiu, \
                                              mypartlist[3]]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -1766,7 +1766,7 @@ class MultiProcessTest(unittest.TestCase):
                                             [mypartlist[2], \
                                              antid, \
                                              mypartlist[0]]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
@@ -1777,7 +1777,7 @@ class MultiProcessTest(unittest.TestCase):
                                             [mypartlist[2], \
                                              antid, \
                                              mypartlist[3]]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -1790,7 +1790,7 @@ class MultiProcessTest(unittest.TestCase):
                                             [mypartlist[4], \
                                              antie, \
                                              mypartlist[3]]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))

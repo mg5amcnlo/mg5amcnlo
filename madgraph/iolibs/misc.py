@@ -50,7 +50,7 @@ def parse_info_str(fsock):
 def get_pkg_info(info_str=None):
     """Returns the current version information of the MadGraph package, 
     as written in the VERSION text file. If the file cannot be found, 
-    a dictionnary with empty values is returned. As an option, an info
+    a dictionary with empty values is returned. As an option, an info
     string can be passed to be read instead of the file content.
     """
 

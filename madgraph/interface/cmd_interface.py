@@ -28,7 +28,9 @@ import re
 
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.files as files
-import madgraph.iolibs.import_v4 as import_v4
+
+import madgraph.iolibs.import_model_v4 as import_v4
+import madgraph.iolibs.save_model as save_model
 import madgraph.iolibs.export_v4 as export_v4
 
 import madgraph.core.base_objects as base_objects
@@ -204,6 +206,37 @@ class MadGraphCmd(cmd.Cmd):
                                         base_dir=\
                                           self.split_arg(line[0:begidx])[2])
 
+    def do_save(self, line):
+        """Save information to file"""
+
+        args = self.split_arg(line)
+        if len(args) != 2:
+            self.help_save()
+            return False
+
+        if args[0] == 'model':
+            if self.__curr_model:
+                save_model.save_model(args[1], self.__curr_model)
+        else:
+            print 'No model to save!'
+
+    def complete_save(self, text, line, begidx, endidx):
+        "Complete the save command"
+
+        # Format
+        if len(self.split_arg(line[0:begidx])) == 1:
+            return self.list_completion(text, ['model'])
+
+        # Filename if directory is not given
+        if len(self.split_arg(line[0:begidx])) == 2:
+            return self.path_completion(text)
+
+        # Filename if directory is given
+        if len(self.split_arg(line[0:begidx])) == 3:
+            return self.path_completion(text,
+                                        base_dir=\
+                                          self.split_arg(line[0:begidx])[2])
+
     # Display
     def do_display(self, line):
         """Display current internal status"""
@@ -362,7 +395,7 @@ class MadGraphCmd(cmd.Cmd):
             forbidden_particle_ids = []
             forbidden_schannel_ids = []
             required_schannel_ids = []
-            
+
             if forbidden_particles:
                 args = self.split_arg(forbidden_particles)
                 for part_name in args:
@@ -393,7 +426,7 @@ class MadGraphCmd(cmd.Cmd):
                         if mypart:
                             required_schannel_ids.append(mypart.get_pdg_code())
 
-                
+
 
             myprocdef = base_objects.ProcessDefinitionList([\
                 base_objects.ProcessDefinition({'legs': myleglist,
@@ -533,6 +566,11 @@ class MadGraphCmd(cmd.Cmd):
     # Quit
     def do_quit(self, line):
         sys.exit(1)
+
+    # In-line help
+    def help_save(self):
+        print "syntax: save model|... PATH"
+        print "-- save information as files in PATH"
 
     # In-line help
     def help_import(self):

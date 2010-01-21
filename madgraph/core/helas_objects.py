@@ -97,7 +97,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['number_external'] = 0
         self['number'] = 0
         self['fermionflow'] = 1
-        
+
     # Customized constructor
     def __init__(self, *arguments):
         """Allow generating a HelasWavefunction from a Leg
@@ -129,13 +129,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 self.set('interaction_id', interaction_id, model)
         elif arguments:
             super(HelasWavefunction, self).__init__(arguments[0])
-            # Set couplings separately, since it needs to be set after
-            # color and lorentz
-            if 'couplings' in arguments[0].keys():
-                self.set('couplings', arguments[0]['couplings'])
         else:
             super(HelasWavefunction, self).__init__()
-   
+
     def filter(self, name, value):
         """Filter for valid wavefunction property values."""
 
@@ -185,7 +181,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if name == 'interaction_id':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid integer "  % str(value) + \
+                        "%s is not a valid integer " % str(value) + \
                         " for wavefunction interaction id"
 
         if name == 'pdg_codes':
@@ -215,11 +211,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         "%s is not a valid dictionary for couplings" % \
                                                                 str(value)
 
-            if len(value) != len(self['inter_color']) * len(self['lorentz']):
-                raise self.PhysicsObjectError, \
-                        "Dictionary " + str(value) + \
-                        " for couplings has not the right number of entry"
-
             for key in value.keys():
                 if not isinstance(key, tuple):
                     raise self.PhysicsObjectError, \
@@ -230,11 +221,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if not isinstance(key[0], int) or not isinstance(key[1], int):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid tuple of integer" % str(key)
-                if key[0] < 0 or key[1] < 0 or \
-                   key[0] >= len(self['inter_color']) or key[1] >= \
-                                                    len(self['lorentz']):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a tuple with valid range" % str(key)
                 if not isinstance(value[key], str):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid string" % str(mystr)
@@ -247,13 +233,13 @@ class HelasWavefunction(base_objects.PhysicsObject):
             if value not in ['incoming', 'outgoing',
                              'intermediate', 'initial', 'final']:
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid wavefunction "  % str(value) + \
+                        "%s is not a valid wavefunction " % str(value) + \
                         "state (incoming|outgoing|intermediate)"
         if name in ['fermionflow']:
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid integer" % str(value)
-            if not value in [-1,1]:
+            if not value in [-1, 1]:
                 raise self.PhysicsObjectError, \
                         "%s is not a valid sign (must be -1 or 1)" % str(value)
 
@@ -284,7 +270,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         name = arguments[0]
         value = arguments[1]
-        
+
         if len(arguments) > 2 and \
                isinstance(value, int) and \
                isinstance(arguments[2], base_objects.Model):
@@ -333,13 +319,13 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
     def is_boson(self):
         return not self.is_fermion()
-    
+
     def to_array(self):
         """Generate an array with the information needed to uniquely
         determine if a wavefunction has been used before: interaction
         id and mother wavefunction numbers."""
-        
-        array_rep = array.array('i',[self['interaction_id']])
+
+        array_rep = array.array('i', [self['interaction_id']])
         array_rep.extend([mother.get('number') for \
                           mother in self['mothers']])
         return array_rep
@@ -347,36 +333,36 @@ class HelasWavefunction(base_objects.PhysicsObject):
     def get_pdg_code_outgoing(self):
         """Generate the corresponding pdg_code for an outgoing particle,
         taking into account fermion flow, for mother wavefunctions"""
- 
+
         if self.get('self_antipart'):
             #This is its own antiparticle e.g. a gluon
             return self.get('pdg_code')
- 
+
         if self.is_boson():
             # This is a boson
             return self.get('pdg_code')
- 
+
         if (self.get('state') == 'incoming' and self.get('is_part') \
                 or self.get('state') == 'outgoing' and not self.get('is_part')):
-            return -self.get('pdg_code')
+            return - self.get('pdg_code')
         else:
             return self.get('pdg_code')
 
     def get_pdg_code_incoming(self):
         """Generate the corresponding pdg_code for an incoming particle,
         taking into account fermion flow, for mother wavefunctions"""
- 
+
         if self.get('self_antipart'):
             #This is its own antiparticle e.g. gluon
             return self.get('pdg_code')
- 
+
         if self.is_boson():
             # This is a boson
-            return -self.get('pdg_code')
- 
+            return - self.get('pdg_code')
+
         if (self.get('state') == 'outgoing' and self.get('is_part') \
                 or self.get('state') == 'incoming' and not self.get('is_part')):
-            return -self.get('pdg_code')
+            return - self.get('pdg_code')
         else:
             return self.get('pdg_code')
 
@@ -403,7 +389,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                       """Multifermion vertices not implemented.
                       Please decompose your vertex into 2-fermion
                       vertices to get fermion flow correct."""
-            
+
             if len(filter(lambda wf: wf.get_with_flow('state') == 'incoming',
                           self.get('mothers'))) > \
                           len(filter(lambda wf: \
@@ -440,7 +426,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             self.set('pdg_code', -self.get('pdg_code'), model)
 
         return True
-        
+
     def check_and_fix_fermion_flow(self,
                                    wavefunctions,
                                    diagram_wavefunctions,
@@ -501,7 +487,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         new_wf = self
         flip_flow = False
         flip_sign = False
-        
+
         # Stop recursion at the external leg
         mothers = copy.copy(self.get('mothers'))
         if not mothers:
@@ -514,12 +500,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                      mothers)
 
             if len(fermion_mother) > 1:
-                raise self.PhysicsObjectError,\
+                raise self.PhysicsObjectError, \
                       "6-fermion vertices not yet implemented"
             if len(fermion_mother) == 0:
-                raise self.PhysicsObjectError,\
+                raise self.PhysicsObjectError, \
                       "Previous unresolved fermion flow in mother chain"
-            
+
             # Perform recursion by calling on mother
             new_mother, wf_number = fermion_mother[0].\
                                     check_majorana_and_flip_flow(\
@@ -541,10 +527,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         self.get('fermionflow') and \
                         self.get('self_antipart') or \
                         new_mother.get('state') != self.get('state')
-                        
+
             # Replace old mother with new mother
             mothers[mothers.index(fermion_mother[0])] = new_mother
-                
+
         # Flip sign if needed
         if flip_flow or flip_sign:
             if self in wavefunctions:
@@ -561,7 +547,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             if flip_flow:
                 # Flip fermion flow
                 new_wf.set('fermionflow', -new_wf.get('fermionflow'))
-                
+
             if flip_sign:
                 # Flip state and particle identity
                 # (to keep particle identity * flow state)
@@ -595,7 +581,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # End recursion if external wavefunction
         if not self.get('mothers'):
             if self.is_fermion():
-                return [self.get('number_external'),[]]
+                return [self.get('number_external'), []]
             else:
                 return []
 
@@ -610,7 +596,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if self.is_boson() and len(in_fermions) + len(out_fermions) > 2\
                or self.is_fermion() and \
                len(in_fermions) + len(out_fermions) > 1:
-            raise self.PhysicsObjectError,\
+            raise self.PhysicsObjectError, \
                   "Multifermion vertices not implemented"
 
         fermion_number_list = []
@@ -640,15 +626,15 @@ class HelasWavefunction(base_objects.PhysicsObject):
         elif len(in_fermions) != len(out_fermions):
             raise self.HelasWavefunctionError, \
                   "Error: %d incoming fermions != %d outgoing fermions" % \
-                  (len(in_fermions),len(out_fermions))
-            
-            
+                  (len(in_fermions), len(out_fermions))
+
+
         return fermion_number_list
 
     def needs_hermitian_conjugate(self):
         """Returns true if any of the mothers have negative
         fermionflow"""
-        
+
         return any([wf.get('fermionflow') < 0 for wf in \
                     self.get('mothers')])
 
@@ -659,7 +645,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if self.get('fermionflow') > 0:
             # Just return (spin, state)
             return self.get(name)
-        
+
         # If fermionflow is -1, need to flip particle identity and state
         if name == 'is_part':
             return not self.get('is_part')
@@ -671,11 +657,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
     def get_spin_state_number(self):
         """Returns the number corresponding to the spin state, with a
         minus sign for incoming fermions"""
-        
-        state_number = {'incoming': -1, 'outgoing': 1,
+
+        state_number = {'incoming':-1, 'outgoing': 1,
                         'intermediate': 1, 'initial': 1, 'final': 1}
-        return self.get('fermionflow')* \
-               state_number[self.get('state')]* \
+        return self.get('fermionflow') * \
+               state_number[self.get('state')] * \
                self.get('spin')
 
     def get_call_key(self):
@@ -690,15 +676,15 @@ class HelasWavefunction(base_objects.PhysicsObject):
         res.sort()
 
         res.append(self.get_spin_state_number())
-        
+
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():
             res.append('C')
 
-        return (tuple(res),tuple(self.get('lorentz')))
+        return (tuple(res), tuple(self.get('lorentz')))
 
     # Overloaded operators
-    
+
     def __eq__(self, other):
         """Overloading the equality operator, to make comparison easy
         when checking if wavefunction is already written, or when
@@ -707,7 +693,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         irrelevant, while the numbers for the mothers are important.
         """
 
-        if not isinstance(other,HelasWavefunction):
+        if not isinstance(other, HelasWavefunction):
             return False
 
         # Check relevant directly defined properties
@@ -744,11 +730,11 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
 
     def is_valid_element(self, obj):
         """Test if object obj is a valid HelasWavefunction for the list."""
-        
+
         return isinstance(obj, HelasWavefunction)
 
     # Helper functions
-    
+
     def check_and_fix_fermion_flow(self,
                                    wavefunctions,
                                    diagram_wavefunctions,
@@ -793,7 +779,7 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                       """Multifermion vertices not implemented.
                       Please decompose your vertex into 2-fermion
                       vertices to get fermion flow correct."""
-        
+
         for mother in fermion_mothers:
             if Nincoming > Noutgoing and \
                mother.get_with_flow('state') == 'outgoing' or \
@@ -812,7 +798,7 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                                                 wavefunctions,
                                                 diagram_wavefunctions,
                                                 external_wavefunctions,
-                                                wf_number) 
+                                                wf_number)
             # Replace old mother with new mother
             self[self.index(mother)] = new_mother
 
@@ -828,7 +814,7 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                                        mother_states))
             Noutgoing = len(filter(lambda state: state == 'outgoing',
                                        mother_states))
-            
+
         if Nincoming != Noutgoing:
             raise self.PhysicsObjectListError, \
                   "Failed to fix fermion flow, %d != %d" % \
@@ -857,27 +843,23 @@ class HelasAmplitude(base_objects.PhysicsObject):
         # Properties relating to the vertex
         self['number'] = 0
         self['mothers'] = HelasWavefunctionList()
-        
+
     # Customized constructor
     def __init__(self, *arguments):
         """Allow generating a HelasAmplitude from a Vertex
         """
 
         if len(arguments) > 1:
-            if isinstance(arguments[0],base_objects.Vertex) and \
-               isinstance(arguments[1],base_objects.Model):
+            if isinstance(arguments[0], base_objects.Vertex) and \
+               isinstance(arguments[1], base_objects.Model):
                 super(HelasAmplitude, self).__init__()
                 self.set('interaction_id',
                          arguments[0].get('id'), arguments[1])
         elif arguments:
             super(HelasAmplitude, self).__init__(arguments[0])
-            # Set couplings separately, since it needs to be set after
-            # color and lorentz
-            if 'couplings' in arguments[0].keys():
-                self.set('couplings', arguments[0]['couplings'])
         else:
             super(HelasAmplitude, self).__init__()
-   
+
     def filter(self, name, value):
         """Filter for valid property values."""
 
@@ -914,11 +896,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
                         "%s is not a valid dictionary for couplings" % \
                                                                 str(value)
 
-            if len(value) != len(self['inter_color']) * len(self['lorentz']):
-                raise self.PhysicsObjectError, \
-                        "Dictionary " + str(value) + \
-                        " for couplings has not the right number of entry"
-
             for key in value.keys():
                 if not isinstance(key, tuple):
                     raise self.PhysicsObjectError, \
@@ -929,11 +906,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 if not isinstance(key[0], int) or not isinstance(key[1], int):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid tuple of integer" % str(key)
-                if key[0] < 0 or key[1] < 0 or \
-                   key[0] >= len(self['inter_color']) or key[1] >= \
-                                                    len(self['lorentz']):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a tuple with valid range" % str(key)
                 if not isinstance(value[key], str):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid string" % str(mystr)
@@ -965,7 +937,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         name = arguments[0]
         value = arguments[1]
-        
+
         if len(arguments) > 2 and \
                isinstance(value, int) and \
                isinstance(arguments[2], base_objects.Model):
@@ -1015,7 +987,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
     def needs_hermitian_conjugate(self):
         """Returns true if any of the mothers have negative
         fermionflow"""
-        
+
         return any([wf.get('fermionflow') < 0 for wf in \
                     self.get('mothers')])
 
@@ -1034,7 +1006,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         if self.needs_hermitian_conjugate():
             res.append('C')
 
-        return (tuple(res),tuple(self.get('lorentz')))
+        return (tuple(res), tuple(self.get('lorentz')))
 
     def calculate_fermionfactor(self):
         """Calculate the fermion factor for the diagram corresponding
@@ -1049,7 +1021,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         bosons = filter(lambda wf: wf.is_boson(), self.get('mothers'))
 
         if len(in_fermions) + len(out_fermions) > 2:
-            raise self.PhysicsObjectError,\
+            raise self.PhysicsObjectError, \
                   "Multifermion vertices not implemented"
 
         fermion_number_list = []
@@ -1071,7 +1043,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         elif len(in_fermions) != len(out_fermions):
             raise self.HelasWavefunctionError, \
                   "Error: %d incoming fermions != %d outgoing fermions" % \
-                  (len(in_fermions),len(out_fermions))
+                  (len(in_fermions), len(out_fermions))
 
         return self.sign_flips_to_order(fermion_number_list)
 
@@ -1085,14 +1057,14 @@ class HelasAmplitude(base_objects.PhysicsObject):
         nflips = 0
 
         for i in range(len(fermions) - 1):
-            for j in range(i+1, len(fermions)):
+            for j in range(i + 1, len(fermions)):
                 if fermions[j] < fermions[i]:
-                    tmp  = fermions[i]
+                    tmp = fermions[i]
                     fermions[i] = fermions[j]
                     fermions[j] = tmp
                     nflips = nflips + 1
-            
-        return (-1)**nflips
+
+        return (-1) ** nflips
 
     # Comparison between different amplitudes, to allow check for
     # identical processes. Note that we are then not interested in
@@ -1101,8 +1073,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
         """Comparison between different amplitudes, to allow check for
         identical processes.
         """
-        
-        if not isinstance(other,HelasAmplitude):
+
+        if not isinstance(other, HelasAmplitude):
             return False
 
         # Check relevant directly defined properties
@@ -1129,7 +1101,7 @@ class HelasAmplitudeList(base_objects.PhysicsObjectList):
 
     def is_valid_element(self, obj):
         """Test if object obj is a valid HelasAmplitude for the list."""
-        
+
         return isinstance(obj, HelasAmplitude)
 
 
@@ -1166,10 +1138,10 @@ class HelasDiagram(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid integer for fermionfactor" % \
                         str(value)
-            if not value in [-1,0,1]:
+            if not value in [-1, 0, 1]:
                 raise self.PhysicsObjectError, \
                         "%s is not a valid fermion factor (-1, 0 or 1)" % \
-                        str(value)                
+                        str(value)
 
         return True
 
@@ -1187,7 +1159,7 @@ class HelasDiagram(base_objects.PhysicsObject):
         """Return particle property names as a nicely sorted list."""
 
         return ['wavefunctions', 'amplitude', 'fermionfactor']
-    
+
 #===============================================================================
 # HelasDiagramList
 #===============================================================================
@@ -1199,7 +1171,7 @@ class HelasDiagramList(base_objects.PhysicsObjectList):
         """Test if object obj is a valid HelasDiagram for the list."""
 
         return isinstance(obj, HelasDiagram)
-    
+
 #===============================================================================
 # HelasMatrixElement
 #===============================================================================
@@ -1244,7 +1216,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Return particle property names as a nicely sorted list."""
 
         return ['processes', 'diagrams']
-    
+
     # Customized constructor
     def __init__(self, *arguments):
         """Constructor for the HelasMatrixElement. In particular allows
@@ -1253,11 +1225,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """
 
         if arguments:
-            if isinstance(arguments[0],diagram_generation.Amplitude):
+            if isinstance(arguments[0], diagram_generation.Amplitude):
                 super(HelasMatrixElement, self).__init__()
                 amplitude = arguments[0]
                 optimization = 1
-                if len(arguments) > 1 and isinstance(arguments[1],int):
+                if len(arguments) > 1 and isinstance(arguments[1], int):
                     optimization = arguments[1]
 
                 self.get('processes').append(amplitude.get('process'))
@@ -1267,7 +1239,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 super(HelasMatrixElement, self).__init__(arguments[0])
         else:
             super(HelasMatrixElement, self).__init__()
-   
+
     # Comparison between different amplitudes, to allow check for
     # identical processes. Note that we are then not interested in
     # interaction id, but in all other properties.
@@ -1275,8 +1247,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Comparison between different matrix elements, to allow check for
         identical processes.
         """
-        
-        if not isinstance(other,HelasMatrixElement):
+
+        if not isinstance(other, HelasMatrixElement):
             return False
 
         # Should only check if diagrams and process id are identical
@@ -1292,7 +1264,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Overloading the nonequality operator, to make comparison easy"""
         return not self.__eq__(other)
 
-    def generate_helas_diagrams(self, amplitude, optimization = 1):
+    def generate_helas_diagrams(self, amplitude, optimization=1):
         """Starting from a list of Diagrams from the diagram
         generation, generate the corresponding HelasDiagrams, i.e.,
         the wave functions and amplitudes. Choose between default
@@ -1302,8 +1274,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """
 
         if not isinstance(amplitude, diagram_generation.Amplitude) or \
-               not isinstance(optimization,int):
-            raise self.PhysicsObjectError,\
+               not isinstance(optimization, int):
+            raise self.PhysicsObjectError, \
                   "Missing or erraneous arguments for generate_helas_diagrams"
 
         diagram_list = amplitude.get('diagrams')
@@ -1348,7 +1320,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
             # Initialize wavefunctions for this diagram
             diagram_wavefunctions = HelasWavefunctionList()
-            
+
             vertices = copy.copy(diagram.get('vertices'))
 
             # Single out last vertex, since this will give amplitude
@@ -1370,7 +1342,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 lastvx = nexttolastvertex
                 # Sort the legs, to get right order of wave functions
                 lastvx.get('legs').sort(lambda leg1, leg2: \
-                                    leg1.get('number')-leg2.get('number'))
+                                    leg1.get('number') - leg2.get('number'))
 
             # Go through all vertices except the last and create
             # wavefunctions
@@ -1419,7 +1391,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                       external_wavefunctions,
                                       wavefunctions,
                                       diagram_wavefunctions)
-                
+
             # Now generate a HelasAmplitude from the last vertex.
             amp = HelasAmplitude(lastvx, model)
             amp.set('mothers', mothers)
@@ -1434,7 +1406,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
             # Sort the wavefunctions according to number
             diagram_wavefunctions.sort(lambda wf1, wf2: \
-                                       wf1.get('number')-wf2.get('number'))
+                                       wf1.get('number') - wf2.get('number'))
 
             # Generate HelasDiagram
             helas_diagrams.append(HelasDiagram({ \
@@ -1449,7 +1421,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             else:
                 wf_number = len(process.get('legs'))
 
-        self.set('diagrams',helas_diagrams)
+        self.set('diagrams', helas_diagrams)
 
     def calculate_fermionfactors(self, amplitude):
         """Generate the fermion factors for all diagrams in the amplitude
@@ -1465,7 +1437,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                    diagram_wavefunctions):
         """Generate list of mothers from number_to_wavefunctions and
         external_wavefunctions"""
-        
+
         mothers = HelasWavefunctionList()
 
         for leg in legs:
@@ -1500,7 +1472,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         if not self.get('processes'):
             return None
-        
+
         model = self.get('processes')[0].get('model')
 
         return reduce(lambda x, y: x * y,
@@ -1513,11 +1485,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         if not self.get('processes'):
             return None
-        
+
         process = self.get('processes')[0]
         model = process.get('model')
 
-        return apply(itertools.product,[ model.get('particle_dict')[\
+        return apply(itertools.product, [ model.get('particle_dict')[\
                                          leg.get('id')].get_helicity_states()\
                                          for leg in process.get('legs') ])
 
@@ -1525,7 +1497,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Calculate the denominator factor due to:
         Averaging initial state color and spin, and
         identical final state particles"""
-        
+
         model = self.get('processes')[0].get('model')
 
         initial_legs = filter(lambda leg: leg.get('state') == 'initial', \
@@ -1534,12 +1506,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         spin_factor = reduce(lambda x, y: x * y,
                              [ len(model.get('particle_dict')[leg.get('id')].\
                                    get_helicity_states())\
-                               for leg in initial_legs ])        
+                               for leg in initial_legs ])
 
         color_factor = reduce(lambda x, y: x * y,
                               [ model.get('particle_dict')[leg.get('id')].\
                                     get('color')\
-                                for leg in initial_legs ])        
+                                for leg in initial_legs ])
 
         final_legs = filter(lambda leg: leg.get('state') == 'final', \
                               self.get('processes')[0].get('legs'))
@@ -1568,7 +1540,7 @@ class HelasMatrixElementList(base_objects.PhysicsObjectList):
         """Test if object obj is a valid HelasMatrixElement for the list."""
 
         return isinstance(obj, HelasMatrixElement)
-    
+
 #===============================================================================
 # HelasMultiProcess
 #===============================================================================
@@ -1597,9 +1569,9 @@ class HelasMultiProcess(base_objects.PhysicsObject):
 
         return ['matrix_elements']
 
-    def __init__(self, argument = None):
+    def __init__(self, argument=None):
         """Allow initialization with AmplitudeList"""
-        
+
         if isinstance(argument, diagram_generation.AmplitudeList):
             super(HelasMultiProcess, self).__init__()
             self.generate_matrix_elements(argument)
@@ -1635,16 +1607,16 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                 other_processes = matrix_elements[\
                     matrix_elements.index(matrix_element)].get('processes')
                 logging.info("Combining process with %s" % \
-                             other_processes[0].nice_string().replace('Process: ',''))
+                             other_processes[0].nice_string().replace('Process: ', ''))
                 other_processes.append(amplitude.get('process'))
-                
+
             except ValueError:
                 # Otherwise, if the matrix element has any diagrams,
                 # add this matrix element.
                 if matrix_element.get('processes') and \
                        matrix_element.get('diagrams'):
                     matrix_elements.append(matrix_element)
-        
+
 
 #===============================================================================
 # HelasModel
@@ -1756,7 +1728,7 @@ class HelasModel(base_objects.PhysicsObject):
 
         self.get('wavefunctions')[key] = function
         return True
-        
+
     def add_amplitude(self, key, function):
         """Set the function for writing the amplitude
         corresponding to the key"""
@@ -1774,14 +1746,14 @@ class HelasModel(base_objects.PhysicsObject):
 
         self.get('amplitudes')[key] = function
         return True
-        
+
     # Customized constructor
-    def __init__(self, argument = {}):
+    def __init__(self, argument={}):
         """Allow generating a HelasModel from a Model
         """
 
-        if isinstance(argument,base_objects.Model):
+        if isinstance(argument, base_objects.Model):
             super(HelasModel, self).__init__()
-            self.set('name',argument.get('name'))
+            self.set('name', argument.get('name'))
         else:
             super(HelasModel, self).__init__(argument)
