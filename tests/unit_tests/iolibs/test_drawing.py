@@ -180,25 +180,14 @@ class TestFeynmanLine(unittest.TestCase):
         self.assertEqual(line.end.pos_x, 0)
         self.assertEqual(line.end.pos_y, 0)
         
-        line.define_line_orientation()
+       
+        line.inverse_part_antipart()
+        line.define_line_orientation()        
         self.assertEqual(line.start.pos_x, 1)
         self.assertEqual(line.start.pos_y, 1)
         self.assertEqual(line.end.pos_x, 0)
         self.assertEqual(line.end.pos_y, 0)
         
-        line.inverse_part_antipart()
-        line.define_line_orientation()        
-        self.assertEqual(line.start.pos_x, 0)
-        self.assertEqual(line.start.pos_y, 0)
-        self.assertEqual(line.end.pos_x, 1)
-        self.assertEqual(line.end.pos_y, 1)
-        
-        line.define_line_orientation()
-        self.assertEqual(line.start.pos_x, 0)
-        self.assertEqual(line.start.pos_y, 0)
-        self.assertEqual(line.end.pos_x, 1)
-        self.assertEqual(line.end.pos_y, 1)                
-    
     def test_inverse_part_antipart(self):
         """TEST change particle in anti-particle"""
         
@@ -245,6 +234,7 @@ class TestFeynmanLine(unittest.TestCase):
         my_line3 = self.def_line([0.1, 0.5], [0.5, 1])# parallel to the diagonal
         my_line4 = self.def_line([0.0, 0.0], [0.0, 1.0]) # y axis 
         my_line5 = self.def_line([0.0, 0.0], [0.3, 0.2])
+
                        
         self.assertEquals(my_line1.domain_intersection(my_line1), (0, 1))
         self.assertEquals(my_line1.domain_intersection(my_line2), (0.5, 0.9))
@@ -287,6 +277,7 @@ class TestFeynmanLine(unittest.TestCase):
         my_line10 = self.def_line([0.5, 0.5], [0.5, 1])    # vertical line center
         my_line11 = self.def_line([0.5, 0], [0.5, 0.5])    # second part
         my_line12 = self.def_line([0.5, 0], [0.5, 0.4])     # just shorther
+ 
 
         #Line 1 intersection
         self.assertTrue(my_line1.has_intersection(my_line1))
@@ -375,11 +366,33 @@ class TestFeynmanLine(unittest.TestCase):
         self.assertTrue(my_line10.has_intersection(my_line10))
         self.assertFalse(my_line10.has_intersection(my_line11))
         self.assertFalse(my_line10.has_intersection(my_line12))        
-
+        
         #line 11 intersection  
         self.assertTrue(my_line11.has_intersection(my_line12))  
   
-  
+
+        #special set for testing error machine problem
+        my_line1 = self.def_line([1.0, 0], [0.8, 2/3]) 
+        my_line2 = self.def_line([0.8, 02/3], [1.0,1])
+         
+        self.assertFalse(my_line1.has_intersection(my_line2))
+ 
+    def test_debug(self):
+        my_line1 = self.def_line([0, 0], [1, 1])         #diagonal
+        my_line2 = self.def_line([0.5, 0.5], [0.9, 0.9]) # part of the diagonal
+        my_line3 = self.def_line([0.1, 0.1], [0.4, 0.4]) # other part of the diagonal
+        my_line4 = self.def_line([0, 0.5], [0.5, 1])     # parallel to the diagonal
+        my_line5 = self.def_line([0.0, 0.0], [0.0, 1.0]) # y axis 
+        my_line6 = self.def_line([0, 1], [1, 0])         # second diagonal
+        my_line7 = self.def_line([0, 1], [0.6, 0.4])     # part of the second 
+        my_line8 = self.def_line([0.6, 0.4], [0, 1])     # same part but inverse order
+        my_line9 = self.def_line([0, 0.5], [0.9, 1])     # other
+        my_line10 = self.def_line([0.5, 0.5], [0.5, 1])    # vertical line center
+        my_line11 = self.def_line([0.5, 0], [0.5, 0.5])    # second part
+        my_line12 = self.def_line([0.5, 0], [0.5, 0.4])     # just shorther
+        
+        self.assertTrue(my_line6.has_intersection(my_line9))
+ 
   
     def test_domainintersection(self):
         """TEST Domain intersection is set correctly"""
@@ -765,11 +778,13 @@ class TestFeynmanDiagram(unittest.TestCase):
         self.mix_drawing = drawing.FeynmanDiagram(mix_diagram, _model)
         
         # gg>gg (via a T channel)
-        t_diagram = base_objects.Diagram(self.t_diagram_dict)
+        t_diagram = self.store_diagram['g g > g g'][2]
+        #t_diagram = base_objects.Diagram(self.t_diagram_dict)
         self.t_drawing = drawing.FeynmanDiagram(t_diagram, _model)
         
         # gg>gg (via a S channel)
-        s_diagram = base_objects.Diagram(self.s_diagram_dict)
+        s_diagram = self.store_diagram['g g > g g'][1]
+        #s_diagram = base_objects.Diagram(self.s_diagram_dict)
         self.s_drawing = drawing.FeynmanDiagram(s_diagram, _model)
               
     def test_load_diagram(self):
@@ -797,12 +812,51 @@ class TestFeynmanDiagram(unittest.TestCase):
         #check that the load corrctly assign the model to the Line
         for line in self.mix_drawing.lineList:
             self.assertTrue(hasattr(line, 'model'))
+    
+    @staticmethod
+    def vertex_identification(vertex):
+        """return a integer which acts like an id"""
+        
+        tag=0
+        for i, line in enumerate(vertex.line):
+            tag += (10**i)*line.get('number')
+        return tag
+        
+        
+    def test_line_ordering_in_load(self):
+        """TEST the default orientation of the line after the load process"""
+        
+        self.mix_drawing.load_diagram()
+        self.mix_drawing.define_level()
+        self.mix_drawing.find_initial_vertex_position()
+        begin_tag=[1,131,131,2,242,521,565,565,521]
+        end_tag=[131,3,521,242,4,242,5,6,565]
+        for i, line in enumerate(self.mix_drawing.lineList):
+            self.assertEquals(self.vertex_identification(line.start),\
+                                                                   begin_tag[i])
+            self.assertEquals(self.vertex_identification(line.end),\
+                                                                   end_tag[i])
             
+            
+        diagram = self.store_diagram['g g > g g g g'][26]
+        diagram = drawing.FeynmanDiagram(diagram, _model)
+        diagram.load_diagram() 
+        diagram.define_level()
+        diagram.find_initial_vertex_position()
+        tag=[(1,131), (131,3), (131,251), (2,242), (242,4), (262,242), (251,5), 
+             (262,6), (251,262)]
+
+        for i, line in enumerate(diagram.lineList):
+            self.assertEquals(self.vertex_identification(line.start),\
+                                                                   tag[i][0])
+            self.assertEquals(self.vertex_identification(line.end),\
+                                                                   tag[i][1])          
                 
     def test_define_level(self):
         """ TEST level assignment """
         
         self.mix_drawing.load_diagram()
+        
         self.mix_drawing.define_level()
         
         #order: initial-external-vertex in diagram order                                 
@@ -859,13 +913,13 @@ class TestFeynmanDiagram(unittest.TestCase):
         sol_l1[1], sol_l1[2] = sol_l1[2], sol_l1[1]
         
         #ask to find level 1 from level 0
-        vertexlist_l1 = self.mix_drawing.find_t_channel_vertex(vertexlist_l0)
+        vertexlist_l1 = self.mix_drawing.find_t_channel_vertex()
         self.assertEquals(len(vertexlist_l1), len(sol_l1))
         for i in range(0, len(sol_l1)):
             self.assertEquals(vertexlist_l1[i], sol_l1[i])
         
         #redo this step but add the position to those vertex
-        self.mix_drawing.find_vertex_position_tchannel(vertexlist_l0)   
+        self.mix_drawing.find_vertex_position_tchannel()   
             
         sol = [[1 / 3, 1 / 6], [1 / 3, 1 / 2], [1 / 3, 5 / 6]]
         for i in range(0, len(vertexlist_l1)):
@@ -908,7 +962,8 @@ class TestFeynmanDiagram(unittest.TestCase):
         self.assertEquals(len(diagram.vertexList), 10)
         self.assertEquals(len(level1), 4)
         #test the routine
-        t_vertex = diagram.find_t_channel_vertex(level0)
+        level0.reverse()
+        t_vertex = diagram.find_t_channel_vertex()
         
         for vertex in t_vertex:
             self.assertTrue(vertex.level, 1)
@@ -929,7 +984,7 @@ class TestFeynmanDiagram(unittest.TestCase):
 
         level = [1  , 1  , 2  , 1  , 0  , 2  , 0  , 2  , 3  , 3 ]
         x_position = [1 / 3, 1 / 3, 2 / 3, 1 / 3, 0.0, 2 / 3, 0.0, 2 / 3, 1.0, 1.0]
-        y_position = [5 / 6, 1 / 6, 1 / 2, 1 / 2, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0]       
+        y_position = [1 / 6, 5 / 6, 1 / 2, 1 / 2, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0]       
 
 
         for i in range(0, 10):
@@ -959,7 +1014,7 @@ class TestFeynmanDiagram(unittest.TestCase):
         diagram.find_initial_vertex_position()
         level_solution = [1, 2, 0, 0, 3, 3]                          
         x_position = [1 / 3, 2 / 3, 0, 0, 1, 1]
-        y_position = [1 / 2, 1 / 2, 1, 0, 0, 1]
+        y_position = [1 / 2, 1 / 2, 0, 1, 0, 1]
         self.assertEquals(len(diagram.vertexList), 6)
         for i in range(0, 6):
             self.assertEquals(diagram.vertexList[i].level, \
@@ -971,7 +1026,19 @@ class TestFeynmanDiagram(unittest.TestCase):
         for line in diagram.lineList:
             self.assertNotEquals(line.start, None)
             self.assertNotEquals(line.end, None)
-                                                
+            
+            
+        diagram = self.store_diagram['g g > g g g g g g'][73]
+        diagram = drawing.FeynmanDiagram(diagram, _model)
+        diagram.main()
+        
+        nb_at_zero = 0
+        for vertex in diagram.vertexList:
+            if vertex.pos_x == 0  and vertex.pos_y == 0:
+                nb_at_zero += 1
+        self.assertEqual(nb_at_zero, 1)
+        
+                                   
     def test_notion_of_egality(self):
         """TEST if not failing on wrongly equal leg"""
         
@@ -993,7 +1060,7 @@ class TestFeynmanDiagram(unittest.TestCase):
                               level_solution[i])                     
         diagram.find_initial_vertex_position()                         
         x_position = [1 / 3, 2 / 3, 0, 0, 1, 1]
-        y_position = [1 / 2, 1 / 2, 1, 0, 0, 1]
+        y_position = [1 / 2, 1 / 2, 0, 1, 0, 1]
         self.assertEquals(len(diagram.vertexList), 6)
         for i in range(0, 6):
             self.assertEquals(diagram.vertexList[i].level, \
@@ -1019,7 +1086,7 @@ class TestFeynmanDiagram(unittest.TestCase):
         diagram.find_initial_vertex_position()
                                  
         x_position = [1 / 2, 1 / 2, 0, 1, 0, 1]
-        y_position = [3 / 4, 1 / 4, 1, 1, 0, 0]
+        y_position = [1 / 4, 3 / 4, 0, 0, 1, 1]
         self.assertEquals(len(diagram.vertexList), 6)
         for i in range(0, 6):
             self.assertEquals(diagram.vertexList[i].level, \
@@ -1044,7 +1111,7 @@ class TestFeynmanDiagram(unittest.TestCase):
 
         for line in t_lines:
             if line.is_fermion():
-                self.assertTrue(line.start.pos_y < line.end.pos_y)
+                self.assertTrue(line.start.pos_y > line.end.pos_y)
  
         # Load diagram with two fermion flow
         diagram = self.store_diagram['mu+ mu- > w+ w- a'][6]
@@ -1055,7 +1122,97 @@ class TestFeynmanDiagram(unittest.TestCase):
 
         for line in t_lines:
             if line.is_fermion():
-                self.assertTrue(line.start.pos_y < line.end.pos_y)               
+                self.assertTrue(line.start.pos_y > line.end.pos_y)
+                
+        #One fermion flow but in opposite direction
+        diagram = self.store_diagram['g g > g g u u~'][100]
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
+        diagram.main()            
+        t_lines = [line for line in diagram.lineList if line.start.level == 1
+                                                and line.end.level == 1]
+
+        for line in t_lines:
+            if line.is_fermion():
+                self.assertTrue(line.start.pos_y > line.end.pos_y)
+                
+                
+    def test_no_cutting_line(self):
+        """Check that the output diagram doesn't intersection between line."""
+        
+        diagram = self.store_diagram['g g > g g g g g g'][73]
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
+        diagram.main()
+        self.assertFalse(diagram._debug_has_intersection())
+        
+        diagram = self.store_diagram['g g > g g g g g g'][2556]
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
+        diagram.main()
+        self.assertFalse(diagram._debug_has_intersection())       
+        
+        diagram = self.store_diagram['g g > g g u u~'][18]
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
+        diagram.main()
+        self.assertFalse(diagram._debug_has_intersection())  
+        
+        diagram = self.store_diagram['g g > g g u u~'][100]
+        diagram = drawing.FeynmanDiagram(diagram, _model)
+        diagram.main()
+        self.assertFalse(diagram._debug_has_intersection())          
+        
+        diagram = self.store_diagram['g g > g g g g'][0]
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
+        diagram.main()
+        self.assertFalse(diagram._debug_has_intersection())         
+        
+        diagram = self.store_diagram['g g > g g g g'][0]
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
+        diagram.main()
+        self.assertFalse(diagram._debug_has_intersection())  
+        
+        diagram = self.store_diagram['g g > g g g g'][26]
+        diagram = drawing.FeynmanDiagram(diagram, _model)
+        diagram.main()
+        self.assertFalse(diagram._debug_has_intersection())  
+        
+        diagram = self.store_diagram['g g > g g g g'][92]
+        diagram = drawing.FeynmanDiagram(diagram, _model)
+        diagram.main()
+        self.assertFalse(diagram._debug_has_intersection())  
+        
+        diagram = self.store_diagram['g g > g g g g'][93]
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
+        diagram.main()
+        self.assertFalse(diagram._debug_has_intersection())  
+        
+        diagram = self.store_diagram['g g > g g g g'][192]
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
+        diagram.main()
+        self.assertFalse(diagram._debug_has_intersection())  
+        
+        diagram = self.store_diagram['mu+ mu- > w+ w- a'][6]
+        diagram = drawing.FeynmanDiagram(diagram, _model)
+        diagram.main()
+        self.assertFalse(diagram._debug_has_intersection())         
+
+        diagram = self.store_diagram['mu+ mu- > w+ w- a'][7]
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
+        diagram.main()
+        self.assertFalse(diagram._debug_has_intersection())
+        
+        for i in range(7):
+            diagram = self.store_diagram['t h > t g W+ W-'][i]
+            diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
+            diagram.main()
+            self.assertFalse(diagram._debug_has_intersection())                
+
+            diagram = self.store_diagram['t h > t g W+ W-'][i]
+            diagram = drawing.FeynmanDiagram(diagram, _model)
+            diagram.main()
+            self.assertFalse(diagram._debug_has_intersection())              
+    
+                
+        
+                           
 
     def test_horizontal_mode(self):
         """Check that the horizontal mode works correctly."""
@@ -1141,7 +1298,7 @@ class TestDrawingEPS(unittest.TestCase):
         
         self.diagram = self.store_diagram['t h > t g W+ W-'][0]
         
-        self.plot = draw_output.DrawDiagramEps(self.diagram, 'diagram.eps', \
+        self.plot = draw_output.DrawDiagramEps(self.diagram, '__testdiag__.eps', \
                                           model=_model, amplitude='')
     
     def output_is_valid(self, position, pdf_check=True):
@@ -1172,7 +1329,7 @@ class TestDrawingEPS(unittest.TestCase):
         Need ImageMagick."""
         
         self.plot.draw(horizontal=False)
-        self.output_is_valid('diagram.eps')
+        self.output_is_valid('__testdiag__.eps')
               
     def testDrawDiagramEPS_external(self):
         """Check the DrawDiagramEPS module (with FeynamDiagram + external 
@@ -1181,7 +1338,7 @@ class TestDrawingEPS(unittest.TestCase):
         Need ImageMagick."""
         
         self.plot.draw(external=False, horizontal=False)
-        self.output_is_valid('diagram.eps')
+        self.output_is_valid('__testdiag__.eps')
  
  
     def testDrawDiagramEPS_contract(self):
@@ -1194,7 +1351,7 @@ class TestDrawingEPS(unittest.TestCase):
         model_info.set('propagating', False)
         self.plot.draw(non_propagating=False, horizontal=False)
         try:
-            self.output_is_valid('diagram.eps')       
+            self.output_is_valid('__testdiag__.eps')       
         except:
             model_info.set('propagating', True)            
             raise
@@ -1209,7 +1366,7 @@ class TestDrawingEPS(unittest.TestCase):
         model_info.set('propagating', False)
         self.plot.draw(non_propagating=False, external=False, horizontal=False)
         try:
-            self.output_is_valid('diagram.eps')       
+            self.output_is_valid('__testdiag__.eps')       
         except:
             model_info.set('propagating', True)            
             raise       
@@ -1221,7 +1378,7 @@ class TestDrawingEPS(unittest.TestCase):
         Need ImageMagick."""
         
         self.plot.draw()
-        self.output_is_valid('diagram.eps')
+        self.output_is_valid('__testdiag__.eps')
               
     def testDrawDiagramEPS_external_horizontal(self):
         """Check the DrawDiagramEPS module (with FeynamDiagramHorizontal +
@@ -1230,7 +1387,7 @@ class TestDrawingEPS(unittest.TestCase):
         Need ImageMagick."""
         
         self.plot.draw(external=False)
-        self.output_is_valid('diagram.eps')
+        self.output_is_valid('__testdiag__.eps')
  
  
     def testDrawDiagramEPS_contract_horizontal(self):
@@ -1243,11 +1400,12 @@ class TestDrawingEPS(unittest.TestCase):
         model_info.set('propagating', False)
         self.plot.draw(non_propagating=False)
         try:
-            self.output_is_valid('diagram.eps')       
+            self.output_is_valid('__testdiag__.eps')       
         except:
             model_info.set('propagating', True)            
             raise
-        
+        model_info.set('propagating', True)
+                
     def testDrawDiagramEPS_contract_ext_horizontal(self):
         """Check the DrawDiagramEPS module (with FeynamDiagramHorizontal + 
         contracts non propagating particles + external particles force to be at 
@@ -1259,7 +1417,7 @@ class TestDrawingEPS(unittest.TestCase):
         model_info.set('propagating', False)
         self.plot.draw(non_propagating=False, external=0, horizontal=True)
         try:
-            self.output_is_valid('diagram.eps')       
+            self.output_is_valid('__testdiag__.eps')       
         except:
             model_info.set('propagating', True)            
             raise       
@@ -1286,7 +1444,7 @@ class TestDrawingS_EPS(unittest.TestCase):
         for i in range(7):
             self.diagram.append(self.store_diagram['t h > t g W+ W-'][i])
         
-        self.plot = draw_output.DrawDiagramsEps(self.diagram, 'diagram.eps', \
+        self.plot = draw_output.DrawDiagramsEps(self.diagram, '__testdiag__.eps', \
                                           model=_model, amplitude='') 
         
 
@@ -1299,8 +1457,9 @@ if __name__ == '__main__':
     process_diag['u d~ > c s~'] = [0]
     process_diag['g g > g g'] = [1, 2]
     process_diag['g g > g g g'] = [0]   
-    process_diag['g g > g g u u~'] = [18] 
+    process_diag['g g > g g u u~'] = [18,100] 
     process_diag['g g > g g g g'] = [0, 26, 92, 93, 192]
+    process_diag['g g > g g g g g g'] = [73,2556]
     process_diag['mu+ mu- > w+ w- a'] = [6, 7]
     process_diag['t h > t g W+ W-'] = [0, 1, 2, 3, 4, 5, 6, 7] 
     

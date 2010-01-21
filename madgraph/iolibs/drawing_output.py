@@ -178,7 +178,7 @@ class DrawDiagram(object):
             raise self.DrawDiagramError('No valid model provide to convert ' + \
                                         'diagram in appropriate format')
 
-        # Test on Amplitude should be entrer here, when we will use this 
+        # Test on Amplitude should be enter here, when we will use this 
         #information
 
 
@@ -249,7 +249,7 @@ class DrawDiagram(object):
         Then finalize line representation by adding his name and, if it's an 
         external particle, the MadGraph number associate to it."""
         
-        # Find the type line of the particule [straight, wavy, ...]
+        # Find the type line of the particle [straight, wavy, ...]
         line_type = line.get_info('line')
         # Call the routine associate to this type [self.draw_straight, ...]
         getattr(self, 'draw_' + line_type)(line)
@@ -273,12 +273,14 @@ class DrawDiagram(object):
     def associate_name(self, line, name):
         """Method to associate a name to a the given line. 
         The default action of this framework doesn't do anything"""
+        pass
 
     
     def associate_number(self,line, number):
         """Method to associate a number to 'line'. By default this method is 
         call only for external particles and the number is the MadGraph number 
         associate to the particle. The default routine doesn't do anything"""
+        pass
 
     
 class DrawDiagramEps(DrawDiagram):
@@ -287,8 +289,8 @@ class DrawDiagramEps(DrawDiagram):
     
     The main routine to draw a diagram is 'draw' which call
     1) initialize: setup things for the diagram (usually open a file)
-    2) convert_diagram : Udate the diagram in the correct format if needed
-    3) draw_diagram : Perform diagram dependant operation
+    2) convert_diagram : Update the diagram in the correct format if needed
+    3) draw_diagram : Perform diagram dependent operation
     4) conclude : finish the operation. 
     """
     
@@ -306,8 +308,8 @@ class DrawDiagramEps(DrawDiagram):
            
     def initialize(self):
         """Operation done before starting to create diagram specific EPS content
-        First open the file in write mode 
-        then write in it the header and the library of particle type."""
+        First open the file in write mode then write in it the header and the 
+        library of particle type."""
 
         # Open file 
         super(DrawDiagramEps, self).initialize()
@@ -445,7 +447,7 @@ class DrawDiagramEps(DrawDiagram):
         elif y == 1:
             y = 1.04
 
-        # Rescale x,y in order to pass in EPS coordinate
+        # Re-scale x,y in order to pass in EPS coordinate
         x, y = self.rescale(x, y)
         # Write the EPS text associate
         self.text += ' %s  %s moveto \n' % (x, y)  
@@ -464,7 +466,7 @@ class DrawDiagramEps(DrawDiagram):
 
         d = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
         if d == 0:
-            raise self.Draw_diagram_Error('Line cann\'t have 0 length')
+            raise self.DrawDiagramError('Line can not have 0 length')
         
         # Compute gap
         dx = (x1 - x2) / d
@@ -506,7 +508,7 @@ class DrawDiagramsEps(DrawDiagramEps):
     x_size = 200
     y_min = 560
     y_size = 150
-    # Define distances between two diagrams
+    # Define distances between two drawing area
     x_gap = 75
     y_gap = 70
 
@@ -527,7 +529,7 @@ class DrawDiagramsEps(DrawDiagramEps):
             In future you could pass the amplitude associate to the object in 
             order to adjust fermion flow in case of Majorana fermion."""
         
-        #use standard initialisation but whithout any diagram
+        #use standard initialization but without any diagram
         super(DrawDiagramsEps,self).__init__('', file , model, amplitude)
         
         #additional information
@@ -537,7 +539,7 @@ class DrawDiagramsEps(DrawDiagramEps):
         
     def rescale(self, x, y):
         """All coordinates belongs to [0,1]. So that in order to have a visible
-        graph we need to rescale the graph. This method distort the square in
+        graph we need to re-scale the graph. This method distort the square in
         a oblong. Deformation are linear."""
         
         # Compute the current line and column
@@ -545,7 +547,7 @@ class DrawDiagramsEps(DrawDiagramEps):
         line_pos = block_pos // self.nb_col 
         col_pos = block_pos % self.nb_col
         
-        # Compute the coordonate of the drawing area associate to this line
+        # Compute the coordinate of the drawing area associate to this line
         #and column.
         x_min = self.x_min + (self.x_size + self.x_gap) * col_pos
         x_max = self.x_min + self.x_gap * (col_pos) + self.x_size * \
@@ -573,7 +575,7 @@ class DrawDiagramsEps(DrawDiagramEps):
     def draw(self,diagramlist='', **opt):
         """Creates the representation in EPS format associate to a specific 
         diagram. 'opt' keeps track of possible option of drawing. Those option
-        are used if we nedd to convert diagram to Drawing Type of Diagram.
+        are used if we need to convert diagram to Drawing Object.
         This is the list of recognize options:
             external [True] : authorizes external particles to finish on 
                 horizontal limit of the square
@@ -591,7 +593,7 @@ class DrawDiagramsEps(DrawDiagramEps):
         self.initialize()
         # Loop on all diagram
         for diagram in diagramlist:
-            # Check if they need to be convert in corrrect format
+            # Check if they need to be convert in correct format
             diagram = self.convert_diagram(diagram, self.model, **opt)
             # Write the code associate to this diagram
             self.draw_diagram(diagram)
@@ -601,11 +603,12 @@ class DrawDiagramsEps(DrawDiagramEps):
                 #if full initialize a new page
                 self.pass_to_next_page()
         
-        
+        #finish operation
         self.conclude()
         
     def pass_to_next_page(self):
-        """ insert text in order to pass to next page """
+        """Insert text in order to pass to next EPS page."""
+        
         self.text += 'showpage\n'
         new_page = 1 + self.block_nb // (self.nb_col * self.nb_line)
         self.text += '%%'+'Page: %s %s \n' % (new_page, new_page)

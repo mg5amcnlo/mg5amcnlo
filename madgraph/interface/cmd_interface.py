@@ -349,7 +349,10 @@ class MadGraphCmd(cmd.Cmd):
         plot = Draw.DrawDiagramsEps(self.curr_amp['diagrams'], args[0],
                              model=self.curr_model, amplitude='')
         if len(args) == 1:
+            start=time.time()
             plot.draw()
+            stop=time.time()
+            print 'time to draw', stop-start
         else:
             opt = {}
             for data in args[1:]:
