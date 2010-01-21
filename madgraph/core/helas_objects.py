@@ -1111,6 +1111,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         self['processes'] = base_objects.ProcessList()
         self['diagrams'] = HelasDiagramList()
+        self['identical_particle_factor'] = 0
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
@@ -1123,6 +1124,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             if not isinstance(value, HelasDiagramList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid HelasDiagramList object" % str(value)
+        if name == 'identical_particle_factor':
+            if not isinstance(value, int):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid int object" % str(value)
         return True
 
     def get_sorted_keys(self):
@@ -1147,7 +1152,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
                 self.get('processes').append(amplitude.get('process'))
                 self.generate_helas_diagrams(amplitude, optimization)
-                self.calculate_fermionfactors(amplitude)
+                self.calculate_fermionfactors()
+                self.calculate_identical_particle_factors()
             else:
                 super(HelasMatrixElement, self).__init__(arguments[0])
         else:
@@ -1168,6 +1174,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         if self['processes'] and not other['processes'] or \
                self['processes'] and \
                self['processes'][0]['id'] != other['processes'][0]['id'] or \
+               self['identical_particle_factor'] != \
+               other['identical_particle_factor'] or \
                self['diagrams'] != other['diagrams']:
             return False
 
@@ -1323,12 +1331,30 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         self.set('diagrams',helas_diagrams)
 
-    def calculate_fermionfactors(self, amplitude):
+    def calculate_fermionfactors(self):
         """Generate the fermion factors for all diagrams in the amplitude
         """
 
         for diagram in self.get('diagrams'):
             diagram.get('fermionfactor')
+
+    def calculate_identical_particle_factors(self):
+        """Calculate the denominator factor for identical final state particles
+        """
+
+        final_legs = filter(lambda leg: leg.get('state') == 'final', \
+                              self.get('processes')[0].get('legs'))
+
+        identical_indices = {}
+        for leg in final_legs:
+            if leg.get('id') in identical_indices:
+                identical_indices[leg.get('id')] = \
+                                    identical_indices[leg.get('id')] + 1
+            else:
+                identical_indices[leg.get('id')] = 1
+        self["identical_particle_factor"] = reduce(lambda x, y: x * y,
+                                          [ factorial(val) for val in \
+                                            identical_indices.values() ])
 
     # Helper methods
 
@@ -1355,9 +1381,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         return mothers
 
     def get_number_of_wavefunctions(self):
-        """Gives the total number of wavefunctions for this amplitude"""
-        return sum([ len(d.get('wavefunctions')) for d in \
-                       self.get('diagrams')])
+        """Gives the total number of wavefunctions for this amplitude,
+        as given by the number of last wavefunction for the last diagram."""
+        return filter(lambda diagram: diagram.get('wavefunctions'),
+                      self.get('diagrams'))[-1].\
+                      get('wavefunctions')[-1].get('number')
 
     def get_nexternal_ninitial(self):
         """Gives (number or external particles, number of
@@ -1412,21 +1440,18 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                     get('color')\
                                 for leg in initial_legs ])        
 
-        final_legs = filter(lambda leg: leg.get('state') == 'final', \
-                              self.get('processes')[0].get('legs'))
+        return spin_factor * color_factor * self['identical_particle_factor']
 
-        identical_indices = {}
-        for leg in final_legs:
-            if leg.get('id') in identical_indices:
-                identical_indices[leg.get('id')] = \
-                                    identical_indices[leg.get('id')] + 1
-            else:
-                identical_indices[leg.get('id')] = 1
-        identical_factor = reduce(lambda x, y: x * y,
-                                  [ factorial(val) for val in \
-                                    identical_indices.values() ])
+    def shift_wavefunctions(self, N, N_initial):
+        """Shift the wavefunction number by N for all wavefunctions
+        after N_initial"""
 
-        return spin_factor * color_factor * identical_factor
+        wavefunctions = []
+        for diagram in self['diagrams']:
+            wavefunctions.extend(diagram.get('wavefunctions'))
+            
+        for wf in wavefunctions[N_initial:]:
+            wf.set('number', wf.get('number') + N)
 
 #===============================================================================
 # HelasMatrixElementList
@@ -1489,7 +1514,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         identifying processes with identical matrix elements"""
 
         if not isinstance(amplitudes, diagram_generation.AmplitudeList):
-            raise self.HelasMultiProcessError, \
+            raise self.PhysicsObjectError, \
                   "%s is not valid AmplitudeList" % repr(amplitudes)
 
         matrix_elements = self.get('matrix_elements')
@@ -1509,6 +1534,70 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                      matrix_element.get('diagrams'):
                 matrix_elements.append(matrix_element)
         
+
+    @staticmethod
+    def check_decay_processes_equal(decay1, decay2):
+        """Check if two single-sided decay processes
+        (HelasMatrixElements) are equal.
+
+        Note that this has to be called before any combination of
+        processes has occured.
+        
+        Since a decay processes for a decay chain is always generated
+        such that all final state legs are completely contracted
+        before the initial state leg is included, all the diagrams
+        will have identical wave function, independently of the order
+        of final state particles.
+        
+        Note that we assume that the process definitions have all
+        external particles, corresponding to the external
+        wavefunctions.
+        """
+
+        if len(decay1.get('processes')) != 1 or \
+           len(decay2.get('processes')) != 1:
+            raise HelasMultiProcess.PhysicsObjectError, \
+                  "Can compare only single process HelasMatrixElements"
+
+        if len(filter(lambda leg: leg.get('state') == 'initial',\
+                      decay1.get('processes')[0].get('legs'))) != 1 or \
+           len(filter(lambda leg: leg.get('state') == 'initial',\
+                      decay2.get('processes')[0].get('legs'))) != 1:
+            raise HelasMultiProcess.PhysicsObjectError, \
+                  "Call to check_decay_processes_equal requires " + \
+                  "both processes to be unique"
+
+        # Compare bulk process properties (number of external legs,
+        # identity factors, number of diagrams, number of wavefunctions
+        # initial leg, final state legs
+        if len(decay1.get('processes')[0].get("legs")) != \
+           len(decay1.get('processes')[0].get("legs")) or \
+           len(decay1.get('diagrams')) != len(decay2.get('diagrams')) or \
+           decay1.get('identical_particle_factor') != \
+           decay2.get('identical_particle_factor') or \
+           sum(len(d.get('wavefunctions')) for diagram in \
+               decay1.get('diagrams')) != \
+           sum(len(d.get('wavefunctions')) for diagram in \
+               decay2.get('diagrams')) or \
+           decay1.get('processes')[0].get('legs')[0].get('id') != \
+           decay2.get('processes')[0].get('legs')[0].get('id') or \
+           sorted([leg.get('id') for leg in \
+                   decay1.get('processes')[0].get('legs')[1:]]) != \
+           sorted([leg.get('id') for leg in \
+                   decay2.get('processes')[0].get('legs')[1:]]):                   
+            return False
+
+        # Run a quick check to see if the processes are already
+        # identical (i.e., the wavefunctions are in the same order)
+        if decay1 == decay2:
+            return True
+
+        # Now check if the wavefunctions are identical after
+        # reordering final state particles. Note that we'll need to
+        # check all reorderings of identical particles, since there
+        # might be different decay chains downstream
+        
+        return True
 
 #===============================================================================
 # HelasModel

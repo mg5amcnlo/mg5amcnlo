@@ -1431,6 +1431,52 @@ class DiagramGenerationTest(unittest.TestCase):
 
             self.assertEqual(len(self.myamplitude.get('diagrams')), 0)
 
+    def test_decay_chain_generation(self):
+        """Test the number of diagram generated for uu~>gg (s, t and u channels)
+        """
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+
+        myproc1 = base_objects.Process({'legs':myleglist,
+                                        'model':self.mymodel,
+                                        'is_decay_chain': True})
+
+        myamplitude1 = diagram_generation.Amplitude()
+        myamplitude1.set('process', myproc1)
+        myamplitude1.generate_diagrams()
+
+        self.assertEqual(len(myamplitude1.get('diagrams')), 3)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':'final'}))
+
+        myproc2 = base_objects.Process({'legs':myleglist,
+                                        'model':self.mymodel,
+                                        'is_decay_chain': True})
+
+        myamplitude2 = diagram_generation.Amplitude()
+        myamplitude2.set('process', myproc2)
+        myamplitude2.generate_diagrams()
+
+        self.assertEqual(len(myamplitude2.get('diagrams')), 3)
+
 
 #===============================================================================
 # Muliparticle test

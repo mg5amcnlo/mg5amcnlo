@@ -526,7 +526,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         
         self.mydiagrams = helas_objects.HelasDiagramList([helas_objects.HelasDiagram(mydict)] * 4)
         self.mydict = {'processes': base_objects.ProcessList(),
-                       'diagrams': self.mydiagrams}
+                       'diagrams': self.mydiagrams,
+                       'identical_particle_factor': 0}
         self.mymatrixelement = helas_objects.HelasMatrixElement(self.mydict)
 
         # Set up model
@@ -938,6 +939,7 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         matrix_element = helas_objects.HelasMatrixElement()
         matrix_element.set('processes', base_objects.ProcessList([ myproc ]))
+        matrix_element.calculate_identical_particle_factors()
 
         self.assertEqual(matrix_element.get_denominator_factor(), 9 * 4 * 6)
 
@@ -959,6 +961,7 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         matrix_element = helas_objects.HelasMatrixElement()
         matrix_element.set('processes', base_objects.ProcessList([ myproc ]))
+        matrix_element.calculate_identical_particle_factors()
 
         self.assertEqual(matrix_element.get_denominator_factor(), 1 * 6 * 6)
 

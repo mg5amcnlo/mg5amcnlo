@@ -849,10 +849,15 @@ class LegList(PhysicsObjectList):
         else:
             return False
 
-    def can_combine_to_0(self, ref_dict_to0, is_decay_chain):
+    def can_combine_to_0(self, ref_dict_to0, is_decay_chain = False):
         """If has at least two 'from_group' True and in ref_dict_to0,
-           return the vertex (with id from ref_dict_to0), otherwise return None
-           """
+        
+        return the vertex (with id from ref_dict_to0), otherwise return None
+
+        If is_decay_chain = True, we only allow clustering of the
+        initial leg, since we want this to be the last wavefunction to
+        be evaluated.
+        """
         if is_decay_chain:
             # Special treatment - here we only allow combination to 0
             # if the initial leg (marked by from_group = None) is
@@ -1113,7 +1118,7 @@ class Process(PhysicsObject):
                 model
                 process id
     """
-
+    
     def default_setup(self):
         """Default values for all properties"""
 
@@ -1125,6 +1130,7 @@ class Process(PhysicsObject):
         self['required_s_channels'] = []
         self['forbidden_s_channels'] = []
         self['forbidden_particles'] = []
+        self['is_decay_chain'] = False
 
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -1170,6 +1176,11 @@ class Process(PhysicsObject):
                     raise self.PhysicsObjectError, \
                       "Forbidden particles should have a positive PDG code" % str(value)
 
+        if name == 'is_decay_chain':
+            if not isinstance(value, bool):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid bool" % str(value)
+
         return True
 
     def get_sorted_keys(self):
@@ -1177,7 +1188,7 @@ class Process(PhysicsObject):
 
         return ['legs', 'orders', 'model', 'id',
                 'required_s_channels', 'forbidden_s_channels',
-                'forbidden_particles']
+                'forbidden_particles', 'is_decay_chain']
 
     def nice_string(self):
         """Returns a nicely formated string about current process

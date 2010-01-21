@@ -1130,7 +1130,8 @@ class ProcessTest(unittest.TestCase):
                        'id': 1,
                        'required_s_channels':[],
                        'forbidden_s_channels':[],
-                       'forbidden_particles':[]}
+                       'forbidden_particles':[],
+                       'is_decay_chain': False}
 
         self.myprocess = base_objects.Process(self.mydict)
 
@@ -1205,7 +1206,8 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'id\': 1,\n"
         goal = goal + "    \'required_s_channels\': [],\n"
         goal = goal + "    \'forbidden_s_channels\': [],\n"
-        goal = goal + "    \'forbidden_particles\': []\n}"
+        goal = goal + "    \'forbidden_particles\': [],\n"
+        goal = goal + "    \'is_decay_chain\': False\n}"
 
         self.assertEqual(goal, str(self.myprocess))
 

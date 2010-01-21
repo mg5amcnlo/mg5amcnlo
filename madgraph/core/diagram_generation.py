@@ -114,6 +114,11 @@ class Amplitude(base_objects.PhysicsObject):
 
         Be aware that the resulting vertices have all particles outgoing,
         so need to flip for incoming particles when used.
+
+        SPECIAL CASE: For A>BC... processes which are legs in decay
+        chains, we need to ensure that BC... combine first, giving A=A
+        as a final vertex. This case is defined by the Process
+        property is_decay_chain = True.
         """
 
         model = self['process'].get('model')
@@ -177,7 +182,7 @@ class Amplitude(base_objects.PhysicsObject):
 
         # Set is_decay_chain to True if this is a 1->N decay process
         # as part of a decay chain.
-        is_decay_chain = True
+        is_decay_chain = self['process'].get('is_decay_chain')
         if is_decay_chain:
             part = model.get('particle_dict')[leglist[0].get('id')]
             # For decay chain legs, we want everything to combine to
