@@ -51,7 +51,7 @@ _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 #===============================================================================
 # DrawDiagramEps
 #===============================================================================
-class DrawDiagramEps(draw.DrawDiagram):
+class EpsDiagramDrawer(draw.DiagramDrawer):
     """Class to write a EPS file containing the asked diagram 
     This class follows the DrawDiagram Frameworks.
     
@@ -80,7 +80,7 @@ class DrawDiagramEps(draw.DrawDiagram):
         library of particle type."""
 
         # Open file 
-        super(DrawDiagramEps, self).initialize()
+        super(EpsDiagramDrawer, self).initialize()
 
         # File Header
         text = "%!PS-Adobe-2.0\n"
@@ -105,7 +105,7 @@ class DrawDiagramEps(draw.DrawDiagram):
         self.text += '%%trailer\n'
 
         #write the diagram file
-        super(DrawDiagramEps, self).conclude()
+        super(EpsDiagramDrawer, self).conclude()
 
 
     def rescale(self, x, y):
@@ -261,7 +261,7 @@ class DrawDiagramEps(draw.DrawDiagram):
 #===============================================================================
 # DrawDiagramsEps
 #===============================================================================
-class DrawDiagramsEps(DrawDiagramEps):
+class MultiEpsDiagramDrawer(EpsDiagramDrawer):
     """Class to write a EPS file containing the asked set of diagram
     This class follows the DrawDiagram Frameworks.
     
@@ -301,7 +301,7 @@ class DrawDiagramsEps(DrawDiagramEps):
             order to adjust fermion flow in case of Majorana fermion."""
 
         #use standard initialization but without any diagram
-        super(DrawDiagramsEps, self).__init__('', file , model, amplitude)
+        super(MultiEpsDiagramDrawer, self).__init__('', file , model, amplitude)
 
         #additional information
         self.block_nb = 0  # keep track of the number of diagram already written
@@ -338,7 +338,7 @@ class DrawDiagramsEps(DrawDiagramEps):
         diagram."""
 
         # Standard method
-        super(DrawDiagramsEps, self).draw_diagram(diagram, self.block_nb)
+        super(MultiEpsDiagramDrawer, self).draw_diagram(diagram, self.block_nb)
         # But keep track how many diagrams are already drawn
         self.block_nb += 1
 

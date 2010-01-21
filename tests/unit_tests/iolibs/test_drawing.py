@@ -1338,7 +1338,7 @@ class TestDrawingEPS(unittest.TestCase):
 
         self.diagram = self.store_diagram['t h > t g W+ W-'][0]
 
-        self.plot = draw_eps.DrawDiagramEps(self.diagram, '__testdiag__.eps', \
+        self.plot = draw_eps.EpsDiagramDrawer(self.diagram, '__testdiag__.eps', \
                                           model=_model, amplitude='')
 
     def output_is_valid(self, position, pdf_check=True):
@@ -1481,7 +1481,7 @@ class TestDrawingS_EPS(unittest.TestCase):
         for i in range(7):
             self.diagram.append(self.store_diagram['t h > t g W+ W-'][i])
 
-        self.plot = draw_eps.DrawDiagramsEps(self.diagram, '__testdiag__.eps', \
+        self.plot = draw_eps.MultiEpsDiagramDrawer(self.diagram, '__testdiag__.eps', \
                                           model=_model, amplitude='')
 
 

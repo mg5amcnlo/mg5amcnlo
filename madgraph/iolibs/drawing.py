@@ -1400,9 +1400,9 @@ class FeynmanDiagramHorizontal(FeynmanDiagram):
             self.find_vertex_position_at_level(vertex_at_level2, level + 1)
 
 #===============================================================================
-# DrawDiagram
+# DiagramDrawer
 #===============================================================================
-class DrawDiagram(object):
+class DiagramDrawer(object):
     """In principle ALL routines representing diagram in ANY format SHOULD 
     derive from this class.
      
