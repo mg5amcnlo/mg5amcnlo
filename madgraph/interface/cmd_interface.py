@@ -31,7 +31,7 @@ import madgraph.iolibs.misc as misc
 import madgraph.iolibs.files as files
 
 import madgraph.iolibs.import_model_v4 as import_v4
-import madgraph.iolibs.save_model as save_model
+#import madgraph.iolibs.save_model as save_model
 import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.iolibs.export_v4 as export_v4
 
@@ -249,18 +249,26 @@ class MadGraphCmd(cmd.Cmd):
             self.help_load()
             return False
 
+        cpu_time1 = time.time()
         if args[0] == 'model':
             self.__curr_model = save_load_object.load_from_file(args[1])
             #save_model.save_model(args[1], self.__curr_model)
             if isinstance(self.__curr_model, base_objects.Model):
-                print 'Loaded model from file'
+                cpu_time2 = time.time()
+                print "Loaded model from file in %0.3f s" % \
+                      (cpu_time2 - cpu_time1)
             else:
                 print 'Error: Could not load model from file ',args[1]
         elif args[0] == 'processes':
             self.__curr_amps = save_load_object.load_from_file(args[1])
-            #save_model.save_model(args[1], self.__curr_model)
             if isinstance(self.__curr_amps, diagram_generation.AmplitudeList):
-                print 'Loaded processes from file'
+                cpu_time2 = time.time()
+                print "Loaded processes from file in %0.3f s" % \
+                      (cpu_time2 - cpu_time1)
+                if self.__curr_amps and not self.__curr_model.get('name'):
+                    self.__curr_model = self.__curr_amps[0].\
+                                        get('process').get('model')
+                    print "Model set from process."
             else:
                 print 'Error: Could not load processes from file ',args[1]
         else:
@@ -657,6 +665,20 @@ class MadGraphCmd(cmd.Cmd):
             print "%s is not a valid directory for export file" % args[1]
 
         start = time.time()
+        opt = {"external": 0, "horizontal": 0}
+        if len(args) > 1:
+            for data in args[1:]:
+                try:
+                    key, value = data.split('=')
+                except:
+                    print 'invalid option %s. Please try again' % data
+                    self.help_draw()
+                    return False
+                if value in ['False', '0', 0, False]:
+                    opt[key] = False
+                else:
+                    opt[key] = True
+
         for amp in self.__curr_amps:
             filename = os.path.join(args[0], 'diagrams_' + \
                                     amp.get('process').shell_string() + ".eps")
@@ -664,20 +686,6 @@ class MadGraphCmd(cmd.Cmd):
                                               filename,
                                               model=self.__curr_model,
                                               amplitude='')
-
-            if len(args) == 1:
-                opt = {"external": 0, "horizontal": 0}
-            else:
-                opt = {}
-                for data in args[1:]:
-                    try:
-                        key, value = data.split('=')
-                    except:
-                        print 'invalid option %s. Please try again'
-                        self.help_draw()
-                        return False
-                    if value in ['False', '0', 0, False]:
-                        opt[key] = False
 
             logging.info("Drawing " + \
                          amp.get('process').nice_string())
@@ -728,16 +736,16 @@ class MadGraphCmd(cmd.Cmd):
         file will be FILEPATH/matrix_\"process_string\".f"""
 
     def help_draw(self):
-        print "syntax: draw FILEPATH [option=0]"
+        print "syntax: draw FILEPATH [option=0|1]"
         print "-- draw the diagrams in eps format"
         print "   Files will be FILEPATH/diagrams_\"process_string\".eps"
         print "   Example: draw plot_dir "
         print "   Possible option: "
-        print "        horizontal [1]: force S-channel to be horizontal"
-        print "        external [1]: authorizes external particles to end"
+        print "        horizontal [0]: force S-channel to be horizontal"
+        print "        external [0]: authorizes external particles to end"
         print "             at top or bottom of diagram"
         print "        non_propagating [1]:contracts non propagating lines"
-        print "   Example: draw plot_dir external=0 horizontal=0"
+        print "   Example: draw plot_dir external=1 horizontal=1"
 
     def help_shell(self):
         print "syntax: shell CMD (or ! CMD)"
