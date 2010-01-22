@@ -291,8 +291,8 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
                   model='', amplitude=''):
         """Define basic variable and store some global information
         all argument are optional
-        diagram : is the object to draw. 'diagram' should inherit from either 
-                base_objects.Diagram  or drawing_lib.FeynmanDiagram
+        diagramlist : are the list of object to draw. item should inherit 
+                from either  base_objects.Diagram  or drawing_lib.FeynmanDiagram
         file: filename of the file to write
         model: model associate to the diagram. In principle use only if diagram
             inherit from base_objects.Diagram

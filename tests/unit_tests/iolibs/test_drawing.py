@@ -1165,7 +1165,7 @@ class TestFeynmanDiagram(unittest.TestCase):
             if line.is_fermion():
                 self.assertTrue(line.start.pos_y > line.end.pos_y)
 
-        #One fermion flow but in opposite direction
+        # One fermion flow but in opposite direction
         diagram = self.store_diagram['g g > g g u u~'][100]
         diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
         diagram.main()
@@ -1175,6 +1175,29 @@ class TestFeynmanDiagram(unittest.TestCase):
         for line in t_lines:
             if line.is_fermion():
                 self.assertTrue(line.start.pos_y > line.end.pos_y)
+                
+        # Two fermion in opposite direction
+        diagram = self.store_diagram['u u > Z u u g'][26]
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
+        diagram.main()
+        t_lines = [line for line in diagram.lineList if line.start.level == 1
+                                                and line.end.level == 1]
+        
+        for line in t_lines:
+            if line.is_fermion():
+                self.assertTrue(line.start.pos_y > line.end.pos_y)
+                
+        
+        # Two fermion in opposite direction
+        diagram = self.store_diagram['u~ u~ > Z u~ u~ g'][26]
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
+        diagram.main()
+        t_lines = [line for line in diagram.lineList if line.start.level == 1
+                                                and line.end.level == 1]
+        
+        for line in t_lines:
+            if line.is_fermion():
+                self.assertTrue(line.start.pos_y < line.end.pos_y)           
 
 
     def test_no_cutting_line(self):
@@ -1500,7 +1523,8 @@ if __name__ == '__main__':
     process_diag['g g > g g g g g g'] = [73, 2556]
     process_diag['mu+ mu- > w+ w- a'] = [6, 7]
     process_diag['t h > t g W+ W-'] = [0, 1, 2, 3, 4, 5, 6, 7]
-
+    process_diag['u u > Z u u g'] = [26]
+    process_diag['u~ u~ > Z u~ u~ g'] = [26]
 
     from madgraph.interface.cmd_interface import MadGraphCmd
     cmd = MadGraphCmd()
@@ -1516,7 +1540,7 @@ if __name__ == '__main__':
         cmd.do_generate(gen_line)
         diag_content[gen_line] = {}
         for pos in pos_list:
-            diag_content[gen_line][pos] = cmd.curr_amp['diagrams'][pos]
+            diag_content[gen_line][pos] =cmd._MadGraphCmd__curr_amps[0]['diagrams'][pos]
 
     # Store the diagrams  
     file_test_diagram = open(os.path.join(_file_path , \

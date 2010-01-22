@@ -559,8 +559,8 @@ class VertexPoint(base_objects.Vertex):
 
         tag = 0
         for i, line in enumerate(self.line):
-            tag += line.get('number') / 10 ^ (-i)
-        tag = tag * 10 ^ (i + 1)
+            tag += line.get('number') / 10 ** (-i)
+        tag = tag * 10 ** (i + 1)
         return tag
 
     def __eq__(self, other):
@@ -1161,17 +1161,21 @@ class FeynmanDiagram:
 
         t_vertex = self.find_next_t_channel_vertex(t_vertex)
         self.initial_vertex[0].line[0].define_line_orientation()
-
-
+        
+        t_old = self.initial_vertex[0].line[0]
         while 1:
             # Look the total flow of the vertex the other
             ver_flow = 0 # Current flow status for the vertex 
-            t_next = ''  # Next T-channel line. the line with unfix fermion flow
+            t_next = None  # Next T-channel line. the line with unfix fermion flow
             for line in t_vertex.line:
 
                 # Identify the next T-channel particles
-                if line.get('state') == 'initial' and line.start is t_vertex:
+                if line.get('state') == 'initial' and t_old is not line and \
+                    line.start is t_vertex:
                     t_next = line
+                    
+                    #import sys
+                    #sys.exit()
 
                 # If not fermion, no update of the fermion flow
                 if not line.is_fermion():
@@ -1185,6 +1189,7 @@ class FeynmanDiagram:
 
             # End of the loop on the line of the vertex. 
             if t_next:
+                t_old = t_next
                 t_vertex = t_next.end
                 # Check the vertex_flow=0, we were lucky, else correct the flow.
                 if ver_flow:
