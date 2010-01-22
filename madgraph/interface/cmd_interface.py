@@ -25,6 +25,7 @@ import time
 import readline
 import atexit
 import re
+import logging
 
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.files as files
@@ -600,36 +601,36 @@ class MadGraphCmd(cmd.Cmd):
         if not os.path.isdir(args[0]):
             print "%s is not a valid directory for export file" % args[1]
 
-        plots = []
+        start = time.time()
         for amp in self.__curr_amps:
             filename = os.path.join(args[0], 'diagrams_' + \
                                     amp.get('process').shell_string() + ".eps")
-            plots.append(draw.MultiEpsDiagramDrawer(amp['diagrams'],
+            plot = draw.MultiEpsDiagramDrawer(amp['diagrams'],
                                               filename,
                                               model=self.__curr_model,
-                                              amplitude=''))
+                                              amplitude='')
 
-        if len(args) == 1:
-            start = time.time()
-            for plot in plots:
+            if len(args) == 1:
                 opt = {"external": 0, "horizontal": 0}
-                plot.draw(**opt)
-            stop = time.time()
-            print 'time to draw', stop - start
-        else:
-            opt = {}
-            for data in args[1:]:
-                try:
-                    key, value = data.split('=')
-                except:
-                    print 'invalid option %s. Please try again'
-                    self.help_draw()
-                    return False
-                if value in ['False', '0', 0, False]:
-                    opt[key] = False
+            else:
+                opt = {}
+                for data in args[1:]:
+                    try:
+                        key, value = data.split('=')
+                    except:
+                        print 'invalid option %s. Please try again'
+                        self.help_draw()
+                        return False
+                    if value in ['False', '0', 0, False]:
+                        opt[key] = False
 
-            for plot in plots:
-                plot.draw(**opt)
+            logging.info("Drawing " + \
+                         amp.get('process').nice_string())
+            plot.draw(**opt)
+            print "Wrote file " + filename
+
+        stop = time.time()
+        print 'time to draw', stop - start
 
 
     # Quit
