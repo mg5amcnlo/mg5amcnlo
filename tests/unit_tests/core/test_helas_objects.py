@@ -1900,6 +1900,61 @@ class HelasMultiProcessTest(unittest.TestCase):
                 self.assertEqual(len(helas_multi_proc.get('matrix_elements')),
                                      goal_number_matrix_elements[nfs - 2])
 
+    def test_equal_decay_chains(self):
+        """Test the functions for checking equal decay chains
+        """
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':'final'}))
+
+        myproc1 = base_objects.Process({'legs':myleglist,
+                                        'model':self.mymodel,
+                                        'is_decay_chain': True})
+
+        myamplitude1 = diagram_generation.Amplitude()
+        myamplitude1.set('process', myproc1)
+        myamplitude1.generate_diagrams()
+        mymatrixelement1 = helas_objects.HelasMatrixElement(\
+            myamplitude1)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':'final'}))
+
+        myproc2 = base_objects.Process({'legs':myleglist,
+                                        'model':self.mymodel,
+                                        'is_decay_chain': True})
+
+        myamplitude2 = diagram_generation.Amplitude()
+        myamplitude2.set('process', myproc2)
+        myamplitude2.generate_diagrams()
+
+        mymatrixelement2 = helas_objects.HelasMatrixElement(\
+            myamplitude2)
+
+        self.assert_(helas_objects.HelasMultiProcess.\
+                     check_equal_decay_processes(\
+                       mymatrixelement1, mymatrixelement2))
+
 #===============================================================================
 # HelasModelTest
 #===============================================================================

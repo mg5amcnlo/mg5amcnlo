@@ -1191,6 +1191,15 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         the wave functions and amplitudes. Choose
         between default optimization (= 1) or no optimization (= 0,
         for GPU).
+
+        Note that we need special treatment for decay chains, since
+        the end product then is a wavefunction, not an amplitude.
+
+        WARNING! For decay chains, we will need extra check for
+        fermion flow clashes when the chains are sewn together! This
+        can be done by making sure that the incoming/outgoing state
+        corresponds between the wf in the core diagram and the wf in
+        the decay chain.
         """
 
         if not isinstance(amplitude, diagram_generation.Amplitude) or \
@@ -1240,7 +1249,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             lastvx = vertices.pop()
 
             # Check if last vertex is identity vertex
-            if lastvx.get('id') == 0:
+            if not process.get('is_decay_chain') and lastvx.get('id') == 0:
                 # Need to "glue together" last and next-to-last
                 # vertext, by replacing the (incoming) last leg of the
                 # next-to-last vertex with the (outgoing) leg in the
@@ -1298,23 +1307,25 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         diagram_wavefunctions.append(wf)
                     number_to_wavefunctions[last_leg.get('number')] = wf
 
-            # Find mothers for the amplitude
-            legs = lastvx.get('legs')
-            mothers = self.getmothers(legs, number_to_wavefunctions,
-                                      external_wavefunctions,
-                                      wavefunctions,
-                                      diagram_wavefunctions)
+            amp = HelasAmplitude()
+            if not process.get('is_decay_chain'):
+                # Find mothers for the amplitude
+                legs = lastvx.get('legs')
+                mothers = self.getmothers(legs, number_to_wavefunctions,
+                                          external_wavefunctions,
+                                          wavefunctions,
+                                          diagram_wavefunctions)
                 
-            # Now generate a HelasAmplitude from the last vertex.
-            amp = HelasAmplitude(lastvx, model)
-            amp.set('mothers', mothers)
-            amp.set('number', diagram_list.index(diagram) + 1)
+                # Now generate a HelasAmplitude from the last vertex.
+                amp = HelasAmplitude(lastvx, model)
+                amp.set('mothers', mothers)
+                amp.set('number', diagram_list.index(diagram) + 1)
 
-            # Need to check for clashing fermion flow due to
-            # Majorana fermions, and modify if necessary
-            amp.check_and_fix_fermion_flow(wavefunctions,
-                                           diagram_wavefunctions,
-                                           external_wavefunctions)
+                # Need to check for clashing fermion flow due to
+                # Majorana fermions, and modify if necessary
+                amp.check_and_fix_fermion_flow(wavefunctions,
+                                               diagram_wavefunctions,
+                                               external_wavefunctions)
 
             # Sort the wavefunctions according to number
             diagram_wavefunctions.sort(lambda wf1, wf2: \
@@ -1322,9 +1333,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
             # Generate HelasDiagram
             helas_diagrams.append(HelasDiagram({ \
-                'wavefunctions': diagram_wavefunctions,
-                'amplitude': amp
-                }))
+                   'wavefunctions': diagram_wavefunctions,
+                   'amplitude': amp
+                   }))
 
             if optimization:
                 wavefunctions.extend(diagram_wavefunctions)
@@ -1536,7 +1547,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         
 
     @staticmethod
-    def check_decay_processes_equal(decay1, decay2):
+    def check_equal_decay_processes(decay1, decay2):
         """Check if two single-sided decay processes
         (HelasMatrixElements) are equal.
 
@@ -1575,9 +1586,9 @@ class HelasMultiProcess(base_objects.PhysicsObject):
            len(decay1.get('diagrams')) != len(decay2.get('diagrams')) or \
            decay1.get('identical_particle_factor') != \
            decay2.get('identical_particle_factor') or \
-           sum(len(d.get('wavefunctions')) for diagram in \
+           sum(len(d.get('wavefunctions')) for d in \
                decay1.get('diagrams')) != \
-           sum(len(d.get('wavefunctions')) for diagram in \
+           sum(len(d.get('wavefunctions')) for d in \
                decay2.get('diagrams')) or \
            decay1.get('processes')[0].get('legs')[0].get('id') != \
            decay2.get('processes')[0].get('legs')[0].get('id') or \
@@ -1589,16 +1600,82 @@ class HelasMultiProcess(base_objects.PhysicsObject):
 
         # Run a quick check to see if the processes are already
         # identical (i.e., the wavefunctions are in the same order)
-        if decay1 == decay2:
+        if [leg.get('id') for leg in \
+            decay1.get('processes')[0].get('legs')] == \
+           [leg.get('id') for leg in \
+            decay2.get('processes')[0].get('legs')] and \
+            decay1 == decay2:
             return True
 
-        # Now check if the wavefunctions are identical after
-        # reordering final state particles. Note that we'll need to
-        # check all reorderings of identical particles, since there
-        # might be different decay chains downstream
+        # Now check if all diagrams are identical. This is done by a
+        # recursive function starting from the last wavefunction
+        # (corresponding to the initial state), since it's the
+        # same steps for each level in mother wavefunctions
+        
+        diagrams2 = copy.copy(decay2.get('diagrams'))
+
+        for diagram1 in decay1.get('diagrams'):
+            founddiagram = False
+            for diagram2 in diagrams2:
+                if HelasMultiProcess.check_equal_wavefunctions(\
+                   diagram1.get('wavefunctions')[-1],
+                   diagram2.get('wavefunctions')[-1]):
+                    founddiagram = True
+                    # Remove diagram2, since it has already been matched
+                    diagrams2.remove(diagram2)
+                    break
+            if not founddiagram:
+                return False
         
         return True
 
+    @staticmethod
+    def check_equal_wavefunctions(wf1, wf2):
+        """Recursive function to check if two wavefunctions are equal.
+        First check that mothers have identical pdg codes, then repeat for
+        all mothers with identical pdg codes."""
+
+        print "Checking equality of (%d, %d) and (%d, %d)" % \
+              (wf1.get('pdg_code'),wf1.get('number'),
+               wf2.get('pdg_code'),wf2.get('number'))
+
+        # End recursion with False if the wavefunctions don't have
+        # identical mother pdgs
+        if sorted([wf.get('pdg_code') for wf in wf1.get('mothers')]) != \
+           sorted([wf.get('pdg_code') for wf in wf1.get('mothers')]):
+            print False
+            return False
+
+        # End recursion with True if these are external wavefunctions
+        # (note that we have already checked that the pdgs are
+        # identical)
+        if not wf1.get('mothers') and not wf2.get('mothers'):
+            print True
+            return True
+
+        mothers2 = copy.copy(wf2.get('mothers'))
+
+        for mother1 in wf1.get('mothers'):
+            # Compare mother1 with all mothers in wf2 that have not
+            # yet been used and have identical pdg codes
+            equalmothers = filter(lambda wf: wf.get('pdg_code') == \
+                                  mother1.get('pdg_code'),
+                                  mothers2)
+            foundmother = False
+            for mother2 in equalmothers:
+                if HelasMultiProcess.check_equal_wavefunctions(\
+                    mother1, mother2):
+                    foundmother = True
+                    # Remove mother2, since it has already been matched
+                    mothers2.remove(mother2)
+                    break
+            if not foundmother:
+                print False
+                return False
+
+        print True
+        return True
+    
 #===============================================================================
 # HelasModel
 #===============================================================================
