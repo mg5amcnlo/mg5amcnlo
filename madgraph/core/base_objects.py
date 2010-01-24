@@ -21,6 +21,8 @@ import itertools
 import logging
 import re
 
+import madgraph.core.color_algebra as color
+
 #===============================================================================
 # PhysicsObject
 #===============================================================================
@@ -53,8 +55,11 @@ class PhysicsObject(dict):
             is always raise
         """
 
-        if self.is_valid_prop(name):
+        try:
             return dict.__getitem__(self, name)
+        except:
+            self.is_valid_prop(name) #raise the correct error
+
 
     def default_setup(self):
         """Function called to create and setup default values for all object
@@ -73,6 +78,12 @@ class PhysicsObject(dict):
                         "%s is not a valid property for this object" % name
 
         return True
+
+    def __getitem__(self, name):
+        """ Get the value of the property name."""
+
+        if self.is_valid_prop(name):
+            return dict.__getitem__(self, name)
 
     def get(self, name):
         """Get the value of the property name."""
@@ -106,6 +117,23 @@ class PhysicsObject(dict):
         alphabetical."""
 
         return self.keys().sort()
+
+    def def_model(self, model):
+        """ 
+        make a link between the  present object and the associate model 
+        """
+
+        if isinstance(model, Model):
+            self._def_model(model)
+        else:
+            raise self.PhysicsObjectError(' try to assign a non model obect')
+
+    def _def_model(self, model):
+        """
+        make a link between the  present object and the associate model 
+        no class verification
+        """
+        self.model = model
 
     def __str__(self):
         """String representation of the object. Outputs valid Python 
@@ -249,7 +277,7 @@ class Particle(PhysicsObject):
             if not isinstance(value, str):
                 raise self.PhysicsObjectError, \
                     "Line type %s is not a string" % repr(value)
-            if value not in ['dashed', 'straight', 'wavy', 'curly']:
+            if value not in ['dashed', 'straight', 'wavy', 'curly', 'double']:
                 raise self.PhysicsObjectError, \
                    "Line type %s is unknown" % value
 
@@ -424,11 +452,6 @@ class Interaction(PhysicsObject):
 
         super(Interaction, self).__init__(init_dict)
 
-        # Set couplings separately, since it needs to be set after
-        # color and lorentz
-        if 'couplings' in init_dict.keys():
-            self.set('couplings', init_dict['couplings'])
-
     def filter(self, name, value):
         """Filter for valid interaction property values."""
 
@@ -458,8 +481,18 @@ class Interaction(PhysicsObject):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid integer" % str(value[order])
 
-        if name in ['color', 'lorentz']:
-            #Should be a list of strings
+        if name in ['color']:
+            #Should be a list of list strings
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list of Color Strings" % str(value)
+            for mycolstring in value:
+                if not isinstance(mycolstring, color.ColorString):
+                    raise self.PhysicsObjectError, \
+                            "%s is not a valid list of Color Strings" % str(value)
+
+        if name in ['lorentz']:
+            #Should be a list of list strings
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list of strings" % str(value)
@@ -475,11 +508,6 @@ class Interaction(PhysicsObject):
                         "%s is not a valid dictionary for couplings" % \
                                                                 str(value)
 
-            if len(value) != len(self['color']) * len(self['lorentz']):
-                raise self.PhysicsObjectError, \
-                        "Dictionary " + str(value) + \
-                        " for couplings has not the right number of entry"
-
             for key in value.keys():
                 if not isinstance(key, tuple):
                     raise self.PhysicsObjectError, \
@@ -490,11 +518,6 @@ class Interaction(PhysicsObject):
                 if not isinstance(key[0], int) or not isinstance(key[1], int):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid tuple of integer" % str(key)
-                if key[0] < 0 or key[1] < 0 or \
-                   key[0] >= len(self['color']) or key[1] >= \
-                                                    len(self['lorentz']):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a tuple with valid range" % str(key)
                 if not isinstance(value[key], str):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid string" % str(mystr)
@@ -539,6 +562,29 @@ class Interaction(PhysicsObject):
             else:
                 ref_dict_to1[pdg_tuple] = [(pdg_part, self['id'])]
 
+    def __str__(self):
+        """String representation of an interaction. Outputs valid Python 
+        with improved format. Overrides the PhysicsObject __str__ to only
+        display PDG code of involved particles."""
+
+        mystr = '{\n'
+
+        for prop in self.get_sorted_keys():
+            if isinstance(self[prop], str):
+                mystr = mystr + '    \'' + prop + '\': \'' + \
+                        self[prop] + '\',\n'
+            elif isinstance(self[prop], float):
+                mystr = mystr + '    \'' + prop + '\': %.2f,\n' % self[prop]
+            elif isinstance(self[prop], ParticleList):
+                mystr = mystr + '    \'' + prop + '\': [%s],\n' % \
+                   ','.join([str(part.get_pdg_code()) for part in self[prop]])
+            else:
+                mystr = mystr + '    \'' + prop + '\': ' + \
+                        repr(self[prop]) + ',\n'
+        mystr = mystr.rstrip(',\n')
+        mystr = mystr + '\n}'
+
+        return mystr
 
 #===============================================================================
 # InteractionList
@@ -701,6 +747,7 @@ class Model(PhysicsObject):
     def get_interaction(self, id):
         """Return the interaction corresponding to the id"""
 
+
         if id in self.get("interaction_dict").keys():
             return self["interaction_dict"][id]
         else:
@@ -786,7 +833,7 @@ class Leg(PhysicsObject):
 
         return model.get('particle_dict')[self['id']].is_fermion()
 
-    def is_incoming(self, model):
+    def is_incoming_fermion(self, model):
         """Returns True if leg is an incoming fermion, i.e., initial
         particle or final antiparticle"""
 
@@ -799,7 +846,7 @@ class Leg(PhysicsObject):
                (self.get('state') == 'initial' and part.get('is_part') or \
                 self.get('state') == 'final' and not part.get('is_part'))
 
-    def is_outgoing(self, model):
+    def is_outgoing_fermion(self, model):
         """Returns True if leg is an outgoing fermion, i.e., initial
         antiparticle or final particle"""
 
@@ -984,7 +1031,7 @@ class Vertex(PhysicsObject):
         particles."""
 
         leg = self.get('legs')[-1]
-        
+
         if ninitial == 1:
             # For one initial particle, all legs are s-channel
             # Only need to flip particle id if state is 'initial'
@@ -1007,7 +1054,7 @@ class Vertex(PhysicsObject):
         else:
             return model.get('particle_dict')[leg.get('id')].\
                        get_anti_pdg_code()
-        
+
         ## Check if the other legs are initial or final.
         ## If the latter, return leg id, if the former, return -leg id
         #if self.get('legs')[0].get('state') == 'final':
@@ -1042,6 +1089,7 @@ class VertexList(PhysicsObjectList):
 
         if isinstance(orders, dict):
             self.orders = orders
+
 
 #===============================================================================
 # Diagram
@@ -1079,6 +1127,7 @@ class Diagram(PhysicsObject):
                 mystr = mystr + '('
                 for leg in vert['legs'][:-1]:
                     mystr = mystr + str(leg['number']) + '(%s)' % str(leg['id']) + ','
+
                 if self['vertices'].index(vert) < len(self['vertices']) - 1:
                     # Do not want ">" in the last vertex
                     mystr = mystr[:-1] + '>'
@@ -1230,7 +1279,7 @@ class Process(PhysicsObject):
         if self['orders']:
             mystr = mystr[:-1] + "\n"
             mystr = mystr + 'Orders: '
-            mystr = mystr + ", ".join([key+'='+repr(self['orders'][key]) \
+            mystr = mystr + ", ".join([key + '=' + repr(self['orders'][key]) \
                        for key in self['orders']]) + ' '
         # Remove last space
         return mystr[:-1]
@@ -1291,6 +1340,7 @@ class ProcessDefinition(PhysicsObject):
         self['required_s_channels'] = []
         self['forbidden_s_channels'] = []
         self['forbidden_particles'] = []
+        self['is_decay_chain'] = False
 
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -1336,6 +1386,10 @@ class ProcessDefinition(PhysicsObject):
                     raise self.PhysicsObjectError, \
                       "Forbidden particles should have a positive PDG code" % str(value)
 
+        if name == 'is_decay_chain':
+            if not isinstance(value, bool):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid bool" % str(value)
         return True
 
     def get_sorted_keys(self):

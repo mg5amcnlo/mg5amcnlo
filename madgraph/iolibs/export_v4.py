@@ -222,7 +222,9 @@ C      CALL GAUGECHECK(JAMP,ZTEMP,EIGEN_VEC,EIGEN_VAL,NCOLOR,NEIGEN)
 # Helper functions
 #===============================================================================
 def get_mg5_info_lines():
-    """Return info lines for MG5, suitable to place at beginning of Fortran files"""
+    """Return info lines for MG5, suitable to place at beginning of
+    Fortran files"""
+
     info = misc.get_pkg_info()
     info_lines = ""
     if info.has_key('version') and  info.has_key('date'):
@@ -268,6 +270,11 @@ class FortranWriter():
     """Routines for writing fortran lines. Keeps track of indentation
     and splitting of long lines"""
 
+    class FortranWriterError(Exception):
+        """Exception raised if an error occurs in the definition
+        or the execution of a FortranWriter."""
+        pass
+
     # Parameters defining the output of the Fortran writer
     keyword_pairs = {'^if.+then\s*$': ('^endif', 2),
                      '^do': ('^enddo\s*$', 2),
@@ -280,26 +287,24 @@ class FortranWriter():
     downcase = False
     line_length = 71
     max_split = 10
-    split_characters = "+-*/, "
+    split_characters = "+-*/,) "
     comment_split_characters = " "
 
     # Private variables
     __indent = 0
     __keyword_list = []
+    __comment_pattern=re.compile(r"^(\s*#|c$|(c\s+([^=]|$)))",re.IGNORECASE)
     
     def write_fortran_line(self, fsock, line):
         """Write a fortran line, with correct indent and line splits"""
 
         if not isinstance(line, str) or line.find('\n') >= 0:
-            raise FortranWriterError,\
+            raise self.FortranWriterError,\
                   "write_fortran_line must have a single line as argument"
 
         # Check if this line is a comment
         comment = False
-        if re.search("^#", line.lstrip()) or \
-           re.search("^c$", line, re.IGNORECASE) or \
-               re.search("^c\s+", line, re.IGNORECASE) and \
-               not re.search("^c\s+=", line, re.IGNORECASE):
+        if self.__comment_pattern.search(line):
             # This is a comment
             myline = " " * (5 + self.__indent) + line.lstrip()[1:].lstrip()
             if self.downcase:
@@ -307,23 +312,14 @@ class FortranWriter():
             else:
                 self.comment_char = self.comment_char.upper()
             myline = self.comment_char + myline
-            res = [myline]
             part = ""
             post_comment = ""
             # Break line in appropriate places
-            # defined (in priority order) by the characters in split_characters
-            while len(res[len(res) - 1]) > self.line_length:
-                split_at = self.line_length
-                for character in self.split_characters:
-                    index = res[len(res) - 1][(self.line_length - self.max_split):\
-                                              self.line_length].rfind(character)
-                    if index >= 0:
-                        split_at = self.line_length - self.max_split + index
-                        break
-                    
-                res.append(self.comment_char + " " * (5 + self.__indent) + \
-                           res[len(res) - 1][split_at:])
-                res[len(res) - 2] = res[len(res) - 2][:split_at]
+            # defined (in priority order) by the characters in
+            # comment_split_characters
+            res = self.split_line(myline,
+                                  self.comment_split_characters,
+                                  self.comment_char + " " * (5 + self.__indent))
         else:
             # This is a regular Fortran line
 
@@ -369,26 +365,14 @@ class FortranWriter():
                     single_indent = -self.single_indents[key]
                     break
                 
-            # Use our own indent
-            res = [" " * (6 + self.__indent) + myline]
-
             # Break line in appropriate places
             # defined (in priority order) by the characters in split_characters
-            while len(res[len(res) - 1]) > self.line_length:
-                split_at = self.line_length
-                for character in self.split_characters:
-                    index = res[len(res) - 1][(self.line_length - self.max_split):\
-                                              self.line_length].rfind(character)
-                    if index >= 0:
-                        split_at = self.line_length - self.max_split + index
-                        break
-                    
-                res.append(" " * 5 + self.line_cont_char + \
-                           " " * (self.__indent + 1) + \
-                           res[len(res) - 1][split_at:])
-                res[len(res) - 2] = res[len(res) - 2][:split_at]
+            res = self.split_line(" " * (6 + self.__indent) + myline,
+                                  self.split_characters,
+                                  " " * 5 + self.line_cont_char + \
+                                  " " * (self.__indent + 1))
 
-            # Check if line starts with keyword and adjust indent 
+            # Check if line starts with keyword and adjust indent for next line
             for key in self.keyword_pairs.keys():
                 if re.search(key, myline.lower()):
                     self.__keyword_list.append(key)
@@ -405,21 +389,52 @@ class FortranWriter():
 
         return True
 
+    def split_line(self, line, split_characters, line_start):
+        """Split a line if it is longer than self.line_length
+        columns. Split in preferential order according to
+        split_characters, and start each new line with line_start."""
+
+        res_lines = [line]
+
+        while len(res_lines[-1]) > self.line_length:
+            split_at = self.line_length
+            for character in split_characters:
+                index = res_lines[-1][(self.line_length - self.max_split): \
+                                      self.line_length].rfind(character)
+                if index >= 0:
+                    split_at = self.line_length - self.max_split + index
+                    break
+                
+            res_lines.append(line_start + \
+                             res_lines[-1][split_at:])
+            res_lines[-2] = res_lines[-2][:split_at]
+
+        return res_lines
+
 #===============================================================================
 # HelasFortranModel
 #===============================================================================
 class HelasFortranModel(helas_objects.HelasModel):
     """The class for writing Helas calls in Fortran, starting from
-    HelasWavefunctions and HelasAmplitudes."""
+    HelasWavefunctions and HelasAmplitudes.
 
+    Includes the function generate_helas_call, which automatically
+    generates the Fortran Helas call based on the Lorentz structure of
+    the interaction."""
+
+    # Dictionaries used for automatic generation of Helas calls
+    # Dictionaries from spin states to letters in Helas call
     mother_dict = {1: 'S', 2: 'O', -2: 'I', 3: 'V', 5: 'T'}
     self_dict = {1: 'H', 2: 'F', -2: 'F', 3: 'J', 5: 'U'}
+    # Dictionaries used for sorting the letters in the Helas call
     sort_wf = {'O': 0, 'I': 1, 'S': 2, 'T': 3, 'V': 4}
     sort_amp = {'S': 1, 'V': 2, 'T': 0, 'O': 3, 'I': 4}
 
 
     def default_setup(self):
-
+        """Set up special Helas calls (wavefunctions and amplitudes)
+        that can not be done automatically by generate_helas_call"""
+        
         super(HelasFortranModel, self).default_setup()
 
         # Add special fortran Helas calls, which are not automatically
@@ -428,36 +443,38 @@ class HelasFortranModel(helas_objects.HelasModel):
 
         # Gluon 4-vertex division tensor calls ggT for the FR sm and mssm
         key = ((3,3,5),tuple('A'))
-        call_function = lambda wf: \
-                        "CALL UVVAXX(W(1,%d),W(1,%d),%s,zero,zero,zero,W(1,%d))" % \
-                        (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
-                         HelasFortranModel.sorted_mothers(wf)[1].get('number'),
-                         wf.get('couplings')[(0,0)],
-                         wf.get('number'))
-        self.add_wavefunction(key,call_function)
+        call = lambda wf: \
+               "CALL UVVAXX(W(1,%d),W(1,%d),%s,zero,zero,zero,W(1,%d))" % \
+               (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
+                HelasFortranModel.sorted_mothers(wf)[1].get('number'),
+                wf.get('couplings')[(0,0)],
+                wf.get('number'))
+        self.add_wavefunction(key,call)
 
         key = ((3,5,3),tuple('A'))
-        call_function = lambda wf: \
-                        "CALL JVTAXX(W(1,%d),W(1,%d),%s,zero,zero,W(1,%d))" % \
-                        (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
-                         HelasFortranModel.sorted_mothers(wf)[1].get('number'),
-                         wf.get('couplings')[(0,0)],
-                         wf.get('number'))
-        self.add_wavefunction(key,call_function)
+        call = lambda wf: \
+               "CALL JVTAXX(W(1,%d),W(1,%d),%s,zero,zero,W(1,%d))" % \
+               (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
+                HelasFortranModel.sorted_mothers(wf)[1].get('number'),
+                wf.get('couplings')[(0,0)],
+                wf.get('number'))
+        self.add_wavefunction(key,call)
 
         key = ((3,3,5),tuple('A'))
-        call_function = lambda amp: \
-                        "CALL VVTAXX(W(1,%d),W(1,%d),W(1,%d),%s,zero,AMP(%d))" % \
-                        (HelasFortranModel.sorted_mothers(amp)[0].get('number'),
-                         HelasFortranModel.sorted_mothers(amp)[1].get('number'),
-                         HelasFortranModel.sorted_mothers(amp)[2].get('number'),
-                         amp.get('couplings')[(0,0)],
-                         amp.get('number'))
-        self.add_amplitude(key,call_function)
+        call = lambda amp: \
+               "CALL VVTAXX(W(1,%d),W(1,%d),W(1,%d),%s,zero,AMP(%d))" % \
+               (HelasFortranModel.sorted_mothers(amp)[0].get('number'),
+                HelasFortranModel.sorted_mothers(amp)[1].get('number'),
+                HelasFortranModel.sorted_mothers(amp)[2].get('number'),
+                amp.get('couplings')[(0,0)],
+                amp.get('number'))
+        self.add_amplitude(key,call)
 
     def get_wavefunction_call(self, wavefunction):
         """Return the function for writing the wavefunction
-        corresponding to the key"""
+        corresponding to the key. If the function doesn't exist,
+        generate_helas_call is called to automatically create the
+        function."""
 
         val = super(HelasFortranModel, self).get_wavefunction_call(wavefunction)
 
@@ -472,11 +489,13 @@ class HelasFortranModel(helas_objects.HelasModel):
                   implemented for > 3 mothers"""
 
         self.generate_helas_call(wavefunction)
-        return super(HelasFortranModel, self).get_wavefunction_call(wavefunction)
+        return super(HelasFortranModel, self).get_wavefunction_call(\
+            wavefunction)
 
     def get_amplitude_call(self, amplitude):
-        """Return the function for writing the amplitude
-        corresponding to the key"""
+        """Return the function for writing the amplitude corresponding
+        to the key. If the function doesn't exist, generate_helas_call
+        is called to automatically create the function."""
 
         val = super(HelasFortranModel, self).get_amplitude_call(amplitude)
 
@@ -494,6 +513,25 @@ class HelasFortranModel(helas_objects.HelasModel):
         return super(HelasFortranModel, self).get_amplitude_call(amplitude)
 
     def generate_helas_call(self, argument):
+        """Routine for automatic generation of Fortran Helas calls
+        according to just the spin structure of the interaction.
+
+        First the call string is generated, using a dictionary to go
+        from the spin state of the calling wavefunction and its
+        mothers, or the mothers of the amplitude, to letters.
+
+        Then the call function is generated, as a lambda which fills
+        the call string with the information of the calling
+        wavefunction or amplitude. The call has different structure,
+        depending on the spin of the wavefunction and the number of
+        mothers (multiplicity of the vertex). The mother
+        wavefunctions, when entering the call, must be sorted in the
+        correct way - this is done by the sorted_mothers routine.
+
+        Finally the call function is stored in the relevant
+        dictionary, in order to be able to reuse the function the next
+        time a wavefunction with the same Lorentz structure is needed.
+        """
             
         if not isinstance(argument, helas_objects.HelasWavefunction) and \
            not isinstance(argument, helas_objects.HelasAmplitude):
@@ -572,7 +610,7 @@ class HelasFortranModel(helas_objects.HelasModel):
 
             if len(call) > 11:
                 raise self.PhysicsObjectError, \
-                      "Too long call to Helas routine %s, should be maximum 6 characters" \
+                      "Call to Helas routine %s should be maximum 6 chars" \
                       % call[5:]
 
             # Fill out with X up to 6 positions
@@ -595,17 +633,22 @@ class HelasFortranModel(helas_objects.HelasModel):
                 # Create call for wavefunction
                 if len(argument.get('couplings').keys()) == 1:
                     call_function = lambda wf: call % \
-                                    (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
-                                     HelasFortranModel.sorted_mothers(wf)[1].get('number'),
+                                    (HelasFortranModel.sorted_mothers(wf)[0].\
+                                     get('number'),
+                                     HelasFortranModel.sorted_mothers(wf)[1].\
+                                     get('number'),
                                      wf.get_with_flow('couplings')[(0,0)],
                                      wf.get('mass'),
                                      wf.get('width'),
                                      wf.get('number'))
                 else:
                     call_function = lambda wf: call % \
-                                    (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
-                                     HelasFortranModel.sorted_mothers(wf)[1].get('number'),
-                                     HelasFortranModel.sorted_mothers(wf)[2].get('number'),
+                                    (HelasFortranModel.sorted_mothers(wf)[0].\
+                                     get('number'),
+                                     HelasFortranModel.sorted_mothers(wf)[1].\
+                                     get('number'),
+                                     HelasFortranModel.sorted_mothers(wf)[2].\
+                                     get('number'),
                                      wf.get_with_flow('couplings')[(0,0)],
                                      wf.get_with_flow('couplings')[(0,1)],
                                      wf.get('mass'),
@@ -615,17 +658,24 @@ class HelasFortranModel(helas_objects.HelasModel):
                 # Create call for amplitude
                 if len(argument.get('couplings').keys()) == 1:
                     call_function = lambda amp: call % \
-                                    (HelasFortranModel.sorted_mothers(amp)[0].get('number'),
-                                     HelasFortranModel.sorted_mothers(amp)[1].get('number'),
-                                     HelasFortranModel.sorted_mothers(amp)[2].get('number'),
+                                    (HelasFortranModel.sorted_mothers(amp)[0].\
+                                     get('number'),
+                                     HelasFortranModel.sorted_mothers(amp)[1].\
+                                     get('number'),
+                                     HelasFortranModel.sorted_mothers(amp)[2].\
+                                     get('number'),
                                      amp.get('couplings')[(0,0)],
                                      amp.get('number'))
                 else:
                     call_function = lambda amp: call % \
-                                    (HelasFortranModel.sorted_mothers(amp)[0].get('number'),
-                                     HelasFortranModel.sorted_mothers(amp)[1].get('number'),
-                                     HelasFortranModel.sorted_mothers(amp)[2].get('number'),
-                                     HelasFortranModel.sorted_mothers(amp)[3].get('number'),
+                                    (HelasFortranModel.sorted_mothers(amp)[0].\
+                                     get('number'),
+                                     HelasFortranModel.sorted_mothers(amp)[1].\
+                                     get('number'),
+                                     HelasFortranModel.sorted_mothers(amp)[2].\
+                                     get('number'),
+                                     HelasFortranModel.sorted_mothers(amp)[3].\
+                                     get('number'),
                                      amp.get('couplings')[(0,0)],
                                      amp.get('couplings')[(0,1)],
                                      amp.get('number'))
@@ -668,7 +718,8 @@ class HelasFortranModel(helas_objects.HelasModel):
                                      wf1.get('number_external') - \
                                      wf2.get('number_external'))
             # Next sort according to interaction pdg codes
-            mother_codes = [ wf.get_pdg_code_outgoing() for wf in sorted_mothers1 ]
+            mother_codes = [ wf.get_pdg_code_outgoing() for wf \
+                             in sorted_mothers1 ]
             pdg_codes = copy.copy(arg.get('pdg_codes'))
             if isinstance(arg, helas_objects.HelasWavefunction):
                 my_code = arg.get_pdg_code_incoming()
@@ -693,9 +744,11 @@ class HelasFortranModel(helas_objects.HelasModel):
             # Next sort according to spin_state_number
             return sorted(sorted_mothers2, lambda wf1, wf2: \
                           HelasFortranModel.sort_amp[\
-                          HelasFortranModel.mother_dict[wf2.get_spin_state_number()]]\
+                          HelasFortranModel.mother_dict[wf2.\
+                                                    get_spin_state_number()]]\
                           - HelasFortranModel.sort_amp[\
-                          HelasFortranModel.mother_dict[wf1.get_spin_state_number()]])
+                          HelasFortranModel.mother_dict[wf1.\
+                                                    get_spin_state_number()]])
         
     @staticmethod
     def sorted_letters(arg):

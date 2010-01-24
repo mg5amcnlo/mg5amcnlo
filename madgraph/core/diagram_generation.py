@@ -12,7 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-
+ 
 import copy
 import itertools
 import logging
@@ -139,8 +139,8 @@ class Amplitude(base_objects.PhysicsObject):
         # Then check same number of incoming and outgoing fermions (if
         # no Majorana particles in model)
         if not model.get('got_majoranas') and \
-           len(filter(lambda leg: leg.is_incoming(model), legs)) != \
-           len(filter(lambda leg: leg.is_outgoing(model), legs)):
+           len(filter(lambda leg: leg.is_incoming_fermion(model), legs)) != \
+           len(filter(lambda leg: leg.is_outgoing_fermion(model), legs)):
             self['diagrams'] = res
             return res
 
@@ -648,7 +648,9 @@ class MultiProcess(base_objects.PhysicsObject):
                                        'forbidden_s_channels': \
                                        process_def.get('forbidden_s_channels'),
                                        'forbidden_particles': \
-                                       process_def.get('forbidden_particles')})
+                                       process_def.get('forbidden_particles'),
+                                       'is_decay_chain': \
+                                       process_def.get('is_decay_chain')})
 
                     # Check for crossed processes
                     sorted_legs = sorted(legs.get_outgoing_id_list(model))

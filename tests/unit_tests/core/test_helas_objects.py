@@ -50,7 +50,7 @@ class HelasWavefunctionTest(unittest.TestCase):
                        'self_antipart': False,
                        'mothers': self.mymothers,
                        'interaction_id': 2,
-                       'pdg_codes':[1,2,3],
+                       'pdg_codes':[1, 2, 3],
                        'inter_color': [],
                        'lorentz': [],
                        'couplings': { (0, 0):'none'},
@@ -157,12 +157,12 @@ class HelasWavefunctionTest(unittest.TestCase):
 
     def test_equality(self):
         """Test that the overloaded equality operator works"""
-        
+
         mymother = copy.copy(self.mymothers[0])
-        mymother.set('pdg_code',13)
+        mymother.set('pdg_code', 13)
         mymothers = helas_objects.HelasWavefunctionList([mymother])
         mywavefunction = copy.copy(self.mywavefunction)
-        mywavefunction.set('mothers',mymothers)
+        mywavefunction.set('mothers', mymothers)
         self.assertTrue(self.mywavefunction == mywavefunction)
         mywavefunction.set('spin', 5)
         self.assertFalse(self.mywavefunction == mywavefunction)
@@ -193,15 +193,15 @@ class HelasWavefunctionTest(unittest.TestCase):
         """Test that the overloaded equality operator works also for a list"""
         mymother = copy.copy(self.mymothers[0])
         mymothers = helas_objects.HelasWavefunctionList([mymother])
-        mymother.set('pdg_code',100)
+        mymother.set('pdg_code', 100)
         mywavefunction = copy.copy(self.mywavefunction)
-        mywavefunction.set('mothers',mymothers)
-        mywavefunction.set('spin',self.mywavefunction.get('spin') + 1)
+        mywavefunction.set('mothers', mymothers)
+        mywavefunction.set('spin', self.mywavefunction.get('spin') + 1)
 
         wavefunctionlist = helas_objects.HelasWavefunctionList(\
             [copy.copy(wf) for wf in [ mywavefunction ] * 100 ])
         self.assertFalse(self.mywavefunction in wavefunctionlist)
-        mywavefunction.set('spin',self.mywavefunction.get('spin'))
+        mywavefunction.set('spin', self.mywavefunction.get('spin'))
         self.assertFalse(self.mywavefunction in wavefunctionlist)
         wavefunctionlist.append(mywavefunction)
         self.assertTrue(self.mywavefunction in wavefunctionlist)
@@ -228,7 +228,7 @@ class HelasAmplitudeTest(unittest.TestCase):
                   'is_part': True,
                   'self_antipart': False,
                   'interaction_id': 2,
-                  'pdg_codes':[1,2,3],
+                  'pdg_codes':[1, 2, 3],
                   'inter_color': [],
                   'lorentz': [],
                   'couplings': { (0, 0):'none'},
@@ -241,7 +241,7 @@ class HelasAmplitudeTest(unittest.TestCase):
 
         self.mydict = {'mothers': self.mywavefunctions,
                        'interaction_id': 2,
-                       'pdg_codes':[1,2,3],
+                       'pdg_codes':[1, 2, 3],
                        'inter_color': [],
                        'lorentz': [],
                        'couplings': { (0, 0):'none'},
@@ -377,7 +377,7 @@ class HelasDiagramTest(unittest.TestCase):
                   'interaction_id': 2,
                   'state': 'incoming',
                   'number': 5}
-                        
+
 
         self.mywavefunctions = helas_objects.HelasWavefunctionList(\
             [helas_objects.HelasWavefunction(mydict)] * 3)
@@ -387,7 +387,7 @@ class HelasDiagramTest(unittest.TestCase):
                   'number': 5}
 
         self.myamplitude = helas_objects.HelasAmplitude(self.mydict)
-        
+
         self.mydict = {'wavefunctions': self.mywavefunctions,
                        'amplitude': self.myamplitude,
                        'fermionfactor': 1}
@@ -449,7 +449,7 @@ class HelasDiagramTest(unittest.TestCase):
                         'right_list':[self.myamplitude],
                         'wrong_list':['a', {}]},
                        {'prop':'fermionfactor',
-                        'right_list':[-1,1,0],
+                        'right_list':[-1, 1, 0],
                         'wrong_list':['a', {}, 0.]},
                        ]
 
@@ -485,7 +485,7 @@ class HelasDiagramTest(unittest.TestCase):
 
         self.assertRaises(helas_objects.HelasDiagramList.PhysicsObjectListError,
                           mydiagramlist.append,
-                          not_a_diagram)        
+                          not_a_diagram)
 
 
 #===============================================================================
@@ -509,7 +509,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                   'interaction_id': 2,
                   'state': 'incoming',
                   'number': 5}
-                        
+
 
         self.mywavefunctions = helas_objects.HelasWavefunctionList(\
             [helas_objects.HelasWavefunction(mydict)] * 3)
@@ -519,11 +519,11 @@ class HelasMatrixElementTest(unittest.TestCase):
                   'number': 5}
 
         self.myamplitude = helas_objects.HelasAmplitude(self.mydict)
-        
+
         mydict = {'wavefunctions': self.mywavefunctions,
                   'amplitude': self.myamplitude,
                   'fermionfactor': 1}
-        
+
         self.mydiagrams = helas_objects.HelasDiagramList([helas_objects.HelasDiagram(mydict)] * 4)
         self.mydict = {'processes': base_objects.ProcessList(),
                        'diagrams': self.mydiagrams,
@@ -551,7 +551,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'is_part':True,
                       'self_antipart':True}))
 
-        g = mypartlist[len(mypartlist)-1]
+        g = mypartlist[len(mypartlist) - 1]
 
         # A quark U and its antiparticle
         mypartlist.append(base_objects.Particle({'name':'u',
@@ -568,7 +568,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        u = mypartlist[len(mypartlist)-1]
+        u = mypartlist[len(mypartlist) - 1]
         antiu = copy.copy(u)
         antiu.set('is_part', False)
 
@@ -587,7 +587,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        eminus = mypartlist[len(mypartlist)-1]
+        eminus = mypartlist[len(mypartlist) - 1]
         eplus = copy.copy(eminus)
         eplus.set('is_part', False)
 
@@ -606,7 +606,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
-        a = mypartlist[len(mypartlist)-1]
+        a = mypartlist[len(mypartlist) - 1]
 
 
         # A E slepton and its antiparticle
@@ -624,7 +624,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        seminus = mypartlist[len(mypartlist)-1]
+        seminus = mypartlist[len(mypartlist) - 1]
         seplus = copy.copy(seminus)
         seplus.set('is_part', False)
 
@@ -643,7 +643,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
-        n1 = mypartlist[len(mypartlist)-1]
+        n1 = mypartlist[len(mypartlist) - 1]
 
         # Gluon and photon couplings to quarks
         myinterlist.append(base_objects.Interaction({
@@ -652,7 +652,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                                             [u, \
                                              antiu, \
                                              g]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'GG'},
                       'orders':{'QCD':1}}))
@@ -663,7 +663,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                                             [u, \
                                              antiu, \
                                              a]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'MGVX15'},
                       'orders':{'QED':1}}))
@@ -675,13 +675,13 @@ class HelasMatrixElementTest(unittest.TestCase):
                                             [eminus, \
                                              eplus, \
                                              a]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'MGVX12'},
                       'orders':{'QED':1}}))
 
         self.mymodel.set('particles', mypartlist)
-        self.mymodel.set('interactions', myinterlist)        
+        self.mymodel.set('interactions', myinterlist)
 
         # Coupling of n1 to e and se
         myinterlist.append(base_objects.Interaction({
@@ -690,7 +690,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                                             [n1, \
                                              eminus, \
                                              seplus]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'MGVX350'},
                       'orders':{'QED':1}}))
@@ -701,7 +701,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                                             [eplus, \
                                              n1, \
                                              seminus]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'MGVX494'},
                       'orders':{'QED':1}}))
@@ -802,7 +802,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude)
-        
+
         self.assertEqual(matrix_element.get('processes')[0],
                          myamplitude.get('process'))
 
@@ -896,7 +896,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         for prod in matrix_element.get_helicity_matrix():
             self.assertEqual(prod, goal_prods[i])
             i = i + 1
-        
+
     def test_get_den_factor(self):
         """Testing helicity matrix using the process
         u u~ > a a a
@@ -990,7 +990,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude.get('diagrams')
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude)
-        
+
         diagrams = matrix_element.get('diagrams')
 
         self.assertEqual(diagrams[0].get('fermionfactor') * \
@@ -1023,7 +1023,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude.get('diagrams')
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude)
-        
+
         diagrams = matrix_element.get('diagrams')
 
         self.assertEqual(diagrams[0].get('fermionfactor') * \
@@ -1042,8 +1042,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                          diagrams[7].get('fermionfactor'), 1)
 
     def test_fermionfactor_emep_emepemep(self):
-        """Testing the fermion factor using the process
-        e- e+ > e- e+ e- e+
+        """Testing the fermion factor using the process e- e+ > e- e+ e- e+
         Time estimates for e+e->e+e-e+e-e+e- (1728 diagrams):
         Diagram generation: 18 s
         Helas call generation (with optimization): 58 s
@@ -1083,7 +1082,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         #      get_matrix_element_calls(matrix_element))
         #print helas_objects.HelasFortranModel().\
         #      get_JAMP_line(matrix_element)
-        
+
         diagrams = matrix_element.get('diagrams')
 
         self.assertEqual(diagrams[0].get('fermionfactor') * \
@@ -1158,8 +1157,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                          diagrams[35].get('fermionfactor'), -1)
 
     def test_fermionfactor_epem_sepsemepem(self):
-        """Testing the fermion factor using the process
-        e+ e- > se+ se- e+ e-
+        """Testing the fermion factor using the process e+ e- > se+ se- e+ e-
         """
 
         # Set up model
@@ -1182,7 +1180,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        eminus = mypartlist[len(mypartlist)-1]
+        eminus = mypartlist[len(mypartlist) - 1]
         eplus = copy.copy(eminus)
         eplus.set('is_part', False)
 
@@ -1201,7 +1199,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        seminus = mypartlist[len(mypartlist)-1]
+        seminus = mypartlist[len(mypartlist) - 1]
         seplus = copy.copy(seminus)
         seplus.set('is_part', False)
 
@@ -1220,7 +1218,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
-        n1 = mypartlist[len(mypartlist)-1]
+        n1 = mypartlist[len(mypartlist) - 1]
 
         # Coupling of n1 to e and se
         myinterlist.append(base_objects.Interaction({
@@ -1229,7 +1227,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                                             [n1, \
                                              eminus, \
                                              seplus]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'MGVX350'},
                       'orders':{'QED':1}}))
@@ -1240,7 +1238,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                                             [eplus, \
                                              n1, \
                                              seminus]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'MGVX494'},
                       'orders':{'QED':1}}))
@@ -1270,7 +1268,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         myamplitude.get('diagrams')
-        
+
         matrix_element = helas_objects.HelasMatrixElement(myamplitude)
 
         diagrams = matrix_element.get('diagrams')
@@ -1291,8 +1289,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                          diagrams[7].get('fermionfactor'), 1)
 
     def test_generate_helas_diagrams_uux_gepem(self):
-        """Testing the helas diagram generation based on Diagrams
-        using the processes u u~ > g e+ e-
+        """Testing the helas diagram generation u u~ > g e+ e-
         """
 
         # Test u u~ > g e+ e-
@@ -1339,7 +1336,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions1[5].set('state', 'incoming')
         wavefunctions1[5].set('mothers',
                               helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[0],wavefunctions1[2]]))
+                         [wavefunctions1[0], wavefunctions1[2]]))
         wavefunctions1[5].set('interaction_id', 3, self.mymodel)
         wavefunctions1[5].set('number', 6)
         wavefunctions1.append(helas_objects.HelasWavefunction())
@@ -1347,7 +1344,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions1[6].set('number_external', 4)
         wavefunctions1[6].set('state', 'intermediate')
         wavefunctions1[6].set('mothers', helas_objects.HelasWavefunctionList(
-                         [wavefunctions1[3],wavefunctions1[4]]))
+                         [wavefunctions1[3], wavefunctions1[4]]))
         wavefunctions1[6].set('interaction_id', 7, self.mymodel)
         wavefunctions1[6].set('number', 7)
 
@@ -1364,7 +1361,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions2[0].set('number_external', 2)
         wavefunctions2[0].set('state', 'outgoing')
         wavefunctions2[0].set('mothers', helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[1],wavefunctions1[2]]))
+                         [wavefunctions1[1], wavefunctions1[2]]))
         wavefunctions2[0].set('interaction_id', 3, self.mymodel)
         wavefunctions2[0].set('number', 8)
 
@@ -1377,23 +1374,22 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
                                                'amplitude': amplitude1,
-                                               'fermionfactor': -1})
+                                               'fermionfactor':-1})
 
         diagram2 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions2,
                                                'amplitude': amplitude2,
-                                               'fermionfactor': -1})
+                                               'fermionfactor':-1})
 
         diagrams = helas_objects.HelasDiagramList([diagram1, diagram2])
 
         matrix_element = helas_objects.HelasMatrixElement(\
             myamplitude,
             1)
-        
+
         self.assertEqual(matrix_element.get('diagrams'), diagrams)
 
     def test_generate_helas_diagrams_uux_gepem_no_optimization(self):
-        """Testing the helas diagram generation based on Diagrams
-        using the processes u u~ > g e+ e-
+        """Testing the helas diagram generation u u~ > g e+ e-
         """
 
         # Test u u~ > g e+ e-
@@ -1440,7 +1436,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions1[5].set('state', 'incoming')
         wavefunctions1[5].set('mothers',
                               helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[0],wavefunctions1[2]]))
+                         [wavefunctions1[0], wavefunctions1[2]]))
         wavefunctions1[5].set('interaction_id', 3, self.mymodel)
         wavefunctions1[5].set('number', 6)
         wavefunctions1.append(helas_objects.HelasWavefunction())
@@ -1448,7 +1444,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions1[6].set('number_external', 4)
         wavefunctions1[6].set('state', 'intermediate')
         wavefunctions1[6].set('mothers', helas_objects.HelasWavefunctionList(
-                         [wavefunctions1[3],wavefunctions1[4]]))
+                         [wavefunctions1[3], wavefunctions1[4]]))
         wavefunctions1[6].set('interaction_id', 7, self.mymodel)
         wavefunctions1[6].set('number', 7)
 
@@ -1475,7 +1471,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions2[5].set('number_external', 2)
         wavefunctions2[5].set('state', 'outgoing')
         wavefunctions2[5].set('mothers', helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[1],wavefunctions1[2]]))
+                         [wavefunctions1[1], wavefunctions1[2]]))
         wavefunctions2[5].set('interaction_id', 3, self.mymodel)
         wavefunctions2[5].set('number', 6)
         wavefunctions2.append(helas_objects.HelasWavefunction())
@@ -1483,7 +1479,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions2[6].set('number_external', 4)
         wavefunctions2[6].set('state', 'intermediate')
         wavefunctions2[6].set('mothers', helas_objects.HelasWavefunctionList(
-                         [wavefunctions1[3],wavefunctions1[4]]))
+                         [wavefunctions1[3], wavefunctions1[4]]))
         wavefunctions2[6].set('interaction_id', 7, self.mymodel)
         wavefunctions2[6].set('number', 7)
 
@@ -1496,23 +1492,22 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
                                                'amplitude': amplitude1,
-                                               'fermionfactor': -1})
+                                               'fermionfactor':-1})
 
         diagram2 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions2,
                                                'amplitude': amplitude2,
-                                               'fermionfactor': -1})
+                                               'fermionfactor':-1})
 
         diagrams = helas_objects.HelasDiagramList([diagram1, diagram2])
 
         matrix_element = helas_objects.HelasMatrixElement(\
             myamplitude,
             0)
-        
+
         self.assertEqual(matrix_element.get('diagrams'), diagrams)
 
     def test_generate_helas_diagrams_ae_ae(self):
-        """Testing the helas diagram generation based on Diagrams
-        using the processes a e- > a e-
+        """Testing the helas diagram generation a e- > a e-
         """
 
         # Test a e- > a e-
@@ -1556,7 +1551,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions1[4].set('number_external', 1)
         wavefunctions1[4].set('mothers',
                               helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[0],wavefunctions1[1]]))
+                         [wavefunctions1[0], wavefunctions1[1]]))
         wavefunctions1[4].set('number', 5)
 
         amplitude1 = helas_objects.HelasAmplitude({\
@@ -1571,7 +1566,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                                                'fermionfactor': 1})
 
         wavefunctions2 = helas_objects.HelasWavefunctionList()
-        
+
         wavefunctions2.append(helas_objects.HelasWavefunction())
         wavefunctions2[0].set('pdg_code', -11, self.mymodel)
         wavefunctions2[0].set('interaction_id', 7, self.mymodel)
@@ -1579,9 +1574,9 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions2[0].set('number_external', 1)
         wavefunctions2[0].set('mothers',
                               helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[0],wavefunctions1[3]]))
+                         [wavefunctions1[0], wavefunctions1[3]]))
         wavefunctions2[0].set('number', 6)
-        
+
         amplitude2 = helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
                          [wavefunctions2[0], wavefunctions1[1],
@@ -1597,12 +1592,11 @@ class HelasMatrixElementTest(unittest.TestCase):
         mydiagrams = helas_objects.HelasDiagramList([diagram1, diagram2])
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
-        
+
         self.assertEqual(matrix_element.get('diagrams'), mydiagrams)
 
     def test_generate_helas_diagrams_ea_ae(self):
-        """Testing the helas diagram generation based on Diagrams
-        using the processes e- a > a e-
+        """Testing the helas diagram generation e- a > a e-
         """
 
         # Test e- a > a e-
@@ -1629,7 +1623,7 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
-        
+
         wavefunctions1 = helas_objects.HelasWavefunctionList()
         wavefunctions1.append(helas_objects.HelasWavefunction(\
             myleglist[0], 0, self.mymodel))
@@ -1646,7 +1640,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions1[4].set('state', 'incoming')
         wavefunctions1[4].set('mothers',
                               helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[0],wavefunctions1[1]]))
+                         [wavefunctions1[0], wavefunctions1[1]]))
         wavefunctions1[4].set('number', 5)
 
         amplitude1 = helas_objects.HelasAmplitude({\
@@ -1661,7 +1655,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                                                'fermionfactor': 1})
 
         wavefunctions2 = helas_objects.HelasWavefunctionList()
-        
+
         wavefunctions2.append(helas_objects.HelasWavefunction())
         wavefunctions2[0].set('pdg_code', 11, self.mymodel)
         wavefunctions2[0].set('interaction_id', 7, self.mymodel)
@@ -1669,9 +1663,9 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions2[0].set('state', 'incoming')
         wavefunctions2[0].set('mothers',
                               helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[0],wavefunctions1[2]]))
+                         [wavefunctions1[0], wavefunctions1[2]]))
         wavefunctions2[0].set('number', 6)
-        
+
         amplitude2 = helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
                          [wavefunctions2[0], wavefunctions1[1],
@@ -1686,7 +1680,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         mydiagrams = helas_objects.HelasDiagramList([diagram1, diagram2])
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
-        
+
         self.assertEqual(matrix_element.get('diagrams'), mydiagrams)
 
 #===============================================================================
@@ -1726,7 +1720,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'is_part':True,
                       'self_antipart':True}))
 
-        g = mypartlist[len(mypartlist)-1]
+        g = mypartlist[len(mypartlist) - 1]
 
         # A quark U and its antiparticle
         mypartlist.append(base_objects.Particle({'name':'u',
@@ -1743,7 +1737,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        u = mypartlist[len(mypartlist)-1]
+        u = mypartlist[len(mypartlist) - 1]
         antiu = copy.copy(u)
         antiu.set('is_part', False)
 
@@ -1757,12 +1751,12 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'texname':'d',
                       'antitexname':'\bar d',
                       'line':'straight',
-                      'charge':-1./3.,
+                      'charge':-1. / 3.,
                       'pdg_code':1,
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        d = mypartlist[len(mypartlist)-1]
+        d = mypartlist[len(mypartlist) - 1]
         antid = copy.copy(d)
         antid.set('is_part', False)
 
@@ -1773,7 +1767,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                                             [u, \
                                              antiu, \
                                              g]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'GG'},
                       'orders':{'QCD':1}}))
@@ -1784,7 +1778,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                                             [d, \
                                              antid, \
                                              g]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'GG'},
                       'orders':{'QCD':1}}))
@@ -1796,20 +1790,20 @@ class HelasMultiProcessTest(unittest.TestCase):
                                             [g, \
                                              g, \
                                              g]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'MGVX1'},
                       'orders':{'QCD':1}}))
 
 
         self.mymodel.set('particles', mypartlist)
-        self.mymodel.set('interactions', myinterlist)        
+        self.mymodel.set('interactions', myinterlist)
 
 
     def test_helas_multi_process(self):
         """Test the HelasMultiProcess with the processes uu~>uu~
         and dd~>dd~"""
-        
+
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':1,
@@ -1878,15 +1872,15 @@ class HelasMultiProcessTest(unittest.TestCase):
 
         my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': 'final'});
 
-        goal_number_matrix_elements = [22,34]
+        goal_number_matrix_elements = [22, 34]
 
         for nfs in range(2, max_fs + 1):
 
             # Define the multiprocess
             my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * (2 + nfs)])
 
-            my_multi_leglist[0].set('state','initial')
-            my_multi_leglist[1].set('state','initial')
+            my_multi_leglist[0].set('state', 'initial')
+            my_multi_leglist[1].set('state', 'initial')
 
             my_process_definition = base_objects.ProcessDefinition({'legs':my_multi_leglist,
                                                                     'model':self.mymodel})
@@ -1924,6 +1918,7 @@ class HelasMultiProcessTest(unittest.TestCase):
         myamplitude1 = diagram_generation.Amplitude()
         myamplitude1.set('process', myproc1)
         myamplitude1.generate_diagrams()
+
         mymatrixelement1 = helas_objects.HelasMatrixElement(\
             myamplitude1)
 
@@ -1962,7 +1957,7 @@ class HelasModelTest(unittest.TestCase):
     """Test class for the HelasModel object"""
 
     mymodel = helas_objects.HelasModel()
-    mybasemodel = base_objects.Model()    
+    mybasemodel = base_objects.Model()
 
     def setUp(self):
         self.mymodel.set('name', 'sm')
@@ -1988,7 +1983,7 @@ class HelasModelTest(unittest.TestCase):
                       'is_part':True,
                       'self_antipart':True}))
 
-        g = mypartlist[len(mypartlist)-1]
+        g = mypartlist[len(mypartlist) - 1]
 
         # A quark U and its antiparticle
         mypartlist.append(base_objects.Particle({'name':'u',
@@ -2005,7 +2000,7 @@ class HelasModelTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        u = mypartlist[len(mypartlist)-1]
+        u = mypartlist[len(mypartlist) - 1]
         antiu = copy.copy(u)
         antiu.set('is_part', False)
 
@@ -2024,7 +2019,7 @@ class HelasModelTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        eminus = mypartlist[len(mypartlist)-1]
+        eminus = mypartlist[len(mypartlist) - 1]
         eplus = copy.copy(eminus)
         eplus.set('is_part', False)
 
@@ -2043,7 +2038,7 @@ class HelasModelTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
-        a = mypartlist[len(mypartlist)-1]
+        a = mypartlist[len(mypartlist) - 1]
 
         # A T particle
         mypartlist.append(base_objects.Particle({'name':'T1',
@@ -2060,7 +2055,7 @@ class HelasModelTest(unittest.TestCase):
                       'propagating':False,
                       'is_part':True,
                       'self_antipart':True}))
-        T1 = mypartlist[len(mypartlist)-1]
+        T1 = mypartlist[len(mypartlist) - 1]
 
         # A U squark and its antiparticle
         mypartlist.append(base_objects.Particle({'name':'su',
@@ -2077,7 +2072,7 @@ class HelasModelTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        su = mypartlist[len(mypartlist)-1]
+        su = mypartlist[len(mypartlist) - 1]
         antisu = copy.copy(su)
         antisu.set('is_part', False)
 
@@ -2096,7 +2091,7 @@ class HelasModelTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        seminus = mypartlist[len(mypartlist)-1]
+        seminus = mypartlist[len(mypartlist) - 1]
         seplus = copy.copy(seminus)
         seplus.set('is_part', False)
 
@@ -2115,7 +2110,7 @@ class HelasModelTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
-        n1 = mypartlist[len(mypartlist)-1]
+        n1 = mypartlist[len(mypartlist) - 1]
 
         # W+ and W-
         mypartlist.append(base_objects.Particle({'name':'W+',
@@ -2132,7 +2127,7 @@ class HelasModelTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        wplus = mypartlist[len(mypartlist)-1]
+        wplus = mypartlist[len(mypartlist) - 1]
         wminus = copy.copy(u)
         wminus.set('is_part', False)
 
@@ -2151,7 +2146,7 @@ class HelasModelTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
-        z = mypartlist[len(mypartlist)-1]
+        z = mypartlist[len(mypartlist) - 1]
 
         # Gluon and photon couplings to quarks
         myinterlist.append(base_objects.Interaction({
@@ -2160,7 +2155,7 @@ class HelasModelTest(unittest.TestCase):
                                             [u, \
                                              antiu, \
                                              g]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'GG'},
                       'orders':{'QCD':1}}))
@@ -2171,7 +2166,7 @@ class HelasModelTest(unittest.TestCase):
                                             [u, \
                                              antiu, \
                                              a]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'MGVX15'},
                       'orders':{'QED':1}}))
@@ -2183,7 +2178,7 @@ class HelasModelTest(unittest.TestCase):
                                             [g, \
                                              g, \
                                              T1]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':['A'],
                       'couplings':{(0, 0):'MGVX2'},
                       'orders':{'QCD':1}}))
@@ -2196,7 +2191,7 @@ class HelasModelTest(unittest.TestCase):
                                             [g, \
                                              g, \
                                              g]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'MGVX1'},
                       'orders':{'QCD':1}}))
@@ -2208,7 +2203,7 @@ class HelasModelTest(unittest.TestCase):
                                             [eminus, \
                                              eplus, \
                                              a]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'MGVX12'},
                       'orders':{'QED':1}}))
@@ -2220,7 +2215,7 @@ class HelasModelTest(unittest.TestCase):
                                             [g, \
                                              su, \
                                              antisu]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'MGVX74'},
                       'orders':{'QCD':1}}))
@@ -2232,7 +2227,7 @@ class HelasModelTest(unittest.TestCase):
                                             [n1, \
                                              u, \
                                              antisu]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'MGVX570'},
                       'orders':{'QED':1}}))
@@ -2243,7 +2238,7 @@ class HelasModelTest(unittest.TestCase):
                                             [antiu, \
                                              n1, \
                                              su]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'MGVX575'},
                       'orders':{'QED':1}}))
@@ -2255,7 +2250,7 @@ class HelasModelTest(unittest.TestCase):
                                             [n1, \
                                              eminus, \
                                              seplus]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'MGVX350'},
                       'orders':{'QED':1}}))
@@ -2266,7 +2261,7 @@ class HelasModelTest(unittest.TestCase):
                                             [eplus, \
                                              n1, \
                                              seminus]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'MGVX494'},
                       'orders':{'QED':1}}))
@@ -2279,7 +2274,7 @@ class HelasModelTest(unittest.TestCase):
                                              g,
                                              su,
                                              antisu]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'MGVX89'},
                       'orders':{'QED':1, 'QCD':1}}))
@@ -2292,7 +2287,7 @@ class HelasModelTest(unittest.TestCase):
                                              wminus,
                                              wplus,
                                              wminus]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'MGVX6'},
                       'orders':{'QED':2}}))
@@ -2305,7 +2300,7 @@ class HelasModelTest(unittest.TestCase):
                                              wminus,
                                              z,
                                              z]),
-                      'color': ['C1'],
+                      'color': [],
                       'lorentz':[''],
                       'couplings':{(0, 0):'MGVX8'},
                       'orders':{'QED':2}}))
@@ -2338,26 +2333,39 @@ class HelasModelTest(unittest.TestCase):
         self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
                           mymodel.set,
                           'wrong_subclass', None)
+        # add_wavefunction and add_amplitude
+        self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
+                          mymodel.add_wavefunction,
+                          'wrong_subclass', None)
+        self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
+                          mymodel.add_wavefunction,
+                          (1, 2), "not_a_function")
+        self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
+                          mymodel.add_amplitude,
+                          'wrong_subclass', None)
+        self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
+                          mymodel.add_amplitude,
+                          (1, 2), "not_a_function")
 
     def test_set_wavefunctions(self):
         """Test wavefunction dictionary in HelasModel"""
 
         wavefunctions = {}
         # IXXXXXX.Key: (spin, state)
-        key1 = (tuple([-2]),tuple(['']))
+        key1 = (tuple([-2]), tuple(['']))
         wavefunctions[key1] = \
                           lambda wf: 'CALL IXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
                           (wf.get('number_external'), wf.get('mass'),
-                           wf.get('number_external'), -(-1)**wf.get_with_flow('is_part'),
+                           wf.get('number_external'), -(-1) ** wf.get_with_flow('is_part'),
                            wf.get('number_external'), wf.get('number'))
         # OXXXXXX.Key: (spin, state)
-        key2 = (tuple([2]),tuple(['']))
+        key2 = (tuple([2]), tuple(['']))
         wavefunctions[key2] = \
                           lambda wf: 'CALL OXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
                           (wf.get('number_external'), wf.get('mass'),
-                           wf.get('number_external'), 1**wf.get_with_flow('is_part'),
+                           wf.get('number_external'), 1 ** wf.get_with_flow('is_part'),
                            wf.get('number_external'), wf.get('number'))
-        
+
         self.assert_(self.mymodel.set('wavefunctions', wavefunctions))
 
         wf = helas_objects.HelasWavefunction()

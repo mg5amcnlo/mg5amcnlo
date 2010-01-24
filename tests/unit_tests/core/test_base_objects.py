@@ -19,6 +19,7 @@ import copy
 import unittest
 
 import madgraph.core.base_objects as base_objects
+import madgraph.core.color_algebra as color
 
 #===============================================================================
 # ParticleTest
@@ -261,7 +262,8 @@ class InteractionTest(unittest.TestCase):
 
         self.mydict = {'id': 1,
                        'particles': base_objects.ParticleList([self.mypart] * 4),
-                       'color': ['C1', 'C2'],
+                       'color': [color.ColorString([color.f(1, 2, 3)]),
+                                 color.ColorString([color.d(1, 2, 3)])],
                        'lorentz':['L1', 'L2'],
                        'couplings':{(0, 0):'g00',
                                     (0, 1):'g01',
@@ -329,7 +331,8 @@ class InteractionTest(unittest.TestCase):
                                       base_objects.ParticleList([self.mypart] * 3)],
                         'wrong_list':[1, 'x ', [self.mypart, 1], [1, 2]]},
                        {'prop':'color',
-                        'right_list':[[], ['C1'], ['C1', 'C2']],
+                        'right_list':[[], [color.ColorString([color.f(1, 2, 3)]),
+                                           color.ColorString([color.f(1, 2, 3)])]],
                         'wrong_list':[1, 'a', ['a', 1]]},
                        {'prop':'lorentz',
                         'right_list':[[], ['L1'], ['L1', 'L2']],
@@ -344,11 +347,7 @@ class InteractionTest(unittest.TestCase):
                         'right_list':[{(0, 0):'g00', (0, 1):'g01',
                                        (1, 0):'g10', (1, 1):'g11'}],
                         'wrong_list':[{(0):'g00', (0, 1):'g01',
-                                       (1, 0):'g10', (1, 2):'g11'},
-                                      {(0, 0):'g00', (0, 1):'g01',
-                                       (1, 0):'g10', (1, 2):'g11'},
-                                      {(0, 0):'g00', (0, 1):'g01',
-                                       (1, 0):'g10'}]}
+                                       (1, 0):'g10', (1, 2):'g11'}]}
                        ]
 
         mytestinter = self.myinter
@@ -364,9 +363,9 @@ class InteractionTest(unittest.TestCase):
 
         goal = "{\n"
         goal = goal + "    \'id\': %d,\n" % self.myinter['id']
-        goal = goal + "    \'particles\': %s,\n" % \
-                            repr(base_objects.ParticleList([self.mypart] * 4))
-        goal = goal + "    \'color\': [\'C1\', \'C2\'],\n"
+        goal = goal + "    \'particles\': [%s],\n" % \
+                            ','.join([str(self.mypart.get_pdg_code())]*4)
+        goal = goal + "    \'color\': [1 f(1,2,3), 1 d(1,2,3)],\n"
         goal = goal + "    \'lorentz\': [\'L1\', \'L2\'],\n"
         goal = goal + "    \'couplings\': %s,\n" % \
                                     repr(self.myinter['couplings'])
@@ -539,7 +538,8 @@ class ModelTest(unittest.TestCase):
                                             [self.mypartlist[0], \
                                              antit, \
                                              self.mypartlist[1]]),
-                      'color': ['C1'],
+                      'color': [color.ColorString([color.f(1, 2, 3),
+                                                   color.d(1, 2, 3)])],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
@@ -1261,7 +1261,8 @@ class ProcessDefinitionTest(unittest.TestCase):
                        'id':3,
                        'required_s_channels':[],
                        'forbidden_s_channels':[],
-                       'forbidden_particles':[]}
+                       'forbidden_particles':[],
+                       'is_decay_chain': False}
 
         self.my_process_definition = base_objects.ProcessDefinition(self.mydict)
 

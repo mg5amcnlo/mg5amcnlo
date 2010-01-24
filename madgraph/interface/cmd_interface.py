@@ -25,15 +25,21 @@ import time
 import readline
 import atexit
 import re
+import logging
 
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.files as files
-import madgraph.iolibs.import_v4 as import_v4
+
+import madgraph.iolibs.import_model_v4 as import_v4
+#import madgraph.iolibs.save_model as save_model
+import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.iolibs.export_v4 as export_v4
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
+
 import madgraph.core.helas_objects as helas_objects
+import madgraph.iolibs.drawing_eps as draw
 
 #===============================================================================
 # MadGraphCmd
@@ -51,6 +57,8 @@ class MadGraphCmd(cmd.Cmd):
                       'interactions',
                       'processes',
                       'multiparticles']
+    __save_opts = ['model',
+                   'processes']
     __import_formats = ['v4']
     __export_formats = ['v4standalone']
 
@@ -142,14 +150,14 @@ class MadGraphCmd(cmd.Cmd):
         def import_v4file(self, filepath):
             """Helper function to load a v4 file from file path filepath"""
             filename = os.path.basename(filepath)
-            if filename == 'particles.dat':
+            if filename.endswith('particles.dat'):
                 self.__curr_model.set('particles',
                                      files.read_from_file(
                                             filepath,
                                             import_v4.read_particles_v4))
                 print "%d particles imported" % \
                       len(self.__curr_model['particles'])
-            if filename == 'interactions.dat':
+            if filename.endswith('interactions.dat'):
                 if len(self.__curr_model['particles']) == 0:
                     print "No particle list currently active,",
                     print "please create one first!"
@@ -177,14 +185,19 @@ class MadGraphCmd(cmd.Cmd):
                         import_v4file(self, os.path.join(args[1], filename))
 
             elif os.path.isfile(args[1]):
-                if os.path.basename(args[1]) in files_to_import:
-                    import_v4file(self, args[1])
-                else:
+                suceed = 0
+                for i in range(0, len(files_to_import)):
+                    if args[1].endswith(files_to_import[i]):
+                        import_v4file(self, args[1])
+                        suceed = 1
+                if not suceed:
+#                if os.path.basename(args[1]) in files_to_import:
+#                    import_v4file(self, args[1])
+#                else:
                     print "%s is not a valid v4 file name" % \
                                         os.path.basename(args[1])
             else:
                 print "Path %s is not a valid pathname" % args[1]
-
 
 
     def complete_import(self, text, line, begidx, endidx):
@@ -204,6 +217,109 @@ class MadGraphCmd(cmd.Cmd):
                                         base_dir=\
                                           self.split_arg(line[0:begidx])[2])
 
+    def do_save(self, line):
+        """Save information to file"""
+
+        args = self.split_arg(line)
+        if len(args) != 2:
+            self.help_save()
+            return False
+
+        if args[0] == 'model':
+            if self.__curr_model:
+                #save_model.save_model(args[1], self.__curr_model)
+                if save_load_object.save_to_file(args[1], self.__curr_model):
+                    print 'Saved model to file ',args[1]
+            else:
+                print 'No model to save!'
+        elif args[0] == 'processes':
+            if self.__curr_amps:
+                if save_load_object.save_to_file(args[1], self.__curr_amps):
+                    print 'Saved processes to file ',args[1]
+            else:
+                print 'No processes to save!'
+        else:
+            self.help_save()
+                
+    def do_load(self, line):
+        """Load information from file"""
+
+        args = self.split_arg(line)
+        if len(args) != 2:
+            self.help_load()
+            return False
+
+        cpu_time1 = time.time()
+        if args[0] == 'model':
+            self.__curr_model = save_load_object.load_from_file(args[1])
+            #save_model.save_model(args[1], self.__curr_model)
+            if isinstance(self.__curr_model, base_objects.Model):
+                cpu_time2 = time.time()
+                print "Loaded model from file in %0.3f s" % \
+                      (cpu_time2 - cpu_time1)
+            else:
+                print 'Error: Could not load model from file ',args[1]
+        elif args[0] == 'processes':
+            self.__curr_amps = save_load_object.load_from_file(args[1])
+            if isinstance(self.__curr_amps, diagram_generation.AmplitudeList):
+                cpu_time2 = time.time()
+                print "Loaded processes from file in %0.3f s" % \
+                      (cpu_time2 - cpu_time1)
+                if self.__curr_amps and not self.__curr_model.get('name'):
+                    self.__curr_model = self.__curr_amps[0].\
+                                        get('process').get('model')
+                    print "Model set from process."
+            else:
+                print 'Error: Could not load processes from file ',args[1]
+        else:
+            self.help_save()
+                
+    def complete_save(self, text, line, begidx, endidx):
+        "Complete the save command"
+
+        # Format
+        if len(self.split_arg(line[0:begidx])) == 1:
+            return self.list_completion(text, self.__save_opts)
+
+        # Filename if directory is not given
+        if len(self.split_arg(line[0:begidx])) == 2:
+            return self.path_completion(text)
+
+        # Filename if directory is given
+        if len(self.split_arg(line[0:begidx])) == 3:
+            return self.path_completion(text,
+                                        base_dir=\
+                                          self.split_arg(line[0:begidx])[2])
+
+    def complete_load(self, text, line, begidx, endidx):
+        "Complete the load command"
+
+        # Format
+        if len(self.split_arg(line[0:begidx])) == 1:
+            return self.list_completion(text, self.__save_opts)
+
+        # Filename if directory is not given
+        if len(self.split_arg(line[0:begidx])) == 2:
+            return self.path_completion(text)
+
+        # Filename if directory is given
+        if len(self.split_arg(line[0:begidx])) == 3:
+            return self.path_completion(text,
+                                        base_dir=\
+                                          self.split_arg(line[0:begidx])[2])
+
+    def complete_draw(self, text, line, begidx, endidx):
+        "Complete the import command"
+
+        # Format
+        if len(self.split_arg(line[0:begidx])) == 1:
+            return self.path_completion(text)
+
+
+        #option
+        if len(self.split_arg(line[0:begidx])) >= 2:
+            return self.list_completion(text,
+                            ['external=', 'horizontal=', 'non_propagating='])
     # Display
     def do_display(self, line):
         """Display current internal status"""
@@ -362,7 +478,7 @@ class MadGraphCmd(cmd.Cmd):
             forbidden_particle_ids = []
             forbidden_schannel_ids = []
             required_schannel_ids = []
-            
+
             if forbidden_particles:
                 args = self.split_arg(forbidden_particles)
                 for part_name in args:
@@ -393,7 +509,7 @@ class MadGraphCmd(cmd.Cmd):
                         if mypart:
                             required_schannel_ids.append(mypart.get_pdg_code())
 
-                
+
 
             myprocdef = base_objects.ProcessDefinitionList([\
                 base_objects.ProcessDefinition({'legs': myleglist,
@@ -401,13 +517,16 @@ class MadGraphCmd(cmd.Cmd):
                                                 'orders': orders,
                                                 'forbidden_particles': forbidden_particle_ids,
                                                 'forbidden_s_channels': forbidden_schannel_ids,
-                                                'required_s_channels': required_schannel_ids \
+                                                'required_s_channels': required_schannel_ids,
+                                                'is_decay_chain': True\
                                                 })])
             myproc = diagram_generation.MultiProcess({'process_definitions':\
                                                       myprocdef})
 
             cpu_time1 = time.time()
+
             self.__curr_amps = myproc.get('amplitudes')
+
             cpu_time2 = time.time()
 
             nprocs = len(filter(lambda amp: amp.get("diagrams"),
@@ -440,8 +559,8 @@ class MadGraphCmd(cmd.Cmd):
 
             calls = 0
             for me in self.__curr_matrix_elements.get('matrix_elements'):
-                filename = filepath + '/matrix_' + \
-                           me.get('processes')[0].shell_string() + ".f"
+                filename = os.path.join(filepath, 'matrix_' + \
+                           me.get('processes')[0].shell_string() + ".f")
                 if os.path.isfile(filename):
                     print "Overwriting existing file %s" % filename
                 else:
@@ -530,11 +649,67 @@ class MadGraphCmd(cmd.Cmd):
 
         self.__multiparticles[label] = pdg_list
 
+    def do_draw(self, line):
+        """ draw the Feynman diagram for the given process """
+
+        args = self.split_arg(line)
+
+        if len(args) < 1:
+            self.help_draw()
+            return False
+        
+        if not filter(lambda amp: amp.get("diagrams"), self.__curr_amps):
+            print "No process generated, please generate a process!"
+            return False
+
+        if not os.path.isdir(args[0]):
+            print "%s is not a valid directory for export file" % args[1]
+
+        start = time.time()
+        opt = {"external": 0, "horizontal": 0}
+        if len(args) > 1:
+            for data in args[1:]:
+                try:
+                    key, value = data.split('=')
+                except:
+                    print 'invalid option %s. Please try again' % data
+                    self.help_draw()
+                    return False
+                if value in ['False', '0', 0, False]:
+                    opt[key] = False
+                else:
+                    opt[key] = True
+
+        for amp in self.__curr_amps:
+            filename = os.path.join(args[0], 'diagrams_' + \
+                                    amp.get('process').shell_string() + ".eps")
+            plot = draw.MultiEpsDiagramDrawer(amp['diagrams'],
+                                              filename,
+                                              model=self.__curr_model,
+                                              amplitude='')
+
+            logging.info("Drawing " + \
+                         amp.get('process').nice_string())
+            plot.draw(**opt)
+            print "Wrote file " + filename
+
+        stop = time.time()
+        print 'time to draw', stop - start
+
+
     # Quit
     def do_quit(self, line):
         sys.exit(1)
 
     # In-line help
+    def help_save(self):
+        print "syntax: save %s PATH" % "|".join(self.__save_opts)
+        print "-- save information as file in PATH"
+
+    def help_load(self):
+        print "syntax: load %s PATH" % "|".join(self.__save_opts)
+        print "-- load information from file in PATH"
+
     def help_import(self):
         print "syntax: import " + "|".join(self.__import_formats) + \
               " FILENAME"
@@ -545,6 +720,7 @@ class MadGraphCmd(cmd.Cmd):
         print "-- display a the status of various internal state variables"
 
     def help_generate(self):
+
         print "syntax: generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2"
         print "-- generate diagrams for a given process"
         print "   Example: u d~ > w+ > m+ vm g $ a / z h QED=3 QCD=0"
@@ -559,6 +735,18 @@ class MadGraphCmd(cmd.Cmd):
               " FILEPATH"
         print """-- export matrix elements in various formats. The resulting
         file will be FILEPATH/matrix_\"process_string\".f"""
+
+    def help_draw(self):
+        print "syntax: draw FILEPATH [option=0|1]"
+        print "-- draw the diagrams in eps format"
+        print "   Files will be FILEPATH/diagrams_\"process_string\".eps"
+        print "   Example: draw plot_dir "
+        print "   Possible option: "
+        print "        horizontal [0]: force S-channel to be horizontal"
+        print "        external [0]: authorizes external particles to end"
+        print "             at top or bottom of diagram"
+        print "        non_propagating [1]:contracts non propagating lines"
+        print "   Example: draw plot_dir external=1 horizontal=1"
 
     def help_shell(self):
         print "syntax: shell CMD (or ! CMD)"

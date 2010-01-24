@@ -155,10 +155,10 @@ def read_interactions_v4(fsock, ref_part_list):
 
                 myinter.set('particles', part_list)
 
-                # Give a dummy 'guess' values for color and Lorentz structures
+                # Give a dummy 'guess' values for color 
                 # Those will have to be replaced by a proper guess!
 
-                myinter.set('color', ['guess'])
+                myinter.set('color', [])
 
                 # Set the Lorentz structure. Default for 3-particle
                 # vertices is empty string, for 4-particle pair of
@@ -166,18 +166,18 @@ def read_interactions_v4(fsock, ref_part_list):
                 if len(part_list) == 3:
                     myinter.set('lorentz', [''])
                 else:
-                    myinter.set('lorentz', ['', ''])                    
+                    myinter.set('lorentz', ['', ''])
                 pdg_codes = sorted([part.get_pdg_code() for part in part_list])
                 spins = sorted([part.get('spin') for part in part_list])
                 # WWWW and WWVV
-                if pdg_codes ==  [-24,-24,24,24]:
+                if pdg_codes == [-24, -24, 24, 24]:
                     myinter.set('lorentz', ['WWWW', ''])
-                elif spins == [3,3,3,3] and \
-                             24 in pdg_codes and -24 in pdg_codes: 
+                elif spins == [3, 3, 3, 3] and \
+                             24 in pdg_codes and - 24 in pdg_codes:
                     myinter.set('lorentz', ['WWVV', ''])
                 # If extra flag, add this to Lorentz    
                 if len(values) > 3 * len(part_list) - 4:
-                    myinter.get('lorentz')[0] =\
+                    myinter.get('lorentz')[0] = \
                                               myinter.get('lorentz')[0]\
                                               + values[3 * len(part_list) - 4].upper()
 

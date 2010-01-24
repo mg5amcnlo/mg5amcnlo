@@ -42,7 +42,7 @@ def read_from_file(filename, myfunct, *args):
 # write_to_file
 #===============================================================================
 def write_to_file(filename, myfunct, *args):
-    """Open a file, apply the function myfunct (with sock as an arg) 
+    """Open a file for writing, apply the function myfunct (with sock as an arg) 
     on its content and return the result. Deals properly with errors and
     returns None if something goes wrong. 
     """
