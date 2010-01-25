@@ -1075,9 +1075,27 @@ class TestFeynmanDiagram(unittest.TestCase):
         # Check that no line cross another
         self.assertFalse(diagram._debug_has_intersection())
 
-        diagram = self.store_diagram['mu- > vm e- ve~'][0]
+        diagram = self.store_diagram['d > d d g d~ QED=0'][0]
         diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
         diagram.main()
+        
+        #check that all line are defined
+        nb_at_zero = 0
+        for vertex in diagram.vertexList:
+            if vertex.pos_x == 0  and vertex.pos_y == 0:
+                nb_at_zero += 1
+        self.assertEqual(nb_at_zero, 0)
+
+
+        # Check that we didn't have T-channel
+        nb_at_level_one = 0
+        for vertex in diagram.vertexList:
+            if vertex.level == 1:
+                nb_at_level_one += 1
+        self.assertEqual(nb_at_level_one, 1)
+
+        # Check that no line cross another
+        self.assertFalse(diagram._debug_has_intersection())
 
 
     def test_notion_of_egality(self):
@@ -1515,6 +1533,7 @@ if __name__ == '__main__':
 
     process_diag = {}
     process_diag['mu- > vm e- ve~'] = [0]
+    process_diag['d > d d g d~ QED=0'] = [0]
     process_diag['u d~ > c s~'] = [0]
     process_diag['g g > g g'] = [1, 2]
     process_diag['g g > g g g'] = [0]
