@@ -22,6 +22,7 @@ import array
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.core.color_amp as color_amp
 
 """Definitions of objects used to generate Helas calls
 (language-independent): HelasWavefunction, HelasAmplitude,
@@ -1198,6 +1199,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         self['processes'] = base_objects.ProcessList()
         self['diagrams'] = HelasDiagramList()
+        self['color_basis'] = color_amp.ColorBasis()
+        self['color_matrix'] = None
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
@@ -1210,33 +1213,41 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             if not isinstance(value, HelasDiagramList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid HelasDiagramList object" % str(value)
+        if name == 'color_basis':
+            if not isinstance(value, color_amp.ColorBasis):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid ColorBasis object" % str(value)
+        if name == 'color_matrix':
+            if not isinstance(value, color_amp.ColorMatrix):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid ColorMatrix object" % str(value)
         return True
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['processes', 'diagrams']
+        return ['processes', 'diagrams', 'color_basis', 'color_matrix']
 
     # Customized constructor
-    def __init__(self, *arguments):
+    def __init__(self, amplitude=None, optimization=1, gen_color=True):
         """Constructor for the HelasMatrixElement. In particular allows
         generating a HelasMatrixElement from an Amplitude, with
         automatic generation of the necessary wavefunctions
         """
 
-        if arguments:
-            if isinstance(arguments[0], diagram_generation.Amplitude):
+        if amplitude != None:
+            if isinstance(amplitude, diagram_generation.Amplitude):
                 super(HelasMatrixElement, self).__init__()
-                amplitude = arguments[0]
-                optimization = 1
-                if len(arguments) > 1 and isinstance(arguments[1], int):
-                    optimization = arguments[1]
-
                 self.get('processes').append(amplitude.get('process'))
                 self.generate_helas_diagrams(amplitude, optimization)
                 self.calculate_fermionfactors(amplitude)
+                if gen_color:
+                    self.get('color_basis').build(amplitude)
+                    self.set('color_matrix',
+                             color_amp.ColorMatrix(self.get('color_basis')))
             else:
-                super(HelasMatrixElement, self).__init__(arguments[0])
+                # In this case, try to use amplitude as a dictionary
+                super(HelasMatrixElement, self).__init__(amplitude)
         else:
             super(HelasMatrixElement, self).__init__()
 

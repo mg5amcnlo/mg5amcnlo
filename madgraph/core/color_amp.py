@@ -18,6 +18,7 @@ import operator
 import re
 
 import madgraph.core.color_algebra as color_algebra
+import madgraph.core.diagram_generation as diagram_generation
 
 """Classes, methods and functions required to write QCD color information 
 for a diagram and build a color basis, and to square a QCD color string for
@@ -215,24 +216,28 @@ class ColorBasis(dict):
                 except KeyError:
                     self[immutable_col_str] = [basis_entry]
 
-    def build(self, amplitude, model):
+    def build(self, amplitude):
         """Build the a color basis object using information contained in
-        amplitude and model"""
+        amplitude"""
 
-        for index, diagram in enumerate(amplitude['diagrams']):
-            colorize_dict = self.colorize(diagram, model)
+        for index, diagram in enumerate(amplitude.get('diagrams')):
+            colorize_dict = self.colorize(diagram,
+                                          amplitude.get('process').get('model'))
             self.update_color_basis(colorize_dict, index)
 
     def __init__(self, *args):
         """Initialize a new color basis object, either empty or filled (0
-        or 2 arguments). If two arguments are given, the first one is 
-        interpreted as the amplitude and the second one as the model."""
+        or 1 arguments). If one arguments is given, it's interpreted as 
+        an amplitude."""
 
-        if len(args) not in (0, 2):
+        if len(args) not in (0, 1):
             raise ValueError, \
-                "Object ColorBasis must be initialized with 0 or 2 arguments"
+                "Object ColorBasis must be initialized with 0 or 1 arguments"
 
-        if len(args) == 2:
+        if len(args) == 1:
+            if not isinstance(args[0], diagram_generation.Amplitude):
+                raise TypeError, \
+                        "%s is not a valid Amplitude object" % str(value)
             self.build(*args)
 
     def __str__(self):

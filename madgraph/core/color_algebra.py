@@ -512,6 +512,29 @@ class ColorString(list):
         return_list.sort()
 
         return (tuple(return_list), replaced_indices)
+
+    def __eq__(self, col_str):
+        """Check if two color strings are equivalent by checking if their
+        canonical representations and the coefficients are equal."""
+
+        return self.coeff == col_str.coeff and \
+               self.Nc_power == col_str.Nc_power and \
+               self.is_imaginary == col_str.is_imaginary and \
+               self.to_canonical() == col_str.to_canonical()
+
+    def __ne__(self, col_str):
+        """Logical opposite of ea"""
+
+        return not self.__eq__(col_str)
+
+    def is_similar(self, col_str):
+        """Check if two color strings are similar by checking if their
+        canonical representations and Nc/I powers are equal."""
+
+        return self.Nc_power == col_str.Nc_power and \
+               self.is_imaginary == col_str.is_imaginary and \
+               self.to_canonical() == col_str.to_canonical()
+
 #===============================================================================
 # ColorFactor
 #===============================================================================
@@ -532,9 +555,7 @@ class ColorFactor(list):
             # Check if strings are similar, this IS the optimal way of doing
             # it. Note that first line only compare the lists, not the 
             # properties associated
-            if col_str == new_str and \
-               col_str.Nc_power == new_str.Nc_power and \
-               col_str.is_imaginary == new_str.is_imaginary:
+            if col_str.is_similar(new_str):
                 # Add them
                 col_str.add(new_str)
                 return True
@@ -603,5 +624,7 @@ class ColorFactor(list):
         return res
 
     __copy__ = create_copy
+
+
 
 

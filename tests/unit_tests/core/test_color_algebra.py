@@ -65,12 +65,18 @@ class ColorObjectTest(unittest.TestCase):
 
         col_str1 = color.ColorString([color.Tr(1, 2, 4), color.Tr()])
         col_str2 = color.ColorString([color.Tr(1, 2, 4)])
+        col_str1.coeff = fractions.Fraction(1, 2)
+        col_str2.coeff = fractions.Fraction(-1, 2)
+        col_str2.Nc_power = -1
         self.assertEqual(my_tr.simplify(),
                          color.ColorFactor([col_str1, col_str2]))
 
         my_tr = color.Tr(100, 100)
         col_str1 = color.ColorString([color.Tr(), color.Tr()])
         col_str2 = color.ColorString([color.Tr()])
+        col_str1.coeff = fractions.Fraction(1, 2)
+        col_str2.coeff = fractions.Fraction(-1, 2)
+        col_str2.Nc_power = -1
         self.assertEqual(my_tr.simplify(),
                          color.ColorFactor([col_str1, col_str2]))
 
@@ -91,6 +97,9 @@ class ColorObjectTest(unittest.TestCase):
 
         col_str1 = color.ColorString([color.T(4, 3, 1, 5, 101, 102)])
         col_str2 = color.ColorString([color.Tr(1, 3), color.T(4, 5, 101, 102)])
+        col_str1.coeff = fractions.Fraction(1, 2)
+        col_str2.coeff = fractions.Fraction(-1, 2)
+        col_str2.Nc_power = -1
         self.assertEqual(my_Tr1.pair_simplify(my_T),
                          color.ColorFactor([col_str1, col_str2]))
 

@@ -308,7 +308,7 @@ class ColorAmpTest(unittest.TestCase):
 
         myamplitude.generate_diagrams()
 
-        new_col_basis = color_amp.ColorBasis(myamplitude, self.mymodel)
+        new_col_basis = color_amp.ColorBasis(myamplitude)
 
         self.assertEqual(len(new_col_basis), 6)
 
@@ -471,7 +471,7 @@ class ColorSquareTest(unittest.TestCase):
 
             myamplitude.generate_diagrams()
 
-            col_basis = color_amp.ColorBasis(myamplitude, self.mymodel)
+            col_basis = color_amp.ColorBasis(myamplitude)
 
             col_matrix = color_amp.ColorMatrix(col_basis, Nc=3)
 
@@ -536,7 +536,7 @@ class ColorSquareTest(unittest.TestCase):
 
             myamplitude.generate_diagrams()
 
-            col_basis = color_amp.ColorBasis(myamplitude, self.mymodel)
+            col_basis = color_amp.ColorBasis(myamplitude)
 
             col_matrix = color_amp.ColorMatrix(col_basis, Nc=3)
 
@@ -577,7 +577,7 @@ class ColorSquareTest(unittest.TestCase):
 
             myamplitude.generate_diagrams()
 
-            col_basis = color_amp.ColorBasis(myamplitude, self.mymodel)
+            col_basis = color_amp.ColorBasis(myamplitude)
 
             col_matrix = color_amp.ColorMatrix(col_basis, Nc=3,
                                                   Nc_power_min=n,
