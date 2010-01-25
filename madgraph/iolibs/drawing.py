@@ -12,7 +12,6 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-
 """All the routines to choose the position to each vertex and the 
 direction for particles. All those class are not related to any output class.
 
@@ -43,7 +42,7 @@ This file contains 4 class:
 
 from __future__ import division
 
-#import math
+import math
 
 import madgraph.core.base_objects as base_objects
 
@@ -176,7 +175,14 @@ class FeynmanLine(base_objects.Leg):
         else:
             # particle is self anti particle
             return self.model.get_particle(-1 * pid).get(name)
-
+        
+    def get_length(self):
+        """ return the length of the line """
+        
+        return math.sqrt((self.end.pos_x-self.start.pos_x)**2 +\
+                         (self.end.pos_y-self.start.pos_y)**2)
+        
+        
     def is_fermion(self):
         """Returns True if the particle is a fermion."""
 
@@ -610,31 +616,33 @@ class FeynmanDiagram:
     class FeynamDiagramError(Exception):
         """Class for internal error."""
 
-    def __init__(self, diagram, model, drawing_mode=1):
+    def __init__(self, diagram, model, opt=None):
         """Store the information concerning this diagram. This routines didn't
         perform any action at all.
         diagram: The diagram object to draw
         model: The model associate to the diagram
-        drawing_mode: If 0, the external lines are authorizes to end only 
-                   at the end of the diagram (in x=1 axis) -like v4 version-
-              If 1, the external lines can ends in lower and upper
-                   axis (y=0 and y=1)."""
+        opt: A DrawingOpt instance with all options for drawing the diagram."""
 
         # Check if input are what we are expecting 
         if isinstance(diagram, base_objects.Diagram):
             self.diagram = diagram
         else:
-            raise self.FeynamDiagramError('first arg should derivates' + \
+            raise self.FeynamDiagramError('first argument should derivates' + \
                                           ' from Diagram object')
 
         if isinstance(model, base_objects.Model):
             self.model = model
         else:
-            raise self.FeynamDiagramError('second arg should derivates' + \
+            raise self.FeynamDiagramError('second argument should derivates' + \
                                           ' from Model object')
-
-        self.drawing_mode = drawing_mode # See method's comment for details
-
+        
+        if opt is None:
+            self.opt = DrawOption()
+        elif(isinstance(opt,DrawOption)):
+            self.opt=opt
+        else:
+             raise self.FeynamDiagramError('third argument should derivates' + \
+                                          ' from DrawOption object')
 
         # Initialize other value to void.
         self.vertexList = [] # List of vertex associate to the diagram 
@@ -643,19 +651,19 @@ class FeynmanDiagram:
         self._treated_legs = [] # List of leg, in the same order as lineList
         self.max_level = 0
 
-    def main(self, contract=True):
+    def main(self):
         """This routine will compute all the vertex position and line 
-        orientation needed to draw the diagram.
+        orientation needed to draw the diagram."""
         
-        'contract' defines if we contract to one point the non propagating line.
-        """
         # Define all the vertex/line 
         # Define self.vertexList,self.lineList
-        self.load_diagram(contract=contract)
+        self.load_diagram(contract=self.opt.contract_unpropa)
         # Define the level of each vertex
         self.define_level()
         # Define position for each vertex
         self.find_initial_vertex_position()
+        # Adjust some 'not beautifull' position
+        self.adjust_position()
         # Flip the particle orientation such that fermion-flow is correct
         self.solve_line_direction()
 
@@ -984,7 +992,7 @@ class FeynmanDiagram:
             if  vertex.is_external() and  vertex.pos_y not in [0, 1]:
                 # Move external vertex from one level to avoid external 
                 #particles finishing inside the square. 
-                #vertex.def_level(level)
+                vertex.def_level(vertex.level + 1)
                 vertex_at_level.append(vertex)
                 continue
 
@@ -1062,7 +1070,7 @@ class FeynmanDiagram:
 
 
     def assign_pos(self, vertex_at_level, level, min=0, max=1, \
-                                                                     mode=''):
+                                                                ext_dist=None):
         """Assign the position to each vertex of vertex_at_level.
         
         The x-coordinate will the ratio of the current level with the maximum
@@ -1080,10 +1088,11 @@ class FeynmanDiagram:
         (resp. max) and the first vertex is also equal but if min=0 (resp.
         max=1) then this distance counts half.
         
-        if mode = 0, the external lines are authorizes to end only 
+        if ext_dist = 0, the external lines are authorizes to end only 
                    at the end of the diagram (in x=1 axis) so this will forbid
                    to put any vertex at y=0-1 (except if x=1)
-        if mode =1, no restriction occurs.
+        if ext_dist >0, minimal distance in before putting a external line
+                  on the border of the diagram.
         
         The computation of y is done in this way
         first compute the distance [dist] between two vertex and assign the point.
@@ -1099,35 +1108,43 @@ class FeynmanDiagram:
                'assigned level %s is bigger than max_level %s' % \
                (level, self.max_level)
 
-        # If mode not define use the one define at __init__ time. 
-        if mode == '':
-            mode = self.drawing_mode
+        # If mode not define use the one of the option. 
+        if ext_dist is None:
+            ext_dist = self.opt.external
         # At final level we should authorize min=0 and max=1 position    
         if level == self.max_level:
-            mode = 1
+            ext_dist = 1
         # Set default gap in dist unity
         begin_gap, end_gap = 1, 1
         # Check the special case when min is 0 -> border
         if min == 0:
-            if mode and vertex_at_level[0].is_external():
+            if ext_dist and vertex_at_level[0].is_external():
+                line = vertex_at_level[0].line[0]
+                if line.end.level - line.start.level >= ext_dist:
                     # Assign position at the border    
                     vertex_at_level[0].def_position(level / self.max_level, 0)
                     # Remove the vertex to avoid that it will pass to next level
                     del vertex_at_level[0]
                     if not vertex_at_level:
                         return []
+                else:
+                    begin_gap = 0.5
             else:
                 begin_gap = 0.5
 
         # Check the special case when max is 1 -> border    
         if max == 1:
-            if mode and vertex_at_level[-1].is_external():
-                # Assign position at the border 
-                vertex_at_level[-1].def_position(level / self.max_level, 1)
-                # Remove the vertex to avoid that it will pass to next level
-                del vertex_at_level[-1]
-                if not vertex_at_level:
+            if ext_dist and vertex_at_level[-1].is_external():
+                line = vertex_at_level[0].line[0]
+                if line.end.level - line.start.level >= ext_dist:
+                    # Assign position at the border 
+                    vertex_at_level[-1].def_position(level / self.max_level, 1)
+                    # Remove the vertex to avoid that it will pass to next level
+                    del vertex_at_level[-1]
+                    if not vertex_at_level:
                         return []
+                else:
+                    end_gap = 0.5
             else:
                 end_gap = 0.5
 
@@ -1211,6 +1228,39 @@ class FeynmanDiagram:
                     self.initial_vertex[1].line[0].inverse_begin_end()
                 return
 
+
+    def adjust_position(self):
+        """Modify the position of some particles in order to improve the final
+        diagram look. This routines acts on two different way:
+        finallen = X : forbid the (final) line to be bigger than X (level unit).
+             Restrict the len line to X in case.
+        external = X: adjust the distance for external particles finishing on
+            the border to put the x-distance to X."""
+        
+        external = self.opt.external
+        finalsize = self.opt.max_size
+        
+        #check if we need to do something
+        if not (external or finalsize):
+            return 
+        
+        for line in self.lineList:
+            if line.is_external():
+                if external%1 and line.end.pos_y in [0,1]:
+                    new_x = line.end.pos_x- (1 - external % 1 ) /self.max_level
+                    line.end.def_position(new_x, line.end.pos_y)
+                
+                if finalsize:
+                    if line.get('state') == 'initial' or not line.is_external():
+                        continue 
+                    size = line.get_length() * self.max_level
+                    if size > finalsize:
+                        ratio = finalsize / size
+                        new_x = line.start.pos_x + ratio * (line.end.pos_x - 
+                                                               line.start.pos_x) 
+                        new_y = line.start.pos_y + ratio * (line.end.pos_y - 
+                                                               line.start.pos_y)                         
+                        line.end.def_position(new_x, new_y)
 
     def _debug_load_diagram(self):
         """Return a string to check to conversion of format for the diagram. 
@@ -1455,7 +1505,8 @@ class DiagramDrawer(object):
     class DrawDiagramError(Exception):
         """Standard error for error occuring to create output of a Diagram."""
 
-    def __init__(self, diagram='', file='', model='', amplitude=''):
+    def __init__(self, diagram=None, file=None, model=None, amplitude=None, \
+                                                                    opt=None):
         """Define basic variables and store some global information.
         All argument are optional:
         diagram : is the object to  'diagram' should inherit from either 
@@ -1480,12 +1531,18 @@ class DiagramDrawer(object):
         # A Test of the Amplitude should be added when this one will be 
         #use.
 
+        # Check the option
+        if opt and not isinstance(opt, DrawOption):
+            raise self.DrawDiagramError('The Option to draw the diagram are in' + \
+                                        'a invalid format')
+
         # Store the parameter in the object variable
         self.diagram = diagram
         self.filename = file
         self.model = model         # use for automatic conversion of graph
         self.amplitude = amplitude # will be use for conversion of graph
-
+        self.opt =opt
+        
         # Set variable for storing text        
         self.text = ''
         # Do we have to write a file? -> store in self.file
@@ -1495,20 +1552,13 @@ class DiagramDrawer(object):
         else:
             self.file = False
 
-    def draw(self, **opt):
+    def draw(self, opt=None):
         """Main routine to draw a single diagram.
-        opt is the option for the conversion of the base_objects.Diagram in one 
-        of the Diagram object. This is the list of recognize options:
-            external [True] : authorizes external particles to finish on 
-                horizontal limit of the square
-            horizontal [True]: if on true use FeynmanDiagramHorizontal to 
-                convert the diagram. otherwise use FeynmanDiagram (Horizontal 
-                forces S-channel to be horizontal)
-            non_propagating [True] : removes the non propagating particles 
-                present in the diagram."""
+        opt is DrawOption object use for the conversion of the 
+        base_objects.Diagram in one of the Diagram object."""
 
         # Check if we need to upgrade the diagram.
-        self.convert_diagram(**opt)
+        self.convert_diagram(opt=opt)
         # Initialize some variable before starting to draw the diagram
         # This is just for frameworks capabilities (default: open file in 
         #write mode if a filename was provide.
@@ -1520,12 +1570,17 @@ class DiagramDrawer(object):
         self.conclude()
 
 
-    def convert_diagram(self, diagram='', model='', amplitude='', **opt):
+    def convert_diagram(self, diagram=None, model=None, amplitude=None, \
+                                                                    opt=None):
         """If diagram is a basic diagram (inherit from base_objects.Diagram)
         convert him to a FeynmanDiagram one. 'opt' keeps track of possible 
         option of drawing. 'amplitude' is not use for the moment. But, later,
         if defined will authorize to adjust the fermion-flow of Majorana 
-        particles. This is the list of recognize options:
+        particles. opt is a DrawOption object containing all option on the way
+        to draw the diagram (see this class for more details)
+        
+        
+        This is the list of recognize options:
             external [True] : authorizes external particles to finish on 
                 horizontal limit of the square
             horizontal [True]: if on true use FeynmanDiagramHorizontal to 
@@ -1534,7 +1589,7 @@ class DiagramDrawer(object):
             non_propagating [True] : removes the non propagating particles 
                 present in the diagram."""
 
-        if diagram == '':
+        if diagram is None:
             diagram = self.diagram
 
         #if already a valid diagram. nothing to do
@@ -1542,7 +1597,7 @@ class DiagramDrawer(object):
             return
 
         # assign default for model and check validity (if not default)
-        if model == '':
+        if model is None:
             model = self.model
         elif not isinstance(model, base_objects.Model):
             raise self.DrawDiagramError('No valid model provide to convert ' + \
@@ -1550,25 +1605,26 @@ class DiagramDrawer(object):
 
         # Test on Amplitude should be enter here, when we will use this 
         #information
-
-
-        # Put default values for options
-        authorize_options = ['external', 'horizontal', 'non_propagating']
-        for key in authorize_options:
-            if key not in opt:
-                opt[key] = True
+        if opt is None:
+            if self.opt:
+                opt = self.opt
+            else:
+                opt = DrawOption()
+        elif not isinstance(opt, DrawOption):
+            raise self.DrawDiagramError('The Option to draw the diagram are' + \
+                                        ' in a invalid format')
 
         # Upgrade diagram to FeynmanDiagram or FeynmanDiagramHorizontal 
         #following option choice
-        if opt['horizontal']:
+        if opt.horizontal:
             diagram = FeynmanDiagramHorizontal(diagram, model, \
-                                                drawing_mode=opt['external'])
+                                                opt=opt)
         else:
             diagram = FeynmanDiagram(diagram, model, \
-                                              drawing_mode=opt['external'])
+                                              opt=opt)
 
         # Find the position of all vertex and all line orientation
-        diagram.main(contract=opt['non_propagating'])
+        diagram.main()
 
         # Store-return information
         self.diagram = diagram
@@ -1651,3 +1707,57 @@ class DiagramDrawer(object):
         call only for external particles and the number is the MadGraph number 
         associate to the particle. The default routine doesn't do anything"""
         pass
+    
+class DrawOption(object):
+    """Dealing with the different option of the drawing method.
+     This is the list of recognize attributes:
+           horizontal [0]: force S-channel to be horizontal
+           external [0]: authorizes external particles to end
+                     at top or bottom of diagram. If bigger than zero
+                     this tune the length of those line.
+           max_size [0]: this forbids external line bigger than 
+                     max_size (arbitrary unit)
+           non_propagating [1]:contracts non propagating lines"""    
+
+    class DrawingOptionError(Exception):
+        """Error raising if an invalid entry is set in a option."""
+
+    def __init__(self, opt={}):
+        """Fullfill option with standard value."""
+        
+        #define default
+        self.external = 0
+        self.horizontal = False
+        self.max_size = 0
+        self.contract_unpropa = True
+
+        for key, value in opt.items():
+            self.set(key,value)
+
+    def set(self, key, value):
+        """Check and attribute the given value."""
+        
+        if key in ['horizontal', 'contract_unpropa']:
+            value = self.pass_to_logical(value)
+            setattr(self, key, value)
+        elif(key in ['external', 'max_size']):
+            try:
+                value = self.pass_to_number(value)
+            except:
+                raise self.DrawingOptionError('%s is not a numerical when %s \
+                                requires one' %(value, key))
+            setattr(self, key, value)
+            
+    def pass_to_logical(self, value):
+        """convert the value in a logical"""
+        
+        if value in [0, False, '0', 'False', 'false']:
+            return False
+        else:
+            return True
+         
+    def pass_to_number(self, value):
+        """Convert the value in a number"""
+        
+        return float(value)
+        

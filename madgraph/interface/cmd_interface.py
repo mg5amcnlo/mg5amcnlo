@@ -39,7 +39,9 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 
 import madgraph.core.helas_objects as helas_objects
+import madgraph.iolibs.drawing as draw_lib
 import madgraph.iolibs.drawing_eps as draw
+
 
 #===============================================================================
 # MadGraphCmd
@@ -665,19 +667,16 @@ class MadGraphCmd(cmd.Cmd):
             print "%s is not a valid directory for export file" % args[1]
 
         start = time.time()
-        opt = {"external": 0, "horizontal": 0}
+        option = draw_lib.DrawOption()
         if len(args) > 1:
             for data in args[1:]:
                 try:
                     key, value = data.split('=')
                 except:
-                    print 'invalid option %s. Please try again' % data
+                    print "invalid syntax: '%s'. Please try again" % data
                     self.help_draw()
                     return False
-                if value in ['False', '0', 0, False]:
-                    opt[key] = False
-                else:
-                    opt[key] = True
+                option.set(key,value)
 
         for amp in self.__curr_amps:
             filename = os.path.join(args[0], 'diagrams_' + \
@@ -689,7 +688,7 @@ class MadGraphCmd(cmd.Cmd):
 
             logging.info("Drawing " + \
                          amp.get('process').nice_string())
-            plot.draw(**opt)
+            plot.draw(opt=option)
             print "Wrote file " + filename
 
         stop = time.time()
@@ -743,7 +742,10 @@ class MadGraphCmd(cmd.Cmd):
         print "   Possible option: "
         print "        horizontal [0]: force S-channel to be horizontal"
         print "        external [0]: authorizes external particles to end"
-        print "             at top or bottom of diagram"
+        print "             at top or bottom of diagram. If bigger than zero"
+        print "             this tune the length of those line."
+        print "        max_size [0]: this forbids external line bigger than "
+        print "             max_size (arbitrary unit)"
         print "        non_propagating [1]:contracts non propagating lines"
         print "   Example: draw plot_dir external=1 horizontal=1"
 

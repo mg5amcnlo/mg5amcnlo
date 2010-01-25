@@ -208,12 +208,9 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         # Move slightly the position to avoid overlapping
         if x == 0:
             x = -0.04
-        elif x == 1:
-            x = 1.04
-        if y == 0:
-            y = -0.06
-        elif y == 1:
-            y = 1.04
+        else:
+            x += 0.04
+            y = line._has_ordinate(x)
 
         # Re-scale x,y in order to pass in EPS coordinate
         x, y = self.rescale(x, y)
@@ -343,18 +340,12 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.block_nb += 1
 
 
-    def draw(self, diagramlist='', **opt):
+    def draw(self, diagramlist='', opt=None):
         """Creates the representation in EPS format associate to a specific 
         diagram. 'opt' keeps track of possible option of drawing. Those option
         are used if we need to convert diagram to Drawing Object.
-        This is the list of recognize options:
-            external [True] : authorizes external particles to finish on 
-                horizontal limit of the square
-            horizontal [True]: if on true use FeynmanDiagramHorizontal to 
-                convert the diagram. otherwise use FeynmanDiagram (Horizontal 
-                forces S-channel to be horizontal)
-            non_propagating [True] : removes the non propagating particles 
-                present in the diagram."""
+        opt is an DrawOption object containing all the possible option on how
+        draw a diagram."""
 
         if diagramlist == '':
             diagramlist = self.diagramlist
@@ -365,7 +356,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         # Loop on all diagram
         for diagram in diagramlist:
             # Check if they need to be convert in correct format
-            diagram = self.convert_diagram(diagram, self.model, **opt)
+            diagram = self.convert_diagram(diagram, self.model,'', opt)
             # Write the code associate to this diagram
             self.draw_diagram(diagram)
 
