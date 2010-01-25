@@ -709,6 +709,9 @@ class FeynmanDiagram:
         if len(self.initial_vertex) == 2:
             if self.initial_vertex[0].line[0].get('number') == 2:
                 self.initial_vertex.reverse()
+        else:
+            # Remove wrongly define T-channel
+            self.remove_t_channel()
 
         return
 
@@ -1011,7 +1014,7 @@ class FeynmanDiagram:
             self.initial_vertex[0].def_position(0, 0.5)
             #initial state are wrongly consider as outgoing -> solve:
             init_line = self.initial_vertex[0].line[0]
-            init_line.inverse_part_antipart()
+            init_line.inverse_part_antipart()          
             # Associate position to level 1
             init_line.end.def_position(1 / self.max_level, 0.5)
             # Associatie position to level 2 and following (auto-recursive fct)
@@ -1137,6 +1140,15 @@ class FeynmanDiagram:
                                                                 (begin_gap + i))
 
         return vertex_at_level
+
+    def remove_t_channel(self):
+        """Removes all T-channel in a diagram and convert those in S-channel.
+        This occur for 1>X diagram where T-channel are wrongly define."""
+        
+        for line in self.lineList:
+            if line.get('state') == 'initial':
+                line.set('state','final')
+
 
     def solve_line_direction(self):
         """Computes the directions of the lines of the diagrams.
