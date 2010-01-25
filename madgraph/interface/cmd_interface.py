@@ -479,6 +479,10 @@ class MadGraphCmd(cmd.Cmd):
             forbidden_schannel_ids = []
             required_schannel_ids = []
 
+            decay_process = len(filter(lambda leg: \
+                                       leg.get('state') == 'initial',
+                                       myleglist)) == 1
+
             if forbidden_particles:
                 args = self.split_arg(forbidden_particles)
                 for part_name in args:
@@ -518,7 +522,7 @@ class MadGraphCmd(cmd.Cmd):
                                                 'forbidden_particles': forbidden_particle_ids,
                                                 'forbidden_s_channels': forbidden_schannel_ids,
                                                 'required_s_channels': required_schannel_ids,
-                                                'is_decay_chain': True\
+                                                'is_decay_chain': decay_process\
                                                 })])
             myproc = diagram_generation.MultiProcess({'process_definitions':\
                                                       myprocdef})
