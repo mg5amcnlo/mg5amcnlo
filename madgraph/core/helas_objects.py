@@ -23,6 +23,7 @@ import array
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
+import madgraph.core.color_algebra as color
 
 """Definitions of objects used to generate Helas calls
 (language-independent): HelasWavefunction, HelasAmplitude,
@@ -75,7 +76,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # proporties:
         # interaction_id = the id of the interaction in the model
         # pdg_codes = the pdg_codes property of the interaction, [11, -11, 22]
-        # inter_color = the 'color' property of the interaction: ['C1']
+        # inter_color = the 'color' property of the interaction: []
         # lorentz = the 'lorentz' property of the interaction: ['']
         # couplings = the coupling names from the interaction: {(0,0):'MGVX12'}
         self['interaction_id'] = 0
@@ -195,8 +196,18 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid integer" % str(mystr)
 
-        if name in ['inter_color', 'lorentz']:
-            #Should be a list of strings
+        if name in ['inter_color']:
+            #Should be a list of list strings
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list of Color Strings" % str(value)
+            for mycolstring in value:
+                if not isinstance(mycolstring, color.ColorString):
+                    raise self.PhysicsObjectError, \
+                            "%s is not a valid list of Color Strings" % str(value)
+
+        if name in ['lorentz']:
+            #Should be a list of list strings
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list of strings" % str(value)
@@ -880,8 +891,18 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid integer" % str(mystr)
 
-        if name in ['inter_color', 'lorentz']:
-            #Should be a list of strings
+        if name in ['color']:
+            #Should be a list of list strings
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list of Color Strings" % str(value)
+            for mycolstring in value:
+                if not isinstance(mycolstring, color.ColorString):
+                    raise self.PhysicsObjectError, \
+                            "%s is not a valid list of Color Strings" % str(value)
+
+        if name in ['lorentz']:
+            #Should be a list of list strings
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list of strings" % str(value)
@@ -1200,7 +1221,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         self['processes'] = base_objects.ProcessList()
         self['diagrams'] = HelasDiagramList()
         self['color_basis'] = color_amp.ColorBasis()
-        self['color_matrix'] = None
+        self['color_matrix'] = color_amp.ColorMatrix(color_amp.ColorBasis())
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""

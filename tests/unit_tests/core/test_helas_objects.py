@@ -529,7 +529,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         self.mydict = {'processes': base_objects.ProcessList(),
                        'diagrams': self.mydiagrams,
                        'color_basis': color_amp.ColorBasis(),
-                       'color_matrix':None}
+                       'color_matrix':color_amp.ColorMatrix(color_amp.ColorBasis())}
         self.mymatrixelement = helas_objects.HelasMatrixElement(self.mydict)
 
         # Set up model
@@ -1385,8 +1385,6 @@ class HelasMatrixElementTest(unittest.TestCase):
         matrix_element = helas_objects.HelasMatrixElement(\
             myamplitude,
             1)
-
-        print matrix_element.get('color_matrix')
 
         self.assertEqual(matrix_element.get('diagrams'), diagrams)
 

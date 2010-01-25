@@ -129,9 +129,14 @@ class ColorBasis(dict):
 
         # Update the result dict using the current vertex ColorString object
         # If more than one, create different entries
+
+        # For colorless vertices, return a copy of res_dict
+        inter_color = model.get_interaction(vertex['id'])['color']
+        if not inter_color:
+            return (min_index, copy.copy(res_dict))
         new_res_dict = {}
         for i, col_str in \
-                enumerate(model.get_interaction(vertex['id'])['color']):
+                enumerate(inter_color):
             # Build the new element
             mod_col_str = col_str.create_copy()
 
@@ -148,8 +153,10 @@ class ColorBasis(dict):
 
             # Replace other (positive) indices using the match_dic
             mod_col_str.replace_indices(match_dict)
+
             # If we are considering the first vertex, simply create
             # new entries
+
             if not res_dict:
                 new_res_dict[tuple([i])] = mod_col_str
             #... otherwise, loop over existing elements and multiply
@@ -160,7 +167,6 @@ class ColorBasis(dict):
                     new_col_str_chain.product(mod_col_str)
                     new_res_dict[tuple(list(ind_chain) + [i])] = \
                         new_col_str_chain
-
         return (min_index, new_res_dict)
 
 
