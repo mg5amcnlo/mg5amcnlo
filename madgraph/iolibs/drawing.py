@@ -1252,10 +1252,15 @@ class FeynmanDiagram:
                 
                 # Adjust x position for external line on horizontal axis if
                 #the ask x-distance is not an integer. In this case the current
-                #position was put to the next integer. 
+                #position was put to the next integer (if possible) 
                 if external%1 and line.end.pos_y in [0,1]:
-                    new_x = line.end.pos_x- (1 - external % 1 ) /self.max_level
-                    line.end.def_position(new_x, line.end.pos_y)
+                    # Check if the we are over the minimal distance
+                    if (line.end.pos_x-line.start.pos_x) * self.max_level > \
+                                                                       external:
+                        # correct the gap
+                        new_x = line.end.pos_x- (1 - external % 1 ) / \
+                                                                  self.max_level
+                        line.end.def_position(new_x, line.end.pos_y)
                 
                 # Check the size of final particles to restrict to the max_size
                 #constraints.
@@ -1721,13 +1726,13 @@ class DiagramDrawer(object):
 class DrawOption(object):
     """Dealing with the different option of the drawing method.
      This is the list of recognize attributes:
-           horizontal [0]: force S-channel to be horizontal
+           horizontal [False]: force S-channel to be horizontal
            external [0]: authorizes external particles to end
                      at top or bottom of diagram. If bigger than zero
                      this tune the length of those line.
            max_size [0]: this forbids external line bigger than 
-                     max_size (arbitrary unit)
-           non_propagating [1]:contracts non propagating lines"""    
+                     max_size.
+           non_propagating [True]:contracts non propagating lines"""    
 
     class DrawingOptionError(Exception):
         """Error raising if an invalid entry is set in a option."""

@@ -304,8 +304,12 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.block_nb = 0  # keep track of the number of diagram already written
         self.npage = 1 + len(diagramlist) // (self.nb_col * self.nb_line)
         
-        if diagramlist and isinstance(diagramlist, base_objects.DiagramList):
-            self.diagramlist = diagramlist
+        if diagramlist:
+            if isinstance(diagramlist, base_objects.DiagramList):
+                self.diagramlist = diagramlist
+            else:
+                raise self.DrawDiagramError('diagramlist Argument should be a' +
+                    ' DiagramList object') 
         else:
             self.diagramlist = None
             

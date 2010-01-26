@@ -735,18 +735,18 @@ class MadGraphCmd(cmd.Cmd):
         file will be FILEPATH/matrix_\"process_string\".f"""
 
     def help_draw(self):
-        print "syntax: draw FILEPATH [option=0|1]"
+        print "syntax: draw FILEPATH [option=value]"
         print "-- draw the diagrams in eps format"
         print "   Files will be FILEPATH/diagrams_\"process_string\".eps"
         print "   Example: draw plot_dir "
         print "   Possible option: "
-        print "        horizontal [0]: force S-channel to be horizontal"
+        print "        horizontal [False]: force S-channel to be horizontal"
         print "        external [0]: authorizes external particles to end"
         print "             at top or bottom of diagram. If bigger than zero"
         print "             this tune the length of those line."
         print "        max_size [0]: this forbids external line bigger than "
-        print "             max_size (arbitrary unit)"
-        print "        non_propagating [1]:contracts non propagating lines"
+        print "             max_size."
+        print "        non_propagating [True]:contracts non propagating lines"
         print "   Example: draw plot_dir external=1 horizontal=1"
 
     def help_shell(self):

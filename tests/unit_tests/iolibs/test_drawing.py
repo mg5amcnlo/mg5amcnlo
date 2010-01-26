@@ -1463,7 +1463,7 @@ class TestDrawingS_EPS(unittest.TestCase):
     def setUp(self):
         """Charge a diagram to draw"""
 
-        self.diagram = []
+        self.diagram = base_objects.DiagramList()
         for i in range(7):
             self.diagram.append(self.store_diagram['t h > t g W+ W-'][i])
 
