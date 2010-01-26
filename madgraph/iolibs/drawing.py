@@ -1231,25 +1231,34 @@ class FeynmanDiagram:
 
     def adjust_position(self):
         """Modify the position of some particles in order to improve the final
-        diagram look. This routines acts on two different way:
-        finallen = X : forbid the (final) line to be bigger than X (level unit).
-             Restrict the len line to X in case.
-        external = X: adjust the distance for external particles finishing on
-            the border to put the x-distance to X."""
+        diagram look. This routines use two option
+        1) max_size which forbids external particles to be longer than max_size.
+            This is in level unit. If a line is too long we contract it to 
+            max_size preserving the orientation.
+        2) external indicating the minimal x-gap for an external line. This 
+            constraints is already take into account in previous stage. But that
+            stage cann't do non integer gap. So this routines correct this."""
         
         external = self.opt.external
         finalsize = self.opt.max_size
         
-        #check if we need to do something
+        # Check if we need to do something
         if not (external or finalsize):
             return 
         
+        # Select all external line
         for line in self.lineList:
             if line.is_external():
+                
+                # Adjust x position for external line on horizontal axis if
+                #the ask x-distance is not an integer. In this case the current
+                #position was put to the next integer. 
                 if external%1 and line.end.pos_y in [0,1]:
                     new_x = line.end.pos_x- (1 - external % 1 ) /self.max_level
                     line.end.def_position(new_x, line.end.pos_y)
                 
+                # Check the size of final particles to restrict to the max_size
+                #constraints.
                 if finalsize:
                     if line.get('state') == 'initial' or not line.is_external():
                         continue 
@@ -1516,7 +1525,8 @@ class DiagramDrawer(object):
             inherit from base_objects.Diagram (for conversion).
         amplitude: amplitude associates to the diagram. NOT USE for the moment.
             In future you could pass the amplitude associate to the object in 
-            order to adjust fermion flow in case of Majorana fermion."""
+            order to adjust fermion flow in case of Majorana fermion.
+        opt: should be a valid DrawOption object."""
 
         # Check the parameter value
         #No need to test Diagram class, it will be tested before using it anyway
@@ -1541,7 +1551,7 @@ class DiagramDrawer(object):
         self.filename = file
         self.model = model         # use for automatic conversion of graph
         self.amplitude = amplitude # will be use for conversion of graph
-        self.opt =opt
+        self.opt = opt
         
         # Set variable for storing text        
         self.text = ''

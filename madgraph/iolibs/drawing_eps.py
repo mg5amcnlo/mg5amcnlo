@@ -284,8 +284,8 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
     nb_line = 3
     nb_col = 2
 
-    def __init__(self, diagramlist='', file='diagram.eps', \
-                  model='', amplitude=''):
+    def __init__(self, diagramlist=None, file='diagram.eps', \
+                  model=None, amplitude=None):
         """Define basic variable and store some global information
         all argument are optional
         diagramlist : are the list of object to draw. item should inherit 
@@ -298,13 +298,18 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
             order to adjust fermion flow in case of Majorana fermion."""
 
         #use standard initialization but without any diagram
-        super(MultiEpsDiagramDrawer, self).__init__('', file , model, amplitude)
+        super(MultiEpsDiagramDrawer, self).__init__(None, file , model, amplitude)
 
         #additional information
         self.block_nb = 0  # keep track of the number of diagram already written
         self.npage = 1 + len(diagramlist) // (self.nb_col * self.nb_line)
-        self.diagramlist = diagramlist
-
+        
+        if diagramlist and isinstance(diagramlist, base_objects.DiagramList):
+            self.diagramlist = diagramlist
+        else:
+            self.diagramlist = None
+            
+            
     def rescale(self, x, y):
         """All coordinates belongs to [0,1]. So that in order to have a visible
         graph we need to re-scale the graph. This method distort the square in
