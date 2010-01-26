@@ -1391,7 +1391,6 @@ class HelasMatrixElementTest(unittest.TestCase):
     def test_generate_helas_diagrams_uux_gepem_no_optimization(self):
         """Testing the helas diagram generation u u~ > g e+ e-
         """
-
         # Test u u~ > g e+ e-
 
         myleglist = base_objects.LegList()
@@ -1767,7 +1766,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                                             [u, \
                                              antiu, \
                                              g]),
-                      'color': [],
+                      'color': [color.ColorString([color.T(2, 0, 1)])],
                       'lorentz':[''],
                       'couplings':{(0, 0):'GG'},
                       'orders':{'QCD':1}}))
@@ -1778,7 +1777,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                                             [d, \
                                              antid, \
                                              g]),
-                      'color': [],
+                      'color': [color.ColorString([color.T(2, 0, 1)])],
                       'lorentz':[''],
                       'couplings':{(0, 0):'GG'},
                       'orders':{'QCD':1}}))
@@ -1790,7 +1789,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                                             [g, \
                                              g, \
                                              g]),
-                      'color': [],
+                      'color': [color.ColorString([color.f(0, 1, 2)])],
                       'lorentz':[''],
                       'couplings':{(0, 0):'MGVX1'},
                       'orders':{'QCD':1}}))

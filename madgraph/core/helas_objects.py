@@ -1626,12 +1626,16 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             raise self.HelasMultiProcessError, \
                   "%s is not valid AmplitudeList" % repr(amplitudes)
 
+        list_colorize = []
+        list_color_basis = []
+        list_color_matrices = []
+
         matrix_elements = self.get('matrix_elements')
 
         for amplitude in amplitudes:
             logging.info("Generating Helas calls for %s" % \
                          amplitude.get('process').nice_string().replace('Process', 'process'))
-            matrix_element = HelasMatrixElement(amplitude)
+            matrix_element = HelasMatrixElement(amplitude, gen_color=False)
             try:
                 # If an identical matrix element is already in the list,
                 # then simply add this process to the list of
@@ -1649,6 +1653,34 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                        matrix_element.get('diagrams'):
                     matrix_elements.append(matrix_element)
 
+                # Always create an empty color basis, and the list of raw
+                # colorize objects (before simplification) associated with amplitude
+                col_basis = color_amp.ColorBasis()
+                colorize_obj = col_basis.create_color_dict_list(amplitude)
+
+                try:
+                    # If the color configuration of the ME has already been 
+                    # considered before, recycle the information
+                    col_index = list_colorize.index(colorize_obj)
+                    logging.info(\
+                        "Reusing existing color information for %s" % \
+                        amplitude.get('process').nice_string().replace('Process',
+                                                                   'process'))
+                except ValueError:
+                    # If not, create color basis and color matrix accordingly
+                    list_colorize.append(colorize_obj)
+                    col_basis.build()
+                    list_color_basis.append(col_basis)
+                    col_matrix = color_amp.ColorMatrix(col_basis)
+                    list_color_matrices.append(col_matrix)
+                    col_index = -1
+                    logging.info(\
+                        "Processing color information for %s" % \
+                        amplitude.get('process').nice_string().replace('Process',
+                                                                   'process'))
+
+                matrix_element.set('color_basis', list_color_basis[col_index])
+                matrix_element.set('color_matrix', list_color_matrices[col_index])
 
 #===============================================================================
 # HelasModel

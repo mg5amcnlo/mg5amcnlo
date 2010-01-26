@@ -39,6 +39,9 @@ class ColorBasis(dict):
     # Dictionary to save simplifications already done in a canonical form
     _canonical_dict = {}
 
+    # Dictionary store the raw colorize information
+    _list_color_dict = []
+
     def colorize(self, diagram, model):
         """Takes a diagram and a model and outputs a dictionary with keys being
         color coefficient index tuples and values a color string (before 
@@ -222,14 +225,31 @@ class ColorBasis(dict):
                 except KeyError:
                     self[immutable_col_str] = [basis_entry]
 
-    def build(self, amplitude):
-        """Build the a color basis object using information contained in
-        amplitude"""
+    def create_color_dict_list(self, amplitude):
+        """Returns a list of colorize dict for all diagrams in amplitude. Also
+        update the _list_color_dict object accordingly """
 
-        for index, diagram in enumerate(amplitude.get('diagrams')):
+        list_color_dict = []
+
+        for diagram in amplitude.get('diagrams'):
             colorize_dict = self.colorize(diagram,
                                           amplitude.get('process').get('model'))
-            self.update_color_basis(colorize_dict, index)
+            list_color_dict.append(colorize_dict)
+
+        self._list_color_dict = list_color_dict
+
+        return list_color_dict
+
+    def build(self, amplitude=None):
+        """Build the a color basis object using information contained in
+        amplitude (otherwise use info from _list_color_dict). 
+        Returns a list of color """
+
+        if amplitude:
+            self.create_color_dict_list(amplitude)
+
+        for index, color_dict in enumerate(self._list_color_dict):
+            self.update_color_basis(color_dict, index)
 
     def __init__(self, *args):
         """Initialize a new color basis object, either empty or filled (0
