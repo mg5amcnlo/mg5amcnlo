@@ -17,6 +17,7 @@
 
 import logging
 
+import madgraph.core.color_algebra as color
 from madgraph.core.base_objects import Particle, ParticleList
 from madgraph.core.base_objects import Interaction, InteractionList
 
@@ -155,10 +156,41 @@ def read_interactions_v4(fsock, ref_part_list):
 
                 myinter.set('particles', part_list)
 
-                # Give a dummy 'guess' values for color 
-                # Those will have to be replaced by a proper guess!
+                # Give color structure
+                # Order particles according to color
+                color_parts = sorted(part_list, lambda p1, p2:\
+                                            p1.get_color() - p2.get_color())
+                colors = [part.get_color() for part in color_parts]
+                
+                if reduce(lambda c1, c2: c1 * c2, colors) == 1:
+                    # All color singlets - set empty
+                    myinter.set('color', [])
+                elif colors == [-3, 1, 3]:
+                    # triplet-triplet-singlet coupling
+                    myinter.set('color', [color.ColorString(\
+                        [color.T(part_list.index(color_parts[2]),
+                                 part_list.index(color_parts[0]))])])
+                elif colors == [-3, 3, 8]:
+                    # triplet-triplet-octet coupling
+                    myinter.set('color', [color.ColorString(\
+                        [color.T(part_list.index(color_parts[2]),
+                                 part_list.index(color_parts[1]),
+                                 part_list.index(color_parts[0]))])])
+#                elif colors == [1, 8, 8]:
+#                    # Higgs-glue-glue coupling
+#                    myinter.set('color', [color.ColorString(\
+#                        [color.f(0, 1, 2)])])
+                elif colors == [8, 8, 8]:
+                    # Triple glue / glue-gluino-gluino coupling
+                    myinter.set('color', [color.ColorString(\
+                        [color.f(0, 1, 2)])])
+                else:
+                    raise Interaction.PhysicsObjectError, \
+                        "Color combination %s not yet implemented." % \
+                        repr(colors)
 
-                myinter.set('color', [])
+                # REMEMBER to set the 4g structure once we have
+                # decided how to deal with this vertex
 
                 # Set the Lorentz structure. Default for 3-particle
                 # vertices is empty string, for 4-particle pair of

@@ -21,6 +21,7 @@ import copy
 
 import madgraph.iolibs.import_model_v4 as import_v4
 import madgraph.core.base_objects as base_objects
+import madgraph.core.color_algebra as color
 
 #===============================================================================
 # IOImportV4Test
@@ -116,6 +117,8 @@ class IOImportV4Test(unittest.TestCase):
                                     g   g   T1 MGVX2   QCD a
                                     w+   w-   w+   w- MGVX6   DUM0   QED QED n
                                     e-   ve   w- MGVX24   QED
+                                    u   u   g MGVX1   QCD
+                                    u   u   a MGVX4   QED
                                     # And now some bad format entries
                                     # which should be ignored with a warning
                                     k+ k- a test QED
@@ -135,6 +138,9 @@ class IOImportV4Test(unittest.TestCase):
         photon = copy.copy(myparts[12])
         gluon = copy.copy(myparts[15])
         t1 = copy.copy(myparts[17])
+        u = myparts[6]
+        ubar = copy.copy(myparts[6])
+        ubar.set('is_part', False)
 
         goal_inter_list = base_objects.InteractionList([ \
                     base_objects.Interaction(
@@ -155,7 +161,8 @@ class IOImportV4Test(unittest.TestCase):
                                                                 gluon,
                                                                 t1]),
 
-                                     'color':[],
+                                     'color':[color.ColorString(\
+                                              [color.f(0, 1, 2)])],
                                      'lorentz':['A'],
                                      'couplings':{(0, 0):'MGVX2'},
                                      'orders':{'QCD':1}}),
@@ -181,6 +188,30 @@ class IOImportV4Test(unittest.TestCase):
                                      'color':[],
                                      'lorentz':[''],
                                      'couplings':{(0, 0):'MGVX24'},
+                                     'orders':{'QED':1}}),
+
+                     base_objects.Interaction(
+                                    {'id':5,
+                                     'particles':base_objects.ParticleList([
+                                                                ubar,
+                                                                u,
+                                                                gluon]),
+                                     'color':[color.ColorString(\
+                                              [color.T(2,1,0)])],
+                                     'lorentz':[''],
+                                     'couplings':{(0, 0):'MGVX1'},
+                                     'orders':{'QCD':1}}),
+                    
+                     base_objects.Interaction(
+                                    {'id':6,
+                                     'particles':base_objects.ParticleList([
+                                                                ubar,
+                                                                u,
+                                                                photon]),
+                                     'color':[color.ColorString(\
+                                              [color.T(1,0)])],
+                                     'lorentz':[''],
+                                     'couplings':{(0, 0):'MGVX4'},
                                      'orders':{'QED':1}})])
 
         self.assertEqual(import_v4.read_interactions_v4(fsock_inter,

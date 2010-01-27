@@ -1213,6 +1213,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     e.g. on a GPU). For processes with many diagrams, the total number
     or wavefunctions after optimization is ~15% of the number of
     amplitudes (diagrams).
+
+    By default, it will also generate the color information (color
+    basis and color matrix) corresponding to the Amplitude.
     """
 
     def default_setup(self):
@@ -1488,12 +1491,14 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
     def get_number_of_wavefunctions(self):
         """Gives the total number of wavefunctions for this amplitude"""
+
         return sum([ len(d.get('wavefunctions')) for d in \
                        self.get('diagrams')])
 
     def get_nexternal_ninitial(self):
         """Gives (number or external particles, number of
         incoming particles)"""
+
         return (len(self.get('processes')[0].get('legs')),
                 len(filter(lambda leg: leg.get('state') == 'initial',
                            self.get('processes')[0].get('legs'))))
@@ -1626,6 +1631,8 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             raise self.HelasMultiProcessError, \
                   "%s is not valid AmplitudeList" % repr(amplitudes)
 
+        # Keep track of already generated color objects, to reuse as
+        # much as possible
         list_colorize = []
         list_color_basis = []
         list_color_matrices = []

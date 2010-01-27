@@ -71,27 +71,21 @@ def write_matrix_element_v4_standalone(fsock, matrix_element, fortran_model):
     nwavefuncs = matrix_element.get_number_of_wavefunctions()
     replace_dict['nwavefuncs'] = nwavefuncs
 
-    # Extract neigen - FIX
-    neigen = 1
-    replace_dict['neigen'] = neigen
-
     # Extract ncolor - FIX!
-    ncolor = 1
+    ncolor = max(1, len(matrix_element.get('color_basis')))
     replace_dict['ncolor'] = ncolor
 
     # Extract color data lines - FIX!
-    color_data_lines = """DATA Denom(1)/1/
-                          DATA (CF(i,1),i=1,1) /1/"""
-    replace_dict['color_data_lines'] = color_data_lines
+    color_data_lines = get_color_data_lines(matrix_element)
+    replace_dict['color_data_lines'] = "\n".join(color_data_lines)
 
     # Extract helas calls
-    helas_call_list = fortran_model.get_matrix_element_calls(\
+    helas_calls = fortran_model.get_matrix_element_calls(\
                 matrix_element)
-    helas_calls = "\n".join(helas_call_list)
-    replace_dict['helas_calls'] = helas_calls
+    replace_dict['helas_calls'] = "\n".join(helas_calls)
 
     # Extract JAMP lines
-    jamp_lines = fortran_model.get_JAMP_line(matrix_element)
+    jamp_lines = get_JAMP_lines(matrix_element)
     replace_dict['jamp_lines'] = jamp_lines
 
     file = \
@@ -166,8 +160,8 @@ C
 C  
 C CONSTANTS
 C  
-      INTEGER    NGRAPHS, NEIGEN 
-      PARAMETER (NGRAPHS=%(ngraphs)d, NEIGEN=%(neigen)d) 
+      INTEGER    NGRAPHS
+      PARAMETER (NGRAPHS=%(ngraphs)d) 
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS, NCOLOR
@@ -209,14 +203,13 @@ C ----------
           ENDDO
           MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
       ENDDO
-C      CALL GAUGECHECK(JAMP,ZTEMP,EIGEN_VEC,EIGEN_VAL,NCOLOR,NEIGEN) 
       END""" % replace_dict
 
     # Write the file
     for line in file.split('\n'):
         writer.write_fortran_line(fsock, line)
 
-    return len(helas_call_list)
+    return len(helas_calls)
 
 #===============================================================================
 # Helper functions
@@ -257,11 +250,30 @@ def get_helicity_lines(matrix_element):
 
     return "\n".join(helicity_line_list)
     
+def get_color_data_lines(matrix_element):
+    """Return the color basis definition lines for this matrix element"""
+
+    if not matrix_element.get('color_basis'):
+        return ["DATA Denom(1)/1/", "DATA (CF(i,1),i=1,1) /1/"]
+    else:
+        return ["DATA Denom(1)/1/", "DATA (CF(i,1),i=1,1) /1/"]
+    
 def get_den_factor_line(matrix_element):
     """Return the denominator factor line for this matrix element"""
 
     return "DATA IDEN/%2r/" % \
            matrix_element.get_denominator_factor()
+
+def get_JAMP_lines(matrix_element):
+    """Return the JAMP(1) = sum(fermionfactor * AMP(i)) line"""
+
+    res = "JAMP(1)="
+    # Add all amplitudes with correct fermion factor
+    for diagram in matrix_element.get('diagrams'):
+        res = res + "%sAMP(%d)" % (sign(diagram.get('fermionfactor')),
+                                   diagram.get('amplitude').get('number'))
+    return res
+
 
 #===============================================================================
 # FortranWriter
@@ -686,21 +698,6 @@ class HelasFortranModel(helas_objects.HelasModel):
         else:
             self.add_amplitude(argument.get_call_key(),call_function)
             
-    def get_JAMP_line(self, matrix_element):
-        """Return the JAMP(1) = sum(fermionfactor * AMP(i)) line"""
-
-        if not isinstance(matrix_element, helas_objects.HelasMatrixElement):
-            raise self.PhysicsObjectError, \
-                  "%s not valid argument for get_matrix_element_calls" % \
-                  repr(matrix_element)
-
-        res = "JAMP(1)="
-        # Add all amplitudes with correct fermion factor
-        for diagram in matrix_element.get('diagrams'):
-            res = res + "%sAMP(%d)" % (sign(diagram.get('fermionfactor')),
-                                         diagram.get('amplitude').get('number'))
-        return res
-
     # Static helper functions
 
     @staticmethod

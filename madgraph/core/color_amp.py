@@ -437,6 +437,12 @@ class ColorMatrix(dict):
 
         return mystr
 
+    def get_line_denominators(self):
+        """Get a list with the denominators for the different lines in
+        the color matrix"""
+
+        pass
+
     @classmethod
     def fix_summed_indices(self, struct1, struct2):
         """Returns a copy of the immutable Color String representation struct2 

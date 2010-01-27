@@ -326,6 +326,14 @@ class Particle(PhysicsObject):
         else:
             return self['pdg_code']
 
+    def get_color(self):
+        """Return the color code with a correct minus sign"""
+
+        if not self['is_part'] and self['color'] in [3, 6]:
+            return -self['color']
+        else:
+            return self['color']
+
     def get_name(self):
         """Return the name if particle, antiname if antiparticle"""
 
