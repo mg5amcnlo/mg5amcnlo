@@ -635,11 +635,10 @@ class FeynmanDiagram:
         else:
             raise self.FeynamDiagramError('second argument should derivates' + \
                                           ' from Model object')
-        
         if opt is None:
             self.opt = DrawOption()
         elif(isinstance(opt,DrawOption)):
-            self.opt=opt
+            self.opt = opt
         else:
              raise self.FeynamDiagramError('third argument should derivates' + \
                                           ' from DrawOption object')
@@ -657,7 +656,7 @@ class FeynmanDiagram:
         
         # Define all the vertex/line 
         # Define self.vertexList,self.lineList
-        self.load_diagram(contract=self.opt.contract_unpropa)
+        self.load_diagram(contract=self.opt.contract_non_propagating)
         # Define the level of each vertex
         self.define_level()
         # Define position for each vertex
@@ -1135,7 +1134,7 @@ class FeynmanDiagram:
         # Check the special case when max is 1 -> border    
         if max == 1:
             if ext_dist and vertex_at_level[-1].is_external():
-                line = vertex_at_level[0].line[0]
+                line = vertex_at_level[-1].line[0]
                 if line.end.level - line.start.level >= ext_dist:
                     # Assign position at the border 
                     vertex_at_level[-1].def_position(level / self.max_level, 1)
@@ -1245,7 +1244,7 @@ class FeynmanDiagram:
         # Check if we need to do something
         if not (external or finalsize):
             return 
-        
+
         # Select all external line
         for line in self.lineList:
             if line.is_external():
@@ -1744,7 +1743,7 @@ class DrawOption(object):
         self.external = 0
         self.horizontal = False
         self.max_size = 0
-        self.contract_unpropa = True
+        self.contract_non_propagating = True
 
         for key, value in opt.items():
             self.set(key,value)
@@ -1752,7 +1751,7 @@ class DrawOption(object):
     def set(self, key, value):
         """Check and attribute the given value."""
         
-        if key in ['horizontal', 'contract_unpropa']:
+        if key in ['horizontal', 'contract_non_propagating']:
             value = self.pass_to_logical(value)
             setattr(self, key, value)
         elif(key in ['external', 'max_size']):
@@ -1762,6 +1761,9 @@ class DrawOption(object):
                 raise self.DrawingOptionError('%s is not a numerical when %s \
                                 requires one' %(value, key))
             setattr(self, key, value)
+        else:
+            raise self.DrawingOptionError('%s is not a valid property for  \
+                                        drawing object' % key)
             
     def pass_to_logical(self, value):
         """convert the value in a logical"""

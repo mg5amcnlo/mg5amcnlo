@@ -320,8 +320,8 @@ class MadGraphCmd(cmd.Cmd):
 
         #option
         if len(self.split_arg(line[0:begidx])) >= 2:
-            return self.list_completion(text,
-                            ['external=', 'horizontal=', 'non_propagating='])
+            return self.list_completion(text, ['external=', 'horizontal=',\
+                                      'max_size=', 'contract_non_propagating='])
     # Display
     def do_display(self, line):
         """Display current internal status"""
@@ -746,7 +746,7 @@ class MadGraphCmd(cmd.Cmd):
         print "             this tune the length of those line."
         print "        max_size [0]: this forbids external line bigger than "
         print "             max_size."
-        print "        non_propagating [True]:contracts non propagating lines"
+        print "        contract_non_propagating [True]:contracts non propagating lines"
         print "   Example: draw plot_dir external=1 horizontal=1"
 
     def help_shell(self):

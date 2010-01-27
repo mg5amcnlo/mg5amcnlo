@@ -1303,7 +1303,41 @@ class TestFeynmanDiagram(unittest.TestCase):
             diagram = drawing.FeynmanDiagram(diagram, _model)
             diagram.main()
             self.assertFalse(diagram._debug_has_intersection())
+        
+    def test_non_integer_external(self):
+        """Test that the an non integer value for external works normally."""
+        
+        #T-channel in one level
+        diagram = self.store_diagram['u~ u~ > e+ e- u~ u~ g'][1]
+        option = drawing.DrawOption({'external':1.5})
+        diagram = drawing.FeynmanDiagram(diagram, _model,opt=option)
+        diagram.load_diagram()
+        diagram.define_level()
+        diagram.find_initial_vertex_position()
+        diagram.adjust_position()
+        
+        #check that all line end at y=1
+        for line in diagram.lineList:
+            if line.is_external() and line.get('number') > 2:
+                self.assertEquals(line.end.pos_x,1)
 
+        #T-chanel (3 T-vertex and the central decay in 2 level decay)
+        diagram = self.store_diagram['u~ u~ > e+ e- u~ u~ g'][8]
+        option = drawing.DrawOption({'external':1.5})
+        diagram = drawing.FeynmanDiagram(diagram, _model,opt=option)
+        diagram.load_diagram()
+        diagram.define_level()
+        diagram.find_initial_vertex_position()
+        diagram.adjust_position()
+        for line in diagram.lineList:
+            if line.is_external() and line.get('number') in [5,7]:
+                dist=(line.end.pos_x-line.start.pos_x)*diagram.max_level
+                self.assertEquals(dist,1.5)
+        
+        
+        
+        
+        
     def test_horizontal_mode(self):
         """Test that the horizontal mode works correctly."""
 
@@ -1429,7 +1463,7 @@ class TestDrawingEPS(unittest.TestCase):
             for external in external_list:
                 opt.set('external',external)
                 for contract_unpropa in contract_unpropa_list:
-                    opt.set('contract_unpropa',contract_unpropa)
+                    opt.set('contract_non_propagating',contract_unpropa)
                     for max_size in max_size_list:
                         opt.set('max_size',max_size)
                         
@@ -1507,7 +1541,7 @@ class TestDrawingS_EPS(unittest.TestCase):
             for external in external_list:
                 opt.set('external',external)
                 for contract_unpropa in contract_unpropa_list:
-                    opt.set('contract_unpropa',contract_unpropa)
+                    opt.set('contract_non_propagating',contract_unpropa)
                     for max_size in max_size_list:
                         opt.set('max_size',max_size)
                         
@@ -1534,6 +1568,7 @@ if __name__ == '__main__':
     process_diag['t h > t g W+ W-'] = [0, 1, 2, 3, 4, 5, 6, 7]
     process_diag['u u > Z u u g'] = [26]
     process_diag['u~ u~ > Z u~ u~ g'] = [26]
+    process_diag['u~ u~ > e+ e- u~ u~ g'] =[1,8]
 
     from madgraph.interface.cmd_interface import MadGraphCmd
     cmd = MadGraphCmd()
