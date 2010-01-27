@@ -647,8 +647,13 @@ class FeynmanDiagram:
         self.vertexList = [] # List of vertex associate to the diagram 
         self.initial_vertex = [] # vertex associate to initial particles
         self.lineList = []  # List of line present in the diagram
-        self._treated_legs = [] # List of leg, in the same order as lineList
         self.max_level = 0
+        
+        #internal parameter
+        self._treated_legs = [] # List of leg, in the same order as lineList
+        self._ext_distance_up = self.opt.external
+        self._ext_distance_down = self.opt.external
+        
 
     def main(self):
         """This routine will compute all the vertex position and line 
@@ -1068,8 +1073,7 @@ class FeynmanDiagram:
             self.find_vertex_position_at_level(vertex_at_level, level + 1)
 
 
-    def assign_pos(self, vertex_at_level, level, min=0, max=1, \
-                                                                ext_dist=None):
+    def assign_pos(self, vertex_at_level, level, min=0, max=1):
         """Assign the position to each vertex of vertex_at_level.
         
         The x-coordinate will the ratio of the current level with the maximum
@@ -1087,11 +1091,13 @@ class FeynmanDiagram:
         (resp. max) and the first vertex is also equal but if min=0 (resp.
         max=1) then this distance counts half.
         
-        if ext_dist = 0, the external lines are authorizes to end only 
+        the option self.opt.external is used
+        if    equals 0, the external lines are authorizes to end only 
                    at the end of the diagram (in x=1 axis) so this will forbid
                    to put any vertex at y=0-1 (except if x=1)
-        if ext_dist >0, minimal distance in before putting a external line
+        if bigger than 0, minimal distance in before putting a external line
                   on the border of the diagram.
+        
         
         The computation of y is done in this way
         first compute the distance [dist] between two vertex and assign the point.
@@ -1107,23 +1113,27 @@ class FeynmanDiagram:
                'assigned level %s is bigger than max_level %s' % \
                (level, self.max_level)
 
-        # If mode not define use the one of the option. 
-        if ext_dist is None:
-            ext_dist = self.opt.external
+        
         # At final level we should authorize min=0 and max=1 position    
         if level == self.max_level:
-            ext_dist = 1
+            ext_dist_up = 1
+            ext_dist_down = 1
+        else:
+            # else follow option
+            ext_dist_up = self._ext_distance_up
+            ext_dist_down = self._ext_distance_down 
         # Set default gap in dist unity
         begin_gap, end_gap = 1, 1
         # Check the special case when min is 0 -> border
         if min == 0:
-            if ext_dist and vertex_at_level[0].is_external():
+            if ext_dist_down and vertex_at_level[0].is_external():
                 line = vertex_at_level[0].line[0]
-                if line.end.level - line.start.level >= ext_dist:
-                    # Assign position at the border    
-                    vertex_at_level[0].def_position(level / self.max_level, 0)
+                if line.end.level - line.start.level >= ext_dist_down:
+                    # Assign position at the border and update option
+                    self.define_vertex_at_border(vertex_at_level[0],level, 0)    
                     # Remove the vertex to avoid that it will pass to next level
                     del vertex_at_level[0]
+                    # 
                     if not vertex_at_level:
                         return []
                 else:
@@ -1133,11 +1143,11 @@ class FeynmanDiagram:
 
         # Check the special case when max is 1 -> border    
         if max == 1:
-            if ext_dist and vertex_at_level[-1].is_external():
+            if ext_dist_up and vertex_at_level[-1].is_external():
                 line = vertex_at_level[-1].line[0]
-                if line.end.level - line.start.level >= ext_dist:
+                if line.end.level - line.start.level >= ext_dist_up:
                     # Assign position at the border 
-                    vertex_at_level[-1].def_position(level / self.max_level, 1)
+                    self.define_vertex_at_border(vertex_at_level[-1],level, 1)
                     # Remove the vertex to avoid that it will pass to next level
                     del vertex_at_level[-1]
                     if not vertex_at_level:
@@ -1156,6 +1166,33 @@ class FeynmanDiagram:
                                                                 (begin_gap + i))
 
         return vertex_at_level
+
+    def define_vertex_at_border(self, vertex, level, pos_y):
+        """Define the position of the vertex considering the distance required
+        in the Drawing Options. Update the option if needed."""
+        
+        # find the minimal x distance and update this distance for the future
+        if pos_y == 1:
+            dist = self._ext_distance_up
+            self._ext_distance_up += self.opt.add_gap
+        else:
+            dist = self._ext_distance_down
+            self._ext_distance_down += self.opt.add_gap
+        
+        # Find the position and switch integer and not integer case
+        if dist % 1:
+            # Check that we have to move forward the line
+            if level < self.max_level: 
+                pos_x = (level - 1 + (dist % 1)) / self.max_level
+            elif (1-vertex.line[0].start.pos_x) * self.max_level > dist:
+                pos_x = (level - 1 + (dist % 1)) / self.max_level
+            else:
+                pos_x = 1
+        else:
+            pos_x = level / self.max_level
+
+        vertex.def_position(pos_x, pos_y)
+         
 
     def remove_t_channel(self):
         """Removes all T-channel in a diagram and convert those in S-channel.
@@ -1230,7 +1267,7 @@ class FeynmanDiagram:
 
     def adjust_position(self):
         """Modify the position of some particles in order to improve the final
-        diagram look. This routines use two option
+        diagram look. This routines use one option
         1) max_size which forbids external particles to be longer than max_size.
             This is in level unit. If a line is too long we contract it to 
             max_size preserving the orientation.
@@ -1238,42 +1275,27 @@ class FeynmanDiagram:
             constraints is already take into account in previous stage. But that
             stage cann't do non integer gap. So this routines correct this."""
         
-        external = self.opt.external
         finalsize = self.opt.max_size
         
         # Check if we need to do something
-        if not (external or finalsize):
+        if not finalsize:
             return 
 
         # Select all external line
         for line in self.lineList:
             if line.is_external():
-                
-                # Adjust x position for external line on horizontal axis if
-                #the ask x-distance is not an integer. In this case the current
-                #position was put to the next integer (if possible) 
-                if external%1 and line.end.pos_y in [0,1]:
-                    # Check if the we are over the minimal distance
-                    if (line.end.pos_x-line.start.pos_x) * self.max_level > \
-                                                                       external:
-                        # correct the gap
-                        new_x = line.end.pos_x- (1 - external % 1 ) / \
-                                                                  self.max_level
-                        line.end.def_position(new_x, line.end.pos_y)
-                
                 # Check the size of final particles to restrict to the max_size
                 #constraints.
-                if finalsize:
-                    if line.get('state') == 'initial' or not line.is_external():
-                        continue 
-                    size = line.get_length() * self.max_level
-                    if size > finalsize:
-                        ratio = finalsize / size
-                        new_x = line.start.pos_x + ratio * (line.end.pos_x - 
+                if line.get('state') == 'initial' or not line.is_external():
+                    continue 
+                size = line.get_length() * self.max_level
+                if size > finalsize:
+                    ratio = finalsize / size
+                    new_x = line.start.pos_x + ratio * (line.end.pos_x - 
                                                                line.start.pos_x) 
-                        new_y = line.start.pos_y + ratio * (line.end.pos_y - 
+                    new_y = line.start.pos_y + ratio * (line.end.pos_y - 
                                                                line.start.pos_y)                         
-                        line.end.def_position(new_x, new_y)
+                    line.end.def_position(new_x, new_y)
 
     def _debug_load_diagram(self):
         """Return a string to check to conversion of format for the diagram. 
@@ -1729,6 +1751,7 @@ class DrawOption(object):
            external [0]: authorizes external particles to end
                      at top or bottom of diagram. If bigger than zero
                      this tune the length of those line.
+           add_gap [0]: make external rising after each positioning.
            max_size [0]: this forbids external line bigger than 
                      max_size.
            non_propagating [True]:contracts non propagating lines"""    
@@ -1741,8 +1764,9 @@ class DrawOption(object):
         
         #define default
         self.external = 0
+        self.add_gap = 0
         self.horizontal = False
-        self.max_size = 0
+        self.max_size = 1.5
         self.contract_non_propagating = True
 
         for key, value in opt.items():
@@ -1754,13 +1778,14 @@ class DrawOption(object):
         if key in ['horizontal', 'contract_non_propagating']:
             value = self.pass_to_logical(value)
             setattr(self, key, value)
-        elif(key in ['external', 'max_size']):
+        elif(key in ['external', 'max_size','add_gap']):
             try:
                 value = self.pass_to_number(value)
             except:
                 raise self.DrawingOptionError('%s is not a numerical when %s \
                                 requires one' %(value, key))
             setattr(self, key, value)
+                
         else:
             raise self.DrawingOptionError('%s is not a valid property for  \
                                         drawing object' % key)

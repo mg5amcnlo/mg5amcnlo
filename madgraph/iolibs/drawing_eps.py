@@ -221,33 +221,35 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
     def associate_name(self, line, name):
         """ADD the EPS code associate to the name of the particle. Place it near
         to the center of the line.
-
-         The position of the name follows the V4 routine.
-         """
+        """
 
         # Put alias for vertex positions
         x1, y1 = line.start.pos_x, line.start.pos_y
         x2, y2 = line.end.pos_x, line.end.pos_y
 
-        d = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+        d = line.get_length()
         if d == 0:
             raise self.DrawDiagramError('Line can not have 0 length')
 
-        # Compute gap
-        dx = (x1 - x2) / d
-        dy = (y1 - y2) / d
-
-        # Correct sign to avoid intersection between the name and the current 
-        #line
-        if dy < 0:
-            dx, dy = -1 * dx, -1 * dy
-        elif dy == 0:
-            dx = 1.5
-
+        
+        # compute gap from middle point
+        if abs(x1 - x2) < 1e-3:
+            dx= 0.015
+            dy= - 0.01
+        elif abs(y1 - y2) < 1e-3:
+            dx = - 0.01
+            dy = 0.025
+        elif ((x1 < x2) == (y1 < y2) ):
+            dx = -0.03 * len(name)
+            dy =  0.02  * len(name) #d * 0.12
+        else:
+            dx =  0.01 #0.05
+            dy =  0.02 #d * 0.12 
+            
         # Assign position
-        x_pos = (x1 + x2) / 2 + 0.04 * dy
-        y_pos = (y1 + y2) / 2 - 0.055 * dx
-
+        x_pos = (x1 + x2) / 2 + dx
+        y_pos = (y1 + y2) / 2 + dy
+        
         # Pass in EPS coordinate
         x_pos, y_pos = self.rescale(x_pos, y_pos)
         #write EPS code
@@ -412,7 +414,7 @@ if __name__ == '__main__':
         diagrams = base_objects.DiagramList()
         diagrams.append(store_diagram['u~ u~ > e+ e- u~ u~ g'][8])
         
-    opt=draw.DrawOption({'external':1.5})
+    opt=draw.DrawOption({'external':1.5,'add_gap':0.5})
     plot = MultiEpsDiagramDrawer(diagrams, 'diagram.eps',
                              model=cmd._MadGraphCmd__curr_model,
                              amplitude='')

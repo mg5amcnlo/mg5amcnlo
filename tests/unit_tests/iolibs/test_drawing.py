@@ -1323,7 +1323,7 @@ class TestFeynmanDiagram(unittest.TestCase):
 
         #T-chanel (3 T-vertex and the central decay in 2 level decay)
         diagram = self.store_diagram['u~ u~ > e+ e- u~ u~ g'][8]
-        option = drawing.DrawOption({'external':1.5})
+        option = drawing.DrawOption({'external':1.5, 'max_size':0})
         diagram = drawing.FeynmanDiagram(diagram, _model,opt=option)
         diagram.load_diagram()
         diagram.define_level()

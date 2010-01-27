@@ -320,8 +320,10 @@ class MadGraphCmd(cmd.Cmd):
 
         #option
         if len(self.split_arg(line[0:begidx])) >= 2:
-            return self.list_completion(text, ['external=', 'horizontal=',\
-                                      'max_size=', 'contract_non_propagating='])
+            option=['external=', 'horizontal=', 'add_gap=','max_size=', \
+                                'contract_non_propagating=']
+            return self.list_completion(text, option)
+        
     # Display
     def do_display(self, line):
         """Display current internal status"""
