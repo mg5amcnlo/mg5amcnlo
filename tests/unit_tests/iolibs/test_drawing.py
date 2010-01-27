@@ -1453,9 +1453,9 @@ class TestDrawingEPS(unittest.TestCase):
         """Test that the DrawingEPS returns valid result"""
         
         horizontal_list = [True, False]
-        external_list = [0,1,1.5,2]
+        external_list = [0,1,1.5]
         contract_unpropa_list =[True, False]
-        max_size_list = [0,1.8,2]
+        max_size_list = [0,1.8]
         
         opt = drawing.DrawOption()
         for horizontal in horizontal_list:
@@ -1473,10 +1473,8 @@ class TestDrawingEPS(unittest.TestCase):
                         
                         self.assertFalse(\
                                     self.plot.diagram._debug_has_intersection())
-        
-
- 
-
+                        for line in self.plot.diagram.lineList:
+                            self.assertNotAlmostEquals(line.get_length(), 0)
 
 #===============================================================================
 # TestDrawingS_EPS
@@ -1529,25 +1527,12 @@ class TestDrawingS_EPS(unittest.TestCase):
         return
     
     def test_schedular(self):
-        
-        horizontal_list = [True, False]
-        external_list = [0,1,1.5,2]
-        contract_unpropa_list =[True, False]
-        max_size_list = [0,1.8,2]
+        """Test the multidiagram drawing"""
         
         opt = drawing.DrawOption()
-        for horizontal in horizontal_list:
-            opt.set('horizontal', horizontal)
-            for external in external_list:
-                opt.set('external',external)
-                for contract_unpropa in contract_unpropa_list:
-                    opt.set('contract_non_propagating',contract_unpropa)
-                    for max_size in max_size_list:
-                        opt.set('max_size',max_size)
-                        
-                        self.setUp()
-                        self.plot.draw(opt=opt)
-                        self.output_is_valid('__testdiag__.eps')
+        self.setUp()
+        self.plot.draw(opt=opt)
+        self.output_is_valid('__testdiag__.eps')
 
 
 if __name__ == '__main__':
