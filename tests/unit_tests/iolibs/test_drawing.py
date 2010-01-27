@@ -1407,49 +1407,15 @@ class TestFeynmanDiagram(unittest.TestCase):
 #===============================================================================
 # TestDrawingEPS
 #===============================================================================
-class TestDrawingEPS(unittest.TestCase):
-    """ Class testing if we can create the files in the EPS mode.
-    
-    This test the following two points:
-    1) can we create the output file?
-    2) can we convert him in pdf? (Imagemagick is needed for this)
-        checking that the file is valid."""
+class TestDrawingOption(unittest.TestCase):
+    """Sanity check for all combination of option. This check on a small sample
+    of diagram that no line have zero lenght and that we don't have any line 
+    crossing for any combination of option."""
 
     # Made a set of diagram available here
     store_diagram = TestFeynmanDiagram.store_diagram
-
-    def setUp(self):
-        """Charge a diagram to draw"""
-
-        self.diagram = self.store_diagram['t h > t g W+ W-'][0]
-
-        self.plot = draw_eps.EpsDiagramDrawer(self.diagram, '__testdiag__.eps', \
-                                          model=_model, amplitude='')
-
-    def output_is_valid(self, position, pdf_check=True):
-        """Test if the output files exist. 
-        Additionally if pdf_check is on True
-        check if we can convert the output file in pdf. Finally delete files."""
-
-        # Check if exist
-        self.assertTrue(os.path.isfile(position))
-
-        # Check if the file is valid
-        if pdf_check:
-            filename, ext = os.path.splitext('position')
-            os.system('convert ' + position + ' ' + filename + '.pdf')
-
-            # Try is use to ensure that no file are left on disk
-            try:
-                self.assertTrue(os.path.isfile(filename + '.pdf'))
-            except:
-                os.remove(position)
-                raise
-            os.remove(filename + '.pdf')
-        os.remove(position)
-        return
     
-    def test_schedular(self):
+    def schedular(self, diagram):
         """Test that the DrawingEPS returns valid result"""
         
         horizontal_list = [True, False]
@@ -1467,15 +1433,30 @@ class TestDrawingEPS(unittest.TestCase):
                     for max_size in max_size_list:
                         opt.set('max_size',max_size)
                         
-                        self.setUp()
-                        self.plot.draw(opt)
-                        self.output_is_valid('__testdiag__.eps')
-                        
+                        plot = draw_eps.EpsDiagramDrawer(diagram, \
+                                        '__testdiag__.eps', model=_model, \
+                                         amplitude='')
+                        plot.draw(opt)
                         self.assertFalse(\
-                                    self.plot.diagram._debug_has_intersection())
-                        for line in self.plot.diagram.lineList:
+                                    plot.diagram._debug_has_intersection())
+                        for line in plot.diagram.lineList:
                             self.assertNotAlmostEquals(line.get_length(), 0)
-
+                            
+    def test_option_6g(self):
+        """Test that gg>6g is fine with all options"""
+        diagram = self.store_diagram['g g > g g g g g g'][73]
+        self.schedular(diagram)
+        
+    def test_option_6g_second(self):
+        """Test that gg>6g is fine with all options"""
+        diagram = self.store_diagram['g g > g g g g g g'][2556]
+        self.schedular(diagram)   
+        
+    def test_option_multi_type(self):
+        """Test that t h > t g W+ W-  is fine with all options"""
+        diagram = self.store_diagram['t h > t g W+ W-'][0] 
+        self.schedular(diagram)        
+          
 #===============================================================================
 # TestDrawingS_EPS
 #===============================================================================
