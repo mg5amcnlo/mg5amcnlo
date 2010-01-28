@@ -1620,7 +1620,7 @@ CALL VVVXXX(W(1,6),W(1,2),W(1,3),MGVX5,AMP(3))""")
         wavefunction.set('mothers', mymothers)
         self.assertEqual(export_v4.HelasFortranModel.\
                          sorted_mothers(wavefunction),
-                         [mymothers[2], mymothers[0], mymothers[1]])
+                         [mymothers[1], mymothers[0], mymothers[2]])
 
 
     def test_generate_helas_diagrams_WWWWA(self):
@@ -1967,5 +1967,5 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
                 get_matrix_element_calls(matrix_element):
             writer.write_fortran_line(fsock, line)
 
-        print fsock.getvalue()
+        #print fsock.getvalue()
 

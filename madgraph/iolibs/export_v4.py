@@ -793,10 +793,12 @@ class HelasFortranModel(helas_objects.HelasModel):
         if isinstance(arg, helas_objects.HelasWavefunction) or \
            isinstance(arg, helas_objects.HelasAmplitude):
             # First sort according to number_external number
-            sorted_mothers1 = sorted(arg.get('mothers'),
-                                     lambda wf1, wf2: \
-                                     wf1.get('number_external') - \
-                                     wf2.get('number_external'))
+            #sorted_mothers1 = sorted(arg.get('mothers'),
+            #                         lambda wf1, wf2: \
+            #                         wf1.get('number_external') - \
+            #                         wf2.get('number_external'))
+            sorted_mothers1 = copy.copy(arg.get('mothers'))
+
             # Next sort according to interaction pdg codes
             mother_codes = [ wf.get_pdg_code_outgoing() for wf \
                              in sorted_mothers1 ]
