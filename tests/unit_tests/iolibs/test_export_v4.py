@@ -1398,9 +1398,6 @@ CALL VVVXXX(W(1,2),W(1,4),W(1,8),MGVX5,AMP(5))""")
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
 
-        print "\n".join(export_v4.HelasFortranModel().\
-                                   get_matrix_element_calls(matrix_element))
-
         # I have checked that the resulting Helas calls below give
         # identical result as MG4.
         self.assertEqual("\n".join(export_v4.HelasFortranModel().\
@@ -1416,7 +1413,7 @@ CALL JVVXXX(W(1,1),W(1,4),MGVX3,MW,WW,W(1,6))
 CALL VVVXXX(W(1,6),W(1,2),W(1,3),MGVX5,AMP(3))""")
 
     def test_sorted_mothers(self):
-        """Testing the helas diagram generation W+ W- > W+ W- a
+        """Testing the sorted_mothers routine
         """
 
         # Set up model
@@ -1738,6 +1735,9 @@ CALL VVVXXX(W(1,6),W(1,2),W(1,3),MGVX5,AMP(3))""")
         #    for wf in diagram.get('wavefunctions'):
         #        print wf.get_call_key()
         #    print diagram.get('amplitude').get_call_key()
+
+        print "\n".join(export_v4.HelasFortranModel().\
+                                   get_matrix_element_calls(matrix_element))
 
         # I have checked that the resulting Helas calls below give
         # identical result as MG4.
