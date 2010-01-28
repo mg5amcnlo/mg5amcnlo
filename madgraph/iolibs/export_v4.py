@@ -253,10 +253,18 @@ def get_helicity_lines(matrix_element):
 def get_color_data_lines(matrix_element):
     """Return the color basis definition lines for this matrix element"""
 
-    if not matrix_element.get('color_basis'):
+    if not matrix_element.get('color_matrix'):
         return ["DATA Denom(1)/1/", "DATA (CF(i,1),i=1,1) /1/"]
     else:
-        return ["DATA Denom(1)/1/", "DATA (CF(i,1),i=1,1) /1/"]
+        ret_list = []
+        for index, denominator in \
+            enumerate(matrix_element.get('color_matrix').get_line_denominators()):
+            ret_list.append("DATA Denom(%i)/%i/" % (index + 1, denominator))
+            num_list = matrix_element.get('color_matrix').get_line_numerators(index, denominator)
+            ret_list.append("DATA (CF(i,%i),i=1,%i) /%s/" % (index + 1,
+                                                             len(num_list),
+                                            ','.join([str(i) for i in num_list])))
+        return ret_list
 
 def get_den_factor_line(matrix_element):
     """Return the denominator factor line for this matrix element"""
