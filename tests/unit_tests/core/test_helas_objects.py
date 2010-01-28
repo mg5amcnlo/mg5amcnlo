@@ -52,9 +52,9 @@ class HelasWavefunctionTest(unittest.TestCase):
                        'mothers': self.mymothers,
                        'interaction_id': 2,
                        'pdg_codes':[1, 2, 3],
-                       'inter_color': [],
-                       'lorentz': [],
-                       'couplings': { (0, 0):'none'},
+                       'inter_color': None,
+                       'lorentz': '',
+                       'coupling': 'none',
                        'state': 'incoming',
                        'number_external': 4,
                        'number': 5,
@@ -145,9 +145,9 @@ class HelasWavefunctionTest(unittest.TestCase):
         goal = goal + "    \'self_antipart\': False,\n"
         goal = goal + "    \'interaction_id\': 2,\n"
         goal = goal + "    \'pdg_codes\': [1, 2, 3],\n"
-        goal = goal + "    \'inter_color\': [],\n"
-        goal = goal + "    \'lorentz\': [],\n"
-        goal = goal + "    \'couplings\': {(0, 0): \'none\'},\n"
+        goal = goal + "    \'inter_color\': None,\n"
+        goal = goal + "    \'lorentz\': \'\',\n"
+        goal = goal + "    \'coupling\': \'none\',\n"
         goal = goal + "    \'state\': \'incoming\',\n"
         goal = goal + "    \'number_external\': 4,\n"
         goal = goal + "    \'number\': 5,\n"
@@ -230,9 +230,9 @@ class HelasAmplitudeTest(unittest.TestCase):
                   'self_antipart': False,
                   'interaction_id': 2,
                   'pdg_codes':[1, 2, 3],
-                  'inter_color': [],
-                  'lorentz': [],
-                  'couplings': { (0, 0):'none'},
+                  'inter_color': None,
+                  'lorentz': '',
+                  'coupling': 'none',
                   'state': 'incoming',
                   'mothers': helas_objects.HelasWavefunctionList(),
                   'number': 5}
@@ -243,9 +243,9 @@ class HelasAmplitudeTest(unittest.TestCase):
         self.mydict = {'mothers': self.mywavefunctions,
                        'interaction_id': 2,
                        'pdg_codes':[1, 2, 3],
-                       'inter_color': [],
-                       'lorentz': [],
-                       'couplings': { (0, 0):'none'},
+                       'inter_color': None,
+                       'lorentz': '',
+                       'coupling': 'none',
                        'number': 5}
 
         self.myamplitude = helas_objects.HelasAmplitude(self.mydict)
@@ -321,9 +321,9 @@ class HelasAmplitudeTest(unittest.TestCase):
         goal = "{\n"
         goal = goal + "    \'interaction_id\': 2,\n"
         goal = goal + "    \'pdg_codes\': [1, 2, 3],\n"
-        goal = goal + "    \'inter_color\': [],\n"
-        goal = goal + "    \'lorentz\': [],\n"
-        goal = goal + "    \'couplings\': {(0, 0): \'none\'},\n"
+        goal = goal + "    \'inter_color\': None,\n"
+        goal = goal + "    \'lorentz\': \'\',\n"
+        goal = goal + "    \'coupling\': \'none\',\n"
         goal = goal + "    \'number\': 5,\n"
         goal = goal + "    \'mothers\': " + repr(self.mywavefunctions) + "\n}"
 
@@ -2295,14 +2295,14 @@ class HelasModelTest(unittest.TestCase):
 
         wavefunctions = {}
         # IXXXXXX.Key: (spin, state)
-        key1 = (tuple([-2]), tuple(['']))
+        key1 = (tuple([-2]), '')
         wavefunctions[key1] = \
                           lambda wf: 'CALL IXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
                           (wf.get('number_external'), wf.get('mass'),
                            wf.get('number_external'), -(-1) ** wf.get_with_flow('is_part'),
                            wf.get('number_external'), wf.get('number'))
         # OXXXXXX.Key: (spin, state)
-        key2 = (tuple([2]), tuple(['']))
+        key2 = (tuple([2]), '')
         wavefunctions[key2] = \
                           lambda wf: 'CALL OXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
                           (wf.get('number_external'), wf.get('mass'),

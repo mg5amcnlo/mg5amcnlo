@@ -81,9 +81,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # couplings = the coupling names from the interaction: {(0,0):'MGVX12'}
         self['interaction_id'] = 0
         self['pdg_codes'] = []
-        self['inter_color'] = []
-        self['lorentz'] = []
-        self['couplings'] = { (0, 0):'none'}
+        self['inter_color'] = None
+        self['lorentz'] = ''
+        self['coupling'] = 'none'
         # Properties relating to the leg/vertex
         # state = initial/final (for external bosons),
         #         intermediate (for intermediate bosons),
@@ -196,46 +196,24 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid integer" % str(mystr)
 
-        if name in ['inter_color']:
-            #Should be a list of list strings
-            if not isinstance(value, list):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid list of Color Strings" % str(value)
-            for mycolstring in value:
-                if not isinstance(mycolstring, color.ColorString):
+        if name == 'inter_color':
+            # Should be None or a color string
+            if value and not isinstance(value, color.ColorString):
                     raise self.PhysicsObjectError, \
-                            "%s is not a valid list of Color Strings" % str(value)
+                            "%s is not a valid Color String" % str(value)
 
-        if name in ['lorentz']:
-            #Should be a list of list strings
-            if not isinstance(value, list):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid list of strings" % str(value)
-            for mystr in value:
-                if not isinstance(mystr, str):
+        if name == 'lorentz':
+            #Should be a string
+            if not isinstance(value, str):
                     raise self.PhysicsObjectError, \
-                        "%s is not a valid string" % str(mystr)
+                        "%s is not a valid string" % str(value)
 
-        if name == 'couplings':
-            #Should be a dictionary of strings with (i,j) keys
-            if not isinstance(value, dict):
+        if name == 'coupling':
+            #Should be a string
+            if not isinstance(value, str):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid dictionary for couplings" % \
+                        "%s is not a valid coupling string" % \
                                                                 str(value)
-
-            for key in value.keys():
-                if not isinstance(key, tuple):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a valid tuple" % str(key)
-                if len(key) != 2:
-                    raise self.PhysicsObjectError, \
-                        "%s is not a valid tuple with 2 elements" % str(key)
-                if not isinstance(key[0], int) or not isinstance(key[1], int):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a valid tuple of integer" % str(key)
-                if not isinstance(value[key], str):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a valid string" % str(mystr)
 
         if name == 'state':
             if not isinstance(value, str):
@@ -293,9 +271,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     self.set('pdg_codes',
                              [part.get_pdg_code() for part in \
                               inter.get('particles')])
-                    self.set('inter_color', inter.get('color'))
-                    self.set('lorentz', inter.get('lorentz'))
-                    self.set('couplings', inter.get('couplings'))
+                    if inter.get('color'):
+                        self.set('inter_color', inter.get('color'))
+                    if inter.get('lorentz'):
+                        self.set('lorentz', inter.get('lorentz'))
+                    self.set('coupling', inter.get('couplings')[\
+                            inter.get('couplings').keys()[0]])
                 return True
             elif name == 'pdg_code':
                 self.set('pdg_code', value)
@@ -321,7 +302,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return ['pdg_code', 'name', 'antiname', 'spin', 'color',
                 'mass', 'width', 'is_part', 'self_antipart',
                 'interaction_id', 'pdg_codes', 'inter_color', 'lorentz',
-                'couplings', 'state', 'number_external', 'number',
+                'coupling', 'state', 'number_external', 'number',
                 'fermionflow', 'mothers']
 
     # Helper functions
@@ -693,7 +674,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if self.needs_hermitian_conjugate():
             res.append('C')
 
-        return (tuple(res), tuple(self.get('lorentz')))
+        return (tuple(res), self.get('lorentz'))
 
     # Overloaded operators
 
@@ -719,7 +700,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
            self['color'] != other['color'] or \
            self['inter_color'] != other['inter_color'] or \
            self['lorentz'] != other['lorentz'] or \
-           self['couplings'] != other['couplings'] or \
+           self['coupling'] != other['coupling'] or \
            self['state'] != other['state']:
             return False
 
@@ -849,9 +830,9 @@ class HelasAmplitude(base_objects.PhysicsObject):
         # Properties related to the interaction generating the propagator
         self['interaction_id'] = 0
         self['pdg_codes'] = []
-        self['inter_color'] = []
-        self['lorentz'] = []
-        self['couplings'] = { (0, 0):'none'}
+        self['inter_color'] = None
+        self['lorentz'] = ''
+        self['coupling'] = 'none'
         # Properties relating to the vertex
         self['number'] = 0
         self['mothers'] = HelasWavefunctionList()
@@ -891,46 +872,24 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid integer" % str(mystr)
 
-        if name in ['color']:
-            #Should be a list of list strings
-            if not isinstance(value, list):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid list of Color Strings" % str(value)
-            for mycolstring in value:
-                if not isinstance(mycolstring, color.ColorString):
+        if name == 'inter_color':
+            # Should be None or a color string
+            if value and not isinstance(value, color.ColorString):
                     raise self.PhysicsObjectError, \
-                            "%s is not a valid list of Color Strings" % str(value)
+                            "%s is not a valid Color String" % str(value)
 
-        if name in ['lorentz']:
-            #Should be a list of list strings
-            if not isinstance(value, list):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid list of strings" % str(value)
-            for mystr in value:
-                if not isinstance(mystr, str):
+        if name == 'lorentz':
+            #Should be a string
+            if not isinstance(value, str):
                     raise self.PhysicsObjectError, \
-                        "%s is not a valid string" % str(mystr)
+                        "%s is not a valid string" % str(value)
 
-        if name == 'couplings':
-            #Should be a dictionary of strings with (i,j) keys
-            if not isinstance(value, dict):
+        if name == 'coupling':
+            #Should be a string
+            if not isinstance(value, str):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid dictionary for couplings" % \
+                        "%s is not a valid coupling string" % \
                                                                 str(value)
-
-            for key in value.keys():
-                if not isinstance(key, tuple):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a valid tuple" % str(key)
-                if len(key) != 2:
-                    raise self.PhysicsObjectError, \
-                        "%s is not a valid tuple with 2 elements" % str(key)
-                if not isinstance(key[0], int) or not isinstance(key[1], int):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a valid tuple of integer" % str(key)
-                if not isinstance(value[key], str):
-                    raise self.PhysicsObjectError, \
-                        "%s is not a valid string" % str(mystr)
 
         if name == 'number':
             if not isinstance(value, int):
@@ -970,9 +929,12 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     self.set('pdg_codes',
                              [part.get_pdg_code() for part in \
                               inter.get('particles')])
-                    self.set('inter_color', inter.get('color'))
-                    self.set('lorentz', inter.get('lorentz'))
-                    self.set('couplings', inter.get('couplings'))
+                    if inter.get('color'):
+                        self.set('inter_color', inter.get('color')[0])
+                    if inter.get('lorentz'):
+                        self.set('lorentz', inter.get('lorentz')[0])
+                    self.set('coupling', inter.get('couplings')[\
+                            inter.get('couplings').keys()[0]])
                 return True
             else:
                 raise self.PhysicsObjectError, \
@@ -984,7 +946,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         """Return particle property names as a nicely sorted list."""
 
         return ['interaction_id', 'pdg_codes', 'inter_color', 'lorentz',
-                'couplings', 'number', 'mothers']
+                'coupling', 'number', 'mothers']
 
 
     # Helper functions
@@ -1102,7 +1064,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         # Check relevant directly defined properties
         if self['inter_color'] != other['inter_color'] or \
            self['lorentz'] != other['lorentz'] or \
-           self['couplings'] != other['couplings'] or \
+           self['coupling'] != other['coupling'] or \
            self['number'] != other['number']:
             return False
 
@@ -1347,14 +1309,18 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         helas_diagrams = HelasDiagramList()
 
+        # Keep track of amplitude number
+        amplitude_number = 0
+
         for diagram in diagram_list:
 
-            # Dictionary from leg number to wave function, keeps track
-            # of the present position in the tree
-            number_to_wavefunctions = {}
+            # List of dictionaries from leg number to wave function,
+            # keeps track of the present position in the tree.
+            # Need one dictionary per coupling multiplicity (diagram)
+            number_to_wavefunctions = [{}]
 
             # Initialize wavefunctions for this diagram
-            diagram_wavefunctions = HelasWavefunctionList()
+            diagram_wavefunctions = [HelasWavefunctionList()]
 
             vertices = copy.copy(diagram.get('vertices'))
 
@@ -1382,79 +1348,128 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # Go through all vertices except the last and create
             # wavefunctions
             for vertex in vertices:
-                legs = copy.copy(vertex.get('legs'))
-                last_leg = legs.pop()
-                # Generate list of mothers from legs
-                mothers = self.getmothers(legs, number_to_wavefunctions,
-                                          external_wavefunctions,
-                                          wavefunctions,
-                                          diagram_wavefunctions)
-                # Now generate new wavefunction for the last leg
-                wf = HelasWavefunction(last_leg, vertex.get('id'), model)
-                wf.set('mothers', mothers)
-                # Need to set incoming/outgoing and
-                # particle/antiparticle according to the fermion flow
-                # of mothers
-                wf.set_state_and_particle(model)
-                # Need to check for clashing fermion flow due to
-                # Majorana fermions, and modify if necessary
-                # Also need to keep track of the wavefunction number.
-                wf, wf_number = wf.check_and_fix_fermion_flow(wavefunctions,
-                                                   diagram_wavefunctions,
+                # In case there are diagrams with multiple Lorentz/color 
+                # structures, we need to keep track of the wavefunctions
+                # for each such structure separately, and generate
+                # one HelasDiagram for each structure.
+                new_number_to_wavefunctions = []
+                new_diagram_wavefunctions = []
+                for number_wf_dict,diag_wfs in zip(number_to_wavefunctions,
+                                                   diagram_wavefunctions):
+                    legs = copy.copy(vertex.get('legs'))
+                    last_leg = legs.pop()
+                    # Generate list of mothers from legs
+                    mothers = self.getmothers(legs, number_wf_dict,
+                                              external_wavefunctions,
+                                              wavefunctions,
+                                              diag_wfs)
+                    inter = model.get('interaction_dict')[vertex.get('id')]
+
+                    # Now generate new wavefunction for the last leg
+
+                    # Need one amplitude for each Lorentz/color structure,
+                    # i.e. for each coupling
+                    for coupl_key in inter.get('couplings').keys():
+                        wf = HelasWavefunction(last_leg, vertex.get('id'), model)
+                        wf.set('coupling', inter.get('couplings')[coupl_key])
+                        if inter.get('color'):
+                            wf.set('color', inter.get('color')[coupl_key[0]])
+                        wf.set('lorentz', inter.get('lorentz')[coupl_key[1]])
+                        wf.set('mothers', mothers)
+                        # Need to set incoming/outgoing and
+                        # particle/antiparticle according to the fermion flow
+                        # of mothers
+                        wf.set_state_and_particle(model)
+                        # Need to check for clashing fermion flow due to
+                        # Majorana fermions, and modify if necessary
+                        # Also need to keep track of the wavefunction number.
+                        wf, wf_number = wf.check_and_fix_fermion_flow(\
+                                                   wavefunctions,
+                                                   diag_wfs,
                                                    external_wavefunctions,
                                                    wf_number)
 
-# Wavefunction number is given by: number of external
-                # wavefunctions + number of non-external wavefunctions
-                # in wavefunctions and diagram_wavefunctions
-                if not wf in diagram_wavefunctions:
-                    wf_number = wf_number + 1
-                    wf.set('number', wf_number)
-                    # Store wavefunction
-                    try:
-                        # Use wf_mother_arrays to locate existing wavefunction
-                        wf = wavefunctions[wf_mother_arrays.index(wf.to_array())]
-                        # Since we reuse the old wavefunction, reset wf_number
-                        wf_number = wf_number - 1
-                    except ValueError:
-                        diagram_wavefunctions.append(wf)
-                    number_to_wavefunctions[last_leg.get('number')] = wf
+                        
+                        # Create new copy of diagram wavefunctions
+                        new_diagram_wfs = copy.copy(\
+                                    diag_wfs)
+                        # Create new copy of number_wf_dict
+                        new_number_wf_dict = copy.copy(number_wf_dict)
 
-            # Find mothers for the amplitude
-            legs = lastvx.get('legs')
-            mothers = self.getmothers(legs, number_to_wavefunctions,
-                                      external_wavefunctions,
-                                      wavefunctions,
-                                      diagram_wavefunctions)
+                        # Store wavefunction
+                        if not wf in diag_wfs:
+                            # Update wf number
+                            wf_number = wf_number + 1
+                            wf.set('number', wf_number)
+                            # Store wavefunction
+                            try:
+                                # Use wf_mother_arrays to locate existing wavefunction
+                                wf = wavefunctions[wf_mother_arrays.index(wf.to_array())]
+                                # Since we reuse the old wavefunction, reset wf_number
+                                wf_number = wf_number - 1
+                            except ValueError:
+                                new_diagram_wfs.append(wf)
 
-            # Now generate a HelasAmplitude from the last vertex.
-            amp = HelasAmplitude(lastvx, model)
-            amp.set('mothers', mothers)
-            amp.set('number', diagram_list.index(diagram) + 1)
+                            new_number_wf_dict[last_leg.get('number')] = wf
 
-            # Need to check for clashing fermion flow due to
-            # Majorana fermions, and modify if necessary
-            wf_number = amp.check_and_fix_fermion_flow(wavefunctions,
-                                           diagram_wavefunctions,
-                                           external_wavefunctions,
-                                           wf_number)
+                        # Store the new copies of diag_wfs and number_wf_dict
+                        new_diagram_wavefunctions.append(\
+                                    new_diagram_wfs)
+                        new_number_to_wavefunctions.append(\
+                                                        new_number_wf_dict)
+                        
 
-            # Sort the wavefunctions according to number
-            diagram_wavefunctions.sort(lambda wf1, wf2: \
-                                       wf1.get('number') - wf2.get('number'))
+                number_to_wavefunctions = new_number_to_wavefunctions
+                diagram_wavefunctions = new_diagram_wavefunctions
 
-            # Generate HelasDiagram
-            helas_diagrams.append(HelasDiagram({ \
-                'wavefunctions': diagram_wavefunctions,
-                'amplitude': amp
-                }))
 
-            if optimization:
-                wavefunctions.extend(diagram_wavefunctions)
-                wf_mother_arrays.extend([wf.to_array() for wf \
-                                         in diagram_wavefunctions])
-            else:
-                wf_number = len(process.get('legs'))
+            # Generate all amplitudes corresponding to the different
+            # copies of this diagram
+            for number_wf_dict,diag_wfs in zip(number_to_wavefunctions,
+                                               diagram_wavefunctions):
+                # Find mothers for the amplitude
+                legs = lastvx.get('legs')
+                mothers = self.getmothers(legs, number_wf_dict,
+                                          external_wavefunctions,
+                                          wavefunctions,
+                                          diag_wfs)
+
+                # Need to check for clashing fermion flow due to
+                # Majorana fermions, and modify if necessary
+                wf_number = mothers.check_and_fix_fermion_flow(wavefunctions,
+                                              diag_wfs,
+                                              external_wavefunctions,
+                                              'nostate',
+                                              wf_number)
+
+                # Sort the wavefunctions according to number
+                diag_wfs.sort(lambda wf1, wf2: \
+                              wf1.get('number') - wf2.get('number'))
+                
+                # Now generate HelasAmplitudes from the last vertex.
+                inter = model.get('interaction_dict')[lastvx.get('id')]
+                for coupl_key in inter.get('couplings').keys():
+                    amp = HelasAmplitude(lastvx, model)
+                    amp.set('coupling', inter.get('couplings')[coupl_key])
+                    if inter.get('color'):
+                        amp.set('inter_color', inter.get('color')[coupl_key[0]])
+                    amp.set('lorentz', inter.get('lorentz')[coupl_key[1]])
+                    amp.set('mothers', mothers)
+                    amplitude_number = amplitude_number + 1
+                    amp.set('number', amplitude_number)
+
+                # Generate HelasDiagram
+                helas_diagrams.append(HelasDiagram({ \
+                   'wavefunctions': diag_wfs,
+                   'amplitude': amp
+                   }))
+
+                if optimization:
+                    wavefunctions.extend(diag_wfs)
+                    wf_mother_arrays.extend([wf.to_array() for wf \
+                                             in diag_wfs])
+                else:
+                    wf_number = len(process.get('legs'))
 
         self.set('diagrams', helas_diagrams)
 
