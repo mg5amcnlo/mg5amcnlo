@@ -835,6 +835,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         # Properties relating to the vertex
         self['number'] = 0
         self['fermionfactor'] = 0
+        self['color_indices'] = []
         self['mothers'] = HelasWavefunctionList()
 
     # Customized constructor
@@ -863,7 +864,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                         str(value)
 
         if name == 'pdg_codes':
-            #Should be a list of strings
+            #Should be a list of integers
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list of integers" % str(value)
@@ -906,6 +907,16 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid fermion factor (-1, 0 or 1)" % \
                         str(value)
+
+        if name == 'color_indices':
+            #Should be a list of integers
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list of integers" % str(value)
+            for mystr in value:
+                if not isinstance(mystr, int):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid integer" % str(mystr)
 
         if name == 'mothers':
             if not isinstance(value, HelasWavefunctionList):
@@ -965,7 +976,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
         """Return particle property names as a nicely sorted list."""
 
         return ['interaction_id', 'pdg_codes', 'inter_color', 'lorentz',
-                'coupling', 'number', 'fermionfactor', 'mothers']
+                'coupling', 'number', 'color_indices', 'fermionfactor', 
+                'mothers']
 
 
     # Helper functions
@@ -1320,6 +1332,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # Need one dictionary per coupling multiplicity (diagram)
             number_to_wavefunctions = [{}]
 
+            # Need to keep track of the color structures for each amplitude
+            color_lists = [[]]
+
             # Initialize wavefunctions for this diagram
             diagram_wavefunctions = HelasWavefunctionList()
 
@@ -1360,7 +1375,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 # Note that all wavefunctions relating to this diagram
                 # will be written out before the first amplitude is written.
                 new_number_to_wavefunctions = []
-                for number_wf_dict in number_to_wavefunctions:
+                new_color_lists = []
+                for number_wf_dict, color_list in zip(number_to_wavefunctions,
+                                                     color_lists):
                     legs = copy.copy(vertex.get('legs'))
                     last_leg = legs.pop()
                     # Generate list of mothers from legs
@@ -1416,15 +1433,19 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         # Store the new copy of number_wf_dict
                         new_number_to_wavefunctions.append(\
                                                         new_number_wf_dict)
-                        
+                        # Add color index and store new copy of color_lists
+                        new_color_list = copy.copy(color_list)
+                        new_color_list.append(coupl_key[0])
+                        new_color_lists.append(new_color_list)
 
                 number_to_wavefunctions = new_number_to_wavefunctions
-
+                color_lists = new_color_lists
 
             # Generate all amplitudes corresponding to the different
             # copies of this diagram
             helas_diagram = HelasDiagram()
-            for number_wf_dict in number_to_wavefunctions:
+            for number_wf_dict, color_list in zip(number_to_wavefunctions,
+                                                  color_lists):
                 # Find mothers for the amplitude
                 legs = lastvx.get('legs')
                 mothers = self.getmothers(legs, number_wf_dict,
@@ -1454,7 +1475,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     amp.set('mothers', mothers)
                     amplitude_number = amplitude_number + 1
                     amp.set('number', amplitude_number)
-
+                    # Add the list with color indices to the amplitude
+                    new_color_list = copy.copy(color_list)
+                    new_color_list.append(coupl_key[0])
+                    amp.set('color_indices', new_color_list)
                     # Generate HelasDiagram
 
                     helas_diagram.get('amplitudes').append(amp)

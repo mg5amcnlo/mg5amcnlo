@@ -247,6 +247,7 @@ class HelasAmplitudeTest(unittest.TestCase):
                        'lorentz': '',
                        'coupling': 'none',
                        'number': 5,
+                       'color_indices': [],
                        'fermionfactor': 1}
 
         self.myamplitude = helas_objects.HelasAmplitude(self.mydict)
@@ -329,6 +330,7 @@ class HelasAmplitudeTest(unittest.TestCase):
         goal = goal + "    \'lorentz\': \'\',\n"
         goal = goal + "    \'coupling\': \'none\',\n"
         goal = goal + "    \'number\': 5,\n"
+        goal = goal + "    \'color_indices\': [],\n"
         goal = goal + "    \'fermionfactor\': 1,\n"
         goal = goal + "    \'mothers\': " + repr(self.mywavefunctions) + "\n}"
 
@@ -1785,6 +1787,7 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude,
                                                           gen_color=False)
+
         self.assertEqual(sum([len(diagram.get('amplitudes')) for diagram in \
                           matrix_element.get('diagrams')]), 510)
 
