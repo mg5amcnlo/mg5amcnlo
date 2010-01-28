@@ -683,6 +683,33 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'couplings':{(0, 0):'MGVX12'},
                       'orders':{'QED':1}}))
 
+        # Gluon self-couplings
+        myinterlist.append(base_objects.Interaction({
+                      'id': 8,
+                      'particles': base_objects.ParticleList(\
+                                            [g, \
+                                             g, \
+                                             g]),
+                      'color': [color.ColorString([color.f(0, 1, 2)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 9,
+                      'particles': base_objects.ParticleList(\
+                                            [g, \
+                                             g, \
+                                             g,
+                                             g]),
+                      'color': [color.ColorString([color.f(0, 1, 2)]),
+                                color.ColorString([color.f(0, 1, 2)]),
+                                color.ColorString([color.f(0, 1, 2)])],
+                      'lorentz':['gggg1', 'gggg2', 'gggg3'],
+                      'couplings':{(0, 0):'GG',(1, 1):'GG',(2, 2):'GG'},
+                      'orders':{'QCD':2}}))
+
+
         self.mymodel.set('particles', mypartlist)
         self.mymodel.set('interactions', myinterlist)
 
@@ -1690,6 +1717,57 @@ class HelasMatrixElementTest(unittest.TestCase):
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
 
         self.assertEqual(matrix_element.get('diagrams'), mydiagrams)
+
+    def test_generate_helas_diagrams_4g(self):
+        """Testing the helas diagram generation g g > g g and g g > g g g
+        """
+
+        # Test g g > g g 
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        self.assertEqual(len(myamplitude.get('diagrams')), 4)
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude,
+                                                          gen_color=False)
+
+        self.assertEqual([len(diagram.get('amplitudes')) for diagram in \
+                          matrix_element.get('diagrams')],
+                         [3, 1, 1, 1])
+
+        # Test g g > g g 
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        self.assertEqual(len(myamplitude.get('diagrams')), 25)
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude,
+                                                          gen_color=False)
+
+        self.assertEqual([len(diagram.get('amplitudes')) for diagram in \
+                          matrix_element.get('diagrams')],
+                         [1, 1, 1, 3, 1, 1, 1, 3, 1, 1, 1, 3, 1, 1, 1, 3,
+                          1, 1, 1, 3, 3, 3, 3, 3, 3])
 
 #===============================================================================
 # HelasMultiProcessTest
