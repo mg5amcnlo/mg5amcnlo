@@ -184,6 +184,14 @@ def read_interactions_v4(fsock, ref_part_list):
                     # Triple glue / glue-gluino-gluino coupling
                     myinter.set('color', [color.ColorString(\
                         [color.f(0, 1, 2)])])
+                elif colors == [8, 8, 8, 8]:
+                    # 4-glue / glue-glue-gluino-gluino coupling
+                    myinter.set('color', [color.ColorString([color.f(-1, 0, 2),
+                                                   color.f(-1, 1, 3)]),
+                                color.ColorString([color.f(-1, 0, 3),
+                                                   color.f(-1, 1, 2)]),
+                                color.ColorString([color.f(-1, 0, 1),
+                                                   color.f(-1, 2, 3)])])
                 else:
                     raise Interaction.PhysicsObjectError, \
                         "Color combination %s not yet implemented." % \
@@ -195,18 +203,22 @@ def read_interactions_v4(fsock, ref_part_list):
                 # Set the Lorentz structure. Default for 3-particle
                 # vertices is empty string, for 4-particle pair of
                 # empty strings
-                if len(part_list) == 3:
-                    myinter.set('lorentz', [''])
-                else:
-                    myinter.set('lorentz', ['', ''])
+                myinter.set('lorentz', [''])
+
                 pdg_codes = sorted([part.get_pdg_code() for part in part_list])
                 spins = sorted([part.get('spin') for part in part_list])
+
                 # WWWW and WWVV
                 if pdg_codes == [-24, -24, 24, 24]:
-                    myinter.set('lorentz', ['WWWW', ''])
+                    myinter.set('lorentz', ['WWWW'])
                 elif spins == [3, 3, 3, 3] and \
                              24 in pdg_codes and - 24 in pdg_codes:
-                    myinter.set('lorentz', ['WWVV', ''])
+                    myinter.set('lorentz', ['WWVV'])
+
+                # gggg
+                if pdg_codes == [21, 21, 21, 21]:
+                    myinter.set('lorentz', ['gggg1','gggg2','gggg3'])
+
                 # If extra flag, add this to Lorentz    
                 if len(values) > 3 * len(part_list) - 4:
                     myinter.get('lorentz')[0] = \
@@ -214,14 +226,28 @@ def read_interactions_v4(fsock, ref_part_list):
                                               + values[3 * len(part_list) - 4].upper()
 
                 # Use the other strings to fill variable names and tags
-                if len(part_list) == 3:
+
+                # Couplings: special treatment for 4-vertices, where MG4 used
+                # two couplings, while MG5 only uses one (with the exception
+                # of the 4g vertex, which needs special treatment)
+                # DUM0 and DUM1 are used as placeholders by FR, corresponds to 1
+                if len(part_list) == 3 or \
+                   values[len(part_list) + 1] == 'DUM0' or \
+                   values[len(part_list) + 1] == 'DUM1':
                     myinter.set('couplings', {(0, 0):values[len(part_list)]})
                 else:
-                    myinter.set('couplings', {(0, 0):values[len(part_list)],
-                                              (0, 1):values[len(part_list) + 1]})
+                    myinter.set('couplings', {(0, 0):values[len(part_list)] + \
+                                             '*' + values[len(part_list) + 1]})
 
+                # gggg
+                if pdg_codes == [21, 21, 21, 21]:
+                    myinter.set('couplings', {(0, 0):values[len(part_list)],
+                                              (1, 1):values[len(part_list)],
+                                              (2, 2):values[len(part_list)]})
+
+                # Coupling orders - needs to be fixed
                 order_list = values[2 * len(part_list) - 2: \
-                                   3 * len(part_list) - 4]
+                                    3 * len(part_list) - 4]
 
                 def count_duplicates_in_list(dupedList):
                     uniqueSet = set(item for item in dupedList)
