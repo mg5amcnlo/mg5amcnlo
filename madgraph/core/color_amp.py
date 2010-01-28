@@ -14,6 +14,7 @@
 ################################################################################
 
 import copy
+import fractions
 import operator
 import re
 
@@ -441,7 +442,20 @@ class ColorMatrix(dict):
         """Get a list with the denominators for the different lines in
         the color matrix"""
 
-        pass
+        den_list = []
+        for i1 in range(len(self._col_basis1)):
+            den_list.append(self.lcmm(*[\
+                        self.col_matrix_fixed_Nc[(i1, i2)][0].denominator for \
+                                        i2 in range(len(self._col_basis2))]))
+        return den_list
+
+    def get_line_numerators(self, line_index, den):
+        """Returns a list of numerator for line line_index, assuming a common
+        denominator den."""
+
+        return [self.col_matrix_fixed_Nc[(line_index, i2)][0].numerator * \
+                den / self.col_matrix_fixed_Nc[(line_index, i2)][0].denominator \
+                for i2 in range(len(self._col_basis2))]
 
     @classmethod
     def fix_summed_indices(self, struct1, struct2):
@@ -474,3 +488,13 @@ class ColorMatrix(dict):
             return_list.append((elem[0], tuple(fix_elem[1])))
 
         return tuple(return_list)
+
+    @staticmethod
+    def lcm(a, b):
+        """Return lowest common multiple."""
+        return a * b // fractions.gcd(a, b)
+
+    @staticmethod
+    def lcmm(*args):
+        """Return lcm of args."""
+        return reduce(ColorMatrix.lcm, args)

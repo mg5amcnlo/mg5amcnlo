@@ -514,6 +514,14 @@ class ColorSquareTest(unittest.TestCase):
                        fractions.Fraction(-1, 54), fractions.Fraction(5, 9))
                       ]
 
+        goal_den_list = [[3] * 2, [54] * 36]
+
+        goal_first_line_num = [[6, -2],
+                               [72, -10, 63, -18, 6, -21, -10, -21, 3, 62, -10,
+                                - 21, -18, 62, -18, -24, 6, 63, -9, -10, -1, 6,
+                                3, 3, 8, -1, 30, 6, -24, -1, 71, 3, -21, -18,
+                                - 1, 30]]
+
         for n in range(2):
             myleglist = base_objects.LegList()
 
@@ -549,6 +557,12 @@ class ColorSquareTest(unittest.TestCase):
             for i in range(len(col_basis.items())):
                 self.assertEqual(col_matrix.col_matrix_fixed_Nc[(0, i)],
                                  (goal_line1[n][i], 0))
+
+            self.assertEqual(col_matrix.get_line_denominators(),
+                             goal_den_list[n])
+            self.assertEqual(col_matrix.get_line_numerators(0,
+                             col_matrix.get_line_denominators()[0]),
+                             goal_first_line_num[n])
 
     def test_color_matrix_Nc_restrictions(self):
         """Test the Nc power restriction during color basis building """
@@ -598,3 +612,9 @@ class ColorSquareTest(unittest.TestCase):
                                                                immutable2),
                          (('d', (1, -2, -5)), ('T', (-5, -2, 4))))
 
+    def test_helper_lcm_functions(self):
+        """Test the helper functions to derive common denominators for
+        lines in the color matrix."""
+
+        self.assertEqual(color_amp.ColorMatrix.lcm(6, 3), 6)
+        self.assertEqual(color_amp.ColorMatrix.lcmm(6, 3, 5, 2), 30)
