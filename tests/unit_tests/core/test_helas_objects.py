@@ -1749,7 +1749,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                           matrix_element.get('diagrams')],
                          [3, 1, 1, 1])
 
-        # Test g g > g g 
+        # Test g g > g g g
 
         myleglist.append(base_objects.Leg({'id':21,
                                          'state':'final'}))
@@ -1768,6 +1768,25 @@ class HelasMatrixElementTest(unittest.TestCase):
                           matrix_element.get('diagrams')],
                          [1, 1, 1, 3, 1, 1, 1, 3, 1, 1, 1, 3, 1, 1, 1, 3,
                           1, 1, 1, 3, 3, 3, 3, 3, 3])
+
+        return
+
+        # Test g g > g g g g
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        self.assertEqual(len(myamplitude.get('diagrams')), 220)
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude,
+                                                          gen_color=False)
+        self.assertEqual(sum([len(diagram.get('amplitudes')) for diagram in \
+                          matrix_element.get('diagrams')]), 510)
 
 #===============================================================================
 # HelasMultiProcessTest

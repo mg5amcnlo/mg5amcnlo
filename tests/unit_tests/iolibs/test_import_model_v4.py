@@ -174,7 +174,7 @@ class IOImportV4Test(unittest.TestCase):
                                                                 wplus,
                                                                 wmin]),
                                      'color':[],
-                                     'lorentz':['WWWWN', ''],
+                                     'lorentz':['WWWWN'],
                                      'couplings':{(0, 0):'MGVX6'},
                                      'orders':{'QED':2}}),
 
