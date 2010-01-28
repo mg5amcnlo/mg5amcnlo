@@ -636,7 +636,7 @@ class HelasFortranModel(helas_objects.HelasModel):
                 # Extra dummy coupling for 4-particle vertices
                 # Need to replace later with the correct type
                 if len(argument.get('mothers')) == 3:
-                    call = call + "ONE,"
+                    call = call + "DUM0,"
                 # Mass and width
                 call = call + "%s,%s,"
                 # New wavefunction
@@ -645,7 +645,7 @@ class HelasFortranModel(helas_objects.HelasModel):
                 # Extra dummy coupling for 4-particle vertices
                 # Need to replace later with the correct type
                 if len(argument.get('mothers')) == 4:
-                    call = call + "ONE,"
+                    call = call + "DUM0,"
                 # Amplitude
                 call = call + "AMP(%d))"                
 

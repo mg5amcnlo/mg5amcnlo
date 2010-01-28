@@ -214,11 +214,18 @@ def read_interactions_v4(fsock, ref_part_list):
                                               + values[3 * len(part_list) - 4].upper()
 
                 # Use the other strings to fill variable names and tags
-                if len(part_list) == 3:
+
+                # Couplings: special treatment for 4-vertices, where MG4 used
+                # two couplings, while MG5 only uses one (with the exception
+                # of the 4g vertex, which needs special treatment)
+                # DUM0 and DUM1 are used as placeholders by FR, corresponds to 1
+                if len(part_list) == 3 or \
+                   values[len(part_list) + 1] == 'DUM0' or \
+                   values[len(part_list) + 1] == 'DUM1':
                     myinter.set('couplings', {(0, 0):values[len(part_list)]})
                 else:
-                    myinter.set('couplings', {(0, 0):values[len(part_list)],
-                                              (0, 1):values[len(part_list) + 1]})
+                    myinter.set('couplings', {(0, 0):values[len(part_list)] + \
+                                             '*' + values[len(part_list) + 1]})
 
                 order_list = values[2 * len(part_list) - 2: \
                                    3 * len(part_list) - 4]

@@ -698,7 +698,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
            self['mass'] != other['mass'] or \
            self['width'] != other['width'] or \
            self['color'] != other['color'] or \
-           self['inter_color'] != other['inter_color'] or \
            self['lorentz'] != other['lorentz'] or \
            self['coupling'] != other['coupling'] or \
            self['state'] != other['state']:
@@ -1062,8 +1061,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
             return False
 
         # Check relevant directly defined properties
-        if self['inter_color'] != other['inter_color'] or \
-           self['lorentz'] != other['lorentz'] or \
+        if self['lorentz'] != other['lorentz'] or \
            self['coupling'] != other['coupling'] or \
            self['number'] != other['number']:
             return False

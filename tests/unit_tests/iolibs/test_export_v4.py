@@ -471,7 +471,6 @@ class HelasFortranModelTest(test_helas_objects.HelasModelTest):
             mothers = copy.copy(wfs)
             mothers.remove(wf)
             wf.set('mothers', mothers)
-            print "call_key: ", wf.get_call_key(), wf.get('lorentz')
             self.assertEqual(fortran_model.get_wavefunction_call(wf),
                              goal[goal_counter])
             goal_counter = goal_counter + 1
@@ -1195,8 +1194,8 @@ CALL IOVXXX(W(1,4),W(1,3),W(1,5),MGVX27,AMP(1))""")
                                              Wplus,
                                              Wminus]),
             'color': [],
-            'lorentz':['WWWWN', ''],
-            'couplings':{(0, 0):'MGVX6', (0, 1):'DUM0'},
+            'lorentz':['WWWWN'],
+            'couplings':{(0, 0):'MGVX6'},
             'orders':{'QED':2}}))
 
         mybasemodel = base_objects.Model()
@@ -1335,8 +1334,8 @@ CALL VVVXXX(W(1,2),W(1,4),W(1,8),MGVX5,AMP(5))""")
                                              Wplus,
                                              Wminus]),
             'color': [],
-            'lorentz':['WWWWN', ''],
-            'couplings':{(0, 0):'MGVX6', (0, 1):'DUM0'},
+            'lorentz':['WWWWN'],
+            'couplings':{(0, 0):'MGVX6'},
             'orders':{'QED':2}}))
 
         myinterlist.append(base_objects.Interaction({
@@ -1347,8 +1346,8 @@ CALL VVVXXX(W(1,2),W(1,4),W(1,8),MGVX5,AMP(5))""")
                                              Wminus,
                                              a]),
             'color': [],
-            'lorentz':['WWVVN', ''],
-            'couplings':{(0, 0):'MGVX4', (0, 1):'DUM0'},
+            'lorentz':['WWVVN'],
+            'couplings':{(0, 0):'MGVX4'},
             'orders':{'QED':2}}))
 
         myinterlist.append(base_objects.Interaction({
@@ -1359,8 +1358,8 @@ CALL VVVXXX(W(1,2),W(1,4),W(1,8),MGVX5,AMP(5))""")
                                              Wminus,
                                              Z]),
             'color': [],
-            'lorentz':['WWVVN', ''],
-            'couplings':{(0, 0):'MGVX7', (0, 1):'DUM0'},
+            'lorentz':['WWVVN'],
+            'couplings':{(0, 0):'MGVX7'},
             'orders':{'QED':2}}))
 
         myinterlist.append(base_objects.Interaction({
@@ -1371,8 +1370,8 @@ CALL VVVXXX(W(1,2),W(1,4),W(1,8),MGVX5,AMP(5))""")
                                              Wminus,
                                              Z]),
             'color': [],
-            'lorentz':['WWVVN', ''],
-            'couplings':{(0, 0):'MGVX8', (0, 1):'DUM0'},
+            'lorentz':['WWVVN'],
+            'couplings':{(0, 0):'MGVX8'},
             'orders':{'QED':2}}))
 
 
@@ -1485,8 +1484,8 @@ CALL VVVXXX(W(1,6),W(1,2),W(1,3),MGVX5,AMP(3))""")
                                              Wplus,
                                              Wminus]),
             'color': [],
-            'lorentz':['WWWWN', ''],
-            'couplings':{(0, 0):'MGVX6', (0, 1):'DUM0'},
+            'lorentz':['WWWWN'],
+            'couplings':{(0, 0):'MGVX6'},
             'orders':{'QED':2}}))
 
         myinterlist.append(base_objects.Interaction({
@@ -1497,8 +1496,8 @@ CALL VVVXXX(W(1,6),W(1,2),W(1,3),MGVX5,AMP(3))""")
                                              Wminus,
                                              a]),
             'color': [],
-            'lorentz':['WWVVN', ''],
-            'couplings':{(0, 0):'MGVX4', (0, 1):'DUM0'},
+            'lorentz':['WWVVN'],
+            'couplings':{(0, 0):'MGVX4'},
             'orders':{'QED':2}}))
 
         myinterlist.append(base_objects.Interaction({
@@ -1509,8 +1508,8 @@ CALL VVVXXX(W(1,6),W(1,2),W(1,3),MGVX5,AMP(3))""")
                                              Wplus,
                                              Z]),
             'color': [],
-            'lorentz':['WWVVN', ''],
-            'couplings':{(0, 0):'MGVX7', (0, 1):'DUM0'},
+            'lorentz':['WWVVN'],
+            'couplings':{(0, 0):'MGVX7'},
             'orders':{'QED':2}}))
 
         myinterlist.append(base_objects.Interaction({
@@ -1521,8 +1520,8 @@ CALL VVVXXX(W(1,6),W(1,2),W(1,3),MGVX5,AMP(3))""")
                                              Wplus,
                                              Z]),
             'color': [],
-            'lorentz':['WWVVN', ''],
-            'couplings':{(0, 0):'MGVX8', (0, 1):'DUM0'},
+            'lorentz':['WWVVN'],
+            'couplings':{(0, 0):'MGVX8'},
             'orders':{'QED':2}}))
 
 
@@ -1662,8 +1661,8 @@ CALL VVVXXX(W(1,6),W(1,2),W(1,3),MGVX5,AMP(3))""")
                                              Wplus,
                                              Wminus]),
             'color': [],
-            'lorentz':['WWWWN', ''],
-            'couplings':{(0, 0):'MGVX6', (0, 1):'DUM0'},
+            'lorentz':['WWWWN'],
+            'couplings':{(0, 0):'MGVX6'},
             'orders':{'QED':2}}))
 
         myinterlist.append(base_objects.Interaction({
@@ -1674,8 +1673,8 @@ CALL VVVXXX(W(1,6),W(1,2),W(1,3),MGVX5,AMP(3))""")
                                              Wminus,
                                              a]),
             'color': [],
-            'lorentz':['WWVVN', ''],
-            'couplings':{(0, 0):'MGVX4', (0, 1):'DUM0'},
+            'lorentz':['WWVVN'],
+            'couplings':{(0, 0):'MGVX4'},
             'orders':{'QED':2}}))
 
         myinterlist.append(base_objects.Interaction({
@@ -1686,8 +1685,8 @@ CALL VVVXXX(W(1,6),W(1,2),W(1,3),MGVX5,AMP(3))""")
                                              Wminus,
                                              Z]),
             'color': [],
-            'lorentz':['WWVVN', ''],
-            'couplings':{(0, 0):'MGVX7', (0, 1):'DUM0'},
+            'lorentz':['WWVVN'],
+            'couplings':{(0, 0):'MGVX7'},
             'orders':{'QED':2}}))
 
         myinterlist.append(base_objects.Interaction({
@@ -1698,8 +1697,8 @@ CALL VVVXXX(W(1,6),W(1,2),W(1,3),MGVX5,AMP(3))""")
                                              Wminus,
                                              Z]),
             'color': [],
-            'lorentz':['WWVVN', ''],
-            'couplings':{(0, 0):'MGVX8', (0, 1):'DUM0'},
+            'lorentz':['WWVVN'],
+            'couplings':{(0, 0):'MGVX8'},
             'orders':{'QED':2}}))
 
 
@@ -1735,9 +1734,6 @@ CALL VVVXXX(W(1,6),W(1,2),W(1,3),MGVX5,AMP(3))""")
         #    for wf in diagram.get('wavefunctions'):
         #        print wf.get_call_key()
         #    print diagram.get('amplitude').get_call_key()
-
-        print "\n".join(export_v4.HelasFortranModel().\
-                                   get_matrix_element_calls(matrix_element))
 
         # I have checked that the resulting Helas calls below give
         # identical result as MG4.
