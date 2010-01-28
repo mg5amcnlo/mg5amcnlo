@@ -270,8 +270,9 @@ def get_JAMP_lines(matrix_element):
     res = "JAMP(1)="
     # Add all amplitudes with correct fermion factor
     for diagram in matrix_element.get('diagrams'):
-        res = res + "%sAMP(%d)" % (sign(diagram.get('fermionfactor')),
-                                   diagram.get('amplitude').get('number'))
+        for amplitude in diagram.get('amplitudes'):
+            res = res + "%sAMP(%d)" % (sign(amplitude.get('fermionfactor')),
+                                       amplitude.get('number'))
     return res
 
 

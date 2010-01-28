@@ -834,6 +834,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         self['coupling'] = 'none'
         # Properties relating to the vertex
         self['number'] = 0
+        self['fermionfactor'] = 0
         self['mothers'] = HelasWavefunctionList()
 
     # Customized constructor
@@ -896,6 +897,16 @@ class HelasAmplitude(base_objects.PhysicsObject):
                         "%s is not a valid integer for amplitude number" % \
                         str(value)
 
+        if name == 'fermionfactor':
+            if not isinstance(value, int):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid integer for fermionfactor" % \
+                        str(value)
+            if not value in [-1, 0, 1]:
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid fermion factor (-1, 0 or 1)" % \
+                        str(value)
+
         if name == 'mothers':
             if not isinstance(value, HelasWavefunctionList):
                 raise self.PhysicsObjectError, \
@@ -903,6 +914,15 @@ class HelasAmplitude(base_objects.PhysicsObject):
                       str(value)
 
         return True
+
+    # Enhanced get function
+    def get(self, name):
+        """Get the value of the property name."""
+
+        if name == 'fermionfactor' and not self[name]:
+            self.calculate_fermionfactor()
+
+        return super(HelasAmplitude, self).get(name)
 
     # Enhanced set function, where we can append a model
 
@@ -945,7 +965,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         """Return particle property names as a nicely sorted list."""
 
         return ['interaction_id', 'pdg_codes', 'inter_color', 'lorentz',
-                'coupling', 'number', 'mothers']
+                'coupling', 'number', 'fermionfactor', 'mothers']
 
 
     # Helper functions
@@ -1028,7 +1048,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                   "Error: %d incoming fermions != %d outgoing fermions" % \
                   (len(in_fermions), len(out_fermions))
 
-        return self.sign_flips_to_order(fermion_number_list)
+        self['fermionfactor'] = self.sign_flips_to_order(fermion_number_list)
 
     def sign_flips_to_order(self, fermions):
         """Gives the sign corresponding to the number of flips needed
@@ -1099,8 +1119,10 @@ class HelasDiagram(base_objects.PhysicsObject):
         """Default values for all properties"""
 
         self['wavefunctions'] = HelasWavefunctionList()
-        self['amplitude'] = HelasAmplitude()
-        self['fermionfactor'] = 0
+        # One diagram can have several amplitudes, if there are
+        # different Lorentz or color structures associated with this
+        # diagram
+        self['amplitudes'] = HelasAmplitudeList()
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
@@ -1110,37 +1132,18 @@ class HelasDiagram(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid HelasWavefunctionList object" % \
                         str(value)
-        if name == 'amplitude':
-            if not isinstance(value, HelasAmplitude):
+        if name == 'amplitudes':
+            if not isinstance(value, HelasAmplitudeList):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid HelasAmplitude object" % str(value)
-
-        if name == 'fermionfactor':
-            if not isinstance(value, int):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid integer for fermionfactor" % \
-                        str(value)
-            if not value in [-1, 0, 1]:
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid fermion factor (-1, 0 or 1)" % \
+                        "%s is not a valid HelasAmplitudeList object" % \
                         str(value)
 
         return True
 
-    def get(self, name):
-        """Get the value of the property name."""
-
-        if name == 'fermionfactor' and not self[name]:
-            if self['amplitude']:
-                self.set('fermionfactor',
-                         self.get('amplitude').calculate_fermionfactor())
-
-        return super(HelasDiagram, self).get(name)
-
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['wavefunctions', 'amplitude', 'fermionfactor']
+        return ['wavefunctions', 'amplitudes']
 
 #===============================================================================
 # HelasDiagramList
@@ -1224,7 +1227,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 super(HelasMatrixElement, self).__init__()
                 self.get('processes').append(amplitude.get('process'))
                 self.generate_helas_diagrams(amplitude, optimization)
-                self.calculate_fermionfactors(amplitude)
+                self.calculate_fermionfactors()
                 if gen_color:
                     self.get('color_basis').build(amplitude)
                     self.set('color_matrix',
@@ -1322,8 +1325,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
             vertices = copy.copy(diagram.get('vertices'))
 
-            diagram_amp_number = amplitude_number + 1
-
             # Single out last vertex, since this will give amplitude
             lastvx = vertices.pop()
 
@@ -1348,10 +1349,16 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # Go through all vertices except the last and create
             # wavefunctions
             for vertex in vertices:
+
                 # In case there are diagrams with multiple Lorentz/color 
                 # structures, we need to keep track of the wavefunctions
                 # for each such structure separately, and generate
                 # one HelasDiagram for each structure.
+                # We use the array number_to_wavefunctions to keep
+                # track of this, with one dictionary per chain of
+                # wavefunctions
+                # Note that all wavefunctions relating to this diagram
+                # will be written out before the first amplitude is written.
                 new_number_to_wavefunctions = []
                 for number_wf_dict in number_to_wavefunctions:
                     legs = copy.copy(vertex.get('legs'))
@@ -1416,6 +1423,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
             # Generate all amplitudes corresponding to the different
             # copies of this diagram
+            helas_diagram = HelasDiagram()
             for number_wf_dict in number_to_wavefunctions:
                 # Find mothers for the amplitude
                 legs = lastvx.get('legs')
@@ -1449,18 +1457,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
                     # Generate HelasDiagram
 
-                    # Only write wavefunctions for the first amplitude
-                    # in this diagram
-                    if amplitude_number == diagram_amp_number:
-                        helas_diagrams.append(HelasDiagram({ \
-                         'wavefunctions': diagram_wavefunctions,
-                         'amplitude': amp
-                         }))
-                    else:
-                        helas_diagrams.append(HelasDiagram({ \
-                         'wavefunctions': HelasWavefunctionList(),
-                         'amplitude': amp
-                         }))
+                    helas_diagram.get('amplitudes').append(amp)
+                    if diagram_wavefunctions and not \
+                                       helas_diagram.get('wavefunctions'):
+                        helas_diagram.set('wavefunctions',
+                                          diagram_wavefunctions)
 
                 if optimization:
                     wavefunctions.extend(diagram_wavefunctions)
@@ -1468,15 +1469,19 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                              in diagram_wavefunctions])
                 else:
                     wf_number = len(process.get('legs'))
+            # Append this diagram in the diagram list
+            helas_diagrams.append(helas_diagram)
+
 
         self.set('diagrams', helas_diagrams)
 
-    def calculate_fermionfactors(self, amplitude):
+    def calculate_fermionfactors(self):
         """Generate the fermion factors for all diagrams in the amplitude
         """
 
         for diagram in self.get('diagrams'):
-            diagram.get('fermionfactor')
+            for amplitude in diagram.get('amplitudes'):
+                amplitude.get('fermionfactor')
 
     # Helper methods
 
@@ -1767,10 +1772,12 @@ class HelasModel(base_objects.PhysicsObject):
                   repr(matrix_element)
 
         res = []
-        for diagram in matrix_element.get('diagrams'):
+        for n, diagram in enumerate(matrix_element.get('diagrams')):
             res.extend([ self.get_wavefunction_call(wf) for \
                          wf in diagram.get('wavefunctions') ])
-            res.append(self.get_amplitude_call(diagram.get('amplitude')))
+            res.append("# Amplitudes for diagram number %d" % (n + 1))
+            for amplitude in diagram.get('amplitudes'):
+                res.append(self.get_amplitude_call(amplitude))
 
         return res
 

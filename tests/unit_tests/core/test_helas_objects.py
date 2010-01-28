@@ -246,7 +246,8 @@ class HelasAmplitudeTest(unittest.TestCase):
                        'inter_color': None,
                        'lorentz': '',
                        'coupling': 'none',
-                       'number': 5}
+                       'number': 5,
+                       'fermionfactor': 1}
 
         self.myamplitude = helas_objects.HelasAmplitude(self.mydict)
 
@@ -305,6 +306,9 @@ class HelasAmplitudeTest(unittest.TestCase):
                        {'prop':'number',
                         'right_list':[1, 2, 3, 4, 5],
                         'wrong_list':['a', {}]},
+                       {'prop':'fermionfactor',
+                        'right_list':[-1, 1, 0],
+                        'wrong_list':['a', {}, 0.]}
                        ]
 
         temp_amplitude = self.myamplitude
@@ -325,6 +329,7 @@ class HelasAmplitudeTest(unittest.TestCase):
         goal = goal + "    \'lorentz\': \'\',\n"
         goal = goal + "    \'coupling\': \'none\',\n"
         goal = goal + "    \'number\': 5,\n"
+        goal = goal + "    \'fermionfactor\': 1,\n"
         goal = goal + "    \'mothers\': " + repr(self.mywavefunctions) + "\n}"
 
         self.assertEqual(goal, str(self.myamplitude))
@@ -385,13 +390,14 @@ class HelasDiagramTest(unittest.TestCase):
 
         mydict = {'mothers': self.mywavefunctions,
                   'interaction_id': 2,
+                  'fermionfactor': 1,
                   'number': 5}
 
-        self.myamplitude = helas_objects.HelasAmplitude(self.mydict)
+        self.myamplitude = helas_objects.HelasAmplitudeList([\
+            helas_objects.HelasAmplitude(self.mydict)])
 
         self.mydict = {'wavefunctions': self.mywavefunctions,
-                       'amplitude': self.myamplitude,
-                       'fermionfactor': 1}
+                       'amplitudes': self.myamplitude}
         self.mydiagram = helas_objects.HelasDiagram(self.mydict)
 
     def test_setget_diagram_correct(self):
@@ -446,12 +452,9 @@ class HelasDiagramTest(unittest.TestCase):
                        {'prop':'wavefunctions',
                         'right_list':[self.mywavefunctions],
                         'wrong_list':['', 0.0]},
-                       {'prop':'amplitude',
+                       {'prop':'amplitudes',
                         'right_list':[self.myamplitude],
-                        'wrong_list':['a', {}]},
-                       {'prop':'fermionfactor',
-                        'right_list':[-1, 1, 0],
-                        'wrong_list':['a', {}, 0.]},
+                        'wrong_list':['a', {}]}
                        ]
 
         temp_diagram = self.mydiagram
@@ -467,8 +470,7 @@ class HelasDiagramTest(unittest.TestCase):
 
         goal = "{\n"
         goal = goal + "    \'wavefunctions\': " + repr(self.mywavefunctions) + ",\n"
-        goal = goal + "    \'amplitude\': " + repr(self.myamplitude) + ",\n"
-        goal = goal + "    \'fermionfactor\': 1\n}"
+        goal = goal + "    \'amplitudes\': " + repr(self.myamplitude) + "\n}"
 
         self.assertEqual(goal, str(self.mydiagram))
 
@@ -522,8 +524,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         self.myamplitude = helas_objects.HelasAmplitude(self.mydict)
 
         mydict = {'wavefunctions': self.mywavefunctions,
-                  'amplitude': self.myamplitude,
-                  'fermionfactor': 1}
+                  'amplitudes': self.myamplitude}
 
         self.mydiagrams = helas_objects.HelasDiagramList([helas_objects.HelasDiagram(mydict)] * 4)
         self.mydict = {'processes': base_objects.ProcessList(),
@@ -993,8 +994,8 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         diagrams = matrix_element.get('diagrams')
 
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[1].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[1].get('amplitudes')[0].get('fermionfactor'), -1)
 
     def test_fermionfactor_emep_emepa(self):
         """Testing the fermion factor using the process  e- e+ > e- e+ a
@@ -1026,20 +1027,20 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         diagrams = matrix_element.get('diagrams')
 
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[1].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[2].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[3].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[4].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[5].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[6].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[7].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[1].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[2].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[3].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[4].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[5].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[6].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[7].get('amplitudes')[0].get('fermionfactor'), 1)
 
     def test_fermionfactor_emep_emepemep(self):
         """Testing the fermion factor using the process e- e+ > e- e+ e- e+
@@ -1085,76 +1086,76 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         diagrams = matrix_element.get('diagrams')
 
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[1].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[2].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[3].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[4].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[5].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[6].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[7].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[8].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[9].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[10].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[11].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[12].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[13].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[14].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[15].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[16].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[17].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[18].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[19].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[20].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[21].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[22].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[23].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[24].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[25].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[26].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[27].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[28].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[29].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[30].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[31].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[32].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[33].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[34].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[35].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[1].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[2].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[3].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[4].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[5].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[6].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[7].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[8].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[9].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[10].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[11].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[12].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[13].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[14].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[15].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[16].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[17].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[18].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[19].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[20].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[21].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[22].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[23].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[24].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[25].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[26].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[27].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[28].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[29].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[30].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[31].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[32].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[33].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[34].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[35].get('amplitudes')[0].get('fermionfactor'), -1)
 
     def test_fermionfactor_epem_sepsemepem(self):
         """Testing the fermion factor using the process e+ e- > se+ se- e+ e-
@@ -1273,20 +1274,20 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         diagrams = matrix_element.get('diagrams')
 
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[1].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[2].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[3].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[4].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[5].get('fermionfactor'), 1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[6].get('fermionfactor'), -1)
-        self.assertEqual(diagrams[0].get('fermionfactor') * \
-                         diagrams[7].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[1].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[2].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[3].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[4].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[5].get('amplitudes')[0].get('fermionfactor'), 1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[6].get('amplitudes')[0].get('fermionfactor'), -1)
+        self.assertEqual(diagrams[0].get('amplitudes')[0].get('fermionfactor') * \
+                         diagrams[7].get('amplitudes')[0].get('fermionfactor'), 1)
 
     def test_generate_helas_diagrams_uux_gepem(self):
         """Testing the helas diagram generation u u~ > g e+ e-
@@ -1348,12 +1349,14 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions1[6].set('interaction_id', 7, self.mymodel)
         wavefunctions1[6].set('number', 7)
 
-        amplitude1 = helas_objects.HelasAmplitude({\
+        amplitude1 = helas_objects.HelasAmplitudeList([\
+            helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[5], wavefunctions1[1],
                           wavefunctions1[6]]),
-             'number': 1})
-        amplitude1.set('interaction_id', 4, self.mymodel)
+             'number': 1,
+             'fermionfactor':-1})])
+        amplitude1[0].set('interaction_id', 4, self.mymodel)
 
         wavefunctions2 = helas_objects.HelasWavefunctionList()
         wavefunctions2.append(helas_objects.HelasWavefunction())
@@ -1365,20 +1368,20 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions2[0].set('interaction_id', 3, self.mymodel)
         wavefunctions2[0].set('number', 8)
 
-        amplitude2 = helas_objects.HelasAmplitude({\
+        amplitude2 = helas_objects.HelasAmplitudeList([\
+            helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[0], wavefunctions2[0],
                           wavefunctions1[6]]),
-             'number': 2})
-        amplitude2.set('interaction_id', 4, self.mymodel)
+             'number': 2,
+             'fermionfactor':-1})])
+        amplitude2[0].set('interaction_id', 4, self.mymodel)
 
         diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
-                                               'amplitude': amplitude1,
-                                               'fermionfactor':-1})
+                                               'amplitudes': amplitude1})
 
         diagram2 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions2,
-                                               'amplitude': amplitude2,
-                                               'fermionfactor':-1})
+                                               'amplitudes': amplitude2})
 
         diagrams = helas_objects.HelasDiagramList([diagram1, diagram2])
 
@@ -1447,12 +1450,14 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions1[6].set('interaction_id', 7, self.mymodel)
         wavefunctions1[6].set('number', 7)
 
-        amplitude1 = helas_objects.HelasAmplitude({\
+        amplitude1 = helas_objects.HelasAmplitudeList([\
+            helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[5], wavefunctions1[1],
                           wavefunctions1[6]]),
-             'number': 1})
-        amplitude1.set('interaction_id', 4, self.mymodel)
+             'number': 1,
+             'fermionfactor':-1})])
+        amplitude1[0].set('interaction_id', 4, self.mymodel)
 
         wavefunctions2 = helas_objects.HelasWavefunctionList()
         wavefunctions2.append(helas_objects.HelasWavefunction(\
@@ -1482,20 +1487,20 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions2[6].set('interaction_id', 7, self.mymodel)
         wavefunctions2[6].set('number', 7)
 
-        amplitude2 = helas_objects.HelasAmplitude({\
+        amplitude2 = helas_objects.HelasAmplitudeList([\
+            helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
                          [wavefunctions2[0], wavefunctions2[5],
                           wavefunctions2[6]]),
-             'number': 2})
-        amplitude2.set('interaction_id', 4, self.mymodel)
+             'number': 2,
+             'fermionfactor':-1})])
+        amplitude2[0].set('interaction_id', 4, self.mymodel)
 
         diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
-                                               'amplitude': amplitude1,
-                                               'fermionfactor':-1})
+                                               'amplitudes': amplitude1})
 
         diagram2 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions2,
-                                               'amplitude': amplitude2,
-                                               'fermionfactor':-1})
+                                               'amplitudes': amplitude2})
 
         diagrams = helas_objects.HelasDiagramList([diagram1, diagram2])
 
@@ -1553,16 +1558,17 @@ class HelasMatrixElementTest(unittest.TestCase):
                          [wavefunctions1[0], wavefunctions1[1]]))
         wavefunctions1[4].set('number', 5)
 
-        amplitude1 = helas_objects.HelasAmplitude({\
+        amplitude1 = helas_objects.HelasAmplitudeList([\
+            helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[4], wavefunctions1[2],
                           wavefunctions1[3]]),
-             'number': 1})
-        amplitude1.set('interaction_id', 7, self.mymodel)
+             'number': 1,
+             'fermionfactor': 1})])
+        amplitude1[0].set('interaction_id', 7, self.mymodel)
 
         diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
-                                               'amplitude': amplitude1,
-                                               'fermionfactor': 1})
+                                               'amplitudes': amplitude1})
 
         wavefunctions2 = helas_objects.HelasWavefunctionList()
 
@@ -1576,17 +1582,18 @@ class HelasMatrixElementTest(unittest.TestCase):
                          [wavefunctions1[0], wavefunctions1[3]]))
         wavefunctions2[0].set('number', 6)
 
-        amplitude2 = helas_objects.HelasAmplitude({\
+        amplitude2 = helas_objects.HelasAmplitudeList([\
+            helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
                          [wavefunctions2[0], wavefunctions1[1],
                           wavefunctions1[2]]),
              'interaction_id': 7,
-             'number': 2})
-        amplitude2.set('interaction_id', 7, self.mymodel)
+             'number': 2,
+             'fermionfactor': 1})])
+        amplitude2[0].set('interaction_id', 7, self.mymodel)
 
         diagram2 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions2,
-                                               'amplitude': amplitude2,
-                                               'fermionfactor': 1})
+                                               'amplitudes': amplitude2})
 
         mydiagrams = helas_objects.HelasDiagramList([diagram1, diagram2])
 
@@ -1642,16 +1649,17 @@ class HelasMatrixElementTest(unittest.TestCase):
                          [wavefunctions1[0], wavefunctions1[1]]))
         wavefunctions1[4].set('number', 5)
 
-        amplitude1 = helas_objects.HelasAmplitude({\
+        amplitude1 = helas_objects.HelasAmplitudeList([\
+            helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[4], wavefunctions1[2],
                           wavefunctions1[3]]),
-             'number': 1})
-        amplitude1.set('interaction_id', 7, self.mymodel)
+             'number': 1,
+             'fermionfactor': 1})])
+        amplitude1[0].set('interaction_id', 7, self.mymodel)
 
         diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
-                                               'amplitude': amplitude1,
-                                               'fermionfactor': 1})
+                                               'amplitudes': amplitude1})
 
         wavefunctions2 = helas_objects.HelasWavefunctionList()
 
@@ -1665,17 +1673,18 @@ class HelasMatrixElementTest(unittest.TestCase):
                          [wavefunctions1[0], wavefunctions1[2]]))
         wavefunctions2[0].set('number', 6)
 
-        amplitude2 = helas_objects.HelasAmplitude({\
+        amplitude2 = helas_objects.HelasAmplitudeList([\
+            helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
                          [wavefunctions2[0], wavefunctions1[1],
                           wavefunctions1[3]]),
              'interaction_id': 7,
-             'number': 2})
-        amplitude2.set('interaction_id', 7, self.mymodel)
+             'number': 2,
+             'fermionfactor': 1})])
+        amplitude2[0].set('interaction_id', 7, self.mymodel)
 
         diagram2 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions2,
-                                               'amplitude': amplitude2,
-                                               'fermionfactor': 1})
+                                               'amplitudes': amplitude2})
         mydiagrams = helas_objects.HelasDiagramList([diagram1, diagram2])
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
