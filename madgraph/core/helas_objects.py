@@ -272,9 +272,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
                              [part.get_pdg_code() for part in \
                               inter.get('particles')])
                     if inter.get('color'):
-                        self.set('inter_color', inter.get('color'))
+                        self.set('inter_color', inter.get('color')[0])
                     if inter.get('lorentz'):
-                        self.set('lorentz', inter.get('lorentz'))
+                        self.set('lorentz', inter.get('lorentz')[0])
                     self.set('coupling', inter.get('couplings')[\
                             inter.get('couplings').keys()[0]])
                 return True
@@ -656,7 +656,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return self.get('fermionflow') * \
                state_number[self.get('state')] * \
                self.get('spin')
-
+    
     def get_call_key(self):
         """Generate the (spin, state) tuple used as key for the helas call
         dictionaries in HelasModel"""
@@ -990,7 +990,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         if self.needs_hermitian_conjugate():
             res.append('C')
 
-        return (tuple(res), tuple(self.get('lorentz')))
+        return (tuple(res), self.get('lorentz'))
 
     def calculate_fermionfactor(self):
         """Calculate the fermion factor for the diagram corresponding
@@ -1321,6 +1321,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
             # Initialize wavefunctions for this diagram
             diagram_wavefunctions = [HelasWavefunctionList()]
+            all_diag_wfs = HelasWavefunctionList([external_wavefunctions[key] \
+                                     for key in external_wavefunctions.keys()])
 
             vertices = copy.copy(diagram.get('vertices'))
 
@@ -1362,7 +1364,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     mothers = self.getmothers(legs, number_wf_dict,
                                               external_wavefunctions,
                                               wavefunctions,
-                                              diag_wfs)
+                                              diagram_wavefunctions[0])
                     inter = model.get('interaction_dict')[vertex.get('id')]
 
                     # Now generate new wavefunction for the last leg
@@ -1388,7 +1390,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                                    diag_wfs,
                                                    external_wavefunctions,
                                                    wf_number)
-
+                        
                         
                         # Create new copy of diagram wavefunctions
                         new_diagram_wfs = copy.copy(\
@@ -1397,7 +1399,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         new_number_wf_dict = copy.copy(number_wf_dict)
 
                         # Store wavefunction
-                        if not wf in diag_wfs:
+                        if not wf in all_diag_wfs:
                             # Update wf number
                             wf_number = wf_number + 1
                             wf.set('number', wf_number)
@@ -1408,6 +1410,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                 # Since we reuse the old wavefunction, reset wf_number
                                 wf_number = wf_number - 1
                             except ValueError:
+                                all_diag_wfs.append(wf)
                                 new_diagram_wfs.append(wf)
 
                             new_number_wf_dict[last_leg.get('number')] = wf
@@ -1432,7 +1435,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 mothers = self.getmothers(legs, number_wf_dict,
                                           external_wavefunctions,
                                           wavefunctions,
-                                          diag_wfs)
+                                          diagram_wavefunctions[0])
 
                 # Need to check for clashing fermion flow due to
                 # Majorana fermions, and modify if necessary
@@ -1458,11 +1461,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     amplitude_number = amplitude_number + 1
                     amp.set('number', amplitude_number)
 
-                # Generate HelasDiagram
-                helas_diagrams.append(HelasDiagram({ \
-                   'wavefunctions': diag_wfs,
-                   'amplitude': amp
-                   }))
+                    # Generate HelasDiagram
+                    helas_diagrams.append(HelasDiagram({ \
+                      'wavefunctions': diag_wfs,
+                      'amplitude': amp
+                      }))
 
                 if optimization:
                     wavefunctions.extend(diag_wfs)
@@ -1498,7 +1501,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 # This is an external leg, pick from external_wavefunctions
                 wf = external_wavefunctions[leg.get('number')]
                 number_to_wavefunctions[leg.get('number')] = wf
-                if not wf in wavefunctions:
+                if not wf in wavefunctions and not wf in diagram_wavefunctions:
                     diagram_wavefunctions.append(wf)
             mothers.append(wf)
 

@@ -471,6 +471,7 @@ class HelasFortranModelTest(test_helas_objects.HelasModelTest):
             mothers = copy.copy(wfs)
             mothers.remove(wf)
             wf.set('mothers', mothers)
+            print "call_key: ", wf.get_call_key(), wf.get('lorentz')
             self.assertEqual(fortran_model.get_wavefunction_call(wf),
                              goal[goal_counter])
             goal_counter = goal_counter + 1
@@ -1240,7 +1241,7 @@ CALL JVVXXX(W(1,3),W(1,1),MGVX5,MZ,WZ,W(1,8))
 CALL VVVXXX(W(1,2),W(1,4),W(1,8),MGVX5,AMP(5))""")
 
     def test_generate_helas_diagrams_WWZA(self):
-        """Testing the helas diagram generation W+ W- > W+ W-
+        """Testing the helas diagram generation W+ W- > Z A
         """
 
         # Set up model
@@ -1396,6 +1397,9 @@ CALL VVVXXX(W(1,2),W(1,4),W(1,8),MGVX5,AMP(5))""")
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
+
+        print "\n".join(export_v4.HelasFortranModel().\
+                                   get_matrix_element_calls(matrix_element))
 
         # I have checked that the resulting Helas calls below give
         # identical result as MG4.
