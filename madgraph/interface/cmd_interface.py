@@ -552,9 +552,9 @@ class MadGraphCmd(cmd.Cmd):
                                            self.__curr_amps)
                 cpu_time2 = time.time()
 
-                ndiags = sum([len(me.get('diagrams')) for \
-                              me in self.__curr_matrix_elements.\
-                              get('matrix_elements')])
+            ndiags = sum([len(me.get('diagrams')) for \
+                          me in self.__curr_matrix_elements.\
+                          get('matrix_elements')])
 
             calls = 0
             for me in self.__curr_matrix_elements.get('matrix_elements'):

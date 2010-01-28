@@ -1378,7 +1378,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         wf = HelasWavefunction(last_leg, vertex.get('id'), model)
                         wf.set('coupling', inter.get('couplings')[coupl_key])
                         if inter.get('color'):
-                            wf.set('color', inter.get('color')[coupl_key[0]])
+                            wf.set('inter_color', inter.get('color')[coupl_key[0]])
                         wf.set('lorentz', inter.get('lorentz')[coupl_key[1]])
                         wf.set('mothers', mothers)
                         # Need to set incoming/outgoing and

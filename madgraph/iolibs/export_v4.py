@@ -209,7 +209,7 @@ C ----------
     for line in file.split('\n'):
         writer.write_fortran_line(fsock, line)
 
-    return len(helas_calls)
+    return len(filter(lambda call: call.find('#') != 0, helas_calls))
 
 #===============================================================================
 # Helper functions
