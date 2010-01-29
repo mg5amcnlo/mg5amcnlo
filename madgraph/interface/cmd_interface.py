@@ -31,14 +31,17 @@ import madgraph.iolibs.misc as misc
 import madgraph.iolibs.files as files
 
 import madgraph.iolibs.import_model_v4 as import_v4
-import madgraph.iolibs.save_model as save_model
+#import madgraph.iolibs.save_model as save_model
+import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.iolibs.export_v4 as export_v4
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 
 import madgraph.core.helas_objects as helas_objects
+import madgraph.iolibs.drawing as draw_lib
 import madgraph.iolibs.drawing_eps as draw
+
 
 #===============================================================================
 # MadGraphCmd
@@ -56,6 +59,8 @@ class MadGraphCmd(cmd.Cmd):
                       'interactions',
                       'processes',
                       'multiparticles']
+    __save_opts = ['model',
+                   'processes']
     __import_formats = ['v4']
     __export_formats = ['v4standalone']
 
@@ -224,16 +229,76 @@ class MadGraphCmd(cmd.Cmd):
 
         if args[0] == 'model':
             if self.__curr_model:
-                save_model.save_model(args[1], self.__curr_model)
+                #save_model.save_model(args[1], self.__curr_model)
+                if save_load_object.save_to_file(args[1], self.__curr_model):
+                    print 'Saved model to file ',args[1]
+            else:
+                print 'No model to save!'
+        elif args[0] == 'processes':
+            if self.__curr_amps:
+                if save_load_object.save_to_file(args[1], self.__curr_amps):
+                    print 'Saved processes to file ',args[1]
+            else:
+                print 'No processes to save!'
         else:
-            print 'No model to save!'
+            self.help_save()
+                
+    def do_load(self, line):
+        """Load information from file"""
 
+        args = self.split_arg(line)
+        if len(args) != 2:
+            self.help_load()
+            return False
+
+        cpu_time1 = time.time()
+        if args[0] == 'model':
+            self.__curr_model = save_load_object.load_from_file(args[1])
+            #save_model.save_model(args[1], self.__curr_model)
+            if isinstance(self.__curr_model, base_objects.Model):
+                cpu_time2 = time.time()
+                print "Loaded model from file in %0.3f s" % \
+                      (cpu_time2 - cpu_time1)
+            else:
+                print 'Error: Could not load model from file ',args[1]
+        elif args[0] == 'processes':
+            self.__curr_amps = save_load_object.load_from_file(args[1])
+            if isinstance(self.__curr_amps, diagram_generation.AmplitudeList):
+                cpu_time2 = time.time()
+                print "Loaded processes from file in %0.3f s" % \
+                      (cpu_time2 - cpu_time1)
+                if self.__curr_amps and not self.__curr_model.get('name'):
+                    self.__curr_model = self.__curr_amps[0].\
+                                        get('process').get('model')
+                    print "Model set from process."
+            else:
+                print 'Error: Could not load processes from file ',args[1]
+        else:
+            self.help_save()
+                
     def complete_save(self, text, line, begidx, endidx):
         "Complete the save command"
 
         # Format
         if len(self.split_arg(line[0:begidx])) == 1:
-            return self.list_completion(text, ['model'])
+            return self.list_completion(text, self.__save_opts)
+
+        # Filename if directory is not given
+        if len(self.split_arg(line[0:begidx])) == 2:
+            return self.path_completion(text)
+
+        # Filename if directory is given
+        if len(self.split_arg(line[0:begidx])) == 3:
+            return self.path_completion(text,
+                                        base_dir=\
+                                          self.split_arg(line[0:begidx])[2])
+
+    def complete_load(self, text, line, begidx, endidx):
+        "Complete the load command"
+
+        # Format
+        if len(self.split_arg(line[0:begidx])) == 1:
+            return self.list_completion(text, self.__save_opts)
 
         # Filename if directory is not given
         if len(self.split_arg(line[0:begidx])) == 2:
@@ -255,8 +320,10 @@ class MadGraphCmd(cmd.Cmd):
 
         #option
         if len(self.split_arg(line[0:begidx])) >= 2:
-            return self.list_completion(text,
-                            ['external=', 'horizontal=', 'non_propagating='])
+            option=['external=', 'horizontal=', 'add_gap=','max_size=', \
+                                'contract_non_propagating=']
+            return self.list_completion(text, option)
+        
     # Display
     def do_display(self, line):
         """Display current internal status"""
@@ -602,6 +669,17 @@ class MadGraphCmd(cmd.Cmd):
             print "%s is not a valid directory for export file" % args[1]
 
         start = time.time()
+        option = draw_lib.DrawOption()
+        if len(args) > 1:
+            for data in args[1:]:
+                try:
+                    key, value = data.split('=')
+                except:
+                    print "invalid syntax: '%s'. Please try again" % data
+                    self.help_draw()
+                    return False
+                option.set(key,value)
+
         for amp in self.__curr_amps:
             filename = os.path.join(args[0], 'diagrams_' + \
                                     amp.get('process').shell_string() + ".eps")
@@ -610,23 +688,9 @@ class MadGraphCmd(cmd.Cmd):
                                               model=self.__curr_model,
                                               amplitude='')
 
-            if len(args) == 1:
-                opt = {"external": 0, "horizontal": 0}
-            else:
-                opt = {}
-                for data in args[1:]:
-                    try:
-                        key, value = data.split('=')
-                    except:
-                        print 'invalid option %s. Please try again'
-                        self.help_draw()
-                        return False
-                    if value in ['False', '0', 0, False]:
-                        opt[key] = False
-
             logging.info("Drawing " + \
                          amp.get('process').nice_string())
-            plot.draw(**opt)
+            plot.draw(opt=option)
             print "Wrote file " + filename
 
         stop = time.time()
@@ -639,10 +703,13 @@ class MadGraphCmd(cmd.Cmd):
 
     # In-line help
     def help_save(self):
-        print "syntax: save model|... PATH"
-        print "-- save information as files in PATH"
+        print "syntax: save %s PATH" % "|".join(self.__save_opts)
+        print "-- save information as file in PATH"
 
-    # In-line help
+    def help_load(self):
+        print "syntax: load %s PATH" % "|".join(self.__save_opts)
+        print "-- load information from file in PATH"
+
     def help_import(self):
         print "syntax: import " + "|".join(self.__import_formats) + \
               " FILENAME"
@@ -670,16 +737,19 @@ class MadGraphCmd(cmd.Cmd):
         file will be FILEPATH/matrix_\"process_string\".f"""
 
     def help_draw(self):
-        print "syntax: draw FILEPATH [option=0]"
+        print "syntax: draw FILEPATH [option=value]"
         print "-- draw the diagrams in eps format"
         print "   Files will be FILEPATH/diagrams_\"process_string\".eps"
         print "   Example: draw plot_dir "
         print "   Possible option: "
-        print "        horizontal [1]: force S-channel to be horizontal"
-        print "        external [1]: authorizes external particles to end"
-        print "             at top or bottom of diagram"
-        print "        non_propagating [1]:contracts non propagating lines"
-        print "   Example: draw plot_dir external=0 horizontal=0"
+        print "        horizontal [False]: force S-channel to be horizontal"
+        print "        external [0]: authorizes external particles to end"
+        print "             at top or bottom of diagram. If bigger than zero"
+        print "             this tune the length of those line."
+        print "        max_size [0]: this forbids external line bigger than "
+        print "             max_size."
+        print "        contract_non_propagating [True]:contracts non propagating lines"
+        print "   Example: draw plot_dir external=1 horizontal=1"
 
     def help_shell(self):
         print "syntax: shell CMD (or ! CMD)"
