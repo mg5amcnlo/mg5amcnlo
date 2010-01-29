@@ -560,6 +560,40 @@ class VertexPoint(base_objects.Vertex):
         else:
             return False
 
+    def has_the_same_line_content(self,other):
+        """Check if the line associate to the two vertex are equivalent. 
+        This means that they have the same number of particles with the same pid
+        and that the external particles have the same number.
+        
+        This is a backup function, this is not use for the moment."""
+
+        # Check the number of line
+        if len(self.line)!=len(other.line):
+            return False
+
+        # Store the information of the pid content of the vertex other
+        other_line_pid = [line.get('pid') for line in other.line]
+        # Sort the information of the number content for external particle
+        other_line_number = [line.get('number') for line in other.line if \
+                                                            line.is_external()]
+        
+        # Now look at the self vertex and destroy the information store in the
+        #two above variable. If an error raise, this means that the content is 
+        #not the same. 
+        for s_line in self.line:
+            try:
+                other_line_pid.remove(s_line.get('pid'))
+            except ValueError:
+                return False
+            if s_line.is_external():
+                try:
+                    other_line_number.remove(s_line.get('number'))
+                except ValueError:
+                    return False
+        
+        # The lines have all their equivalent, so returns True 
+        return True
+
     def get_uid(self):
         """Provide a unique id for the vertex"""
 
@@ -1383,6 +1417,44 @@ class FeynmanDiagram:
                             '(', line2.end.pos_x, line2.end.pos_y, ')'
                     return True
         return False
+
+    def __eq__(self,other):
+        """Check if two diagrams are equivalent. (same structure-same particle)
+        
+        This function is not used for the moment. The initial purpose was the
+        avoid duplication of identical diagram in the output (these could happen
+        if we contract non propagating line). But the number of such comparaison
+        rise as the number of diagram square such that the total time needed for
+        this feature was consider as too (time-)expansive."""
+        
+        # Check basic globals (this is done to fastenize the check
+        if self.max_level != other.max_level:
+            return False
+        elif len(self.lineList) != len(other.lineList):
+            return False
+        
+        # Then compare vertex by vertex. As we didn't want to use order 
+        #information, we first select two vertex with the same position and then
+        #compare then.
+        other_pos = [(vertex.pos_x,vertex.pos_y) for vertex in other.vertexList]
+        for vertex_self in self.vertexList:
+            try:
+                i = other_pos.index((vertex_self.pos_x,vertex_self.pos_y))
+            except:
+                # This vertex doesn't have equivalent => They are different.
+                return False
+            else:
+                vertex_other = other.vertexList[i]
+ 
+            # So now we have the 'vertex_self' and 'vertex_other' which are 
+            #vertex at the same position. Now we check if they have the same 
+            #line content.
+            if not vertex_self.has_the_same_line_content(vertex_other):
+                return False
+ 
+        # All the vertex and the associate line are equivalent. So the two 
+        #diagrams are consider as identical.
+        return True
 
 
 #===============================================================================

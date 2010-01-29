@@ -1228,6 +1228,37 @@ class TestFeynmanDiagram(unittest.TestCase):
             if line.is_fermion():
                 self.assertTrue(line.start.pos_y < line.end.pos_y)           
 
+    def test_diagram_equality(self):
+        """Test if the diagram equalities work"""
+        
+        diagram_list = []
+        for i in range(8):
+            diagram = self.store_diagram['t h > t g W+ W-'][i]
+            diagram = drawing.FeynmanDiagram(diagram, _model)
+            diagram.main()
+            diagram_list.append(diagram)
+            
+        for i in range(8):
+            for j in range(i,8):
+                if i == j:
+                    self.assertTrue(diagram_list[i] == diagram_list[j])
+                else:
+                    self.assertFalse(diagram_list[i] == diagram_list[j])
+                    
+                    
+        diagram_list = []
+        for i in range(2):
+            diagram = self.store_diagram['g g > g g g'][i]
+            diagram = drawing.FeynmanDiagram(diagram, _model)
+            diagram.main()
+            diagram_list.append(diagram)
+            
+        for i in range(2):
+            for j in range(i,2):
+                if i == j:
+                    self.assertTrue(diagram_list[i] == diagram_list[j])
+                else:
+                    self.assertFalse(diagram_list[i] == diagram_list[j])
 
     def test_no_cutting_line(self):
         """Test that the output diagram doesn't intersection between line."""
@@ -1526,7 +1557,7 @@ if __name__ == '__main__':
     process_diag['d > d d g d~ QED=0'] = [0]
     process_diag['u d~ > c s~'] = [0]
     process_diag['g g > g g'] = [1, 2]
-    process_diag['g g > g g g'] = [0]
+    process_diag['g g > g g g'] = [0, 1]
     process_diag['g g > g g u u~'] = [18, 100]
     process_diag['g g > g g g g'] = [0, 26, 92, 93, 192]
     process_diag['g g > g g g g g g'] = [73, 2556]
