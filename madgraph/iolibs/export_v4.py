@@ -251,19 +251,23 @@ def get_helicity_lines(matrix_element):
     return "\n".join(helicity_line_list)
 
 def get_color_data_lines(matrix_element):
-    """Return the color basis definition lines for this matrix element"""
+    """Return the color matrix definition lines for this matrix element"""
 
     if not matrix_element.get('color_matrix'):
         return ["DATA Denom(1)/1/", "DATA (CF(i,1),i=1,1) /1/"]
     else:
         ret_list = []
         for index, denominator in \
-            enumerate(matrix_element.get('color_matrix').get_line_denominators()):
+            enumerate(matrix_element.get('color_matrix').\
+                                             get_line_denominators()):
+            # First write the common denominator for this color matrix line
             ret_list.append("DATA Denom(%i)/%i/" % (index + 1, denominator))
-            num_list = matrix_element.get('color_matrix').get_line_numerators(index, denominator)
-            ret_list.append("DATA (CF(i,%i),i=1,%i) /%s/" % (index + 1,
-                                                             len(num_list),
-                                            ','.join([str(i) for i in num_list])))
+            # Then write the numerators for the matrix elements
+            num_list = matrix_element.get('color_matrix').\
+                                        get_line_numerators(index, denominator)
+            ret_list.append("DATA (CF(i,%i),i=1,%i) /%s/" % \
+                            (index + 1, len(num_list),
+                             ','.join(["%i" % i for i in num_list])))
         return ret_list
 
 def get_den_factor_line(matrix_element):
@@ -788,7 +792,7 @@ class HelasFortranModel(helas_objects.HelasModel):
         """Gives a list of mother wavefunctions sorted according to
         1. the spin order needed in the Fortran Helas calls and
         2. the order of the particles in the interaction (cyclic)
-        3. the number for the external leg"""
+        (3. the number for the external leg)"""
 
         if isinstance(arg, helas_objects.HelasWavefunction) or \
            isinstance(arg, helas_objects.HelasAmplitude):

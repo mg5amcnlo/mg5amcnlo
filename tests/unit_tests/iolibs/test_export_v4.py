@@ -270,21 +270,21 @@ C     ----------
       CALL VXXXXX(P(0,5),ZERO,NHEL(5),+1*IC(5),W(1,5))
       CALL FVOXXX(W(1,1),W(1,3),MGVX12,ZERO,ZERO,W(1,6))
       CALL FVIXXX(W(1,2),W(1,4),MGVX12,ZERO,ZERO,W(1,7))
-C     Amplitudes for diagram number 1
+C     Amplitude(s) for diagram number 1
       CALL IOVXXX(W(1,7),W(1,6),W(1,5),MGVX12,AMP(1))
       CALL FVIXXX(W(1,2),W(1,5),MGVX12,ZERO,ZERO,W(1,8))
-C     Amplitudes for diagram number 2
+C     Amplitude(s) for diagram number 2
       CALL IOVXXX(W(1,8),W(1,6),W(1,4),MGVX12,AMP(2))
       CALL FVOXXX(W(1,1),W(1,4),MGVX12,ZERO,ZERO,W(1,9))
       CALL FVIXXX(W(1,2),W(1,3),MGVX12,ZERO,ZERO,W(1,10))
-C     Amplitudes for diagram number 3
+C     Amplitude(s) for diagram number 3
       CALL IOVXXX(W(1,10),W(1,9),W(1,5),MGVX12,AMP(3))
-C     Amplitudes for diagram number 4
+C     Amplitude(s) for diagram number 4
       CALL IOVXXX(W(1,8),W(1,9),W(1,3),MGVX12,AMP(4))
       CALL FVOXXX(W(1,1),W(1,5),MGVX12,ZERO,ZERO,W(1,11))
-C     Amplitudes for diagram number 5
+C     Amplitude(s) for diagram number 5
       CALL IOVXXX(W(1,10),W(1,11),W(1,4),MGVX12,AMP(5))
-C     Amplitudes for diagram number 6
+C     Amplitude(s) for diagram number 6
       CALL IOVXXX(W(1,7),W(1,11),W(1,3),MGVX12,AMP(6))
       JAMP(1)=-AMP(1)-AMP(2)-AMP(3)-AMP(4)-AMP(5)-AMP(6)
       
@@ -497,13 +497,13 @@ class HelasFortranModelTest(test_helas_objects.HelasModelTest):
             'CALL JWWWXX(W(1,1),W(1,3),W(1,4),MGVX6,wmas,wwid,W(1,2))',
             'CALL JWWWXX(W(1,1),W(1,2),W(1,4),MGVX6,wmas,wwid,W(1,3))',
             'CALL JWWWXX(W(1,1),W(1,2),W(1,3),MGVX6,wmas,wwid,W(1,4))',
-            '# Amplitudes for diagram number 1',
+            '# Amplitude(s) for diagram number 1',
             'CALL WWWWXX(W(1,1),W(1,2),W(1,3),W(1,4),MGVX6,AMP(1))',
             'CALL JW3WXX(W(1,2),W(1,3),W(1,4),MGVX8,wmas,wwid,W(1,1))',
             'CALL JW3WXX(W(1,1),W(1,3),W(1,4),MGVX8,wmas,wwid,W(1,2))',
             'CALL JW3WXX(W(1,1),W(1,2),W(1,4),MGVX8,zmas,zwid,W(1,3))',
             'CALL JW3WXX(W(1,1),W(1,2),W(1,3),MGVX8,zmas,zwid,W(1,4))',
-            '# Amplitudes for diagram number 1',
+            '# Amplitude(s) for diagram number 1',
             'CALL W3W3XX(W(1,1),W(1,2),W(1,3),W(1,4),MGVX8,AMP(1))']
 
         goal_counter = 0
@@ -622,10 +622,10 @@ CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
 CALL VXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
 CALL OXXXXX(P(0,4),me,NHEL(4),+1*IC(4),W(1,4))
 CALL FVIXXX(W(1,1),W(1,2),MGVX12,me,zero,W(1,5))
-# Amplitudes for diagram number 1
+# Amplitude(s) for diagram number 1
 CALL IOVXXX(W(1,5),W(1,4),W(1,3),MGVX12,AMP(1))
 CALL FVIXXX(W(1,1),W(1,3),MGVX12,me,zero,W(1,6))
-# Amplitudes for diagram number 2
+# Amplitude(s) for diagram number 2
 CALL IOVXXX(W(1,6),W(1,4),W(1,2),MGVX12,AMP(2))""")
 
     def test_generate_helas_diagrams_uux_gepem_no_optimization(self):
@@ -667,7 +667,7 @@ CALL OXXXXX(P(0,4),me,NHEL(4),+1*IC(4),W(1,4))
 CALL IXXXXX(P(0,5),me,NHEL(5),-1*IC(5),W(1,5))
 CALL FVIXXX(W(1,1),W(1,3),GG,mu,zero,W(1,6))
 CALL JIOXXX(W(1,5),W(1,4),MGVX12,zero,zero,W(1,7))
-# Amplitudes for diagram number 1
+# Amplitude(s) for diagram number 1
 CALL IOVXXX(W(1,6),W(1,2),W(1,7),MGVX15,AMP(1))
 CALL IXXXXX(P(0,1),mu,NHEL(1),+1*IC(1),W(1,1))
 CALL OXXXXX(P(0,2),mu,NHEL(2),-1*IC(2),W(1,2))
@@ -676,7 +676,7 @@ CALL OXXXXX(P(0,4),me,NHEL(4),+1*IC(4),W(1,4))
 CALL IXXXXX(P(0,5),me,NHEL(5),-1*IC(5),W(1,5))
 CALL FVOXXX(W(1,2),W(1,3),GG,mu,zero,W(1,6))
 CALL JIOXXX(W(1,5),W(1,4),MGVX12,zero,zero,W(1,7))
-# Amplitudes for diagram number 2
+# Amplitude(s) for diagram number 2
 CALL IOVXXX(W(1,1),W(1,6),W(1,7),MGVX15,AMP(2))""")
 
     def test_generate_helas_diagrams_uux_ggg(self):
@@ -714,52 +714,52 @@ CALL VXXXXX(P(0,4),zero,NHEL(4),+1*IC(4),W(1,4))
 CALL VXXXXX(P(0,5),zero,NHEL(5),+1*IC(5),W(1,5))
 CALL JIOXXX(W(1,1),W(1,2),GG,zero,zero,W(1,6))
 CALL UVVAXX(W(1,3),W(1,4),MGVX2,zero,zero,zero,W(1,7))
-# Amplitudes for diagram number 1
+# Amplitude(s) for diagram number 1
 CALL VVTAXX(W(1,6),W(1,5),W(1,7),MGVX2,zero,AMP(1))
 CALL JVVXXX(W(1,3),W(1,4),MGVX1,zero,zero,W(1,8))
-# Amplitudes for diagram number 2
+# Amplitude(s) for diagram number 2
 CALL VVVXXX(W(1,6),W(1,8),W(1,5),MGVX1,AMP(2))
 CALL UVVAXX(W(1,3),W(1,5),MGVX2,zero,zero,zero,W(1,9))
-# Amplitudes for diagram number 3
+# Amplitude(s) for diagram number 3
 CALL VVTAXX(W(1,6),W(1,4),W(1,9),MGVX2,zero,AMP(3))
 CALL JVVXXX(W(1,3),W(1,5),MGVX1,zero,zero,W(1,10))
-# Amplitudes for diagram number 4
+# Amplitude(s) for diagram number 4
 CALL VVVXXX(W(1,6),W(1,10),W(1,4),MGVX1,AMP(4))
 CALL UVVAXX(W(1,4),W(1,5),MGVX2,zero,zero,zero,W(1,11))
-# Amplitudes for diagram number 5
+# Amplitude(s) for diagram number 5
 CALL VVTAXX(W(1,6),W(1,3),W(1,11),MGVX2,zero,AMP(5))
 CALL JVVXXX(W(1,4),W(1,5),MGVX1,zero,zero,W(1,12))
-# Amplitudes for diagram number 6
+# Amplitude(s) for diagram number 6
 CALL VVVXXX(W(1,6),W(1,3),W(1,12),MGVX1,AMP(6))
 CALL FVIXXX(W(1,1),W(1,3),GG,mu,zero,W(1,13))
 CALL FVOXXX(W(1,2),W(1,4),GG,mu,zero,W(1,14))
-# Amplitudes for diagram number 7
+# Amplitude(s) for diagram number 7
 CALL IOVXXX(W(1,13),W(1,14),W(1,5),GG,AMP(7))
 CALL FVOXXX(W(1,2),W(1,5),GG,mu,zero,W(1,15))
-# Amplitudes for diagram number 8
+# Amplitude(s) for diagram number 8
 CALL IOVXXX(W(1,13),W(1,15),W(1,4),GG,AMP(8))
-# Amplitudes for diagram number 9
+# Amplitude(s) for diagram number 9
 CALL IOVXXX(W(1,13),W(1,2),W(1,12),GG,AMP(9))
 CALL FVIXXX(W(1,1),W(1,4),GG,mu,zero,W(1,16))
 CALL FVOXXX(W(1,2),W(1,3),GG,mu,zero,W(1,17))
-# Amplitudes for diagram number 10
+# Amplitude(s) for diagram number 10
 CALL IOVXXX(W(1,16),W(1,17),W(1,5),GG,AMP(10))
-# Amplitudes for diagram number 11
+# Amplitude(s) for diagram number 11
 CALL IOVXXX(W(1,16),W(1,15),W(1,3),GG,AMP(11))
-# Amplitudes for diagram number 12
+# Amplitude(s) for diagram number 12
 CALL IOVXXX(W(1,16),W(1,2),W(1,10),GG,AMP(12))
 CALL FVIXXX(W(1,1),W(1,5),GG,mu,zero,W(1,18))
-# Amplitudes for diagram number 13
+# Amplitude(s) for diagram number 13
 CALL IOVXXX(W(1,18),W(1,17),W(1,4),GG,AMP(13))
-# Amplitudes for diagram number 14
+# Amplitude(s) for diagram number 14
 CALL IOVXXX(W(1,18),W(1,14),W(1,3),GG,AMP(14))
-# Amplitudes for diagram number 15
+# Amplitude(s) for diagram number 15
 CALL IOVXXX(W(1,18),W(1,2),W(1,8),GG,AMP(15))
-# Amplitudes for diagram number 16
+# Amplitude(s) for diagram number 16
 CALL IOVXXX(W(1,1),W(1,17),W(1,12),GG,AMP(16))
-# Amplitudes for diagram number 17
+# Amplitude(s) for diagram number 17
 CALL IOVXXX(W(1,1),W(1,14),W(1,10),GG,AMP(17))
-# Amplitudes for diagram number 18
+# Amplitude(s) for diagram number 18
 CALL IOVXXX(W(1,1),W(1,15),W(1,8),GG,AMP(18))""")
 
     def test_generate_helas_diagrams_uu_susu(self):
@@ -793,10 +793,10 @@ CALL IXXXXX(P(0,2),mu,NHEL(2),+1*IC(2),W(1,2))
 CALL SXXXXX(P(0,3),+1*IC(3),W(1,3))
 CALL SXXXXX(P(0,4),+1*IC(4),W(1,4))
 CALL FSOCXX(W(1,1),W(1,3),MGVX575,Mneu1,Wneu1,W(1,5))
-# Amplitudes for diagram number 1
+# Amplitude(s) for diagram number 1
 CALL IOSXXX(W(1,2),W(1,5),W(1,4),MGVX575,AMP(1))
 CALL FSOCXX(W(1,1),W(1,4),MGVX575,Mneu1,Wneu1,W(1,6))
-# Amplitudes for diagram number 2
+# Amplitude(s) for diagram number 2
 CALL IOSXXX(W(1,2),W(1,6),W(1,3),MGVX575,AMP(2))""")
 
 
@@ -934,36 +934,36 @@ CALL OXXXXX(P(0,6),me,NHEL(6),+1*IC(6),W(1,6))
 CALL FSOXXX(W(1,1),W(1,3),MGVX350,Mneu1,Wneu1,W(1,7))
 CALL FSIXXX(W(1,2),W(1,4),MGVX494,Mneu1,Wneu1,W(1,8))
 CALL HIOXXX(W(1,5),W(1,7),MGVX494,Msl2,Wsl2,W(1,9))
-# Amplitudes for diagram number 1
+# Amplitude(s) for diagram number 1
 CALL IOSXXX(W(1,8),W(1,6),W(1,9),MGVX350,AMP(1))
 CALL IXXXXX(P(0,1),me,NHEL(1),+1*IC(1),W(1,10))
 CALL FSICXX(W(1,10),W(1,3),MGVX350,Mneu1,Wneu1,W(1,11))
 CALL HIOXXX(W(1,11),W(1,6),MGVX350,Msl2,Wsl2,W(1,12))
 CALL OXXXXX(P(0,2),me,NHEL(2),-1*IC(2),W(1,13))
 CALL FSOCXX(W(1,13),W(1,4),MGVX494,Mneu1,Wneu1,W(1,14))
-# Amplitudes for diagram number 2
+# Amplitude(s) for diagram number 2
 CALL IOSXXX(W(1,5),W(1,14),W(1,12),MGVX494,AMP(2))
 CALL FSIXXX(W(1,5),W(1,4),MGVX494,Mneu1,Wneu1,W(1,15))
 CALL HIOXXX(W(1,2),W(1,7),MGVX494,Msl2,Wsl2,W(1,16))
-# Amplitudes for diagram number 3
+# Amplitude(s) for diagram number 3
 CALL IOSXXX(W(1,15),W(1,6),W(1,16),MGVX350,AMP(3))
 CALL OXXXXX(P(0,5),me,NHEL(5),+1*IC(5),W(1,17))
 CALL FSOCXX(W(1,17),W(1,4),MGVX494,Mneu1,Wneu1,W(1,18))
-# Amplitudes for diagram number 4
+# Amplitude(s) for diagram number 4
 CALL IOSXXX(W(1,2),W(1,18),W(1,12),MGVX494,AMP(4))
 CALL FSOXXX(W(1,6),W(1,3),MGVX350,Mneu1,Wneu1,W(1,19))
 CALL HIOXXX(W(1,8),W(1,1),MGVX350,Msl2,Wsl2,W(1,20))
-# Amplitudes for diagram number 5
+# Amplitude(s) for diagram number 5
 CALL IOSXXX(W(1,5),W(1,19),W(1,20),MGVX494,AMP(5))
 CALL IXXXXX(P(0,6),me,NHEL(6),-1*IC(6),W(1,21))
 CALL FSICXX(W(1,21),W(1,3),MGVX350,Mneu1,Wneu1,W(1,22))
 CALL HIOXXX(W(1,22),W(1,1),MGVX350,Msl2,Wsl2,W(1,23))
-# Amplitudes for diagram number 6
+# Amplitude(s) for diagram number 6
 CALL IOSXXX(W(1,5),W(1,14),W(1,23),MGVX494,AMP(6))
-# Amplitudes for diagram number 7
+# Amplitude(s) for diagram number 7
 CALL IOSXXX(W(1,2),W(1,18),W(1,23),MGVX494,AMP(7))
 CALL HIOXXX(W(1,15),W(1,1),MGVX350,Msl2,Wsl2,W(1,24))
-# Amplitudes for diagram number 8
+# Amplitude(s) for diagram number 8
 CALL IOSXXX(W(1,2),W(1,19),W(1,24),MGVX494,AMP(8))""")
 
 
@@ -1002,27 +1002,27 @@ CALL SXXXXX(P(0,4),+1*IC(4),W(1,4))
 CALL VXXXXX(P(0,5),zero,NHEL(5),+1*IC(5),W(1,5))
 CALL FSOCXX(W(1,1),W(1,3),MGVX575,Mneu1,Wneu1,W(1,6))
 CALL FVIXXX(W(1,2),W(1,5),GG,mu,zero,W(1,7))
-# Amplitudes for diagram number 1
+# Amplitude(s) for diagram number 1
 CALL IOSXXX(W(1,7),W(1,6),W(1,4),MGVX575,AMP(1))
 CALL HVSXXX(W(1,5),W(1,4),MGVX74,Musq2,Wusq2,W(1,8))
-# Amplitudes for diagram number 2
+# Amplitude(s) for diagram number 2
 CALL IOSXXX(W(1,2),W(1,6),W(1,8),MGVX575,AMP(2))
 CALL FSOCXX(W(1,1),W(1,4),MGVX575,Mneu1,Wneu1,W(1,9))
-# Amplitudes for diagram number 3
+# Amplitude(s) for diagram number 3
 CALL IOSXXX(W(1,7),W(1,9),W(1,3),MGVX575,AMP(3))
 CALL HVSXXX(W(1,5),W(1,3),MGVX74,Musq2,Wusq2,W(1,10))
-# Amplitudes for diagram number 4
+# Amplitude(s) for diagram number 4
 CALL IOSXXX(W(1,2),W(1,9),W(1,10),MGVX575,AMP(4))
 CALL FVOCXX(W(1,1),W(1,5),GG,mu,zero,W(1,11))
 CALL FSIXXX(W(1,2),W(1,3),MGVX575,Mneu1,Wneu1,W(1,12))
-# Amplitudes for diagram number 5
+# Amplitude(s) for diagram number 5
 CALL IOSCXX(W(1,12),W(1,11),W(1,4),MGVX575,AMP(5))
 CALL FSIXXX(W(1,2),W(1,4),MGVX575,Mneu1,Wneu1,W(1,13))
-# Amplitudes for diagram number 6
+# Amplitude(s) for diagram number 6
 CALL IOSCXX(W(1,13),W(1,11),W(1,3),MGVX575,AMP(6))
-# Amplitudes for diagram number 7
+# Amplitude(s) for diagram number 7
 CALL IOSCXX(W(1,12),W(1,1),W(1,8),MGVX575,AMP(7))
-# Amplitudes for diagram number 8
+# Amplitude(s) for diagram number 8
 CALL IOSCXX(W(1,13),W(1,1),W(1,10),MGVX575,AMP(8))""")
 
     def test_generate_helas_diagrams_enu_enu(self):
@@ -1145,7 +1145,7 @@ CALL OXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
 CALL OXXXXX(P(0,3),me,NHEL(3),+1*IC(3),W(1,3))
 CALL IXXXXX(P(0,4),zero,NHEL(4),-1*IC(4),W(1,4))
 CALL JIOXXX(W(1,1),W(1,2),MGVX27,MW,WW,W(1,5))
-# Amplitudes for diagram number 1
+# Amplitude(s) for diagram number 1
 CALL IOVXXX(W(1,4),W(1,3),W(1,5),MGVX27,AMP(1))""")
 
     def test_generate_helas_diagrams_WWWW(self):
@@ -1278,19 +1278,19 @@ CALL IOVXXX(W(1,4),W(1,3),W(1,5),MGVX27,AMP(1))""")
 CALL VXXXXX(P(0,2),MW,NHEL(2),-1*IC(2),W(1,2))
 CALL VXXXXX(P(0,3),MW,NHEL(3),+1*IC(3),W(1,3))
 CALL VXXXXX(P(0,4),MW,NHEL(4),+1*IC(4),W(1,4))
-# Amplitudes for diagram number 1
+# Amplitude(s) for diagram number 1
 CALL WWWWNX(W(1,2),W(1,1),W(1,3),W(1,4),MGVX6,DUM0,AMP(1))
 CALL JVVXXX(W(1,2),W(1,1),MGVX3,zero,zero,W(1,5))
-# Amplitudes for diagram number 2
+# Amplitude(s) for diagram number 2
 CALL VVVXXX(W(1,3),W(1,4),W(1,5),MGVX3,AMP(2))
 CALL JVVXXX(W(1,2),W(1,1),MGVX5,MZ,WZ,W(1,6))
-# Amplitudes for diagram number 3
+# Amplitude(s) for diagram number 3
 CALL VVVXXX(W(1,3),W(1,4),W(1,6),MGVX5,AMP(3))
 CALL JVVXXX(W(1,3),W(1,1),MGVX3,zero,zero,W(1,7))
-# Amplitudes for diagram number 4
+# Amplitude(s) for diagram number 4
 CALL VVVXXX(W(1,2),W(1,4),W(1,7),MGVX3,AMP(4))
 CALL JVVXXX(W(1,3),W(1,1),MGVX5,MZ,WZ,W(1,8))
-# Amplitudes for diagram number 5
+# Amplitude(s) for diagram number 5
 CALL VVVXXX(W(1,2),W(1,4),W(1,8),MGVX5,AMP(5))""")
 
     def test_generate_helas_diagrams_WWZA(self):
@@ -1459,13 +1459,13 @@ CALL VVVXXX(W(1,2),W(1,4),W(1,8),MGVX5,AMP(5))""")
 CALL VXXXXX(P(0,2),MW,NHEL(2),-1*IC(2),W(1,2))
 CALL VXXXXX(P(0,3),MZ,NHEL(3),+1*IC(3),W(1,3))
 CALL VXXXXX(P(0,4),zero,NHEL(4),+1*IC(4),W(1,4))
-# Amplitudes for diagram number 1
+# Amplitude(s) for diagram number 1
 CALL W3W3NX(W(1,2),W(1,4),W(1,1),W(1,3),MGVX7,DUM0,AMP(1))
 CALL JVVXXX(W(1,3),W(1,1),MGVX5,MW,WW,W(1,5))
-# Amplitudes for diagram number 2
+# Amplitude(s) for diagram number 2
 CALL VVVXXX(W(1,2),W(1,5),W(1,4),MGVX3,AMP(2))
 CALL JVVXXX(W(1,1),W(1,4),MGVX3,MW,WW,W(1,6))
-# Amplitudes for diagram number 3
+# Amplitude(s) for diagram number 3
 CALL VVVXXX(W(1,6),W(1,2),W(1,3),MGVX5,AMP(3))""")
 
     def test_sorted_mothers(self):
@@ -1803,78 +1803,78 @@ CALL VXXXXX(P(0,4),MW,NHEL(4),+1*IC(4),W(1,4))
 CALL VXXXXX(P(0,5),zero,NHEL(5),+1*IC(5),W(1,5))
 CALL JVVXXX(W(1,2),W(1,1),MGVX3,zero,zero,W(1,6))
 CALL JVVXXX(W(1,5),W(1,3),MGVX3,MW,WW,W(1,7))
-# Amplitudes for diagram number 1
+# Amplitude(s) for diagram number 1
 CALL VVVXXX(W(1,7),W(1,4),W(1,6),MGVX3,AMP(1))
 CALL JVVXXX(W(1,1),W(1,2),MGVX5,MZ,WZ,W(1,8))
-# Amplitudes for diagram number 2
+# Amplitude(s) for diagram number 2
 CALL VVVXXX(W(1,4),W(1,7),W(1,8),MGVX5,AMP(2))
 CALL JVVXXX(W(1,4),W(1,5),MGVX3,MW,WW,W(1,9))
-# Amplitudes for diagram number 3
+# Amplitude(s) for diagram number 3
 CALL VVVXXX(W(1,3),W(1,9),W(1,6),MGVX3,AMP(3))
-# Amplitudes for diagram number 4
+# Amplitude(s) for diagram number 4
 CALL VVVXXX(W(1,9),W(1,3),W(1,8),MGVX5,AMP(4))
-# Amplitudes for diagram number 5
+# Amplitude(s) for diagram number 5
 CALL W3W3NX(W(1,3),W(1,6),W(1,4),W(1,5),MGVX4,DUM0,AMP(5))
-# Amplitudes for diagram number 6
+# Amplitude(s) for diagram number 6
 CALL W3W3NX(W(1,3),W(1,5),W(1,4),W(1,8),MGVX7,DUM0,AMP(6))
 CALL JVVXXX(W(1,3),W(1,1),MGVX3,zero,zero,W(1,10))
 CALL JVVXXX(W(1,5),W(1,2),MGVX3,MW,WW,W(1,11))
-# Amplitudes for diagram number 7
+# Amplitude(s) for diagram number 7
 CALL VVVXXX(W(1,11),W(1,4),W(1,10),MGVX3,AMP(7))
 CALL JVVXXX(W(1,1),W(1,3),MGVX5,MZ,WZ,W(1,12))
-# Amplitudes for diagram number 8
+# Amplitude(s) for diagram number 8
 CALL VVVXXX(W(1,4),W(1,11),W(1,12),MGVX5,AMP(8))
-# Amplitudes for diagram number 9
+# Amplitude(s) for diagram number 9
 CALL VVVXXX(W(1,2),W(1,9),W(1,10),MGVX3,AMP(9))
-# Amplitudes for diagram number 10
+# Amplitude(s) for diagram number 10
 CALL VVVXXX(W(1,9),W(1,2),W(1,12),MGVX5,AMP(10))
-# Amplitudes for diagram number 11
+# Amplitude(s) for diagram number 11
 CALL W3W3NX(W(1,2),W(1,10),W(1,4),W(1,5),MGVX4,DUM0,AMP(11))
-# Amplitudes for diagram number 12
+# Amplitude(s) for diagram number 12
 CALL W3W3NX(W(1,2),W(1,5),W(1,4),W(1,12),MGVX7,DUM0,AMP(12))
 CALL JVVXXX(W(1,1),W(1,5),MGVX3,MW,WW,W(1,13))
 CALL JVVXXX(W(1,2),W(1,4),MGVX3,zero,zero,W(1,14))
-# Amplitudes for diagram number 13
+# Amplitude(s) for diagram number 13
 CALL VVVXXX(W(1,3),W(1,13),W(1,14),MGVX3,AMP(13))
 CALL JVVXXX(W(1,4),W(1,2),MGVX5,MZ,WZ,W(1,15))
-# Amplitudes for diagram number 14
+# Amplitude(s) for diagram number 14
 CALL VVVXXX(W(1,13),W(1,3),W(1,15),MGVX5,AMP(14))
 CALL JVVXXX(W(1,3),W(1,4),MGVX3,zero,zero,W(1,16))
-# Amplitudes for diagram number 15
+# Amplitude(s) for diagram number 15
 CALL VVVXXX(W(1,2),W(1,13),W(1,16),MGVX3,AMP(15))
 CALL JVVXXX(W(1,4),W(1,3),MGVX5,MZ,WZ,W(1,17))
-# Amplitudes for diagram number 16
+# Amplitude(s) for diagram number 16
 CALL VVVXXX(W(1,13),W(1,2),W(1,17),MGVX5,AMP(16))
-# Amplitudes for diagram number 17
+# Amplitude(s) for diagram number 17
 CALL WWWWNX(W(1,2),W(1,13),W(1,3),W(1,4),MGVX6,DUM0,AMP(17))
-# Amplitudes for diagram number 18
+# Amplitude(s) for diagram number 18
 CALL VVVXXX(W(1,7),W(1,1),W(1,14),MGVX3,AMP(18))
-# Amplitudes for diagram number 19
+# Amplitude(s) for diagram number 19
 CALL VVVXXX(W(1,1),W(1,7),W(1,15),MGVX5,AMP(19))
-# Amplitudes for diagram number 20
+# Amplitude(s) for diagram number 20
 CALL VVVXXX(W(1,11),W(1,1),W(1,16),MGVX3,AMP(20))
-# Amplitudes for diagram number 21
+# Amplitude(s) for diagram number 21
 CALL VVVXXX(W(1,1),W(1,11),W(1,17),MGVX5,AMP(21))
 CALL JWWWNX(W(1,2),W(1,1),W(1,3),MGVX6,DUM0,MW,WW,W(1,18))
-# Amplitudes for diagram number 22
+# Amplitude(s) for diagram number 22
 CALL VVVXXX(W(1,18),W(1,4),W(1,5),MGVX3,AMP(22))
 CALL JWWWNX(W(1,1),W(1,2),W(1,4),MGVX6,DUM0,MW,WW,W(1,19))
-# Amplitudes for diagram number 23
+# Amplitude(s) for diagram number 23
 CALL VVVXXX(W(1,3),W(1,19),W(1,5),MGVX3,AMP(23))
 CALL JW3WNX(W(1,1),W(1,5),W(1,2),MGVX4,DUM0,zero,zero,W(1,20))
-# Amplitudes for diagram number 24
+# Amplitude(s) for diagram number 24
 CALL VVVXXX(W(1,3),W(1,4),W(1,20),MGVX3,AMP(24))
 CALL JW3WNX(W(1,2),W(1,5),W(1,1),MGVX7,DUM0,MZ,WZ,W(1,21))
-# Amplitudes for diagram number 25
+# Amplitude(s) for diagram number 25
 CALL VVVXXX(W(1,4),W(1,3),W(1,21),MGVX5,AMP(25))
 CALL JWWWNX(W(1,1),W(1,3),W(1,4),MGVX6,DUM0,MW,WW,W(1,22))
-# Amplitudes for diagram number 26
+# Amplitude(s) for diagram number 26
 CALL VVVXXX(W(1,2),W(1,22),W(1,5),MGVX3,AMP(26))
 CALL JW3WNX(W(1,1),W(1,5),W(1,3),MGVX4,DUM0,zero,zero,W(1,23))
-# Amplitudes for diagram number 27
+# Amplitude(s) for diagram number 27
 CALL VVVXXX(W(1,2),W(1,4),W(1,23),MGVX3,AMP(27))
 CALL JW3WNX(W(1,3),W(1,5),W(1,1),MGVX7,DUM0,MZ,WZ,W(1,24))
-# Amplitudes for diagram number 28
+# Amplitude(s) for diagram number 28
 CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
 
     def test_generate_helas_diagrams_ggggg(self):

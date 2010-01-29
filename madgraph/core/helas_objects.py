@@ -1799,7 +1799,7 @@ class HelasModel(base_objects.PhysicsObject):
         for n, diagram in enumerate(matrix_element.get('diagrams')):
             res.extend([ self.get_wavefunction_call(wf) for \
                          wf in diagram.get('wavefunctions') ])
-            res.append("# Amplitudes for diagram number %d" % (n + 1))
+            res.append("# Amplitude(s) for diagram number %d" % (n + 1))
             for amplitude in diagram.get('amplitudes'):
                 res.append(self.get_amplitude_call(amplitude))
 
