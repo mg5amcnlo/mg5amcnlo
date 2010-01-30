@@ -414,6 +414,16 @@ class TestFeynmanLine(unittest.TestCase):
         self.assertEquals(my_line5.domain_intersection(my_line8), (0, 0.0))
         self.assertEquals(my_line5.domain_intersection(my_line9), (0, 0.0))
 
+    def test_get_length(self):
+        """Test if we can compute the length of a line."""
+ 
+        my_line1 = self.def_line([0.1, 0.1], [0.4, 0.1]) #horizontal
+        my_line2 = self.def_line([0.1, 0.1], [0.4, 0.5]) #normal
+        my_line3 = self.def_line([0, 0.5], [0, 1])       
+
+        self.assertAlmostEqual(my_line1.get_length(),0.3)
+        self.assertAlmostEqual(my_line2.get_length(),0.5)
+        self.assertAlmostEqual(my_line3.get_length(),0.5)
 
     def test_hasordinate(self):
         """Test if we can recover the ordinate at any position"""
@@ -767,19 +777,20 @@ class TestFeynmanDiagram(unittest.TestCase):
     def setUp(self):
         """Basic building of the object needed to build the test"""
 
+        opt=drawing.DrawOption({'external':1,'horizontal':1,'max_size':0})
         # gg>g(g>uux)g (via a T channel)  
         mix_diagram = self.store_diagram['g g > g g u u~'][18]
-        self.mix_drawing = drawing.FeynmanDiagram(mix_diagram, _model)
+        self.mix_drawing = drawing.FeynmanDiagram(mix_diagram, _model, opt)
 
         # gg>gg (via a T channel)
         t_diagram = self.store_diagram['g g > g g'][2]
         #t_diagram = base_objects.Diagram(self.t_diagram_dict)
-        self.t_drawing = drawing.FeynmanDiagram(t_diagram, _model)
+        self.t_drawing = drawing.FeynmanDiagram(t_diagram, _model, opt)
 
         # gg>gg (via a S channel)
         s_diagram = self.store_diagram['g g > g g'][1]
         #s_diagram = base_objects.Diagram(self.s_diagram_dict)
-        self.s_drawing = drawing.FeynmanDiagram(s_diagram, _model)
+        self.s_drawing = drawing.FeynmanDiagram(s_diagram, _model, opt)
 
     def test_load_diagram(self):
         """ Test update of a diagram to a drawing class """
@@ -1217,6 +1228,37 @@ class TestFeynmanDiagram(unittest.TestCase):
             if line.is_fermion():
                 self.assertTrue(line.start.pos_y < line.end.pos_y)           
 
+    def test_diagram_equality(self):
+        """Test if the diagram equalities work"""
+        
+        diagram_list = []
+        for i in range(8):
+            diagram = self.store_diagram['t h > t g W+ W-'][i]
+            diagram = drawing.FeynmanDiagram(diagram, _model)
+            diagram.main()
+            diagram_list.append(diagram)
+            
+        for i in range(8):
+            for j in range(i,8):
+                if i == j:
+                    self.assertTrue(diagram_list[i] == diagram_list[j])
+                else:
+                    self.assertFalse(diagram_list[i] == diagram_list[j])
+                    
+                    
+        diagram_list = []
+        for i in range(2):
+            diagram = self.store_diagram['g g > g g g'][i]
+            diagram = drawing.FeynmanDiagram(diagram, _model)
+            diagram.main()
+            diagram_list.append(diagram)
+            
+        for i in range(2):
+            for j in range(i,2):
+                if i == j:
+                    self.assertTrue(diagram_list[i] == diagram_list[j])
+                else:
+                    self.assertFalse(diagram_list[i] == diagram_list[j])
 
     def test_no_cutting_line(self):
         """Test that the output diagram doesn't intersection between line."""
@@ -1242,9 +1284,10 @@ class TestFeynmanDiagram(unittest.TestCase):
         self.assertFalse(diagram._debug_has_intersection())
 
         diagram = self.store_diagram['g g > g g g g'][0]
-        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
+        diagram = drawing.FeynmanDiagram(diagram, _model)
         diagram.main()
         self.assertFalse(diagram._debug_has_intersection())
+        self.assertEqual(len(diagram.lineList),8)
 
         diagram = self.store_diagram['g g > g g g g'][0]
         diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
@@ -1291,7 +1334,41 @@ class TestFeynmanDiagram(unittest.TestCase):
             diagram = drawing.FeynmanDiagram(diagram, _model)
             diagram.main()
             self.assertFalse(diagram._debug_has_intersection())
+        
+    def test_non_integer_external(self):
+        """Test that the an non integer value for external works normally."""
+        
+        #T-channel in one level
+        diagram = self.store_diagram['u~ u~ > e+ e- u~ u~ g'][1]
+        option = drawing.DrawOption({'external':1.5})
+        diagram = drawing.FeynmanDiagram(diagram, _model,opt=option)
+        diagram.load_diagram()
+        diagram.define_level()
+        diagram.find_initial_vertex_position()
+        diagram.adjust_position()
+        
+        #check that all line end at y=1
+        for line in diagram.lineList:
+            if line.is_external() and line.get('number') > 2:
+                self.assertEquals(line.end.pos_x,1)
 
+        #T-chanel (3 T-vertex and the central decay in 2 level decay)
+        diagram = self.store_diagram['u~ u~ > e+ e- u~ u~ g'][8]
+        option = drawing.DrawOption({'external':1.5, 'max_size':0})
+        diagram = drawing.FeynmanDiagram(diagram, _model,opt=option)
+        diagram.load_diagram()
+        diagram.define_level()
+        diagram.find_initial_vertex_position()
+        diagram.adjust_position()
+        for line in diagram.lineList:
+            if line.is_external() and line.get('number') in [5,7]:
+                dist=(line.end.pos_x-line.start.pos_x)*diagram.max_level
+                self.assertEquals(dist,1.5)
+        
+        
+        
+        
+        
     def test_horizontal_mode(self):
         """Test that the horizontal mode works correctly."""
 
@@ -1324,7 +1401,8 @@ class TestFeynmanDiagram(unittest.TestCase):
 
         # Standard verification + test position of external particles on border
         diagram = self.store_diagram['g g > g g g g'][93]
-        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
+        opt = drawing.DrawOption({'external':1,'max_size':0})
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model, opt)
         diagram.load_diagram()
         diagram.define_level()
         diagram.find_initial_vertex_position()
@@ -1333,9 +1411,6 @@ class TestFeynmanDiagram(unittest.TestCase):
                                                               vertex.level != 0 ]
         for vertex in vertex_list:
             self.assertFalse(vertex.pos_x == 0)
-
-
-
 
         # Check if the position of the external line on the below order works 
         vertex_at_x_0 = [vertex for vertex in vertex_list if vertex.pos_y == 0]
@@ -1363,8 +1438,62 @@ class TestFeynmanDiagram(unittest.TestCase):
 #===============================================================================
 # TestDrawingEPS
 #===============================================================================
-class TestDrawingEPS(unittest.TestCase):
-    """ Class testing if we can create the files in the EPS mode.
+class TestDrawingOption(unittest.TestCase):
+    """Sanity check for all combination of option. This check on a small sample
+    of diagram that no line have zero lenght and that we don't have any line 
+    crossing for any combination of option."""
+
+    # Made a set of diagram available here
+    store_diagram = TestFeynmanDiagram.store_diagram
+    
+    def schedular(self, diagram):
+        """Test that the DrawingEPS returns valid result"""
+        
+        horizontal_list = [True, False]
+        external_list = [0,1,1.5]
+        contract_unpropa_list =[True, False]
+        max_size_list = [0,1.8]
+        
+        opt = drawing.DrawOption()
+        for horizontal in horizontal_list:
+            opt.set('horizontal', horizontal)
+            for external in external_list:
+                opt.set('external',external)
+                for contract_unpropa in contract_unpropa_list:
+                    opt.set('contract_non_propagating',contract_unpropa)
+                    for max_size in max_size_list:
+                        opt.set('max_size',max_size)
+                        
+                        plot = draw_eps.EpsDiagramDrawer(diagram, \
+                                        '__testdiag__.eps', model=_model, \
+                                         amplitude='')
+                        plot.draw(opt)
+                        self.assertFalse(\
+                                    plot.diagram._debug_has_intersection())
+                        for line in plot.diagram.lineList:
+                            self.assertNotAlmostEquals(line.get_length(), 0)
+                            
+    def test_option_6g(self):
+        """Test that gg>6g is fine with all options"""
+        diagram = self.store_diagram['g g > g g g g g g'][73]
+        self.schedular(diagram)
+        
+    def test_option_6g_second(self):
+        """Test that gg>6g is fine with all options"""
+        diagram = self.store_diagram['g g > g g g g g g'][2556]
+        self.schedular(diagram)   
+        
+    def test_option_multi_type(self):
+        """Test that t h > t g W+ W-  is fine with all options"""
+        diagram = self.store_diagram['t h > t g W+ W-'][0] 
+        self.schedular(diagram)        
+          
+#===============================================================================
+# TestDrawingS_EPS
+#===============================================================================
+class TestDrawingS_EPS(unittest.TestCase):
+    """ Class testing if we can create the files in the EPS mode for a set
+        of diagrams.
     
     This test the following two points:
     1) can we create the output file?
@@ -1374,14 +1503,18 @@ class TestDrawingEPS(unittest.TestCase):
     # Made a set of diagram available here
     store_diagram = TestFeynmanDiagram.store_diagram
 
+
     def setUp(self):
         """Charge a diagram to draw"""
 
-        self.diagram = self.store_diagram['t h > t g W+ W-'][0]
+        self.diagram = base_objects.DiagramList()
+        for i in range(7):
+            self.diagram.append(self.store_diagram['t h > t g W+ W-'][i])
 
-        self.plot = draw_eps.EpsDiagramDrawer(self.diagram, '__testdiag__.eps', \
+        self.plot = draw_eps.MultiEpsDiagramDrawer(self.diagram, '__testdiag__.eps', \
                                           model=_model, amplitude='')
-
+        
+        
     def output_is_valid(self, position, pdf_check=True):
         """Test if the output files exist. 
         Additionally if pdf_check is on True
@@ -1404,126 +1537,14 @@ class TestDrawingEPS(unittest.TestCase):
             os.remove(filename + '.pdf')
         os.remove(position)
         return
-
-    def testDrawDiagramEPS(self):
-        """Test DrawDiagramEPS (with FeynamDiagram). 
-        
-        Need ImageMagick."""
-
-        self.plot.draw(horizontal=False)
-        self.output_is_valid('__testdiag__.eps')
-
-    def testDrawDiagramEPS_external(self):
-        """Test DrawDiagramEPS (with FeynamDiagram + external particles forced to be at y=1.
-        
-        Need ImageMagick."""
-
-        self.plot.draw(external=False, horizontal=False)
-        self.output_is_valid('__testdiag__.eps')
-
-
-    def testDrawDiagramEPS_contract(self):
-        """Test DrawDiagramEPS (with FeynmanDiagram + non propagating particles).
-        
-        Need ImageMagick."""
-
-        model_info = _model.get_particle(5)
-        model_info.set('propagating', False)
-        self.plot.draw(non_propagating=False, horizontal=False)
-        try:
-            self.output_is_valid('__testdiag__.eps')
-        except:
-            model_info.set('propagating', True)
-            raise
-
-    def testDrawDiagramEPS_contract_ext(self):
-        """Test DrawDiagramEPS (with FeynamDiagram + non propagating particles + external particles force to be at y=1.
-        
-        Need ImageMagick."""
-
-        model_info = _model.get_particle(5)
-        model_info.set('propagating', False)
-        self.plot.draw(non_propagating=False, external=False, horizontal=False)
-        try:
-            self.output_is_valid('__testdiag__.eps')
-        except:
-            model_info.set('propagating', True)
-            raise
-
-
-    def testDrawDiagramEPS_horizontal(self):
-        """Test DrawDiagramEPS (with FeynamDiagramHorizontal). 
-        
-        Need ImageMagick."""
-
-        self.plot.draw()
-        self.output_is_valid('__testdiag__.eps')
-
-    def testDrawDiagramEPS_external_horizontal(self):
-        """Test DrawDiagramEPS with (FeynamDiagramHorizontal + external particles forced to be at y=1.
-        
-        Need ImageMagick."""
-
-        self.plot.draw(external=False)
-        self.output_is_valid('__testdiag__.eps')
-
-
-    def testDrawDiagramEPS_contract_horizontal(self):
-        """Test the DrawDiagramEPS module (with FeynmanDiagramHorizontal + non propagating particles).
-        
-        Need ImageMagick."""
-
-        model_info = _model.get_particle(5)
-        model_info.set('propagating', False)
-        self.plot.draw(non_propagating=False)
-        try:
-            self.output_is_valid('__testdiag__.eps')
-        except:
-            model_info.set('propagating', True)
-            raise
-        model_info.set('propagating', True)
-
-    def testDrawDiagramEPS_contract_ext_horizontal(self):
-        """Test the DrawDiagramEPS module (with FeynamDiagramHorizontal + non propagating particles + external particles force to be at y=1.
-        
-        Need ImageMagick."""
-
-        model_info = _model.get_particle(5)
-        model_info.set('propagating', False)
-        self.plot.draw(non_propagating=False, external=0, horizontal=True)
-        try:
-            self.output_is_valid('__testdiag__.eps')
-        except:
-            model_info.set('propagating', True)
-            raise
-
-
-
-#===============================================================================
-# TestDrawingS_EPS
-#===============================================================================
-class TestDrawingS_EPS(unittest.TestCase):
-    """ Class testing if we can create the files in the EPS mode for a set
-        of diagrams.
     
-    This test the following two points:
-    1) can we create the output file?
-    2) can we convert him in pdf? (Imagemagick is needed for this)
-        checking that the file is valid."""
-
-    # Made a set of diagram available here
-    store_diagram = TestFeynmanDiagram.store_diagram
-
-
-    def setUp(self):
-        """Charge a diagram to draw"""
-
-        self.diagram = []
-        for i in range(7):
-            self.diagram.append(self.store_diagram['t h > t g W+ W-'][i])
-
-        self.plot = draw_eps.MultiEpsDiagramDrawer(self.diagram, '__testdiag__.eps', \
-                                          model=_model, amplitude='')
+    def test_schedular(self):
+        """Test the multidiagram drawing"""
+        
+        opt = drawing.DrawOption()
+        self.setUp()
+        self.plot.draw(opt=opt)
+        self.output_is_valid('__testdiag__.eps')
 
 
 if __name__ == '__main__':
@@ -1536,7 +1557,7 @@ if __name__ == '__main__':
     process_diag['d > d d g d~ QED=0'] = [0]
     process_diag['u d~ > c s~'] = [0]
     process_diag['g g > g g'] = [1, 2]
-    process_diag['g g > g g g'] = [0]
+    process_diag['g g > g g g'] = [0, 1]
     process_diag['g g > g g u u~'] = [18, 100]
     process_diag['g g > g g g g'] = [0, 26, 92, 93, 192]
     process_diag['g g > g g g g g g'] = [73, 2556]
@@ -1544,6 +1565,7 @@ if __name__ == '__main__':
     process_diag['t h > t g W+ W-'] = [0, 1, 2, 3, 4, 5, 6, 7]
     process_diag['u u > Z u u g'] = [26]
     process_diag['u~ u~ > Z u~ u~ g'] = [26]
+    process_diag['u~ u~ > e+ e- u~ u~ g'] =[1,8]
 
     from madgraph.interface.cmd_interface import MadGraphCmd
     cmd = MadGraphCmd()

@@ -208,12 +208,9 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         # Move slightly the position to avoid overlapping
         if x == 0:
             x = -0.04
-        elif x == 1:
-            x = 1.04
-        if y == 0:
-            y = -0.06
-        elif y == 1:
-            y = 1.04
+        else:
+            x += 0.04
+            y = line._has_ordinate(x)
 
         # Re-scale x,y in order to pass in EPS coordinate
         x, y = self.rescale(x, y)
@@ -224,33 +221,35 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
     def associate_name(self, line, name):
         """ADD the EPS code associate to the name of the particle. Place it near
         to the center of the line.
-
-         The position of the name follows the V4 routine.
-         """
+        """
 
         # Put alias for vertex positions
         x1, y1 = line.start.pos_x, line.start.pos_y
         x2, y2 = line.end.pos_x, line.end.pos_y
 
-        d = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+        d = line.get_length()
         if d == 0:
             raise self.DrawDiagramError('Line can not have 0 length')
 
-        # Compute gap
-        dx = (x1 - x2) / d
-        dy = (y1 - y2) / d
-
-        # Correct sign to avoid intersection between the name and the current 
-        #line
-        if dy < 0:
-            dx, dy = -1 * dx, -1 * dy
-        elif dy == 0:
-            dx = 1.5
-
+        
+        # compute gap from middle point
+        if abs(x1 - x2) < 1e-3:
+            dx= 0.015
+            dy= - 0.01
+        elif abs(y1 - y2) < 1e-3:
+            dx = - 0.01
+            dy = 0.025
+        elif ((x1 < x2) == (y1 < y2) ):
+            dx = -0.03 * len(name)
+            dy =  0.02  * len(name) #d * 0.12
+        else:
+            dx =  0.01 #0.05
+            dy =  0.02 #d * 0.12 
+            
         # Assign position
-        x_pos = (x1 + x2) / 2 + 0.04 * dy
-        y_pos = (y1 + y2) / 2 - 0.055 * dx
-
+        x_pos = (x1 + x2) / 2 + dx
+        y_pos = (y1 + y2) / 2 + dy
+        
         # Pass in EPS coordinate
         x_pos, y_pos = self.rescale(x_pos, y_pos)
         #write EPS code
@@ -287,8 +286,8 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
     nb_line = 3
     nb_col = 2
 
-    def __init__(self, diagramlist='', file='diagram.eps', \
-                  model='', amplitude=''):
+    def __init__(self, diagramlist=None, file='diagram.eps', \
+                  model=None, amplitude=None):
         """Define basic variable and store some global information
         all argument are optional
         diagramlist : are the list of object to draw. item should inherit 
@@ -301,13 +300,22 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
             order to adjust fermion flow in case of Majorana fermion."""
 
         #use standard initialization but without any diagram
-        super(MultiEpsDiagramDrawer, self).__init__('', file , model, amplitude)
+        super(MultiEpsDiagramDrawer, self).__init__(None, file , model, amplitude)
 
         #additional information
         self.block_nb = 0  # keep track of the number of diagram already written
         self.npage = 1 + len(diagramlist) // (self.nb_col * self.nb_line)
-        self.diagramlist = diagramlist
-
+        
+        if diagramlist:
+            if isinstance(diagramlist, base_objects.DiagramList):
+                self.diagramlist = diagramlist
+            else:
+                raise self.DrawDiagramError('diagramlist Argument should be a' +
+                    ' DiagramList object') 
+        else:
+            self.diagramlist = None
+            
+            
     def rescale(self, x, y):
         """All coordinates belongs to [0,1]. So that in order to have a visible
         graph we need to re-scale the graph. This method distort the square in
@@ -343,18 +351,12 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.block_nb += 1
 
 
-    def draw(self, diagramlist='', **opt):
+    def draw(self, diagramlist='', opt=None):
         """Creates the representation in EPS format associate to a specific 
         diagram. 'opt' keeps track of possible option of drawing. Those option
         are used if we need to convert diagram to Drawing Object.
-        This is the list of recognize options:
-            external [True] : authorizes external particles to finish on 
-                horizontal limit of the square
-            horizontal [True]: if on true use FeynmanDiagramHorizontal to 
-                convert the diagram. otherwise use FeynmanDiagram (Horizontal 
-                forces S-channel to be horizontal)
-            non_propagating [True] : removes the non propagating particles 
-                present in the diagram."""
+        opt is an DrawOption object containing all the possible option on how
+        draw a diagram."""
 
         if diagramlist == '':
             diagramlist = self.diagramlist
@@ -365,7 +367,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         # Loop on all diagram
         for diagram in diagramlist:
             # Check if they need to be convert in correct format
-            diagram = self.convert_diagram(diagram, self.model, **opt)
+            diagram = self.convert_diagram(diagram, self.model,'', opt)
             # Write the code associate to this diagram
             self.draw_diagram(diagram)
 
@@ -388,3 +390,5 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.text += '/Helvetica findfont 10 scalefont setfont\n'
         self.text += ' 240         770  moveto\n'
         self.text += ' (Diagrams by MadGraph) show\n'
+
+
