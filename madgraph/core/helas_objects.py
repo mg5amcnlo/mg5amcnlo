@@ -13,12 +13,12 @@
 #
 ################################################################################
 
+import array
 import copy
 import logging
 import re
 import itertools
 import math
-import array
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -656,7 +656,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return self.get('fermionflow') * \
                state_number[self.get('state')] * \
                self.get('spin')
-    
+
     def get_call_key(self):
         """Generate the (spin, state) tuple used as key for the helas call
         dictionaries in HelasModel"""
@@ -976,7 +976,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         """Return particle property names as a nicely sorted list."""
 
         return ['interaction_id', 'pdg_codes', 'inter_color', 'lorentz',
-                'coupling', 'number', 'color_indices', 'fermionfactor', 
+                'coupling', 'number', 'color_indices', 'fermionfactor',
                 'mothers']
 
 
@@ -1410,7 +1410,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                                    diagram_wavefunctions,
                                                    external_wavefunctions,
                                                    wf_number)
-                        
+
                         # Create new copy of number_wf_dict
                         new_number_wf_dict = copy.copy(number_wf_dict)
 
@@ -1463,7 +1463,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 # Sort the wavefunctions according to number
                 diagram_wavefunctions.sort(lambda wf1, wf2: \
                               wf1.get('number') - wf2.get('number'))
-                
+
                 # Now generate HelasAmplitudes from the last vertex.
                 inter = model.get('interaction_dict')[lastvx.get('id')]
                 for i, coupl_key in enumerate(inter.get('couplings').keys()):
@@ -1532,9 +1532,15 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         return mothers
 
     def get_number_of_wavefunctions(self):
-        """Gives the total number of wavefunctions for this amplitude"""
+        """Gives the total number of wavefunctions for this ME"""
 
         return sum([ len(d.get('wavefunctions')) for d in \
+                       self.get('diagrams')])
+
+    def get_number_of_amplitudes(self):
+        """Gives the total number of amplitudes for this ME"""
+
+        return sum([ len(d.get('amplitudes')) for d in \
                        self.get('diagrams')])
 
     def get_nexternal_ninitial(self):

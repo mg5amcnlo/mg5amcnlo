@@ -142,6 +142,9 @@ class IOImportV4Test(unittest.TestCase):
         ubar = copy.copy(myparts[6])
         ubar.set('is_part', False)
 
+        my_i_f = color.ColorString([color.f(0, 1, 2)])
+        my_i_f.is_imaginary = True
+
         goal_inter_list = base_objects.InteractionList([ \
                     base_objects.Interaction(
                                     {'id':1,
@@ -161,8 +164,7 @@ class IOImportV4Test(unittest.TestCase):
                                                                 gluon,
                                                                 t1]),
 
-                                     'color':[color.ColorString(\
-                                              [color.f(0, 1, 2)])],
+                                     'color':[my_i_f],
                                      'lorentz':['A'],
                                      'couplings':{(0, 0):'MGVX2'},
                                      'orders':{'QCD':1}}),
@@ -196,11 +198,11 @@ class IOImportV4Test(unittest.TestCase):
                                                                 u,
                                                                 gluon]),
                                      'color':[color.ColorString(\
-                                              [color.T(2,1,0)])],
+                                              [color.T(2, 1, 0)])],
                                      'lorentz':[''],
                                      'couplings':{(0, 0):'MGVX1'},
                                      'orders':{'QCD':1}}),
-                    
+
                      base_objects.Interaction(
                                     {'id':6,
                                      'particles':base_objects.ParticleList([
@@ -208,7 +210,7 @@ class IOImportV4Test(unittest.TestCase):
                                                                 u,
                                                                 photon]),
                                      'color':[color.ColorString(\
-                                              [color.T(1,0)])],
+                                              [color.T(1, 0)])],
                                      'lorentz':[''],
                                      'couplings':{(0, 0):'MGVX4'},
                                      'orders':{'QED':1}})])

@@ -15,12 +15,14 @@
 
 """Methods and classes to export matrix elements to v4 format."""
 
+import fractions
 import logging
 import copy
 import re
 
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.misc as misc
+import madgraph.core.color_algebra as color
 
 #===============================================================================
 # write_amplitude_v4_standalone
@@ -64,7 +66,7 @@ def write_matrix_element_v4_standalone(fsock, matrix_element, fortran_model):
     replace_dict['den_factor_line'] = den_factor_line
 
     # Extract ngraphs
-    ngraphs = len(matrix_element.get('diagrams'))
+    ngraphs = matrix_element.get_number_of_amplitudes()
     replace_dict['ngraphs'] = ngraphs
 
     # Extract nwavefuncs
@@ -75,7 +77,7 @@ def write_matrix_element_v4_standalone(fsock, matrix_element, fortran_model):
     ncolor = max(1, len(matrix_element.get('color_basis')))
     replace_dict['ncolor'] = ncolor
 
-    # Extract color data lines - FIX!
+    # Extract color data lines
     color_data_lines = get_color_data_lines(matrix_element)
     replace_dict['color_data_lines'] = "\n".join(color_data_lines)
 
@@ -86,7 +88,7 @@ def write_matrix_element_v4_standalone(fsock, matrix_element, fortran_model):
 
     # Extract JAMP lines
     jamp_lines = get_JAMP_lines(matrix_element)
-    replace_dict['jamp_lines'] = jamp_lines
+    replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
     file = \
 """      SUBROUTINE SMATRIX(P,ANS)
@@ -257,6 +259,7 @@ def get_color_data_lines(matrix_element):
         return ["DATA Denom(1)/1/", "DATA (CF(i,1),i=1,1) /1/"]
     else:
         ret_list = []
+        my_cs = color.ColorString()
         for index, denominator in \
             enumerate(matrix_element.get('color_matrix').\
                                              get_line_denominators()):
@@ -268,6 +271,8 @@ def get_color_data_lines(matrix_element):
             ret_list.append("DATA (CF(i,%i),i=1,%i) /%s/" % \
                             (index + 1, len(num_list),
                              ','.join(["%i" % i for i in num_list])))
+            my_cs.from_immutable(matrix_element.get('color_basis').keys()[index])
+            ret_list.append("C %s" % repr(my_cs))
         return ret_list
 
 def get_den_factor_line(matrix_element):
@@ -279,14 +284,49 @@ def get_den_factor_line(matrix_element):
 def get_JAMP_lines(matrix_element):
     """Return the JAMP(1) = sum(fermionfactor * AMP(i)) line"""
 
-    res = "JAMP(1)="
-    # Add all amplitudes with correct fermion factor
-    for diagram in matrix_element.get('diagrams'):
-        for amplitude in diagram.get('amplitudes'):
-            res = res + "%sAMP(%d)" % (sign(amplitude.get('fermionfactor')),
-                                       amplitude.get('number'))
-    return res
+    if not matrix_element.get('color_basis'):
+        res = "JAMP(1)="
+        # Add all amplitudes with correct fermion factor
+        for diagram in matrix_element.get('diagrams'):
+            for amplitude in diagram.get('amplitudes'):
+                res = res + "%sAMP(%d)" % (coeff(amplitude.get('fermionfactor'),
+                                                 1, False, 0),
+                                           amplitude.get('number'))
+        return [res]
+    else:
+        res_list = []
+        for i, col_basis_elem in \
+                enumerate(matrix_element.get('color_basis').keys()):
+            res = "JAMP(%i)=" % (i + 1)
+            for diag_tuple in matrix_element.get('color_basis')[col_basis_elem]:
+                res_amp = filter(lambda amp: \
+                                 tuple(amp.get('color_indices')) == diag_tuple[1],
+                                 matrix_element.get('diagrams')[diag_tuple[0]].get('amplitudes'))
+                if res_amp:
+                    if len(res_amp) > 1:
+                        raise FortranWriter.FortranWriterError, \
+                            """More than one amplitude found for color structure
+                            %s and color index chain (%s) (diagram %i)""" % \
+                            (col_basis_elem,
+                             str(diag_tuple[1]),
+                             diag_tuple[0])
+                    else:
+                        res = res + "%sAMP(%d)" % (coeff(res_amp[0].get('fermionfactor'),
+                                                 diag_tuple[2],
+                                                 diag_tuple[3],
+                                                 diag_tuple[4]),
+                                                 res_amp[0].get('number'))
+                else:
+                    raise FortranWriter.FortranWriterError, \
+                            """No corresponding amplitude found for color structure
+                            %s and color index chain (%s) (diagram %i)""" % \
+                            (col_basis_elem,
+                             str(diag_tuple[1]),
+                             diag_tuple[0])
 
+            res_list.append(res)
+
+        return res_list
 
 #===============================================================================
 # FortranWriter
@@ -859,11 +899,34 @@ class HelasFortranModel(helas_objects.HelasModel):
 # Global helper methods
 #===============================================================================
 
-def sign(number):
-    """Returns '+' if positive, '-' if negative"""
+def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
+    """Returns a nicely formatted string for the coefficients in JAMP lines"""
 
-    if number > 0:
-        return '+'
-    if number < 0:
-        return '-'
+    total_coeff = ff_number * frac * fractions.Fraction(Nc_value) ** Nc_power
+
+    if total_coeff == 1:
+        if is_imaginary:
+            return '+complex(0,1)*'
+        else:
+            return '+'
+    elif total_coeff == -1:
+        if is_imaginary:
+            return '-complex(0,1)*'
+        else:
+            return '-'
+
+    res_str = '%+i' % total_coeff.numerator
+
+    if total_coeff.denominator != 1:
+        # Check if total_coeff is an integer
+        res_str = res_str + './%i.' % total_coeff.denominator
+
+    if is_imaginary:
+        res_str = res_str + '*complex(0,1)'
+
+    return res_str + '*'
+
+
+
+
 

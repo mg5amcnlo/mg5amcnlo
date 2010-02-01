@@ -161,7 +161,7 @@ def read_interactions_v4(fsock, ref_part_list):
                 color_parts = sorted(part_list, lambda p1, p2:\
                                             p1.get_color() - p2.get_color())
                 colors = [part.get_color() for part in color_parts]
-                
+
                 if reduce(lambda c1, c2: c1 * c2, colors) == 1:
                     # All color singlets - set empty
                     myinter.set('color', [])
@@ -182,8 +182,10 @@ def read_interactions_v4(fsock, ref_part_list):
 #                        [color.f(0, 1, 2)])])
                 elif colors == [8, 8, 8]:
                     # Triple glue / glue-gluino-gluino coupling
-                    myinter.set('color', [color.ColorString(\
-                        [color.f(0, 1, 2)])])
+                    my_color_string = color.ColorString(\
+                        [color.f(0, 1, 2)])
+                    my_color_string.is_imaginary = True
+                    myinter.set('color', [my_color_string])
                 elif colors == [8, 8, 8, 8]:
                     # 4-glue / glue-glue-gluino-gluino coupling
                     myinter.set('color', [color.ColorString([color.f(-1, 0, 2),
@@ -217,7 +219,7 @@ def read_interactions_v4(fsock, ref_part_list):
 
                 # gggg
                 if pdg_codes == [21, 21, 21, 21]:
-                    myinter.set('lorentz', ['gggg1','gggg2','gggg3'])
+                    myinter.set('lorentz', ['gggg1', 'gggg2', 'gggg3'])
 
                 # If extra flag, add this to Lorentz    
                 if len(values) > 3 * len(part_list) - 4:

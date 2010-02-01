@@ -18,6 +18,7 @@
 import StringIO
 import unittest
 import copy
+import fractions
 
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.export_v4 as export_v4
@@ -304,6 +305,25 @@ C     Amplitude(s) for diagram number 6
                                                      self.myfortranmodel)
 
         self.assertEqual(fsock.getvalue(), goal_matrix_f)
+
+    def test_coeff_string(self):
+        """Test the coeff string for JAMP lines"""
+
+        self.assertEqual(export_v4.coeff(1,
+                                         fractions.Fraction(1),
+                                         False, 0), '+')
+
+        self.assertEqual(export_v4.coeff(-1,
+                                         fractions.Fraction(1),
+                                         False, 0), '-')
+
+        self.assertEqual(export_v4.coeff(-1,
+                                         fractions.Fraction(-3),
+                                         False, 0), '+3*')
+
+        self.assertEqual(export_v4.coeff(-1,
+                                         fractions.Fraction(3, 5),
+                                         True, -2), '-1./15.*complex(0,1)*')
 
 #===============================================================================
 # IOImportV4Test
@@ -1925,7 +1945,7 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
                                              g]),
                       'color': [],
                       'lorentz':['gggg1', 'gggg2', 'gggg3'],
-                      'couplings':{(0, 0):'G',(1, 1):'G',(2, 2):'G'},
+                      'couplings':{(0, 0):'G', (1, 1):'G', (2, 2):'G'},
                       'orders':{'QCD':2}}))
 
         mybasemodel = base_objects.Model()
