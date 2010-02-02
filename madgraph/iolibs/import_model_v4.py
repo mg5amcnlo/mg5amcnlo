@@ -15,6 +15,7 @@
 
 """Methods and classes to import v4 format model files."""
 
+import fractions
 import logging
 
 import madgraph.core.color_algebra as color
@@ -188,12 +189,16 @@ def read_interactions_v4(fsock, ref_part_list):
                     myinter.set('color', [my_color_string])
                 elif colors == [8, 8, 8, 8]:
                     # 4-glue / glue-glue-gluino-gluino coupling
-                    myinter.set('color', [color.ColorString([color.f(-1, 0, 2),
-                                                   color.f(-1, 1, 3)]),
-                                color.ColorString([color.f(-1, 0, 3),
-                                                   color.f(-1, 1, 2)]),
-                                color.ColorString([color.f(-1, 0, 1),
-                                                   color.f(-1, 2, 3)])])
+                    cs1 = color.ColorString([color.f(-1, 0, 1),
+                                                   color.f(-1, 2, 3)])
+                    cs1.coeff = fractions.Fraction(-1)
+                    cs2 = color.ColorString([color.f(-1, 0, 2),
+                                                   color.f(-1, 3, 1)])
+                    cs2.coeff = fractions.Fraction(-1)
+                    cs3 = color.ColorString([color.f(-1, 0, 3),
+                                                   color.f(-1, 1, 2)])
+                    cs3.coeff = fractions.Fraction(-1)
+                    myinter.set('color', [cs1, cs2, cs3])
                 else:
                     raise Interaction.PhysicsObjectError, \
                         "Color combination %s not yet implemented." % \
@@ -234,7 +239,7 @@ def read_interactions_v4(fsock, ref_part_list):
                 # of the 4g vertex, which needs special treatment)
                 # DUM0 and DUM1 are used as placeholders by FR, corresponds to 1
                 if len(part_list) == 3 or \
-                   values[len(part_list) + 1] in ['DUM', 'DUM0','DUM1']:
+                   values[len(part_list) + 1] in ['DUM', 'DUM0', 'DUM1']:
                     myinter.set('couplings', {(0, 0):values[len(part_list)]})
                 elif pdg_codes == [21, 21, 21, 21]:
                     # gggg
