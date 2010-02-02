@@ -229,8 +229,8 @@ def read_interactions_v4(fsock, ref_part_list):
                 # If extra flag, add this to Lorentz    
                 if len(values) > 3 * len(part_list) - 4:
                     myinter.get('lorentz')[0] = \
-                                              myinter.get('lorentz')[0]\
-                                              + values[3 * len(part_list) - 4].upper()
+                                      myinter.get('lorentz')[0]\
+                                      + values[3 * len(part_list) - 4].upper()
 
                 # Use the other strings to fill variable names and tags
 
@@ -240,7 +240,13 @@ def read_interactions_v4(fsock, ref_part_list):
                 # DUM0 and DUM1 are used as placeholders by FR, corresponds to 1
                 if len(part_list) == 3 or \
                    values[len(part_list) + 1] in ['DUM', 'DUM0', 'DUM1']:
+                    # We can just use the first coupling, since the second
+                    # is a dummy
                     myinter.set('couplings', {(0, 0):values[len(part_list)]})
+                    if myinter.get('lorentz')[0] == 'WWWWN':
+                        # Should only use one Helas amplitude for electroweak
+                        # 4-vector vertices with FR. I choose W3W3NX.
+                        myinter.set('lorentz', ['WWVVN'])
                 elif pdg_codes == [21, 21, 21, 21]:
                     # gggg
                     myinter.set('couplings', {(0, 0):values[len(part_list)],
