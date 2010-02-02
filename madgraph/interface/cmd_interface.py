@@ -549,12 +549,12 @@ class MadGraphCmd(cmd.Cmd):
         def export_v4standalone(self, filepath):
             """Helper function to write a v4 file to file path filepath"""
 
+            cpu_time1 = time.time()
             if not self.__curr_matrix_elements.get('matrix_elements'):
-                cpu_time1 = time.time()
                 self.__curr_matrix_elements = \
                              helas_objects.HelasMultiProcess(\
                                            self.__curr_amps)
-                cpu_time2 = time.time()
+            cpu_time2 = time.time()
 
             ndiags = sum([len(me.get('diagrams')) for \
                           me in self.__curr_matrix_elements.\

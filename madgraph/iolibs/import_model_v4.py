@@ -237,15 +237,17 @@ def read_interactions_v4(fsock, ref_part_list):
                    values[len(part_list) + 1] == 'DUM0' or \
                    values[len(part_list) + 1] == 'DUM1':
                     myinter.set('couplings', {(0, 0):values[len(part_list)]})
-                else:
-                    myinter.set('couplings', {(0, 0):values[len(part_list)] + \
-                                             '*' + values[len(part_list) + 1]})
-
-                # gggg
-                if pdg_codes == [21, 21, 21, 21]:
+                elif pdg_codes == [21, 21, 21, 21]:
                     myinter.set('couplings', {(0, 0):values[len(part_list)],
                                               (1, 1):values[len(part_list)],
                                               (2, 2):values[len(part_list)]})
+                else:
+                    #myinter.set('couplings', {(0, 0):values[len(part_list)] + \
+                    #                         '*' + values[len(part_list) + 1]})
+
+                    raise Interaction.PhysicsObjectError, \
+                        "Only FR-style 4-vertices implemented."
+                # gggg
 
                 # Coupling orders - needs to be fixed
                 order_list = values[2 * len(part_list) - 2: \
