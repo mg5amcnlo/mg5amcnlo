@@ -127,7 +127,7 @@ class ColorBasis(dict):
         # Create a list of associated leg number following the same order
         list_numbers = []
         for pdg_code in list_pdg:
-            list_numbers.append(dict_pdg_leg[pdg_code].pop())
+            list_numbers.append(dict_pdg_leg[pdg_code].pop(0))
         # ... and the associated dictionary for replacement
         match_dict = dict(enumerate(list_numbers))
 
