@@ -753,9 +753,14 @@ class HelasFortranModel(helas_objects.HelasModel):
 
 
             if isinstance(argument, helas_objects.HelasWavefunction):
-                # Extra dummy coupling for 4-particle vertices
-                # Need to replace later with the correct type
-                if len(argument.get('mothers')) == 3:
+                # Extra dummy coupling for 4-vector vertices
+                if argument.get('lorentz') == 'WWVV':
+                    call = call + "1D0,"
+                elif argument.get('lorentz') == 'WWWW':
+                    call = call + "0D0,"
+                elif argument.get('spin') == 3 and \
+                       [wf.get('spin') for wf in argument.get('mothers')] == \
+                       [3, 3, 3]:
                     call = call + "DUM0,"
                 # Mass and width
                 call = call + "%s,%s,"
@@ -764,7 +769,12 @@ class HelasFortranModel(helas_objects.HelasModel):
             else:
                 # Extra dummy coupling for 4-particle vertices
                 # Need to replace later with the correct type
-                if len(argument.get('mothers')) == 4:
+                if argument.get('lorentz') == 'WWVV':
+                    call = call + "1D0,"
+                elif argument.get('lorentz') == 'WWWW':
+                    call = call + "0D0,"
+                elif [wf.get('spin') for wf in argument.get('mothers')] == \
+                       [3, 3, 3, 3]:
                     call = call + "DUM0,"
                 # Amplitude
                 call = call + "AMP(%d))"
