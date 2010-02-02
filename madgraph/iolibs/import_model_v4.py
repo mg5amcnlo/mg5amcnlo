@@ -234,18 +234,30 @@ def read_interactions_v4(fsock, ref_part_list):
                 # of the 4g vertex, which needs special treatment)
                 # DUM0 and DUM1 are used as placeholders by FR, corresponds to 1
                 if len(part_list) == 3 or \
-                   values[len(part_list) + 1] == 'DUM0' or \
-                   values[len(part_list) + 1] == 'DUM1':
+                   values[len(part_list) + 1] in ['DUM', 'DUM0','DUM1']:
                     myinter.set('couplings', {(0, 0):values[len(part_list)]})
-                else:
-                    myinter.set('couplings', {(0, 0):values[len(part_list)] + \
-                                             '*' + values[len(part_list) + 1]})
-
-                # gggg
-                if pdg_codes == [21, 21, 21, 21]:
+                elif pdg_codes == [21, 21, 21, 21]:
+                    # gggg
                     myinter.set('couplings', {(0, 0):values[len(part_list)],
                                               (1, 1):values[len(part_list)],
                                               (2, 2):values[len(part_list)]})
+                elif myinter.get('lorentz')[0] == 'WWWW':
+                    # Need special treatment of v4 SM WWWW couplings since 
+                    # MG5 can only have one coupling per Lorentz structure
+                    myinter.set('couplings', {(0, 0):\
+                                              'sqrt(' +
+                                              values[len(part_list)] + \
+                                             '**2+' + \
+                                              values[len(part_list) + 1] + \
+                                              '**2)'})
+                elif myinter.get('lorentz')[0] == 'WWVV':
+                    # Need special treatment of v4 SM WWVV couplings since 
+                    # MG5 can only have one coupling per Lorentz structure
+                    myinter.set('couplings', {(0, 0):values[len(part_list)] + \
+                                             '*' + \
+                                              values[len(part_list) + 1]})
+                    #raise Interaction.PhysicsObjectError, \
+                    #    "Only FR-style 4-vertices implemented."
 
                 # Coupling orders - needs to be fixed
                 order_list = values[2 * len(part_list) - 2: \
