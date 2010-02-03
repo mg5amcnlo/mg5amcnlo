@@ -177,10 +177,6 @@ def read_interactions_v4(fsock, ref_part_list):
                         [color.T(part_list.index(color_parts[2]),
                                  part_list.index(color_parts[1]),
                                  part_list.index(color_parts[0]))])])
-#                elif colors == [1, 8, 8]:
-#                    # Higgs-glue-glue coupling
-#                    myinter.set('color', [color.ColorString(\
-#                        [color.f(0, 1, 2)])])
                 elif colors == [8, 8, 8]:
                     # Triple glue / glue-gluino-gluino coupling
                     my_color_string = color.ColorString(\
@@ -189,15 +185,15 @@ def read_interactions_v4(fsock, ref_part_list):
                     myinter.set('color', [my_color_string])
                 elif colors == [8, 8, 8, 8]:
                     # 4-glue / glue-glue-gluino-gluino coupling
-                    cs1 = color.ColorString([color.f(-1, 0, 1),
-                                                   color.f(-1, 2, 3)])
-                    cs1.coeff = fractions.Fraction(-1)
-                    cs2 = color.ColorString([color.f(-1, 0, 2),
-                                                   color.f(-1, 3, 1)])
-                    cs2.coeff = fractions.Fraction(-1)
-                    cs3 = color.ColorString([color.f(-1, 0, 3),
-                                                   color.f(-1, 1, 2)])
-                    cs3.coeff = fractions.Fraction(-1)
+                    cs1 = color.ColorString([color.f(0, 1, -1),
+                                                   color.f(2, 3, -1)])
+                    #cs1.coeff = fractions.Fraction(-1)
+                    cs2 = color.ColorString([color.f(1, 2, -1),
+                                                   color.f(0, 3, -1)])
+                    #cs2.coeff = fractions.Fraction(-1)
+                    cs3 = color.ColorString([color.f(2, 0, -1),
+                                                   color.f(1, 3, -1)])
+                    #cs3.coeff = fractions.Fraction(-1)
                     myinter.set('color', [cs1, cs2, cs3])
                 else:
                     raise Interaction.PhysicsObjectError, \

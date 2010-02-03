@@ -253,6 +253,10 @@ class ColorStringTest(unittest.TestCase):
         my_color_string.replace_indices(repl_dict)
         self.assertEqual(str(my_color_string),
                          '1 T(2,3,1,4) Tr(1,3,2)')
+        inv_repl_dict = dict([v, k] for k, v in repl_dict.items())
+        my_color_string.replace_indices(inv_repl_dict)
+        self.assertEqual(str(my_color_string),
+                         '1 T(1,2,3,4) Tr(3,2,1)')
 
     def test_color_string_canonical(self):
         """Test the canonical representation of a immutable color string"""
@@ -263,6 +267,10 @@ class ColorStringTest(unittest.TestCase):
         self.assertEqual(color.ColorString().to_canonical(immutable1 + \
                                                                immutable2)[0],
                          (('T', (2, 4)), ('T', (3, 1, 4)), ('f', (1, 2, 3))))
+
+        self.assertEqual(color.ColorString().to_canonical(immutable1 + \
+                                                               immutable2)[1],
+                         {3:2, 5:4, 4:3, 2:1})
 
 class ColorFactorTest(unittest.TestCase):
     """Test class for the ColorFactor objects"""

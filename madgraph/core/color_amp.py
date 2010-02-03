@@ -62,12 +62,13 @@ class ColorBasis(dict):
             if vertex['id'] == 0:
                 self.add_vertex_id_0(vertex, repl_dict, res_dict)
                 # Return since this must be the last vertex
+                print res_dict
                 return res_dict
 
         # NORMAL VERTICES WITH ID != 0 -----------------------------------------
             min_index, res_dict = self.add_vertex(vertex, diagram, model,
                             repl_dict, res_dict, min_index)
-
+        print res_dict
         return res_dict
 
     def add_vertex_id_0(self, vertex, repl_dict, res_dict):
@@ -185,10 +186,11 @@ class ColorBasis(dict):
 
             # Create a canonical immutable representation of the the string
             canonical_rep, rep_dict = col_str.to_canonical()
+
             try:
                 # If this representation has already been considered,
                 # recycle the result. 
-                col_fact = copy.copy(self._canonical_dict[canonical_rep])
+                col_fact = self._canonical_dict[canonical_rep].create_copy()
 
             except KeyError:
                 # If the representation is really new
@@ -198,7 +200,7 @@ class ColorBasis(dict):
                 col_fact = col_fact.full_simplify()
 
                 # Save the result for further use
-                canonical_col_fact = copy.copy(col_fact)
+                canonical_col_fact = col_fact.create_copy()
                 canonical_col_fact.replace_indices(rep_dict)
                 self._canonical_dict[canonical_rep] = canonical_col_fact
 
@@ -208,6 +210,10 @@ class ColorBasis(dict):
                 # Note that we have to replace back
                 # the indices to match the initial convention. 
                 col_fact.replace_indices(self._invert_dict(rep_dict))
+                # Since the initial coeff of col_str is not taken into account
+                # for matching, we have to multiply col_fact by it.
+                for cs in col_fact:
+                    cs.coeff = cs.coeff * col_str.coeff
                 # Must simplify once to put traces in a canonical ordering
                 col_fact = col_fact.simplify()
 
