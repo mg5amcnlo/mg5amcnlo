@@ -187,13 +187,13 @@ def read_interactions_v4(fsock, ref_part_list):
                     # 4-glue / glue-glue-gluino-gluino coupling
                     cs1 = color.ColorString([color.f(0, 1, -1),
                                                    color.f(2, 3, -1)])
-                    #cs1.coeff = fractions.Fraction(-1)
-                    cs2 = color.ColorString([color.f(1, 2, -1),
-                                                   color.f(0, 3, -1)])
-                    #cs2.coeff = fractions.Fraction(-1)
-                    cs3 = color.ColorString([color.f(2, 0, -1),
+                    cs1.coeff = fractions.Fraction(-1)
+                    cs2 = color.ColorString([color.f(2, 0, -1),
                                                    color.f(1, 3, -1)])
-                    #cs3.coeff = fractions.Fraction(-1)
+                    cs2.coeff = fractions.Fraction(-1)
+                    cs3 = color.ColorString([color.f(1, 2, -1),
+                                                   color.f(0, 3, -1)])
+                    cs3.coeff = fractions.Fraction(-1)
                     myinter.set('color', [cs1, cs2, cs3])
                 else:
                     raise Interaction.PhysicsObjectError, \

@@ -570,18 +570,18 @@ class HelasFortranModel(helas_objects.HelasModel):
         key = ((3, 3, 3, 3), 'gggg2')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
-               (HelasFortranModel.sorted_mothers(wf)[1].get('number'),
-                HelasFortranModel.sorted_mothers(wf)[2].get('number'),
+               (HelasFortranModel.sorted_mothers(wf)[2].get('number'),
                 HelasFortranModel.sorted_mothers(wf)[0].get('number'),
+                HelasFortranModel.sorted_mothers(wf)[1].get('number'),
                 wf.get('coupling'),
                 wf.get('number'))
         self.add_wavefunction(key, call)
         key = ((3, 3, 3, 3), 'gggg2')
         call = lambda amp: \
                "CALL GGGGXX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,AMP(%d))" % \
-               (HelasFortranModel.sorted_mothers(amp)[1].get('number'),
-                HelasFortranModel.sorted_mothers(amp)[2].get('number'),
+               (HelasFortranModel.sorted_mothers(amp)[2].get('number'),
                 HelasFortranModel.sorted_mothers(amp)[0].get('number'),
+                HelasFortranModel.sorted_mothers(amp)[1].get('number'),
                 HelasFortranModel.sorted_mothers(amp)[3].get('number'),
                 amp.get('coupling'),
                 amp.get('number'))
@@ -589,18 +589,18 @@ class HelasFortranModel(helas_objects.HelasModel):
         key = ((3, 3, 3, 3), 'gggg3')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
-               (HelasFortranModel.sorted_mothers(wf)[2].get('number'),
+               (HelasFortranModel.sorted_mothers(wf)[1].get('number'),
+                HelasFortranModel.sorted_mothers(wf)[2].get('number'),
                 HelasFortranModel.sorted_mothers(wf)[0].get('number'),
-                HelasFortranModel.sorted_mothers(wf)[1].get('number'),
                 wf.get('coupling'),
                 wf.get('number'))
         self.add_wavefunction(key, call)
         key = ((3, 3, 3, 3), 'gggg3')
         call = lambda amp: \
                "CALL GGGGXX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,AMP(%d))" % \
-               (HelasFortranModel.sorted_mothers(amp)[2].get('number'),
+               (HelasFortranModel.sorted_mothers(amp)[1].get('number'),
+                HelasFortranModel.sorted_mothers(amp)[2].get('number'),
                 HelasFortranModel.sorted_mothers(amp)[0].get('number'),
-                HelasFortranModel.sorted_mothers(amp)[1].get('number'),
                 HelasFortranModel.sorted_mothers(amp)[3].get('number'),
                 amp.get('coupling'),
                 amp.get('number'))
