@@ -162,10 +162,12 @@ def read_interactions_v4(fsock, ref_part_list):
                 color_parts = sorted(part_list, lambda p1, p2:\
                                             p1.get_color() - p2.get_color())
                 colors = [part.get_color() for part in color_parts]
-
+                
+                # Set color empty by default
+                myinter.set('color', [])
                 if reduce(lambda c1, c2: c1 * c2, colors) == 1:
                     # All color singlets - set empty
-                    myinter.set('color', [])
+                    pass
                 elif colors == [-3, 1, 3]:
                     # triplet-triplet-singlet coupling
                     myinter.set('color', [color.ColorString(\
@@ -200,9 +202,9 @@ def read_interactions_v4(fsock, ref_part_list):
                     cs3.coeff = fractions.Fraction(-1)
                     myinter.set('color', [cs1, cs2, cs3])
                 else:
-                    raise Interaction.PhysicsObjectError, \
+                    logging.warning(\
                         "Color combination %s not yet implemented." % \
-                        repr(colors)
+                        repr(colors))
 
                 # REMEMBER to set the 4g structure once we have
                 # decided how to deal with this vertex
@@ -288,6 +290,6 @@ def read_interactions_v4(fsock, ref_part_list):
                 myinterlist.append(myinter)
 
             except Interaction.PhysicsObjectError, why:
-                logging.warning("Interaction ignored: %s" % why)
+                logging.error("Interaction ignored: %s" % why)
 
     return myinterlist

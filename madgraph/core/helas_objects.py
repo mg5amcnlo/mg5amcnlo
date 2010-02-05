@@ -264,10 +264,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if len(arguments) > 2 and \
                isinstance(value, int) and \
                isinstance(arguments[2], base_objects.Model):
+            model = arguments[2]
             if name == 'interaction_id':
                 self.set('interaction_id', value)
                 if value > 0:
-                    inter = arguments[2].get('interaction_dict')[value]
+                    inter = model.get('interaction_dict')[value]
                     self.set('pdg_codes',
                              [part.get_pdg_code() for part in \
                               inter.get('particles')])
@@ -275,12 +276,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         self.set('inter_color', inter.get('color')[0])
                     if inter.get('lorentz'):
                         self.set('lorentz', inter.get('lorentz')[0])
-                    self.set('coupling', inter.get('couplings')[\
-                            inter.get('couplings').keys()[0]])
                 return True
             elif name == 'pdg_code':
                 self.set('pdg_code', value)
-                part = arguments[2].get('particle_dict')[value]
+                part = model.get('particle_dict')[value]
                 self.set('name', part.get('name'))
                 self.set('antiname', part.get('antiname'))
                 self.set('spin', part.get('spin'))
@@ -351,14 +350,29 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         if self.is_boson():
             # This is a boson
-            return - self.get('pdg_code')
+            return -self.get('pdg_code')
 
         if (self.get('state') == 'outgoing' and self.get('is_part') \
                 or self.get('state') == 'incoming' and not self.get('is_part')):
-            return - self.get('pdg_code')
+            return -self.get('pdg_code')
         else:
             return self.get('pdg_code')
 
+    def set_scalar_coupling_sign(self, model):
+        """Check if we need to add a minus sign due to non-identical
+        bosons in HVS type couplings"""
+
+        inter = model.get('interaction_dict')[self.get('interaction_id')]
+        if [p.get('spin') for p in \
+                   inter.get('particles')] == [3, 1, 1]:
+            particles = inter.get('particles')
+            #                   lambda p1, p2: p1.get('spin') - p2.get('spin'))
+            if particles[1].get_pdg_code() != particles[2].get_pdg_code() \
+                   and self.get('pdg_code') == \
+                       particles[1].get_anti_pdg_code():
+                # We need a minus sign in front of the coupling
+                self.set('coupling', '-' + self.get('coupling'))
+        
 
     def set_state_and_particle(self, model):
         """Set incoming/outgoing state according to mother states and
@@ -963,8 +977,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
                         self.set('inter_color', inter.get('color')[0])
                     if inter.get('lorentz'):
                         self.set('lorentz', inter.get('lorentz')[0])
-                    self.set('coupling', inter.get('couplings')[\
-                            inter.get('couplings').keys()[0]])
                 return True
             else:
                 raise self.PhysicsObjectError, \
@@ -1394,6 +1406,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     for coupl_key in inter.get('couplings').keys():
                         wf = HelasWavefunction(last_leg, vertex.get('id'), model)
                         wf.set('coupling', inter.get('couplings')[coupl_key])
+                        # Special feature: For HVS vertices with the two
+                        # scalars different, we need extra minus sign in front
+                        # of coupling for one of the two scalars since the HVS
+                        # is asymmetric in the two scalars
+                        if wf.get('spin') == 1:
+                            wf.set_scalar_coupling_sign(model)
                         if inter.get('color'):
                             wf.set('inter_color', inter.get('color')[coupl_key[0]])
                         wf.set('lorentz', inter.get('lorentz')[coupl_key[1]])
