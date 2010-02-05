@@ -55,61 +55,66 @@ class ColorBasis(dict):
         # The dictionary for book keeping of replaced indices
         repl_dict = {}
 
-        for vertex in diagram.get('vertices'):
+        for i, vertex in enumerate(diagram.get('vertices')):
 
-        # SPECIAL VERTEX WITH ID = 0 -------------------------------------------
+        # SPECIAL VERTEX JUST BEFORE ID = 0 ------------------------------------
 
-            if vertex['id'] == 0:
-                self.add_vertex_id_0(vertex, repl_dict, res_dict)
+            if i == len(diagram.get('vertices')) - 2 and \
+                diagram.get('vertices')[i + 1]['id'] == 0:
+
+                # Tag the numbers in id=0 and look for possible replacement
+                num1 = diagram.get('vertices')[i + 1].get('legs')[1].get('number')
+                num2 = diagram.get('vertices')[i + 1].get('legs')[0].get('number')
+                try:
+                    num1 = repl_dict[num1]
+                except KeyError:
+                    pass
+                try:
+                    num2 = repl_dict[num2]
+                except KeyError:
+                    pass
+                # call the ad_vertex routine with a special replacement request
+                min_index, res_dict = self.add_vertex(vertex, diagram, model,
+                            repl_dict, res_dict, min_index,
+                            id0_dict={num1:num2, num2:num1})
                 # Return since this must be the last vertex
+                print res_dict
                 return res_dict
 
         # NORMAL VERTICES WITH ID != 0 -----------------------------------------
             min_index, res_dict = self.add_vertex(vertex, diagram, model,
                             repl_dict, res_dict, min_index)
-
+        print res_dict
         return res_dict
 
-    def add_vertex_id_0(self, vertex, repl_dict, res_dict):
-        """Update the repl_dict and res_dict when vertex has id=0, i.e. for
-        the special case of an identity vertex."""
-
-        # For vertex (i1,i2), replace all i2 by i1
-        old_num = vertex.get('legs')[1].get('number')
-        new_num = vertex.get('legs')[0].get('number')
-        # Be careful i1 or i2 might have been replaced themselves
-        try:
-            old_num = repl_dict[old_num]
-        except KeyError:
-            pass
-        try:
-            new_num = repl_dict[new_num]
-        except KeyError:
-            pass
-        # Do the replacement
-        for (ind_chain, col_str_chain) in res_dict.items():
-            col_str_chain.replace_indices({old_num:new_num})
-
     def add_vertex(self, vertex, diagram, model,
-                   repl_dict, res_dict, min_index):
+                   repl_dict, res_dict, min_index, id0_dict={}):
         """Update repl_dict, res_dict and min_index for normal vertices.
-        Returns the min_index reached and the result dictionary in a tuple."""
+        Returns the min_index reached and the result dictionary in a tuple.
+        If id0_dict is not None, perform the requested replacement on the
+        last leg number before going further."""
 
         # Create a list of pdg codes entering the vertex ordered as in
         # interactions.py
         list_pdg = [part.get_pdg_code() for part in \
                model.get_interaction(vertex.get('id')).get('particles')]
-
         # Create a dictionary pdg code --> leg(s)
         dict_pdg_leg = {}
         for index, leg in enumerate(vertex.get('legs')):
             curr_num = leg.get('number')
+
+            # If this is the last vertex before id=0, replace the last leg number
+            # accordingly to close the index chain
+            if curr_num in id0_dict.keys() and \
+                index == len(vertex.get('legs')) - 1:
+                curr_num = id0_dict[curr_num]
+
             curr_pdg = leg.get('id')
-            # If this is the last leg and not the last vertex, 
-            # flip part/antipart, and replace last index by a new 
+            # If this is the last leg and not the last vertex (or the last 
+            # before id=0), flip part/antipart, and replace last index by a new 
             # summed index
             if index == len(vertex.get('legs')) - 1 and \
-                vertex != diagram.get('vertices')[-1]:
+                vertex != diagram.get('vertices')[-1] and id0_dict == {}:
                 part = model.get('particle_dict')[curr_pdg]
                 curr_pdg = \
                     model.get('particle_dict')[curr_pdg].get_anti_pdg_code()
@@ -185,11 +190,11 @@ class ColorBasis(dict):
 
             # Create a canonical immutable representation of the the string
             canonical_rep, rep_dict = col_str.to_canonical()
+
             try:
                 # If this representation has already been considered,
                 # recycle the result. 
-                col_fact = copy.copy(self._canonical_dict[canonical_rep])
-
+                col_fact = self._canonical_dict[canonical_rep].create_copy()
             except KeyError:
                 # If the representation is really new
 
@@ -198,8 +203,11 @@ class ColorBasis(dict):
                 col_fact = col_fact.full_simplify()
 
                 # Save the result for further use
-                canonical_col_fact = copy.copy(col_fact)
+                canonical_col_fact = col_fact.create_copy()
                 canonical_col_fact.replace_indices(rep_dict)
+                # Remove overall coefficient
+                for cs in canonical_col_fact:
+                    cs.coeff = cs.coeff / col_str.coeff
                 self._canonical_dict[canonical_rep] = canonical_col_fact
 
             else:
@@ -208,6 +216,10 @@ class ColorBasis(dict):
                 # Note that we have to replace back
                 # the indices to match the initial convention. 
                 col_fact.replace_indices(self._invert_dict(rep_dict))
+                # Since the initial coeff of col_str is not taken into account
+                # for matching, we have to multiply col_fact by it.
+                for cs in col_fact:
+                    cs.coeff = cs.coeff * col_str.coeff
                 # Must simplify once to put traces in a canonical ordering
                 col_fact = col_fact.simplify()
 
@@ -355,7 +367,6 @@ class ColorMatrix(dict):
                 try:
                     # If this has already been calculated, use the result
                     result, result_fixed_Nc = canonical_dict[canonical_entry]
-
                 except KeyError:
                     # Otherwise calculate the result
                     result, result_fixed_Nc = \
