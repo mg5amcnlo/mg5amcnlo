@@ -303,6 +303,19 @@ def get_JAMP_lines(matrix_element):
         for i, col_basis_elem in \
                 enumerate(matrix_element.get('color_basis').keys()):
             res = "JAMP(%i)=" % (i + 1)
+
+            # Optimization: if all contributions to that color basis element have
+            # the same coefficient (up to a sign), put it in front
+            list_fracs = [abs(diag_tuple[2]) for diag_tuple in \
+                          matrix_element.get('color_basis')[col_basis_elem]]
+            common_factor = False
+            diff_fracs = list(set(list_fracs))
+            if len(diff_fracs) == 1 and abs(diff_fracs[0]) != 1:
+                common_factor = True
+                global_factor = diff_fracs[0]
+                res = res + '%s(' % coeff(1, global_factor, False, 0)
+
+
             for diag_tuple in matrix_element.get('color_basis')[col_basis_elem]:
                 res_amp = filter(lambda amp: \
                                  tuple(amp.get('color_indices')) == diag_tuple[1],
@@ -316,11 +329,18 @@ def get_JAMP_lines(matrix_element):
                              str(diag_tuple[1]),
                              diag_tuple[0])
                     else:
-                        res = res + "%sAMP(%d)" % (coeff(res_amp[0].get('fermionfactor'),
-                                                 diag_tuple[2],
-                                                 diag_tuple[3],
-                                                 diag_tuple[4]),
-                                                 res_amp[0].get('number'))
+                        if common_factor:
+                            res = res + "%sAMP(%d)" % (coeff(res_amp[0].get('fermionfactor'),
+                                                     diag_tuple[2] / abs(diag_tuple[2]),
+                                                     diag_tuple[3],
+                                                     diag_tuple[4]),
+                                                     res_amp[0].get('number'))
+                        else:
+                            res = res + "%sAMP(%d)" % (coeff(res_amp[0].get('fermionfactor'),
+                                                     diag_tuple[2],
+                                                     diag_tuple[3],
+                                                     diag_tuple[4]),
+                                                     res_amp[0].get('number'))
                 else:
                     raise FortranWriter.FortranWriterError, \
                             """No corresponding amplitude found for color structure
@@ -328,6 +348,9 @@ def get_JAMP_lines(matrix_element):
                             (col_basis_elem,
                              str(diag_tuple[1]),
                              diag_tuple[0])
+
+            if common_factor:
+                res = res + ')'
 
             res_list.append(res)
 

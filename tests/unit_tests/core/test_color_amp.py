@@ -212,7 +212,7 @@ class ColorAmpTest(unittest.TestCase):
                                      self.mymodel)
 
         goal_dict = {(0, 0):color.ColorString([color.T(-1000, 1, 2),
-                                               color.f(-1000, 4, 3)])}
+                                               color.f(3, 4, -1000)])}
 
         self.assertEqual(col_dict, goal_dict)
 
@@ -263,8 +263,8 @@ class ColorAmpTest(unittest.TestCase):
                                      self.mymodel)
 
         goal_dict = {(0, 0, 0):color.ColorString([color.T(-1000, 1, 2),
-                                               color.f(-1001, 4, 3),
-                                               color.f(5, -1001, -1000)])}
+                                               color.f(3, 4, -1001),
+                                               color.f(-1000, -1001, 5)])}
 
         self.assertEqual(col_dict, goal_dict)
 
@@ -273,14 +273,14 @@ class ColorAmpTest(unittest.TestCase):
                                      self.mymodel)
 
         goal_dict = {(0, 0):color.ColorString([color.T(-1000, 1, 2),
-                                               color.f(-1002, -1000, 4),
-                                               color.f(-1002, 5, 3)]),
+                                               color.f(-1001, 3, 5),
+                                               color.f(-1001, 4, -1000)]),
                      (0, 1):color.ColorString([color.T(-1000, 1, 2),
-                                               color.f(-1003, -1000, 3),
-                                               color.f(-1003, 5, 4)]),
+                                               color.f(-1002, 3, -1000),
+                                               color.f(-1002, 4, 5)]),
                      (0, 2):color.ColorString([color.T(-1000, 1, 2),
-                                               color.f(-1004, -1000, 5),
-                                               color.f(-1004, 4, 3)])}
+                                               color.f(-1003, 3, 4),
+                                               color.f(-1003, 5, -1000)])}
 
         self.assertEqual(col_dict, goal_dict)
 
@@ -435,21 +435,21 @@ class ColorSquareTest(unittest.TestCase):
                 fractions.Fraction(3641, 648)]
 
         goal_line1 = [(fractions.Fraction(7, 3), fractions.Fraction(-2, 3)),
-                      (fractions.Fraction(19, 6), fractions.Fraction(-1, 3),
-                       fractions.Fraction(-1, 3), fractions.Fraction(-1, 3),
-                       fractions.Fraction(2, 3), fractions.Fraction(-1, 3)),
+                     (fractions.Fraction(19, 6), fractions.Fraction(2, 3),
+                    fractions.Fraction(-1, 3), fractions.Fraction(-1, 3),
+                    fractions.Fraction(-1, 3), fractions.Fraction(-1, 3)),
                     (fractions.Fraction(455, 108), fractions.Fraction(-29, 54),
-                       fractions.Fraction(17, 27), fractions.Fraction(7, 54),
-                       fractions.Fraction(-1, 27), fractions.Fraction(17, 27),
-                       fractions.Fraction(5, 108), fractions.Fraction(7, 54),
-                       fractions.Fraction(7, 54), fractions.Fraction(-1, 27),
-                       fractions.Fraction(7, 54), fractions.Fraction(5, 108),
-                       fractions.Fraction(-10, 27), fractions.Fraction(-29, 54),
-                       fractions.Fraction(-29, 54), fractions.Fraction(-29, 54),
-                       fractions.Fraction(-29, 54), fractions.Fraction(7, 54),
-                       fractions.Fraction(17, 27), fractions.Fraction(-1, 27),
-                       fractions.Fraction(-1, 27), fractions.Fraction(17, 27),
-                       fractions.Fraction(-1, 27), fractions.Fraction(17, 27))]
+                    fractions.Fraction(17, 27), fractions.Fraction(17, 27),
+                    fractions.Fraction(-29, 54), fractions.Fraction(-1, 27),
+                    fractions.Fraction(17, 27), fractions.Fraction(7, 54),
+                    fractions.Fraction(7, 54), fractions.Fraction(5, 108),
+                    fractions.Fraction(7, 54), fractions.Fraction(5, 108),
+                    fractions.Fraction(-10, 27), fractions.Fraction(-1, 27),
+                    fractions.Fraction(7, 54), fractions.Fraction(-29, 54),
+                    fractions.Fraction(-1, 27), fractions.Fraction(17, 27),
+                    fractions.Fraction(-1, 27), fractions.Fraction(-1, 27),
+                    fractions.Fraction(-29, 54), fractions.Fraction(17, 27),
+                    fractions.Fraction(-29, 54), fractions.Fraction(7, 54))]
 
         for n in range(3):
             myleglist = base_objects.LegList()

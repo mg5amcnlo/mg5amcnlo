@@ -62,21 +62,14 @@ class ColorBasis(dict):
             if i == len(diagram.get('vertices')) - 2 and \
                 diagram.get('vertices')[i + 1]['id'] == 0:
 
-                # Tag the numbers in id=0 and look for possible replacement
-                num1 = diagram.get('vertices')[i + 1].get('legs')[1].get('number')
-                num2 = diagram.get('vertices')[i + 1].get('legs')[0].get('number')
-                try:
-                    num1 = repl_dict[num1]
-                except KeyError:
-                    pass
-                try:
-                    num2 = repl_dict[num2]
-                except KeyError:
-                    pass
+                # Tag the numbers in id=0 
+                num1 = diagram.get('vertices')[i + 1].get('legs')[0].get('number')
+                num2 = diagram.get('vertices')[i + 1].get('legs')[1].get('number')
+
                 # call the ad_vertex routine with a special replacement request
                 min_index, res_dict = self.add_vertex(vertex, diagram, model,
                             repl_dict, res_dict, min_index,
-                            id0_dict={num1:num2, num2:num1})
+                            id0_rep=[num1, num2])
 
                 # Return since this must be the last vertex
                 return res_dict
@@ -84,13 +77,14 @@ class ColorBasis(dict):
         # NORMAL VERTICES WITH ID != 0 -----------------------------------------
             min_index, res_dict = self.add_vertex(vertex, diagram, model,
                             repl_dict, res_dict, min_index)
+
         return res_dict
 
     def add_vertex(self, vertex, diagram, model,
-                   repl_dict, res_dict, min_index, id0_dict={}):
+                   repl_dict, res_dict, min_index, id0_rep=[]):
         """Update repl_dict, res_dict and min_index for normal vertices.
         Returns the min_index reached and the result dictionary in a tuple.
-        If id0_dict is not None, perform the requested replacement on the
+        If the id0_rep list is not None, perform the requested replacement on the
         last leg number before going further."""
 
         # Create a list of pdg codes entering the vertex ordered as in
@@ -99,36 +93,35 @@ class ColorBasis(dict):
                model.get_interaction(vertex.get('id')).get('particles')]
         # Create a dictionary pdg code --> leg(s)
         dict_pdg_leg = {}
+
         for index, leg in enumerate(vertex.get('legs')):
             curr_num = leg.get('number')
             curr_pdg = leg.get('id')
 
-            # If this is the last vertex before id=0, replace the last leg number
-            # accordingly to close the index chain and change the pdg code to
-            # switch to a n>0 vertex.
-            if curr_num in id0_dict.keys() and \
-                index == len(vertex.get('legs')) - 1:
-                curr_num = id0_dict[curr_num]
-                part = model.get('particle_dict')[curr_pdg]
-                curr_pdg = \
-                    model.get('particle_dict')[curr_pdg].get_anti_pdg_code()
-
-
-            # If this is the last leg and not the last vertex (or the last 
-            # before id=0), flip part/antipart, and replace last index by a new 
-            # summed index
-
+            # If this is the next-to-last vertex and the last vertex is
+            # the special identity id=0, start by applying the replacement rule
+            # on the last vertex.
             if index == len(vertex.get('legs')) - 1 and \
-                vertex != diagram.get('vertices')[-1] and id0_dict == {}:
-                part = model.get('particle_dict')[curr_pdg]
+                    curr_num in id0_rep:
+                    curr_num = id0_rep[id0_rep.index(curr_num) - 1]
+
+            # If this is the last leg and not the last vertex 
+            # flip part/antipart. If it is not the last, AND not the next-to-last
+            # before an id=0 vertex, replace last index by a new summed index.
+            if index == len(vertex.get('legs')) - 1 and \
+                vertex != diagram.get('vertices')[-1]:
                 curr_pdg = \
                     model.get('particle_dict')[curr_pdg].get_anti_pdg_code()
-                repl_dict[curr_num] = min_index
-                min_index = min_index - 1
+                if not id0_rep:
+                    repl_dict[curr_num] = min_index
+                    min_index = min_index - 1
+
+            # Take into account previous replacements
             try:
                 curr_num = repl_dict[curr_num]
             except KeyError:
                 pass
+
             try:
                 dict_pdg_leg[curr_pdg].append(curr_num)
             except KeyError:
