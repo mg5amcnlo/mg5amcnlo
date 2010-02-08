@@ -162,7 +162,7 @@ def read_interactions_v4(fsock, ref_part_list):
                 color_parts = sorted(part_list, lambda p1, p2:\
                                             p1.get_color() - p2.get_color())
                 colors = [part.get_color() for part in color_parts]
-                
+
                 # Set color empty by default
                 myinter.set('color', [])
                 if reduce(lambda c1, c2: c1 * c2, colors) == 1:
@@ -189,13 +189,13 @@ def read_interactions_v4(fsock, ref_part_list):
                     # 4-glue / glue-glue-gluino-gluino coupling
                     cs1 = color.ColorString([color.f(0, 1, -1),
                                                    color.f(2, 3, -1)])
-                    cs1.coeff = fractions.Fraction(-1)
+                    #cs1.coeff = fractions.Fraction(-1)
                     cs2 = color.ColorString([color.f(2, 0, -1),
                                                    color.f(1, 3, -1)])
-                    cs2.coeff = fractions.Fraction(-1)
+                    #cs2.coeff = fractions.Fraction(-1)
                     cs3 = color.ColorString([color.f(1, 2, -1),
                                                    color.f(0, 3, -1)])
-                    cs3.coeff = fractions.Fraction(-1)
+                    #cs3.coeff = fractions.Fraction(-1)
                     myinter.set('color', [cs1, cs2, cs3])
                 else:
                     logging.warning(\

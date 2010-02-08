@@ -77,14 +77,13 @@ class ColorBasis(dict):
                 min_index, res_dict = self.add_vertex(vertex, diagram, model,
                             repl_dict, res_dict, min_index,
                             id0_dict={num1:num2, num2:num1})
+
                 # Return since this must be the last vertex
-                print res_dict
                 return res_dict
 
         # NORMAL VERTICES WITH ID != 0 -----------------------------------------
             min_index, res_dict = self.add_vertex(vertex, diagram, model,
                             repl_dict, res_dict, min_index)
-        print res_dict
         return res_dict
 
     def add_vertex(self, vertex, diagram, model,
@@ -102,17 +101,23 @@ class ColorBasis(dict):
         dict_pdg_leg = {}
         for index, leg in enumerate(vertex.get('legs')):
             curr_num = leg.get('number')
+            curr_pdg = leg.get('id')
 
             # If this is the last vertex before id=0, replace the last leg number
-            # accordingly to close the index chain
+            # accordingly to close the index chain and change the pdg code to
+            # switch to a n>0 vertex.
             if curr_num in id0_dict.keys() and \
                 index == len(vertex.get('legs')) - 1:
                 curr_num = id0_dict[curr_num]
+                part = model.get('particle_dict')[curr_pdg]
+                curr_pdg = \
+                    model.get('particle_dict')[curr_pdg].get_anti_pdg_code()
 
-            curr_pdg = leg.get('id')
+
             # If this is the last leg and not the last vertex (or the last 
             # before id=0), flip part/antipart, and replace last index by a new 
             # summed index
+
             if index == len(vertex.get('legs')) - 1 and \
                 vertex != diagram.get('vertices')[-1] and id0_dict == {}:
                 part = model.get('particle_dict')[curr_pdg]

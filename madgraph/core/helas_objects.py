@@ -350,11 +350,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         if self.is_boson():
             # This is a boson
-            return -self.get('pdg_code')
+            return - self.get('pdg_code')
 
         if (self.get('state') == 'outgoing' and self.get('is_part') \
                 or self.get('state') == 'incoming' and not self.get('is_part')):
-            return -self.get('pdg_code')
+            return - self.get('pdg_code')
         else:
             return self.get('pdg_code')
 
@@ -372,7 +372,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                        particles[1].get_anti_pdg_code():
                 # We need a minus sign in front of the coupling
                 self.set('coupling', '-' + self.get('coupling'))
-        
+
 
     def set_state_and_particle(self, model):
         """Set incoming/outgoing state according to mother states and
@@ -1369,9 +1369,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 # Replace the last leg of nexttolastvertex
                 legs[-1] = lastleg
                 lastvx = nexttolastvertex
-                # Sort the legs, to get right order of wave functions
-                lastvx.get('legs').sort(lambda leg1, leg2: \
-                                    leg1.get('number') - leg2.get('number'))
 
             # Go through all vertices except the last and create
             # wavefunctions
@@ -1470,7 +1467,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                           external_wavefunctions,
                                           wavefunctions,
                                           diagram_wavefunctions)
-
                 # Need to check for clashing fermion flow due to
                 # Majorana fermions, and modify if necessary
                 wf_number = mothers.check_and_fix_fermion_flow(wavefunctions,
