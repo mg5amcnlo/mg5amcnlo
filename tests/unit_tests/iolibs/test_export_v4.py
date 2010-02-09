@@ -465,6 +465,7 @@ class HelasFortranModelTest(test_helas_objects.HelasModelTest):
             'mothers': wfs,
             'number': 1})
         amplitude.set('interaction_id', 7, self.mybasemodel)
+
         self.assertEqual(fortran_model.get_amplitude_call(amplitude),
                          goal[goal_counter])
         goal_counter = goal_counter + 1
@@ -1834,7 +1835,7 @@ CALL VVVXXX(W(1,3),W(1,9),W(1,6),MGVX3,AMP(3))
 # Amplitude(s) for diagram number 4
 CALL VVVXXX(W(1,9),W(1,3),W(1,8),MGVX5,AMP(4))
 # Amplitude(s) for diagram number 5
-CALL W3W3NX(W(1,3),W(1,6),W(1,4),W(1,5),MGVX4,DUM0,AMP(5))
+CALL W3W3NX(W(1,3),W(1,5),W(1,4),W(1,6),MGVX4,DUM0,AMP(5))
 # Amplitude(s) for diagram number 6
 CALL W3W3NX(W(1,3),W(1,5),W(1,4),W(1,8),MGVX7,DUM0,AMP(6))
 CALL JVVXXX(W(1,3),W(1,1),MGVX3,zero,zero,W(1,10))
@@ -1849,7 +1850,7 @@ CALL VVVXXX(W(1,2),W(1,9),W(1,10),MGVX3,AMP(9))
 # Amplitude(s) for diagram number 10
 CALL VVVXXX(W(1,9),W(1,2),W(1,12),MGVX5,AMP(10))
 # Amplitude(s) for diagram number 11
-CALL W3W3NX(W(1,2),W(1,10),W(1,4),W(1,5),MGVX4,DUM0,AMP(11))
+CALL W3W3NX(W(1,2),W(1,5),W(1,4),W(1,10),MGVX4,DUM0,AMP(11))
 # Amplitude(s) for diagram number 12
 CALL W3W3NX(W(1,2),W(1,5),W(1,4),W(1,12),MGVX7,DUM0,AMP(12))
 CALL JVVXXX(W(1,1),W(1,5),MGVX3,MW,WW,W(1,13))
@@ -1866,7 +1867,7 @@ CALL JVVXXX(W(1,4),W(1,3),MGVX5,MZ,WZ,W(1,17))
 # Amplitude(s) for diagram number 16
 CALL VVVXXX(W(1,13),W(1,2),W(1,17),MGVX5,AMP(16))
 # Amplitude(s) for diagram number 17
-CALL W3W3NX(W(1,2),W(1,13),W(1,3),W(1,4),MGVX6,DUM0,AMP(17))
+CALL W3W3NX(W(1,2),W(1,4),W(1,3),W(1,13),MGVX6,DUM0,AMP(17))
 # Amplitude(s) for diagram number 18
 CALL VVVXXX(W(1,7),W(1,1),W(1,14),MGVX3,AMP(18))
 # Amplitude(s) for diagram number 19

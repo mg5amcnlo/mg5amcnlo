@@ -272,10 +272,14 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     self.set('pdg_codes',
                              [part.get_pdg_code() for part in \
                               inter.get('particles')])
+                    # Note that the following values might change, if
+                    # the relevant color/lorentz/coupling is not index 0
                     if inter.get('color'):
                         self.set('inter_color', inter.get('color')[0])
                     if inter.get('lorentz'):
                         self.set('lorentz', inter.get('lorentz')[0])
+                    if inter.get('couplings'):
+                        self.set('coupling', inter.get('couplings').values()[0])
                 return True
             elif name == 'pdg_code':
                 self.set('pdg_code', value)
@@ -973,10 +977,14 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     self.set('pdg_codes',
                              [part.get_pdg_code() for part in \
                               inter.get('particles')])
+                    # Note that the following values might change, if
+                    # the relevant color/lorentz/coupling is not index 0
                     if inter.get('color'):
                         self.set('inter_color', inter.get('color')[0])
                     if inter.get('lorentz'):
                         self.set('lorentz', inter.get('lorentz')[0])
+                    if inter.get('couplings'):
+                        self.set('coupling', inter.get('couplings').values()[0])
                 return True
             else:
                 raise self.PhysicsObjectError, \

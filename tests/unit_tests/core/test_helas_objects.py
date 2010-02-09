@@ -1590,9 +1590,10 @@ class HelasMatrixElementTest(unittest.TestCase):
         amplitude1 = helas_objects.HelasAmplitudeList([\
             helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[4], wavefunctions1[2],
-                          wavefunctions1[3]]),
+                         [wavefunctions1[2], wavefunctions1[3],
+                          wavefunctions1[4]]),
              'number': 1,
+             'color_indices': [0, 0],
              'fermionfactor': 1})])
         amplitude1[0].set('interaction_id', 7, self.mymodel)
 
@@ -1614,10 +1615,11 @@ class HelasMatrixElementTest(unittest.TestCase):
         amplitude2 = helas_objects.HelasAmplitudeList([\
             helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
-                         [wavefunctions2[0], wavefunctions1[1],
-                          wavefunctions1[2]]),
+                         [wavefunctions1[1], wavefunctions1[2],
+                          wavefunctions2[0]]),
              'interaction_id': 7,
              'number': 2,
+             'color_indices': [0, 0],
              'fermionfactor': 1})])
         amplitude2[0].set('interaction_id', 7, self.mymodel)
 
@@ -1681,9 +1683,10 @@ class HelasMatrixElementTest(unittest.TestCase):
         amplitude1 = helas_objects.HelasAmplitudeList([\
             helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
-                         [wavefunctions1[4], wavefunctions1[2],
-                          wavefunctions1[3]]),
+                         [wavefunctions1[2], wavefunctions1[3],
+                          wavefunctions1[4]]),
              'number': 1,
+             'color_indices': [0, 0],
              'fermionfactor': 1})])
         amplitude1[0].set('interaction_id', 7, self.mymodel)
 
@@ -1705,10 +1708,11 @@ class HelasMatrixElementTest(unittest.TestCase):
         amplitude2 = helas_objects.HelasAmplitudeList([\
             helas_objects.HelasAmplitude({\
              'mothers': helas_objects.HelasWavefunctionList(\
-                         [wavefunctions2[0], wavefunctions1[1],
-                          wavefunctions1[3]]),
+                         [wavefunctions1[1], wavefunctions1[3],
+                          wavefunctions2[0]]),
              'interaction_id': 7,
              'number': 2,
+             'color_indices': [0, 0],
              'fermionfactor': 1})])
         amplitude2[0].set('interaction_id', 7, self.mymodel)
 
