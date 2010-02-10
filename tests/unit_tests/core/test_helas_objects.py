@@ -55,6 +55,7 @@ class HelasWavefunctionTest(unittest.TestCase):
                        'inter_color': None,
                        'lorentz': '',
                        'coupling': 'none',
+                       'coupl_key': (0, 0),
                        'state': 'incoming',
                        'number_external': 4,
                        'number': 5,
@@ -148,6 +149,7 @@ class HelasWavefunctionTest(unittest.TestCase):
         goal = goal + "    \'inter_color\': None,\n"
         goal = goal + "    \'lorentz\': \'\',\n"
         goal = goal + "    \'coupling\': \'none\',\n"
+        goal = goal + "    \'coupl_key\': (0, 0),\n"
         goal = goal + "    \'state\': \'incoming\',\n"
         goal = goal + "    \'number_external\': 4,\n"
         goal = goal + "    \'number\': 5,\n"

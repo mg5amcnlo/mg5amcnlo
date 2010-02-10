@@ -84,7 +84,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['inter_color'] = None
         self['lorentz'] = ''
         self['coupling'] = 'none'
-        # Gives the Lorentz and color index used in this wavefunction
+        # The Lorentz and color index used in this wavefunction
         self['coupl_key'] = (0, 0)
         # Properties relating to the leg/vertex
         # state = initial/final (for external bosons),
@@ -217,6 +217,17 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         "%s is not a valid coupling string" % \
                                                                 str(value)
 
+        if name == 'coupl_key':
+            if not isinstance(value, tuple):
+                raise self.PhysicsObjectError, \
+                      "%s is not a valid tuple" % str(value)
+            if len(value) != 2:
+                raise self.PhysicsObjectError, \
+                      "%s is not a valid tuple with 2 elements" % str(value)
+            if not isinstance(value[0], int) or not isinstance(value[1], int):
+                raise self.PhysicsObjectError, \
+                      "%s is not a valid tuple of integer" % str(value)
+
         if name == 'state':
             if not isinstance(value, str):
                 raise self.PhysicsObjectError, \
@@ -307,8 +318,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return ['pdg_code', 'name', 'antiname', 'spin', 'color',
                 'mass', 'width', 'is_part', 'self_antipart',
                 'interaction_id', 'pdg_codes', 'inter_color', 'lorentz',
-                'coupling', 'state', 'number_external', 'number',
-                'fermionflow', 'mothers']
+                'coupling', 'coupl_key', 'state', 'number_external', 
+                'number', 'fermionflow', 'mothers']
 
     # Helper functions
 
@@ -323,8 +334,13 @@ class HelasWavefunction(base_objects.PhysicsObject):
         determine if a wavefunction has been used before: interaction
         id and mother wavefunction numbers."""
 
+        # Identification based on interaction id
         array_rep = array.array('i', [self['interaction_id']])
+        # Need the coupling key, to distinguish between
+        # wavefunctions from the same interaction but different
+        # Lorentz or color structures
         array_rep.extend(list(self['coupl_key']))
+        # Finally, the mother numbers
         array_rep.extend([mother.get('number') for \
                           mother in self['mothers']])
         return array_rep
