@@ -84,6 +84,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['inter_color'] = None
         self['lorentz'] = ''
         self['coupling'] = 'none'
+        # Gives the Lorentz and color index used in this wavefunction
+        self['coupl_key'] = (0, 0)
         # Properties relating to the leg/vertex
         # state = initial/final (for external bosons),
         #         intermediate (for intermediate bosons),
@@ -322,6 +324,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         id and mother wavefunction numbers."""
 
         array_rep = array.array('i', [self['interaction_id']])
+        array_rep.extend(list(self['coupl_key']))
         array_rep.extend([mother.get('number') for \
                           mother in self['mothers']])
         return array_rep
@@ -1420,6 +1423,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         if inter.get('color'):
                             wf.set('inter_color', inter.get('color')[coupl_key[0]])
                         wf.set('lorentz', inter.get('lorentz')[coupl_key[1]])
+                        wf.set('coupl_key', coupl_key)
                         wf.set('mothers', mothers)
                         # Need to set incoming/outgoing and
                         # particle/antiparticle according to the fermion flow
@@ -1442,11 +1446,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                             # Update wf number
                             wf_number = wf_number + 1
                             wf.set('number', wf_number)
-                            # Store wavefunction
                             try:
-                                # Use wf_mother_arrays to locate existing wavefunction
-                                wf = wavefunctions[wf_mother_arrays.index(wf.to_array())]
-                                # Since we reuse the old wavefunction, reset wf_number
+                                # Use wf_mother_arrays to locate existing
+                                # wavefunction
+                                wf = wavefunctions[wf_mother_arrays.index(\
+                                wf.to_array())]
+                                # Since we reuse the old wavefunction, reset
+                                # wf_number
                                 wf_number = wf_number - 1
                             except ValueError:
                                 diagram_wavefunctions.append(wf)
