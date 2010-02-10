@@ -35,6 +35,8 @@ usage = "usage: %prog [options] "
 parser = optparse.OptionParser(usage=usage)
 parser.add_option("-l", "--logging", default='WARNING',
                   help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
+parser.add_option("-f", "--file", default='',
+					help="use script file FILE")
 
 (options, args) = parser.parse_args()
 if len(args) == 0:

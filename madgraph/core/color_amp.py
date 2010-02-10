@@ -137,10 +137,17 @@ class ColorBasis(dict):
         # Update the result dict using the current vertex ColorString object
         # If more than one, create different entries
 
-        # For colorless vertices, return a copy of res_dict
         inter_color = model.get_interaction(vertex['id'])['color']
+
+        # For colorless vertices, return a copy of res_dict
+        # Where one 0 has been added to each color index chain key
         if not inter_color:
-            return (min_index, copy.copy(res_dict))
+            new_dict = {}
+            for k, v in res_dict.items():
+                new_key = tuple(list(k) + [0])
+                new_dict[new_key] = v
+            return (min_index, new_dict)
+
         new_res_dict = {}
         for i, col_str in \
                 enumerate(inter_color):
