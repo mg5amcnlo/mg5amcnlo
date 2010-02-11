@@ -33,7 +33,7 @@ sys.path.append(root_path)
 # Write out nice usage message if called with -h or --help
 usage = "usage: %prog [options] "
 parser = optparse.OptionParser(usage=usage)
-parser.add_option("-l", "--logging", default='WARNING',
+parser.add_option("-l", "--logging", default='INFO',
                   help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
 parser.add_option("-f", "--file", default='',
 					help="use script file FILE")

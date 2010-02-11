@@ -38,7 +38,7 @@ def write_matrix_element_v4_standalone(fsock, matrix_element, fortran_model):
 
     writer = FortranWriter()
     # Set lowercase/uppercase Fortran code
-    FortranWriter.downcase = True
+    FortranWriter.downcase = False
 
     replace_dict = {}
 
@@ -543,7 +543,7 @@ class FortranWriter():
         if self.__comment_pattern.search(line):
             # This is a comment
             myline = " " * (5 + self.__indent) + line.lstrip()[1:].lstrip()
-            if self.downcase:
+            if FortranWriter.downcase:
                 self.comment_char = self.comment_char.lower()
             else:
                 self.comment_char = self.comment_char.upper()
@@ -578,7 +578,7 @@ class FortranWriter():
                         splitline[i] = splitline[i] + '\'' + splitline.pop(i + 1)
                 else:
                     # Otherwise downcase/upcase
-                    if self.downcase:
+                    if FortranWriter.downcase:
                         splitline[i] = splitline[i].lower()
                     else:
                         splitline[i] = splitline[i].upper()
