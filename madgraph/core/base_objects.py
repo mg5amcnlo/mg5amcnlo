@@ -1239,7 +1239,7 @@ class Process(PhysicsObject):
                    and leg['state'] == 'final':
                 # Separate initial and final legs by ">"
                 mystr = mystr + '> '
-                # Check for required s-channels
+                # Add required s-channels
                 if self['required_s_channels']:
                     for req_id in self['required_s_channels']:
                         reqpart = self['model'].get('particle_dict')[req_id]
@@ -1250,14 +1250,14 @@ class Process(PhysicsObject):
             #mystr = mystr + '(%i) ' % leg['number']
             prevleg = leg
 
-        # Check for forbidden s-channels
+        # Add forbidden s-channels
         if self['forbidden_s_channels']:
             mystr = mystr + '$ '
             for forb_id in self['forbidden_s_channels']:
                 forbpart = self['model'].get('particle_dict')[forb_id]
                 mystr = mystr + forbpart.get_name() + ' '
 
-        # Check for forbidden particles
+        # Add forbidden particles
         if self['forbidden_particles']:
             mystr = mystr + '/ '
             for forb_id in self['forbidden_particles']:
@@ -1273,9 +1273,49 @@ class Process(PhysicsObject):
         return mystr[:-1]
 
     def shell_string(self):
-        """Returns process as string with '~' -> 'x' and '>' -> '_'"""
+        """Returns process as string with '~' -> 'x' and '>' -> '_',
+        including process number, intermediate s-channels and forbidden
+        particles"""
 
-        mystr = ""
+        mystr = "%d_" % self['id']
+        prevleg = None
+        for leg in self['legs']:
+            mypart = self['model'].get('particle_dict')[leg['id']]
+            if prevleg and prevleg['state'] == 'initial' \
+                   and leg['state'] == 'final':
+                # Separate initial and final legs by ">"
+                mystr = mystr + '_'
+                # Add required s-channels
+                if self['required_s_channels']:
+                    for req_id in self['required_s_channels']:
+                        reqpart = self['model'].get('particle_dict')[req_id]
+                        mystr = mystr + reqpart.get_name()
+                    mystr = mystr + '_'
+            if mypart['is_part']:
+                mystr = mystr + mypart['name']
+            else:
+                mystr = mystr + mypart['antiname']
+            prevleg = leg
+
+        # Check for forbidden particles
+        if self['forbidden_particles']:
+            mystr = mystr + '-'
+            for forb_id in self['forbidden_particles']:
+                forbpart = self['model'].get('particle_dict')[forb_id]
+                mystr = mystr + forbpart.get_name()
+
+        # Replace '~' with 'x'
+        mystr = mystr.replace('~', 'x')
+        # Just to be safe, remove all spaces
+        mystr = mystr.replace(' ', '')
+
+        return mystr
+
+    def shell_string_v4(self):
+        """Returns process as v4-compliant string with '~' -> 'x' and
+        '>' -> '_'"""
+
+        mystr = "%d_" % self['id']
         prevleg = None
         for leg in self['legs']:
             mypart = self['model'].get('particle_dict')[leg['id']]

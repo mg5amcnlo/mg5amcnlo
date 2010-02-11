@@ -15,17 +15,19 @@
 
 """Methods and classes to export matrix elements to v4 format."""
 
+import copy
 import fractions
 import logging
-import copy
+import os
 import re
 
-import madgraph.core.helas_objects as helas_objects
-import madgraph.iolibs.misc as misc
 import madgraph.core.color_algebra as color
+import madgraph.core.helas_objects as helas_objects
+import madgraph.iolibs.files as files
+import madgraph.iolibs.misc as misc
 
 #===============================================================================
-# write_amplitude_v4_standalone
+# write_matrix_element_v4_standalone
 #===============================================================================
 def write_matrix_element_v4_standalone(fsock, matrix_element, fortran_model):
     """Export a matrix element to a matrix.f file in MG4 standalone format"""
@@ -36,7 +38,7 @@ def write_matrix_element_v4_standalone(fsock, matrix_element, fortran_model):
 
     writer = FortranWriter()
     # Set lowercase/uppercase Fortran code
-    writer.downcase = False
+    FortranWriter.downcase = True
 
     replace_dict = {}
 
@@ -212,6 +214,147 @@ C ----------
         writer.write_fortran_line(fsock, line)
 
     return len(filter(lambda call: call.find('#') != 0, helas_calls))
+
+
+#===============================================================================
+# write_nexternal_file
+#===============================================================================
+def write_nexternal_file(fsock, matrix_element, fortran_model):
+    """Write the nexternal.inc file for MG4"""
+
+    writer = FortranWriter()
+
+    replace_dict = {}
+
+    # Extract number of external particles
+    (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+    replace_dict['nexternal'] = nexternal
+    replace_dict['ninitial'] = ninitial
+
+    file = \
+"""   integer    nexternal
+      parameter (nexternal=%(nexternal)d)
+      integer    nincoming
+      parameter (nincoming=%(ninitial)d)""" % replace_dict
+
+
+    # Write the file
+    for line in file.split('\n'):
+        writer.write_fortran_line(fsock, line)
+
+    return True
+
+#===============================================================================
+# write_pmass_file
+#===============================================================================
+def write_pmass_file(fsock, matrix_element, fortran_model):
+    """Write the pmass.inc file for MG4"""
+
+    writer = FortranWriter()
+
+    process = matrix_element.get('processes')[0]
+    model = process.get('model')
+    
+    lines = []
+    for i, leg in enumerate(process.get('legs')):
+        lines.append("pmass(%d)=abs(%s)" % \
+                     (i + 1, model.get('particle_dict')[leg.get('id')].\
+                      get('mass')))
+
+    # Write the file
+    for line in lines:
+        writer.write_fortran_line(fsock, line)
+
+    return True
+
+#===============================================================================
+# write_ngraphs_file
+#===============================================================================
+def write_ngraphs_file(fsock, matrix_element, fortran_model):
+    """Write the ngraphs.inc file for MG4"""
+
+    writer = FortranWriter()
+
+    # Extract number of amplitudes
+    ngraphs = matrix_element.get_number_of_amplitudes()
+
+    file = \
+"""   integer    n_max_cg
+      parameter (n_max_cg=%d)""" % ngraphs
+
+
+    # Write the file
+    for line in file.split('\n'):
+        writer.write_fortran_line(fsock, line)
+
+    return True
+
+#===============================================================================
+# generate_subprocess_directory_v4_standalone
+#===============================================================================
+def generate_subprocess_directory_v4_standalone(matrix_element,
+                                                fortran_model,
+                                                path = os.getcwd()):
+    """Generate the Pxxxxx directory for a subprocess in MG4 standalone,
+    including the necessary matrix.f and nexternal.inc files"""
+
+    cwd = os.getcwd()
+
+    # Create the directory PN_xx_xxxxx in the specified path
+    dirpath = os.path.join(path, \
+                   "P%s" % matrix_element.get('processes')[0].shell_string_v4())
+    try:
+        os.mkdir(dirpath)
+    except os.error as error:
+        logging.warning(error.strerror + " " + dirpath)
+    
+    try:
+        os.chdir(dirpath)
+    except os.error:
+        logging.error('Could not cd to directory %s' % dirpath)
+        return 0
+
+    logging.info('Creating files in directory %s' % dirpath)
+
+    # Create the matrix.f file and the nexternal.inc file
+    filename = 'matrix.f'
+    calls = files.write_to_file(filename,
+                                write_matrix_element_v4_standalone,
+                                matrix_element,
+                                fortran_model)
+
+    filename = 'nexternal.inc'
+    files.write_to_file(filename,
+                        write_nexternal_file,
+                        matrix_element,
+                        fortran_model)
+
+    filename = 'pmass.inc'
+    files.write_to_file(filename,
+                        write_pmass_file,
+                        matrix_element,
+                        fortran_model)
+
+    filename = 'ngraphs.inc'
+    files.write_to_file(filename,
+                        write_ngraphs_file,
+                        matrix_element,
+                        fortran_model)
+
+    linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
+
+    try:
+        for file in linkfiles:
+            os.symlink(os.path.join('..',file), file)
+    except os.error:
+        logging.warning('Could not link to ' + os.path.join('..',file))
+            
+    # Return to original PWD
+    os.chdir(cwd)
+
+    if not calls:
+        calls = 0
+    return calls
 
 #===============================================================================
 # Helper functions
