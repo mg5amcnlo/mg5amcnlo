@@ -175,6 +175,13 @@ def read_interactions_v4(fsock, ref_part_list):
                     myinter.set('color', [color.ColorString(\
                         [color.T(part_list.index(color_parts[1]),
                                  part_list.index(color_parts[0]))])])
+                elif colors == [8, 8]:
+                    # octet-octet-singlet coupling
+                    my_cs = color.ColorString(\
+                        [color.Tr(part_list.index(color_parts[0]),
+                                 part_list.index(color_parts[1]))])
+                    my_cs.coeff = fractions.Fraction(2)
+                    myinter.set('color', [my_cs])
                 elif colors == [-3, 3, 8]:
                     # triplet-triplet-octet coupling
                     myinter.set('color', [color.ColorString(\
@@ -187,6 +194,16 @@ def read_interactions_v4(fsock, ref_part_list):
                         [color.f(0, 1, 2)])
                     my_color_string.is_imaginary = True
                     myinter.set('color', [my_color_string])
+                elif colors == [-3, 3, 8, 8]:
+                    my_cs = color.ColorString(\
+                        [color.f(part_list.index(color_parts[2]),
+                                 part_list.index(color_parts[3]),
+                                 - 1),
+                         color.T(-1,
+                                 part_list.index(color_parts[1]),
+                                 part_list.index(color_parts[0]))])
+                    my_cs.is_imaginary = True
+                    myinter.set('color', [my_cs])
                 elif colors == [8, 8, 8, 8]:
                     # 4-glue / glue-glue-gluino-gluino coupling
                     cs1 = color.ColorString([color.f(0, 1, -1),

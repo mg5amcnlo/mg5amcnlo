@@ -28,10 +28,13 @@ class ColorObject(array.array):
     """Parent class for all color objects like T, Tr, f, d, ... Any new color 
     object MUST inherit from this class!"""
 
-    def __new__(self, *args):
+    def __new__(cls, *args):
         """Create a new ColorObject, assuming an integer array"""
+        return super(ColorObject, cls).__new__(cls, 'i', args)
 
-        return super(ColorObject, self).__new__(self, 'i', args)
+    def __reduce__(self):
+        """Special method needed to pickle color objects correctly"""
+        return (self.__class__, tuple([i for i in self]))
 
     def __str__(self):
         """Returns a standard string representation."""
