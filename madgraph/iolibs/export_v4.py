@@ -26,6 +26,8 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
 
+logger = logging.getLogger('export_v4')
+
 #===============================================================================
 # write_matrix_element_v4_standalone
 #===============================================================================
@@ -306,15 +308,15 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
     try:
         os.mkdir(dirpath)
     except os.error as error:
-        logging.warning(error.strerror + " " + dirpath)
+        logger.warning(error.strerror + " " + dirpath)
     
     try:
         os.chdir(dirpath)
     except os.error:
-        logging.error('Could not cd to directory %s' % dirpath)
+        logger.error('Could not cd to directory %s' % dirpath)
         return 0
 
-    logging.info('Creating files in directory %s' % dirpath)
+    logger.info('Creating files in directory %s' % dirpath)
 
     # Create the matrix.f file and the nexternal.inc file
     filename = 'matrix.f'
@@ -347,7 +349,7 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
         for file in linkfiles:
             os.symlink(os.path.join('..',file), file)
     except os.error:
-        logging.warning('Could not link to ' + os.path.join('..',file))
+        logger.warning('Could not link to ' + os.path.join('..',file))
             
     # Return to original PWD
     os.chdir(cwd)

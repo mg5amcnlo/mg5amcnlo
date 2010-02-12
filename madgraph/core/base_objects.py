@@ -23,6 +23,8 @@ import re
 
 import madgraph.core.color_algebra as color
 
+logger = logging.getLogger('base_objects')
+
 #===============================================================================
 # PhysicsObject
 #===============================================================================
@@ -102,7 +104,7 @@ class PhysicsObject(dict):
                 self[name] = value
                 return True
             except self.PhysicsObjectError, why:
-                logging.warning("Property " + name + " cannot be changed:" + \
+                logger.warning("Property " + name + " cannot be changed:" + \
                                 str(why))
                 return False
 

@@ -22,6 +22,7 @@ import madgraph.core.color_algebra as color
 from madgraph.core.base_objects import Particle, ParticleList
 from madgraph.core.base_objects import Interaction, InteractionList
 
+logger = logging.getLogger('import_model_v4')
 
 #===============================================================================
 # read_particles_v4
@@ -100,7 +101,7 @@ def read_particles_v4(fsock):
                     mypart.set('antitexname', mypart.get('texname'))
 
                 except (Particle.PhysicsObjectError, ValueError), why:
-                    logging.warning("Warning: %s, particle ignored" % why)
+                    logger.warning("Warning: %s, particle ignored" % why)
                 else:
                     mypartlist.append(mypart)
 
@@ -217,7 +218,7 @@ def read_interactions_v4(fsock, ref_part_list):
                     #cs3.coeff = fractions.Fraction(-1)
                     myinter.set('color', [cs1, cs2, cs3])
                 else:
-                    logging.warning(\
+                    logger.warning(\
                         "Color combination %s not yet implemented." % \
                         repr(colors))
 
@@ -304,6 +305,6 @@ def read_interactions_v4(fsock, ref_part_list):
                 myinterlist.append(myinter)
 
             except Interaction.PhysicsObjectError, why:
-                logging.error("Interaction ignored: %s" % why)
+                logger.error("Interaction ignored: %s" % why)
 
     return myinterlist

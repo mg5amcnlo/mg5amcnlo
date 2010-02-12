@@ -37,6 +37,8 @@ classes for writing Helas calls, found in the iolibs directory"""
 # 
 #===============================================================================
 
+logger = logging.getLogger('helas_objects')
+
 #===============================================================================
 # HelasWavefunction
 #===============================================================================
@@ -1735,7 +1737,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         matrix_elements = self.get('matrix_elements')
 
         for amplitude in amplitudes:
-            logging.info("Generating Helas calls for %s" % \
+            logger.info("Generating Helas calls for %s" % \
                          amplitude.get('process').nice_string().replace('Process', 'process'))
             matrix_element = HelasMatrixElement(amplitude, gen_color=False)
             try:
@@ -1744,7 +1746,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                 # processes for that matrix element
                 other_processes = matrix_elements[\
                     matrix_elements.index(matrix_element)].get('processes')
-                logging.info("Combining process with %s" % \
+                logger.info("Combining process with %s" % \
                              other_processes[0].nice_string().replace('Process: ', ''))
                 other_processes.append(amplitude.get('process'))
 
@@ -1764,7 +1766,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     # If the color configuration of the ME has already been 
                     # considered before, recycle the information
                     col_index = list_colorize.index(colorize_obj)
-                    logging.info(\
+                    logger.info(\
                         "Reusing existing color information for %s" % \
                         amplitude.get('process').nice_string().replace('Process',
                                                                    'process'))
@@ -1776,7 +1778,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     col_matrix = color_amp.ColorMatrix(col_basis)
                     list_color_matrices.append(col_matrix)
                     col_index = -1
-                    logging.info(\
+                    logger.info(\
                         "Processing color information for %s" % \
                         amplitude.get('process').nice_string().replace('Process',
                                                                    'process'))
