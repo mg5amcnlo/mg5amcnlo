@@ -71,6 +71,10 @@ class ColorBasis(dict):
                             repl_dict, res_dict, min_index,
                             id0_rep=[num1, num2])
 
+                # Return an empty list if all entries are empty
+                if all([cs == color_algebra.ColorString() \
+                        for cs in res_dict.values()]):
+                    res_dict = {}
                 # Return since this must be the last vertex
                 return res_dict
 
@@ -78,6 +82,10 @@ class ColorBasis(dict):
             min_index, res_dict = self.add_vertex(vertex, diagram, model,
                             repl_dict, res_dict, min_index)
 
+        # Return an empty list if all entries are empty
+        if all([cs == color_algebra.ColorString() \
+                        for cs in res_dict.values()]):
+            res_dict = {}
         return res_dict
 
     def add_vertex(self, vertex, diagram, model,
@@ -146,6 +154,9 @@ class ColorBasis(dict):
             for k, v in res_dict.items():
                 new_key = tuple(list(k) + [0])
                 new_dict[new_key] = v
+            # If there is no result until now, create an empty CS...
+            if not new_dict:
+                new_dict[(0,)] = color_algebra.ColorString()
             return (min_index, new_dict)
 
         new_res_dict = {}
@@ -313,7 +324,7 @@ class ColorBasis(dict):
 class ColorMatrix(dict):
     """A color matrix, i.e. a dictionary with pairs (i,j) as keys where i
     and j refer to elements of color basis objects. Values are Color Factor
-    objects. Also contains two additional dictonaries, one with the fixed Nc
+    objects. Also contains two additional dictionaries, one with the fixed Nc
     representation of the matrix, and the other one with the "inverted" matrix,
     i.e. a dictionary where keys are values of the color matrix."""
 
@@ -329,6 +340,9 @@ class ColorMatrix(dict):
         As options, any value of Nc and minimal/maximal power of Nc can also be 
         provided. Note that the min/max power constraint is applied
         only at the end, so that it does NOT speed up the calculation."""
+
+        self.col_matrix_fixed_Nc = {}
+        self.inverted_col_matrix = {}
 
         self._col_basis1 = col_basis
         if col_basis2:

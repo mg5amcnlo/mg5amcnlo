@@ -318,7 +318,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return ['pdg_code', 'name', 'antiname', 'spin', 'color',
                 'mass', 'width', 'is_part', 'self_antipart',
                 'interaction_id', 'pdg_codes', 'inter_color', 'lorentz',
-                'coupling', 'coupl_key', 'state', 'number_external', 
+                'coupling', 'coupl_key', 'state', 'number_external',
                 'number', 'fermionflow', 'mothers']
 
     # Helper functions
