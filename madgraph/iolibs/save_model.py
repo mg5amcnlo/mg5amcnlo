@@ -21,6 +21,8 @@ import os
 import madgraph.iolibs.files as files
 import madgraph.core.base_objects as base_objects
 
+logger = logging.getLogger('save_model')
+
 def save_particles(fsock, part_list):
     """Save particle objects contained in part_list in the stream fsock"""
 
@@ -67,11 +69,11 @@ def save_model(path, model):
             "Object %s is not a path string" % repr(path)
 
     if not os.path.isdir(path):
-        logging.warning("Path %s does not exist, try to make it..." % str(path))
+        logger.warning("Path %s does not exist, try to make it..." % str(path))
         try:
             os.mkdir(path)
         except IOError, (errno, strerror):
-            logging.error("I/O error (%s): %s" % (errno, strerror))
+            logger.error("I/O error (%s): %s" % (errno, strerror))
             return None
 
     print "Saving particles...",

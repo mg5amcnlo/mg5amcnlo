@@ -332,7 +332,7 @@ if __name__ == "__main__":
                   help="regular expression tag [%default]")
     parser.add_option("-p", "--path", default='./tests/',
                   help="position to start the search (from root)  [%default]")
-    parser.add_option("-l", "--logging", default='ERROR',
+    parser.add_option("-l", "--logging", default='CRITICAL',
         help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
 
     (options, args) = parser.parse_args()

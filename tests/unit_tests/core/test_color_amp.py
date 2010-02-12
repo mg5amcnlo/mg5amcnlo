@@ -212,7 +212,7 @@ class ColorAmpTest(unittest.TestCase):
                                      self.mymodel)
 
         goal_dict = {(0, 0):color.ColorString([color.T(-1000, 1, 2),
-                                               color.f(-1000, 4, 3)])}
+                                               color.f(3, 4, -1000)])}
 
         self.assertEqual(col_dict, goal_dict)
 
@@ -263,8 +263,8 @@ class ColorAmpTest(unittest.TestCase):
                                      self.mymodel)
 
         goal_dict = {(0, 0, 0):color.ColorString([color.T(-1000, 1, 2),
-                                               color.f(-1001, 4, 3),
-                                               color.f(5, -1001, -1000)])}
+                                               color.f(3, 4, -1001),
+                                               color.f(-1000, -1001, 5)])}
 
         self.assertEqual(col_dict, goal_dict)
 
@@ -273,14 +273,14 @@ class ColorAmpTest(unittest.TestCase):
                                      self.mymodel)
 
         goal_dict = {(0, 0):color.ColorString([color.T(-1000, 1, 2),
-                                               color.f(-1002, -1000, 4),
-                                               color.f(-1002, 5, 3)]),
+                                               color.f(-1001, 3, 5),
+                                               color.f(-1001, 4, -1000)]),
                      (0, 1):color.ColorString([color.T(-1000, 1, 2),
-                                               color.f(-1003, -1000, 3),
-                                               color.f(-1003, 5, 4)]),
+                                               color.f(-1002, 3, -1000),
+                                               color.f(-1002, 4, 5)]),
                      (0, 2):color.ColorString([color.T(-1000, 1, 2),
-                                               color.f(-1004, -1000, 5),
-                                               color.f(-1004, 4, 3)])}
+                                               color.f(-1003, 3, 4),
+                                               color.f(-1003, 5, -1000)])}
 
         self.assertEqual(col_dict, goal_dict)
 
@@ -308,7 +308,7 @@ class ColorAmpTest(unittest.TestCase):
 
         myamplitude.generate_diagrams()
 
-        new_col_basis = color_amp.ColorBasis(myamplitude, self.mymodel)
+        new_col_basis = color_amp.ColorBasis(myamplitude)
 
         self.assertEqual(len(new_col_basis), 6)
 
@@ -435,21 +435,21 @@ class ColorSquareTest(unittest.TestCase):
                 fractions.Fraction(3641, 648)]
 
         goal_line1 = [(fractions.Fraction(7, 3), fractions.Fraction(-2, 3)),
-                      (fractions.Fraction(19, 6), fractions.Fraction(-1, 3),
-                       fractions.Fraction(-1, 3), fractions.Fraction(-1, 3),
-                       fractions.Fraction(2, 3), fractions.Fraction(-1, 3)),
+                     (fractions.Fraction(19, 6), fractions.Fraction(2, 3),
+                    fractions.Fraction(-1, 3), fractions.Fraction(-1, 3),
+                    fractions.Fraction(-1, 3), fractions.Fraction(-1, 3)),
                     (fractions.Fraction(455, 108), fractions.Fraction(-29, 54),
-                       fractions.Fraction(17, 27), fractions.Fraction(7, 54),
-                       fractions.Fraction(-1, 27), fractions.Fraction(17, 27),
-                       fractions.Fraction(5, 108), fractions.Fraction(7, 54),
-                       fractions.Fraction(7, 54), fractions.Fraction(-1, 27),
-                       fractions.Fraction(7, 54), fractions.Fraction(5, 108),
-                       fractions.Fraction(-10, 27), fractions.Fraction(-29, 54),
-                       fractions.Fraction(-29, 54), fractions.Fraction(-29, 54),
-                       fractions.Fraction(-29, 54), fractions.Fraction(7, 54),
-                       fractions.Fraction(17, 27), fractions.Fraction(-1, 27),
-                       fractions.Fraction(-1, 27), fractions.Fraction(17, 27),
-                       fractions.Fraction(-1, 27), fractions.Fraction(17, 27))]
+                    fractions.Fraction(17, 27), fractions.Fraction(17, 27),
+                    fractions.Fraction(-29, 54), fractions.Fraction(-1, 27),
+                    fractions.Fraction(17, 27), fractions.Fraction(7, 54),
+                    fractions.Fraction(7, 54), fractions.Fraction(5, 108),
+                    fractions.Fraction(7, 54), fractions.Fraction(5, 108),
+                    fractions.Fraction(-10, 27), fractions.Fraction(-1, 27),
+                    fractions.Fraction(7, 54), fractions.Fraction(-29, 54),
+                    fractions.Fraction(-1, 27), fractions.Fraction(17, 27),
+                    fractions.Fraction(-1, 27), fractions.Fraction(-1, 27),
+                    fractions.Fraction(-29, 54), fractions.Fraction(17, 27),
+                    fractions.Fraction(-29, 54), fractions.Fraction(7, 54))]
 
         for n in range(3):
             myleglist = base_objects.LegList()
@@ -471,7 +471,7 @@ class ColorSquareTest(unittest.TestCase):
 
             myamplitude.generate_diagrams()
 
-            col_basis = color_amp.ColorBasis(myamplitude, self.mymodel)
+            col_basis = color_amp.ColorBasis(myamplitude)
 
             col_matrix = color_amp.ColorMatrix(col_basis, Nc=3)
 
@@ -514,6 +514,14 @@ class ColorSquareTest(unittest.TestCase):
                        fractions.Fraction(-1, 54), fractions.Fraction(5, 9))
                       ]
 
+        goal_den_list = [[3] * 2, [54] * 36]
+
+        goal_first_line_num = [[6, -2],
+                               [72, -10, 63, -18, 6, -21, -10, -21, 3, 62, -10,
+                                - 21, -18, 62, -18, -24, 6, 63, -9, -10, -1, 6,
+                                3, 3, 8, -1, 30, 6, -24, -1, 71, 3, -21, -18,
+                                - 1, 30]]
+
         for n in range(2):
             myleglist = base_objects.LegList()
 
@@ -536,7 +544,7 @@ class ColorSquareTest(unittest.TestCase):
 
             myamplitude.generate_diagrams()
 
-            col_basis = color_amp.ColorBasis(myamplitude, self.mymodel)
+            col_basis = color_amp.ColorBasis(myamplitude)
 
             col_matrix = color_amp.ColorMatrix(col_basis, Nc=3)
 
@@ -549,6 +557,12 @@ class ColorSquareTest(unittest.TestCase):
             for i in range(len(col_basis.items())):
                 self.assertEqual(col_matrix.col_matrix_fixed_Nc[(0, i)],
                                  (goal_line1[n][i], 0))
+
+            self.assertEqual(col_matrix.get_line_denominators(),
+                             goal_den_list[n])
+            self.assertEqual(col_matrix.get_line_numerators(0,
+                             col_matrix.get_line_denominators()[0]),
+                             goal_first_line_num[n])
 
     def test_color_matrix_Nc_restrictions(self):
         """Test the Nc power restriction during color basis building """
@@ -577,7 +591,7 @@ class ColorSquareTest(unittest.TestCase):
 
             myamplitude.generate_diagrams()
 
-            col_basis = color_amp.ColorBasis(myamplitude, self.mymodel)
+            col_basis = color_amp.ColorBasis(myamplitude)
 
             col_matrix = color_amp.ColorMatrix(col_basis, Nc=3,
                                                   Nc_power_min=n,
@@ -598,3 +612,9 @@ class ColorSquareTest(unittest.TestCase):
                                                                immutable2),
                          (('d', (1, -2, -5)), ('T', (-5, -2, 4))))
 
+    def test_helper_lcm_functions(self):
+        """Test the helper functions to derive common denominators for
+        lines in the color matrix."""
+
+        self.assertEqual(color_amp.ColorMatrix.lcm(6, 3), 6)
+        self.assertEqual(color_amp.ColorMatrix.lcmm(6, 3, 5, 2), 30)

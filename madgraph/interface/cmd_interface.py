@@ -62,7 +62,7 @@ class MadGraphCmd(cmd.Cmd):
     __save_opts = ['model',
                    'processes']
     __import_formats = ['v4']
-    __export_formats = ['v4standalone']
+    __export_formats = ['v4standalone', 'v4sa_dirs']
 
     def split_arg(self, line):
         """Split a line of arguments"""
@@ -406,7 +406,15 @@ class MadGraphCmd(cmd.Cmd):
 
         # Use regular expressions to extract s-channel propagators,
         # forbidden s-channel propagators/particles, coupling orders
-        # starting from the back
+        # and process number, starting from the back
+
+        # Start with process number (identified by "@")
+        proc_number_pattern = re.compile("^(.+)\s*@\s*(\d+)\s*$")
+        proc_number_re = proc_number_pattern.match(line)
+        proc_number = 0
+        if proc_number_re:
+            proc_number = int(proc_number_re.group(2))
+            line = proc_number_re.group(1)
 
         # Start with coupling orders (identified by "=")
         order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
@@ -518,6 +526,7 @@ class MadGraphCmd(cmd.Cmd):
             myprocdef = base_objects.ProcessDefinitionList([\
                 base_objects.ProcessDefinition({'legs': myleglist,
                                                 'model': self.__curr_model,
+                                                'id': proc_number,
                                                 'orders': orders,
                                                 'forbidden_particles': forbidden_particle_ids,
                                                 'forbidden_s_channels': forbidden_schannel_ids,
@@ -546,39 +555,24 @@ class MadGraphCmd(cmd.Cmd):
     def do_export(self, line):
         """Export a generated amplitude to file"""
 
-        def export_v4standalone(self, filepath):
-            """Helper function to write a v4 file to file path filepath"""
+        def generate_matrix_elements(self):
+            """Helper function to generate the matrix elements before
+            exporting"""
 
+            cpu_time1 = time.time()
             if not self.__curr_matrix_elements.get('matrix_elements'):
-                cpu_time1 = time.time()
                 self.__curr_matrix_elements = \
                              helas_objects.HelasMultiProcess(\
                                            self.__curr_amps)
-                cpu_time2 = time.time()
+            cpu_time2 = time.time()
 
-                ndiags = sum([len(me.get('diagrams')) for \
-                              me in self.__curr_matrix_elements.\
-                              get('matrix_elements')])
+            ndiags = sum([len(me.get('diagrams')) for \
+                          me in self.__curr_matrix_elements.\
+                          get('matrix_elements')])
 
-            calls = 0
-            for me in self.__curr_matrix_elements.get('matrix_elements'):
-                filename = os.path.join(filepath, 'matrix_' + \
-                           me.get('processes')[0].shell_string() + ".f")
-                if os.path.isfile(filename):
-                    print "Overwriting existing file %s" % filename
-                else:
-                    print "Creating new file %s" % filename
-                calls = calls + files.write_to_file(filename,
-                                                    export_v4.write_matrix_element_v4_standalone,
-                                                    me,
-                                                    self.__curr_fortran_model)
+            return ndiags, cpu_time2 - cpu_time1
 
-            print "Generated helas calls for %d subprocesses (%d diagrams) in %0.3f s" % \
-                  (len(self.__curr_matrix_elements.get('matrix_elements')),
-                   ndiags,
-                   (cpu_time2 - cpu_time1))
-
-            print "Wrote %d helas calls" % calls
+        # Start of the actual routine
 
         args = self.split_arg(line)
 
@@ -597,8 +591,36 @@ class MadGraphCmd(cmd.Cmd):
         if not os.path.isdir(args[1]):
             print "%s is not a valid directory for export file" % args[1]
 
+        ndiags, cpu_time = generate_matrix_elements(self)
+        calls = 0
+        path = args[1]
+        
         if args[0] == 'v4standalone':
-            export_v4standalone(self, args[1])
+            for me in self.__curr_matrix_elements.get('matrix_elements'):
+                filename = os.path.join(path, 'matrix_' + \
+                           me.get('processes')[0].shell_string() + ".f")
+                if os.path.isfile(filename):
+                    print "Overwriting existing file %s" % filename
+                else:
+                    print "Creating new file %s" % filename
+                calls = calls + files.write_to_file(filename,
+                                                    export_v4.write_matrix_element_v4_standalone,
+                                                    me,
+                                                    self.__curr_fortran_model)
+
+
+        if args[0] == 'v4sa_dirs':
+            for me in self.__curr_matrix_elements.get('matrix_elements'):
+                calls = calls + \
+                        export_v4.generate_subprocess_directory_v4_standalone(\
+                            me, self.__curr_fortran_model, path)
+
+        print ("Generated helas calls for %d subprocesses " + \
+              "(%d diagrams) in %0.3f s") % \
+              (len(self.__curr_matrix_elements.get('matrix_elements')),
+               ndiags, cpu_time)
+        
+        print "Wrote %d helas calls" % calls
 
     def complete_export(self, text, line, begidx, endidx):
         "Complete the export command"
@@ -703,12 +725,12 @@ class MadGraphCmd(cmd.Cmd):
 
     # In-line help
     def help_save(self):
-        print "syntax: save %s PATH" % "|".join(self.__save_opts)
-        print "-- save information as file in PATH"
+        print "syntax: save %s FILENAME" % "|".join(self.__save_opts)
+        print "-- save information as file FILENAME"
 
     def help_load(self):
-        print "syntax: load %s PATH" % "|".join(self.__save_opts)
-        print "-- load information from file in PATH"
+        print "syntax: load %s FILENAME" % "|".join(self.__save_opts)
+        print "-- load information from file FILENAME"
 
     def help_import(self):
         print "syntax: import " + "|".join(self.__import_formats) + \
@@ -733,8 +755,9 @@ class MadGraphCmd(cmd.Cmd):
     def help_export(self):
         print "syntax: export " + "|".join(self.__export_formats) + \
               " FILEPATH"
-        print """-- export matrix elements in various formats. The resulting
-        file will be FILEPATH/matrix_\"process_string\".f"""
+        print """-- export matrix elements. For v4standalone, the resulting
+        files will be FILEPATH/matrix_\"process_string\".f. For v4sa_dirs,
+        the result is a set of complete MG4 Standalone process directories."""
 
     def help_draw(self):
         print "syntax: draw FILEPATH [option=value]"

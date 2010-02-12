@@ -15,26 +15,32 @@
 
 """Methods and classes to export matrix elements to v4 format."""
 
-import logging
 import copy
+import fractions
+import logging
+import os
 import re
 
+import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
+import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
 
+logger = logging.getLogger('export_v4')
+
 #===============================================================================
-# write_amplitude_v4_standalone
+# write_matrix_element_v4_standalone
 #===============================================================================
 def write_matrix_element_v4_standalone(fsock, matrix_element, fortran_model):
     """Export a matrix element to a matrix.f file in MG4 standalone format"""
- 
+
     if not matrix_element.get('processes') or \
            not matrix_element.get('diagrams'):
         return 0
 
     writer = FortranWriter()
     # Set lowercase/uppercase Fortran code
-    writer.downcase = False
+    FortranWriter.downcase = False
 
     replace_dict = {}
 
@@ -57,42 +63,36 @@ def write_matrix_element_v4_standalone(fsock, matrix_element, fortran_model):
     # Extract helicity lines
     helicity_lines = get_helicity_lines(matrix_element)
     replace_dict['helicity_lines'] = helicity_lines
-    
+
     # Extract overall denominator
     # Averaging initial state color, spin, and identical FS particles
     den_factor_line = get_den_factor_line(matrix_element)
     replace_dict['den_factor_line'] = den_factor_line
 
     # Extract ngraphs
-    ngraphs = len(matrix_element.get('diagrams'))
+    ngraphs = matrix_element.get_number_of_amplitudes()
     replace_dict['ngraphs'] = ngraphs
 
     # Extract nwavefuncs
     nwavefuncs = matrix_element.get_number_of_wavefunctions()
     replace_dict['nwavefuncs'] = nwavefuncs
 
-    # Extract neigen - FIX
-    neigen = 1
-    replace_dict['neigen'] = neigen
-
-    # Extract ncolor - FIX!
-    ncolor = 1
+    # Extract ncolor
+    ncolor = max(1, len(matrix_element.get('color_basis')))
     replace_dict['ncolor'] = ncolor
 
-    # Extract color data lines - FIX!
-    color_data_lines = """DATA Denom(1)/1/
-                          DATA (CF(i,1),i=1,1) /1/"""
-    replace_dict['color_data_lines'] = color_data_lines
+    # Extract color data lines
+    color_data_lines = get_color_data_lines(matrix_element)
+    replace_dict['color_data_lines'] = "\n".join(color_data_lines)
 
     # Extract helas calls
-    helas_call_list = fortran_model.get_matrix_element_calls(\
+    helas_calls = fortran_model.get_matrix_element_calls(\
                 matrix_element)
-    helas_calls = "\n".join(helas_call_list)
-    replace_dict['helas_calls'] = helas_calls
+    replace_dict['helas_calls'] = "\n".join(helas_calls)
 
     # Extract JAMP lines
-    jamp_lines = fortran_model.get_JAMP_line(matrix_element)
-    replace_dict['jamp_lines'] = jamp_lines
+    jamp_lines = get_JAMP_lines(matrix_element)
+    replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
     file = \
 """      SUBROUTINE SMATRIX(P,ANS)
@@ -166,8 +166,8 @@ C
 C  
 C CONSTANTS
 C  
-      INTEGER    NGRAPHS, NEIGEN 
-      PARAMETER (NGRAPHS=%(ngraphs)d, NEIGEN=%(neigen)d) 
+      INTEGER    NGRAPHS
+      PARAMETER (NGRAPHS=%(ngraphs)d) 
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS, NCOLOR
@@ -209,14 +209,154 @@ C ----------
           ENDDO
           MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
       ENDDO
-C      CALL GAUGECHECK(JAMP,ZTEMP,EIGEN_VEC,EIGEN_VAL,NCOLOR,NEIGEN) 
       END""" % replace_dict
 
     # Write the file
     for line in file.split('\n'):
         writer.write_fortran_line(fsock, line)
 
-    return len(helas_call_list)
+    return len(filter(lambda call: call.find('#') != 0, helas_calls))
+
+
+#===============================================================================
+# write_nexternal_file
+#===============================================================================
+def write_nexternal_file(fsock, matrix_element, fortran_model):
+    """Write the nexternal.inc file for MG4"""
+
+    writer = FortranWriter()
+
+    replace_dict = {}
+
+    # Extract number of external particles
+    (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+    replace_dict['nexternal'] = nexternal
+    replace_dict['ninitial'] = ninitial
+
+    file = \
+"""   integer    nexternal
+      parameter (nexternal=%(nexternal)d)
+      integer    nincoming
+      parameter (nincoming=%(ninitial)d)""" % replace_dict
+
+
+    # Write the file
+    for line in file.split('\n'):
+        writer.write_fortran_line(fsock, line)
+
+    return True
+
+#===============================================================================
+# write_pmass_file
+#===============================================================================
+def write_pmass_file(fsock, matrix_element, fortran_model):
+    """Write the pmass.inc file for MG4"""
+
+    writer = FortranWriter()
+
+    process = matrix_element.get('processes')[0]
+    model = process.get('model')
+    
+    lines = []
+    for i, leg in enumerate(process.get('legs')):
+        lines.append("pmass(%d)=abs(%s)" % \
+                     (i + 1, model.get('particle_dict')[leg.get('id')].\
+                      get('mass')))
+
+    # Write the file
+    for line in lines:
+        writer.write_fortran_line(fsock, line)
+
+    return True
+
+#===============================================================================
+# write_ngraphs_file
+#===============================================================================
+def write_ngraphs_file(fsock, matrix_element, fortran_model):
+    """Write the ngraphs.inc file for MG4"""
+
+    writer = FortranWriter()
+
+    # Extract number of amplitudes
+    ngraphs = matrix_element.get_number_of_amplitudes()
+
+    file = \
+"""   integer    n_max_cg
+      parameter (n_max_cg=%d)""" % ngraphs
+
+
+    # Write the file
+    for line in file.split('\n'):
+        writer.write_fortran_line(fsock, line)
+
+    return True
+
+#===============================================================================
+# generate_subprocess_directory_v4_standalone
+#===============================================================================
+def generate_subprocess_directory_v4_standalone(matrix_element,
+                                                fortran_model,
+                                                path = os.getcwd()):
+    """Generate the Pxxxxx directory for a subprocess in MG4 standalone,
+    including the necessary matrix.f and nexternal.inc files"""
+
+    cwd = os.getcwd()
+
+    # Create the directory PN_xx_xxxxx in the specified path
+    dirpath = os.path.join(path, \
+                   "P%s" % matrix_element.get('processes')[0].shell_string_v4())
+    try:
+        os.mkdir(dirpath)
+    except os.error as error:
+        logger.warning(error.strerror + " " + dirpath)
+    
+    try:
+        os.chdir(dirpath)
+    except os.error:
+        logger.error('Could not cd to directory %s' % dirpath)
+        return 0
+
+    logger.info('Creating files in directory %s' % dirpath)
+
+    # Create the matrix.f file and the nexternal.inc file
+    filename = 'matrix.f'
+    calls = files.write_to_file(filename,
+                                write_matrix_element_v4_standalone,
+                                matrix_element,
+                                fortran_model)
+
+    filename = 'nexternal.inc'
+    files.write_to_file(filename,
+                        write_nexternal_file,
+                        matrix_element,
+                        fortran_model)
+
+    filename = 'pmass.inc'
+    files.write_to_file(filename,
+                        write_pmass_file,
+                        matrix_element,
+                        fortran_model)
+
+    filename = 'ngraphs.inc'
+    files.write_to_file(filename,
+                        write_ngraphs_file,
+                        matrix_element,
+                        fortran_model)
+
+    linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
+
+    try:
+        for file in linkfiles:
+            os.symlink(os.path.join('..',file), file)
+    except os.error:
+        logger.warning('Could not link to ' + os.path.join('..',file))
+            
+    # Return to original PWD
+    os.chdir(cwd)
+
+    if not calls:
+        calls = 0
+    return calls
 
 #===============================================================================
 # Helper functions
@@ -237,9 +377,9 @@ def get_mg5_info_lines():
 
 def get_process_info_lines(matrix_element):
     """Return info lines describing the processes for this matrix element"""
-    
-    return"\n".join([ "C " + process.nice_string() for process in \
-                                matrix_element.get('processes')])
+
+    return"\n".join([ "C " + process.nice_string().replace('\n', '\nC ') \
+                     for process in matrix_element.get('processes')])
 
 
 def get_helicity_lines(matrix_element):
@@ -256,12 +396,110 @@ def get_helicity_lines(matrix_element):
              ",".join(['%2r'] * len(helicities)) + "/") % tuple(int_list))
 
     return "\n".join(helicity_line_list)
-    
+
+def get_color_data_lines(matrix_element, n=6):
+    """Return the color matrix definition lines for this matrix element. Split
+    rows in chunks of size n."""
+
+    if not matrix_element.get('color_matrix'):
+        return ["DATA Denom(1)/1/", "DATA (CF(i,1),i=1,1) /1/"]
+    else:
+        ret_list = []
+        my_cs = color.ColorString()
+        for index, denominator in \
+            enumerate(matrix_element.get('color_matrix').\
+                                             get_line_denominators()):
+            # First write the common denominator for this color matrix line
+            ret_list.append("DATA Denom(%i)/%i/" % (index + 1, denominator))
+            # Then write the numerators for the matrix elements
+            num_list = matrix_element.get('color_matrix').\
+                                        get_line_numerators(index, denominator)
+
+            for k in xrange(0, len(num_list), n):
+                ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
+                                (index + 1, k + 1, min(k + n, len(num_list)),
+                                 ','.join(["%5r" % i for i in num_list[k:k + n]])))
+
+            my_cs.from_immutable(matrix_element.get('color_basis').keys()[index])
+            ret_list.append("C %s" % repr(my_cs))
+        return ret_list
+
+
 def get_den_factor_line(matrix_element):
     """Return the denominator factor line for this matrix element"""
 
     return "DATA IDEN/%2r/" % \
            matrix_element.get_denominator_factor()
+
+def get_JAMP_lines(matrix_element):
+    """Return the JAMP(1) = sum(fermionfactor * AMP(i)) line"""
+
+    if not matrix_element.get('color_basis'):
+        res = "JAMP(1)="
+        # Add all amplitudes with correct fermion factor
+        for diagram in matrix_element.get('diagrams'):
+            for amplitude in diagram.get('amplitudes'):
+                res = res + "%sAMP(%d)" % (coeff(amplitude.get('fermionfactor'),
+                                                 1, False, 0),
+                                           amplitude.get('number'))
+        return [res]
+    else:
+        res_list = []
+        for i, col_basis_elem in \
+                enumerate(matrix_element.get('color_basis').keys()):
+            res = "JAMP(%i)=" % (i + 1)
+
+            # Optimization: if all contributions to that color basis element have
+            # the same coefficient (up to a sign), put it in front
+            list_fracs = [abs(diag_tuple[2]) for diag_tuple in \
+                          matrix_element.get('color_basis')[col_basis_elem]]
+            common_factor = False
+            diff_fracs = list(set(list_fracs))
+            if len(diff_fracs) == 1 and abs(diff_fracs[0]) != 1:
+                common_factor = True
+                global_factor = diff_fracs[0]
+                res = res + '%s(' % coeff(1, global_factor, False, 0)
+
+
+            for diag_tuple in matrix_element.get('color_basis')[col_basis_elem]:
+                res_amp = filter(lambda amp: \
+                                 tuple(amp.get('color_indices')) == diag_tuple[1],
+                                 matrix_element.get('diagrams')[diag_tuple[0]].get('amplitudes'))
+                if res_amp:
+                    if len(res_amp) > 1:
+                        raise FortranWriter.FortranWriterError, \
+                            """More than one amplitude found for color structure
+                            %s and color index chain (%s) (diagram %i)""" % \
+                            (col_basis_elem,
+                             str(diag_tuple[1]),
+                             diag_tuple[0])
+                    else:
+                        if common_factor:
+                            res = res + "%sAMP(%d)" % (coeff(res_amp[0].get('fermionfactor'),
+                                                     diag_tuple[2] / abs(diag_tuple[2]),
+                                                     diag_tuple[3],
+                                                     diag_tuple[4]),
+                                                     res_amp[0].get('number'))
+                        else:
+                            res = res + "%sAMP(%d)" % (coeff(res_amp[0].get('fermionfactor'),
+                                                     diag_tuple[2],
+                                                     diag_tuple[3],
+                                                     diag_tuple[4]),
+                                                     res_amp[0].get('number'))
+                else:
+                    raise FortranWriter.FortranWriterError, \
+                            """No corresponding amplitude found for color structure
+                            %s and color index chain (%s) (diagram %i)""" % \
+                            (col_basis_elem,
+                             str(diag_tuple[1]),
+                             diag_tuple[0])
+
+            if common_factor:
+                res = res + ')'
+
+            res_list.append(res)
+
+        return res_list
 
 #===============================================================================
 # FortranWriter
@@ -280,8 +518,8 @@ class FortranWriter():
                      '^do': ('^enddo\s*$', 2),
                      '^subroutine': ('^end\s*$', 0),
                      'function': ('^end\s*$', 0)}
-    single_indents = {'^else\s*$': -2,
-                      '^else\s*if.+then\s*$': -2}
+    single_indents = {'^else\s*$':-2,
+                      '^else\s*if.+then\s*$':-2}
     line_cont_char = '$'
     comment_char = 'c'
     downcase = False
@@ -293,13 +531,13 @@ class FortranWriter():
     # Private variables
     __indent = 0
     __keyword_list = []
-    __comment_pattern=re.compile(r"^(\s*#|c$|(c\s+([^=]|$)))",re.IGNORECASE)
-    
+    __comment_pattern = re.compile(r"^(\s*#|c$|(c\s+([^=]|$)))", re.IGNORECASE)
+
     def write_fortran_line(self, fsock, line):
         """Write a fortran line, with correct indent and line splits"""
 
         if not isinstance(line, str) or line.find('\n') >= 0:
-            raise self.FortranWriterError,\
+            raise self.FortranWriterError, \
                   "write_fortran_line must have a single line as argument"
 
         # Check if this line is a comment
@@ -307,7 +545,7 @@ class FortranWriter():
         if self.__comment_pattern.search(line):
             # This is a comment
             myline = " " * (5 + self.__indent) + line.lstrip()[1:].lstrip()
-            if self.downcase:
+            if FortranWriter.downcase:
                 self.comment_char = self.comment_char.lower()
             else:
                 self.comment_char = self.comment_char.upper()
@@ -330,7 +568,7 @@ class FortranWriter():
             # Here we need to make exception for anything within quotes.
             (myline, part, post_comment) = myline.partition("!")
             # Replace all double quotes by single quotes
-            myline = myline.replace('\"','\'')
+            myline = myline.replace('\"', '\'')
             # Downcase or upcase Fortran code, except for quotes
             splitline = myline.split('\'')
             myline = ""
@@ -339,10 +577,10 @@ class FortranWriter():
                 if i % 2 == 1:
                     # This is a quote - check for escaped \'s
                     while splitline[i][len(splitline[i]) - 1] == '\\':
-                        splitline[i] = splitline[i] + '\'' + splitline.pop(i+1)
+                        splitline[i] = splitline[i] + '\'' + splitline.pop(i + 1)
                 else:
                     # Otherwise downcase/upcase
-                    if self.downcase:
+                    if FortranWriter.downcase:
                         splitline[i] = splitline[i].lower()
                     else:
                         splitline[i] = splitline[i].upper()
@@ -364,7 +602,7 @@ class FortranWriter():
                     self.__indent = self.__indent + self.single_indents[key]
                     single_indent = -self.single_indents[key]
                     break
-                
+
             # Break line in appropriate places
             # defined (in priority order) by the characters in split_characters
             res = self.split_line(" " * (6 + self.__indent) + myline,
@@ -378,14 +616,14 @@ class FortranWriter():
                     self.__keyword_list.append(key)
                     self.__indent = self.__indent + self.keyword_pairs[key][1]
                     break
-        
+
             # Correct back for else and else if
             if single_indent != None:
                 self.__indent = self.__indent + single_indent
                 single_indent = None
 
         # Write line(s) to file
-        fsock.write("\n".join(res)+ part + post_comment + "\n")
+        fsock.write("\n".join(res) + part + post_comment + "\n")
 
         return True
 
@@ -404,7 +642,7 @@ class FortranWriter():
                 if index >= 0:
                     split_at = self.line_length - self.max_split + index
                     break
-                
+
             res_lines.append(line_start + \
                              res_lines[-1][split_at:])
             res_lines[-2] = res_lines[-2][:split_at]
@@ -434,41 +672,107 @@ class HelasFortranModel(helas_objects.HelasModel):
     def default_setup(self):
         """Set up special Helas calls (wavefunctions and amplitudes)
         that can not be done automatically by generate_helas_call"""
-        
+
         super(HelasFortranModel, self).default_setup()
 
         # Add special fortran Helas calls, which are not automatically
         # generated
 
-
         # Gluon 4-vertex division tensor calls ggT for the FR sm and mssm
-        key = ((3,3,5),tuple('A'))
+
+        key = ((3, 3, 5), 'A')
+
         call = lambda wf: \
                "CALL UVVAXX(W(1,%d),W(1,%d),%s,zero,zero,zero,W(1,%d))" % \
                (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
                 HelasFortranModel.sorted_mothers(wf)[1].get('number'),
-                wf.get('couplings')[(0,0)],
-                wf.get('number'))
-        self.add_wavefunction(key,call)
 
-        key = ((3,5,3),tuple('A'))
+                wf.get('coupling'),
+                wf.get('number'))
+        self.add_wavefunction(key, call)
+
+        key = ((3, 5, 3), 'A')
+
         call = lambda wf: \
                "CALL JVTAXX(W(1,%d),W(1,%d),%s,zero,zero,W(1,%d))" % \
                (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
                 HelasFortranModel.sorted_mothers(wf)[1].get('number'),
-                wf.get('couplings')[(0,0)],
-                wf.get('number'))
-        self.add_wavefunction(key,call)
 
-        key = ((3,3,5),tuple('A'))
+                wf.get('coupling'),
+                wf.get('number'))
+        self.add_wavefunction(key, call)
+
+        key = ((3, 3, 5), 'A')
+
         call = lambda amp: \
                "CALL VVTAXX(W(1,%d),W(1,%d),W(1,%d),%s,zero,AMP(%d))" % \
                (HelasFortranModel.sorted_mothers(amp)[0].get('number'),
                 HelasFortranModel.sorted_mothers(amp)[1].get('number'),
                 HelasFortranModel.sorted_mothers(amp)[2].get('number'),
-                amp.get('couplings')[(0,0)],
+
+                amp.get('coupling'),
                 amp.get('number'))
-        self.add_amplitude(key,call)
+        self.add_amplitude(key, call)
+
+        # SM gluon 4-vertex components
+
+        key = ((3, 3, 3, 3), 'gggg1')
+        call = lambda wf: \
+               "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
+               (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
+                HelasFortranModel.sorted_mothers(wf)[1].get('number'),
+                HelasFortranModel.sorted_mothers(wf)[2].get('number'),
+                wf.get('coupling'),
+                wf.get('number'))
+        self.add_wavefunction(key, call)
+        key = ((3, 3, 3, 3), 'gggg1')
+        call = lambda amp: \
+               "CALL GGGGXX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,AMP(%d))" % \
+               (HelasFortranModel.sorted_mothers(amp)[0].get('number'),
+                HelasFortranModel.sorted_mothers(amp)[1].get('number'),
+                HelasFortranModel.sorted_mothers(amp)[2].get('number'),
+                HelasFortranModel.sorted_mothers(amp)[3].get('number'),
+                amp.get('coupling'),
+                amp.get('number'))
+        self.add_amplitude(key, call)
+        key = ((3, 3, 3, 3), 'gggg2')
+        call = lambda wf: \
+               "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
+               (HelasFortranModel.sorted_mothers(wf)[2].get('number'),
+                HelasFortranModel.sorted_mothers(wf)[0].get('number'),
+                HelasFortranModel.sorted_mothers(wf)[1].get('number'),
+                wf.get('coupling'),
+                wf.get('number'))
+        self.add_wavefunction(key, call)
+        key = ((3, 3, 3, 3), 'gggg2')
+        call = lambda amp: \
+               "CALL GGGGXX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,AMP(%d))" % \
+               (HelasFortranModel.sorted_mothers(amp)[2].get('number'),
+                HelasFortranModel.sorted_mothers(amp)[0].get('number'),
+                HelasFortranModel.sorted_mothers(amp)[1].get('number'),
+                HelasFortranModel.sorted_mothers(amp)[3].get('number'),
+                amp.get('coupling'),
+                amp.get('number'))
+        self.add_amplitude(key, call)
+        key = ((3, 3, 3, 3), 'gggg3')
+        call = lambda wf: \
+               "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
+               (HelasFortranModel.sorted_mothers(wf)[1].get('number'),
+                HelasFortranModel.sorted_mothers(wf)[2].get('number'),
+                HelasFortranModel.sorted_mothers(wf)[0].get('number'),
+                wf.get('coupling'),
+                wf.get('number'))
+        self.add_wavefunction(key, call)
+        key = ((3, 3, 3, 3), 'gggg3')
+        call = lambda amp: \
+               "CALL GGGGXX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,AMP(%d))" % \
+               (HelasFortranModel.sorted_mothers(amp)[1].get('number'),
+                HelasFortranModel.sorted_mothers(amp)[2].get('number'),
+                HelasFortranModel.sorted_mothers(amp)[0].get('number'),
+                HelasFortranModel.sorted_mothers(amp)[3].get('number'),
+                amp.get('coupling'),
+                amp.get('number'))
+        self.add_amplitude(key, call)
 
     def get_wavefunction_call(self, wavefunction):
         """Return the function for writing the wavefunction
@@ -484,7 +788,7 @@ class HelasFortranModel(helas_objects.HelasModel):
         # If function not already existing, try to generate it.
 
         if len(wavefunction.get('mothers')) > 3:
-            raise self.PhysicsObjectError,\
+            raise self.PhysicsObjectError, \
                   """Automatic generation of Fortran wavefunctions not
                   implemented for > 3 mothers"""
 
@@ -505,7 +809,7 @@ class HelasFortranModel(helas_objects.HelasModel):
         # If function not already existing, try to generate it.
 
         if len(amplitude.get('mothers')) > 4:
-            raise self.PhysicsObjectError,\
+            raise self.PhysicsObjectError, \
                   """Automatic generation of Fortran amplitudes not
                   implemented for > 4 mothers"""
 
@@ -532,7 +836,7 @@ class HelasFortranModel(helas_objects.HelasModel):
         dictionary, in order to be able to reuse the function the next
         time a wavefunction with the same Lorentz structure is needed.
         """
-            
+
         if not isinstance(argument, helas_objects.HelasWavefunction) and \
            not isinstance(argument, helas_objects.HelasAmplitude):
             raise self.PhysicsObjectError, \
@@ -541,7 +845,7 @@ class HelasFortranModel(helas_objects.HelasModel):
         call = "CALL "
 
         call_function = None
-            
+
         if isinstance(argument, helas_objects.HelasWavefunction) and \
                not argument.get('mothers'):
             # String is just IXXXXX, OXXXXX, VXXXXX or SXXXXX
@@ -558,7 +862,7 @@ class HelasFortranModel(helas_objects.HelasModel):
                 call_function = lambda wf: call % \
                                 (wf.get('number_external'),
                                  # For boson, need initial/final here
-                                 (-1)**(wf.get('state') == 'initial'),
+                                 (-1) ** (wf.get('state') == 'initial'),
                                  wf.get('number_external'),
                                  wf.get('number'))
             elif argument.is_boson():
@@ -567,7 +871,7 @@ class HelasFortranModel(helas_objects.HelasModel):
                                  wf.get('mass'),
                                  wf.get('number_external'),
                                  # For boson, need initial/final here
-                                 (-1)**(wf.get('state')=='initial'),
+                                 (-1) ** (wf.get('state') == 'initial'),
                                  wf.get('number_external'),
                                  wf.get('number'))
             else:
@@ -576,7 +880,7 @@ class HelasFortranModel(helas_objects.HelasModel):
                                  wf.get('mass'),
                                  wf.get('number_external'),
                                  # For fermions, need particle/antiparticle
-                                 -(-1)**wf.get_with_flow('is_part'),
+                                 - (-1) ** wf.get_with_flow('is_part'),
                                  wf.get('number_external'),
                                  wf.get('number'))
         else:
@@ -590,16 +894,16 @@ class HelasFortranModel(helas_objects.HelasModel):
 
             # If Lorentz structure is given, by default add this
             # to call name
-            addition = argument.get('lorentz')[0]
+            addition = argument.get('lorentz')
 
             # Take care of special case: WWWW or WWVV calls
-            if len(argument.get('lorentz')[0]) > 3 and \
-                   argument.get('lorentz')[0][:2] == "WW":
-                if argument.get('lorentz')[0][:4] == "WWWW":
+            if len(argument.get('lorentz')) > 3 and \
+                   argument.get('lorentz')[:2] == "WW":
+                if argument.get('lorentz')[:4] == "WWWW":
                     mother_letters = "WWWW"[:len(mother_letters)]
-                if argument.get('lorentz')[0][:4] == "WWVV":
+                if argument.get('lorentz')[:4] == "WWVV":
                     mother_letters = "W3W3"[:len(mother_letters)]
-                addition = argument.get('lorentz')[0][4:]
+                addition = argument.get('lorentz')[4:]
 
             call = call + mother_letters
             call = call + addition
@@ -618,26 +922,53 @@ class HelasFortranModel(helas_objects.HelasModel):
             # Wavefunctions
             call = call + "W(1,%d)," * len(argument.get('mothers'))
             # Couplings
-            call = call + "%s," * min(2,len(argument.get('couplings').keys()))
+            call = call + "%s,"
+
 
             if isinstance(argument, helas_objects.HelasWavefunction):
+                # Extra dummy coupling for 4-vector vertices
+                if argument.get('lorentz') == 'WWVV':
+                    # SM W3W3 vertex
+                    call = call + "1D0,"
+                elif argument.get('lorentz') == 'WWWW':
+                    # SM WWWW vertex
+                    call = call + "0D0,"
+                elif argument.get('spin') == 3 and \
+                       [wf.get('spin') for wf in argument.get('mothers')] == \
+                       [3, 3, 3]:
+                    # All other 4-vector vertices (FR) - note that gggg
+                    # has already been defined
+                    call = call + "DUM0,"
                 # Mass and width
                 call = call + "%s,%s,"
                 # New wavefunction
                 call = call + "W(1,%d))"
             else:
+                # Extra dummy coupling for 4-particle vertices
+                # Need to replace later with the correct type
+                if argument.get('lorentz') == 'WWVV':
+                    # SM W3W3 vertex
+                    call = call + "1D0,"
+                elif argument.get('lorentz') == 'WWWW':
+                    # SM WWWW vertex
+                    call = call + "0D0,"
+                elif [wf.get('spin') for wf in argument.get('mothers')] == \
+                       [3, 3, 3, 3]:
+                    # Other 4-vector vertices (FR) - note that gggg
+                    # has already been defined
+                    call = call + "DUM0,"
                 # Amplitude
-                call = call + "AMP(%d))"                
+                call = call + "AMP(%d))"
 
-            if isinstance(argument,helas_objects.HelasWavefunction):
+            if isinstance(argument, helas_objects.HelasWavefunction):
                 # Create call for wavefunction
-                if len(argument.get('couplings').keys()) == 1:
+                if len(argument.get('mothers')) == 2:
                     call_function = lambda wf: call % \
                                     (HelasFortranModel.sorted_mothers(wf)[0].\
                                      get('number'),
                                      HelasFortranModel.sorted_mothers(wf)[1].\
                                      get('number'),
-                                     wf.get_with_flow('couplings')[(0,0)],
+                                     wf.get_with_flow('coupling'),
                                      wf.get('mass'),
                                      wf.get('width'),
                                      wf.get('number'))
@@ -649,14 +980,13 @@ class HelasFortranModel(helas_objects.HelasModel):
                                      get('number'),
                                      HelasFortranModel.sorted_mothers(wf)[2].\
                                      get('number'),
-                                     wf.get_with_flow('couplings')[(0,0)],
-                                     wf.get_with_flow('couplings')[(0,1)],
+                                     wf.get_with_flow('coupling'),
                                      wf.get('mass'),
                                      wf.get('width'),
                                      wf.get('number'))
             else:
                 # Create call for amplitude
-                if len(argument.get('couplings').keys()) == 1:
+                if len(argument.get('mothers')) == 3:
                     call_function = lambda amp: call % \
                                     (HelasFortranModel.sorted_mothers(amp)[0].\
                                      get('number'),
@@ -664,7 +994,8 @@ class HelasFortranModel(helas_objects.HelasModel):
                                      get('number'),
                                      HelasFortranModel.sorted_mothers(amp)[2].\
                                      get('number'),
-                                     amp.get('couplings')[(0,0)],
+
+                                     amp.get('coupling'),
                                      amp.get('number'))
                 else:
                     call_function = lambda amp: call % \
@@ -676,30 +1007,14 @@ class HelasFortranModel(helas_objects.HelasModel):
                                      get('number'),
                                      HelasFortranModel.sorted_mothers(amp)[3].\
                                      get('number'),
-                                     amp.get('couplings')[(0,0)],
-                                     amp.get('couplings')[(0,1)],
+                                     amp.get('coupling'),
                                      amp.get('number'))
 
         # Add the constructed function to wavefunction or amplitude dictionary
-        if isinstance(argument,helas_objects.HelasWavefunction):
-            self.add_wavefunction(argument.get_call_key(),call_function)
+        if isinstance(argument, helas_objects.HelasWavefunction):
+            self.add_wavefunction(argument.get_call_key(), call_function)
         else:
-            self.add_amplitude(argument.get_call_key(),call_function)
-            
-    def get_JAMP_line(self, matrix_element):
-        """Return the JAMP(1) = sum(fermionfactor * AMP(i)) line"""
-
-        if not isinstance(matrix_element, helas_objects.HelasMatrixElement):
-            raise self.PhysicsObjectError, \
-                  "%s not valid argument for get_matrix_element_calls" % \
-                  repr(matrix_element)
-
-        res = "JAMP(1)="
-        # Add all amplitudes with correct fermion factor
-        for diagram in matrix_element.get('diagrams'):
-            res = res + "%sAMP(%d)" % (sign(diagram.get('fermionfactor')),
-                                         diagram.get('amplitude').get('number'))
-        return res
+            self.add_amplitude(argument.get_call_key(), call_function)
 
     # Static helper functions
 
@@ -708,15 +1023,17 @@ class HelasFortranModel(helas_objects.HelasModel):
         """Gives a list of mother wavefunctions sorted according to
         1. the spin order needed in the Fortran Helas calls and
         2. the order of the particles in the interaction (cyclic)
-        3. the number for the external leg"""
+        (3. the number for the external leg)"""
 
         if isinstance(arg, helas_objects.HelasWavefunction) or \
            isinstance(arg, helas_objects.HelasAmplitude):
             # First sort according to number_external number
-            sorted_mothers1 = sorted(arg.get('mothers'),
-                                     lambda wf1, wf2: \
-                                     wf1.get('number_external') - \
-                                     wf2.get('number_external'))
+            #sorted_mothers1 = sorted(arg.get('mothers'),
+            #                         lambda wf1, wf2: \
+            #                         wf1.get('number_external') - \
+            #                         wf2.get('number_external'))
+            sorted_mothers1 = copy.copy(arg.get('mothers'))
+
             # Next sort according to interaction pdg codes
             mother_codes = [ wf.get_pdg_code_outgoing() for wf \
                              in sorted_mothers1 ]
@@ -725,7 +1042,7 @@ class HelasFortranModel(helas_objects.HelasModel):
                 my_code = arg.get_pdg_code_incoming()
                 # We need to create the cyclic pdg_codes
                 missing_index = pdg_codes.index(my_code)
-                pdg_codes_cycl = pdg_codes[missing_index+1:]
+                pdg_codes_cycl = pdg_codes[missing_index + 1:]
                 pdg_codes_cycl.extend(pdg_codes[:missing_index])
             else:
                 pdg_codes_cycl = pdg_codes
@@ -737,9 +1054,9 @@ class HelasFortranModel(helas_objects.HelasModel):
                 sorted_mothers2.append(sorted_mothers1.pop(index))
 
             if sorted_mothers1:
-                raise HelasFortranModel.PhysicsObjectError,\
+                raise HelasFortranModel.PhysicsObjectError, \
                           "Mismatch of pdg codes, %s != %s" % \
-                          (repr(mother_codes),repr(pdg_codes_cycl))
+                          (repr(mother_codes), repr(pdg_codes_cycl))
 
             # Next sort according to spin_state_number
             return sorted(sorted_mothers2, lambda wf1, wf2: \
@@ -749,7 +1066,7 @@ class HelasFortranModel(helas_objects.HelasModel):
                           - HelasFortranModel.sort_amp[\
                           HelasFortranModel.mother_dict[wf1.\
                                                     get_spin_state_number()]])
-        
+
     @staticmethod
     def sorted_letters(arg):
         """Gives a list of letters sorted according to
@@ -768,16 +1085,39 @@ class HelasFortranModel(helas_objects.HelasModel):
                           lambda l1, l2: \
                           HelasFortranModel.sort_amp[l2] - \
                           HelasFortranModel.sort_amp[l1]))
-    
+
 #===============================================================================
 # Global helper methods
 #===============================================================================
 
-def sign(number):
-    """Returns '+' if positive, '-' if negative"""
+def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
+    """Returns a nicely formatted string for the coefficients in JAMP lines"""
 
-    if number > 0:
-        return '+'
-    if number < 0:
-        return '-'
-    
+    total_coeff = ff_number * frac * fractions.Fraction(Nc_value) ** Nc_power
+
+    if total_coeff == 1:
+        if is_imaginary:
+            return '+complex(0,1)*'
+        else:
+            return '+'
+    elif total_coeff == -1:
+        if is_imaginary:
+            return '-complex(0,1)*'
+        else:
+            return '-'
+
+    res_str = '%+i' % total_coeff.numerator
+
+    if total_coeff.denominator != 1:
+        # Check if total_coeff is an integer
+        res_str = res_str + './%i.' % total_coeff.denominator
+
+    if is_imaginary:
+        res_str = res_str + '*complex(0,1)'
+
+    return res_str + '*'
+
+
+
+
+

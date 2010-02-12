@@ -17,6 +17,8 @@
 
 import logging
 
+logger = logging.getLogger('files')
+
 #===============================================================================
 # read_from_file
 #===============================================================================
@@ -33,7 +35,7 @@ def read_from_file(filename, myfunct, *args):
         finally:
             sock.close()
     except IOError, (errno, strerror):
-        logging.error("I/O error (%s): %s" % (errno, strerror))
+        logger.error("I/O error (%s): %s" % (errno, strerror))
         return None
 
     return ret_value
@@ -54,7 +56,7 @@ def write_to_file(filename, myfunct, *args):
         finally:
             sock.close()
     except IOError, (errno, strerror):
-        logging.error("I/O error (%s): %s" % (errno, strerror))
+        logger.error("I/O error (%s): %s" % (errno, strerror))
         return None
 
     return ret_value
