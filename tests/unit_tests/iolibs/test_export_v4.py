@@ -820,6 +820,43 @@ CALL FSOCXX(W(1,1),W(1,4),MGVX575,Mneu1,Wneu1,W(1,6))
 # Amplitude(s) for diagram number 2
 CALL IOSXXX(W(1,2),W(1,6),W(1,3),MGVX575,AMP(2))""")
 
+    def test_generate_helas_diagrams_zz_n1n1(self):
+        """Testing the helas diagram generation z z > n1 n1 with t-channel n1
+        """
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':23,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':23,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':'final'}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mybasemodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
+
+        # I have checked that the resulting Helas calls
+        # below give identical result as MG4
+        self.assertEqual("\n".join(export_v4.HelasFortranModel().\
+                                   get_matrix_element_calls(matrix_element)),
+                         """CALL VXXXXX(P(0,1),zmas,NHEL(1),-1*IC(1),W(1,1))
+CALL VXXXXX(P(0,2),zmas,NHEL(2),-1*IC(2),W(1,2))
+CALL OXXXXX(P(0,3),Mneu1,NHEL(3),+1*IC(3),W(1,3))
+CALL IXXXXX(P(0,4),Mneu1,NHEL(4),-1*IC(4),W(1,4))
+CALL FVOXXX(W(1,3),W(1,1),GZN11,Mneu1,Wneu1,W(1,5))
+# Amplitude(s) for diagram number 1
+CALL IOVXXX(W(1,4),W(1,5),W(1,2),GZN11,AMP(1))
+CALL FVIXXX(W(1,4),W(1,1),GZN11,Mneu1,Wneu1,W(1,6))
+# Amplitude(s) for diagram number 2
+CALL IOVXXX(W(1,6),W(1,3),W(1,2),GZN11,AMP(2))""")
+
 
     def test_generate_helas_diagrams_epem_elpelmepem(self):
         """Testing the helas diagram generation e+ e- > sl2+ sl2- e+ e-
@@ -1898,8 +1935,8 @@ CALL JW3WNX(W(1,3),W(1,5),W(1,1),MGVX7,DUM0,MZ,WZ,W(1,24))
 # Amplitude(s) for diagram number 28
 CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
 
-    def test_generate_helas_diagrams_ggggg(self):
-        """Testing the helas diagram generation g g > g g g
+    def test_multiple_lorentz_structures(self):
+        """Testing multiple Lorentz structures for one diagram.
         """
 
         # Set up model
@@ -1907,47 +1944,35 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
         mypartlist = base_objects.ParticleList()
         myinterlist = base_objects.InteractionList()
 
-        # A gluon
-        mypartlist.append(base_objects.Particle({'name':'g',
-                      'antiname':'g',
+        # An A particle
+        mypartlist.append(base_objects.Particle({'name':'A',
+                      'antiname':'A',
                       'spin':3,
-                      'color':8,
+                      'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'g',
-                      'antitexname':'g',
+                      'texname':'A',
+                      'antitexname':'A',
                       'line':'curly',
                       'charge':0.,
-                      'pdg_code':21,
+                      'pdg_code':45,
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
 
-        g = mypartlist[len(mypartlist) - 1]
+        A = mypartlist[len(mypartlist) - 1]
 
-        # Gluon self-couplings
+        # A particle self-couplings
         myinterlist.append(base_objects.Interaction({
                       'id': 8,
                       'particles': base_objects.ParticleList(\
-                                            [g, \
-                                             g, \
-                                             g]),
+                                            [A, \
+                                             A, \
+                                             A]),
                       'color': [],
-                      'lorentz':[''],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QCD':1}}))
-
-        myinterlist.append(base_objects.Interaction({
-                      'id': 9,
-                      'particles': base_objects.ParticleList(\
-                                            [g, \
-                                             g, \
-                                             g,
-                                             g]),
-                      'color': [],
-                      'lorentz':['gggg1', 'gggg2', 'gggg3'],
-                      'couplings':{(0, 0):'G', (1, 1):'G', (2, 2):'G'},
-                      'orders':{'QCD':2}}))
+                      'lorentz':['L1', 'L2'],
+                      'couplings':{(0, 0):'G1',(0, 1):'G2'},
+                      'orders':{'QED':1}}))
 
         mybasemodel = base_objects.Model()
         mybasemodel.set('particles', mypartlist)
@@ -1955,15 +1980,13 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
 
         myleglist = base_objects.LegList()
 
-        myleglist.append(base_objects.Leg({'id':21,
+        myleglist.append(base_objects.Leg({'id':45,
                                          'state':'initial'}))
-        myleglist.append(base_objects.Leg({'id':21,
+        myleglist.append(base_objects.Leg({'id':45,
                                          'state':'initial'}))
-        myleglist.append(base_objects.Leg({'id':21,
+        myleglist.append(base_objects.Leg({'id':45,
                                          'state':'final'}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
-        myleglist.append(base_objects.Leg({'id':21,
+        myleglist.append(base_objects.Leg({'id':45,
                                          'state':'final'}))
 
         myproc = base_objects.Process({'legs':myleglist,
@@ -1973,20 +1996,31 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, gen_color=False)
 
-        #print myamplitude.get('process').nice_string()
-        #print myamplitude.get('diagrams').nice_string()
-
-        #print "Keys:"
-        #for diagram in matrix_element.get('diagrams'):
-        #    for wf in diagram.get('wavefunctions'):
-        #        print wf.get_call_key()
-        #    print diagram.get('amplitude').get_call_key()
-
-        writer = export_v4.FortranWriter()
-        fsock = StringIO.StringIO()
-        for line in export_v4.HelasFortranModel().\
-                get_matrix_element_calls(matrix_element):
-            writer.write_fortran_line(fsock, line)
-
-        #print fsock.getvalue()
+        self.assertEqual("\n".join(export_v4.HelasFortranModel().\
+                                   get_matrix_element_calls(matrix_element)),
+                         """CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
+CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
+CALL VXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
+CALL VXXXXX(P(0,4),zero,NHEL(4),+1*IC(4),W(1,4))
+CALL JVVL2X(W(1,1),W(1,2),G2,zero,zero,W(1,5))
+CALL JVVL1X(W(1,1),W(1,2),G1,zero,zero,W(1,6))
+# Amplitude(s) for diagram number 1
+CALL VVVL2X(W(1,3),W(1,4),W(1,5),G2,AMP(1))
+CALL VVVL1X(W(1,3),W(1,4),W(1,5),G1,AMP(2))
+CALL VVVL2X(W(1,3),W(1,4),W(1,6),G2,AMP(3))
+CALL VVVL1X(W(1,3),W(1,4),W(1,6),G1,AMP(4))
+CALL JVVL2X(W(1,1),W(1,3),G2,zero,zero,W(1,7))
+CALL JVVL1X(W(1,1),W(1,3),G1,zero,zero,W(1,8))
+# Amplitude(s) for diagram number 2
+CALL VVVL2X(W(1,2),W(1,4),W(1,7),G2,AMP(5))
+CALL VVVL1X(W(1,2),W(1,4),W(1,7),G1,AMP(6))
+CALL VVVL2X(W(1,2),W(1,4),W(1,8),G2,AMP(7))
+CALL VVVL1X(W(1,2),W(1,4),W(1,8),G1,AMP(8))
+CALL JVVL2X(W(1,1),W(1,4),G2,zero,zero,W(1,9))
+CALL JVVL1X(W(1,1),W(1,4),G1,zero,zero,W(1,10))
+# Amplitude(s) for diagram number 3
+CALL VVVL2X(W(1,2),W(1,3),W(1,9),G2,AMP(9))
+CALL VVVL1X(W(1,2),W(1,3),W(1,9),G1,AMP(10))
+CALL VVVL2X(W(1,2),W(1,3),W(1,10),G2,AMP(11))
+CALL VVVL1X(W(1,2),W(1,3),W(1,10),G1,AMP(12))""")
 

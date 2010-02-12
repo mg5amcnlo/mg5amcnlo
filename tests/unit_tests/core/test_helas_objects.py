@@ -2324,6 +2324,18 @@ class HelasModelTest(unittest.TestCase):
                       'couplings':{(0, 0):'MGVX494'},
                       'orders':{'QED':1}}))
 
+        # Coupling of n1 to z
+        myinterlist.append(base_objects.Interaction({
+                      'id': 106,
+                      'particles': base_objects.ParticleList(\
+                                            [n1, \
+                                             n1,
+                                             z]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GZN11'},
+                      'orders':{'QED':1}}))
+
         # g-gamma-su-subar coupling
         myinterlist.append(base_objects.Interaction({
                       'id': 100,

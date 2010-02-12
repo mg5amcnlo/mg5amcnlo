@@ -725,12 +725,12 @@ class MadGraphCmd(cmd.Cmd):
 
     # In-line help
     def help_save(self):
-        print "syntax: save %s PATH" % "|".join(self.__save_opts)
-        print "-- save information as file in PATH"
+        print "syntax: save %s FILENAME" % "|".join(self.__save_opts)
+        print "-- save information as file FILENAME"
 
     def help_load(self):
-        print "syntax: load %s PATH" % "|".join(self.__save_opts)
-        print "-- load information from file in PATH"
+        print "syntax: load %s FILENAME" % "|".join(self.__save_opts)
+        print "-- load information from file FILENAME"
 
     def help_import(self):
         print "syntax: import " + "|".join(self.__import_formats) + \
@@ -755,8 +755,9 @@ class MadGraphCmd(cmd.Cmd):
     def help_export(self):
         print "syntax: export " + "|".join(self.__export_formats) + \
               " FILEPATH"
-        print """-- export matrix elements in various formats. The resulting
-        file will be FILEPATH/matrix_\"process_string\".f"""
+        print """-- export matrix elements. For v4standalone, the resulting
+        files will be FILEPATH/matrix_\"process_string\".f. For v4sa_dirs,
+        the result is a set of complete MG4 Standalone process directories."""
 
     def help_draw(self):
         print "syntax: draw FILEPATH [option=value]"

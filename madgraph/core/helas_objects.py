@@ -521,7 +521,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Stop recursion at the external leg
         mothers = copy.copy(self.get('mothers'))
         if not mothers:
-            flip_flow = found_majorana
+            if not self.get('self_antipart'):
+                flip_flow = found_majorana
+            else:
+                flip_sign = found_majorana
         else:
             # Follow fermion flow up through tree
             fermion_mother = filter(lambda wf: wf.is_fermion() and
