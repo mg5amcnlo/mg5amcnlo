@@ -734,7 +734,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Check relevant directly defined properties
         if self['number_external'] != other['number_external'] or \
            self['spin'] != other['spin'] or \
-           self['is_part'] != other['is_part'] or \
            self['self_antipart'] != other['self_antipart'] or \
            self['fermionflow'] != other['fermionflow'] or \
            self['mass'] != other['mass'] or \
