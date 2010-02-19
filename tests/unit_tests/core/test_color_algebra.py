@@ -65,12 +65,18 @@ class ColorObjectTest(unittest.TestCase):
 
         col_str1 = color.ColorString([color.Tr(1, 2, 4), color.Tr()])
         col_str2 = color.ColorString([color.Tr(1, 2, 4)])
+        col_str1.coeff = fractions.Fraction(1, 2)
+        col_str2.coeff = fractions.Fraction(-1, 2)
+        col_str2.Nc_power = -1
         self.assertEqual(my_tr.simplify(),
                          color.ColorFactor([col_str1, col_str2]))
 
         my_tr = color.Tr(100, 100)
         col_str1 = color.ColorString([color.Tr(), color.Tr()])
         col_str2 = color.ColorString([color.Tr()])
+        col_str1.coeff = fractions.Fraction(1, 2)
+        col_str2.coeff = fractions.Fraction(-1, 2)
+        col_str2.Nc_power = -1
         self.assertEqual(my_tr.simplify(),
                          color.ColorFactor([col_str1, col_str2]))
 
@@ -91,6 +97,9 @@ class ColorObjectTest(unittest.TestCase):
 
         col_str1 = color.ColorString([color.T(4, 3, 1, 5, 101, 102)])
         col_str2 = color.ColorString([color.Tr(1, 3), color.T(4, 5, 101, 102)])
+        col_str1.coeff = fractions.Fraction(1, 2)
+        col_str2.coeff = fractions.Fraction(-1, 2)
+        col_str2.Nc_power = -1
         self.assertEqual(my_Tr1.pair_simplify(my_T),
                          color.ColorFactor([col_str1, col_str2]))
 
@@ -244,6 +253,10 @@ class ColorStringTest(unittest.TestCase):
         my_color_string.replace_indices(repl_dict)
         self.assertEqual(str(my_color_string),
                          '1 T(2,3,1,4) Tr(1,3,2)')
+        inv_repl_dict = dict([v, k] for k, v in repl_dict.items())
+        my_color_string.replace_indices(inv_repl_dict)
+        self.assertEqual(str(my_color_string),
+                         '1 T(1,2,3,4) Tr(3,2,1)')
 
     def test_color_string_canonical(self):
         """Test the canonical representation of a immutable color string"""
@@ -254,6 +267,10 @@ class ColorStringTest(unittest.TestCase):
         self.assertEqual(color.ColorString().to_canonical(immutable1 + \
                                                                immutable2)[0],
                          (('T', (2, 4)), ('T', (3, 1, 4)), ('f', (1, 2, 3))))
+
+        self.assertEqual(color.ColorString().to_canonical(immutable1 + \
+                                                               immutable2)[1],
+                         {3:2, 5:4, 4:3, 2:1})
 
 class ColorFactorTest(unittest.TestCase):
     """Test class for the ColorFactor objects"""

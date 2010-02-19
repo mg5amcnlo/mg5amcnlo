@@ -23,6 +23,8 @@ import madgraph.core.base_objects as base_objects
 generation algorithm.
 """
 
+logger = logging.getLogger('diagram_generation')
+
 #===============================================================================
 # Amplitude
 #===============================================================================
@@ -144,7 +146,7 @@ class Amplitude(base_objects.PhysicsObject):
             self['diagrams'] = res
             return res
 
-        logging.info("Trying %s " % self['process'].nice_string().replace('Process', 'process'))
+        logger.info("Trying %s " % self['process'].nice_string().replace('Process', 'process'))
 
         # Give numbers to legs in process
         for i in range(0, len(self['process'].get('legs'))):
@@ -248,7 +250,7 @@ class Amplitude(base_objects.PhysicsObject):
         self['diagrams'] = res
 
         if res:
-            logging.info("Process has %d diagrams" % len(res))
+            logger.info("Process has %d diagrams" % len(res))
 
         return not failed_crossing
 

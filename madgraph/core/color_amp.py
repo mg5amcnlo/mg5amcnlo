@@ -14,10 +14,12 @@
 ################################################################################
 
 import copy
+import fractions
 import operator
 import re
 
 import madgraph.core.color_algebra as color_algebra
+import madgraph.core.diagram_generation as diagram_generation
 
 """Classes, methods and functions required to write QCD color information 
 for a diagram and build a color basis, and to square a QCD color string for
@@ -38,6 +40,9 @@ class ColorBasis(dict):
     # Dictionary to save simplifications already done in a canonical form
     _canonical_dict = {}
 
+    # Dictionary store the raw colorize information
+    _list_color_dict = []
+
     def colorize(self, diagram, model):
         """Takes a diagram and a model and outputs a dictionary with keys being
         color coefficient index tuples and values a color string (before 
@@ -50,12 +55,26 @@ class ColorBasis(dict):
         # The dictionary for book keeping of replaced indices
         repl_dict = {}
 
-        for vertex in diagram.get('vertices'):
+        for i, vertex in enumerate(diagram.get('vertices')):
 
-        # SPECIAL VERTEX WITH ID = 0 -------------------------------------------
+        # SPECIAL VERTEX JUST BEFORE ID = 0 ------------------------------------
 
-            if vertex['id'] == 0:
-                self.add_vertex_id_0(vertex, repl_dict, res_dict)
+            if i == len(diagram.get('vertices')) - 2 and \
+                diagram.get('vertices')[i + 1]['id'] == 0:
+
+                # Tag the numbers in id=0 
+                num1 = diagram.get('vertices')[i + 1].get('legs')[0].get('number')
+                num2 = diagram.get('vertices')[i + 1].get('legs')[1].get('number')
+
+                # call the ad_vertex routine with a special replacement request
+                min_index, res_dict = self.add_vertex(vertex, diagram, model,
+                            repl_dict, res_dict, min_index,
+                            id0_rep=[num1, num2])
+
+                # Return an empty list if all entries are empty
+                if all([cs == color_algebra.ColorString() \
+                        for cs in res_dict.values()]):
+                    res_dict = {}
                 # Return since this must be the last vertex
                 return res_dict
 
@@ -63,57 +82,54 @@ class ColorBasis(dict):
             min_index, res_dict = self.add_vertex(vertex, diagram, model,
                             repl_dict, res_dict, min_index)
 
+        # Return an empty list if all entries are empty
+        if all([cs == color_algebra.ColorString() \
+                        for cs in res_dict.values()]):
+            res_dict = {}
         return res_dict
 
-    def add_vertex_id_0(self, vertex, repl_dict, res_dict):
-        """Update the repl_dict and res_dict when vertex has id=0, i.e. for
-        the special case of an identity vertex."""
-
-        # For vertex (i1,i2), replace all i2 by i1
-        old_num = vertex.get('legs')[1].get('number')
-        new_num = vertex.get('legs')[0].get('number')
-        # Be careful i1 or i2 might have been replaced themselves
-        try:
-            old_num = repl_dict[old_num]
-        except KeyError:
-            pass
-        try:
-            new_num = repl_dict[new_num]
-        except KeyError:
-            pass
-        # Do the replacement
-        for (ind_chain, col_str_chain) in res_dict.items():
-            col_str_chain.replace_indices({old_num:new_num})
-
     def add_vertex(self, vertex, diagram, model,
-                   repl_dict, res_dict, min_index):
+                   repl_dict, res_dict, min_index, id0_rep=[]):
         """Update repl_dict, res_dict and min_index for normal vertices.
-        Returns the min_index reached and the result dictionary in a tuple."""
+        Returns the min_index reached and the result dictionary in a tuple.
+        If the id0_rep list is not None, perform the requested replacement on the
+        last leg number before going further."""
 
         # Create a list of pdg codes entering the vertex ordered as in
         # interactions.py
         list_pdg = [part.get_pdg_code() for part in \
                model.get_interaction(vertex.get('id')).get('particles')]
-
         # Create a dictionary pdg code --> leg(s)
         dict_pdg_leg = {}
+
         for index, leg in enumerate(vertex.get('legs')):
             curr_num = leg.get('number')
             curr_pdg = leg.get('id')
-            # If this is the last leg and not the last vertex, 
-            # flip part/antipart, and replace last index by a new 
-            # summed index
+
+            # If this is the next-to-last vertex and the last vertex is
+            # the special identity id=0, start by applying the replacement rule
+            # on the last vertex.
+            if index == len(vertex.get('legs')) - 1 and \
+                    curr_num in id0_rep:
+                    curr_num = id0_rep[id0_rep.index(curr_num) - 1]
+
+            # If this is the last leg and not the last vertex 
+            # flip part/antipart. If it is not the last, AND not the next-to-last
+            # before an id=0 vertex, replace last index by a new summed index.
             if index == len(vertex.get('legs')) - 1 and \
                 vertex != diagram.get('vertices')[-1]:
-                part = model.get('particle_dict')[curr_pdg]
                 curr_pdg = \
                     model.get('particle_dict')[curr_pdg].get_anti_pdg_code()
-                repl_dict[curr_num] = min_index
-                min_index = min_index - 1
+                if not id0_rep:
+                    repl_dict[curr_num] = min_index
+                    min_index = min_index - 1
+
+            # Take into account previous replacements
             try:
                 curr_num = repl_dict[curr_num]
             except KeyError:
                 pass
+
             try:
                 dict_pdg_leg[curr_pdg].append(curr_num)
             except KeyError:
@@ -122,15 +138,30 @@ class ColorBasis(dict):
         # Create a list of associated leg number following the same order
         list_numbers = []
         for pdg_code in list_pdg:
-            list_numbers.append(dict_pdg_leg[pdg_code].pop())
+            list_numbers.append(dict_pdg_leg[pdg_code].pop(0))
         # ... and the associated dictionary for replacement
         match_dict = dict(enumerate(list_numbers))
 
         # Update the result dict using the current vertex ColorString object
         # If more than one, create different entries
+
+        inter_color = model.get_interaction(vertex['id'])['color']
+
+        # For colorless vertices, return a copy of res_dict
+        # Where one 0 has been added to each color index chain key
+        if not inter_color:
+            new_dict = {}
+            for k, v in res_dict.items():
+                new_key = tuple(list(k) + [0])
+                new_dict[new_key] = v
+            # If there is no result until now, create an empty CS...
+            if not new_dict:
+                new_dict[(0,)] = color_algebra.ColorString()
+            return (min_index, new_dict)
+
         new_res_dict = {}
         for i, col_str in \
-                enumerate(model.get_interaction(vertex['id'])['color']):
+                enumerate(inter_color):
             # Build the new element
             mod_col_str = col_str.create_copy()
 
@@ -147,8 +178,10 @@ class ColorBasis(dict):
 
             # Replace other (positive) indices using the match_dic
             mod_col_str.replace_indices(match_dict)
+
             # If we are considering the first vertex, simply create
             # new entries
+
             if not res_dict:
                 new_res_dict[tuple([i])] = mod_col_str
             #... otherwise, loop over existing elements and multiply
@@ -159,7 +192,6 @@ class ColorBasis(dict):
                     new_col_str_chain.product(mod_col_str)
                     new_res_dict[tuple(list(ind_chain) + [i])] = \
                         new_col_str_chain
-
         return (min_index, new_res_dict)
 
 
@@ -174,11 +206,11 @@ class ColorBasis(dict):
 
             # Create a canonical immutable representation of the the string
             canonical_rep, rep_dict = col_str.to_canonical()
+
             try:
                 # If this representation has already been considered,
                 # recycle the result. 
-                col_fact = copy.copy(self._canonical_dict[canonical_rep])
-
+                col_fact = self._canonical_dict[canonical_rep].create_copy()
             except KeyError:
                 # If the representation is really new
 
@@ -187,8 +219,11 @@ class ColorBasis(dict):
                 col_fact = col_fact.full_simplify()
 
                 # Save the result for further use
-                canonical_col_fact = copy.copy(col_fact)
+                canonical_col_fact = col_fact.create_copy()
                 canonical_col_fact.replace_indices(rep_dict)
+                # Remove overall coefficient
+                for cs in canonical_col_fact:
+                    cs.coeff = cs.coeff / col_str.coeff
                 self._canonical_dict[canonical_rep] = canonical_col_fact
 
             else:
@@ -197,6 +232,10 @@ class ColorBasis(dict):
                 # Note that we have to replace back
                 # the indices to match the initial convention. 
                 col_fact.replace_indices(self._invert_dict(rep_dict))
+                # Since the initial coeff of col_str is not taken into account
+                # for matching, we have to multiply col_fact by it.
+                for cs in col_fact:
+                    cs.coeff = cs.coeff * col_str.coeff
                 # Must simplify once to put traces in a canonical ordering
                 col_fact = col_fact.simplify()
 
@@ -215,24 +254,45 @@ class ColorBasis(dict):
                 except KeyError:
                     self[immutable_col_str] = [basis_entry]
 
-    def build(self, amplitude, model):
-        """Build the a color basis object using information contained in
-        amplitude and model"""
+    def create_color_dict_list(self, amplitude):
+        """Returns a list of colorize dict for all diagrams in amplitude. Also
+        update the _list_color_dict object accordingly """
 
-        for index, diagram in enumerate(amplitude['diagrams']):
-            colorize_dict = self.colorize(diagram, model)
-            self.update_color_basis(colorize_dict, index)
+        list_color_dict = []
+
+        for diagram in amplitude.get('diagrams'):
+            colorize_dict = self.colorize(diagram,
+                                          amplitude.get('process').get('model'))
+            list_color_dict.append(colorize_dict)
+
+        self._list_color_dict = list_color_dict
+
+        return list_color_dict
+
+    def build(self, amplitude=None):
+        """Build the a color basis object using information contained in
+        amplitude (otherwise use info from _list_color_dict). 
+        Returns a list of color """
+
+        if amplitude:
+            self.create_color_dict_list(amplitude)
+
+        for index, color_dict in enumerate(self._list_color_dict):
+            self.update_color_basis(color_dict, index)
 
     def __init__(self, *args):
         """Initialize a new color basis object, either empty or filled (0
-        or 2 arguments). If two arguments are given, the first one is 
-        interpreted as the amplitude and the second one as the model."""
+        or 1 arguments). If one arguments is given, it's interpreted as 
+        an amplitude."""
 
-        if len(args) not in (0, 2):
+        if len(args) not in (0, 1):
             raise ValueError, \
-                "Object ColorBasis must be initialized with 0 or 2 arguments"
+                "Object ColorBasis must be initialized with 0 or 1 arguments"
 
-        if len(args) == 2:
+        if len(args) == 1:
+            if not isinstance(args[0], diagram_generation.Amplitude):
+                raise TypeError, \
+                        "%s is not a valid Amplitude object" % str(value)
             self.build(*args)
 
     def __str__(self):
@@ -264,7 +324,7 @@ class ColorBasis(dict):
 class ColorMatrix(dict):
     """A color matrix, i.e. a dictionary with pairs (i,j) as keys where i
     and j refer to elements of color basis objects. Values are Color Factor
-    objects. Also contains two additional dictonaries, one with the fixed Nc
+    objects. Also contains two additional dictionaries, one with the fixed Nc
     representation of the matrix, and the other one with the "inverted" matrix,
     i.e. a dictionary where keys are values of the color matrix."""
 
@@ -280,6 +340,9 @@ class ColorMatrix(dict):
         As options, any value of Nc and minimal/maximal power of Nc can also be 
         provided. Note that the min/max power constraint is applied
         only at the end, so that it does NOT speed up the calculation."""
+
+        self.col_matrix_fixed_Nc = {}
+        self.inverted_col_matrix = {}
 
         self._col_basis1 = col_basis
         if col_basis2:
@@ -323,7 +386,6 @@ class ColorMatrix(dict):
                 try:
                     # If this has already been calculated, use the result
                     result, result_fixed_Nc = canonical_dict[canonical_entry]
-
                 except KeyError:
                     # Otherwise calculate the result
                     result, result_fixed_Nc = \
@@ -406,6 +468,25 @@ class ColorMatrix(dict):
 
         return mystr
 
+    def get_line_denominators(self):
+        """Get a list with the denominators for the different lines in
+        the color matrix"""
+
+        den_list = []
+        for i1 in range(len(self._col_basis1)):
+            den_list.append(self.lcmm(*[\
+                        self.col_matrix_fixed_Nc[(i1, i2)][0].denominator for \
+                                        i2 in range(len(self._col_basis2))]))
+        return den_list
+
+    def get_line_numerators(self, line_index, den):
+        """Returns a list of numerator for line line_index, assuming a common
+        denominator den."""
+
+        return [self.col_matrix_fixed_Nc[(line_index, i2)][0].numerator * \
+                den / self.col_matrix_fixed_Nc[(line_index, i2)][0].denominator \
+                for i2 in range(len(self._col_basis2))]
+
     @classmethod
     def fix_summed_indices(self, struct1, struct2):
         """Returns a copy of the immutable Color String representation struct2 
@@ -437,3 +518,13 @@ class ColorMatrix(dict):
             return_list.append((elem[0], tuple(fix_elem[1])))
 
         return tuple(return_list)
+
+    @staticmethod
+    def lcm(a, b):
+        """Return lowest common multiple."""
+        return a * b // fractions.gcd(a, b)
+
+    @staticmethod
+    def lcmm(*args):
+        """Return lcm of args."""
+        return reduce(ColorMatrix.lcm, args)
