@@ -1642,8 +1642,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         incoming particles)"""
 
         return (len(self.get('processes')[0].get('legs')),
-                len(filter(lambda leg: leg.get('state') == 'initial',
-                           self.get('processes')[0].get('legs'))))
+                self.get('processes')[0].get_ninitial())
 
     def get_helicity_combinations(self):
         """Gives the number of helicity combinations for external
