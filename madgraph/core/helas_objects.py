@@ -1717,6 +1717,90 @@ class HelasMatrixElementList(base_objects.PhysicsObjectList):
         return isinstance(obj, HelasMatrixElement)
 
 #===============================================================================
+# HelasDecayChainProcess
+#===============================================================================
+class HelasDecayChainProcess(base_objects.PhysicsObject):
+    """HelasDecayChainProcess: If initiated with a
+    DecayChainAmplitude object, generates the HelasMatrixElements for
+    the core process(es) and decay chains"""
+
+    def default_setup(self):
+        """Default values for all properties"""
+
+        self['core_processes'] = HelasMatrixElementList()
+        self['decay_chains'] = HelasDecayChainProcessList()
+
+    def filter(self, name, value):
+        """Filter for valid process property values."""
+
+        if name == 'core_processes':
+            if not isinstance(value, HelasMatrixElementList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid HelasMatrixElementList object" % \
+                        str(value)
+
+        if name == 'decay_chains':
+            if not isinstance(value, HelasDecayChainProcessList):
+                raise self.PhysicsObjectError, \
+                     "%s is not a valid HelasDecayChainProcessList object" % \
+                     str(value)
+
+        return True
+
+    def get_sorted_keys(self):
+        """Return process property names as a nicely sorted list."""
+
+        return ['core_processes', 'decay_chains']
+
+    def __init__(self, argument=None):
+        """Allow initialization with DecayChainAmplitude"""
+
+        if isinstance(argument, diagram_generation.DecayChainAmplitude):
+            super(HelasDecayChainProcess, self).__init__()
+            self.generate_matrix_elements(argument)
+        elif argument:
+            # call the mother routine
+            super(HelasDecayChainProcess, self).__init__(argument)
+        else:
+            # call the mother routine
+            super(HelasDecayChainProcess, self).__init__()
+
+    def generate_matrix_elements(self, dc_amplitude):
+        """Generate the HelasMatrixElements for the core processes and
+        decay processes (separately)"""
+
+        if not isinstance(dc_amplitude, diagram_generation.DecayChainAmplitude):
+            raise base_objects.PhysicsObjectError,\
+                  "%s is not a valid DecayChainAmplitude" % dc_amplitude
+
+        for amplitude in dc_amplitude.get('amplitudes'):
+            logger.info("Generating Helas calls for %s" % \
+                         amplitude.get('process').nice_string().replace('Process', 'process'))
+            matrix_element = HelasMatrixElement(amplitude, gen_color=False)
+
+            # If the matrix element has any diagrams,
+            # add this matrix element.
+            if matrix_element.get('processes') and \
+                   matrix_element.get('diagrams'):
+                self['core_processes'].append(matrix_element)
+
+        for decay_chain in dc_amplitude.get('decay_chains'):
+            self['decay_chains'].append(HelasDecayChainProcess(\
+                decay_chain))
+
+#===============================================================================
+# HelasDecayChainProcessList
+#===============================================================================
+class HelasDecayChainProcessList(base_objects.PhysicsObjectList):
+    """List of HelasDecayChainProcess objects
+    """
+
+    def is_valid_element(self, obj):
+        """Test if object obj is a valid HelasDecayChainProcess for the list."""
+
+        return isinstance(obj, HelasDecayChainProcess)
+
+#===============================================================================
 # HelasMultiProcess
 #===============================================================================
 class HelasMultiProcess(base_objects.PhysicsObject):

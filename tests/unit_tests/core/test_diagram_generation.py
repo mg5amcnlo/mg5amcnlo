@@ -1659,16 +1659,16 @@ class MultiparticleTest(unittest.TestCase):
         self.mymodel.set('interactions', self.myinterlist)
 
 #===============================================================================
-# DecayChainAmplitudesTest
+# DecayChainAmplitudeTest
 #===============================================================================
-class DecayChainAmplitudesTest(unittest.TestCase):
-    """Test class for the DecayChainAmplitudes object"""
+class DecayChainAmplitudeTest(unittest.TestCase):
+    """Test class for the DecayChainAmplitude object"""
 
     mydict = {}
     mymodel = base_objects.Model()
     my_amplitudes = diagram_generation.AmplitudeList()
-    my_decay_chains = diagram_generation.DecayChainAmplitudesList()
-    my_decay_chain = diagram_generation.DecayChainAmplitudes()
+    my_decay_chains = diagram_generation.DecayChainAmplitudeList()
+    my_decay_chain = diagram_generation.DecayChainAmplitude()
 
     def setUp(self):
 
@@ -1845,13 +1845,13 @@ class DecayChainAmplitudesTest(unittest.TestCase):
         self.mydict = {'amplitudes': self.my_amplitudes,
                        'decay_chains': self.my_decay_chains}
 
-        self.my_decay_chain = diagram_generation.DecayChainAmplitudes(\
+        self.my_decay_chain = diagram_generation.DecayChainAmplitude(\
             self.mydict)
 
     def test_setget_process_correct(self):
-        "Test correct DecayChainAmplitudes object __init__, get and set"
+        "Test correct DecayChainAmplitude object __init__, get and set"
 
-        myprocess2 = diagram_generation.DecayChainAmplitudes()
+        myprocess2 = diagram_generation.DecayChainAmplitude()
 
         for prop in self.mydict.keys():
             myprocess2.set(prop, self.mydict[prop])
@@ -1860,7 +1860,7 @@ class DecayChainAmplitudesTest(unittest.TestCase):
 
         
     def test_setget_process_exceptions(self):
-        "Test error raising in DecayChainAmplitudes __init__, get and set"
+        "Test error raising in DecayChainAmplitude __init__, get and set"
 
         wrong_dict = self.mydict
         wrong_dict['wrongparam'] = 'wrongvalue'
@@ -1868,26 +1868,26 @@ class DecayChainAmplitudesTest(unittest.TestCase):
         a_number = 0
 
         # Test init
-        self.assertRaises(diagram_generation.DecayChainAmplitudes.PhysicsObjectError,
-                          diagram_generation.DecayChainAmplitudes,
+        self.assertRaises(diagram_generation.DecayChainAmplitude.PhysicsObjectError,
+                          diagram_generation.DecayChainAmplitude,
                           wrong_dict)
-        self.assertRaises(diagram_generation.DecayChainAmplitudes.PhysicsObjectError,
-                          diagram_generation.DecayChainAmplitudes,
+        self.assertRaises(diagram_generation.DecayChainAmplitude.PhysicsObjectError,
+                          diagram_generation.DecayChainAmplitude,
                           a_number)
 
         # Test get
-        self.assertRaises(diagram_generation.DecayChainAmplitudes.PhysicsObjectError,
+        self.assertRaises(diagram_generation.DecayChainAmplitude.PhysicsObjectError,
                           self.my_decay_chain.get,
                           a_number)
-        self.assertRaises(diagram_generation.DecayChainAmplitudes.PhysicsObjectError,
+        self.assertRaises(diagram_generation.DecayChainAmplitude.PhysicsObjectError,
                           self.my_decay_chain.get,
                           'wrongparam')
 
         # Test set
-        self.assertRaises(diagram_generation.DecayChainAmplitudes.PhysicsObjectError,
+        self.assertRaises(diagram_generation.DecayChainAmplitude.PhysicsObjectError,
                           self.my_decay_chain.set,
                           a_number, 0)
-        self.assertRaises(diagram_generation.DecayChainAmplitudes.PhysicsObjectError,
+        self.assertRaises(diagram_generation.DecayChainAmplitude.PhysicsObjectError,
                           self.my_decay_chain.set,
                           'wrongparam', 0)
 
@@ -1921,14 +1921,13 @@ class DecayChainAmplitudesTest(unittest.TestCase):
         my_decay_leglist[0].set('state', 'initial')
         my_decay_processes = base_objects.ProcessDefinition({\
                                'legs':my_decay_leglist,
-                               'model':self.mymodel,
-                               'is_decay_chain': True})
+                               'model':self.mymodel})
 
         my_process_definition.set('decay_chains',
                                   base_objects.ProcessDefinitionList(\
                                     [my_decay_processes]))
 
-        my_decay_chain_amps = diagram_generation.DecayChainAmplitudes(\
+        my_decay_chain_amps = diagram_generation.DecayChainAmplitude(\
                                                    my_process_definition)
         
         self.assertEqual(len(my_decay_chain_amps.get('amplitudes')), 35)

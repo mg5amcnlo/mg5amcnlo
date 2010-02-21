@@ -545,7 +545,7 @@ class AmplitudeList(base_objects.PhysicsObjectList):
 #===============================================================================
 # DecayChainAmplitudes
 #===============================================================================
-class DecayChainAmplitudes(base_objects.PhysicsObject):
+class DecayChainAmplitude(Amplitude):
     """A list of amplitudes + a list of decay chain amplitude lists;
     corresponding to a ProcessDefinition with a list of decay chains
     """
@@ -554,13 +554,13 @@ class DecayChainAmplitudes(base_objects.PhysicsObject):
         """Default values for all properties"""
 
         self['amplitudes'] = AmplitudeList()
-        self['decay_chains'] = DecayChainAmplitudesList()
+        self['decay_chains'] = DecayChainAmplitudeList()
 
     def __init__(self, argument=None):
         """Allow initialization with Process and with ProcessDefinition"""
 
         if isinstance(argument, base_objects.Process):
-            super(DecayChainAmplitudes, self).__init__()
+            super(DecayChainAmplitude, self).__init__()
             if isinstance(argument, base_objects.ProcessDefinition):
                 self['amplitudes'].extend(\
                 MultiProcess.generate_multi_amplitudes(argument))
@@ -574,13 +574,13 @@ class DecayChainAmplitudes(base_objects.PhysicsObject):
                           "Decay chain process must have exactly one" + \
                           " incoming particle"
                 self['decay_chains'].append(\
-                    DecayChainAmplitudes(process))
+                    DecayChainAmplitude(process))
         elif argument != None:
             # call the mother routine
-            super(DecayChainAmplitudes, self).__init__(argument)
+            super(DecayChainAmplitude, self).__init__(argument)
         else:
             # call the mother routine
-            super(DecayChainAmplitudes, self).__init__()
+            super(DecayChainAmplitude, self).__init__()
 
     def filter(self, name, value):
         """Filter for valid amplitude property values."""
@@ -590,9 +590,9 @@ class DecayChainAmplitudes(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid AmplitudeList" % str(value)
         if name == 'decay_chains':
-            if not isinstance(value, DecayChainAmplitudesList):
+            if not isinstance(value, DecayChainAmplitudeList):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid DecayChainAmplitudesList object" % \
+                        "%s is not a valid DecayChainAmplitudeList object" % \
                         str(value)
         return True
 
@@ -602,16 +602,16 @@ class DecayChainAmplitudes(base_objects.PhysicsObject):
         return ['amplitudes', 'decay_chains']
 
 #===============================================================================
-# DecayChainAmplitudesList
+# DecayChainAmplitudeList
 #===============================================================================
-class DecayChainAmplitudesList(base_objects.PhysicsObjectList):
-    """List of DecayChainAmplitudes objects
+class DecayChainAmplitudeList(base_objects.PhysicsObjectList):
+    """List of DecayChainAmplitude objects
     """
 
     def is_valid_element(self, obj):
-        """Test if object obj is a valid DecayChainAmplitudes for the list."""
+        """Test if object obj is a valid DecayChainAmplitude for the list."""
 
-        return isinstance(obj, DecayChainAmplitudes)
+        return isinstance(obj, DecayChainAmplitude)
 
     
 #===============================================================================
@@ -628,9 +628,28 @@ class MultiProcess(base_objects.PhysicsObject):
 
         self['process_definitions'] = base_objects.ProcessDefinitionList()
         # self['amplitudes'] can be an AmplitudeList or a
-        # DecayChainAmplitudesList, depending on whether there are
+        # DecayChainAmplitudeList, depending on whether there are
         # decay chains in the process definitions or not.
         self['amplitudes'] = AmplitudeList()
+
+    def __init__(self, argument=None):
+        """Allow initialization with ProcessDefinition or
+        ProcessDefinitionList"""
+
+        if isinstance(argument, base_objects.ProcessDefinition):
+            super(MultiProcess, self).__init__()
+            self['process_definitions'].append(argument)
+            self.get('amplitudes')
+        elif isinstance(argument, base_objects.ProcessDefinitionList):
+            super(MultiProcess, self).__init__()
+            self['process_definitions'] = argument
+            self.get('amplitudes')
+        elif argument != None:
+            # call the mother routine
+            super(MultiProcess, self).__init__(argument)
+        else:
+            # call the mother routine
+            super(MultiProcess, self).__init__()
 
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -652,8 +671,14 @@ class MultiProcess(base_objects.PhysicsObject):
 
         if (name == 'amplitudes') and not self[name]:
             for process_def in self.get('process_definitions'):
-                self['amplitudes'].extend(\
-                    MultiProcess.generate_multi_amplitudes(process_def))
+                if process_def.get('decay_chains'):
+                    # This is a decay chain process
+                    # Store amplitude(s) as DecayChainAmplitude
+                    self['amplitudes'].append(\
+                        DecayChainAmplitude(process_def))
+                else:
+                    self['amplitudes'].extend(\
+                        MultiProcess.generate_multi_amplitudes(process_def))
 
         return MultiProcess.__bases__[0].get(self, name) # call the mother routine
 

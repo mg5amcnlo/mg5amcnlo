@@ -527,20 +527,19 @@ class MadGraphCmd(cmd.Cmd):
 
 
 
-            myprocdef = base_objects.ProcessDefinitionList([\
+            myprocdef = \
                 base_objects.ProcessDefinition({'legs': myleglist,
-                                                'model': self.__curr_model,
-                                                'id': proc_number,
-                                                'orders': orders,
-                                                'forbidden_particles': forbidden_particle_ids,
-                                                'forbidden_s_channels': forbidden_schannel_ids,
-                                                'required_s_channels': required_schannel_ids,
-                                                'is_decay_chain': decay_process\
-                                                })])
-            myproc = diagram_generation.MultiProcess({'process_definitions':\
-                                                      myprocdef})
-
+                                'model': self.__curr_model,
+                                'id': proc_number,
+                                'orders': orders,
+                                'forbidden_particles': forbidden_particle_ids,
+                                'forbidden_s_channels': forbidden_schannel_ids,
+                                'required_s_channels': required_schannel_ids,
+                                'is_decay_chain': decay_process\
+                                 })
             cpu_time1 = time.time()
+
+            myproc = diagram_generation.MultiProcess(myprocdef)
 
             self.__curr_amps = myproc.get('amplitudes')
 
