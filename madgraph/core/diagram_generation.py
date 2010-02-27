@@ -566,6 +566,11 @@ class DecayChainAmplitude(Amplitude):
                 MultiProcess.generate_multi_amplitudes(argument))
             else:
                 self['amplitudes'].append(Amplitude(argument))
+                # Clean decay chains from process, since we haven't
+                # combined processes with decay chains yet
+                process = copy.copy(self['amplitudes'][0].get('process'))
+                process.set('decay_chains', base_objects.ProcessList())
+                self['amplitudes'][0].set('process', process)
             for process in argument.get('decay_chains'):
                 if not process.get('is_decay_chain'):
                     process.set('is_decay_chain',True)

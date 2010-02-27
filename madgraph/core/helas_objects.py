@@ -92,6 +92,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # state = initial/final (for external bosons),
         #         intermediate (for intermediate bosons),
         #         incoming/outgoing (for fermions)
+        # leg_state = initial/final for initial/final legs
+        #             intermediate for non-external wavefunctions
         # number_external = the 'number' property of the corresponding Leg,
         #                   corresponds to the number of the first external
         #                   particle contributing to this leg
@@ -99,6 +101,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         #                    -1 is used only if there is a fermion flow clash
         #                    due to a Majorana particle 
         self['state'] = 'incoming'
+        self['leg_state'] = 'initial'
         self['mothers'] = HelasWavefunctionList()
         self['number_external'] = 0
         self['number'] = 0
@@ -129,6 +132,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 self.set('number_external', leg.get('number'))
                 self.set('number', leg.get('number'))
                 self.set('state', leg.get('state'))
+                self.set('leg_state', leg.get('state'))
                 # Need to set 'decay' to True for particles which will be
                 # decayed later, in order to not combine such processes
                 # although they might have identical matrix elements before
@@ -423,6 +427,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
             raise self.PhysicsObjectError, \
                   "%s is not a valid model for call to set_state_and_particle" \
                   % repr(model)
+        # Set leg_state to 'intermediate'
+        self.set('leg_state', 'intermediate')
+
         # Start by setting the state of the wavefunction
         if self.is_boson():
             # For boson, set state to intermediate
@@ -1653,7 +1660,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         for process in self.get('processes'):
             process.get('decay_chains').append( \
                 decay_element.get('processes')[0])
-
+            
         # Pick out wavefunctions and amplitudes
         wavefunctions = sum([diagram.get('wavefunctions') for \
                              diagram in self['diagrams']],[])
@@ -1966,6 +1973,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         return sum([ len(d.get('wavefunctions')) for d in \
                        self.get('diagrams')])
 
+    def get_all_wavefunctions(self):
+        """Gives the total number of wavefunctions for this ME"""
+
+        return sum([d.get('wavefunctions') for d in \
+                       self.get('diagrams')],[])
+
     def get_number_of_amplitudes(self):
         """Gives the total number of amplitudes for this ME"""
 
@@ -1975,6 +1988,16 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     def get_nexternal_ninitial(self):
         """Gives (number or external particles, number of
         incoming particles)"""
+
+        external_wfs = filter(lambda wf: wf.get('leg_state') != \
+                              'intermediate',
+                              self.get_all_wavefunctions())
+
+        return (len(set([wf.get('number_external') for wf in \
+                         external_wfs])),
+                len(set([wf.get('number_external') for wf in \
+                         filter(lambda wf: wf.get('leg_state') == 'initial',
+                                external_wfs)])))
 
         return (len(self.get('processes')[0].get('legs')),
                 self.get('processes')[0].get_ninitial())

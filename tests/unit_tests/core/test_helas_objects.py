@@ -2218,6 +2218,169 @@ class HelasMultiProcessTest(unittest.TestCase):
                 self.assertEqual(me.get('identical_particle_factor'),
                                  iden_factors[i])
 
+            for i, amp in enumerate(sum([\
+                   diag.get('amplitudes') for diag in \
+                   me.get('diagrams')],[])):
+                self.assertEqual(amp.get('number'), i + 1)
+                    
+            for i, wf in enumerate(sum([\
+                   diag.get('wavefunctions') for diag in \
+                   me.get('diagrams')],[])):
+                self.assertEqual(wf.get('number'), i + 1)
+
+    def test_multistage_decay_chain_process(self):
+        """Test a multistage decay chain g g > d d~, d > g d, g > u u~ g
+        """
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':'final'}))
+
+        mycoreproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        me_core =  helas_objects.HelasMatrixElement(\
+            diagram_generation.Amplitude(mycoreproc))
+
+        print me_core.get('processes')[0].nice_string()
+        print 'Diagrams: ',len(me_core.get('diagrams'))
+        for diag in me_core.get('diagrams'):
+            print 'Diagram ',diag.get('number')
+            print "Wavefunctions: ", len(diag.get('wavefunctions'))
+            for wf in diag.get('wavefunctions'):
+                print wf.get('number'), wf.get('number_external'), wf.get('pdg_code'), [mother.get('number') for mother in wf.get('mothers')]
+            print "Amplitudes: ", len(diag.get('amplitudes'))
+            for amp in diag.get('amplitudes'):
+                print amp.get('number'), [mother.get('number') for mother in amp.get('mothers')]
+        
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':'final'}))
+
+        mydecay11 = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        me11 =  helas_objects.HelasMatrixElement(\
+            diagram_generation.Amplitude(mydecay11))
+
+        print me11.get('processes')[0].nice_string()
+        print 'Diagrams: ',len(me11.get('diagrams'))
+        for diag in me11.get('diagrams'):
+            print 'Diagram ',diag.get('number')
+            print "Wavefunctions: ", len(diag.get('wavefunctions'))
+            for wf in diag.get('wavefunctions'):
+                print wf.get('number'), wf.get('number_external'), wf.get('pdg_code'), [mother.get('number') for mother in wf.get('mothers')]
+            print "Amplitudes: ", len(diag.get('amplitudes'))
+            for amp in diag.get('amplitudes'):
+                print amp.get('number'), [mother.get('number') for mother in amp.get('mothers')]
+        
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':'final'}))
+
+        mydecay12 = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        me12 =  helas_objects.HelasMatrixElement(\
+            diagram_generation.Amplitude(mydecay12))
+
+        print me12.get('processes')[0].nice_string()
+        print 'Diagrams: ',len(me12.get('diagrams'))
+        for diag in me12.get('diagrams'):
+            print 'Diagram ',diag.get('number')
+            print "Wavefunctions: ", len(diag.get('wavefunctions'))
+            for wf in diag.get('wavefunctions'):
+                print wf.get('number'), wf.get('number_external'), wf.get('pdg_code'), [mother.get('number') for mother in wf.get('mothers')]
+            print "Amplitudes: ", len(diag.get('amplitudes'))
+            for amp in diag.get('amplitudes'):
+                print amp.get('number'), [mother.get('number') for mother in amp.get('mothers')]
+        
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+
+        mydecay2 = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        me2 =  helas_objects.HelasMatrixElement(\
+            diagram_generation.Amplitude(mydecay2))
+
+        print me2.get('processes')[0].nice_string()
+        print 'Diagrams: ',len(me2.get('diagrams'))
+        for diag in me2.get('diagrams'):
+            print 'Diagram ',diag.get('number')
+            print "Wavefunctions: ", len(diag.get('wavefunctions'))
+            for wf in diag.get('wavefunctions'):
+                print wf.get('number'), wf.get('number_external'), wf.get('pdg_code'), [mother.get('number') for mother in wf.get('mothers')]
+            print "Amplitudes: ", len(diag.get('amplitudes'))
+            for amp in diag.get('amplitudes'):
+                print amp.get('number'), [mother.get('number') for mother in amp.get('mothers')]
+        
+        mydecay11.set('decay_chains', base_objects.ProcessList([mydecay2]))
+        mydecay12.set('decay_chains', base_objects.ProcessList([mydecay2]))
+
+        mycoreproc.set('decay_chains', base_objects.ProcessList([\
+            mydecay11, mydecay12]))
+
+        myamplitude = diagram_generation.DecayChainAmplitude(mycoreproc)
+
+        matrix_element = helas_objects.HelasDecayChainProcess(myamplitude)
+
+        matrix_elements = matrix_element.combine_decay_chain_processes()
+
+        print matrix_elements[0].get('processes')[0].nice_string()
+        print matrix_elements[0].get('identical_particle_factor')
+
+        for diag in matrix_elements[0].get('diagrams'):
+            print 'Diagram ',diag.get('number')
+            print "Wavefunctions: ", len(diag.get('wavefunctions'))
+            for wf in diag.get('wavefunctions'):
+                print wf.get('number'), wf.get('number_external'), wf.get('pdg_code'), [mother.get('number') for mother in wf.get('mothers')]
+            print "Amplitudes: ", len(diag.get('amplitudes'))
+            for amp in diag.get('amplitudes'):
+                print amp.get('number'), [mother.get('number') for mother in amp.get('mothers')]
+
+        self.assertEqual(matrix_elements[0].get_number_of_amplitudes(),
+                         me_core.get_number_of_amplitudes() * \
+                         me11.get_number_of_amplitudes() * \
+                         me12.get_number_of_amplitudes() * \
+                         me2.get_number_of_amplitudes() ** 2)
+
+        self.assertEqual(matrix_elements[0].get('identical_particle_factor'),
+                         1)
+
+        for i, amp in enumerate(sum([diag.get('amplitudes') for diag in \
+                                    matrix_elements[0].get('diagrams')],[])):
+            self.assertEqual(amp.get('number'), i + 1)
+
+        for i, wf in enumerate(sum([diag.get('wavefunctions') for diag in \
+                                   matrix_elements[0].get('diagrams')],[])):
+            self.assertEqual(wf.get('number'), i + 1)
+
     def test_equal_decay_chains(self):
         """Test the functions for checking equal decay chains
         """
