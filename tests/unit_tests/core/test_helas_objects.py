@@ -391,19 +391,6 @@ class HelasDiagramTest(unittest.TestCase):
                        'amplitudes': self.myamplitude}
         self.mydiagram = helas_objects.HelasDiagram(self.mydict)
 
-    def test_setget_diagram_correct(self):
-        "Test correct HelasDiagram object __init__, get and set"
-
-        mydiagram2 = helas_objects.HelasDiagram()
-
-        for prop in self.mydict.keys():
-            mydiagram2.set(prop, self.mydict[prop])
-
-        self.assertEqual(self.mydiagram, mydiagram2)
-
-        for prop in self.mydiagram.keys():
-            self.assertEqual(self.mydiagram.get(prop), self.mydict[prop])
-
     def test_setget_diagram_exceptions(self):
         "Test error raising in HelasDiagram __init__, get and set"
 
@@ -1399,10 +1386,12 @@ class HelasMatrixElementTest(unittest.TestCase):
         amplitude2[0].set('interaction_id', 4, self.mymodel)
 
         diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
-                                               'amplitudes': amplitude1})
+                                               'amplitudes': amplitude1,
+                                               'number': 1})
 
         diagram2 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions2,
-                                               'amplitudes': amplitude2})
+                                               'amplitudes': amplitude2,
+                                               'number': 2})
 
         diagrams = helas_objects.HelasDiagramList([diagram1, diagram2])
 
@@ -1518,10 +1507,12 @@ class HelasMatrixElementTest(unittest.TestCase):
         amplitude2[0].set('interaction_id', 4, self.mymodel)
 
         diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
-                                               'amplitudes': amplitude1})
+                                               'amplitudes': amplitude1,
+                                               'number': 1})
 
         diagram2 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions2,
-                                               'amplitudes': amplitude2})
+                                               'amplitudes': amplitude2,
+                                               'number': 2})
 
         diagrams = helas_objects.HelasDiagramList([diagram1, diagram2])
 
@@ -1590,7 +1581,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         amplitude1[0].set('interaction_id', 7, self.mymodel)
 
         diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
-                                               'amplitudes': amplitude1})
+                                               'amplitudes': amplitude1,
+                                               'number': 1})
 
         wavefunctions2 = helas_objects.HelasWavefunctionList()
 
@@ -1616,7 +1608,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         amplitude2[0].set('interaction_id', 7, self.mymodel)
 
         diagram2 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions2,
-                                               'amplitudes': amplitude2})
+                                               'amplitudes': amplitude2,
+                                               'number': 2})
 
         mydiagrams = helas_objects.HelasDiagramList([diagram1, diagram2])
 
@@ -1683,7 +1676,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         amplitude1[0].set('interaction_id', 7, self.mymodel)
 
         diagram1 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions1,
-                                               'amplitudes': amplitude1})
+                                               'amplitudes': amplitude1,
+                                               'number': 1})
 
         wavefunctions2 = helas_objects.HelasWavefunctionList()
 
@@ -1709,7 +1703,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         amplitude2[0].set('interaction_id', 7, self.mymodel)
 
         diagram2 = helas_objects.HelasDiagram({'wavefunctions': wavefunctions2,
-                                               'amplitudes': amplitude2})
+                                               'amplitudes': amplitude2,
+                                               'number': 2})
         mydiagrams = helas_objects.HelasDiagramList([diagram1, diagram2])
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
@@ -2169,12 +2164,14 @@ class HelasMultiProcessTest(unittest.TestCase):
         
         my_multi_leglist[0].set('state', 'initial')
         my_multi_leglist[1].set('state', 'initial')
+        my_multi_leglist[0].set('ids', [21])
+        my_multi_leglist[1].set('ids', [21])
         
         my_process_definition = base_objects.ProcessDefinition({\
                                      'legs':my_multi_leglist,
                                      'model':self.mymodel})
-        my_multi_leg = base_objects.MultiLeg({'ids': [1, -1, 21],
-                                                      'state': 'final'});
+        #my_multi_leg = base_objects.MultiLeg({'ids': [1, -1, 21],
+        #                                              'state': 'final'});
         my_decay_leglist = base_objects.MultiLegList([copy.copy(leg) \
                                           for leg in [my_multi_leg] * 4])
         my_decay_leglist[0].set('state', 'initial')
@@ -2201,11 +2198,25 @@ class HelasMultiProcessTest(unittest.TestCase):
 
         matrix_elements = my_dc_process.combine_decay_chain_processes()
 
-        for me in matrix_elements:
-            for process in me.get('processes'):
-                print process.nice_string()
-            print me.get('processes')[0].shell_string() + "\n"
-                                             
+        self.assertEqual(len(matrix_elements), 16)
+
+        num_processes = [2, 1, 2, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1]
+        num_wfs = [21, 18, 24, 18, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27]
+        num_amps = [12, 6, 18, 6, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27]
+        iden_factors = [4, 2, 4, 2, 1, 2, 4, 2, 4, 1, 2, 2, 2, 2, 6, 72]
+
+        for i, me in enumerate(matrix_elements):
+            self.assertEqual(len(me.get('processes')), num_processes[i])
+            if num_amps[i] > 0:
+                self.assertEqual(me.get_number_of_amplitudes(),
+                                 num_amps[i])
+            if num_wfs[i] > 0:
+                self.assertEqual(me.get_number_of_wavefunctions(),
+                                 num_wfs[i])
+
+            if iden_factors[i] > 0:
+                self.assertEqual(me.get('identical_particle_factor'),
+                                 iden_factors[i])
 
     def test_equal_decay_chains(self):
         """Test the functions for checking equal decay chains

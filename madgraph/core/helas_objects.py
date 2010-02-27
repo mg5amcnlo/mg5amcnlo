@@ -1195,6 +1195,7 @@ class HelasDiagram(base_objects.PhysicsObject):
         # different Lorentz or color structures associated with this
         # diagram
         self['amplitudes'] = HelasAmplitudeList()
+        self['number'] = 0
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
@@ -1413,8 +1414,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         helas_diagrams = HelasDiagramList()
 
-        # Keep track of amplitude number
+        # Keep track of amplitude number and diagram number
         amplitude_number = 0
+        diagram_number = 0
 
         for diagram in diagram_list:
 
@@ -1541,6 +1543,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # Generate all amplitudes corresponding to the different
             # copies of this diagram
             helas_diagram = HelasDiagram()
+            diagram_number = diagram_number + 1
+            helas_diagram.set('number', diagram_number)
             for number_wf_dict, color_list in zip(number_to_wavefunctions,
                                                   color_lists):
                 # Find mothers for the amplitude
@@ -1691,6 +1695,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # wfs that have it as mother, and all their wfs, and
             # finally multiply all amplitudes
 
+            # Pick out the diagrams which contain old_wf
             diagrams = filter(lambda diag: old_wf.get('number') in \
                          [wf.get('number') for wf in diag.get('wavefunctions')],
                          self.get('diagrams'))
@@ -1727,7 +1732,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 i = i + 1
             # Renumber the old wavefunctions above the replaced one
             i = i - len(new_final_wfs)
-            for wf in wavefunctions[wavefunctions.index(old_wf):]:
+            old_wf_index = [wf.get('number') for wf in \
+                     wavefunctions].index(old_wf.get('number'))
+            for wf in wavefunctions[old_wf_index:]:
                 wf.set('number', i)
                 # Increase external wavefunction number appropriately
                 if wf.get('number_external') > old_wf.get('number_external'):
@@ -1738,12 +1745,14 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # Insert the new wavefunctions, excluding the final ones
             # (which are used to replace the existing final state wfs)
             # into wavefunctions and diagram
-            wavefunctions = wavefunctions[0:wavefunctions.index(old_wf)] + \
-                            new_wfs + wavefunctions[wavefunctions.index(old_wf):]
+            wavefunctions = wavefunctions[0:old_wf_index] + \
+                            new_wfs + wavefunctions[old_wf_index:]
             for diagram in diagrams:
                 diagram_wfs = diagram.get('wavefunctions')
-                diagram_wfs = diagram_wfs[0:diagram_wfs.index(old_wf)] + \
-                              new_wfs + diagram_wfs[diagram_wfs.index(old_wf):]
+                old_wf_index = [wf.get('number') for wf in \
+                         diagram_wfs].index(old_wf.get('number'))
+                diagram_wfs = diagram_wfs[0:old_wf_index] + \
+                              new_wfs + diagram_wfs[old_wf_index:]
             
                 diagram.set('wavefunctions', HelasWavefunctionList(diagram_wfs))
             
@@ -1779,9 +1788,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         # Update diagram wavefunctions
         for diagram in diagrams:
+            old_wf_index = [wf.get('number') for wf in \
+                     diagram.get('wavefunctions')].index(old_wf.get('number'))
             diagram_wfs = diagram.get('wavefunctions')
-            diagram_wfs = diagram_wfs[:old_wf.get('number')-1] + \
-                          new_wfs + diagram_wfs[old_wf.get('number'):]
+            diagram_wfs = diagram_wfs[:old_wf_index] + \
+                          new_wfs + diagram_wfs[old_wf_index + 1:]
             diagram.set('wavefunctions', HelasWavefunctionList(diagram_wfs))
         
         # Find amplitudes which are daughters of old_wf
@@ -1797,10 +1808,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # Replace the old mother with the new ones
             for i, (daughter, new_wf) in enumerate(zip(new_amps, new_wfs)):
                 mothers = copy.copy(daughter.get('mothers'))
-                index = [wf.get('number') for wf in mothers].index(\
+                old_wf_index = [wf.get('number') for wf in mothers].index(\
                     old_wf.get('number'))
                 # Update mother
-                mothers[index] = new_wf
+                mothers[old_wf_index] = new_wf
                 daughter.set('mothers', mothers)
                 # Update amp numbers for replaced amp
                 daughter.set('number', old_amp.get('number') + i)
@@ -2592,10 +2603,11 @@ class HelasModel(base_objects.PhysicsObject):
                   repr(matrix_element)
 
         res = []
-        for n, diagram in enumerate(matrix_element.get('diagrams')):
+        for diagram in matrix_element.get('diagrams'):
             res.extend([ self.get_wavefunction_call(wf) for \
                          wf in diagram.get('wavefunctions') ])
-            res.append("# Amplitude(s) for diagram number %d" % (n + 1))
+            res.append("# Amplitude(s) for diagram number %d" % \
+                       diagram.get('number'))
             for amplitude in diagram.get('amplitudes'):
                 res.append(self.get_amplitude_call(amplitude))
 
