@@ -63,19 +63,6 @@ class HelasWavefunctionTest(unittest.TestCase):
 
         self.mywavefunction = helas_objects.HelasWavefunction(self.mydict)
 
-    def test_setget_wavefunction_correct(self):
-        "Test correct HelasWavefunction object __init__, get and set"
-
-        mywavefunction2 = helas_objects.HelasWavefunction()
-
-        for prop in self.mydict.keys():
-            mywavefunction2.set(prop, self.mydict[prop])
-
-        self.assertEqual(self.mywavefunction, mywavefunction2)
-
-        for prop in self.mywavefunction.keys():
-            self.assertEqual(self.mywavefunction.get(prop), self.mydict[prop])
-
     def test_setget_wavefunction_exceptions(self):
         "Test error raising in HelasWavefunction __init__, get and set"
 
@@ -1951,7 +1938,7 @@ class HelasDecayChainProcessTest(unittest.TestCase):
         my_dc_process = helas_objects.HelasDecayChainProcess(\
                                        my_decay_chain_amps)
 
-        self.assertEqual(len(my_dc_process.get('core_processes')), 35)
+        self.assertEqual(len(my_dc_process.get('core_processes')), 33)
         self.assertEqual(len(my_dc_process.get('decay_chains')), 1)
         self.assertEqual(len(my_dc_process.get('decay_chains')[0].\
                              get('core_processes')), 15)
@@ -2169,7 +2156,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                 self.assertEqual(len(helas_multi_proc.get('matrix_elements')),
                                      goal_number_matrix_elements[nfs - 2])
 
-    def test_helas_decay_chain_process(self):
+    def test_complete_decay_chain_process(self):
         """Test a complete decay chain process pp > jj, j > jj
         """
 
@@ -2186,16 +2173,25 @@ class HelasMultiProcessTest(unittest.TestCase):
         my_process_definition = base_objects.ProcessDefinition({\
                                      'legs':my_multi_leglist,
                                      'model':self.mymodel})
+        my_multi_leg = base_objects.MultiLeg({'ids': [1, -1, 21],
+                                                      'state': 'final'});
         my_decay_leglist = base_objects.MultiLegList([copy.copy(leg) \
                                           for leg in [my_multi_leg] * 4])
         my_decay_leglist[0].set('state', 'initial')
-        my_decay_processes = base_objects.ProcessDefinition({\
+        my_multi_leg2 = base_objects.MultiLeg({'ids': [21], 'state': 'final'});
+        my_decay_leglist2 = base_objects.MultiLegList([copy.copy(leg) \
+                                          for leg in [my_multi_leg2] * 4])
+        my_decay_leglist2[0].set('state', 'initial')
+        my_decay_processes = base_objects.ProcessDefinitionList(\
+            [base_objects.ProcessDefinition({\
                                'legs':my_decay_leglist,
-                               'model':self.mymodel})
+                               'model':self.mymodel}),
+             base_objects.ProcessDefinition({\
+                               'legs':my_decay_leglist2,
+                               'model':self.mymodel})])
 
         my_process_definition.set('decay_chains',
-                                  base_objects.ProcessDefinitionList(\
-                                    [my_decay_processes]))
+                                  my_decay_processes)
 
         my_decay_chain_amps = diagram_generation.DecayChainAmplitude(\
                                                    my_process_definition)
@@ -2203,6 +2199,13 @@ class HelasMultiProcessTest(unittest.TestCase):
         my_dc_process = helas_objects.HelasDecayChainProcess(\
                                        my_decay_chain_amps)
 
+        matrix_elements = my_dc_process.combine_decay_chain_processes()
+
+        for me in matrix_elements:
+            for process in me.get('processes'):
+                print process.nice_string()
+            print me.get('processes')[0].shell_string() + "\n"
+                                             
 
     def test_equal_decay_chains(self):
         """Test the functions for checking equal decay chains
@@ -2256,7 +2259,7 @@ class HelasMultiProcessTest(unittest.TestCase):
         mymatrixelement2 = helas_objects.HelasMatrixElement(\
             myamplitude2)
 
-        self.assert_(helas_objects.HelasMultiProcess.\
+        self.assert_(helas_objects.HelasMatrixElement.\
                      check_equal_decay_processes(\
                        mymatrixelement1, mymatrixelement2))
 

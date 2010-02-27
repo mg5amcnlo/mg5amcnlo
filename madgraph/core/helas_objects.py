@@ -103,6 +103,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['number_external'] = 0
         self['number'] = 0
         self['fermionflow'] = 1
+        # The decay flag is used in processes with defined decay chains,
+        # to indicate that this wavefunction has a decay defined
+        self['decay'] = False
 
     # Customized constructor
     def __init__(self, *arguments):
@@ -117,10 +120,22 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 leg = arguments[0]
                 interaction_id = arguments[1]
                 model = arguments[2]
+                # decay_ids is the pdg codes for particles with decay
+                # chains defined
+                decay_ids = []
+                if len(arguments) > 3:
+                    decay_ids = arguments[3]
                 self.set('pdg_code', leg.get('id'), model)
                 self.set('number_external', leg.get('number'))
                 self.set('number', leg.get('number'))
                 self.set('state', leg.get('state'))
+                # Need to set 'decay' to True for particles which will be
+                # decayed later, in order to not combine such processes
+                # although they might have identical matrix elements before
+                # the decay is applied
+                if self['state'] == 'final' and self['pdg_code'] in decay_ids:
+                    self.set('decay', True)
+
                 # Set fermion flow state. Initial particle and final
                 # antiparticle are incoming, and vice versa for
                 # outgoing
@@ -741,7 +756,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
            self['color'] != other['color'] or \
            self['lorentz'] != other['lorentz'] or \
            self['coupling'] != other['coupling'] or \
-           self['state'] != other['state']:
+           self['state'] != other['state'] or \
+           self['decay'] != other['decay'] or \
+           self['decay'] and self['pdg_code'] != other['pdg_code']:
             return False
 
         # Check that mothers have the same numbers (only relevant info)
@@ -1273,10 +1290,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['processes', 'diagrams', 'color_basis', 'color_matrix']
+        return ['processes', 'identical_particle_factor',
+                'diagrams', 'color_basis', 'color_matrix']
 
     # Customized constructor
-    def __init__(self, amplitude=None, optimization=1, gen_color=True):
+    def __init__(self, amplitude=None, optimization=1,
+                 decay_ids = [], gen_color=True):
         """Constructor for the HelasMatrixElement. In particular allows
         generating a HelasMatrixElement from an Amplitude, with
         automatic generation of the necessary wavefunctions
@@ -1286,7 +1305,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             if isinstance(amplitude, diagram_generation.Amplitude):
                 super(HelasMatrixElement, self).__init__()
                 self.get('processes').append(amplitude.get('process'))
-                self.generate_helas_diagrams(amplitude, optimization)
+                self.generate_helas_diagrams(amplitude, optimization, decay_ids)
                 self.calculate_fermionfactors()
                 self.calculate_identical_particle_factors()
                 if gen_color:
@@ -1310,12 +1329,20 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         if not isinstance(other, HelasMatrixElement):
             return False
 
+        # If no processes, this is an empty matrix element
+        if not self['processes'] and not other['processes']:
+            return True
+
         # Should only check if diagrams and process id are identical
+        # Except in case of decay processes: then also initial state
+        # must be the same
         if self['processes'] and not other['processes'] or \
                self['processes'] and \
                self['processes'][0]['id'] != other['processes'][0]['id'] or \
+               self['processes'][0]['is_decay_chain'] or \
+               other['processes'][0]['is_decay_chain'] or \
                self['identical_particle_factor'] != \
-               other['identical_particle_factor'] or \
+                           other['identical_particle_factor'] or \
                self['diagrams'] != other['diagrams']:
             return False
 
@@ -1325,7 +1352,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Overloading the nonequality operator, to make comparison easy"""
         return not self.__eq__(other)
 
-    def generate_helas_diagrams(self, amplitude, optimization=1):
+    def generate_helas_diagrams(self, amplitude, optimization = 1,
+                                decay_ids = []):
         """Starting from a list of Diagrams from the diagram
         generation, generate the corresponding HelasDiagrams, i.e.,
         the wave functions and amplitudes. Choose between default
@@ -1350,6 +1378,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         diagram_list = amplitude.get('diagrams')
         process = amplitude.get('process')
+
         model = process.get('model')
         if not diagram_list:
             return
@@ -1364,8 +1393,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         # Generate wavefunctions for the external particles
         external_wavefunctions = dict([(leg.get('number'),
-                                        HelasWavefunction(leg, 0, model)) \
+                                        HelasWavefunction(leg, 0, model,
+                                                          decay_ids)) \
                                        for leg in process.get('legs')])
+               
         # Initially, have one wavefunction for each external leg.
         wf_number = len(process.get('legs'))
 
@@ -1575,6 +1606,299 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         self.set('diagrams', helas_diagrams)
 
+    def insert_decay_chains(self, decay_dict):
+        """Insert the decay chains decays into this matrix element,
+        using the recursive function insert_decay
+        """
+        
+        # We need to keep track of how the
+        # wavefunction numbers change
+        replace_dict = dict([(number,number) for number in \
+                             decay_dict.keys()])
+
+        # Iteratively replace all legs that have decays
+        for number in decay_dict.keys():
+            
+            self.insert_decay(number,
+                              decay_dict[number],
+                              replace_dict)
+            
+            # Calculate identical particle factors for
+            # this matrix element
+            self.identical_decay_chain_factor(decay_dict.values())
+
+        
+    def insert_decay(self, wf_number, decay, replace_dict):
+        """Insert a decay chain wavefunction into the matrix element.
+        Note that:
+        1) All wavefunction numbers must be shifted
+        2) All amplitudes and all wavefunctions using the decaying wf
+           must be copied as many times as there are diagrams in the
+           decay matrix element
+        3) In the presence of Majorana particles, we must make sure
+           to flip fermion flow for the decay process if needed.
+        """
+        
+        decay_element = copy.deepcopy(decay)
+        # Avoid Python copying the complete model
+        # every time using deepcopy
+        decay_element.get('processes')[0].set('model', \
+                                decay.get('processes')[0].get('model'))
+        
+        # Insert the decay process in the process
+        for process in self.get('processes'):
+            process.get('decay_chains').append( \
+                decay_element.get('processes')[0])
+
+        # Pick out wavefunctions and amplitudes
+        wavefunctions = sum([diagram.get('wavefunctions') for \
+                             diagram in self['diagrams']],[])
+        amplitudes = sum([diagram.get('amplitudes') for \
+                          diagram in self['diagrams']],[])
+
+        # Keep track of the numbers for the wavefunctions we will need
+        # to replace later by simply keeping track of the
+        # wavefunctions in question
+        replace_wf_dict = dict([(number,
+                            filter(lambda wf: wf.get('number') \
+                                        == replace_dict[number],
+                                        wavefunctions)[0]) for number in \
+                                replace_dict.keys()])
+
+        # Create a list of all the wavefunctions in the decay
+        decay_wfs = sum([diagram.get('wavefunctions') for \
+                         diagram in decay_element.get('diagrams')],[])
+        # Remove the unwanted initial state wavefunction
+        decay_wfs.remove(filter(lambda wf: \
+                                wf.get('number_external') == 1,
+                                decay_wfs)[0])
+        
+        # The wavefunctions which will replace the present wfs are
+        # the second mother in the decay_chain amplitudes
+        final_wfs = [amp.get('mothers')[1] for amp in \
+                    sum([diagram.get('amplitudes') for \
+                         diagram in decay_element.get('diagrams')],[])]
+
+        # Find the external wfs to be replaced. There should only be
+        # one, unless we have multiple fermion flows in the process
+        replace_wfs = filter(lambda wf: not wf.get('mothers') and \
+                             wf.get('number') == \
+                             replace_dict[wf_number],
+                             wavefunctions)
+        
+        for old_wf in replace_wfs:
+            # We need to replace and multiply this wf, as well as all
+            # wfs that have it as mother, and all their wfs, and
+            # finally multiply all amplitudes
+
+            diagrams = filter(lambda diag: old_wf.get('number') in \
+                         [wf.get('number') for wf in diag.get('wavefunctions')],
+                         self.get('diagrams'))
+
+            new_wfs = copy.copy(decay_wfs)
+            # NEED TO INCLUDE CHECK FOR FERMION FLOW DIRECTION HERE!
+
+            # Pick out the final wavefunctions in the decay chain,
+            # which are going to replace the existing final state
+            # wavefunction old_wf
+            new_final_wfs = filter(lambda wf: wf in final_wfs, new_wfs)
+
+            # new_final_wfs will be inserted by replace_wavefunctions,
+            # so remove from new_wfs
+            for wf in new_final_wfs:
+                new_wfs.remove(wf)
+
+            # External wavefunction offset for new wfs
+            incr_new = old_wf.get('number_external') - \
+                       new_wfs[0].get('number_external')
+            # External wavefunction offset for old wfs
+            incr_old = \
+                     len(decay_element.get('processes')[0].get('legs')) - 2
+            # Renumber the new wavefunctions
+            i = old_wf.get('number')
+            for wf in new_wfs:
+                wf.set('number', i)
+                wf.set('number_external', wf.get('number_external') + incr_new)
+                i = i + 1
+            for wf in new_final_wfs:
+                wf.set('number', i)
+                wf.set('number_external',
+                       wf.get('number_external') + incr_new)
+                i = i + 1
+            # Renumber the old wavefunctions above the replaced one
+            i = i - len(new_final_wfs)
+            for wf in wavefunctions[wavefunctions.index(old_wf):]:
+                wf.set('number', i)
+                # Increase external wavefunction number appropriately
+                if wf.get('number_external') > old_wf.get('number_external'):
+                    wf.set('number_external', wf.get('number_external') + \
+                           incr_old)
+                i = i + 1
+
+            # Insert the new wavefunctions, excluding the final ones
+            # (which are used to replace the existing final state wfs)
+            # into wavefunctions and diagram
+            wavefunctions = wavefunctions[0:wavefunctions.index(old_wf)] + \
+                            new_wfs + wavefunctions[wavefunctions.index(old_wf):]
+            for diagram in diagrams:
+                diagram_wfs = diagram.get('wavefunctions')
+                diagram_wfs = diagram_wfs[0:diagram_wfs.index(old_wf)] + \
+                              new_wfs + diagram_wfs[diagram_wfs.index(old_wf):]
+            
+                diagram.set('wavefunctions', HelasWavefunctionList(diagram_wfs))
+            
+            # Multiply wavefunctions and insert mothers using a
+            # recursive function
+            self.replace_wavefunctions(old_wf,
+                                       new_final_wfs,
+                                       wavefunctions,
+                                       amplitudes)
+
+            # Update replace_dict
+            for key in replace_dict.keys():
+                replace_dict[key] = replace_wf_dict[key].get('number')
+
+
+    def replace_wavefunctions(self, old_wf, new_wfs, wavefunctions, amplitudes):
+        """Recursive function to replace old_wf with new_wfs, and multiply
+        all wavefunctions or amplitudes that use old_wf."""
+
+        # Update wavefunction numbers
+        # Here we know that the wf number corresponds to the list order
+        for wf in wavefunctions[old_wf.get('number'):]:
+            wf.set('number', wf.get('number') + len(new_wfs) - 1)
+
+        # Insert the new wavefunctions into wavefunctions and diagrams
+        wavefunctions = wavefunctions[0:old_wf.get('number')-1] + \
+                        new_wfs + wavefunctions[old_wf.get('number'):]
+
+        # Pick out the diagrams which has the old_wf
+        diagrams = filter(lambda diag: old_wf.get('number') in \
+                         [wf.get('number') for wf in diag.get('wavefunctions')],
+                         self.get('diagrams'))
+
+        # Update diagram wavefunctions
+        for diagram in diagrams:
+            diagram_wfs = diagram.get('wavefunctions')
+            diagram_wfs = diagram_wfs[:old_wf.get('number')-1] + \
+                          new_wfs + diagram_wfs[old_wf.get('number'):]
+            diagram.set('wavefunctions', HelasWavefunctionList(diagram_wfs))
+        
+        # Find amplitudes which are daughters of old_wf
+        daughter_amps = filter(lambda amp: old_wf.get('number') in \
+                                [wf.get('number') for wf in amp.get('mothers')],
+                               amplitudes)
+        # Create new copies, to insert the new wfs instead
+        new_daughter_amps = [ [ amp ] * len(new_wfs) for amp in daughter_amps]
+        new_daughter_amps = [ [ copy.copy(amp) for amp in amp_list] \
+                              for amp_list in new_daughter_amps ]
+
+        for old_amp, new_amps in zip(daughter_amps, new_daughter_amps):
+            # Replace the old mother with the new ones
+            for i, (daughter, new_wf) in enumerate(zip(new_amps, new_wfs)):
+                mothers = copy.copy(daughter.get('mothers'))
+                index = [wf.get('number') for wf in mothers].index(\
+                    old_wf.get('number'))
+                # Update mother
+                mothers[index] = new_wf
+                daughter.set('mothers', mothers)
+                # Update amp numbers for replaced amp
+                daughter.set('number', old_amp.get('number') + i)
+                
+            # Update amplitudes numbers for all other amplitudes
+            for amp in amplitudes[amplitudes.index(old_amp) + 1:]:
+                amp.set('number', amp.get('number') + len(new_wfs) - 1)
+
+            # Insert the new amplitudes into amplitudes and diagrams
+            amplitudes = amplitudes[0:amplitudes.index(old_amp)] + \
+                         new_amps + amplitudes[amplitudes.index(old_amp) + 1:]
+
+            # For now, keep old diagrams and just multiply the
+            # amplitudes. This should be changed.
+            diagrams = filter(lambda diag: old_amp in diag.get('amplitudes'),
+                              self.get('diagrams'))
+            for diagram in diagrams:
+                diagram_amps = diagram.get('amplitudes')
+                diagram_amps = diagram_amps[0:diagram_amps.index(old_amp)] + \
+                              new_amps + diagram_amps[\
+                                    diagram_amps.index(old_amp) + 1:]
+                diagram.set('amplitudes', HelasAmplitudeList(diagram_amps))
+
+        # Find wavefunctions that are daughters of old_wf
+        daughter_wfs = filter(lambda wf: old_wf.get('number') in \
+                              [wf1.get('number') for wf1 in wf.get('mothers')],
+                              wavefunctions)
+        
+        # Create new copies, to insert the new wfs instead
+        new_daughter_wfs = [ [ wf ] * len(new_wfs) for wf in daughter_wfs]
+        new_daughter_wfs = [ [ copy.copy(wf) for wf in wf_list] \
+                             for wf_list in new_daughter_wfs ]
+        
+        for daughter_ind, wfs in enumerate(new_daughter_wfs):
+            # Replace the old mother with the new ones, update wf numbers
+            for i, (daughter, new_wf) in enumerate(zip(wfs, new_wfs)):
+                mothers = copy.copy(daughter.get('mothers'))
+                index = [wf.get('number') for wf in mothers].index(\
+                    old_wf.get('number'))
+                mothers[index] = new_wf
+                daughter.set('mothers', mothers)
+                daughter.set('number', daughter.get('number') + i)
+            # This is where recursion happens
+            self.replace_wavefunctions(daughter_wfs[daughter_ind],
+                                       wfs, wavefunctions, amplitudes)
+
+    def identical_decay_chain_factor(self, decay_chains):
+        """Calculate the denominator factor from identical decay chains"""
+
+        final_legs = [leg.get('id') for leg in \
+                      filter(lambda leg: leg.get('state') == 'final', \
+                              self.get('processes')[0].get('legs'))]
+
+        # Leg ids for legs being replaced by decay chains
+        decay_ids = [decay.get('legs')[0].get('id') for decay in \
+                     self.get('processes')[0].get('decay_chains')]
+
+        # Find all leg ids which are not being replaced by decay chains
+        non_decay_legs = filter(lambda id: id not in decay_ids,
+                                final_legs)
+
+        # Identical particle factor for legs not being decayed
+        identical_indices = {}
+        for id in non_decay_legs:
+            if id in identical_indices:
+                identical_indices[id] = \
+                                    identical_indices[id] + 1
+            else:
+                identical_indices[id] = 1
+        non_chain_factor = reduce(lambda x, y: x * y,
+                                  [ math.factorial(val) for val in \
+                                    identical_indices.values() ], 1)
+        
+        # Identical particle factor for decay chains
+        # Go through chains to find identical ones
+        chains = copy.copy(decay_chains)
+        iden_chains_factor = 1
+        while chains:
+            ident_copies = 1
+            first_chain = chains.pop(0)
+            i = 0
+            while i < len(chains):
+                chain = chains[i]
+                if HelasMatrixElement.check_equal_decay_processes(\
+                                                 first_chain, chain):
+                    ident_copies = ident_copies + 1
+                    chains.pop(i)
+                else:
+                    i = i + 1
+            iden_chains_factor = iden_chains_factor * \
+                                 math.factorial(ident_copies)
+        
+        self['identical_particle_factor'] = non_chain_factor * \
+                                    iden_chains_factor * \
+                                    reduce(lambda x1, x2: x1 * x2,
+                                    [me.get('identical_particle_factor') \
+                                     for me in decay_chains], 1)
+        
     def calculate_fermionfactors(self):
         """Generate the fermion factors for all diagrams in the amplitude
         """
@@ -1693,16 +2017,131 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         return spin_factor * color_factor * self['identical_particle_factor']
 
-    def shift_wavefunctions(self, N, N_initial):
-        """Shift the wavefunction number by N for all wavefunctions
-        after N_initial"""
+    @staticmethod
+    def check_equal_decay_processes(decay1, decay2):
+        """Check if two single-sided decay processes
+        (HelasMatrixElements) are equal.
 
-        wavefunctions = []
-        for diagram in self['diagrams']:
-            wavefunctions.extend(diagram.get('wavefunctions'))
-            
-        for wf in wavefunctions[N_initial:]:
-            wf.set('number', wf.get('number') + N)
+        Note that this has to be called before any combination of
+        processes has occured.
+        
+        Since a decay processes for a decay chain is always generated
+        such that all final state legs are completely contracted
+        before the initial state leg is included, all the diagrams
+        will have identical wave function, independently of the order
+        of final state particles.
+        
+        Note that we assume that the process definitions have all
+        external particles, corresponding to the external
+        wavefunctions.
+        """
+
+        if len(decay1.get('processes')) != 1 or \
+           len(decay2.get('processes')) != 1:
+            raise HelasMatrixElement.PhysicsObjectError, \
+                  "Can compare only single process HelasMatrixElements"
+
+        if len(filter(lambda leg: leg.get('state') == 'initial',\
+                      decay1.get('processes')[0].get('legs'))) != 1 or \
+           len(filter(lambda leg: leg.get('state') == 'initial',\
+                      decay2.get('processes')[0].get('legs'))) != 1:
+            raise HelasMatrixElement.PhysicsObjectError, \
+                  "Call to check_decay_processes_equal requires " + \
+                  "both processes to be unique"
+
+        # Compare bulk process properties (number of external legs,
+        # identity factors, number of diagrams, number of wavefunctions
+        # initial leg, final state legs
+        if len(decay1.get('processes')[0].get("legs")) != \
+           len(decay1.get('processes')[0].get("legs")) or \
+           len(decay1.get('diagrams')) != len(decay2.get('diagrams')) or \
+           decay1.get('identical_particle_factor') != \
+           decay2.get('identical_particle_factor') or \
+           sum(len(d.get('wavefunctions')) for d in \
+               decay1.get('diagrams')) != \
+           sum(len(d.get('wavefunctions')) for d in \
+               decay2.get('diagrams')) or \
+           decay1.get('processes')[0].get('legs')[0].get('id') != \
+           decay2.get('processes')[0].get('legs')[0].get('id') or \
+           sorted([leg.get('id') for leg in \
+                   decay1.get('processes')[0].get('legs')[1:]]) != \
+           sorted([leg.get('id') for leg in \
+                   decay2.get('processes')[0].get('legs')[1:]]):                   
+            return False
+
+        # Run a quick check to see if the processes are already
+        # identical (i.e., the wavefunctions are in the same order)
+        if [leg.get('id') for leg in \
+            decay1.get('processes')[0].get('legs')] == \
+           [leg.get('id') for leg in \
+            decay2.get('processes')[0].get('legs')] and \
+            decay1 == decay2:
+            return True
+
+        # Now check if all diagrams are identical. This is done by a
+        # recursive function starting from the last wavefunction
+        # (corresponding to the initial state), since it is the
+        # same steps for each level in mother wavefunctions
+        
+        amplitudes2 = copy.copy(reduce(lambda a1, d2: a1 + \
+                                       d2.get('amplitudes'),
+                                       decay2.get('diagrams'), []))
+
+        for amplitude1 in reduce(lambda a1, d2: a1 + d2.get('amplitudes'),
+                                  decay1.get('diagrams'), []):
+            foundamplitude = False
+            for amplitude2 in amplitudes2:
+                if HelasMatrixElement.check_equal_wavefunctions(\
+                   amplitude1.get('mothers')[-1],
+                   amplitude2.get('mothers')[-1]):
+                    foundamplitude = True
+                    # Remove amplitude2, since it has already been matched
+                    amplitudes2.remove(amplitude2)
+                    break
+            if not foundamplitude:
+                return False
+        
+        return True
+
+    @staticmethod
+    def check_equal_wavefunctions(wf1, wf2):
+        """Recursive function to check if two wavefunctions are equal.
+        First check that mothers have identical pdg codes, then repeat for
+        all mothers with identical pdg codes."""
+
+        # End recursion with False if the wavefunctions do not have
+        # the same mother pdgs
+        if sorted([wf.get('pdg_code') for wf in wf1.get('mothers')]) != \
+           sorted([wf.get('pdg_code') for wf in wf2.get('mothers')]):
+            return False
+
+        # End recursion with True if these are external wavefunctions
+        # (note that we have already checked that the pdgs are
+        # identical)
+        if not wf1.get('mothers') and not wf2.get('mothers'):
+            return True
+
+        mothers2 = copy.copy(wf2.get('mothers'))
+
+        for mother1 in wf1.get('mothers'):
+            # Compare mother1 with all mothers in wf2 that have not
+            # yet been used and have identical pdg codes
+            equalmothers = filter(lambda wf: wf.get('pdg_code') == \
+                                  mother1.get('pdg_code'),
+                                  mothers2)
+            foundmother = False
+            for mother2 in equalmothers:
+                if HelasMatrixElement.check_equal_wavefunctions(\
+                    mother1, mother2):
+                    foundmother = True
+                    # Remove mother2, since it has already been matched
+                    mothers2.remove(mother2)
+                    break
+            if not foundmother:
+                return False
+
+        return True
+    
 
 #===============================================================================
 # HelasMatrixElementList
@@ -1773,20 +2212,192 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
             raise base_objects.PhysicsObjectError,\
                   "%s is not a valid DecayChainAmplitude" % dc_amplitude
 
+        matrix_elements = self['core_processes']
+        
+        # Extract the pdg codes of all particles decayed by decay chains
+        # since these should not be combined in a MultiProcess
+        decay_ids = dc_amplitude.get_decay_ids()
+
         for amplitude in dc_amplitude.get('amplitudes'):
             logger.info("Generating Helas calls for %s" % \
-                         amplitude.get('process').nice_string().replace('Process', 'process'))
-            matrix_element = HelasMatrixElement(amplitude, gen_color=False)
+                        amplitude.get('process').nice_string().\
+                                            replace('Process', 'process'))
+            matrix_element = HelasMatrixElement(amplitude,
+                                                decay_ids=decay_ids,
+                                                gen_color=False)
 
-            # If the matrix element has any diagrams,
-            # add this matrix element.
-            if matrix_element.get('processes') and \
-                   matrix_element.get('diagrams'):
-                self['core_processes'].append(matrix_element)
+            try:
+                # If an identical matrix element is already in the list,
+                # then simply add this process to the list of
+                # processes for that matrix element
+                other_processes = matrix_elements[\
+                    matrix_elements.index(matrix_element)].get('processes')
+                logger.info("Combining process with %s" % \
+                      other_processes[0].nice_string().replace('Process: ', ''))
+                other_processes.append(amplitude.get('process'))
+            except ValueError:
+                # Otherwise, if the matrix element has any diagrams,
+                # add this matrix element.
+                if matrix_element.get('processes') and \
+                       matrix_element.get('diagrams'):
+                    matrix_elements.append(matrix_element)
 
         for decay_chain in dc_amplitude.get('decay_chains'):
             self['decay_chains'].append(HelasDecayChainProcess(\
                 decay_chain))
+
+    def combine_decay_chain_processes(self):
+        """Recursive function to generate complete
+        HelasMatrixElements, combining the core process with the decay
+        chains. If there are several identical final state particles
+        and only one decay chain defined, apply this decay chain to
+        all copies. If there are several decay chains defined for the
+        same particle, apply them in order of the FS particles and the
+        defined decay chains."""
+
+        # End recursion when there are no more decay chains
+        if not self['decay_chains']:
+            # Just return the list of matrix elements
+            return self['core_processes']
+
+        # This is where recursion happens
+
+        # decay_elements is a list of HelasMatrixElementLists with
+        # all decay processes
+        decay_elements = []
+        
+        for decay_chain in self['decay_chains']:
+            # This is where recursion happens
+            decay_elements.append(decay_chain.combine_decay_chain_processes())
+
+        # Store the result in matrix_elements
+        matrix_elements = HelasMatrixElementList()
+
+        # List of list of ids for the initial state legs in all decay
+        # processes
+        decay_is_ids = [[element.get('processes')[0].get_initial_ids()[0] \
+                         for element in elements]
+                         for elements in decay_elements]
+
+        for core_process in self['core_processes']:
+            # Get all final state legs
+            fs_legs = core_process.get('processes')[0].get_final_legs()
+            fs_ids = [leg.get('id') for leg in fs_legs]
+            decay_lists = []
+            # Loop over unique final state particle ids
+            for fs_id in set(fs_ids):
+                # Check if the particle id for this leg has a decay
+                # chain defined
+                if not any([any([id == fs_id for id \
+                            in is_ids]) for is_ids in decay_is_ids]):
+                    continue
+                # decay_list has the leg numbers and decays for this
+                # fs particle id
+                decay_list = []
+                # Now check if the number of decay chains with
+                # this particle id is the same as the number of
+                # identical particles in the core process - if so,
+                # use one chain for each of the identical
+                # particles. Otherwise, use all combinations of
+                # decay chains for the particles.
+
+                # Indices for the decay chain lists which contain at
+                # least one decay for this final state
+                chain_indices = filter(lambda index: fs_id in \
+                                                   decay_is_ids[index],
+                                       range(len(decay_is_ids)))
+
+                my_fs_legs = filter(lambda leg: leg.get('id') == fs_id,
+                                    fs_legs)
+                leg_numbers = [leg.get('number') for leg in my_fs_legs]
+
+                if len(leg_numbers) > 1 and \
+                       len(leg_numbers) == len(chain_indices):
+
+                    # The decay of the different fs parts is given
+                    # by the different decay chains, respectively
+                    # Chains is a list of matrix element lists
+                    chains = []
+                    for index in chain_indices:
+                        decay_chains = decay_elements[index]
+                        chains.append(filter(lambda me: \
+                                             me.get('processes')[0].\
+                                             get_initial_ids()[0] == fs_id,
+                                             decay_chains))
+
+                    # Combine decays for this final state type
+                    for element in itertools.product(*chains):
+                        decay_list.append([[n, d] for [n, d] in \
+                                           zip(leg_numbers, element)])
+
+                else:
+                    # We let the particles decay according to the
+                    # first decay list only
+                    proc_index = chain_indices[0]
+
+                    # Generate all combinations of decay chains with
+                    # the given decays, without double counting
+                    decay_indices = filter(lambda index: fs_id == \
+                                           decay_is_ids[proc_index][index],
+                                       range(len(decay_is_ids[proc_index])))
+                    
+
+                    red_decay_ids = []
+                    decay_ids = [decay_indices] * len(leg_numbers)
+                    # Combine all decays for this final state type,
+                    # without double counting
+                    for prod in itertools.product(*decay_ids):
+                        
+                        # Remove double counting between final states
+                        if tuple(sorted(prod)) in red_decay_ids:
+                            continue
+
+                        # Specify decay processes in the matrix element process
+                        red_decay_ids.append(tuple(sorted(prod)));
+
+                        # Pick out the decays for this iteration
+                        decays = [decay_elements[proc_index][chain_index] \
+                                  for chain_index in prod]
+
+                        decay_list.append([[n, d] for [n, d] in \
+                                           zip(leg_numbers, decays)])
+
+                decay_lists.append(decay_list)
+
+            # Finally combine all decays for this process,
+            # and combine them, decay by decay
+            for decays in itertools.product(*decay_lists):
+
+                # Generate a dictionary from leg number to decay process
+                decay_dict = dict(sum(decays, []))
+
+                # Make sure to not modify the original matrix element
+                matrix_element = copy.deepcopy(core_process)
+                # Avoid Python copying the complete model
+                # every time using deepcopy
+                matrix_element.get('processes')[0].set('model', \
+                                core_process.get('processes')[0].get('model'))
+
+                # Insert the decay chains
+                matrix_element.insert_decay_chains(decay_dict)
+
+                try:
+                    # If an identical matrix element is already in the list,
+                    # then simply add this process to the list of
+                    # processes for that matrix element
+                    other_processes = matrix_elements[\
+                    matrix_elements.index(matrix_element)].get('processes')
+                    logger.info("Combining process with %s" % \
+                      other_processes[0].nice_string().replace('Process: ', ''))
+                    other_processes.extend(matrix_element.get('processes'))
+                except ValueError:
+                    # Otherwise, if the matrix element has any diagrams,
+                    # add this matrix element.
+                    if matrix_element.get('processes') and \
+                           matrix_element.get('diagrams'):
+                        matrix_elements.append(matrix_element)
+                        
+        return matrix_elements
 
 #===============================================================================
 # HelasDecayChainProcessList
@@ -1864,178 +2475,58 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         for amplitude in amplitudes:
             logger.info("Generating Helas calls for %s" % \
                          amplitude.get('process').nice_string().replace('Process', 'process'))
-            matrix_element = HelasMatrixElement(amplitude, gen_color=False)
-            try:
-                # If an identical matrix element is already in the list,
-                # then simply add this process to the list of
-                # processes for that matrix element
-                other_processes = matrix_elements[\
-                    matrix_elements.index(matrix_element)].get('processes')
-                logger.info("Combining process with %s" % \
-                             other_processes[0].nice_string().replace('Process: ', ''))
-                other_processes.append(amplitude.get('process'))
-
-            except ValueError:
-                # Otherwise, if the matrix element has any diagrams,
-                # add this matrix element.
-                if matrix_element.get('processes') and \
-                       matrix_element.get('diagrams'):
-                    matrix_elements.append(matrix_element)
-
-                # Always create an empty color basis, and the list of raw
-                # colorize objects (before simplification) associated with amplitude
-                col_basis = color_amp.ColorBasis()
-                colorize_obj = col_basis.create_color_dict_list(amplitude)
-
+            if isinstance(amplitude, diagram_generation.DecayChainAmplitude):
+                matrix_element_list = HelasDecayChainProcess(amplitude,
+                                                             gen_color=False)
+            else:
+                matrix_element_list = [HelasMatrixElement(amplitude,
+                                                          gen_color=False)]
+            for matrix_element in matrix_element_list:
                 try:
-                    # If the color configuration of the ME has already been 
-                    # considered before, recycle the information
-                    col_index = list_colorize.index(colorize_obj)
-                    logger.info(\
+                    # If an identical matrix element is already in the list,
+                    # then simply add this process to the list of
+                    # processes for that matrix element
+                    other_processes = matrix_elements[\
+                    matrix_elements.index(matrix_element)].get('processes')
+                    logger.info("Combining process with %s" % \
+                      other_processes[0].nice_string().replace('Process: ', ''))
+                    other_processes.extend(matrix_element.get('processes'))
+                except ValueError:
+                    # Otherwise, if the matrix element has any diagrams,
+                    # add this matrix element.
+                    if matrix_element.get('processes') and \
+                           matrix_element.get('diagrams'):
+                        matrix_elements.append(matrix_element)
+                        
+                    # Always create an empty color basis, and the list of raw
+                    # colorize objects (before simplification) associated with amplitude
+                    col_basis = color_amp.ColorBasis()
+                    colorize_obj = col_basis.create_color_dict_list(amplitude)
+
+                    try:
+                        # If the color configuration of the ME has already been 
+                        # considered before, recycle the information
+                        col_index = list_colorize.index(colorize_obj)
+                        logger.info(\
                         "Reusing existing color information for %s" % \
                         amplitude.get('process').nice_string().replace('Process',
-                                                                   'process'))
-                except ValueError:
-                    # If not, create color basis and color matrix accordingly
-                    list_colorize.append(colorize_obj)
-                    col_basis.build()
-                    list_color_basis.append(col_basis)
-                    col_matrix = color_amp.ColorMatrix(col_basis)
-                    list_color_matrices.append(col_matrix)
-                    col_index = -1
-                    logger.info(\
+                                                                       'process'))
+                    except ValueError:
+                        # If not, create color basis and color matrix accordingly
+                        list_colorize.append(colorize_obj)
+                        col_basis.build()
+                        list_color_basis.append(col_basis)
+                        col_matrix = color_amp.ColorMatrix(col_basis)
+                        list_color_matrices.append(col_matrix)
+                        col_index = -1
+                        logger.info(\
                         "Processing color information for %s" % \
                         amplitude.get('process').nice_string().replace('Process',
-                                                                   'process'))
+                                                                       'process'))
 
                 matrix_element.set('color_basis', list_color_basis[col_index])
                 matrix_element.set('color_matrix', list_color_matrices[col_index])
 
-    @staticmethod
-    def check_equal_decay_processes(decay1, decay2):
-        """Check if two single-sided decay processes
-        (HelasMatrixElements) are equal.
-
-        Note that this has to be called before any combination of
-        processes has occured.
-        
-        Since a decay processes for a decay chain is always generated
-        such that all final state legs are completely contracted
-        before the initial state leg is included, all the diagrams
-        will have identical wave function, independently of the order
-        of final state particles.
-        
-        Note that we assume that the process definitions have all
-        external particles, corresponding to the external
-        wavefunctions.
-        """
-
-        if len(decay1.get('processes')) != 1 or \
-           len(decay2.get('processes')) != 1:
-            raise HelasMultiProcess.PhysicsObjectError, \
-                  "Can compare only single process HelasMatrixElements"
-
-        if len(filter(lambda leg: leg.get('state') == 'initial',\
-                      decay1.get('processes')[0].get('legs'))) != 1 or \
-           len(filter(lambda leg: leg.get('state') == 'initial',\
-                      decay2.get('processes')[0].get('legs'))) != 1:
-            raise HelasMultiProcess.PhysicsObjectError, \
-                  "Call to check_decay_processes_equal requires " + \
-                  "both processes to be unique"
-
-        # Compare bulk process properties (number of external legs,
-        # identity factors, number of diagrams, number of wavefunctions
-        # initial leg, final state legs
-        if len(decay1.get('processes')[0].get("legs")) != \
-           len(decay1.get('processes')[0].get("legs")) or \
-           len(decay1.get('diagrams')) != len(decay2.get('diagrams')) or \
-           decay1.get('identical_particle_factor') != \
-           decay2.get('identical_particle_factor') or \
-           sum(len(d.get('wavefunctions')) for d in \
-               decay1.get('diagrams')) != \
-           sum(len(d.get('wavefunctions')) for d in \
-               decay2.get('diagrams')) or \
-           decay1.get('processes')[0].get('legs')[0].get('id') != \
-           decay2.get('processes')[0].get('legs')[0].get('id') or \
-           sorted([leg.get('id') for leg in \
-                   decay1.get('processes')[0].get('legs')[1:]]) != \
-           sorted([leg.get('id') for leg in \
-                   decay2.get('processes')[0].get('legs')[1:]]):                   
-            return False
-
-        # Run a quick check to see if the processes are already
-        # identical (i.e., the wavefunctions are in the same order)
-        if [leg.get('id') for leg in \
-            decay1.get('processes')[0].get('legs')] == \
-           [leg.get('id') for leg in \
-            decay2.get('processes')[0].get('legs')] and \
-            decay1 == decay2:
-            return True
-
-        # Now check if all diagrams are identical. This is done by a
-        # recursive function starting from the last wavefunction
-        # (corresponding to the initial state), since it is the
-        # same steps for each level in mother wavefunctions
-        
-        amplitudes2 = copy.copy(reduce(lambda a1, d2: a1 + \
-                                       d2.get('amplitudes'),
-                                       decay2.get('diagrams'), []))
-
-        for amplitude1 in reduce(lambda a1, d2: a1 + d2.get('amplitudes'),
-                                  decay1.get('diagrams'), []):
-            foundamplitude = False
-            for amplitude2 in amplitudes2:
-                if HelasMultiProcess.check_equal_wavefunctions(\
-                   amplitude1.get('mothers')[-1],
-                   amplitude2.get('mothers')[-1]):
-                    foundamplitude = True
-                    # Remove amplitude2, since it has already been matched
-                    amplitudes2.remove(amplitude2)
-                    break
-            if not foundamplitude:
-                return False
-        
-        return True
-
-    @staticmethod
-    def check_equal_wavefunctions(wf1, wf2):
-        """Recursive function to check if two wavefunctions are equal.
-        First check that mothers have identical pdg codes, then repeat for
-        all mothers with identical pdg codes."""
-
-        # End recursion with False if the wavefunctions do not have
-        # the same mother pdgs
-        if sorted([wf.get('pdg_code') for wf in wf1.get('mothers')]) != \
-           sorted([wf.get('pdg_code') for wf in wf2.get('mothers')]):
-            return False
-
-        # End recursion with True if these are external wavefunctions
-        # (note that we have already checked that the pdgs are
-        # identical)
-        if not wf1.get('mothers') and not wf2.get('mothers'):
-            return True
-
-        mothers2 = copy.copy(wf2.get('mothers'))
-
-        for mother1 in wf1.get('mothers'):
-            # Compare mother1 with all mothers in wf2 that have not
-            # yet been used and have identical pdg codes
-            equalmothers = filter(lambda wf: wf.get('pdg_code') == \
-                                  mother1.get('pdg_code'),
-                                  mothers2)
-            foundmother = False
-            for mother2 in equalmothers:
-                if HelasMultiProcess.check_equal_wavefunctions(\
-                    mother1, mother2):
-                    foundmother = True
-                    # Remove mother2, since it has already been matched
-                    mothers2.remove(mother2)
-                    break
-            if not foundmother:
-                return False
-
-        return True
-    
 #===============================================================================
 # HelasModel
 #===============================================================================

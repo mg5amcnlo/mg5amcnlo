@@ -306,46 +306,6 @@ C     Amplitude(s) for diagram number 6
 
         self.assertEqual(fsock.getvalue(), goal_matrix_f)
 
-    def test_shift_wavefunction_number(self):
-        """Test the result of shifting the wave function number by 1"""
-
-        fsock = StringIO.StringIO()
-
-        myleglist = base_objects.LegList()
-
-        myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'initial'}))
-        myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'initial'}))
-        myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
-        myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
-
-        myproc = base_objects.Process({'legs':myleglist,
-                                       'model':self.mymodel})
-
-        myamplitude = diagram_generation.Amplitude({'process': myproc})
-
-        mymatrixelement = helas_objects.HelasMatrixElement(myamplitude)
-        
-        mymatrixelement.shift_wavefunctions(2, 4)
-
-        goal = """CALL OXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
-CALL IXXXXX(P(0,2),zero,NHEL(2),+1*IC(2),W(1,2))
-CALL VXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
-CALL VXXXXX(P(0,4),zero,NHEL(4),+1*IC(4),W(1,4))
-CALL FVOXXX(W(1,1),W(1,3),MGVX12,zero,zero,W(1,7))
-# Amplitude(s) for diagram number 1
-CALL IOVXXX(W(1,2),W(1,7),W(1,4),MGVX12,AMP(1))
-CALL FVOXXX(W(1,1),W(1,4),MGVX12,zero,zero,W(1,8))
-# Amplitude(s) for diagram number 2
-CALL IOVXXX(W(1,2),W(1,8),W(1,3),MGVX12,AMP(2))"""
-
-        self.assertEqual("\n".join(self.myfortranmodel.\
-                                   get_matrix_element_calls(mymatrixelement)),
-                         goal)
-
     def test_coeff_string(self):
         """Test the coeff string for JAMP lines"""
 

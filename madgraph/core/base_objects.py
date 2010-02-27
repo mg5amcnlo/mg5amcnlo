@@ -1256,11 +1256,11 @@ class Process(PhysicsObject):
                 'required_s_channels', 'forbidden_s_channels',
                 'forbidden_particles', 'is_decay_chain', 'decay_chains']
 
-    def nice_string(self):
+    def nice_string(self, indent = 0):
         """Returns a nicely formated string about current process
         content"""
 
-        mystr = "Process: "
+        mystr = " " * indent + "Process: "
         prevleg = None
         for leg in self['legs']:
             mypart = self['model'].get('particle_dict')[leg['id']]
@@ -1294,12 +1294,19 @@ class Process(PhysicsObject):
                 mystr = mystr + forbpart.get_name() + ' '
 
         if self['orders']:
-            mystr = mystr[:-1] + "\n"
+            mystr = mystr[:-1] + "\n" + " " * indent
             mystr = mystr + 'Orders: '
             mystr = mystr + ", ".join([key + '=' + repr(self['orders'][key]) \
                        for key in self['orders']]) + ' '
+
         # Remove last space
-        return mystr[:-1]
+        mystr = mystr[:-1]
+
+        for decay in self['decay_chains']:
+            mystr = mystr + '\n' + \
+                    decay.nice_string(indent + 2).replace('Process', 'Decay')
+
+        return mystr
 
     def shell_string(self):
         """Returns process as string with '~' -> 'x' and '>' -> '_',
@@ -1338,6 +1345,9 @@ class Process(PhysicsObject):
         # Just to be safe, remove all spaces
         mystr = mystr.replace(' ', '')
 
+        for decay in self.get('decay_chains'):
+            mystr = mystr + decay.shell_string().replace("%d_" % decay.get('id'),
+                                                        "_", 1)
         return mystr
 
     def shell_string_v4(self):
@@ -1363,6 +1373,10 @@ class Process(PhysicsObject):
         # Just to be safe, remove all spaces
         mystr = mystr.replace(' ', '')
 
+        for decay in self.get('decay_chains'):
+            mystr = mystr + decay.shell_string_v4().replace("%d_" % decay.get('id'),
+                                                        "_", 1)
+
         return mystr
 
     # Helper functions
@@ -1372,6 +1386,19 @@ class Process(PhysicsObject):
 
         return len(filter(lambda leg: leg.get('state') == 'initial',
                            self.get('legs')))
+
+    def get_initial_ids(self):
+        """Gives the pdg codes for initial state particles"""
+
+        return [leg.get('id') for leg in \
+                filter(lambda leg: leg.get('state') == 'initial',
+                       self.get('legs'))]
+
+    def get_final_legs(self):
+        """Gives the pdg codes for initial state particles"""
+
+        return filter(lambda leg: leg.get('state') == 'final',
+                       self.get('legs'))
 
 #===============================================================================
 # ProcessList

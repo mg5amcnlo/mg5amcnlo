@@ -543,7 +543,7 @@ class AmplitudeList(base_objects.PhysicsObjectList):
         return isinstance(obj, Amplitude)
 
 #===============================================================================
-# DecayChainAmplitudes
+# DecayChainAmplitude
 #===============================================================================
 class DecayChainAmplitude(Amplitude):
     """A list of amplitudes + a list of decay chain amplitude lists;
@@ -601,6 +601,22 @@ class DecayChainAmplitude(Amplitude):
 
         return ['amplitudes', 'decay_chains']
 
+    # Helper functions
+
+    def get_decay_ids(self):
+        """Returns a set of all particle ids for which a decay is defined"""
+
+        decay_ids = []
+
+        # Get all amplitudes for the decay processes
+        for amp in sum([dc.get('amplitudes') for dc \
+                        in self['decay_chains']], []):
+            # For each amplitude, find the initial state leg
+            decay_ids.append(amp.get('process').get_initial_ids()[0])
+            
+        # Return a list with unique ids
+        return list(set(decay_ids))
+    
 #===============================================================================
 # DecayChainAmplitudeList
 #===============================================================================
