@@ -254,14 +254,21 @@ def write_pmass_file(fsock, matrix_element, fortran_model):
 
     writer = FortranWriter()
 
-    process = matrix_element.get('processes')[0]
-    model = process.get('model')
+    model = matrix_element.get('processes')[0].get('model')
     
     lines = []
-    for i, leg in enumerate(process.get('legs')):
-        lines.append("pmass(%d)=abs(%s)" % \
-                     (i + 1, model.get('particle_dict')[leg.get('id')].\
-                      get('mass')))
+    for wf in matrix_element.get_external_wavefunctions():
+        if model.get('particle_dict')[wf.get('pdg_code')].\
+               get('mass') == "zero":
+            lines.append("pmass(%d)=%s" % \
+                         (wf.get('number_external'),
+                          model.get('particle_dict')[wf.get('pdg_code')].\
+                          get('mass')))
+        else:
+            lines.append("pmass(%d)=abs(%s)" % \
+                         (wf.get('number_external'),
+                          model.get('particle_dict')[wf.get('pdg_code')].\
+                          get('mass')))
 
     # Write the file
     for line in lines:
@@ -378,7 +385,7 @@ def get_mg5_info_lines():
 def get_process_info_lines(matrix_element):
     """Return info lines describing the processes for this matrix element"""
 
-    return"\n".join([ "C " + process.nice_string().replace('\n', '\nC ') \
+    return"\n".join([ "C " + process.nice_string().replace('\n', '\nC * ') \
                      for process in matrix_element.get('processes')])
 
 

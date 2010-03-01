@@ -815,97 +815,6 @@ class HelasMatrixElementTest(unittest.TestCase):
         self.assertEqual(matrix_element.get('processes')[0],
                          myamplitude.get('process'))
 
-    def test_get_helicity_matrix(self):
-        """Testing helicity matrix using the process
-        e- e+ > z a
-        """
-
-        # A Z
-        self.mymodel.get('particles').append(base_objects.Particle({'name':'Z',
-                      'antiname':'Z',
-                      'spin':3,
-                      'color':1,
-                      'mass':'MZ',
-                      'width':'WZ',
-                      'texname':'Z',
-                      'antitexname':'Z',
-                      'line':'wavy',
-                      'charge':0.,
-                      'pdg_code':23,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':True}))
-
-        # A Higgs
-        self.mymodel.get('particles').append(base_objects.Particle({'name':'H',
-                      'antiname':'H',
-                      'spin':1,
-                      'color':1,
-                      'mass':'MH',
-                      'width':'WH',
-                      'texname':'H',
-                      'antitexname':'H',
-                      'line':'dashed',
-                      'charge':0.,
-                      'pdg_code':25,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':True}))
-
-        self.mymodel.set('particle_dict',
-                         self.mymodel.get('particles').generate_dict())
-
-        myleglist = base_objects.LegList()
-
-        myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'initial'}))
-        myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'initial'}))
-        myleglist.append(base_objects.Leg({'id':23,
-                                         'state':'final'}))
-        myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
-        myleglist.append(base_objects.Leg({'id':25,
-                                         'state':'final'}))
-
-        myproc = base_objects.Process({'legs':myleglist,
-                                       'model':self.mymodel})
-
-        matrix_element = helas_objects.HelasMatrixElement()
-        matrix_element.set('processes', base_objects.ProcessList([ myproc ]))
-
-        self.assertEqual(matrix_element.get_helicity_combinations(), 24)
-
-        goal_prods = [(-1, -1, -1, -1, 0),
-                      (-1, -1, -1, 1, 0),
-                      (-1, -1, 0, -1, 0),
-                      (-1, -1, 0, 1, 0),
-                      (-1, -1, 1, -1, 0),
-                      (-1, -1, 1, 1, 0),
-                      (-1, 1, -1, -1, 0),
-                      (-1, 1, -1, 1, 0),
-                      (-1, 1, 0, -1, 0),
-                      (-1, 1, 0, 1, 0),
-                      (-1, 1, 1, -1, 0),
-                      (-1, 1, 1, 1, 0),
-                      (1, -1, -1, -1, 0),
-                      (1, -1, -1, 1, 0),
-                      (1, -1, 0, -1, 0),
-                      (1, -1, 0, 1, 0),
-                      (1, -1, 1, -1, 0),
-                      (1, -1, 1, 1, 0),
-                      (1, 1, -1, -1, 0),
-                      (1, 1, -1, 1, 0),
-                      (1, 1, 0, -1, 0),
-                      (1, 1, 0, 1, 0),
-                      (1, 1, 1, -1, 0),
-                      (1, 1, 1, 1, 0)]
-
-        i = 0
-        for prod in matrix_element.get_helicity_matrix():
-            self.assertEqual(prod, goal_prods[i])
-            i = i + 1
-
     def test_get_den_factor(self):
         """Testing helicity matrix using the process
         u u~ > a a a
@@ -2223,10 +2132,12 @@ class HelasMultiProcessTest(unittest.TestCase):
                    me.get('diagrams')],[])):
                 self.assertEqual(amp.get('number'), i + 1)
                     
-            for i, wf in enumerate(sum([\
-                   diag.get('wavefunctions') for diag in \
-                   me.get('diagrams')],[])):
+            for i, wf in enumerate(me.get_all_wavefunctions()):
                 self.assertEqual(wf.get('number'), i + 1)
+
+            for i, wf in enumerate(filter (lambda wf: not wf.get('mothers'),
+                                           me.get_all_wavefunctions())):
+                self.assertEqual(wf.get('number_external'), i + 1)
 
     def test_multistage_decay_chain_process(self):
         """Test a multistage decay chain g g > d d~, d > g d, g > u u~ g
@@ -2249,17 +2160,6 @@ class HelasMultiProcessTest(unittest.TestCase):
         me_core =  helas_objects.HelasMatrixElement(\
             diagram_generation.Amplitude(mycoreproc))
 
-        print me_core.get('processes')[0].nice_string()
-        print 'Diagrams: ',len(me_core.get('diagrams'))
-        for diag in me_core.get('diagrams'):
-            print 'Diagram ',diag.get('number')
-            print "Wavefunctions: ", len(diag.get('wavefunctions'))
-            for wf in diag.get('wavefunctions'):
-                print wf.get('number'), wf.get('number_external'), wf.get('pdg_code'), [mother.get('number') for mother in wf.get('mothers')]
-            print "Amplitudes: ", len(diag.get('amplitudes'))
-            for amp in diag.get('amplitudes'):
-                print amp.get('number'), [mother.get('number') for mother in amp.get('mothers')]
-        
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':1,
@@ -2275,17 +2175,6 @@ class HelasMultiProcessTest(unittest.TestCase):
         me11 =  helas_objects.HelasMatrixElement(\
             diagram_generation.Amplitude(mydecay11))
 
-        print me11.get('processes')[0].nice_string()
-        print 'Diagrams: ',len(me11.get('diagrams'))
-        for diag in me11.get('diagrams'):
-            print 'Diagram ',diag.get('number')
-            print "Wavefunctions: ", len(diag.get('wavefunctions'))
-            for wf in diag.get('wavefunctions'):
-                print wf.get('number'), wf.get('number_external'), wf.get('pdg_code'), [mother.get('number') for mother in wf.get('mothers')]
-            print "Amplitudes: ", len(diag.get('amplitudes'))
-            for amp in diag.get('amplitudes'):
-                print amp.get('number'), [mother.get('number') for mother in amp.get('mothers')]
-        
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':-1,
@@ -2301,17 +2190,6 @@ class HelasMultiProcessTest(unittest.TestCase):
         me12 =  helas_objects.HelasMatrixElement(\
             diagram_generation.Amplitude(mydecay12))
 
-        print me12.get('processes')[0].nice_string()
-        print 'Diagrams: ',len(me12.get('diagrams'))
-        for diag in me12.get('diagrams'):
-            print 'Diagram ',diag.get('number')
-            print "Wavefunctions: ", len(diag.get('wavefunctions'))
-            for wf in diag.get('wavefunctions'):
-                print wf.get('number'), wf.get('number_external'), wf.get('pdg_code'), [mother.get('number') for mother in wf.get('mothers')]
-            print "Amplitudes: ", len(diag.get('amplitudes'))
-            for amp in diag.get('amplitudes'):
-                print amp.get('number'), [mother.get('number') for mother in amp.get('mothers')]
-        
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':21,
@@ -2329,17 +2207,6 @@ class HelasMultiProcessTest(unittest.TestCase):
         me2 =  helas_objects.HelasMatrixElement(\
             diagram_generation.Amplitude(mydecay2))
 
-        print me2.get('processes')[0].nice_string()
-        print 'Diagrams: ',len(me2.get('diagrams'))
-        for diag in me2.get('diagrams'):
-            print 'Diagram ',diag.get('number')
-            print "Wavefunctions: ", len(diag.get('wavefunctions'))
-            for wf in diag.get('wavefunctions'):
-                print wf.get('number'), wf.get('number_external'), wf.get('pdg_code'), [mother.get('number') for mother in wf.get('mothers')]
-            print "Amplitudes: ", len(diag.get('amplitudes'))
-            for amp in diag.get('amplitudes'):
-                print amp.get('number'), [mother.get('number') for mother in amp.get('mothers')]
-        
         mydecay11.set('decay_chains', base_objects.ProcessList([mydecay2]))
         mydecay12.set('decay_chains', base_objects.ProcessList([mydecay2]))
 
@@ -2352,17 +2219,17 @@ class HelasMultiProcessTest(unittest.TestCase):
 
         matrix_elements = matrix_element.combine_decay_chain_processes()
 
-        print matrix_elements[0].get('processes')[0].nice_string()
-        print matrix_elements[0].get('identical_particle_factor')
+        #print matrix_elements[0].get('processes')[0].nice_string()
+        #print matrix_elements[0].get('identical_particle_factor')
 
-        for diag in matrix_elements[0].get('diagrams'):
-            print 'Diagram ',diag.get('number')
-            print "Wavefunctions: ", len(diag.get('wavefunctions'))
-            for wf in diag.get('wavefunctions'):
-                print wf.get('number'), wf.get('number_external'), wf.get('pdg_code'), [mother.get('number') for mother in wf.get('mothers')]
-            print "Amplitudes: ", len(diag.get('amplitudes'))
-            for amp in diag.get('amplitudes'):
-                print amp.get('number'), [mother.get('number') for mother in amp.get('mothers')]
+        #for diag in matrix_elements[0].get('diagrams'):
+        #    print 'Diagram ',diag.get('number')
+        #    print "Wavefunctions: ", len(diag.get('wavefunctions'))
+        #    for wf in diag.get('wavefunctions'):
+        #        print wf.get('number'), wf.get('number_external'), wf.get('pdg_code'), [mother.get('number') for mother in wf.get('mothers')]
+        #    print "Amplitudes: ", len(diag.get('amplitudes'))
+        #    for amp in diag.get('amplitudes'):
+        #        print amp.get('number'), [mother.get('number') for mother in amp.get('mothers')]
 
         self.assertEqual(matrix_elements[0].get_number_of_amplitudes(),
                          me_core.get_number_of_amplitudes() * \
@@ -2380,6 +2247,11 @@ class HelasMultiProcessTest(unittest.TestCase):
         for i, wf in enumerate(sum([diag.get('wavefunctions') for diag in \
                                    matrix_elements[0].get('diagrams')],[])):
             self.assertEqual(wf.get('number'), i + 1)
+
+        for i, wf in enumerate(filter (lambda wf: not wf.get('mothers'),
+                                       matrix_elements[0].get_all_wavefunctions())):
+            self.assertEqual(wf.get('number_external'), i + 1)
+
 
     def test_equal_decay_chains(self):
         """Test the functions for checking equal decay chains
@@ -2490,6 +2362,25 @@ class HelasModelTest(unittest.TestCase):
         u = mypartlist[len(mypartlist) - 1]
         antiu = copy.copy(u)
         antiu.set('is_part', False)
+
+        # A quark D and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'d',
+                      'antiname':'d~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'mu',
+                      'width':'zero',
+                      'texname':'d',
+                      'antitexname':'\bar d',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':1,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        d = mypartlist[len(mypartlist) - 1]
+        antid = copy.copy(d)
+        antid.set('is_part', False)
 
         # A electron and positron
         mypartlist.append(base_objects.Particle({'name':'e+',
@@ -2649,6 +2540,28 @@ class HelasModelTest(unittest.TestCase):
 
         myinterlist.append(base_objects.Interaction({
                       'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [d, \
+                                             antid, \
+                                             a]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'MGVX15'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 10,
+                      'particles': base_objects.ParticleList(\
+                                            [d, \
+                                             antid, \
+                                             g]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 11,
                       'particles': base_objects.ParticleList(\
                                             [u, \
                                              antiu, \

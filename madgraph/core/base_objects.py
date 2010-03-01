@@ -1302,6 +1302,9 @@ class Process(PhysicsObject):
         # Remove last space
         mystr = mystr[:-1]
 
+        if not self.get('decay_chains'):
+            return mystr
+
         for decay in self['decay_chains']:
             mystr = mystr + '\n' + \
                     decay.nice_string(indent + 2).replace('Process', 'Decay')

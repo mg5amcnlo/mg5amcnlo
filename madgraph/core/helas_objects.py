@@ -1634,10 +1634,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                               decay_dict[number],
                               replace_dict)
             
-            # Calculate identical particle factors for
-            # this matrix element
-            self.identical_decay_chain_factor(decay_dict.values())
-
+        # Calculate identical particle factors for
+        # this matrix element
+        self.identical_decay_chain_factor(decay_dict.values())
         
     def insert_decay(self, wf_number, decay, replace_dict):
         """Insert a decay chain wavefunction into the matrix element.
@@ -1723,9 +1722,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # External wavefunction offset for new wfs
             incr_new = old_wf.get('number_external') - \
                        new_wfs[0].get('number_external')
+
             # External wavefunction offset for old wfs
             incr_old = \
-                     len(decay_element.get('processes')[0].get('legs')) - 2
+                     len(filter(lambda wf: not wf.get('mothers'), new_wfs)) - 1
             # Renumber the new wavefunctions
             i = old_wf.get('number')
             for wf in new_wfs:
@@ -1737,6 +1737,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 wf.set('number_external',
                        wf.get('number_external') + incr_new)
                 i = i + 1
+
             # Renumber the old wavefunctions above the replaced one
             i = i - len(new_final_wfs)
             old_wf_index = [wf.get('number') for wf in \
@@ -1979,6 +1980,25 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         return sum([d.get('wavefunctions') for d in \
                        self.get('diagrams')],[])
 
+    def get_external_wavefunctions(self):
+        """Gives the external wavefunctions for this ME"""
+
+        external_wfs = filter(lambda wf: wf.get('leg_state') != \
+                              'intermediate',
+                              self.get_all_wavefunctions())
+
+        external_wfs.sort(lambda w1, w2: w1.get('number_external') - \
+             w1.get('number_external'))
+
+        i = 1
+        while i < len(external_wfs):
+            if external_wfs[i].get('number_external') == \
+               external_wfs[i - 1].get('number_external'):
+                external_wfs.pop(i)
+            else:
+                i = i + 1
+        return external_wfs
+
     def get_number_of_amplitudes(self):
         """Gives the total number of amplitudes for this ME"""
 
@@ -1999,9 +2019,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                          filter(lambda wf: wf.get('leg_state') == 'initial',
                                 external_wfs)])))
 
-        return (len(self.get('processes')[0].get('legs')),
-                self.get('processes')[0].get_ninitial())
-
     def get_helicity_combinations(self):
         """Gives the number of helicity combinations for external
         wavefunctions"""
@@ -2012,9 +2029,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         model = self.get('processes')[0].get('model')
 
         return reduce(lambda x, y: x * y,
-                      [ len(model.get('particle_dict')[leg.get('id')].\
+                      [ len(model.get('particle_dict')[wf.get('pdg_code')].\
                             get_helicity_states())\
-                        for leg in self.get('processes')[0].get('legs') ])
+                        for wf in self.get_external_wavefunctions() ], 1)
 
     def get_helicity_matrix(self):
         """Gives the helicity matrix for external wavefunctions"""
@@ -2026,8 +2043,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         model = process.get('model')
 
         return apply(itertools.product, [ model.get('particle_dict')[\
-                                         leg.get('id')].get_helicity_states()\
-                                         for leg in process.get('legs') ])
+                                  wf.get('pdg_code')].get_helicity_states()\
+                                  for wf in self.get_external_wavefunctions()])
 
     def get_denominator_factor(self):
         """Calculate the denominator factor due to:
@@ -2482,6 +2499,10 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         elif isinstance(argument, diagram_generation.MultiProcess):
             super(HelasMultiProcess, self).__init__()
             self.generate_matrix_elements(argument.get('amplitudes'))
+        elif isinstance(argument, diagram_generation.Amplitude):
+            super(HelasMultiProcess, self).__init__()
+            self.generate_matrix_elements(\
+                diagram_generation.AmplitudeList([argument]))
         elif argument:
             # call the mother routine
             super(HelasMultiProcess, self).__init__(argument)
@@ -2507,15 +2528,19 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         matrix_elements = self.get('matrix_elements')
 
         for amplitude in amplitudes:
-            logger.info("Generating Helas calls for %s" % \
-                         amplitude.get('process').nice_string().replace('Process', 'process'))
             if isinstance(amplitude, diagram_generation.DecayChainAmplitude):
-                matrix_element_list = HelasDecayChainProcess(amplitude,
-                                                             gen_color=False)
+                matrix_element_list = HelasDecayChainProcess(amplitude).\
+                                      combine_decay_chain_processes()
             else:
+                logger.info("Generating Helas calls for %s" % \
+                         amplitude.get('process').nice_string().\
+                                           replace('Process', 'process'))
                 matrix_element_list = [HelasMatrixElement(amplitude,
                                                           gen_color=False)]
             for matrix_element in matrix_element_list:
+                if not isinstance(matrix_element, HelasMatrixElement):
+                    raise self.PhysicsObjectError,\
+                          "Not a HelasMatrixElement: ",matrix_element
                 try:
                     # If an identical matrix element is already in the list,
                     # then simply add this process to the list of
