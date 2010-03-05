@@ -1691,6 +1691,162 @@ class HelasMatrixElementTest(unittest.TestCase):
         self.assertEqual(sum([len(diagram.get('amplitudes')) for diagram in \
                           matrix_element.get('diagrams')]), 510)
 
+    def test_sorted_mothers(self):
+        """Testing the sorted_mothers routine
+        """
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A W
+        mypartlist.append(base_objects.Particle({'name':'W+',
+                      'antiname':'W-',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MW',
+                      'width':'WW',
+                      'texname':'W^+',
+                      'antitexname':'W^-',
+                      'line':'wavy',
+                      'charge':1.,
+                      'pdg_code':24,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        Wplus = mypartlist[len(mypartlist) - 1]
+        Wminus = copy.copy(Wplus)
+        Wminus.set('is_part', False)
+
+        # A photon
+        mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        a = mypartlist[len(mypartlist) - 1]
+
+        # Z
+        mypartlist.append(base_objects.Particle({'name':'Z',
+                      'antiname':'Z',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MZ',
+                      'width':'WZ',
+                      'texname':'Z',
+                      'antitexname':'Z',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':23,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        Z = mypartlist[len(mypartlist) - 1]
+
+
+        # WWZ and WWa couplings
+
+        myinterlist.append(base_objects.Interaction({
+            'id': 3,
+            'particles': base_objects.ParticleList(\
+                                            [Wplus, \
+                                             Wminus, \
+                                             Wplus,
+                                             Wminus]),
+            'color': [],
+            'lorentz':['WWVVN'],
+            'couplings':{(0, 0):'MGVX6'},
+            'orders':{'QED':2}}))
+
+        myinterlist.append(base_objects.Interaction({
+            'id': 4,
+            'particles': base_objects.ParticleList(\
+                                            [Wplus, \
+                                             a, \
+                                             Wminus,
+                                             a]),
+            'color': [],
+            'lorentz':['WWVVN'],
+            'couplings':{(0, 0):'MGVX4'},
+            'orders':{'QED':2}}))
+
+        myinterlist.append(base_objects.Interaction({
+            'id': 5,
+            'particles': base_objects.ParticleList(\
+                                            [Wminus, \
+                                             a, \
+                                             Wplus,
+                                             Z]),
+            'color': [],
+            'lorentz':['WWVVN'],
+            'couplings':{(0, 0):'MGVX7'},
+            'orders':{'QED':2}}))
+
+        myinterlist.append(base_objects.Interaction({
+            'id': 6,
+            'particles': base_objects.ParticleList(\
+                                            [Wminus, \
+                                             Z, \
+                                             Wplus,
+                                             Z]),
+            'color': [],
+            'lorentz':['WWVVN'],
+            'couplings':{(0, 0):'MGVX8'},
+            'orders':{'QED':2}}))
+
+
+        mybasemodel = base_objects.Model()
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':24,
+                                           'state':'initial',
+                                           'number': 1}))
+        myleglist.append(base_objects.Leg({'id':23,
+                                         'state':'final',
+                                           'number': 2}))
+        myleglist.append(base_objects.Leg({'id':-24,
+                                         'state':'initial',
+                                           'number': 3}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final',
+                                           'number': 5}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final',
+                                           'number': 4}))
+
+        mymothers = helas_objects.HelasWavefunctionList(\
+            [helas_objects.HelasWavefunction(leg, 0, mybasemodel) for leg in myleglist[:4]])
+
+        amplitude = helas_objects.HelasAmplitude()
+        amplitude.set('interaction_id', 5, mybasemodel)
+        amplitude.set('mothers', mymothers)
+        self.assertEqual(helas_objects.HelasMatrixElement.sorted_mothers(amplitude),
+                         [mymothers[2], mymothers[3], mymothers[0], mymothers[1]])
+        mymothers = helas_objects.HelasWavefunctionList(\
+            [helas_objects.HelasWavefunction(leg, 0, mybasemodel) for leg in myleglist[2:]])
+
+        wavefunction = helas_objects.HelasWavefunction(myleglist[2],
+                                                       4, mybasemodel)
+        wavefunction.set('mothers', mymothers)
+        self.assertEqual(helas_objects.HelasMatrixElement.\
+                         sorted_mothers(wavefunction),
+                         [mymothers[1], mymothers[0], mymothers[2]])
+
+
+
 #===============================================================================
 # HelasDecayChainProcessTest
 #===============================================================================

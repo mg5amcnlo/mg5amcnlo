@@ -769,8 +769,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
             return False
 
         # Check that mothers have the same numbers (only relevant info)
-        return [ mother.get('number') for mother in self['mothers'] ] == \
-               [ mother.get('number') for mother in other['mothers'] ]
+        return sorted([mother.get('number') for mother in self['mothers']]) == \
+               sorted([mother.get('number') for mother in other['mothers']])
 
     def __ne__(self, other):
         """Overloading the nonequality operator, to make comparison easy"""
@@ -1166,8 +1166,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
             return False
 
         # Check that mothers have the same numbers (only relevant info)
-        return [ mother.get('number') for mother in self['mothers'] ] == \
-               [ mother.get('number') for mother in other['mothers'] ]
+        return sorted([mother.get('number') for mother in self['mothers']]) == \
+               sorted([mother.get('number') for mother in other['mothers']])
 
     def __ne__(self, other):
         """Overloading the nonequality operator, to make comparison easy"""
@@ -1616,6 +1616,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
 
         self.set('diagrams', helas_diagrams)
+        # Sort all mothers according to the order wanted in Helas calls
+        for wf in self.get_all_wavefunctions():
+            wf.set('mothers', HelasMatrixElement.sorted_mothers(wf))
+        for amp in self.get_all_amplitudes():
+            amp.set('mothers', HelasMatrixElement.sorted_mothers(amp))
+                    
 
     def insert_decay_chains(self, decay_dict):
         """Insert the decay chains decays into this matrix element,
@@ -1708,6 +1714,21 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
             new_wfs = copy.copy(decay_wfs)
             # NEED TO INCLUDE CHECK FOR FERMION FLOW DIRECTION HERE!
+            for wf in filter(lambda final_wf: final_wf.is_fermion(),
+                             final_wfs):
+                if old_wf.get_with_flow('state') == wf.get_with_flow('state'):
+                    continue
+                # If not same flow state - need to flip flow of wf
+
+                # We use the same function
+                # check_majorana_and_flip_flow as is done in the helas
+                # diagram generation.  Since we have different flow,
+                # there is already a Majorana particle along the fermion line.
+
+                # Need to set up wavefunctions, diagram_wavefunctions,
+                # external_wavefunctions and wf_number.
+                #wf.check_majorana_and_flip_flow(found_majorana = True,
+                                                
 
             # Pick out the final wavefunctions in the decay chain,
             # which are going to replace the existing final state
@@ -1975,17 +1996,22 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                        self.get('diagrams')])
 
     def get_all_wavefunctions(self):
-        """Gives the total number of wavefunctions for this ME"""
+        """Gives a list of all wavefunctions for this ME"""
 
         return sum([d.get('wavefunctions') for d in \
+                       self.get('diagrams')],[])
+
+    def get_all_amplitudes(self):
+        """Gives a list of all amplitudes for this ME"""
+
+        return sum([d.get('amplitudes') for d in \
                        self.get('diagrams')],[])
 
     def get_external_wavefunctions(self):
         """Gives the external wavefunctions for this ME"""
 
-        external_wfs = filter(lambda wf: wf.get('leg_state') != \
-                              'intermediate',
-                              self.get_all_wavefunctions())
+        external_wfs = filter(lambda wf: not wf.get('mothers'),
+                              self.get('diagrams')[0].get('wavefunctions'))
 
         external_wfs.sort(lambda w1, w2: w1.get('number_external') - \
              w1.get('number_external'))
@@ -2192,6 +2218,60 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 return False
 
         return True
+    
+    # This gives the order in which the different spin states will be
+    # written in all Helas calls. Note that this is 
+    sort_spin_dict = {1: 1, -2: 4, 2: 3, 3: 2, 5: 0}
+
+    @staticmethod
+    def sorted_mothers(arg):
+        """Gives a list of mother wavefunctions sorted according to
+        1. the spin order needed in the Fortran Helas calls and
+        2. the order of the particles in the interaction (cyclic)"""
+        
+        if not isinstance(arg, HelasWavefunction) and \
+               not isinstance(arg, HelasAmplitude):
+            raise base_objects.PhysicsObject.PhysicsObjectError, \
+                  "%s is not a valid HelasWavefunction or HelasAmplitude" % \
+                  repr(arg)
+        
+        if not arg.get('interaction_id'):
+            return arg.get('mothers')
+        
+        sorted_mothers1 = copy.copy(arg.get('mothers'))
+        
+        # Next sort according to interaction pdg codes
+        
+        mother_codes = [ wf.get_pdg_code_outgoing() for wf \
+                         in sorted_mothers1 ]
+        pdg_codes = copy.copy(arg.get('pdg_codes'))
+        if isinstance(arg, HelasWavefunction):
+            my_code = arg.get_pdg_code_incoming()
+            # We need to create the cyclic pdg_codes
+            missing_index = pdg_codes.index(my_code)
+            pdg_codes_cycl = pdg_codes[missing_index + 1:] + \
+                             pdg_codes[:missing_index]
+        else:
+            pdg_codes_cycl = pdg_codes
+            
+        sorted_mothers2 = HelasWavefunctionList()
+        for code in pdg_codes_cycl:
+            index = mother_codes.index(code)
+            mother_codes.pop(index)
+            sorted_mothers2.append(sorted_mothers1.pop(index))
+            
+        if sorted_mothers1:
+            raise base_objects.PhysicsObject.PhysicsObjectError, \
+                  "Mismatch of pdg codes, %s != %s" % \
+                  (repr(mother_codes), repr(pdg_codes_cycl))
+        
+        # Next sort according to spin_state_number
+        return HelasWavefunctionList(\
+                  sorted(sorted_mothers2, lambda wf1, wf2: \
+                         HelasMatrixElement.sort_spin_dict[\
+                                          wf2.get_spin_state_number()]\
+                         - HelasMatrixElement.sort_spin_dict[\
+                                          wf1.get_spin_state_number()]))
     
 
 #===============================================================================
@@ -2728,3 +2808,4 @@ class HelasModel(base_objects.PhysicsObject):
             self.set('name', argument.get('name'))
         else:
             super(HelasModel, self).__init__(argument)
+
