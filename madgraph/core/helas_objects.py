@@ -740,6 +740,39 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return (tuple(res), self.get('lorentz'))
 
+    def get_base_vertices(self):
+        """Recursive method to get a base_objects.VertexList
+        corresponding to this wavefunction and its mothers."""
+
+        vertices = base_objects.VertexList()
+
+        if not self.get('mothers'):
+            return vertices
+
+        # Add vertices for all mothers
+        for mother in self.get('mothers'):
+            # This is where recursion happens
+            vertices.extend(mother.get_base_vertices())
+        # Generate last vertex
+        legs = base_objects.LegList()
+        for mother in self.get('mothers'):
+            legs.append(base_objects.Leg({
+                'id': mother.get_pdg_code_outgoing(),
+                'number': mother.get('number_external'),
+                'state': mother.get('leg_state')
+                }))
+        legs.append(base_objects.Leg({
+                'id': self.get_pdg_code_outgoing(),
+                'number': self.get('number_external'),
+                'state': self.get('leg_state')
+                }))
+
+        vertices.append(base_objects.Vertex({
+            'id': self.get('interaction_id'),
+            'legs': legs}))
+
+        return vertices
+
     # Overloaded operators
 
     def __eq__(self, other):
@@ -1148,6 +1181,30 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         return (-1) ** nflips
 
+    def get_base_diagram(self):
+        """Return the base_objects.Diagram which corresponds to this
+        amplitude, using a recursive method for the wavefunctions."""
+
+        vertices = base_objects.VertexList()
+
+        # Add vertices for all mothers
+        for mother in self.get('mothers'):
+            vertices.extend(mother.get_base_vertices())
+        # Generate last vertex
+        legs = base_objects.LegList()
+        for mother in self.get('mothers'):
+            legs.append(base_objects.Leg({
+                'id': mother.get_pdg_code_outgoing(),
+                'number': mother.get('number_external'),
+                'state': mother.get('leg_state')
+                }))
+                        
+        vertices.append(base_objects.Vertex({
+            'id': self.get('interaction_id'),
+            'legs': legs}))
+
+        return base_objects.Diagram({'vertices': vertices})
+
     # Comparison between different amplitudes, to allow check for
     # identical processes. Note that we are then not interested in
     # interaction id, but in all other properties.
@@ -1317,7 +1374,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 self.calculate_fermionfactors()
                 self.calculate_identical_particle_factors()
                 if gen_color:
-                    self.get('color_basis').build(amplitude)
+                    new_amp = self.get_base_amplitude()
+                    self.get('color_basis').build(new_amp)
                     self.set('color_matrix',
                              color_amp.ColorMatrix(self.get('color_basis')))
             else:
@@ -1964,6 +2022,24 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         self["identical_particle_factor"] = reduce(lambda x, y: x * y,
                                           [ math.factorial(val) for val in \
                                             identical_indices.values() ])
+
+    def get_base_amplitude(self):
+        """Generate a diagram_generation.Amplitude from a
+        HelasMatrixElement. This is used to generate both color
+        amplitudes and diagram drawing."""
+
+        # Need to take care of diagram numbering for decay chains
+        # before this can be used for those!
+
+        model = self.get('processes')[0].get('model')
+
+        diagrams = base_objects.DiagramList()
+        for diag in self.get('diagrams'):
+            diagrams.append(diag.get('amplitudes')[0].get_base_diagram())
+
+        return diagram_generation.Amplitude({\
+            'process': self.get('processes')[0],
+            'diagrams': diagrams})
 
     # Helper methods
 
@@ -2640,7 +2716,8 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     # Always create an empty color basis, and the list of raw
                     # colorize objects (before simplification) associated with amplitude
                     col_basis = color_amp.ColorBasis()
-                    colorize_obj = col_basis.create_color_dict_list(amplitude)
+                    new_amp = matrix_element.get_base_amplitude()
+                    colorize_obj = col_basis.create_color_dict_list(new_amp)
 
                     try:
                         # If the color configuration of the ME has already been 
