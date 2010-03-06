@@ -1703,7 +1703,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         self.identical_decay_chain_factor(decay_dict.values())
         
     def insert_decay(self, wf_number, decay, replace_dict):
-        """Insert a decay chain wavefunction into the matrix element.
+        """Insert a decay chain matrix element into the matrix element.
         Note that:
         1) All wavefunction numbers must be shifted
         2) All amplitudes and all wavefunctions using the decaying wf
@@ -1711,8 +1711,18 @@ class HelasMatrixElement(base_objects.PhysicsObject):
            decay matrix element
         3) In the presence of Majorana particles, we must make sure
            to flip fermion flow for the decay process if needed.
+        The algorithm used is the following:
+        1) Pick out all wavefunctions in the decay, except the final ones,
+           which are the ones to replace the present wavefunctions
+        2) Multiply the diagrams with the number of diagrams Ndiag in
+           the decay element
+        3) Replace the wavefunctions recursively, so that we always replace
+           each old wavefunctions with Namp new ones, where Namp is the number
+           of amplitudes in the decay element. Simultaneously replace the
+           amplitudes, keeping the diagram numbers (mod Ndiag)
         """
-        
+
+        # decay is a HelasMatrixElement
         decay_element = copy.deepcopy(decay)
         # Avoid Python copying the complete model
         # every time using deepcopy
@@ -1752,7 +1762,26 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         final_wfs = [amp.get('mothers')[1] for amp in \
                     sum([diagram.get('amplitudes') for \
                          diagram in decay_element.get('diagrams')],[])]
+        
+        # final_wfs will be inserted by replace_wavefunctions,
+        # so remove from new_wfs
+        for wf in final_wfs:
+            decay_wfs.remove(wf)
 
+        # Multiply the diagrams by Ndiag
+        diagrams = HelasDiagramList()
+        for diagram in self.get('diagrams'):
+            new_diagrams = [copy.copy(diag) for diag in \
+                            [ diagram ] * (len(decay.get('diagrams')) - 1)]
+            diagram.set('number', (diagram.get('number') - 1) * \
+                                  len(decay.get('diagrams')) + 1)
+            for i, diag in enumerate(new_diagrams):
+                diag.set('wavefunctions', HelasWavefunctionList())
+                diag.set('number', diagram.get('number') + i + 1)
+            diagrams.append(diagram)
+            diagrams.extend(new_diagrams)
+        self.set('diagrams', diagrams)
+        
         # Find the external wfs to be replaced. There should only be
         # one, unless we have multiple fermion flows in the process
         replace_wfs = filter(lambda wf: not wf.get('mothers') and \
@@ -1770,7 +1799,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                          [wf.get('number') for wf in diag.get('wavefunctions')],
                          self.get('diagrams'))
 
-            new_wfs = copy.copy(decay_wfs)
             # NEED TO INCLUDE CHECK FOR FERMION FLOW DIRECTION HERE!
             for wf in filter(lambda final_wf: final_wf.is_fermion(),
                              final_wfs):
@@ -1788,37 +1816,27 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 #wf.check_majorana_and_flip_flow(found_majorana = True,
                                                 
 
-            # Pick out the final wavefunctions in the decay chain,
-            # which are going to replace the existing final state
-            # wavefunction old_wf
-            new_final_wfs = filter(lambda wf: wf in final_wfs, new_wfs)
-
-            # new_final_wfs will be inserted by replace_wavefunctions,
-            # so remove from new_wfs
-            for wf in new_final_wfs:
-                new_wfs.remove(wf)
-
             # External wavefunction offset for new wfs
             incr_new = old_wf.get('number_external') - \
-                       new_wfs[0].get('number_external')
+                       decay_wfs[0].get('number_external')
 
             # External wavefunction offset for old wfs
-            incr_old = \
-                     len(filter(lambda wf: not wf.get('mothers'), new_wfs)) - 1
+            incr_old = len(filter(lambda wf: not wf.get('mothers'),
+                                  decay_wfs)) - 1
             # Renumber the new wavefunctions
             i = old_wf.get('number')
-            for wf in new_wfs:
+            for wf in decay_wfs:
                 wf.set('number', i)
                 wf.set('number_external', wf.get('number_external') + incr_new)
                 i = i + 1
-            for wf in new_final_wfs:
+            for wf in final_wfs:
                 wf.set('number', i)
                 wf.set('number_external',
                        wf.get('number_external') + incr_new)
                 i = i + 1
 
             # Renumber the old wavefunctions above the replaced one
-            i = i - len(new_final_wfs)
+            i = i - len(final_wfs)
             old_wf_index = [wf.get('number') for wf in \
                      wavefunctions].index(old_wf.get('number'))
             for wf in wavefunctions[old_wf_index:]:
@@ -1833,20 +1851,20 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # (which are used to replace the existing final state wfs)
             # into wavefunctions and diagram
             wavefunctions = wavefunctions[0:old_wf_index] + \
-                            new_wfs + wavefunctions[old_wf_index:]
+                            decay_wfs + wavefunctions[old_wf_index:]
             for diagram in diagrams:
                 diagram_wfs = diagram.get('wavefunctions')
                 old_wf_index = [wf.get('number') for wf in \
                          diagram_wfs].index(old_wf.get('number'))
                 diagram_wfs = diagram_wfs[0:old_wf_index] + \
-                              new_wfs + diagram_wfs[old_wf_index:]
+                              decay_wfs + diagram_wfs[old_wf_index:]
             
                 diagram.set('wavefunctions', HelasWavefunctionList(diagram_wfs))
             
             # Multiply wavefunctions and insert mothers using a
             # recursive function
             self.replace_wavefunctions(old_wf,
-                                       new_final_wfs,
+                                       decay_element,
                                        wavefunctions,
                                        amplitudes)
 
@@ -1855,9 +1873,20 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 replace_dict[key] = replace_wf_dict[key].get('number')
 
 
-    def replace_wavefunctions(self, old_wf, new_wfs, wavefunctions, amplitudes):
-        """Recursive function to replace old_wf with new_wfs, and multiply
-        all wavefunctions or amplitudes that use old_wf."""
+    def replace_wavefunctions(self, old_wf, decay, wavefunctions, amplitudes):
+        """Recursive function to replace old_wf with the wfs from
+        decay, and multiply all wavefunctions or amplitudes that use
+        old_wf."""
+
+        if not isinstance(decay, HelasMatrixElement):
+            raise self.PhysicsObjectError,\
+                  "Should be a HelasMatrixElement"
+
+        # The wavefunctions which will replace the present wfs are
+        # the second mother in the decay_chain amplitudes
+        new_wfs = [amp.get('mothers')[1] for amp in \
+                    sum([diagram.get('amplitudes') for \
+                         diagram in decay.get('diagrams')],[])]
 
         # Update wavefunction numbers
         # Here we know that the wf number corresponds to the list order
@@ -1882,57 +1911,105 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                           new_wfs + diagram_wfs[old_wf_index + 1:]
             diagram.set('wavefunctions', HelasWavefunctionList(diagram_wfs))
         
-        # Find amplitudes which are daughters of old_wf
-        daughter_amps = filter(lambda amp: old_wf.get('number') in \
+
+        # Pick out diagrams with amplitudes which are daughters of old_wf
+        diagrams = filter(lambda diag: old_wf.get('number') in \
+                          sum([[wf.get('number') for wf in amp.get('mothers')] \
+                              for amp in diag.get('amplitudes')], []),
+                          self.get('diagrams'))
+
+        for diagram in diagrams:
+            # The number of the diagram is correlated with the number
+            # of the decay chain diagram
+            numdecay = (diagram.get('number') - 1) % \
+                           len(decay.get('diagrams')) + 1
+            # Get the corresponding decay diagram
+            decay_diag = filter(lambda diag: diag.get('number') == numdecay,
+                                decay.get('diagrams'))[0]
+            # Wavefunctions to replace for this diagram
+            decay_wfs = [amp.get('mothers')[1] for amp in \
+                         decay_diag.get('amplitudes')]
+            # Amplitudes in this diagram that are daughters of old_wf
+            daughter_amps = filter(lambda amp: old_wf.get('number') in \
                                 [wf.get('number') for wf in amp.get('mothers')],
-                               amplitudes)
-        # Create new copies, to insert the new wfs instead
-        new_daughter_amps = [ [ amp ] * len(new_wfs) for amp in daughter_amps]
-        new_daughter_amps = [ [ copy.copy(amp) for amp in amp_list] \
-                              for amp_list in new_daughter_amps ]
+                                diagram.get('amplitudes'))
 
-        for old_amp, new_amps in zip(daughter_amps, new_daughter_amps):
-            # Replace the old mother with the new ones
-            for i, (daughter, new_wf) in enumerate(zip(new_amps, new_wfs)):
-                mothers = copy.copy(daughter.get('mothers'))
-                old_wf_index = [wf.get('number') for wf in mothers].index(\
-                    old_wf.get('number'))
-                # Update mother
-                mothers[old_wf_index] = new_wf
-                daughter.set('mothers', mothers)
-                # Update amp numbers for replaced amp
-                daughter.set('number', old_amp.get('number') + i)
+            new_amplitudes = copy.copy(diagram.get('amplitudes'))
+
+            # Loop over daughter_amps, to replace each amp with new
+            # amplitudes, that have the right mothers
+            for old_amp in daughter_amps:
+                # Create copies of this amp
+                new_amps = [copy.copy(amp) for amp in \
+                            [ old_amp ] * len(decay_wfs)]
+                # Replace the old mother with the new ones
+                for i, (daughter, new_wf) in enumerate(zip(new_amps, decay_wfs)):
+                    mothers = copy.copy(daughter.get('mothers'))
+                    old_wf_index = [wf.get('number') for wf in mothers].index(\
+                         old_wf.get('number'))
+                    # Update mother
+                    mothers[old_wf_index] = new_wf
+                    daughter.set('mothers', mothers)
+                    # Update amp numbers for replaced amp
+                    daughter.set('number', old_amp.get('number') + i)
+
+                # Insert the new amplitudes in diagram amplitudes
+                index = new_amplitudes.index(old_amp)
+                new_amplitudes = new_amplitudes[:index] + \
+                                 new_amps + new_amplitudes[index + 1:]
+
+                # Update number for old_amp
+                old_amp.set('number', new_amps[-1].get('number') + 1)
                 
-            # Update amplitudes numbers for all other amplitudes
-            for amp in amplitudes[amplitudes.index(old_amp) + 1:]:
-                amp.set('number', amp.get('number') + len(new_wfs) - 1)
+                # Update number for all amplitudes
+                index = amplitudes.index(old_amp)
+                for i, amp in enumerate(amplitudes[index + 1:]):
+                    amp.set('number', new_amps[-1].get('number') + i + 1)
 
-            # Insert the new amplitudes into amplitudes and diagrams
-            amplitudes = amplitudes[0:amplitudes.index(old_amp)] + \
-                         new_amps + amplitudes[amplitudes.index(old_amp) + 1:]
+                # Insert the new amplitudes in amplitudes (leaving old_amp)
+                amplitudes = amplitudes[:index] + \
+                                 new_amps + amplitudes[index:]
 
-            # For now, keep old diagrams and just multiply the
-            # amplitudes. This should be changed.
-            diagrams = filter(lambda diag: old_amp in diag.get('amplitudes'),
-                              self.get('diagrams'))
-            for diagram in diagrams:
-                diagram_amps = diagram.get('amplitudes')
-                diagram_amps = diagram_amps[0:diagram_amps.index(old_amp)] + \
-                              new_amps + diagram_amps[\
-                                    diagram_amps.index(old_amp) + 1:]
-                diagram.set('amplitudes', HelasAmplitudeList(diagram_amps))
+            # Replace diagram amplitudes with the new ones
+            diagram.set('amplitudes', HelasAmplitudeList(new_amplitudes))
+
+            # If this is the last diagram in the series, remove old amplitudes
+            if numdecay == len(decay.get('diagrams')):
+                for old_amp in daughter_amps:
+                    amplitudes.remove(old_amp)
 
         # Find wavefunctions that are daughters of old_wf
         daughter_wfs = filter(lambda wf: old_wf.get('number') in \
                               [wf1.get('number') for wf1 in wf.get('mothers')],
                               wavefunctions)
         
-        # Create new copies, to insert the new wfs instead
-        new_daughter_wfs = [ [ wf ] * len(new_wfs) for wf in daughter_wfs]
-        new_daughter_wfs = [ [ copy.copy(wf) for wf in wf_list] \
-                             for wf_list in new_daughter_wfs ]
-        
-        for daughter_ind, wfs in enumerate(new_daughter_wfs):
+        # Loop over daughter_wfs, to replace it with new wfs with the
+        # new mothers
+        for daughter_wf in daughter_wfs:
+            # Create new diagrams containing the new wavefunctions
+            # to be replaced, keeping track of diagram numbers, in order
+            # to prepare for recursion
+            new_diagrams = HelasDiagramList()
+            for diag in decay.get('diagrams'):
+                new_amplitudes = HelasAmplitudeList()
+                for wf in [amp.get('mothers')[1] for amp in \
+                           diag.get('amplitudes')]:
+                    new_amplitudes.append(\
+                        HelasAmplitude({'mothers': \
+                                        HelasWavefunctionList([\
+                                        HelasWavefunction(),
+                                        copy.copy(daughter_wf)])}))
+                new_diagrams.append(\
+                    HelasDiagram({'amplitudes': new_amplitudes,
+                                  'number': diag.get('number')}))
+            # Insert the diagrams into a new HelasMatrixElement
+            new_decay = HelasMatrixElement({'diagrams': new_diagrams})
+
+            # Collect the new wavefunctions
+            wfs = [amp.get('mothers')[1] for amp in \
+                    sum([diagram.get('amplitudes') for \
+                         diagram in new_decay.get('diagrams')],[])]
+
             # Replace the old mother with the new ones, update wf numbers
             for i, (daughter, new_wf) in enumerate(zip(wfs, new_wfs)):
                 mothers = copy.copy(daughter.get('mothers'))
@@ -1941,9 +2018,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 mothers[index] = new_wf
                 daughter.set('mothers', mothers)
                 daughter.set('number', daughter.get('number') + i)
+
             # This is where recursion happens
-            self.replace_wavefunctions(daughter_wfs[daughter_ind],
-                                       wfs, wavefunctions, amplitudes)
+            self.replace_wavefunctions(daughter_wf, new_decay,
+                                       wavefunctions, amplitudes)
 
     def identical_decay_chain_factor(self, decay_chains):
         """Calculate the denominator factor from identical decay chains"""
@@ -2466,8 +2544,6 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
         if not self['decay_chains']:
             # Just return the list of matrix elements
             return self['core_processes']
-
-        # This is where recursion happens
 
         # decay_elements is a list of HelasMatrixElementLists with
         # all decay processes
