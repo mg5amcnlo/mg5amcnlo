@@ -23,6 +23,8 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color
+import madgraph.iolibs.export_v4 as export_v4
+
 #===============================================================================
 # HelasWavefunctionTest
 #===============================================================================
@@ -241,19 +243,6 @@ class HelasAmplitudeTest(unittest.TestCase):
 
         self.myamplitude = helas_objects.HelasAmplitude(self.mydict)
 
-    def test_setget_amplitude_correct(self):
-        "Test correct HelasAmplitude object __init__, get and set"
-
-        myamplitude2 = helas_objects.HelasAmplitude()
-
-        for prop in self.mydict.keys():
-            myamplitude2.set(prop, self.mydict[prop])
-
-        self.assertEqual(self.myamplitude, myamplitude2)
-
-        for prop in self.myamplitude.keys():
-            self.assertEqual(self.myamplitude.get(prop), self.mydict[prop])
-
     def test_setget_amplitude_exceptions(self):
         "Test error raising in HelasAmplitude __init__, get and set"
 
@@ -318,6 +307,7 @@ class HelasAmplitudeTest(unittest.TestCase):
         goal = goal + "    \'inter_color\': None,\n"
         goal = goal + "    \'lorentz\': \'\',\n"
         goal = goal + "    \'coupling\': \'none\',\n"
+        goal = goal + "    \'coupl_key\': (0, 0),\n"
         goal = goal + "    \'number\': 5,\n"
         goal = goal + "    \'color_indices\': [],\n"
         goal = goal + "    \'fermionfactor\': 1,\n"
@@ -2103,7 +2093,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'couplings':{(0, 0):'GG'},
                       'orders':{'QCD':1}}))
 
-        # 3- and 4-Gluon coupling
+        # 3-Gluon coupling
         myinterlist.append(base_objects.Interaction({
                       'id': 8,
                       'particles': base_objects.ParticleList(\
@@ -2114,20 +2104,6 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'lorentz':[''],
                       'couplings':{(0, 0):'GG'},
                       'orders':{'QCD':1}}))
-
-        myinterlist.append(base_objects.Interaction({
-                      'id': 9,
-                      'particles': base_objects.ParticleList(\
-                                            [g, \
-                                             g, \
-                                             g,
-                                             g]),
-                      'color': [color.ColorString([color.f(0, 1, 2)]),
-                                color.ColorString([color.f(0, 1, 2)]),
-                                color.ColorString([color.f(0, 1, 2)])],
-                      'lorentz':['gggg1', 'gggg2', 'gggg3'],
-                      'couplings':{(0, 0):'GG',(1, 1):'GG',(2, 2):'GG'},
-                      'orders':{'QCD':2}}))
 
         self.mymodel.set('particles', mypartlist)
         self.mymodel.set('interactions', myinterlist)
@@ -2285,12 +2261,12 @@ class HelasMultiProcessTest(unittest.TestCase):
 
         for i, me in enumerate(matrix_elements):
             self.assertEqual(len(me.get('processes')), num_processes[i])
-##            if num_amps[i] > 0:
-##                self.assertEqual(me.get_number_of_amplitudes(),
-##                                 num_amps[i])
-##            if num_wfs[i] > 0:
-##                self.assertEqual(me.get_number_of_wavefunctions(),
-##                                 num_wfs[i])
+            if num_amps[i] > 0:
+                self.assertEqual(me.get_number_of_amplitudes(),
+                                 num_amps[i])
+            if num_wfs[i] > 0:
+                self.assertEqual(me.get_number_of_wavefunctions(),
+                                 num_wfs[i])
 
             if iden_factors[i] > 0:
                 self.assertEqual(me.get('identical_particle_factor'),
@@ -2309,14 +2285,6 @@ class HelasMultiProcessTest(unittest.TestCase):
             for i, wf in enumerate(filter (lambda wf: not wf.get('mothers'),
                                            me.get_all_wavefunctions())):
                 self.assertEqual(wf.get('number_external'), i + 1)
-
-        me = matrix_elements[-1]
-        print me.get('processes')[0].nice_string()
-        print me.get_base_amplitude().get('diagrams').nice_string()
-        print "Diagrams: ",len(me.get('diagrams'))
-        for diag in me.get('diagrams'):
-            print "Diagram ",diag.get('number')," has amplitudes: "
-            print [amp.get('number') for amp in diag.get('amplitudes')]
 
     def test_multistage_decay_chain_process(self):
         """Test a multistage decay chain g g > d d~, d > g d, g > u u~ g

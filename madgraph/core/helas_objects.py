@@ -239,7 +239,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                                                 str(value)
 
         if name == 'coupl_key':
-            if not isinstance(value, tuple):
+            if value and not isinstance(value, tuple):
                 raise self.PhysicsObjectError, \
                       "%s is not a valid tuple" % str(value)
             if len(value) != 2:
@@ -773,6 +773,24 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return vertices
 
+    def get_color_indices(self):
+        """Recursive method to get the color indices corresponding to
+        this wavefunction and its mothers."""
+
+        if not self.get('mothers'):
+            return []
+
+        color_indices = []
+        
+        # Add color indices for all mothers
+        for mother in self.get('mothers'):
+            # This is where recursion happens
+            color_indices.extend(mother.get_color_indices())
+        # Add this wf's color index
+        color_indices.append(self.get('coupl_key')[0])
+
+        return color_indices
+
     # Overloaded operators
 
     def __eq__(self, other):
@@ -930,6 +948,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
         self['inter_color'] = None
         self['lorentz'] = ''
         self['coupling'] = 'none'
+        # The Lorentz and color index used in this amplitude
+        self['coupl_key'] = (0, 0)
         # Properties relating to the vertex
         self['number'] = 0
         self['fermionfactor'] = 0
@@ -989,6 +1009,17 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid coupling string" % \
                                                                 str(value)
+
+        if name == 'coupl_key':
+            if value and not isinstance(value, tuple):
+                raise self.PhysicsObjectError, \
+                      "%s is not a valid tuple" % str(value)
+            if len(value) != 2:
+                raise self.PhysicsObjectError, \
+                      "%s is not a valid tuple with 2 elements" % str(value)
+            if not isinstance(value[0], int) or not isinstance(value[1], int):
+                raise self.PhysicsObjectError, \
+                      "%s is not a valid tuple of integer" % str(value)
 
         if name == 'number':
             if not isinstance(value, int):
@@ -1076,8 +1107,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
         """Return particle property names as a nicely sorted list."""
 
         return ['interaction_id', 'pdg_codes', 'inter_color', 'lorentz',
-                'coupling', 'number', 'color_indices', 'fermionfactor',
-                'mothers']
+                'coupling', 'coupl_key', 'number', 'color_indices',
+                'fermionfactor', 'mothers']
 
 
     # Helper functions
@@ -1204,6 +1235,26 @@ class HelasAmplitude(base_objects.PhysicsObject):
             'legs': legs}))
 
         return base_objects.Diagram({'vertices': vertices})
+
+    def get_color_indices(self):
+        """Get the color indices corresponding to
+        this amplitude and its mothers, using a recursive function."""
+
+        if not self.get('mothers'):
+            return []
+
+        color_indices = []
+
+        # Add color indices for all mothers
+        for mother in self.get('mothers'):
+            # This is where recursion happens
+            color_indices.extend(mother.get_color_indices())
+
+        # Add this amp's color index
+        if self.get('interaction_id'):
+            color_indices.append(self.get('coupl_key')[0])
+
+        return color_indices
 
     # Comparison between different amplitudes, to allow check for
     # identical processes. Note that we are then not interested in
@@ -1647,6 +1698,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         if inter.get('color'):
                             amp.set('inter_color', inter.get('color')[\
                                 coupl_key[0]])
+                        amp.set('coupl_key', coupl_key)
                     amp.set('mothers', mothers)
                     amplitude_number = amplitude_number + 1
                     amp.set('number', amplitude_number)
@@ -1655,8 +1707,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     if inter:
                         new_color_list.append(coupl_key[0])
                     amp.set('color_indices', new_color_list)
-                    # Generate HelasDiagram
 
+                    # Generate HelasDiagram
                     helas_diagram.get('amplitudes').append(amp)
                     if diagram_wavefunctions and not \
                                        helas_diagram.get('wavefunctions'):
@@ -1679,7 +1731,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             wf.set('mothers', HelasMatrixElement.sorted_mothers(wf))
         for amp in self.get_all_amplitudes():
             amp.set('mothers', HelasMatrixElement.sorted_mothers(amp))
-                    
+            amp.set('color_indices', amp.get_color_indices())
 
     def insert_decay_chains(self, decay_dict):
         """Insert the decay chains decays into this matrix element,
@@ -1691,7 +1743,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         replace_dict = dict([(number,number) for number in \
                              decay_dict.keys()])
 
-        # Iteratively replace all legs that have decays
+        # Replace all legs that have decays
         for number in decay_dict.keys():
             
             self.insert_decay(number,
@@ -1705,21 +1757,21 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     def insert_decay(self, wf_number, decay, replace_dict):
         """Insert a decay chain matrix element into the matrix element.
         Note that:
-        1) All wavefunction numbers must be shifted
-        2) All amplitudes and all wavefunctions using the decaying wf
-           must be copied as many times as there are diagrams in the
+        1) All amplitudes and all wavefunctions using the decaying wf
+           must be copied as many times as there are amplitudes in the
            decay matrix element
-        3) In the presence of Majorana particles, we must make sure
+        2) In the presence of Majorana particles, we must make sure
            to flip fermion flow for the decay process if needed.
         The algorithm used is the following:
         1) Pick out all wavefunctions in the decay, except the final ones,
-           which are the ones to replace the present wavefunctions
+           which will replace the present wavefunctions
         2) Multiply the diagrams with the number of diagrams Ndiag in
            the decay element
         3) Replace the wavefunctions recursively, so that we always replace
            each old wavefunctions with Namp new ones, where Namp is the number
            of amplitudes in the decay element. Simultaneously replace the
-           amplitudes, keeping the diagram numbers (mod Ndiag)
+           amplitudes, while making sure that each new diagram corresponds
+           to the combination of an old diagram and one diagram in the decay
         """
 
         # decay is a HelasMatrixElement
@@ -1861,8 +1913,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             
                 diagram.set('wavefunctions', HelasWavefunctionList(diagram_wfs))
             
-            # Multiply wavefunctions and insert mothers using a
-            # recursive function
+            # Multiply wavefunctions and amplitudes and insert mothers
+            # using a recursive function
             self.replace_wavefunctions(old_wf,
                                        decay_element,
                                        wavefunctions,
@@ -1952,17 +2004,25 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     daughter.set('mothers', mothers)
                     # Update amp numbers for replaced amp
                     daughter.set('number', old_amp.get('number') + i)
+                    # Update color indices for daughter amplitude
+                    daughter.set('color_indices',
+                                 daughter.get('color_indices')[:-1] + \
+                                 decay_diag.get('amplitudes')[i]. \
+                                            get('color_indices') + \
+                                 daughter.get('color_indices')[-1:])
+                    
 
                 # Insert the new amplitudes in diagram amplitudes
                 index = new_amplitudes.index(old_amp)
                 new_amplitudes = new_amplitudes[:index] + \
                                  new_amps + new_amplitudes[index + 1:]
 
+                index = amplitudes.index(old_amp)
+
                 # Update number for old_amp
                 old_amp.set('number', new_amps[-1].get('number') + 1)
                 
                 # Update number for all amplitudes
-                index = amplitudes.index(old_amp)
                 for i, amp in enumerate(amplitudes[index + 1:]):
                     amp.set('number', new_amps[-1].get('number') + i + 1)
 
