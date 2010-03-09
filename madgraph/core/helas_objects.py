@@ -259,6 +259,15 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid wavefunction " % str(value) + \
                         "state (incoming|outgoing|intermediate)"
+        if name == 'leg_state':
+            if not isinstance(value, str):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid string for wavefunction state" % \
+                                                                    str(value)
+            if value not in ['initial', 'final']:
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid wavefunction " % str(value) + \
+                        "state (incoming|outgoing|intermediate)"
         if name in ['fermionflow']:
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
@@ -427,8 +436,15 @@ class HelasWavefunction(base_objects.PhysicsObject):
             raise self.PhysicsObjectError, \
                   "%s is not a valid model for call to set_state_and_particle" \
                   % repr(model)
-        # Set leg_state to 'intermediate'
-        self.set('leg_state', 'intermediate')
+
+        # leg_state is final, unless there is exactly one initial 
+        # state particle involved in the combination -> t-channel
+        if len(filter(lambda mother: mother.get('leg_state') == 'initial',
+                      self.get('mothers'))) == 1:
+            leg_state = 'initial'
+        else:
+            leg_state = 'final'
+        self.set('leg_state', leg_state)
 
         # Start by setting the state of the wavefunction
         if self.is_boson():
@@ -533,6 +549,15 @@ class HelasWavefunction(base_objects.PhysicsObject):
         wavefunctions before the last Majorana fermion, instead flip
         particle identities and state. Return the new (or old)
         wavefunction, and the present wavefunction number.
+
+        Arguments:
+          found_majorana: boolean
+          wavefunctions: HelasWavefunctionList with previously
+                         defined wavefunctions
+          diagram_wavefunctions: HelasWavefunctionList with the wavefunctions
+                         already defined in this diagram
+          external_wavefunctions: dictionary from legnumber to external wf
+          wf_number: The present wavefunction number
         """
 
         if not found_majorana:
@@ -888,6 +913,11 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                       Please decompose your vertex into 2-fermion
                       vertices to get fermion flow correct."""
 
+        # Note that the order of mothers is given by the external
+        # number meaning that the order will in general be different
+        # for t- and s-channel diagrams, hence giving duplication of
+        # wave functions. I don't think there's anything to do about
+        # this.
         for mother in fermion_mothers:
             if Nincoming > Noutgoing and \
                mother.get_with_flow('state') == 'outgoing' or \
@@ -1734,8 +1764,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             amp.set('color_indices', amp.get_color_indices())
 
     def insert_decay_chains(self, decay_dict):
-        """Insert the decay chains decays into this matrix element,
-        using the recursive function insert_decay
+        """Iteratively insert the decay chains decays into this matrix
+        element. decay_dict is a dictionary from external leg number
+        to decay matrix element.
         """
         
         # We need to keep track of how the
@@ -1762,7 +1793,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
            decay matrix element
         2) In the presence of Majorana particles, we must make sure
            to flip fermion flow for the decay process if needed.
-        The algorithm used is the following:
+        The algorithm is the following:
         1) Pick out all wavefunctions in the decay, except the final ones,
            which will replace the present wavefunctions
         2) Multiply the diagrams with the number of diagrams Ndiag in
@@ -1776,8 +1807,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         # decay is a HelasMatrixElement
         decay_element = copy.deepcopy(decay)
-        # Avoid Python copying the complete model
-        # every time using deepcopy
+        # Avoid Python copying the complete model every time
         decay_element.get('processes')[0].set('model', \
                                 decay.get('processes')[0].get('model'))
         
@@ -1787,10 +1817,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 decay_element.get('processes')[0])
             
         # Pick out wavefunctions and amplitudes
-        wavefunctions = sum([diagram.get('wavefunctions') for \
-                             diagram in self['diagrams']],[])
-        amplitudes = sum([diagram.get('amplitudes') for \
-                          diagram in self['diagrams']],[])
+        wavefunctions = self.get_all_wavefunctions()
+        amplitudes = self.get_all_amplitudes()
 
         # Keep track of the numbers for the wavefunctions we will need
         # to replace later by simply keeping track of the
@@ -1802,8 +1830,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                 replace_dict.keys()])
 
         # Create a list of all the wavefunctions in the decay
-        decay_wfs = sum([diagram.get('wavefunctions') for \
-                         diagram in decay_element.get('diagrams')],[])
+        decay_wfs = decay_element.get_all_wavefunctions()
         # Remove the unwanted initial state wavefunction
         decay_wfs.remove(filter(lambda wf: \
                                 wf.get('number_external') == 1,
@@ -1846,7 +1873,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # wfs that have it as mother, and all their wfs, and
             # finally multiply all amplitudes
 
-            # Pick out the diagrams which contain old_wf
+            # Pick out the diagrams which contain old_wf. Unless
+            # optimization was off in helas diagram generation, there
+            # should only be one
             diagrams = filter(lambda diag: old_wf.get('number') in \
                          [wf.get('number') for wf in diag.get('wavefunctions')],
                          self.get('diagrams'))
@@ -2716,8 +2745,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
 
                 # Make sure to not modify the original matrix element
                 matrix_element = copy.deepcopy(core_process)
-                # Avoid Python copying the complete model
-                # every time using deepcopy
+                # Avoid Python copying the complete model every time
                 matrix_element.get('processes')[0].set('model', \
                                 core_process.get('processes')[0].get('model'))
 

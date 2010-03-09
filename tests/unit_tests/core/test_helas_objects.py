@@ -2400,6 +2400,190 @@ class HelasMultiProcessTest(unittest.TestCase):
             self.assertEqual(wf.get('number_external'), i + 1)
 
 
+    def test_majorana_decay_chain_process(self):
+        """Test a multistage decay chain g g > d d~, d > g d, g > u u~ g
+        """
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A electron and positron
+        mypartlist.append(base_objects.Particle({'name':'e-',
+                      'antiname':'e+',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'e^-',
+                      'antitexname':'e^+',
+                      'line':'straight',
+                      'charge':-1.,
+                      'pdg_code':11,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        eminus = mypartlist[len(mypartlist) - 1]
+        eplus = copy.copy(eminus)
+        eplus.set('is_part', False)
+
+        # A E slepton and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'sl2-',
+                      'antiname':'sl2+',
+                      'spin':1,
+                      'color':1,
+                      'mass':'Msl2',
+                      'width':'Wsl2',
+                      'texname':'\tilde e^-',
+                      'antitexname':'\tilde e^+',
+                      'line':'dashed',
+                      'charge':1.,
+                      'pdg_code':1000011,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        seminus = mypartlist[len(mypartlist) - 1]
+        seplus = copy.copy(seminus)
+        seplus.set('is_part', False)
+
+        # A neutralino
+        mypartlist.append(base_objects.Particle({'name':'n1',
+                      'antiname':'n1',
+                      'spin':2,
+                      'color':1,
+                      'mass':'Mneu1',
+                      'width':'Wneu1',
+                      'texname':'\chi_0^1',
+                      'antitexname':'\chi_0^1',
+                      'line':'straight',
+                      'charge':0.,
+                      'pdg_code':1000022,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        n1 = mypartlist[len(mypartlist) - 1]
+
+        # Coupling of n1 to e and se
+        myinterlist.append(base_objects.Interaction({
+                      'id': 103,
+                      'particles': base_objects.ParticleList(\
+                                            [n1, \
+                                             eminus, \
+                                             seplus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'MGVX350'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 104,
+                      'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             n1, \
+                                             seminus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'MGVX494'},
+                      'orders':{'QED':1}}))
+
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':'final'}))
+
+        mycoreproc = base_objects.Process({'legs':myleglist,
+                                       'model':mymodel})
+
+        me_core =  helas_objects.HelasMatrixElement(\
+            diagram_generation.Amplitude(mycoreproc))
+
+        print me_core.get('processes')[0].nice_string()
+        print me_core.get_base_amplitude().get('diagrams').nice_string()
+
+        print me_core.get('identical_particle_factor')
+        for diag in me_core.get('diagrams'):
+            print 'Diagram ',diag.get('number')
+            print "Wavefunctions: ", len(diag.get('wavefunctions'))
+            for wf in diag.get('wavefunctions'):
+                print wf.get('number'), wf.get('number_external'), wf.get('pdg_code'), [mother.get('number') for mother in wf.get('mothers')], wf.get('state'), wf.get('fermionflow')
+            print "Amplitudes: ", len(diag.get('amplitudes'))
+            for amp in diag.get('amplitudes'):
+                print amp.get('number'), [mother.get('number') for mother in amp.get('mothers')]
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-1000011,
+                                         'state':'final'}))
+
+        mydecay1 = base_objects.Process({'legs':myleglist,
+                                         'model':mymodel})
+
+        me1 =  helas_objects.HelasMatrixElement(\
+            diagram_generation.Amplitude(mydecay1))
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':1000011,
+                                         'state':'final'}))
+
+        mydecay2 = base_objects.Process({'legs':myleglist,
+                                         'model':mymodel})
+
+        mycoreproc.set('decay_chains', base_objects.ProcessList([\
+            mydecay1, mydecay2]))
+
+        myamplitude = diagram_generation.DecayChainAmplitude(mycoreproc)
+
+        matrix_element = helas_objects.HelasDecayChainProcess(myamplitude)
+
+        matrix_elements = matrix_element.combine_decay_chain_processes()
+
+        print matrix_elements[0].get('processes')[0].nice_string()
+        print matrix_elements[0].get('identical_particle_factor')
+
+        for diag in matrix_elements[0].get('diagrams'):
+            print 'Diagram ',diag.get('number')
+            print "Wavefunctions: ", len(diag.get('wavefunctions'))
+            for wf in diag.get('wavefunctions'):
+                print wf.get('number'), wf.get('number_external'), wf.get('pdg_code'), [mother.get('number') for mother in wf.get('mothers')], wf.get('state'), wf.get('fermionflow')
+            print "Amplitudes: ", len(diag.get('amplitudes'))
+            for amp in diag.get('amplitudes'):
+                print amp.get('number'), [mother.get('number') for mother in amp.get('mothers')]
+
+        self.assertEqual(matrix_elements[0].get('identical_particle_factor'),
+                         2)
+
+        for i, amp in enumerate(sum([diag.get('amplitudes') for diag in \
+                                    matrix_elements[0].get('diagrams')],[])):
+            self.assertEqual(amp.get('number'), i + 1)
+
+        for i, wf in enumerate(sum([diag.get('wavefunctions') for diag in \
+                                   matrix_elements[0].get('diagrams')],[])):
+            self.assertEqual(wf.get('number'), i + 1)
+
+        for i, wf in enumerate(filter (lambda wf: not wf.get('mothers'),
+                                       matrix_elements[0].get_all_wavefunctions())):
+            self.assertEqual(wf.get('number_external'), i + 1)
+
+
     def test_equal_decay_chains(self):
         """Test the functions for checking equal decay chains
         """
