@@ -62,7 +62,7 @@ class MadGraphCmd(cmd.Cmd):
     __save_opts = ['model',
                    'processes']
     __import_formats = ['v4']
-    __export_formats = ['v4standalone', 'v4sa_dirs']
+    __export_formats = ['v4standalone', 'v4sa_dirs', 'v4madevent']
 
     def split_arg(self, line):
         """Split a line of arguments"""
@@ -231,18 +231,18 @@ class MadGraphCmd(cmd.Cmd):
             if self.__curr_model:
                 #save_model.save_model(args[1], self.__curr_model)
                 if save_load_object.save_to_file(args[1], self.__curr_model):
-                    print 'Saved model to file ',args[1]
+                    print 'Saved model to file ', args[1]
             else:
                 print 'No model to save!'
         elif args[0] == 'processes':
             if self.__curr_amps:
                 if save_load_object.save_to_file(args[1], self.__curr_amps):
-                    print 'Saved processes to file ',args[1]
+                    print 'Saved processes to file ', args[1]
             else:
                 print 'No processes to save!'
         else:
             self.help_save()
-                
+
     def do_load(self, line):
         """Load information from file"""
 
@@ -260,7 +260,7 @@ class MadGraphCmd(cmd.Cmd):
                 print "Loaded model from file in %0.3f s" % \
                       (cpu_time2 - cpu_time1)
             else:
-                print 'Error: Could not load model from file ',args[1]
+                print 'Error: Could not load model from file ', args[1]
         elif args[0] == 'processes':
             self.__curr_amps = save_load_object.load_from_file(args[1])
             if isinstance(self.__curr_amps, diagram_generation.AmplitudeList):
@@ -272,10 +272,10 @@ class MadGraphCmd(cmd.Cmd):
                                         get('process').get('model')
                     print "Model set from process."
             else:
-                print 'Error: Could not load processes from file ',args[1]
+                print 'Error: Could not load processes from file ', args[1]
         else:
             self.help_save()
-                
+
     def complete_save(self, text, line, begidx, endidx):
         "Complete the save command"
 
@@ -320,10 +320,10 @@ class MadGraphCmd(cmd.Cmd):
 
         #option
         if len(self.split_arg(line[0:begidx])) >= 2:
-            option=['external=', 'horizontal=', 'add_gap=','max_size=', \
+            option = ['external=', 'horizontal=', 'add_gap=', 'max_size=', \
                                 'contract_non_propagating=']
             return self.list_completion(text, option)
-        
+
     # Display
     def do_display(self, line):
         """Display current internal status"""
@@ -594,7 +594,7 @@ class MadGraphCmd(cmd.Cmd):
         ndiags, cpu_time = generate_matrix_elements(self)
         calls = 0
         path = args[1]
-        
+
         if args[0] == 'v4standalone':
             for me in self.__curr_matrix_elements.get('matrix_elements'):
                 filename = os.path.join(path, 'matrix_' + \
@@ -615,11 +615,17 @@ class MadGraphCmd(cmd.Cmd):
                         export_v4.generate_subprocess_directory_v4_standalone(\
                             me, self.__curr_fortran_model, path)
 
+        if args[0] == 'v4madevent':
+            for me in self.__curr_matrix_elements.get('matrix_elements'):
+                calls = calls + \
+                        export_v4.generate_subprocess_directory_v4_madevent(\
+                            me, self.__curr_fortran_model, path)
+
         print ("Generated helas calls for %d subprocesses " + \
               "(%d diagrams) in %0.3f s") % \
               (len(self.__curr_matrix_elements.get('matrix_elements')),
                ndiags, cpu_time)
-        
+
         print "Wrote %d helas calls" % calls
 
     def complete_export(self, text, line, begidx, endidx):
@@ -682,7 +688,7 @@ class MadGraphCmd(cmd.Cmd):
         if len(args) < 1:
             self.help_draw()
             return False
-        
+
         if not filter(lambda amp: amp.get("diagrams"), self.__curr_amps):
             print "No process generated, please generate a process!"
             return False
@@ -700,7 +706,7 @@ class MadGraphCmd(cmd.Cmd):
                     print "invalid syntax: '%s'. Please try again" % data
                     self.help_draw()
                     return False
-                option.set(key,value)
+                option.set(key, value)
 
         for amp in self.__curr_amps:
             filename = os.path.join(args[0], 'diagrams_' + \

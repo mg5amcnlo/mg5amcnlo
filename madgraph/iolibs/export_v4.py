@@ -217,6 +217,284 @@ C ----------
 
     return len(filter(lambda call: call.find('#') != 0, helas_calls))
 
+#===============================================================================
+# write_matrix_element_v4_madevent
+#===============================================================================
+def write_matrix_element_v4_madevent(fsock, matrix_element, fortran_model):
+    """Export a matrix element to a matrix.f file in MG4 madevent format"""
+
+    if not matrix_element.get('processes') or \
+           not matrix_element.get('diagrams'):
+        return 0
+
+    writer = FortranWriter()
+    # Set lowercase/uppercase Fortran code
+    FortranWriter.downcase = False
+
+    replace_dict = {}
+
+    # Extract version number and date from VERSION file
+    info_lines = get_mg5_info_lines()
+    replace_dict['info_lines'] = info_lines
+
+    # Extract process info lines
+    process_lines = get_process_info_lines(matrix_element)
+    replace_dict['process_lines'] = process_lines
+
+    # Extract ncomb
+    ncomb = matrix_element.get_helicity_combinations()
+    replace_dict['ncomb'] = ncomb
+
+    # Extract helicity lines
+    helicity_lines = get_helicity_lines(matrix_element)
+    replace_dict['helicity_lines'] = helicity_lines
+
+    # Extract overall denominator
+    # Averaging initial state color, spin, and identical FS particles
+    den_factor_line = get_den_factor_line(matrix_element)
+    replace_dict['den_factor_line'] = den_factor_line
+
+    # Extract ngraphs
+    ngraphs = matrix_element.get_number_of_amplitudes()
+    replace_dict['ngraphs'] = ngraphs
+
+    # Extract nwavefuncs
+    nwavefuncs = matrix_element.get_number_of_wavefunctions()
+    replace_dict['nwavefuncs'] = nwavefuncs
+
+    # Extract ncolor
+    ncolor = max(1, len(matrix_element.get('color_basis')))
+    replace_dict['ncolor'] = ncolor
+
+    # Extract color data lines
+    color_data_lines = get_color_data_lines(matrix_element)
+    replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+
+    # Extract helas calls
+    helas_calls = fortran_model.get_matrix_element_calls(\
+                matrix_element)
+    replace_dict['helas_calls'] = "\n".join(helas_calls)
+
+    # Extract JAMP lines
+    jamp_lines = get_JAMP_lines(matrix_element)
+    replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+
+    file = \
+"""      SUBROUTINE SMATRIX(P,ANS)
+C  
+%(info_lines)s
+C 
+C MadGraph for Madevent Version
+C 
+C Returns amplitude squared summed/avg over colors
+c and helicities
+c for the point in phase space P(0:3,NEXTERNAL)
+C  
+%(process_lines)s
+C  
+    IMPLICIT NONE
+C  
+C CONSTANTS
+C  
+    Include "genps.inc"
+    INTEGER                 NCOMB,     NCROSS         
+    PARAMETER (             NCOMB=%(ncomb)d, NCROSS=  1)
+    INTEGER    THEL
+    PARAMETER (THEL=NCOMB*NCROSS)
+C  
+C ARGUMENTS 
+C  
+    REAL*8 P1(0:3,NEXTERNAL),ANS(NCROSS)
+C  
+C LOCAL VARIABLES 
+C  
+    INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
+    REAL*8 T, P(0:3,NEXTERNAL)
+    REAL*8 MATRIX
+    INTEGER IHEL,IDEN(NCROSS),IC(NEXTERNAL,NCROSS)
+    INTEGER IPROC,JC(NEXTERNAL), I
+    LOGICAL GOODHEL(NCOMB,NCROSS)
+    INTEGER NGRAPHS
+    REAL*8 hwgt, xtot, xtry, xrej, xr, yfrac(0:ncomb)
+    INTEGER idum, ngood, igood(ncomb), jhel, j, jj
+    LOGICAL warned
+    REAL     xran1
+    EXTERNAL xran1
+C  
+C GLOBAL VARIABLES
+C  
+    Double Precision amp2(maxamps), jamp2(0:maxamps)
+    common/to_amps/  amp2,       jamp2
+    
+    character*79         hel_buff
+    common/to_helicity/  hel_buff
+    
+    REAL*8 POL(2)
+    common/to_polarization/ POL
+    
+    integer          isum_hel
+    logical                    multi_channel
+    common/to_matrix/isum_hel, multi_channel
+    INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
+    common/to_mconfigs/mapconfig, iconfig
+    DATA NTRY,IDUM /0,-1/
+    DATA xtry, xrej, ngood /0,0,0/
+    DATA warned, isum_hel/.false.,0/
+    DATA multi_channel/.true./
+    SAVE yfrac, igood, jhel
+    DATA NGRAPHS /    4/          
+    DATA jamp2(0) /   1/          
+    DATA GOODHEL/THEL*.FALSE./
+%(helicity_lines)s
+%(den_factor_line)s
+C ----------
+C BEGIN CODE
+C ----------
+    NTRY=NTRY+1
+    DO IPROC=1,NCROSS
+    CALL SWITCHMOM(P1,P,IC(1,IPROC),JC,NEXTERNAL)
+    DO IHEL=1,NEXTERNAL
+       JC(IHEL) = +1
+    ENDDO
+     
+    IF (multi_channel) THEN
+        DO IHEL=1,NGRAPHS
+            amp2(ihel)=0d0
+            jamp2(ihel)=0d0
+        ENDDO
+        DO IHEL=1,int(jamp2(0))
+            jamp2(ihel)=0d0
+        ENDDO
+    ENDIF
+    ANS(IPROC) = 0D0
+    write(hel_buff,'(16i5)') (0,i=1,nexternal)
+    IF (ISUM_HEL .EQ. 0 .OR. NTRY .LT. 10) THEN
+        DO IHEL=1,NCOMB
+           IF (GOODHEL(IHEL,IPROC) .OR. NTRY .LT. 2) THEN
+               T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
+             DO JJ=1,nincoming
+               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
+                 T=T*ABS(POL(JJ))
+               ELSE IF(POL(JJ).NE.1d0)THEN
+                 T=T*(2d0-ABS(POL(JJ)))
+               ENDIF
+             ENDDO
+             ANS(IPROC)=ANS(IPROC)+T
+             IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL,IPROC)) THEN
+                 GOODHEL(IHEL,IPROC)=.TRUE.
+                 NGOOD = NGOOD +1
+                 IGOOD(NGOOD) = IHEL
+             ENDIF
+           ENDIF
+        ENDDO
+        JHEL = 1
+        ISUM_HEL=MIN(ISUM_HEL,NGOOD)
+    ELSE              !RANDOM HELICITY
+        DO J=1,ISUM_HEL
+            JHEL=JHEL+1
+            IF (JHEL .GT. NGOOD) JHEL=1
+            HWGT = REAL(NGOOD)/REAL(ISUM_HEL)
+            IHEL = IGOOD(JHEL)
+            T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
+            DO JJ=1,nincoming
+              IF(POL(JJ).NE.1d0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
+                T=T*ABS(POL(JJ))
+              ELSE IF(POL(JJ).NE.1d0)THEN
+                T=T*(2d0-ABS(POL(JJ)))
+              ENDIF
+            ENDDO
+            ANS(IPROC)=ANS(IPROC)+T*HWGT
+        ENDDO
+        IF (ISUM_HEL .EQ. 1) THEN
+            WRITE(HEL_BUFF,'(16i5)')(NHEL(i,IHEL),i=1,nexternal)
+        ENDIF
+    ENDIF
+    IF (MULTI_CHANNEL) THEN
+        XTOT=0D0
+        DO IHEL=1,MAPCONFIG(0)
+            XTOT=XTOT+AMP2(MAPCONFIG(IHEL))
+        ENDDO
+        IF (XTOT.NE.0D0) THEN
+            ANS(IPROC)=ANS(IPROC)*AMP2(MAPCONFIG(ICONFIG))/XTOT
+        ELSE
+            ANS(IPROC)=0D0
+        ENDIF
+    ENDIF
+    ANS(IPROC)=ANS(IPROC)/DBLE(IDEN(IPROC))
+    ENDDO
+    END
+ 
+ 
+REAL*8 FUNCTION MATRIX(P,NHEL,IC)
+C  
+%(info_lines)s
+C
+C Returns amplitude squared summed/avg over colors
+c for the point with external lines W(0:6,NEXTERNAL)
+C  
+%(process_lines)s
+C  
+    IMPLICIT NONE
+C  
+C CONSTANTS
+C  
+    INTEGER    NGRAPHS,    NEIGEN 
+    PARAMETER (NGRAPHS=%(ngraphs)d,NEIGEN=  1) 
+    include "genps.inc"
+    INTEGER    NWAVEFUNCS     , NCOLOR
+    PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
+    REAL*8     ZERO
+    PARAMETER (ZERO=0D0)
+C  
+C ARGUMENTS 
+C  
+    REAL*8 P(0:3,NEXTERNAL)
+    INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+C  
+C LOCAL VARIABLES 
+C  
+    INTEGER I,J
+    COMPLEX*16 ZTEMP
+    REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+    COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
+    COMPLEX*16 W(18,NWAVEFUNCS)
+C  
+C GLOBAL VARIABLES
+C  
+    Double Precision amp2(maxamps), jamp2(0:maxamps)
+    common/to_amps/  amp2,       jamp2
+    include "coupl.inc"
+C  
+C COLOR DATA
+C  
+%(color_data_lines)s
+C ----------
+C BEGIN CODE
+C ----------
+%(helas_calls)s
+%(jamp_lines)s
+    MATRIX = 0.D0 
+    DO I = 1, NCOLOR
+        ZTEMP = (0.D0,0.D0)
+        DO J = 1, NCOLOR
+            ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
+        ENDDO
+        MATRIX =MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
+    ENDDO
+    Do I = 1, NGRAPHS
+        amp2(i)=amp2(i)+amp(i)*dconjg(amp(i))
+    Enddo
+    Do I = 1, NCOLOR
+        Jamp2(i)=Jamp2(i)+Jamp(i)*dconjg(Jamp(i))
+    Enddo
+C      CALL GAUGECHECK(JAMP,ZTEMP,EIGEN_VEC,EIGEN_VAL,NCOLOR,NEIGEN) 
+    END""" % replace_dict
+
+    # Write the file
+    for line in file.split('\n'):
+        writer.write_fortran_line(fsock, line)
+
+    return len(filter(lambda call: call.find('#') != 0, helas_calls))
 
 #===============================================================================
 # write_nexternal_file
@@ -256,7 +534,7 @@ def write_pmass_file(fsock, matrix_element, fortran_model):
 
     process = matrix_element.get('processes')[0]
     model = process.get('model')
-    
+
     lines = []
     for i, leg in enumerate(process.get('legs')):
         lines.append("pmass(%d)=abs(%s)" % \
@@ -296,7 +574,7 @@ def write_ngraphs_file(fsock, matrix_element, fortran_model):
 #===============================================================================
 def generate_subprocess_directory_v4_standalone(matrix_element,
                                                 fortran_model,
-                                                path = os.getcwd()):
+                                                path=os.getcwd()):
     """Generate the Pxxxxx directory for a subprocess in MG4 standalone,
     including the necessary matrix.f and nexternal.inc files"""
 
@@ -309,7 +587,7 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
         os.mkdir(dirpath)
     except os.error as error:
         logger.warning(error.strerror + " " + dirpath)
-    
+
     try:
         os.chdir(dirpath)
     except os.error:
@@ -347,10 +625,96 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
 
     try:
         for file in linkfiles:
-            os.symlink(os.path.join('..',file), file)
+            os.symlink(os.path.join('..', file), file)
     except os.error:
-        logger.warning('Could not link to ' + os.path.join('..',file))
-            
+        logger.warning('Could not link to ' + os.path.join('..', file))
+
+    # Return to original PWD
+    os.chdir(cwd)
+
+    if not calls:
+        calls = 0
+    return calls
+#===============================================================================
+# generate_subprocess_directory_v4_madevent
+#===============================================================================
+def generate_subprocess_directory_v4_madevent(matrix_element,
+                                                fortran_model,
+                                                path=os.getcwd()):
+    """Generate the Pxxxxx directory for a subprocess in MG4 madevent,
+    including the necessary matrix.f and various helper files"""
+
+    cwd = os.getcwd()
+
+    # Create the directory PN_xx_xxxxx in the specified path
+    dirpath = os.path.join(path, \
+                   "P%s" % matrix_element.get('processes')[0].shell_string_v4())
+    try:
+        os.mkdir(dirpath)
+    except os.error as error:
+        logger.warning(error.strerror + " " + dirpath)
+
+    try:
+        os.chdir(dirpath)
+    except os.error:
+        logger.error('Could not cd to directory %s' % dirpath)
+        return 0
+
+    logger.info('Creating files in directory %s' % dirpath)
+
+    # Create the matrix.f file and the nexternal.inc file
+    filename = 'matrix.f'
+    calls = files.write_to_file(filename,
+                                write_matrix_element_v4_madevent,
+                                matrix_element,
+                                fortran_model)
+
+    filename = 'nexternal.inc'
+    files.write_to_file(filename,
+                        write_nexternal_file,
+                        matrix_element,
+                        fortran_model)
+
+    filename = 'pmass.inc'
+    files.write_to_file(filename,
+                        write_pmass_file,
+                        matrix_element,
+                        fortran_model)
+
+    filename = 'ngraphs.inc'
+    files.write_to_file(filename,
+                        write_ngraphs_file,
+                        matrix_element,
+                        fortran_model)
+
+    linkfiles = ['addmothers.f',
+                 'cluster.f',
+                 'cluster.inc',
+                 'coupl.inc',
+                 'cuts.f',
+                 'cuts.inc',
+                 'driver.f',
+                 'genps.f',
+                 'genps.inc',
+                 'initcluster.f',
+                 'makefile',
+                 'message.inc',
+                 'myamp.f',
+                 'reweight.f',
+                 'run.inc',
+                 'setcuts.f',
+                 'setscales.f',
+                 'sudakov.inc',
+                 'symmetry.f',
+                 'unwgt.f']
+
+
+    for file in linkfiles:
+        try:
+            os.symlink(os.path.join('..', file), file)
+        except os.error:
+            logger.warning('Could not link to ' + os.path.join('..', file))
+
     # Return to original PWD
     os.chdir(cwd)
 
@@ -515,7 +879,7 @@ class FortranWriter():
 
     # Parameters defining the output of the Fortran writer
     keyword_pairs = {'^if.+then\s*$': ('^endif', 2),
-                     '^do': ('^enddo\s*$', 2),
+                     '^do\s+': ('^enddo\s*$', 2),
                      '^subroutine': ('^end\s*$', 0),
                      'function': ('^end\s*$', 0)}
     single_indents = {'^else\s*$':-2,
