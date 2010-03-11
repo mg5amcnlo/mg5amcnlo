@@ -1249,6 +1249,14 @@ class Process(PhysicsObject):
 
         return True
 
+    def set(self, name, value):
+        """Special set for forbidden particles - set to abs value."""
+
+        if name == 'forbidden_particles':
+            value = [abs(i) for i in value]
+
+        return super(Process, self).set(name, value) # call the mother routine
+
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 

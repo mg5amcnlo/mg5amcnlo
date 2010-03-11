@@ -1771,15 +1771,21 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         
         # We need to keep track of how the
         # wavefunction numbers change
-        replace_dict = dict([(number,number) for number in \
-                             decay_dict.keys()])
-
-        # Replace all legs that have decays
+        replace_dict = {}
         for number in decay_dict.keys():
+            # Find all wavefunctions corresponding to this external
+            # leg number
+            replace_dict[number] = [wf.get('number') for wf in \
+                          filter(lambda wf: not wf.get('mothers') and \
+                                 wf.get('number_external') == number,
+                                 self.get_all_wavefunctions())]
             
-            self.insert_decay(number,
-                              decay_dict[number],
-                              replace_dict)
+        # Replace all legs that have decays
+        for number in decay_dict.keys():            
+            for wf_number in replace_dict[number]:
+                self.insert_decay(wf_number,
+                                  decay_dict[number],
+                                  replace_dict)
             
         # Calculate identical particle factors for
         # this matrix element
@@ -1823,11 +1829,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # Keep track of the numbers for the wavefunctions we will need
         # to replace later by simply keeping track of the
         # wavefunctions in question
-        replace_wf_dict = dict([(number,
-                            filter(lambda wf: wf.get('number') \
-                                        == replace_dict[number],
-                                        wavefunctions)[0]) for number in \
-                                replace_dict.keys()])
+        replace_wf_dict = {}
+        for key in replace_dict.keys():
+            replace_wf_dict[key] = filter(lambda wf: wf.get('number') \
+                                          in replace_dict[key],
+                                          wavefunctions)
 
         # Create a list of all the wavefunctions in the decay
         decay_wfs = decay_element.get_all_wavefunctions()
@@ -1863,11 +1869,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         
         # Find the external wfs to be replaced. There should only be
         # one, unless we have multiple fermion flows in the process
-        replace_wfs = filter(lambda wf: not wf.get('mothers') and \
-                             wf.get('number') == \
-                             replace_dict[wf_number],
-                             wavefunctions)
-        
+        #replace_wfs = filter(lambda wf: not wf.get('mothers') and \
+        #                     wf.get('number') == wf_number,
+        #                     wavefunctions)
+        replace_wfs = [wavefunctions[wf_number-1]]
         for old_wf in replace_wfs:
             # We need to replace and multiply this wf, as well as all
             # wfs that have it as mother, and all their wfs, and
@@ -1879,6 +1884,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             diagrams = filter(lambda diag: old_wf.get('number') in \
                          [wf.get('number') for wf in diag.get('wavefunctions')],
                          self.get('diagrams'))
+
+            # Remove extra decay processes in the process definition
+            if diagrams[0].get('number') > 1:
+                for process in self.get('processes'):
+                    process.get('decay_chains').pop()
+                
 
             # NEED TO INCLUDE CHECK FOR FERMION FLOW DIRECTION HERE!
             for wf in filter(lambda final_wf: final_wf.is_fermion(),
@@ -1951,7 +1962,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
             # Update replace_dict
             for key in replace_dict.keys():
-                replace_dict[key] = replace_wf_dict[key].get('number')
+                replace_dict[key] = [ wf.get('number') for wf in \
+                                      replace_wf_dict[key] ]
 
 
     def replace_wavefunctions(self, old_wf, decay, wavefunctions, amplitudes):
@@ -2533,9 +2545,10 @@ class HelasMatrixElementList(base_objects.PhysicsObjectList):
 # HelasDecayChainProcess
 #===============================================================================
 class HelasDecayChainProcess(base_objects.PhysicsObject):
-    """HelasDecayChainProcess: If initiated with a
-    DecayChainAmplitude object, generates the HelasMatrixElements for
-    the core process(es) and decay chains"""
+    """HelasDecayChainProcess: If initiated with a DecayChainAmplitude
+    object, generates the HelasMatrixElements for the core process(es)
+    and decay chains. Then call combine_decay_chain_processes in order
+    to generate the matrix elements for all combined processes."""
 
     def default_setup(self):
         """Default values for all properties"""
@@ -2701,7 +2714,6 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                     for element in itertools.product(*chains):
                         decay_list.append([[n, d] for [n, d] in \
                                            zip(leg_numbers, element)])
-
                 else:
                     # We let the particles decay according to the
                     # first decay list only
