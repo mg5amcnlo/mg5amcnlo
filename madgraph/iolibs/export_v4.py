@@ -249,6 +249,10 @@ def write_matrix_element_v4_madevent(fsock, matrix_element, fortran_model):
     helicity_lines = get_helicity_lines(matrix_element)
     replace_dict['helicity_lines'] = helicity_lines
 
+    # Extract IC line
+    ic_line = get_ic_line(matrix_element)
+    replace_dict['ic_line'] = ic_line
+
     # Extract overall denominator
     # Averaging initial state color, spin, and identical FS particles
     den_factor_line = get_den_factor_line(matrix_element)
@@ -280,7 +284,7 @@ def write_matrix_element_v4_madevent(fsock, matrix_element, fortran_model):
     replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
     file = \
-"""      SUBROUTINE SMATRIX(P,ANS)
+"""      SUBROUTINE SMATRIX(P1,ANS)
 C  
 %(info_lines)s
 C 
@@ -346,6 +350,7 @@ C
     DATA jamp2(0) /   1/          
     DATA GOODHEL/THEL*.FALSE./
 %(helicity_lines)s
+%(ic_line)s
 %(den_factor_line)s
 C ----------
 C BEGIN CODE
@@ -760,6 +765,17 @@ def get_helicity_lines(matrix_element):
              ",".join(['%2r'] * len(helicities)) + "/") % tuple(int_list))
 
     return "\n".join(helicity_line_list)
+
+def get_ic_line(matrix_element):
+    """Return the IC definition line coming after helicities, required by
+    switchmom in madevent"""
+
+    nexternal = matrix_element.get_nexternal_ninitial()[0]
+    int_list = range(1, nexternal + 1)
+
+    return "DATA (IC(IHEL,1),IHEL=1,%i) /%s/" % (nexternal,
+                                                 ",".join([str(i) for \
+                                                           i in int_list]))
 
 def get_color_data_lines(matrix_element, n=6):
     """Return the color matrix definition lines for this matrix element. Split
