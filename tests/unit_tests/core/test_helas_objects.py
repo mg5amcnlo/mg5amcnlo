@@ -2401,7 +2401,7 @@ class HelasMultiProcessTest(unittest.TestCase):
 
 
     def test_majorana_decay_chain_process(self):
-        """Test a multistage decay chain g g > d d~, d > g d, g > u u~ g
+        """Test decay chain with majorana particles e+e->n1n1
         """
 
         mypartlist = base_objects.ParticleList()
@@ -2548,7 +2548,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                                          'model':mymodel})
 
         mycoreproc.set('decay_chains', base_objects.ProcessList([\
-            mydecay1, mydecay2]))
+            mydecay1]))
 
         myamplitude = diagram_generation.DecayChainAmplitude(mycoreproc)
 
