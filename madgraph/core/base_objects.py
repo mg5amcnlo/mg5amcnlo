@@ -332,7 +332,16 @@ class Particle(PhysicsObject):
         """Return the color code with a correct minus sign"""
 
         if not self['is_part'] and self['color'] in [3, 6]:
-            return -self['color']
+            return - self['color']
+        else:
+            return self['color']
+
+    def get_anti_color(self):
+        """Return the color code of the antiparticle with a correct minus sign
+        """
+
+        if self['is_part'] and self['color'] in [3, 6]:
+            return - self['color']
         else:
             return self['color']
 
@@ -906,7 +915,7 @@ class LegList(PhysicsObjectList):
         else:
             return False
 
-    def can_combine_to_0(self, ref_dict_to0, is_decay_chain = False):
+    def can_combine_to_0(self, ref_dict_to0, is_decay_chain=False):
         """If has at least two 'from_group' True and in ref_dict_to0,
         
         return the vertex (with id from ref_dict_to0), otherwise return None
@@ -1177,7 +1186,7 @@ class Process(PhysicsObject):
                 model
                 process id
     """
-    
+
     def default_setup(self):
         """Default values for all properties"""
 
@@ -1264,7 +1273,7 @@ class Process(PhysicsObject):
                 'required_s_channels', 'forbidden_s_channels',
                 'forbidden_particles', 'is_decay_chain', 'decay_chains']
 
-    def nice_string(self, indent = 0):
+    def nice_string(self, indent=0):
         """Returns a nicely formated string about current process
         content"""
 
