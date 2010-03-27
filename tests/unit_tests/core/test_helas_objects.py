@@ -2507,19 +2507,6 @@ class HelasMultiProcessTest(unittest.TestCase):
         me_core =  helas_objects.HelasMatrixElement(\
             diagram_generation.Amplitude(mycoreproc))
 
-        print me_core.get('processes')[0].nice_string()
-        print me_core.get_base_amplitude().get('diagrams').nice_string()
-
-        print me_core.get('identical_particle_factor')
-        for diag in me_core.get('diagrams'):
-            print 'Diagram ',diag.get('number')
-            print "Wavefunctions: ", len(diag.get('wavefunctions'))
-            for wf in diag.get('wavefunctions'):
-                print wf.get('number'), wf.get('number_external'), wf.get('pdg_code'), [mother.get('number') for mother in wf.get('mothers')], wf.get('state'), wf.get('fermionflow')
-            print "Amplitudes: ", len(diag.get('amplitudes'))
-            for amp in diag.get('amplitudes'):
-                print amp.get('number'), [mother.get('number') for mother in amp.get('mothers')]
-
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':1000022,
@@ -2556,18 +2543,6 @@ class HelasMultiProcessTest(unittest.TestCase):
 
         matrix_elements = matrix_element.combine_decay_chain_processes()
 
-        print matrix_elements[0].get('processes')[0].nice_string()
-        print matrix_elements[0].get('identical_particle_factor')
-
-        for diag in matrix_elements[0].get('diagrams'):
-            print 'Diagram ',diag.get('number')
-            print "Wavefunctions: ", len(diag.get('wavefunctions'))
-            for wf in diag.get('wavefunctions'):
-                print wf.get('number'), wf.get('number_external'), wf.get('pdg_code'), [mother.get('number') for mother in wf.get('mothers')], wf.get('state'), wf.get('fermionflow')
-            print "Amplitudes: ", len(diag.get('amplitudes'))
-            for amp in diag.get('amplitudes'):
-                print amp.get('number'), [mother.get('number') for mother in amp.get('mothers')]
-
         self.assertEqual(matrix_elements[0].get('identical_particle_factor'),
                          2)
 
@@ -2580,8 +2555,20 @@ class HelasMultiProcessTest(unittest.TestCase):
             self.assertEqual(wf.get('number'), i + 1)
 
         for i, wf in enumerate(filter (lambda wf: not wf.get('mothers'),
-                                       matrix_elements[0].get_all_wavefunctions())):
+                                       matrix_elements[0].get('diagrams')[0].\
+                                       get('wavefunctions'))):
             self.assertEqual(wf.get('number_external'), i + 1)
+
+        for wf in filter (lambda wf: not wf.get('mothers'),
+                                       sum([d.get('wavefunctions') for d in \
+                                            matrix_elements[0].get('diagrams')\
+                                            [1:]], [])):
+            old_wf = filter(lambda w: w.get('number_external') == \
+                            wf.get('number_external') and not w.get('mothers'),\
+                            matrix_elements[0].get('diagrams')[0].\
+                            get('wavefunctions'))[0]
+            self.assertEqual(wf.get('pdg_code'), old_wf.get('pdg_code'))
+            self.assert_(wf.get_with_flow('state') != old_wf.get_with_flow('state'))
 
 
     def test_equal_decay_chains(self):
