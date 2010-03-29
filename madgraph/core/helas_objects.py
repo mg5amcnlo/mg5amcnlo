@@ -1769,9 +1769,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             amp.set('color_indices', amp.get_color_indices())
 
     def insert_decay_chains(self, decay_dict):
-        """Iteratively insert the decay chains decays into this matrix
-        element. decay_dict is a dictionary from external leg number
-        to decay matrix element.
+        """Iteratively insert decay chains decays into this matrix
+        element.
+        * Replace one wavefunction at a time, successively replacing
+          the different wavefunctions if there are multiple fermion
+          states
+        * decay_dict is a dictionary from external leg number
+          to decay matrix element.
         """
 
         # We need to keep track of how the
@@ -1807,22 +1811,41 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     def insert_decay(self, wf_number, decay, replace_dict,
                      amplitudes, first_time = True):
         """Insert a decay chain matrix element into the matrix element.
+        * wf_number is the number of the wavefunction to be replaced
+        * decay is the matrix element for the decay chain
+        * replace_dict keeps track of the wavefunction numbers for all
+          future wavefunctions to be replaced, since the numbers are
+          shifted around by the routine
+        * amplitudes is a list of the amplitudes in the matrix element,
+          used to properly keep track of amplitudes and amplitude numbers
+        * first_time denotes whether this is the first time that this
+          external leg number is replaced (needed if multiple fermion
+          states)
+          
         Note that:
         1) All amplitudes and all wavefunctions using the decaying wf
            must be copied as many times as there are amplitudes in the
            decay matrix element
         2) In the presence of Majorana particles, we must make sure
            to flip fermion flow for the decay process if needed.
+
         The algorithm is the following:
         1) Pick out all wavefunctions in the decay, except the final ones,
            which will replace the present wavefunctions
         2) Multiply the diagrams with the number of diagrams Ndiag in
            the decay element
-        3) Replace the wavefunctions recursively, so that we always replace
+        3) Insert all auxiliary wavefunctions into diagram (i.e., all except
+           the final wavefunctions, which directly replace the original
+           final state wavefunctions)
+        4) Replace the wavefunctions recursively, so that we always replace
            each old wavefunctions with Namp new ones, where Namp is the number
            of amplitudes in the decay element. Simultaneously replace the
            amplitudes, while making sure that each new diagram corresponds
            to the combination of an old diagram and one diagram in the decay
+
+        We keep track of diagrams so that the new diagram number is given by
+        (old diagram number - 1) x (number of diagrams in decay chain) +
+        (number of present diagram in decay chain)
         """
 
         # decay is a HelasMatrixElement
@@ -1978,8 +2001,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             num = num + 1
 
         # Insert the new wavefunctions, excluding the final ones
-        # (which are used to replace the existing final state wfs)
-        # into wavefunctions and diagram
+        # (which are to replace the existing final state wfs in
+        # replace_wavefunctions) into wavefunctions and diagram
         wavefunctions = wavefunctions[0:old_wf_index] + \
                         decay_wfs + wavefunctions[old_wf_index:]
 
@@ -2008,7 +2031,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     def replace_wavefunctions(self, old_wf, decay, wavefunctions, amplitudes):
         """Recursive function to replace old_wf with the wfs from
         decay, and multiply all wavefunctions or amplitudes that use
-        old_wf."""
+        old_wf, keeping track of diagrams in the correct way."""
 
         if not isinstance(decay, HelasMatrixElement):
             raise self.PhysicsObjectError,\
