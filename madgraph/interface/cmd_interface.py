@@ -415,7 +415,7 @@ class MadGraphCmd(cmd.Cmd):
             if line.find(',') == -1:
                 myprocdef = self.extract_process(line)
             else:
-                myprocdef = self.extract_decay_chain_process(line)
+                myprocdef, line = self.extract_decay_chain_process(line)
         except self.MadGraphCmdError as error:
             print "Empty or wrong format process, please try again. Error:\n" \
                   + str(error)
@@ -446,8 +446,6 @@ class MadGraphCmd(cmd.Cmd):
         """Recursively extract a decay chain process definition from a
         string. Returns a ProcessDefinition."""
 
-        print "In extract_decay_chain_process"
-
         index_comma = line.find(",")
         index_par = line.find(")")
         min_index = index_comma
@@ -461,21 +459,19 @@ class MadGraphCmd(cmd.Cmd):
 
         #level_down = False
 
-        print line
-
         while index_comma > -1:
             line = line[index_comma + 1:]
             index_par = line.find(')')
-            print line
             if line.lstrip()[0] == '(':
                 # Go down one level in process hierarchy
                 #level_down = True
                 line = line.lstrip()[1:]
                 # This is where recursion happens
-                decay_process = \
+                decay_process, line = \
                             self.extract_decay_chain_process(line,
                                                              level_down = True)
                 index_comma = line.find(",")
+                index_par = line.find(')')
             else:
                 index_comma = line.find(",")
                 min_index = index_comma
@@ -490,15 +486,25 @@ class MadGraphCmd(cmd.Cmd):
             core_process.get('decay_chains').append(decay_process)
 
             if level_down:
-                index_par = line.find(')')
-                if index_par > -1 and index_par < index_comma:
-                    line = line[index_par + 1:]
-                    break
-                #level_down = False
+                if index_par == -1:
+                    raise self.MadGraphCmdError,\
+                      "Missing ending parenthesis for decay process"
 
+                if index_par < index_comma:
+                    line = line[index_par + 1:]
+                    level_down = False
+                    break
+
+        if level_down:
+            index_par = line.find(')')
+            if index_par == -1:
+                raise self.MadGraphCmdError,\
+                      "Missing ending parenthesis for decay process"
+            line = line[index_par + 1:]
+            
         # Return the core process (ends recursion when there are no
         # more decays)
-        return core_process
+        return core_process, line
         
     def extract_process(self, line):
         """Extract a process definition from a string. Returns

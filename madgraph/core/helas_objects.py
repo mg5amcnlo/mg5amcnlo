@@ -1790,26 +1790,29 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                  self.get_all_wavefunctions())]
 
         # Replace all legs that have decays
+        amplitudes = self.get_all_amplitudes()
+        wavefunctions = self.get_all_wavefunctions()
         for number in decay_dict.keys():            
             # Pick out all amplitudes.  Needs to be done here, since
             # we want only one set of amplitudes for a given external
             # wavefunction number.
-            amplitudes = self.get_all_amplitudes()
             for i in range(len(replace_dict[number])):
                 # The "i == 0" indicates that this is the first time
                 # this external leg number is replaced
-                self.insert_decay(replace_dict[number][i],
-                                  decay_dict[number],
-                                  replace_dict,
-                                  amplitudes,
-                                  i == 0)
+                wavefunctions, amplitudes = \
+                               self.insert_decay(replace_dict[number][i],
+                                                 decay_dict[number],
+                                                 replace_dict,
+                                                 wavefunctions,
+                                                 amplitudes,
+                                                 i == 0)
             
         # Calculate identical particle factors for
         # this matrix element
         self.identical_decay_chain_factor(decay_dict.values())
         
     def insert_decay(self, wf_number, decay, replace_dict,
-                     amplitudes, first_time = True):
+                     wavefunctions, amplitudes, first_time = True):
         """Insert a decay chain matrix element into the matrix element.
         * wf_number is the number of the wavefunction to be replaced
         * decay is the matrix element for the decay chain
@@ -1859,9 +1862,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             process.get('decay_chains').append( \
                 decay_element.get('processes')[0])
             
-        # Pick out wavefunctions
-        wavefunctions = self.get_all_wavefunctions()
-
         # Keep track of the numbers for the wavefunctions we will need
         # to replace later by simply keeping track of the
         # wavefunctions in question
@@ -1874,10 +1874,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # Create a list of all the wavefunctions in the decay
         decay_wfs = decay_element.get_all_wavefunctions()
         # Remove the unwanted initial state wavefunction
-        decay_wfs.remove(filter(lambda wf: \
-                                wf.get('number_external') == 1,
-                                decay_wfs)[0])
-        
+        for wf in filter(lambda wf: \
+                         wf.get('number_external') == 1,
+                         decay_wfs):
+            decay_wfs.remove(wf)
         # The wavefunctions which will replace the present wfs are
         # the second mother in the decay_chain amplitudes
         final_wfs = [amp.get('mothers')[1] for amp in \
@@ -1948,21 +1948,20 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         number_removed_wfs = 0
 
         # Check for fermion flow direction
-        if old_wf.get('state') in ['incoming', 'outgoing'] and \
-               old_wf.get_with_flow('state') != \
-                                   final_wfs[0].get_with_flow('state'):
+        for i, final_wf in enumerate(final_wfs):
+            if old_wf.is_fermion() and final_wf.is_fermion() and \
+               old_wf.get_with_flow('state') != final_wf.get_with_flow('state'):
             
-            # Not same flow state - need to flip flow of wf
+                # Not same flow state - need to flip flow of final_wf
+
+                # We use the function check_majorana_and_flip_flow, as in
+                # the helas diagram generation.  Since we have different
+                # flow, there is already a Majorana particle along the
+                # fermion line.
             
-            # We use the function check_majorana_and_flip_flow, as in
-            # the helas diagram generation.  Since we have different
-            # flow, there is already a Majorana particle along the
-            # fermion line.
-            
-            for i, wf in enumerate(final_wfs):
-                final_wfs[i], dummy = wf.check_majorana_and_flip_flow(\
-                                                 True, [], [], {},
-                                                 old_wf.get('number') - 1)
+                final_wfs[i], dummy = final_wf.check_majorana_and_flip_flow(\
+                                                   True, [], [], {},
+                                                   old_wf.get('number') - 1)
 
         # Remove wfs in decay_wfs which are already in previous diagrams
         i = 0
@@ -2014,16 +2013,16 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             
         # Multiply wavefunctions and amplitudes and insert mothers
         # using a recursive function
-        self.replace_wavefunctions(old_wf,
-                                   decay_element,
-                                   wavefunctions,
-                                   amplitudes)
-
+        wavefunctions, amplitudes = self.replace_wavefunctions(old_wf,
+                                                               decay_element,
+                                                               wavefunctions,
+                                                               amplitudes)
         # Update replace_dict
         for key in replace_dict.keys():
             replace_dict[key] = [ wf.get('number') for wf in \
                                   replace_wf_dict[key] ]
 
+        return wavefunctions, amplitudes
 
     def replace_wavefunctions(self, old_wf, decay, wavefunctions, amplitudes):
         """Recursive function to replace old_wf with the wfs from
@@ -2044,7 +2043,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # Here we know that the wf number corresponds to the list order
         for wf in wavefunctions[old_wf.get('number'):]:
             wf.set('number', wf.get('number') + len(new_wfs) - 1)
-
+            
         # Insert the new wavefunctions into wavefunctions and diagrams
         wavefunctions = wavefunctions[0:old_wf.get('number')-1] + \
                         new_wfs + wavefunctions[old_wf.get('number'):]
@@ -2059,10 +2058,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             old_wf_index = [wf.get('number') for wf in \
                      diagram.get('wavefunctions')].index(old_wf.get('number'))
             diagram_wfs = diagram.get('wavefunctions')
+            wf = diagram_wfs[old_wf_index]
+
             diagram_wfs = diagram_wfs[:old_wf_index] + \
                           new_wfs + diagram_wfs[old_wf_index + 1:]
             diagram.set('wavefunctions', HelasWavefunctionList(diagram_wfs))
-        
 
         # Pick out diagrams with amplitudes which are daughters of old_wf
         diagrams = filter(lambda diag: old_wf.get('number') in \
@@ -2070,11 +2070,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                               for amp in diag.get('amplitudes')], []),
                           self.get('diagrams'))
 
-        for diagram in diagrams:
+        for (i, diagram) in enumerate(diagrams):
             # The number of the diagram is correlated with the number
             # of the decay chain diagram
-            numdecay = (diagram.get('number') - 1) % \
-                           len(decay.get('diagrams')) + 1
+            numdecay = i % len(decay.get('diagrams')) + 1
             # Get the corresponding decay diagram
             decay_diag = filter(lambda diag: diag.get('number') == numdecay,
                                 decay.get('diagrams'))[0]
@@ -2137,14 +2136,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             if numdecay == len(decay.get('diagrams')):
                 for old_amp in daughter_amps:
                     amplitudes.remove(old_amp) 
-                   
+
         # Find wavefunctions that are daughters of old_wf
         daughter_wfs = filter(lambda wf: old_wf.get('number') in \
                               [wf1.get('number') for wf1 in wf.get('mothers')],
                               wavefunctions)
-        
-        # Loop over daughter_wfs, to replace it with new wfs with the
-        # new mothers
+
         for daughter_wf in daughter_wfs:
             # Create new diagrams containing the new wavefunctions
             # to be replaced, keeping track of diagram numbers, in order
@@ -2180,8 +2177,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 daughter.set('number', daughter.get('number') + i)
                 
             # This is where recursion happens
-            self.replace_wavefunctions(daughter_wf, new_decay,
-                                       wavefunctions, amplitudes)
+            wavefunctions, amplitudes = self.replace_wavefunctions(\
+                                                daughter_wf, new_decay,
+                                                wavefunctions, amplitudes)
+
+        return wavefunctions, amplitudes
 
     def identical_decay_chain_factor(self, decay_chains):
         """Calculate the denominator factor from identical decay chains"""
