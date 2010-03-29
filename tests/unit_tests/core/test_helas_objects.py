@@ -2462,6 +2462,23 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'self_antipart':True}))
         n1 = mypartlist[len(mypartlist) - 1]
 
+        # A photon
+        mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        a = mypartlist[len(mypartlist) - 1]
+
         # Coupling of n1 to e and se
         myinterlist.append(base_objects.Interaction({
                       'id': 103,
@@ -2485,6 +2502,29 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'couplings':{(0, 0):'MGVX494'},
                       'orders':{'QED':1}}))
 
+        # Coupling of e to gamma
+        myinterlist.append(base_objects.Interaction({
+                      'id': 7,
+                      'particles': base_objects.ParticleList(\
+                                            [eminus, \
+                                             eplus, \
+                                             a]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'MGVX12'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of sl2 to gamma
+        myinterlist.append(base_objects.Interaction({
+                      'id': 8,
+                      'particles': base_objects.ParticleList(\
+                                            [a, \
+                                             seplus, \
+                                             seminus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'MGVX56'},
+                      'orders':{'QED':1}}))
 
         mymodel = base_objects.Model()
         mymodel.set('particles', mypartlist)
@@ -2546,6 +2586,9 @@ class HelasMultiProcessTest(unittest.TestCase):
         self.assertEqual(matrix_elements[0].get('identical_particle_factor'),
                          2)
 
+        for i, diag in enumerate(matrix_elements[0].get('diagrams')):
+            self.assertEqual(diag.get('number'), i + 1)
+
         for i, amp in enumerate(sum([diag.get('amplitudes') for diag in \
                                     matrix_elements[0].get('diagrams')],[])):
             self.assertEqual(amp.get('number'), i + 1)
@@ -2570,6 +2613,74 @@ class HelasMultiProcessTest(unittest.TestCase):
             self.assertEqual(wf.get('pdg_code'), old_wf.get('pdg_code'))
             self.assert_(wf.get_with_flow('state') != old_wf.get_with_flow('state'))
 
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-1000011,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final'}))
+
+        mydecay3 = base_objects.Process({'legs':myleglist,
+                                         'model':mymodel,
+                                         'is_decay_chain': True})
+
+        me3 =  helas_objects.HelasMatrixElement(\
+            diagram_generation.Amplitude(mydecay3))
+        
+        #print me3.get('processes')[0].nice_string()
+        #print me3.get_base_amplitude().get('diagrams').nice_string()
+
+        mycoreproc.set('decay_chains', base_objects.ProcessList([\
+            mydecay3]))
+
+        myamplitude = diagram_generation.DecayChainAmplitude(mycoreproc)
+
+        matrix_element = helas_objects.HelasDecayChainProcess(myamplitude)
+
+        matrix_elements = matrix_element.combine_decay_chain_processes()
+
+        #for d in matrix_elements[0].get('diagrams'):
+        #    print "Diagram number ", d.get('number')
+        #    print "Wavefunctions:"
+        #    for w in d.get('wavefunctions'):
+        #        print w.get('number'),w.get('number_external'),w.get('pdg_code'),\
+        #              [wf.get('number') for wf in w.get('mothers')]
+        #    print "Amplitudes:"
+        #    for a in d.get('amplitudes'):
+        #        print a.get('number'),\
+        #              [wf.get('number') for wf in a.get('mothers')]
+
+        for i, diag in enumerate(matrix_elements[0].get('diagrams')):
+            self.assertEqual(diag.get('number'), i + 1)
+
+        for i, amp in enumerate(sum([diag.get('amplitudes') for diag in \
+                                    matrix_elements[0].get('diagrams')],[])):
+            self.assertEqual(amp.get('number'), i + 1)
+
+        for i, wf in enumerate(sum([diag.get('wavefunctions') for diag in \
+                                   matrix_elements[0].get('diagrams')],[])):
+            self.assertEqual(wf.get('number'), i + 1)
+
+        for i, wf in enumerate(filter (lambda wf: not wf.get('mothers'),
+                                       matrix_elements[0].get('diagrams')[0].\
+                                       get('wavefunctions'))):
+            self.assertEqual(wf.get('number_external'), i + 1)
+
+        for wf in filter (lambda wf: not wf.get('mothers'),
+                                       sum([d.get('wavefunctions') for d in \
+                                            matrix_elements[0].get('diagrams')\
+                                            [1:]], [])):
+            old_wf = filter(lambda w: w.get('number_external') == \
+                            wf.get('number_external') and not w.get('mothers'),\
+                            matrix_elements[0].get('diagrams')[0].\
+                            get('wavefunctions'))[0]
+            self.assertEqual(wf.get('pdg_code'), old_wf.get('pdg_code'))
+            self.assert_(wf.get_with_flow('state') != old_wf.get_with_flow('state'))
+        
 
     def test_equal_decay_chains(self):
         """Test the functions for checking equal decay chains
