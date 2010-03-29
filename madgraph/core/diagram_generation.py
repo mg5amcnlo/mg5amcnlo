@@ -83,6 +83,15 @@ class Amplitude(base_objects.PhysicsObject):
 
         return ['process', 'diagrams']
 
+    def get_number_of_diagrams(self):
+        """Returns number of diagrams for this amplitude"""
+        return len(self.get('diagrams'))
+
+    def nice_string(self, indent=0):
+        """Returns a nicely formatted string of the amplitude content."""
+        return self.get('process').nice_string(indent) + "\n" + \
+               self.get('diagrams').nice_string(indent)
+
     def generate_diagrams(self):
         """Generate diagrams. Algorithm:
 
@@ -607,6 +616,25 @@ class DecayChainAmplitude(Amplitude):
         return ['amplitudes', 'decay_chains']
 
     # Helper functions
+
+    def get_number_of_diagrams(self):
+        """Returns number of diagrams for this amplitude"""
+        return sum(len(a.get('diagrams')) for a in self.get('amplitudes')) \
+               + sum(d.get_number_of_diagrams() for d in \
+                                        self.get('decay_chains'))
+
+    def nice_string(self, indent = 0):
+        """Returns a nicely formatted string of the amplitude content."""
+        mystr = ""
+        for amplitude in self.get('amplitudes'):
+            mystr = mystr + amplitude.nice_string(indent) + "\n"
+
+        if self.get('decay_chains'):
+            mystr = mystr + " " * indent + "Decays:\n"
+        for dec in self.get('decay_chains'):
+            mystr = mystr + dec.nice_string(indent + 2) + "\n"
+
+        return  mystr[:-1]
 
     def get_decay_ids(self):
         """Returns a set of all particle ids for which a decay is defined"""

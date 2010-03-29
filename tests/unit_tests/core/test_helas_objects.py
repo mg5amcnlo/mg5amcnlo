@@ -2544,9 +2544,6 @@ class HelasMultiProcessTest(unittest.TestCase):
         mycoreproc = base_objects.Process({'legs':myleglist,
                                        'model':mymodel})
 
-        me_core =  helas_objects.HelasMatrixElement(\
-            diagram_generation.Amplitude(mycoreproc))
-
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':1000022,
@@ -2558,9 +2555,6 @@ class HelasMultiProcessTest(unittest.TestCase):
 
         mydecay1 = base_objects.Process({'legs':myleglist,
                                          'model':mymodel})
-
-        me1 =  helas_objects.HelasMatrixElement(\
-            diagram_generation.Amplitude(mydecay1))
 
         myleglist = base_objects.LegList()
 

@@ -64,6 +64,12 @@ class MadGraphCmd(cmd.Cmd):
     __import_formats = ['v4']
     __export_formats = ['v4standalone', 'v4sa_dirs']
 
+
+    class MadGraphCmdError(Exception):
+        """Exception raised if an error occurs in the execution
+        of command."""
+        pass
+
     def split_arg(self, line):
         """Split a line of arguments"""
         return line.split()
@@ -362,9 +368,7 @@ class MadGraphCmd(cmd.Cmd):
 
         if args[0] == 'processes':
             for amp in self.__curr_amps:
-                print amp.get('process').nice_string()
-                print amp.get('diagrams').nice_string()
-
+                print amp.nice_string()
         if args[0] == 'multiparticles':
             print 'Multiparticle labels:'
             for key in self.__multiparticles:
@@ -403,6 +407,102 @@ class MadGraphCmd(cmd.Cmd):
             print "No interaction list currently active," + \
             " please create one first!"
             return False
+
+        # Reset Helas matrix elements
+        self.__curr_matrix_elements = helas_objects.HelasMultiProcess()
+
+        try:
+            if line.find(',') == -1:
+                myprocdef = self.extract_process(line)
+            else:
+                myprocdef = self.extract_decay_chain_process(line)
+        except self.MadGraphCmdError as error:
+            print "Empty or wrong format process, please try again. Error:\n" \
+                  + str(error)
+            myprocdef = None
+            
+        if myprocdef:
+
+            cpu_time1 = time.time()
+
+            myproc = diagram_generation.MultiProcess(myprocdef)
+
+            self.__curr_amps = myproc.get('amplitudes')
+
+            cpu_time2 = time.time()
+
+            nprocs = len(self.__curr_amps)
+            ndiags = sum([amp.get_number_of_diagrams() for \
+                              amp in self.__curr_amps])
+            print "%i processes with %i diagrams generated in %0.3f s" % \
+                  (nprocs, ndiags, (cpu_time2 - cpu_time1))
+
+        else:
+            print "Empty or wrong format process, please try again."
+
+
+    # Helper functions
+    def extract_decay_chain_process(self, line, level_down = False):
+        """Recursively extract a decay chain process definition from a
+        string. Returns a ProcessDefinition."""
+
+        print "In extract_decay_chain_process"
+
+        index_comma = line.find(",")
+        index_par = line.find(")")
+        min_index = index_comma
+        if index_par > -1 and (index_par < min_index or min_index == -1):
+            min_index = index_par
+        
+        if min_index > -1:
+            core_process = self.extract_process(line[:min_index])
+        else:
+            core_process = self.extract_process(line)
+
+        #level_down = False
+
+        print line
+
+        while index_comma > -1:
+            line = line[index_comma + 1:]
+            index_par = line.find(')')
+            print line
+            if line.lstrip()[0] == '(':
+                # Go down one level in process hierarchy
+                #level_down = True
+                line = line.lstrip()[1:]
+                # This is where recursion happens
+                decay_process = \
+                            self.extract_decay_chain_process(line,
+                                                             level_down = True)
+                index_comma = line.find(",")
+            else:
+                index_comma = line.find(",")
+                min_index = index_comma
+                if index_par > -1 and \
+                       (index_par < min_index or min_index == -1):
+                    min_index = index_par
+                if min_index > -1:
+                    decay_process = self.extract_process(line[:min_index])
+                else:
+                    decay_process = self.extract_process(line)
+
+            core_process.get('decay_chains').append(decay_process)
+
+            if level_down:
+                index_par = line.find(')')
+                if index_par > -1 and index_par < index_comma:
+                    line = line[index_par + 1:]
+                    break
+                #level_down = False
+
+        # Return the core process (ends recursion when there are no
+        # more decays)
+        return core_process
+        
+    def extract_process(self, line):
+        """Extract a process definition from a string. Returns
+        a ProcessDefinition."""
 
         # Use regular expressions to extract s-channel propagators,
         # forbidden s-channel propagators/particles, coupling orders
@@ -452,9 +552,6 @@ class MadGraphCmd(cmd.Cmd):
 
         args = self.split_arg(line)
 
-        # Reset Helas matrix elements
-        self.__curr_matrix_elements = helas_objects.HelasMultiProcess()
-
         myleglist = base_objects.MultiLegList()
         state = 'initial'
         number = 1
@@ -463,9 +560,9 @@ class MadGraphCmd(cmd.Cmd):
         for part_name in args:
 
             if part_name == '>':
-                if not len(myleglist):
-                    print "Empty or wrong format process, please try again."
-                    return False
+                if not myleglist:
+                    raise self.MadGraphCmdError, \
+                          "No final state particles"
                 state = 'final'
                 continue
 
@@ -527,7 +624,7 @@ class MadGraphCmd(cmd.Cmd):
 
 
 
-            myprocdef = \
+            return \
                 base_objects.ProcessDefinition({'legs': myleglist,
                                 'model': self.__curr_model,
                                 'id': proc_number,
@@ -537,23 +634,8 @@ class MadGraphCmd(cmd.Cmd):
                                 'required_s_channels': required_schannel_ids,
                                 'is_decay_chain': decay_process\
                                  })
-            cpu_time1 = time.time()
-
-            myproc = diagram_generation.MultiProcess(myprocdef)
-
-            self.__curr_amps = myproc.get('amplitudes')
-
-            cpu_time2 = time.time()
-
-            nprocs = len(filter(lambda amp: amp.get("diagrams"),
-                                self.__curr_amps))
-            ndiags = sum([len(amp.get('diagrams')) for \
-                              amp in self.__curr_amps])
-            print "%i processes with %i diagrams generated in %0.3f s" % \
-                  (nprocs, ndiags, (cpu_time2 - cpu_time1))
-
         else:
-            print "Empty or wrong format process, please try again."
+            return None
 
     # Generate a new amplitude
     def do_export(self, line):
@@ -588,7 +670,7 @@ class MadGraphCmd(cmd.Cmd):
             self.help_export()
             return False
 
-        if not filter(lambda amp: amp.get("diagrams"), self.__curr_amps):
+        if not self.__curr_amps:
             print "No process generated, please generate a process!"
             return False
 
@@ -625,6 +707,13 @@ class MadGraphCmd(cmd.Cmd):
                ndiags, cpu_time)
         
         print "Wrote %d helas calls" % calls
+
+        # Replace the amplitudes with the actual amplitudes from the
+        # matrix elements, which allows proper diagram drawing also of
+        # decay chain processes
+        self.__curr_amps = diagram_generation.AmplitudeList(\
+               [me.get_base_amplitude() for me in \
+                self.__curr_matrix_elements.get('matrix_elements')])
 
     def complete_export(self, text, line, begidx, endidx):
         "Complete the export command"
@@ -750,6 +839,10 @@ class MadGraphCmd(cmd.Cmd):
         print "syntax: generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2"
         print "-- generate diagrams for a given process"
         print "   Example: u d~ > w+ > m+ vm g $ a / z h QED=3 QCD=0"
+        print "Decay chain syntax:"
+        print "   core process, decay1, (decay2, (decay3, ...)), ...  etc"
+        print "   Example: g g > t~ t, (t~ > W- b~, W- > e- ve~), t > W+ b"
+        print "   Note that identical particles will all be decayed"
 
     def help_define(self):
         print "syntax: define multipart_name [ part_name_list ]"

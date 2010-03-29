@@ -1968,9 +1968,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         i = 0
         while decay_wfs[i:]:
             wf = decay_wfs[i]
-            #earlier_wfs = sum([d.get('wavefunctions') for d in \
-            #              self.get('diagrams')[:diagrams[0].get('number') - 1]],
-            #                  [])
             earlier_wfs = wavefunctions[:old_wf.get('number')-1]
             try:
                 new_wf = earlier_wfs[earlier_wfs.index(wf)]
@@ -2951,35 +2948,39 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                            matrix_element.get('diagrams'):
                         matrix_elements.append(matrix_element)
                         
-                    # Always create an empty color basis, and the list of raw
-                    # colorize objects (before simplification) associated with amplitude
-                    col_basis = color_amp.ColorBasis()
-                    new_amp = matrix_element.get_base_amplitude()
-                    colorize_obj = col_basis.create_color_dict_list(new_amp)
-
-                    try:
-                        # If the color configuration of the ME has already been 
-                        # considered before, recycle the information
-                        col_index = list_colorize.index(colorize_obj)
-                        logger.info(\
-                        "Reusing existing color information for %s" % \
-                        amplitude.get('process').nice_string().replace('Process',
-                                                                       'process'))
-                    except ValueError:
-                        # If not, create color basis and color matrix accordingly
-                        list_colorize.append(colorize_obj)
-                        col_basis.build()
-                        list_color_basis.append(col_basis)
-                        col_matrix = color_amp.ColorMatrix(col_basis)
-                        list_color_matrices.append(col_matrix)
-                        col_index = -1
-                        logger.info(\
-                        "Processing color information for %s" % \
-                        amplitude.get('process').nice_string().replace('Process',
-                                                                       'process'))
+                        # Always create an empty color basis, and the
+                        # list of raw colorize objects (before
+                        # simplification) associated with amplitude
+                        col_basis = color_amp.ColorBasis()
+                        new_amp = matrix_element.get_base_amplitude()
+                        colorize_obj = col_basis.create_color_dict_list(new_amp)
+                        
+                        try:
+                            # If the color configuration of the ME has
+                            # already been considered before, recycle
+                            # the information
+                            col_index = list_colorize.index(colorize_obj)
+                            logger.info(\
+                              "Reusing existing color information for %s" % \
+                              matrix_element.get('processes')[0].nice_string().\
+                                                 replace('Process', 'process'))
+                        except ValueError:
+                            # If not, create color basis and color
+                            # matrix accordingly
+                            list_colorize.append(colorize_obj)
+                            col_basis.build()
+                            list_color_basis.append(col_basis)
+                            col_matrix = color_amp.ColorMatrix(col_basis)
+                            list_color_matrices.append(col_matrix)
+                            col_index = -1
+                            logger.info(\
+                              "Processing color information for %s" % \
+                              matrix_element.get('processes')[0].nice_string().\
+                                             replace('Process', 'process'))
 
                 matrix_element.set('color_basis', list_color_basis[col_index])
-                matrix_element.set('color_matrix', list_color_matrices[col_index])
+                matrix_element.set('color_matrix',
+                                   list_color_matrices[col_index])
 
 #===============================================================================
 # HelasModel

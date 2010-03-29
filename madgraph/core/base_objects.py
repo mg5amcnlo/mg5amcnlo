@@ -1169,11 +1169,11 @@ class DiagramList(PhysicsObjectList):
 
         return isinstance(obj, Diagram)
 
-    def nice_string(self):
+    def nice_string(self, indent=0):
         """Returns a nicely formatted string"""
-        mystr = str(len(self)) + ' diagrams:\n'
+        mystr = " " * indent + str(len(self)) + ' diagrams:\n'
         for diag in self:
-            mystr = mystr + "  " + diag.nice_string() + '\n'
+            mystr = mystr + " " * indent + "  " + diag.nice_string() + '\n'
         return mystr[:-1]
 
 
