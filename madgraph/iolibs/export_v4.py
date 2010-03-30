@@ -852,6 +852,13 @@ class HelasFortranModel(helas_objects.HelasModel):
 
         call_function = None
 
+        if isinstance(argument, helas_objects.HelasAmplitude) and \
+           argument.get('interaction_id') == 0:
+            call = "#"
+            call_function = lambda amp: call
+            self.add_amplitude(argument.get_call_key(), call_function)
+            return
+
         if isinstance(argument, helas_objects.HelasWavefunction) and \
                not argument.get('mothers'):
             # String is just IXXXXX, OXXXXX, VXXXXX or SXXXXX

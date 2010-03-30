@@ -628,8 +628,6 @@ class MadGraphCmd(cmd.Cmd):
                         if mypart:
                             required_schannel_ids.append(mypart.get_pdg_code())
 
-
-
             return \
                 base_objects.ProcessDefinition({'legs': myleglist,
                                 'model': self.__curr_model,
