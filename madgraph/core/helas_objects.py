@@ -1793,7 +1793,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                  self.get_all_wavefunctions())]
 
         # Keep track of wavefunction and amplitude numbers,
-        # to allow unique numbers for all new wfs and amps
+        # to ensure unique numbers for all new wfs and amps
         numbers = [self.get_all_wavefunctions()[-1].get('number'),
                    self.get_all_amplitudes()[-1].get('number')]
 
@@ -1801,16 +1801,67 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         # Replace all legs that have decays
         for number in decay_dict.keys():            
-            # Pick out all amplitudes.  Needs to be done here, since
-            # we want only one set of amplitudes for a given external
-            # wavefunction number.
-            for i in range(len(replace_dict[number])):
-                # The "i == 0" indicates that this is the first time
-                # this external leg number is replaced
-                self.insert_decay(replace_dict[number][i],
-                                  decay_dict[number],
-                                  numbers, i == 0)
+            self.insert_decay(replace_dict[number],
+                              decay_dict[number],
+                              numbers)
             
+        # Final cleaning out duplicate wavefunctions
+        for diagram in self.get('diagrams'):
+            print "Final cleaning diagram ", diagram.get('number')
+
+            # We can have duplicate wfs only from previous copies of
+            # this diagram
+            earlier_wfs = sum([d.get('wavefunctions') for d in \
+                               self.get('diagrams')[:diagram.get('number') - 1]], [])
+
+            later_wfs = sum([d.get('wavefunctions') for d in \
+                               self.get('diagrams')[\
+                                 diagram.get('number'):]], [])
+
+            later_amps = sum([d.get('amplitudes') for d in \
+                               self.get('diagrams')[\
+                                 diagram.get('number') - 1:]], [])
+
+            print "later_amps: ",[a.get('number') for a in later_amps]
+
+            i = 0
+            diag_wfs = diagram.get('wavefunctions')
+            print "diag_wfs for diagram ",diagram.get('number'),":"
+            for wf in diag_wfs:
+                print wf.get('number'), wf.get('number_external'),\
+                      wf.get('pdg_code'), [ w.get('number') for w in wf.get('mothers')],\
+                      wf.get_with_flow('state')                
+            print "diag_amps for diagram ",diagram.get('number'),":"
+            for amp in diagram.get('amplitudes'):
+                print amp.get('number'), [ w.get('number') for w in amp.get('mothers')]
+            while diag_wfs[i:]:
+                try:
+                    index = [w.get('number') for w in earlier_wfs].\
+                            index(diag_wfs[i].get('number'))
+                    wf = diag_wfs.pop(i)
+                    for later_wf in diag_wfs[i:] + later_wfs + later_amps:
+                        try:
+                            # Replace mother
+                            later_wf.get('mothers')[\
+                               later_wf.get('mothers').index(wf)] = \
+                                  earlier_wfs[index]
+                            print 'Replaced mother ', wf.get('number'),\
+                                  ' for ',type(later_wf),\
+                                  later_wf.get('number')
+                        except ValueError:
+                            pass
+                except ValueError:
+                    i = i + 1
+
+            print "diag_wfs after cleaning:"
+            for wf in diag_wfs:
+                print wf.get('number'), wf.get('number_external'),\
+                      wf.get('pdg_code'), [ w.get('number') for w in wf.get('mothers')],\
+                      wf.get_with_flow('state')                
+            print "diag_amps after cleaning:"
+            for amp in diagram.get('amplitudes'):
+                print amp.get('number'), [ w.get('number') for w in amp.get('mothers')]
+
         # When we are done with all decays, set wavefunction and
         # amplitude numbers
         for i, wf in enumerate(self.get_all_wavefunctions()):
@@ -1824,7 +1875,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # this matrix element
         self.identical_decay_chain_factor(decay_dict.values())
         
-    def insert_decay(self, old_wf, decay, numbers, first_time = True):
+    def insert_decay(self, old_wfs, decay, numbers, first_time = True):
         """Insert a decay chain matrix element into the matrix element.
         * wf_number is the number of the wavefunction to be replaced
         * decay is the matrix element for the decay chain
@@ -1863,113 +1914,113 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         (number of present diagram in decay chain)
         """
 
-        print "In insert_decay, replacing ", \
-              old_wf.get('number'), old_wf.get('number_external'),\
+        print "\nIn insert_decay, replacing: "
+        for old_wf in old_wfs:
+            print old_wf.get('number'), old_wf.get('number_external'),\
               old_wf.get('pdg_code'), old_wf.get_with_flow('state')
         
 
-        # decay is a HelasMatrixElement
-        decay_element = copy.deepcopy(decay)
-        # Avoid Python copying the complete model every time
-        decay_element.get('processes')[0].set('model', \
-                                decay.get('processes')[0].get('model'))
-
         len_decay = len(decay.get('diagrams'))
+
+        number_external = old_wfs[0].get('number_external')
 
         print "len_decay: ", len_decay
         
         # Insert the decay process in the process
-        if first_time:
-            for process in self.get('processes'):
-                process.get('decay_chains').append( \
-                   decay_element.get('processes')[0])
+        for process in self.get('processes'):
+            process.get('decay_chains').append( \
+                   decay.get('processes')[0])
 
-        # Remove the unwanted initial state wavefunctions from decay
-        for decay_diag in decay_element.get('diagrams'):
-            for wf in filter(lambda wf: wf.get('number_external') == 1,
-                             decay_diag.get('wavefunctions')):
-                decay_diag.get('wavefunctions').remove(wf)
+        # We need one decay element for each old_wf to be replaced
+        decay_elements = [copy.deepcopy(d) for d in \
+                          [ decay ] * len(old_wfs)]
 
-        decay_wfs = decay_element.get_all_wavefunctions()
+        for decay_element in decay_elements:
+            # Avoid Python copying the complete model every time
+            decay_element.get('processes')[0].set('model', \
+                                    decay.get('processes')[0].get('model'))
 
-        # External wavefunction offset for new wfs
-        incr_new = old_wf.get('number_external') - \
-                   decay_wfs[0].get('number_external')
+            # Remove the unwanted initial state wavefunctions from decay
+            for decay_diag in decay_element.get('diagrams'):
+                for wf in filter(lambda wf: wf.get('number_external') == 1,
+                                 decay_diag.get('wavefunctions')):
+                    decay_diag.get('wavefunctions').remove(wf)
 
-        for wf in decay_wfs:
+            decay_wfs = decay_element.get_all_wavefunctions()
+
+            # External wavefunction offset for new wfs
+            incr_new = number_external - \
+                       decay_wfs[0].get('number_external')
+
+            for wf in decay_wfs:
+                # Set number_external for new wavefunctions
+                wf.set('number_external', wf.get('number_external') + incr_new)
+                # Set unique number for new wavefunctions
+                numbers[0] = numbers[0] + 1
+                wf.set('number', numbers[0])
+
             # Set number_external for new wavefunctions
-            wf.set('number_external', wf.get('number_external') + incr_new)
-            # Set unique number for new wavefunctions
-            numbers[0] = numbers[0] + 1
-            wf.set('number', numbers[0])
-            
-        # Set number_external for new wavefunctions
-        decay_wfs = decay_element.get_all_wavefunctions()
-        # External wavefunction offset for new wfs
-        incr_new = old_wf.get('number_external') - \
-                   decay_wfs[0].get('number_external')
-        for wf in decay_wfs:
-            wf.set('number_external', wf.get('number_external') + incr_new)
-        
-        print "decay_wfs: "
-        for wf in decay_wfs:
-            print wf.get('number'), wf.get('number_external'),\
-                  wf.get('pdg_code'), [ w.get('number') for w in wf.get('mothers')],\
-                  wf.get_with_flow('state')
+            decay_wfs = decay_element.get_all_wavefunctions()
+            # External wavefunction offset for new wfs
+            incr_new = number_external - \
+                       decay_wfs[0].get('number_external')
+            for wf in decay_wfs:
+                wf.set('number_external', wf.get('number_external') + incr_new)
 
-        if first_time:
-            # External wavefunction offset for old wfs, only the first
-            # time this external wavefunction is replaced
-            (nex, nin) = decay_element.get_nexternal_ninitial()
-            incr_old = nex - 1
-            wavefunctions = self.get_all_wavefunctions()
-            for wf in wavefunctions:
-                # Only modify number_external for wavefunctions above old_wf
-                if wf.get('number_external') > old_wf.get('number_external'):
-                    wf.set('number_external',
-                           wf.get('number_external') + incr_old)
+            print "decay_wfs: "
+            for wf in decay_wfs:
+                print wf.get('number'), wf.get('number_external'),\
+                      wf.get('pdg_code'), [ w.get('number') for w in wf.get('mothers')],\
+                      wf.get_with_flow('state')
 
-            # Multiply the diagrams by Ndiag (if first time this
-            # external wavefunction appears)
+        # External wavefunction offset for old wfs, only the first
+        # time this external wavefunction is replaced
+        (nex, nin) = decay_elements[0].get_nexternal_ninitial()
+        incr_old = nex - 1
+        wavefunctions = self.get_all_wavefunctions()
+        for wf in wavefunctions:
+            # Only modify number_external for wavefunctions above old_wf
+            if wf.get('number_external') > number_external:
+                wf.set('number_external',
+                       wf.get('number_external') + incr_old)
 
-            diagrams = HelasDiagramList()
-            for diagram in self.get('diagrams'):
-                new_diagrams = [copy.copy(diag) for diag in \
-                                [ diagram ] * (len_decay - 1)]
-                diagram.set('number', (diagram.get('number') - 1) * \
-                            len_decay + 1)
-                #insert_wf = (old_wf in diagram.get('wavefunctions'))
-                for i, diag in enumerate(new_diagrams):
-                    #diag.set('wavefunctions',HelasWavefunctionList())
-                    # Add old_wf to all diagrams corresponding
-                    # to the diagram which has it
-                    #if insert_wf:
-                    #    diag.get('wavefunctions').append(old_wf)
-                    # Copy over all wavefunctions
-                    diag.set('wavefunctions',
-                             copy.copy(diagram.get('wavefunctions')))
-                    # Copy over the amplitudes and set new amp numbers
-                    amplitudes = HelasAmplitudeList(\
-                                    [copy.copy(amp) for amp in \
-                                     diag.get('amplitudes')])
-                    for amp in amplitudes:
-                        numbers[1] = numbers[1] + 1
-                        amp.set('number', numbers[1])
-                    diag.set('amplitudes', amplitudes)
-                    # Set diagram number
-                    diag.set('number', diagram.get('number') + i + 1)
-                diagrams.append(diagram)
-                diagrams.extend(new_diagrams)
+        # Multiply the diagrams by Ndiag
 
-            self.set('diagrams', diagrams)
+        diagrams = HelasDiagramList()
+        for diagram in self.get('diagrams'):
+            new_diagrams = [copy.copy(diag) for diag in \
+                            [ diagram ] * (len_decay - 1)]
+            diagram.set('number', (diagram.get('number') - 1) * \
+                        len_decay + 1)
+            #insert_wf = (old_wf in diagram.get('wavefunctions'))
+            for i, diag in enumerate(new_diagrams):
+                # Set diagram number
+                diag.set('number', diagram.get('number') + i + 1)
+                # Copy over all wavefunctions
+                diag.set('wavefunctions',
+                         copy.copy(diagram.get('wavefunctions')))
+                # Copy over the amplitudes
+                amplitudes = HelasAmplitudeList(\
+                                [copy.copy(amp) for amp in \
+                                 diag.get('amplitudes')])
+                # Renumber amplitudes
+                for amp in amplitudes:
+                    numbers[1] = numbers[1] + 1
+                    amp.set('number', numbers[1])
+                diag.set('amplitudes', amplitudes)
+            # Add old and new diagram to diagrams
+            diagrams.append(diagram)
+            diagrams.extend(new_diagrams)
 
-            print "Diagrams after multiplying: "
-            for d in diagrams:
-                print "Diagram ",d.get('number')
-                print "wavefunctions: ",[w.get('number') for w in d.get('wavefunctions')]
-                print "amplitudes: "
-                for amp in d.get('amplitudes'):
-                    print amp.get('number'), [w.get('number') for w in amp.get('mothers')]
+        self.set('diagrams', diagrams)
+
+        print "Diagrams after multiplying: "
+        for d in diagrams:
+            print "Diagram ",d.get('number')
+            print "wavefunctions: ",[w.get('number') for w in d.get('wavefunctions')]
+            print "amplitudes: "
+            for amp in d.get('amplitudes'):
+                print amp.get('number'), [w.get('number') for w in amp.get('mothers')]
 
         
         # Now we work by decay process diagram, parameterized by numdecay
@@ -1977,211 +2028,217 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
             print "numdecay: ", numdecay
 
-            decay_diag = decay_element.get('diagrams')[numdecay]
-
             # Pick out the diagrams which correspond to this decay diagram
             diagrams = [self.get('diagrams')[i] for i in \
                         range(numdecay, len(self.get('diagrams')), len_decay)]
 
             print "diagrams: ",[d.get('number') for d in diagrams]
 
-            # Find the diagrams which have old_wf
-            my_diagrams = filter(lambda diag: (old_wf.get('number') in \
-                                        [wf.get('number') for wf in \
-                                         diag.get('wavefunctions')]), diagrams)
-        
-            # Ignore possibility for unoptimizated generation for now
-            if len(my_diagrams) > 1:
-                raise self.PhysicsObjectError, \
-                      "Decay chains not yet prepared for GPU"
+            # Perform replacement for the wavefunctions in old_wfs
+            for decay_element, old_wf in zip(decay_elements, old_wfs):
 
-            for diagram in my_diagrams:
+                decay_diag = decay_element.get('diagrams')[numdecay]
 
-                print "Diagram: ",diagram.get('number')
-                
-                # Earlier wavefunctions, will be used for fermion flow
-                earlier_wavefunctions = \
+
+                # Find the diagrams which have old_wf
+                my_diagrams = filter(lambda diag: (old_wf.get('number') in \
+                                            [wf.get('number') for wf in \
+                                             diag.get('wavefunctions')]), diagrams)
+
+                print "diagrams with old_wf: ",[d.get('number') for d in my_diagrams]
+
+                # Ignore possibility for unoptimizated generation for now
+                if len(my_diagrams) > 1:
+                    raise self.PhysicsObjectError, \
+                          "Decay chains not yet prepared for GPU"
+
+                for diagram in my_diagrams:
+
+                    print "Diagram: ",diagram.get('number')
+
+                    # Earlier wavefunctions, will be used for fermion flow
+                    index = [d.get('number') for d in diagrams].\
+                            index(diagram.get('number'))
+                    earlier_wavefunctions = \
+                            sum([d.get('wavefunctions') for d in \
+                                 diagrams[:index]],\
+                                [])
+
+                    print "earlier_wavefunctions: "
+                    for wf in earlier_wavefunctions:
+                        print wf.get('number'), wf.get('number_external'),\
+                              wf.get('pdg_code'), [ w.get('number') for w in wf.get('mothers')],\
+                              wf.get_with_flow('state')
+
+                    # Prepare for fermion flow direction check
+
+                    # Don't want to affect original decay wavefunctions, so need to
+                    # deepcopy
+                    decay_diag_wfs = copy.deepcopy(decay_diag.get('wavefunctions'))
+
+                    print "decay_diag_wfs:"
+                    for wf in decay_diag_wfs:
+                        print wf.get('number'), wf.get('number_external'), \
+                                  wf.get('pdg_code'), \
+                                  [ w.get('number') for w in wf.get('mothers')],\
+                                  wf.get_with_flow('state')
+
+
+                    # These are the wavefunctions which directly replace old_wf
+                    final_decay_wfs = [amp.get('mothers')[1] for amp in \
+                                          decay_diag.get('amplitudes')]
+                    # Since we made deepcopy, need to syncronize
+                    for i, wf in enumerate(final_decay_wfs):
+                        final_decay_wfs[i] = \
+                                           decay_diag_wfs[decay_diag_wfs.index(wf)]
+
+                    print "final_decay_wfs:"
+                    for wf in final_decay_wfs:
+                        print wf.get('number'), wf.get('number_external'),\
+                              wf.get('pdg_code'), [ w.get('number') for w in wf.get('mothers')],\
+                              wf.get_with_flow('state')
+
+                    # Remove final wavefunctions from decay_diag_wfs,
+                    # since these will be replaced separately by
+                    # replace_wavefunctions
+                    for wf in final_decay_wfs:
+                        decay_diag_wfs.remove(wf)
+
+                    # Check fermion flow direction
+                    if old_wf.is_fermion() and \
+                           old_wf.get_with_flow('state') != \
+                                 final_decay_wfs[0].get_with_flow('state'):
+
+                        # Not same flow state - need to flip flow of wf
+
+                        # We use the function check_majorana_and_flip_flow, as in
+                        # the helas diagram generation.  Since we have different
+                        # flow, there is already a Majorana particle along the
+                        # fermion line.
+
+                        print "Need to flip fermion flow"
+
+                        for i, wf in enumerate(final_decay_wfs):
+                            print "wf: ",wf.get('number'), wf.get_with_flow('state'),\
+                                  [w.get('number') for w in wf.get('mothers')]
+                            final_decay_wfs[i], numbers[0] = \
+                                                wf.check_majorana_and_flip_flow(\
+                                                     True,
+                                                     earlier_wavefunctions,
+                                                     decay_diag_wfs,
+                                                     {},
+                                                     numbers[0])
+                            print "wf after: ",final_decay_wfs[i].get('number'), \
+                                  final_decay_wfs[i].get_with_flow('state'),\
+                                  [w.get('number') for w in wf.get('mothers')]
+
+                    print "after flip: decay_diag_wfs:"
+                    for wf in decay_diag_wfs:
+                        print wf.get('number'), wf.get('number_external'),\
+                                  wf.get('pdg_code'), [ w.get('number') for w in wf.get('mothers')],\
+                                  wf.get_with_flow('state')
+
+                    print "after flip: final_decay_wfs:"
+                    for wf in final_decay_wfs:
+                        print wf.get('number'), wf.get('number_external'),\
+                                  wf.get('pdg_code'), [ w.get('number') for w in wf.get('mothers')],\
+                                  wf.get_with_flow('state')
+
+##                    # Remove wavefunctions which are already present in
+##                    # earlier_wavefunctions
+                    i = 0
+                    earlier_wavefunctions = \
                         sum([d.get('wavefunctions') for d in \
                              self.get('diagrams')[:diagram.get('number') - 1]],\
                             [])
+                    earlier_wf_numbers = [wf.get('number') for wf in \
+                                          earlier_wavefunctions]
 
-                print "earlier_wavefunctions: "
-                for wf in earlier_wavefunctions:
-                    print wf.get('number'), wf.get('number_external'),\
-                          wf.get('pdg_code'), [ w.get('number') for w in wf.get('mothers')],\
-                          wf.get_with_flow('state')
+##                    i = 0
+##                    while decay_diag_wfs[i:]:
+##                        wf = decay_diag_wfs[i]
+##                        try:
+##                            new_wf = earlier_wavefunctions[\
+##                                earlier_wf_numbers.index(wf.get('number'))]
+##                            decay_diag_wfs.pop(i)
+##                            for later_wf in decay_diag_wfs[i:] + final_decay_wfs:
+##                                try:
+##                                    # Replace mother
+##                                    later_wf.get('mothers')[\
+##                                       later_wf.get('mothers').index(wf)] = new_wf
+##                                    print 'Replaced mother', wf.get('number'),\
+##                                          ' for ',type(later_wf),\
+##                                          later_wf.get('number')
+##                                except ValueError:
+##                                    pass
+##                        except ValueError:
+##                            i = i + 1
 
-                # Prepare for fermion flow direction check
-
-                # Don't want to affect original decay wavefunctions, so need to
-                # deepcopy
-                decay_diag_wfs = copy.deepcopy(decay_diag.get('wavefunctions'))
-                
-                print "decay_diag_wfs:"
-                for wf in decay_diag_wfs:
-                    print wf.get('number'), wf.get('number_external'), \
-                              wf.get('pdg_code'), \
-                              [ w.get('number') for w in wf.get('mothers')],\
-                              wf.get_with_flow('state')
-                        
-                        
-                # These are the wavefunctions which directly replace old_wf
-                final_decay_wfs = [amp.get('mothers')[1] for amp in \
-                                      decay_diag.get('amplitudes')]
-                # Since we made deepcopy, need to syncronize
-                for i, wf in enumerate(final_decay_wfs):
-                    final_decay_wfs[i] = \
-                                       decay_diag_wfs[decay_diag_wfs.index(wf)]
-
-                print "final_decay_wfs:"
-                for wf in final_decay_wfs:
-                    print wf.get('number'), wf.get('number_external'),\
-                          wf.get('pdg_code'), [ w.get('number') for w in wf.get('mothers')],\
-                          wf.get_with_flow('state')
-                
-                # Remove final wavefunctions from decay_diag_wfs,
-                # since these will be replaced separately by
-                # replace_wavefunctions
-                for wf in final_decay_wfs:
-                    decay_diag_wfs.remove(wf)
-                    
-                # Check fermion flow direction
-                if old_wf.is_fermion() and \
-                       old_wf.get_with_flow('state') != \
-                             final_decay_wfs[0].get_with_flow('state'):
-            
-                    # Not same flow state - need to flip flow of wf
-                    
-                    # We use the function check_majorana_and_flip_flow, as in
-                    # the helas diagram generation.  Since we have different
-                    # flow, there is already a Majorana particle along the
-                    # fermion line.
-                    
-                    print "Need to flip fermion flow"
-
-                    for i, wf in enumerate(final_decay_wfs):
-                        print "wf: ",wf.get('number'), wf.get_with_flow('state'),\
-                              [w.get('number') for w in wf.get('mothers')]
-                        final_decay_wfs[i], numbers[0] = \
-                                            wf.check_majorana_and_flip_flow(\
-                                                 True,
-                                                 earlier_wavefunctions,
-                                                 decay_diag_wfs,
-                                                 {},
-                                                 numbers[0])
-                        print "wf after: ",final_decay_wfs[i].get('number'), \
-                              final_decay_wfs[i].get_with_flow('state'),\
-                              [w.get('number') for w in wf.get('mothers')]
-
-                print "after flip: decay_diag_wfs:"
-                for wf in decay_diag_wfs:
-                    print wf.get('number'), wf.get('number_external'),\
-                              wf.get('pdg_code'), [ w.get('number') for w in wf.get('mothers')],\
-                              wf.get_with_flow('state')
-            
-                print "after flip: final_decay_wfs:"
-                for wf in final_decay_wfs:
-                    print wf.get('number'), wf.get('number_external'),\
-                              wf.get('pdg_code'), [ w.get('number') for w in wf.get('mothers')],\
-                              wf.get_with_flow('state')
-
-                # Remove wavefunctions which are already present in
-                # earlier_wavefunctions
-                i = 0
-                earlier_wf_numbers = [wf.get('number') for wf in \
-                                      earlier_wavefunctions]
-
-                i = 0
-                while decay_diag_wfs[i:]:
-                    wf = decay_diag_wfs[i]
-                    try:
-                        new_wf = earlier_wavefunctions[\
-                            earlier_wavefunctions.index(wf)]
-                        decay_diag_wfs.pop(i)
-                        for later_wf in decay_diag_wfs[i:] + final_decay_wfs:
+                    # Since we made deepcopy, go through mothers and make
+                    # sure we are using the ones in earlier_wavefunctions
+                    for decay_wf in decay_diag_wfs + final_decay_wfs:
+                        mothers = decay_wf.get('mothers')
+                        for i, wf in enumerate(mothers):
                             try:
-                                # Replace mother
-                                later_wf.get('mothers')[\
-                                   later_wf.get('mothers').index(wf)] = new_wf
-                                print 'Replaced mother', wf.get('number'),\
-                                      ' for ',type(later_wf),\
-                                      later_wf.get('number')
+                                mothers[i] = earlier_wavefunctions[\
+                                    earlier_wf_numbers.index(wf.get('number'))]
+                                print 'Replaced mother ',wf.get('number'),\
+                                      ' for ',type(decay_wf),\
+                                      decay_wf.get('number')
                             except ValueError:
                                 pass
-                    except ValueError:
-                        i = i + 1
 
-                # If we are using wavefunctions in later amplitudes,
-                # make sure to replace mothers also in these. The possible
-                # ones are the ones which come from the same diagram
-                later_amps = sum([d.get('amplitudes') for d in \
-                             self.get('diagrams')[diagram.get('number') - 1:\
-                                    diagram.get('number') + len_decay - \
-                                                  numdecay - 1]], [])
-                print "later_amps: ",[a.get('number') for a in later_amps]
+                    print "decay_diag_wfs after cleaning:"
+                    for wf in decay_diag_wfs:
+                        print wf.get('number'), wf.get('number_external'),\
+                              wf.get('pdg_code'), \
+                              [ w.get('number') for w in wf.get('mothers')],\
+                              wf.get_with_flow('state')                
 
-                # Since we made deepcopy, go through mothers and make
-                # sure we are using the ones in earlier_wavefunctions
-                for decay_wf in decay_diag_wfs + final_decay_wfs + later_amps:
-                    mothers = decay_wf.get('mothers')
-                    for i, wf in enumerate(mothers):
-                        try:
-                            mothers[i] = earlier_wavefunctions[\
-                                earlier_wf_numbers.index(wf.get('number'))]
-                            print 'Replaced mother ',wf.get('number'),\
-                                  ' for ',type(decay_wf),\
-                                  decay_wf.get('number')
-                        except ValueError:
-                            pass
+                    print "final_decay_wfs after cleaning:"
+                    for wf in final_decay_wfs:
+                        print wf.get('number'), wf.get('number_external'),\
+                              wf.get('pdg_code'), \
+                              [ w.get('number') for w in wf.get('mothers')],\
+                              wf.get_with_flow('state')                
 
-                print "decay_diag_wfs after cleaning:"
-                for wf in decay_diag_wfs:
-                    print wf.get('number'), wf.get('number_external'),\
-                          wf.get('pdg_code'), \
-                          [ w.get('number') for w in wf.get('mothers')],\
-                          wf.get_with_flow('state')                
-                    
-                print "final_decay_wfs after cleaning:"
-                for wf in final_decay_wfs:
-                    print wf.get('number'), wf.get('number_external'),\
-                          wf.get('pdg_code'), \
-                          [ w.get('number') for w in wf.get('mothers')],\
-                          wf.get_with_flow('state')                
-                    
-                diagram_wfs = diagram.get('wavefunctions')
+                    diagram_wfs = diagram.get('wavefunctions')
 
-                print "diagram_wfs before insertion: "
-                for wf in diagram_wfs:
-                    print wf.get('number'), wf.get('number_external'),\
-                          wf.get('pdg_code'), [ w.get('number') for w in wf.get('mothers')],\
-                          wf.get_with_flow('state')                
+                    print "diagram_wfs before insertion: "
+                    for wf in diagram_wfs:
+                        print wf.get('number'), wf.get('number_external'),\
+                              wf.get('pdg_code'), [ w.get('number') for w in wf.get('mothers')],\
+                              wf.get_with_flow('state')                
 
-                old_wf_index = [wf.get('number') for wf in \
-                                diagram_wfs].index(old_wf.get('number'))
-                print 'old_wf_index: ', old_wf_index
+                    old_wf_index = [wf.get('number') for wf in \
+                                    diagram_wfs].index(old_wf.get('number'))
+                    print 'old_wf_index: ', old_wf_index
 
-                diagram_wfs = diagram_wfs[0:old_wf_index] + \
-                              decay_diag_wfs + diagram_wfs[old_wf_index:]
-            
-                print "diagram_wfs after insertion: "
-                for wf in diagram_wfs:
-                    print wf.get('number'), wf.get('number_external'),\
-                          wf.get('pdg_code'), [ w.get('number') for w in wf.get('mothers')],\
-                          wf.get_with_flow('state')                
+                    diagram_wfs = diagram_wfs[0:old_wf_index] + \
+                                  decay_diag_wfs + diagram_wfs[old_wf_index:]
 
-                diagram.set('wavefunctions', HelasWavefunctionList(diagram_wfs))
-            
-                # Multiply wavefunctions and amplitudes and insert mothers
-                # using a recursive function
-                self.replace_wavefunctions(old_wf,
-                                           final_decay_wfs,
-                                           diagrams,
-                                           numbers,
-                                           [amp.get('color_indices') for amp \
-                                            in decay_diag.get('amplitudes')])
+                    print "diagram_wfs after insertion: "
+                    for wf in diagram_wfs:
+                        print wf.get('number'), wf.get('number_external'),\
+                              wf.get('pdg_code'), [ w.get('number') for w in wf.get('mothers')],\
+                              wf.get_with_flow('state')                
+
+                    diagram.set('wavefunctions', HelasWavefunctionList(diagram_wfs))
+
+                    # Multiply wavefunctions and amplitudes and insert mothers
+                    # using a recursive function
+                    self.replace_wavefunctions(old_wf,
+                                               final_decay_wfs,
+                                               diagrams,
+                                               numbers,
+                                               [amp.get('color_indices') for amp \
+                                                in decay_diag.get('amplitudes')])
+
             # Now that we are done with this whole set of diagrams, we can
             # clean out duplicate wavefunctions
             for diagram in diagrams:
+                print "Cleaning diagram ", diagram.get('number')
+
                 # We can have duplicate wfs only from previous copies of
                 # this diagram
                 earlier_wfs = sum([d.get('wavefunctions') for d in \
@@ -2192,6 +2249,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 later_wfs = sum([d.get('wavefunctions') for d in \
                                    self.get('diagrams')[\
                                      diagram.get('number'):]], [])
+
+                print "Diagrams included for earlier_wfs: ",\
+                      diagram.get('number') - numdecay, " - ",\
+                                     diagram.get('number') - 1
 
                 later_amps = sum([d.get('amplitudes') for d in \
                                    self.get('diagrams')[\
