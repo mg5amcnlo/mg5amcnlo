@@ -968,6 +968,28 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
 
         return wf_number
 
+    def insert_own_mothers(self):
+        """Recursively go through a wavefunction list and insert the
+        mothers of all wavefunctions, return the result.
+        Assumes that all wavefunctions have unique numbers."""
+
+        res = copy.copy(self)
+        # Recursively build up res
+        for wf in self:
+            index = res.index(wf)
+            res = res[:index] + wf.get('mothers').insert_own_mothers() \
+                  + res[index:]
+
+        # Make sure no wavefunctions occur twice, by removing doublets
+        # from the back
+        i = len(res) - 1
+        while res[:i]:
+            if res[i].get('number') in [w.get('number') for w in res[:i]]:
+                res.pop(i)
+            i = i - 1
+            
+        return res
+    
 #===============================================================================
 # HelasAmplitude
 #===============================================================================
@@ -1792,8 +1814,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                  wf.get('number_external') == number,
                                  self.get_all_wavefunctions())]
 
-        # Keep track of wavefunction and amplitude numbers,
-        # to ensure unique numbers for all new wfs and amps
+        # Keep track of wavefunction and amplitude numbers, to ensure
+        # unique numbers for all new wfs and amps during manipulations
         numbers = [self.get_all_wavefunctions()[-1].get('number'),
                    self.get_all_amplitudes()[-1].get('number')]
 
@@ -1869,6 +1891,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         for i, amp in enumerate(self.get_all_amplitudes()):
             print "Renumber amp: ", amp.get('number'), i + 1
             amp.set('number', i + 1)
+            # Update fermion factors for all amplitudes
+            amp.calculate_fermionfactor()
 
         # Calculate identical particle factors for
         # this matrix element
@@ -1895,9 +1919,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
            to flip fermion flow for the decay process if needed.
 
         The algorithm is the following:
-        1) Pick out all wavefunctions in the decay, except the final ones,
-           which will replace the present wavefunctions
-        2) Multiply the diagrams with the number of diagrams Ndiag in
+        1) Multiply the diagrams with the number of diagrams Ndiag in
            the decay element
         3) Insert all auxiliary wavefunctions into diagram (i.e., all except
            the final wavefunctions, which directly replace the original
@@ -2073,7 +2095,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     # Don't want to affect original decay wavefunctions, so need to
                     # deepcopy
                     decay_diag_wfs = copy.deepcopy(decay_diag.get('wavefunctions'))
-
+                    # Complete decay_diag_wfs with the mother wavefunctions
+                    # to allow for independent fermion flow flips
+                    decay_diag_wfs = decay_diag_wfs.insert_own_mothers()
+                    
                     print "decay_diag_wfs:"
                     for wf in decay_diag_wfs:
                         print wf.get('number'), wf.get('number_external'), \
@@ -2158,6 +2183,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         try:
                             new_wf = earlier_wavefunctions[\
                                 earlier_wf_numbers.index(wf.get('number'))]
+                            # If the wavefunctions are not identical,
+                            # then we should keep this wavefunction,
+                            # and update its number so it is unique
+                            if wf != new_wf:
+                                numbers[0] = numbers[0] + 1
+                                wf.set('number', numbers[0])
+                                continue
                             decay_diag_wfs.pop(i)
                             for later_wf in decay_diag_wfs[i:] + \
                                                                final_decay_wfs:
@@ -2512,7 +2544,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                      for me in decay_chains], 1)
         
     def calculate_fermionfactors(self):
-        """Generate the fermion factors for all diagrams in the amplitude
+        """Generate the fermion factors for all diagrams in the matrix element
         """
 
         for diagram in self.get('diagrams'):
