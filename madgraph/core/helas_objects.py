@@ -1809,8 +1809,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         for diagram in self.get('diagrams'):
             print "Final cleaning diagram ", diagram.get('number')
 
-            # We can have duplicate wfs only from previous copies of
-            # this diagram
+            # This time we look at all wavefunctions
             earlier_wfs = sum([d.get('wavefunctions') for d in \
                                self.get('diagrams')[:diagram.get('number') - 1]], [])
 
@@ -1834,17 +1833,17 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             print "diag_amps for diagram ",diagram.get('number'),":"
             for amp in diagram.get('amplitudes'):
                 print amp.get('number'), [ w.get('number') for w in amp.get('mothers')]
+            # Remove wavefunctions and replace mothers
             while diag_wfs[i:]:
                 try:
-                    index = [w.get('number') for w in earlier_wfs].\
-                            index(diag_wfs[i].get('number'))
+                    new_wf = earlier_wfs[earlier_wfs.index(diag_wfs[i])]
                     wf = diag_wfs.pop(i)
                     for later_wf in diag_wfs[i:] + later_wfs + later_amps:
                         try:
                             # Replace mother
                             later_wf.get('mothers')[\
                                later_wf.get('mothers').index(wf)] = \
-                                  earlier_wfs[index]
+                                  new_wf
                             print 'Replaced mother ', wf.get('number'),\
                                   ' for ',type(later_wf),\
                                   later_wf.get('number')
@@ -2060,9 +2059,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     index = [d.get('number') for d in diagrams].\
                             index(diagram.get('number'))
                     earlier_wavefunctions = \
-                            sum([d.get('wavefunctions') for d in \
-                                 diagrams[:index]],\
-                                [])
+                                      sum([d.get('wavefunctions') for d in \
+                                           diagrams[:index]],[])
 
                     print "earlier_wavefunctions: "
                     for wf in earlier_wavefunctions:
@@ -2144,8 +2142,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                   wf.get('pdg_code'), [ w.get('number') for w in wf.get('mothers')],\
                                   wf.get_with_flow('state')
 
-##                    # Remove wavefunctions which are already present in
-##                    # earlier_wavefunctions
+                    # Remove wavefunctions which are already present in
+                    # earlier_wavefunctions
                     i = 0
                     earlier_wavefunctions = \
                         sum([d.get('wavefunctions') for d in \
@@ -2154,25 +2152,27 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     earlier_wf_numbers = [wf.get('number') for wf in \
                                           earlier_wavefunctions]
 
-##                    i = 0
-##                    while decay_diag_wfs[i:]:
-##                        wf = decay_diag_wfs[i]
-##                        try:
-##                            new_wf = earlier_wavefunctions[\
-##                                earlier_wf_numbers.index(wf.get('number'))]
-##                            decay_diag_wfs.pop(i)
-##                            for later_wf in decay_diag_wfs[i:] + final_decay_wfs:
-##                                try:
-##                                    # Replace mother
-##                                    later_wf.get('mothers')[\
-##                                       later_wf.get('mothers').index(wf)] = new_wf
-##                                    print 'Replaced mother', wf.get('number'),\
-##                                          ' for ',type(later_wf),\
-##                                          later_wf.get('number')
-##                                except ValueError:
-##                                    pass
-##                        except ValueError:
-##                            i = i + 1
+                    i = 0
+                    while decay_diag_wfs[i:]:
+                        wf = decay_diag_wfs[i]
+                        try:
+                            new_wf = earlier_wavefunctions[\
+                                earlier_wf_numbers.index(wf.get('number'))]
+                            decay_diag_wfs.pop(i)
+                            for later_wf in decay_diag_wfs[i:] + \
+                                                               final_decay_wfs:
+                                try:
+                                    # Replace mother
+                                    later_wf.get('mothers')[\
+                                          later_wf.get('mothers').index(wf)] = \
+                                                          new_wf
+                                    print 'Replaced mother', wf.get('number'),\
+                                          ' for ',type(later_wf),\
+                                          later_wf.get('number')
+                                except ValueError:
+                                    pass
+                        except ValueError:
+                            i = i + 1
 
                     # Since we made deepcopy, go through mothers and make
                     # sure we are using the ones in earlier_wavefunctions
@@ -2234,8 +2234,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                                [amp.get('color_indices') for amp \
                                                 in decay_diag.get('amplitudes')])
 
-            # Now that we are done with this whole set of diagrams, we can
-            # clean out duplicate wavefunctions
+            # Now that we are done with this whole set of diagrams, we
+            # can clean out duplicate wavefunctions (i.e., remove
+            # identical wavefunctions which are already present in
+            # earlier diagrams)
             for diagram in diagrams:
                 print "Cleaning diagram ", diagram.get('number')
 
@@ -2270,11 +2272,15 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 print "diag_amps for diagram ",diagram.get('number'),":"
                 for amp in diagram.get('amplitudes'):
                     print amp.get('number'), [ w.get('number') for w in amp.get('mothers')]
+                # Remove wavefunctions and replace mothers, to make
+                # sure we only have one copy of each wavefunction
+                # number
                 while diag_wfs[i:]:
                     try:
                         index = [w.get('number') for w in earlier_wfs].\
                                 index(diag_wfs[i].get('number'))
                         wf = diag_wfs.pop(i)
+                        print "Removed wf ",wf.get('number')
                         for later_wf in diag_wfs[i:] + later_wfs + later_amps:
                             try:
                                 # Replace mother
