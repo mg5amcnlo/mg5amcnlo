@@ -2233,7 +2233,6 @@ C     Amplitude(s) for diagram number 6
         self.assertEqual(me.get_nexternal_ninitial(), (10,2))
         self.assertEqual(me.get_helicity_combinations(), 1024)
         self.assertEqual(len(export_v4.get_helicity_lines(me).split("\n")), 1024)
-        print "\n".join(myfortranmodel.get_matrix_element_calls(me))
         # This has been tested against v4
         self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
                          """CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
@@ -2432,10 +2431,6 @@ CALL IOVXXX(W(1,26),W(1,23),W(1,2),GAL,AMP(8))""")
 16 108 [2, 2, 2]""".split("\n")
 
         diagram = me.get('diagrams')[15]
-        for i, amp in enumerate(diagram.get('amplitudes')):
-            print "%d %d %s" % \
-                  (diagram.get('number'), amp.get('number'), \
-                   repr(amp.get('color_indices')))
 
         for i, amp in enumerate(diagram.get('amplitudes')):
             if diagram.get('number') == 16:
