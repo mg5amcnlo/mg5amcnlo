@@ -1867,6 +1867,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             amp.set('number', i + 1)
             # Update fermion factors for all amplitudes
             amp.calculate_fermionfactor()
+            # Update color indices
+            amp.set('color_indices', amp.get_color_indices())
 
         # Calculate identical particle factors for
         # this matrix element
@@ -2136,9 +2138,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     self.replace_wavefunctions(old_wf,
                                                final_decay_wfs,
                                                diagrams,
-                                               numbers,
-                                               [amp.get('color_indices') for amp \
-                                                in decay_diag.get('amplitudes')])
+                                               numbers)
 
             # Now that we are done with this whole set of diagrams, we
             # can clean out duplicate wavefunctions (i.e., remove
@@ -2185,7 +2185,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         i = i + 1
 
     def replace_wavefunctions(self, old_wf, new_wfs,
-                              diagrams, numbers, decay_color_indices):
+                              diagrams, numbers):
         """Recursive function to replace old_wf with new_wfs, and
         multiply all wavefunctions or amplitudes that use old_wf,
         keeping track of diagrams in the correct way.
@@ -2244,11 +2244,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     # Update amp numbers for replaced amp
                     numbers[1] = numbers[1] + 1
                     new_amp.set('number', numbers[1])
-                    # Update color indices for daughter amplitude
-                    new_amp.set('color_indices',
-                                 new_amp.get('color_indices')[:-1] + \
-                                 decay_color_indices[i] + \
-                                 new_amp.get('color_indices')[-1:])
 
                 # Insert the new amplitudes in diagram amplitudes
                 index = [a.get('number') for a in new_amplitudes].\
@@ -2302,8 +2297,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 self.replace_wavefunctions(daughter_wf,
                                            replace_daughters,
                                            diagrams,
-                                           numbers,
-                                           decay_color_indices)
+                                           numbers)
 
     def identical_decay_chain_factor(self, decay_chains):
         """Calculate the denominator factor from identical decay chains"""
