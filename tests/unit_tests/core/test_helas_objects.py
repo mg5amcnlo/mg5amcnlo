@@ -499,7 +499,8 @@ class HelasMatrixElementTest(unittest.TestCase):
                        'diagrams': self.mydiagrams,
                        'identical_particle_factor': 0,
                        'color_basis': color_amp.ColorBasis(),
-                       'color_matrix':color_amp.ColorMatrix(color_amp.ColorBasis())}
+                       'color_matrix':color_amp.ColorMatrix(color_amp.ColorBasis()),
+                       'base_amplitude': diagram_generation.Amplitude()}
         self.mymatrixelement = helas_objects.HelasMatrixElement(self.mydict)
 
         # Set up model

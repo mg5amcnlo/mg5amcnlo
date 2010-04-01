@@ -1437,6 +1437,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         self['identical_particle_factor'] = 0
         self['color_basis'] = color_amp.ColorBasis()
         self['color_matrix'] = color_amp.ColorMatrix(color_amp.ColorBasis())
+        # base_amplitude is the Amplitude to be used in color
+        # generation, drawing etc. For decay chain processes, this is
+        # the Amplitude which corresponds to the combined process.
+        self['base_amplitude'] = diagram_generation.Amplitude()
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
@@ -1461,13 +1465,18 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             if not isinstance(value, color_amp.ColorMatrix):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid ColorMatrix object" % str(value)
+        if name == 'base_amplitude':
+            if not isinstance(value, diagram_generation.Amplitude):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid Amplitude object" % str(value)
         return True
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
         return ['processes', 'identical_particle_factor',
-                'diagrams', 'color_basis', 'color_matrix']
+                'diagrams', 'color_basis', 'color_matrix',
+                'base_amplitude']
 
     # Customized constructor
     def __init__(self, amplitude=None, optimization=1,
@@ -1485,8 +1494,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 self.calculate_fermionfactors()
                 self.calculate_identical_particle_factors()
                 if gen_color:
-                    new_amp = self.get_base_amplitude()
-                    self.get('color_basis').build(new_amp)
+                    my_amp = self.get_base_amplitude()
+                    self['base_amplitude'] = my_amp
+                    self.get('color_basis').build(my_amp)
                     self.set('color_matrix',
                              color_amp.ColorMatrix(self.get('color_basis')))
             else:
@@ -1825,12 +1835,15 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                               decay_dict[number],
                               numbers)
             
+        # This time we look at all wavefunctions
+        earlier_wfs = []
+
         # Final cleaning out duplicate wavefunctions
         for diagram in self.get('diagrams'):
 
-            # This time we look at all wavefunctions
-            earlier_wfs = sum([d.get('wavefunctions') for d in \
-                               self.get('diagrams')[:diagram.get('number') - 1]], [])
+            if diagram.get('number') > 1:
+                earlier_wfs.extend(self.get('diagrams')[\
+                    diagram.get('number') - 2].get('wavefunctions'))
 
             later_wfs = sum([d.get('wavefunctions') for d in \
                                self.get('diagrams')[\
@@ -1840,22 +1853,27 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                self.get('diagrams')[\
                                  diagram.get('number') - 1:]], [])
 
+            #mother_numbers = [[w.get('number') for w in a.get('mothers')]\
+            #                  for a in later_wfs + later_amps]
+
             i = 0
             diag_wfs = diagram.get('wavefunctions')
 
             # Remove wavefunctions and replace mothers
             while diag_wfs[i:]:
                 try:
-                    new_wf = earlier_wfs[earlier_wfs.index(diag_wfs[i])]
+                    new_wf = earlier_wfs[\
+                             earlier_wfs.index(diag_wfs[i])]
                     wf = diag_wfs.pop(i)
-                    for later_wf in diag_wfs[i:] + later_wfs + later_amps:
-                        try:
-                            # Replace mother
-                            later_wf.get('mothers')[\
+
+                    mother_wfs = filter(lambda a: wf in \
+                                        a.get('mothers'),\
+                                        diag_wfs[i:] + later_wfs + later_amps)
+                    for later_wf in mother_wfs:
+                        # Replace mother
+                        later_wf.get('mothers')[\
                                later_wf.get('mothers').index(wf)] = \
-                                  new_wf
-                        except ValueError:
-                            pass
+                               new_wf
                 except ValueError:
                     i = i + 1
 
@@ -3069,6 +3087,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                         # simplification) associated with amplitude
                         col_basis = color_amp.ColorBasis()
                         new_amp = matrix_element.get_base_amplitude()
+                        matrix_element.set('base_amplitude', new_amp)
                         colorize_obj = col_basis.create_color_dict_list(new_amp)
                         
                         try:
