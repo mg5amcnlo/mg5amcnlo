@@ -780,7 +780,7 @@ class MadGraphCmd(cmd.Cmd):
             self.help_draw()
             return False
         
-        if not filter(lambda amp: amp.get("diagrams"), self.__curr_amps):
+        if not self.__curr_amps:
             print "No process generated, please generate a process!"
             return False
 
@@ -798,8 +798,12 @@ class MadGraphCmd(cmd.Cmd):
                     self.help_draw()
                     return False
                 option.set(key,value)
-
+        # Collect amplitudes
+        amplitudes = diagram_generation.AmplitudeList()
         for amp in self.__curr_amps:
+            amplitudes.extend(amp.get_amplitudes())
+
+        for amp in amplitudes:
             filename = os.path.join(args[0], 'diagrams_' + \
                                     amp.get('process').shell_string() + ".eps")
             plot = draw.MultiEpsDiagramDrawer(amp['diagrams'],
