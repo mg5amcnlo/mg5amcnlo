@@ -900,7 +900,7 @@ class FeynmanDiagram:
     def deal_last_line(self, last_line):
         """The line of the last vertex breaks the rules that line before
         '>' exist previously and the one after don't. The last one can also
-        already exist and for the one befor the '>' sometimes they arrive 
+        already exist and for the one before the '>' sometimes they arrive 
         with a second object which is equivalent to another one but not 
         the same object. discover those case and treat this properly."""
 
@@ -910,7 +910,6 @@ class FeynmanDiagram:
             id1 = self.find_leg_id(last_line)
             # Find if they are a second call to this line
             id2 = self.find_leg_id(last_line, end=len(self._treated_legs) - id1)
-
             if id2 is not None:
                 # Line is duplicate in linelist => remove this duplication
                 line = self.lineList[id2]
@@ -932,7 +931,7 @@ class FeynmanDiagram:
                     else:
                         line.def_start_point(last_line.start)
                     # Remove last_line from the vertex    
-                    last_line.begin.remove_line(last_line)
+                    last_line.start.remove_line(last_line)
 
                 # Remove last_line
                 self.lineList.remove(last_line)

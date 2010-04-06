@@ -814,9 +814,19 @@ class TestFeynmanDiagram(unittest.TestCase):
         for obj in self.mix_drawing.lineList:
             self.assertTrue(isinstance(obj, drawing.FeynmanLine))
 
-        #check that the load corrctly assign the model to the Line
+        #check that the load correctly assign the model to the Line
         for line in self.mix_drawing.lineList:
             self.assertTrue(hasattr(line, 'model'))
+            
+    def test_dealing_with_last_line(self):
+        """ check that we deal correctly with format coming from decaychains"""
+        
+        diagram = self.store_diagram['e- e+ > t t~, t > w+ b'][0]
+        diagram = drawing.FeynmanDiagram(diagram, _model)
+        #call the function
+        diagram.load_diagram()        
+        self.assertEqual(len(diagram.lineList), 7)
+        
 
     @staticmethod
     def vertex_identification(vertex):
