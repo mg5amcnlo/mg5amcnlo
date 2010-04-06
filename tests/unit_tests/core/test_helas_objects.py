@@ -1836,6 +1836,230 @@ class HelasMatrixElementTest(unittest.TestCase):
                          sorted_mothers(wavefunction),
                          [mymothers[1], mymothers[0], mymothers[2]])
 
+    def test_complicated_majorana_process(self):
+        """Test majorana process z e- > n2 n2 e-
+        """
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A electron and positron
+        mypartlist.append(base_objects.Particle({'name':'e-',
+                      'antiname':'e+',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'e^-',
+                      'antitexname':'e^+',
+                      'line':'straight',
+                      'charge':-1.,
+                      'pdg_code':11,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        eminus = mypartlist[len(mypartlist) - 1]
+        eplus = copy.copy(eminus)
+        eplus.set('is_part', False)
+
+        # E sleptons and their antiparticle
+        mypartlist.append(base_objects.Particle({'name':'el-',
+                      'antiname':'el+',
+                      'spin':1,
+                      'color':1,
+                      'mass':'Msl2',
+                      'width':'Wsl2',
+                      'texname':'\tilde e^-',
+                      'antitexname':'\tilde e^+',
+                      'line':'dashed',
+                      'charge':1.,
+                      'pdg_code':1000011,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        elminus = mypartlist[len(mypartlist) - 1]
+        elplus = copy.copy(elminus)
+        elplus.set('is_part', False)
+
+        mypartlist.append(base_objects.Particle({'name':'er-',
+                      'antiname':'er+',
+                      'spin':1,
+                      'color':1,
+                      'mass':'Msl2',
+                      'width':'Wsl2',
+                      'texname':'\tilde e^-',
+                      'antitexname':'\tilde e^+',
+                      'line':'dashed',
+                      'charge':1.,
+                      'pdg_code':2000011,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        erminus = mypartlist[len(mypartlist) - 1]
+        erplus = copy.copy(erminus)
+        erplus.set('is_part', False)
+
+        # Neutralinos
+        mypartlist.append(base_objects.Particle({'name':'n2',
+                      'antiname':'n2',
+                      'spin':2,
+                      'color':1,
+                      'mass':'mn2',
+                      'width':'wn2',
+                      'texname':'\chi_0^2',
+                      'antitexname':'\chi_0^2',
+                      'line':'straight',
+                      'charge':0.,
+                      'pdg_code':1000023,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        n2 = mypartlist[len(mypartlist) - 1]
+
+        # A z
+        mypartlist.append(base_objects.Particle({'name':'z',
+                      'antiname':'z',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zmass',
+                      'width':'zwidth',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':23,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        z = mypartlist[len(mypartlist) - 1]
+
+        # Coupling of e to Z
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             eminus, \
+                                             z]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GZL'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of n2 to e and el/er
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             n2, \
+                                             elminus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GELN2M'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [n2, \
+                                             eminus, \
+                                             elplus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GELN2P'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             n2, \
+                                             erminus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GERN2M'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 5,
+                      'particles': base_objects.ParticleList(\
+                                            [n2, \
+                                             eminus, \
+                                             erplus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GERN2P'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of n2 to z
+        myinterlist.append(base_objects.Interaction({
+                      'id': 6,
+                      'particles': base_objects.ParticleList(\
+                                            [n2, \
+                                             n2, \
+                                             z]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GZN22'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of el/er to z
+        myinterlist.append(base_objects.Interaction({
+                      'id': 7,
+                      'particles': base_objects.ParticleList(\
+                                            [z, \
+                                             elminus, \
+                                             elplus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GZELEL'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 8,
+                      'particles': base_objects.ParticleList(\
+                                            [z, \
+                                             erminus, \
+                                             erplus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GZERER'},
+                      'orders':{'QED':1}}))
+
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':23,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':1000023,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':1000023,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'final'}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                           'model':mymodel})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        self.assertEqual(len(myamplitude.get('diagrams')), 24)
+
+        me = helas_objects.HelasMatrixElement(myamplitude,
+                                              gen_color=False)
+
+        self.assertEqual(sum([len(diagram.get('amplitudes')) for diagram in \
+                          me.get('diagrams')]), 24)
+
+        for i, amp in enumerate(me.get_all_amplitudes()):
+            self.assertEqual(amp.get('number'), i + 1)
+
+        for i, wf in enumerate(me.get_all_wavefunctions()):
+            self.assertEqual(wf.get('number'), i + 1)        
 
 
 #===============================================================================
