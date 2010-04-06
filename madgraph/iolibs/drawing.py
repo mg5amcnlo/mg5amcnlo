@@ -86,12 +86,12 @@ class FeynmanLine(base_objects.Leg):
         return
 
     def def_end_point(self, vertex):
-        """-Re-Define the starting point of the line."""
+        """-Re-Define the starting point of the line. with check"""
 
         if not isinstance(vertex, VertexPoint):
             raise self.FeynmanLineError, 'The end point should be a ' + \
                  'Vertex_Point object'
-
+                 
         self.end = vertex
         vertex.add_line(self)
         return
@@ -797,7 +797,7 @@ class FeynmanDiagram:
         2) Add this vertex in vertexList of the diagram
         3) Update vertex.line list. (first update the leg into line if needed)
         4) assign line.start[end] to this vertex. (in end if start is already
-                assigned to another vertex). the start-end will be flipped later
+                assigned to another vertex). the start-end will be flip later
                 if needed."""
 
         #1) Extend to a vertex point
@@ -875,13 +875,25 @@ class FeynmanDiagram:
         #consequence we replace in line2 the common vertex by the second vertex 
         #present in line1, such that the new line2 is the sum of the two 
         #previous lines.
+        to_del = pos1
         if line1.end is line2.start:
             line2.def_begin_point(line1.start)
         else:
-            line2.def_end_point(line1.end)
+            if line1.end:
+                # Standard case
+                line2.def_end_point(line1.end)
+            else:
+                # line1 is a initial/final line. We need to keep her status
+                #so we will delete line2 instead of line1
+                to_del = pos2
+                line1.def_begin_point(line2.end)
         # Remove line completely
-        line1.start.remove_line(line1)
-        del self.lineList[pos1]
+        if to_del == pos1:
+            line1.start.remove_line(line1)
+            del self.lineList[pos1]
+        else:
+            line2.start.remove_line(line2)
+            del self.lineList[pos2]
         # Remove last_vertex
         self.vertexList.remove(last_vertex)
 
