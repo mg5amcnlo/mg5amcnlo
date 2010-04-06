@@ -97,6 +97,12 @@ def read_particles_v4(fsock):
                     mypart.set("texname", values[7])
                     mypart.set("pdg_code", int(values[8]))
 
+                    if mypart.get('pdg_code') < 0:
+                        mypart.set('pdg_code', -mypart.get('pdg_code'))
+                        tmp = mypart.get('name')
+                        mypart.set('name', mypart.get('antiname'))
+                        mypart.set('antiname', tmp)
+
                     mypart.set('charge', 0.)
                     mypart.set('antitexname', mypart.get('texname'))
 

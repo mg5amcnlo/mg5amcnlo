@@ -541,7 +541,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                      wavefunctions,
                                      diagram_wavefunctions,
                                      external_wavefunctions,
-                                     wf_number):
+                                     wf_number, force_flip_flow = False):
         """Recursive function. Check for Majorana fermion. If found,
         continue down to external leg, then flip all the fermion flows
         on the way back up, in the correct way:
@@ -570,7 +570,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Stop recursion at the external leg
         mothers = copy.copy(self.get('mothers'))
         if not mothers:
-            if not self.get('self_antipart'):
+            if force_flip_flow:
+                flip_flow = True
+            elif not self.get('self_antipart'):
                 flip_flow = found_majorana
             else:
                 flip_sign = found_majorana
@@ -597,7 +599,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                            wavefunctions,
                                            diagram_wavefunctions,
                                            external_wavefunctions,
-                                           wf_number)
+                                           wf_number,
+                                           force_flip_flow)
 
             # If this is Majorana and mother has different fermion
             # flow, it means that we should from now on in the chain
@@ -888,7 +891,8 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                                    diagram_wavefunctions,
                                    external_wavefunctions,
                                    my_state,
-                                   wf_number):
+                                   wf_number,
+                                   force_flip_flow = False):
         """Check for clashing fermion flow (N(incoming) !=
         N(outgoing)). If found, we need to trace back through the
         mother structure (only looking at fermions), until we find a
@@ -944,14 +948,15 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
 
             # Call recursive function to check for Majorana fermions
             # and flip fermionflow if found
-            found_majorana = False
 
+            found_majorana = False
             new_mother, wf_number = mother.check_majorana_and_flip_flow(\
                                                 found_majorana,
                                                 wavefunctions,
                                                 diagram_wavefunctions,
                                                 external_wavefunctions,
-                                                wf_number)
+                                                wf_number,
+                                                force_flip_flow)
             # Replace old mother with new mother
             self[self.index(mother)] = new_mother
 
@@ -969,10 +974,16 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                                        mother_states))
 
         if Nincoming != Noutgoing:
-            raise self.PhysicsObjectListError, \
-                  "Failed to fix fermion flow, %d != %d" % \
-                  (Nincoming, Noutgoing)
-
+            # No Majorana fermion in any relevant legs - try again,
+            # but simply use the first relevant leg
+            force_flip_flow = True
+            wf_number = self.check_and_fix_fermion_flow( \
+                                   wavefunctions,
+                                   diagram_wavefunctions,
+                                   external_wavefunctions,
+                                   my_state,
+                                   wf_number,
+                                   force_flip_flow)
         return wf_number
 
     def insert_own_mothers(self):
