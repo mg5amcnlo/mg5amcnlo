@@ -625,8 +625,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 wf_number = wf_number + 1
                 new_wf.set('number', wf_number)
                 try:
-                    diagram_wavefunctions[diagram_wavefunctions.index(self)] \
-                                                                = new_wf
+                    # In call from insert_decay, we want to replace
+                    # also identical wavefunctions in the same diagram
+                    old_wf_index = diagram_wavefunctions.index(self)
+                    diagram_wavefunctions[old_wf_index] = new_wf
                 except ValueError:
                     diagram_wavefunctions.append(new_wf)
 
@@ -652,7 +654,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 # Use the copy in wavefunctions instead.
                 # Remove this copy from diagram_wavefunctions
                 new_wf = wavefunctions[wavefunctions.index(new_wf)]
-                diagram_wavefunctions.remove(new_wf)
+                index = diagram_wavefunctions.index(new_wf)
+                diagram_wavefunctions.pop(index)
+                # We need to decrease the wf number for later
+                # diagram wavefunctions
+                for wf in diagram_wavefunctions[index:]:
+                    wf.set('number', wf.get('number') - 1)
                 # Since we reuse the old wavefunction, reset wf_number
                 wf_number = wf_number - 1
             except ValueError:
@@ -1550,12 +1557,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         Note that we need special treatment for decay chains, since
         the end product then is a wavefunction, not an amplitude.
-
-        WARNING! For decay chains, we will need extra check for
-        fermion flow clashes when the chains are sewn together! This
-        can be done by making sure that the incoming/outgoing state
-        corresponds between the wf in the core diagram and the wf in
-        the decay chain.
         """
 
         if not isinstance(amplitude, diagram_generation.Amplitude) or \
@@ -1746,6 +1747,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                               external_wavefunctions,
                                               'nostate',
                                               wf_number)
+                
                 # Sort the wavefunctions according to number
                 diagram_wavefunctions.sort(lambda wf1, wf2: \
                               wf1.get('number') - wf2.get('number'))

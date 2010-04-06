@@ -87,6 +87,12 @@ class Amplitude(base_objects.PhysicsObject):
         """Returns number of diagrams for this amplitude"""
         return len(self.get('diagrams'))
 
+    def get_amplitudes(self):
+        """Return an AmplitudeList with just this amplitude.
+        Needed for DecayChainAmplitude."""
+
+        return AmplitudeList([self])
+
     def nice_string(self, indent=0):
         """Returns a nicely formatted string of the amplitude content."""
         return self.get('process').nice_string(indent) + "\n" + \
@@ -650,6 +656,18 @@ class DecayChainAmplitude(Amplitude):
         # Return a list with unique ids
         return list(set(decay_ids))
     
+    def get_amplitudes(self):
+        """Recursive function to extract all amplitudes for this process"""
+
+        amplitudes = AmplitudeList()
+
+        amplitudes.extend(self.get('amplitudes'))
+        for decay in self.get('decay_chains'):
+            amplitudes.extend(decay.get_amplitudes())
+
+        return amplitudes
+            
+
 #===============================================================================
 # DecayChainAmplitudeList
 #===============================================================================
