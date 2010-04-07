@@ -606,7 +606,20 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     diagram_wavefunctions[old_wf_index] = new_wf
                 except ValueError:
                     diagram_wavefunctions.append(new_wf)
-
+                    # Make sure that new_wf comes before any wavefunction
+                    # which has it as mother
+                    for i, wf in enumerate(diagram_wavefunctions):
+                        if self in wf.get('mothers'):
+                            # Remove new_wf, in order to insert it below
+                            diagram_wavefunctions.pop()
+                            # Update wf numbers
+                            new_wf.set('number', wf.get('number'))
+                            for w in diagram_wavefunctions[i:]:
+                                w.set('number', w.get('number') + 1)
+                            # Insert wavefunction
+                            diagram_wavefunctions.insert(i, new_wf)
+                            break
+                    
             # Set new mothers
             new_wf.set('mothers', mothers)
 
