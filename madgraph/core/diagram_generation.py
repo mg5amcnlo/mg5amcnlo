@@ -83,6 +83,21 @@ class Amplitude(base_objects.PhysicsObject):
 
         return ['process', 'diagrams']
 
+    def get_number_of_diagrams(self):
+        """Returns number of diagrams for this amplitude"""
+        return len(self.get('diagrams'))
+
+    def get_amplitudes(self):
+        """Return an AmplitudeList with just this amplitude.
+        Needed for DecayChainAmplitude."""
+
+        return AmplitudeList([self])
+
+    def nice_string(self, indent=0):
+        """Returns a nicely formatted string of the amplitude content."""
+        return self.get('process').nice_string(indent) + "\n" + \
+               self.get('diagrams').nice_string(indent)
+
     def generate_diagrams(self):
         """Generate diagrams. Algorithm:
 
@@ -116,6 +131,11 @@ class Amplitude(base_objects.PhysicsObject):
 
         Be aware that the resulting vertices have all particles outgoing,
         so need to flip for incoming particles when used.
+
+        SPECIAL CASE: For A>BC... processes which are legs in decay
+        chains, we need to ensure that BC... combine first, giving A=A
+        as a final vertex. This case is defined by the Process
+        property is_decay_chain = True.
         """
 
         model = self['process'].get('model')
@@ -177,9 +197,30 @@ class Amplitude(base_objects.PhysicsObject):
         # Reduce the leg list and return the corresponding
         # list of vertices
 
-        reduced_leglist = self.reduce_leglist(leglist,
-                                              max_multi_to1,
-                                              self.get('process').get('orders'))
+        # Set is_decay_chain to True if this is a 1->N decay process
+        # as part of a decay chain.
+        is_decay_chain = self['process'].get('is_decay_chain')
+        if is_decay_chain:
+            part = model.get('particle_dict')[leglist[0].get('id')]
+            # For decay chain legs, we want everything to combine to
+            # the initial leg. This is done by only allowing the
+            # initial leg to combine as a final identity.
+            ref_dict_to0 = {(part.get_pdg_code(),part.get_anti_pdg_code()):0,
+                            (part.get_anti_pdg_code(),part.get_pdg_code()):0}
+            # Need to set initial leg from_group to None, to make sure
+            # it can only be combined at the end.
+            leglist[0].set('from_group', None)
+            reduced_leglist = self.reduce_leglist(leglist,
+                                                  max_multi_to1,
+                                                  ref_dict_to0,
+                                                  is_decay_chain,
+                                                  self.get('process').get('orders'))
+        else:
+            reduced_leglist = self.reduce_leglist(leglist,
+                                                  max_multi_to1,
+                                                  model.get('ref_dict_to0'),
+                                                  is_decay_chain,
+                                                  self.get('process').get('orders'))
 
         for vertex_list in reduced_leglist:
             res.append(base_objects.Diagram(
@@ -228,8 +269,8 @@ class Amplitude(base_objects.PhysicsObject):
 
         return not failed_crossing
 
-    def reduce_leglist(self, curr_leglist, max_multi_to1,
-                       coupling_orders=None):
+    def reduce_leglist(self, curr_leglist, max_multi_to1, ref_dict_to0,
+                       is_decay_chain = False, coupling_orders = None):
         """Recursive function to reduce N LegList to N-1
            For algorithm, see doc for generate_diagrams.
         """
@@ -245,13 +286,13 @@ class Amplitude(base_objects.PhysicsObject):
 
         # Extract ref dict information
         model = self['process'].get('model')
-        ref_dict_to0 = self['process'].get('model').get('ref_dict_to0')
         ref_dict_to1 = self['process'].get('model').get('ref_dict_to1')
 
 
         # If all legs can be combined in one single vertex, add this
-        # vertex to res and continue
-        if curr_leglist.can_combine_to_0(ref_dict_to0):
+        # vertex to res and continue.
+        # Special treatment for decay chain legs
+        if curr_leglist.can_combine_to_0(ref_dict_to0, is_decay_chain):
             # Extract the interaction id associated to the vertex 
             vertex_id = ref_dict_to0[tuple(sorted([leg.get('id') for \
                                                    leg in curr_leglist]))]
@@ -300,6 +341,8 @@ class Amplitude(base_objects.PhysicsObject):
             # First, reduce again the leg part
             reduced_diagram = self.reduce_leglist(leg_vertex_tuple[0],
                                                   max_multi_to1,
+                                                  ref_dict_to0,
+                                                  is_decay_chain,
                                                   new_coupling_orders)
             # If there is a reduced diagram
             if reduced_diagram:
@@ -484,7 +527,11 @@ class Amplitude(base_objects.PhysicsObject):
                 # and add it
                 else:
                     cp_entry = copy.copy(entry)
-                    cp_entry.set('from_group', False)
+                    # Need special case for from_group == None; this
+                    # is for initial state leg of decay chain process
+                    # (see Leg.can_combine_to_0)
+                    if cp_entry.get('from_group') != None:
+                        cp_entry.set('from_group', False)
                     reduced_list.append(cp_entry)
 
             # Flatten the obtained leg and vertex lists
@@ -511,6 +558,130 @@ class AmplitudeList(base_objects.PhysicsObjectList):
         return isinstance(obj, Amplitude)
 
 #===============================================================================
+# DecayChainAmplitude
+#===============================================================================
+class DecayChainAmplitude(Amplitude):
+    """A list of amplitudes + a list of decay chain amplitude lists;
+    corresponding to a ProcessDefinition with a list of decay chains
+    """
+
+    def default_setup(self):
+        """Default values for all properties"""
+
+        self['amplitudes'] = AmplitudeList()
+        self['decay_chains'] = DecayChainAmplitudeList()
+
+    def __init__(self, argument=None):
+        """Allow initialization with Process and with ProcessDefinition"""
+
+        if isinstance(argument, base_objects.Process):
+            super(DecayChainAmplitude, self).__init__()
+            if isinstance(argument, base_objects.ProcessDefinition):
+                self['amplitudes'].extend(\
+                MultiProcess.generate_multi_amplitudes(argument))
+            else:
+                self['amplitudes'].append(Amplitude(argument))
+                # Clean decay chains from process, since we haven't
+                # combined processes with decay chains yet
+                process = copy.copy(self['amplitudes'][0].get('process'))
+                process.set('decay_chains', base_objects.ProcessList())
+                self['amplitudes'][0].set('process', process)
+            for process in argument.get('decay_chains'):
+                if not process.get('is_decay_chain'):
+                    process.set('is_decay_chain',True)
+                if not process.get_ninitial() == 1:
+                    raise self.PhysicsObjectError,\
+                          "Decay chain process must have exactly one" + \
+                          " incoming particle"
+                self['decay_chains'].append(\
+                    DecayChainAmplitude(process))
+        elif argument != None:
+            # call the mother routine
+            super(DecayChainAmplitude, self).__init__(argument)
+        else:
+            # call the mother routine
+            super(DecayChainAmplitude, self).__init__()
+
+    def filter(self, name, value):
+        """Filter for valid amplitude property values."""
+
+        if name == 'amplitudes':
+            if not isinstance(value, AmplitudeList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid AmplitudeList" % str(value)
+        if name == 'decay_chains':
+            if not isinstance(value, DecayChainAmplitudeList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid DecayChainAmplitudeList object" % \
+                        str(value)
+        return True
+
+    def get_sorted_keys(self):
+        """Return diagram property names as a nicely sorted list."""
+
+        return ['amplitudes', 'decay_chains']
+
+    # Helper functions
+
+    def get_number_of_diagrams(self):
+        """Returns number of diagrams for this amplitude"""
+        return sum(len(a.get('diagrams')) for a in self.get('amplitudes')) \
+               + sum(d.get_number_of_diagrams() for d in \
+                                        self.get('decay_chains'))
+
+    def nice_string(self, indent = 0):
+        """Returns a nicely formatted string of the amplitude content."""
+        mystr = ""
+        for amplitude in self.get('amplitudes'):
+            mystr = mystr + amplitude.nice_string(indent) + "\n"
+
+        if self.get('decay_chains'):
+            mystr = mystr + " " * indent + "Decays:\n"
+        for dec in self.get('decay_chains'):
+            mystr = mystr + dec.nice_string(indent + 2) + "\n"
+
+        return  mystr[:-1]
+
+    def get_decay_ids(self):
+        """Returns a set of all particle ids for which a decay is defined"""
+
+        decay_ids = []
+
+        # Get all amplitudes for the decay processes
+        for amp in sum([dc.get('amplitudes') for dc \
+                        in self['decay_chains']], []):
+            # For each amplitude, find the initial state leg
+            decay_ids.append(amp.get('process').get_initial_ids()[0])
+            
+        # Return a list with unique ids
+        return list(set(decay_ids))
+    
+    def get_amplitudes(self):
+        """Recursive function to extract all amplitudes for this process"""
+
+        amplitudes = AmplitudeList()
+
+        amplitudes.extend(self.get('amplitudes'))
+        for decay in self.get('decay_chains'):
+            amplitudes.extend(decay.get_amplitudes())
+
+        return amplitudes
+            
+
+#===============================================================================
+# DecayChainAmplitudeList
+#===============================================================================
+class DecayChainAmplitudeList(base_objects.PhysicsObjectList):
+    """List of DecayChainAmplitude objects
+    """
+
+    def is_valid_element(self, obj):
+        """Test if object obj is a valid DecayChainAmplitude for the list."""
+
+        return isinstance(obj, DecayChainAmplitude)
+
+    
+#===============================================================================
 # MultiProcess
 #===============================================================================
 class MultiProcess(base_objects.PhysicsObject):
@@ -523,7 +694,29 @@ class MultiProcess(base_objects.PhysicsObject):
         """Default values for all properties"""
 
         self['process_definitions'] = base_objects.ProcessDefinitionList()
+        # self['amplitudes'] can be an AmplitudeList or a
+        # DecayChainAmplitudeList, depending on whether there are
+        # decay chains in the process definitions or not.
         self['amplitudes'] = AmplitudeList()
+
+    def __init__(self, argument=None):
+        """Allow initialization with ProcessDefinition or
+        ProcessDefinitionList"""
+
+        if isinstance(argument, base_objects.ProcessDefinition):
+            super(MultiProcess, self).__init__()
+            self['process_definitions'].append(argument)
+            self.get('amplitudes')
+        elif isinstance(argument, base_objects.ProcessDefinitionList):
+            super(MultiProcess, self).__init__()
+            self['process_definitions'] = argument
+            self.get('amplitudes')
+        elif argument != None:
+            # call the mother routine
+            super(MultiProcess, self).__init__(argument)
+        else:
+            # call the mother routine
+            super(MultiProcess, self).__init__()
 
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -544,8 +737,15 @@ class MultiProcess(base_objects.PhysicsObject):
         """Get the value of the property name."""
 
         if (name == 'amplitudes') and not self[name]:
-            if self.get('process_definitions'):
-                self.generate_amplitudes()
+            for process_def in self.get('process_definitions'):
+                if process_def.get('decay_chains'):
+                    # This is a decay chain process
+                    # Store amplitude(s) as DecayChainAmplitude
+                    self['amplitudes'].append(\
+                        DecayChainAmplitude(process_def))
+                else:
+                    self['amplitudes'].extend(\
+                        MultiProcess.generate_multi_amplitudes(process_def))
 
         return MultiProcess.__bases__[0].get(self, name) # call the mother routine
 
@@ -554,7 +754,8 @@ class MultiProcess(base_objects.PhysicsObject):
 
         return ['process_definitions', 'amplitudes']
 
-    def generate_amplitudes(self):
+    @staticmethod
+    def generate_multi_amplitudes(process_definition):
         """Generate amplitudes in a semi-efficient way.
         Make use of crossing symmetry for processes that fail diagram
         generation, but not for processes that succeed diagram
@@ -562,79 +763,86 @@ class MultiProcess(base_objects.PhysicsObject):
         identify processes with identical amplitudes.
         """
 
-        # Loop over all process definitions and multilegs
+        if not isinstance(process_definition, base_objects.ProcessDefinition):
+            raise base_objects.PhysicsObjectError,\
+                  "%s not valid ProcessDefinition object" % \
+                  repr(process_definition)
+
         processes = base_objects.ProcessList()
+        amplitudes = AmplitudeList()
 
-        for process_def in self['process_definitions']:
+        # failed_procs are processes that have already failed
+        # based on crossing symmetry
+        failed_procs = []
+        
+        model = process_definition['model']
+        
+        isids = [leg['ids'] for leg in \
+                 filter(lambda leg: leg['state'] == 'initial', process_definition['legs'])]
+        fsids = [leg['ids'] for leg in \
+                 filter(lambda leg: leg['state'] == 'final', process_definition['legs'])]
 
-            # failed_procs are processes that have already failed
-            # based on crossing symmetry
-            failed_procs = []
-                    
-            model = process_def['model']
-
-            isids = [leg['ids'] for leg in \
-                     filter(lambda leg: leg['state'] == 'initial', process_def['legs'])]
-            fsids = [leg['ids'] for leg in \
-                     filter(lambda leg: leg['state'] == 'final', process_def['legs'])]
-
-            # Generate all combinations for the initial state
-
-            for prod in apply(itertools.product, isids):
-                islegs = [\
+        # Generate all combinations for the initial state
+        
+        for prod in apply(itertools.product, isids):
+            islegs = [\
                     base_objects.Leg({'id':id, 'state': 'initial'}) \
                     for id in prod]
 
-                # Generate all combinations for the final state, and make
-                # sure to remove double counting
+            # Generate all combinations for the final state, and make
+            # sure to remove double counting
 
-                red_fsidlist = []
+            red_fsidlist = []
 
-                for prod in apply(itertools.product, fsids):
+            for prod in apply(itertools.product, fsids):
 
-                    # Remove double counting between final states
-                    if tuple(sorted(prod)) in red_fsidlist:
-                        continue
-
-                    red_fsidlist.append(tuple(sorted(prod)));
-
-                    # Generate leg list for process
-                    leg_list = [copy.copy(leg) for leg in islegs]
-
-                    leg_list.extend([\
+                # Remove double counting between final states
+                if tuple(sorted(prod)) in red_fsidlist:
+                    continue
+                
+                red_fsidlist.append(tuple(sorted(prod)));
+                
+                # Generate leg list for process
+                leg_list = [copy.copy(leg) for leg in islegs]
+                
+                leg_list.extend([\
                         base_objects.Leg({'id':id, 'state': 'final'}) \
                         for id in prod])
+                
+                legs = base_objects.LegList(leg_list)
 
-                    legs = base_objects.LegList(leg_list)
+                # Setup process
+                process = base_objects.Process({\
+                              'legs':legs,
+                              'model':process_definition.get('model'),
+                              'id': process_definition.get('id'),
+                              'orders': process_definition.get('orders'),
+                              'required_s_channels': \
+                                 process_definition.get('required_s_channels'),
+                              'forbidden_s_channels': \
+                                 process_definition.get('forbidden_s_channels'),
+                              'forbidden_particles': \
+                                 process_definition.get('forbidden_particles'),
+                              'is_decay_chain': \
+                                 process_definition.get('is_decay_chain')})
 
-                    # Setup process
-                    process = base_objects.Process({\
-                                       'legs':legs,
-                                       'model':process_def.get('model'),
-                                       'id': process_def.get('id'),
-                                       'orders': process_def.get('orders'),
-                                       'required_s_channels': \
-                                       process_def.get('required_s_channels'),
-                                       'forbidden_s_channels': \
-                                       process_def.get('forbidden_s_channels'),
-                                       'forbidden_particles': \
-                                       process_def.get('forbidden_particles')})
+                # Check for crossed processes
+                sorted_legs = sorted(legs.get_outgoing_id_list(model))
+                # Check if crossed process has already failed
+                # In that case don't check process
+                if tuple(sorted_legs) in failed_procs:
+                    continue
 
-                    # Check for crossed processes
-                    sorted_legs = sorted(legs.get_outgoing_id_list(model))
-                    # Check if crossed process has already failed
-                    # In that case don't check process
-                    if tuple(sorted_legs) in failed_procs:
-                        continue
+                amplitude = Amplitude({"process": process})
+                if not amplitude.generate_diagrams():
+                    # Add process to failed_procs
+                    failed_procs.append(tuple(sorted_legs))
+                if amplitude.get('diagrams'):
+                    amplitudes.append(amplitude)
 
-                    amplitude = Amplitude({"process": process})
-                    if not amplitude.generate_diagrams():
-                        # Add process to failed_procs
-                        failed_procs.append(tuple(sorted_legs))
-                    if amplitude.get('diagrams'):
-                        self['amplitudes'].append(amplitude)
-                    
-
+        # Return the produced amplitudes
+        return amplitudes
+            
 #===============================================================================
 # Global helper methods
 #===============================================================================

@@ -25,6 +25,7 @@ import madgraph.iolibs.export_v4 as export_v4
 import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.core.color_algebra as color
 import tests.unit_tests.core.test_helas_objects as test_helas_objects
 
 #===============================================================================
@@ -114,8 +115,8 @@ class IOExportV4Test(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         self.mymatrixelement = helas_objects.HelasMatrixElement(myamplitude)
-        self.mymatrixelement.downcase = False
-
+        self.myfortranmodel.downcase = False
+        
     def tearDown(self):
         pass
 
@@ -857,6 +858,9 @@ CALL FVIXXX(W(1,4),W(1,1),GZN11,Mneu1,Wneu1,W(1,6))
 # Amplitude(s) for diagram number 2
 CALL IOVXXX(W(1,6),W(1,3),W(1,2),GZN11,AMP(2))""")
 
+        self.assertEqual(export_v4.get_JAMP_lines(matrix_element)[0],
+                         "JAMP(1)=-AMP(1)-AMP(2)")
+        
 
     def test_generate_helas_diagrams_epem_elpelmepem(self):
         """Testing the helas diagram generation e+ e- > sl2+ sl2- e+ e-
@@ -1526,160 +1530,6 @@ CALL JVVXXX(W(1,1),W(1,4),MGVX3,MW,WW,W(1,6))
 # Amplitude(s) for diagram number 3
 CALL VVVXXX(W(1,6),W(1,2),W(1,3),MGVX5,AMP(3))""")
 
-    def test_sorted_mothers(self):
-        """Testing the sorted_mothers routine
-        """
-
-        # Set up model
-
-        mypartlist = base_objects.ParticleList()
-        myinterlist = base_objects.InteractionList()
-
-        # A W
-        mypartlist.append(base_objects.Particle({'name':'W+',
-                      'antiname':'W-',
-                      'spin':3,
-                      'color':1,
-                      'mass':'MW',
-                      'width':'WW',
-                      'texname':'W^+',
-                      'antitexname':'W^-',
-                      'line':'wavy',
-                      'charge':1.,
-                      'pdg_code':24,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False}))
-        Wplus = mypartlist[len(mypartlist) - 1]
-        Wminus = copy.copy(Wplus)
-        Wminus.set('is_part', False)
-
-        # A photon
-        mypartlist.append(base_objects.Particle({'name':'a',
-                      'antiname':'a',
-                      'spin':3,
-                      'color':1,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
-                      'line':'wavy',
-                      'charge':0.,
-                      'pdg_code':22,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':True}))
-        a = mypartlist[len(mypartlist) - 1]
-
-        # Z
-        mypartlist.append(base_objects.Particle({'name':'Z',
-                      'antiname':'Z',
-                      'spin':3,
-                      'color':1,
-                      'mass':'MZ',
-                      'width':'WZ',
-                      'texname':'Z',
-                      'antitexname':'Z',
-                      'line':'wavy',
-                      'charge':0.,
-                      'pdg_code':23,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':True}))
-        Z = mypartlist[len(mypartlist) - 1]
-
-
-        # WWZ and WWa couplings
-
-        myinterlist.append(base_objects.Interaction({
-            'id': 3,
-            'particles': base_objects.ParticleList(\
-                                            [Wplus, \
-                                             Wminus, \
-                                             Wplus,
-                                             Wminus]),
-            'color': [],
-            'lorentz':['WWVVN'],
-            'couplings':{(0, 0):'MGVX6'},
-            'orders':{'QED':2}}))
-
-        myinterlist.append(base_objects.Interaction({
-            'id': 4,
-            'particles': base_objects.ParticleList(\
-                                            [Wplus, \
-                                             a, \
-                                             Wminus,
-                                             a]),
-            'color': [],
-            'lorentz':['WWVVN'],
-            'couplings':{(0, 0):'MGVX4'},
-            'orders':{'QED':2}}))
-
-        myinterlist.append(base_objects.Interaction({
-            'id': 5,
-            'particles': base_objects.ParticleList(\
-                                            [Wminus, \
-                                             a, \
-                                             Wplus,
-                                             Z]),
-            'color': [],
-            'lorentz':['WWVVN'],
-            'couplings':{(0, 0):'MGVX7'},
-            'orders':{'QED':2}}))
-
-        myinterlist.append(base_objects.Interaction({
-            'id': 6,
-            'particles': base_objects.ParticleList(\
-                                            [Wminus, \
-                                             Z, \
-                                             Wplus,
-                                             Z]),
-            'color': [],
-            'lorentz':['WWVVN'],
-            'couplings':{(0, 0):'MGVX8'},
-            'orders':{'QED':2}}))
-
-
-        mybasemodel = base_objects.Model()
-        mybasemodel.set('particles', mypartlist)
-        mybasemodel.set('interactions', myinterlist)
-
-        myleglist = base_objects.LegList()
-
-        myleglist.append(base_objects.Leg({'id':24,
-                                           'state':'initial',
-                                           'number': 1}))
-        myleglist.append(base_objects.Leg({'id':23,
-                                         'state':'final',
-                                           'number': 2}))
-        myleglist.append(base_objects.Leg({'id':-24,
-                                         'state':'initial',
-                                           'number': 3}))
-        myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final',
-                                           'number': 5}))
-        myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final',
-                                           'number': 4}))
-
-        mymothers = helas_objects.HelasWavefunctionList(\
-            [helas_objects.HelasWavefunction(leg, 0, mybasemodel) for leg in myleglist[:4]])
-
-        amplitude = helas_objects.HelasAmplitude()
-        amplitude.set('interaction_id', 5, mybasemodel)
-        amplitude.set('mothers', mymothers)
-        self.assertEqual(export_v4.HelasFortranModel.sorted_mothers(amplitude),
-                         [mymothers[2], mymothers[3], mymothers[0], mymothers[1]])
-        mymothers = helas_objects.HelasWavefunctionList(\
-            [helas_objects.HelasWavefunction(leg, 0, mybasemodel) for leg in myleglist[2:]])
-
-        wavefunction = helas_objects.HelasWavefunction(myleglist[2],
-                                                       4, mybasemodel)
-        wavefunction.set('mothers', mymothers)
-        self.assertEqual(export_v4.HelasFortranModel.\
-                         sorted_mothers(wavefunction),
-                         [mymothers[1], mymothers[0], mymothers[2]])
-
 
     def test_generate_helas_diagrams_WWWWA(self):
         """Testing the helas diagram generation W+ W- > W+ W- a
@@ -2024,3 +1874,1507 @@ CALL VVVL1X(W(1,2),W(1,3),W(1,9),G1,AMP(10))
 CALL VVVL2X(W(1,2),W(1,3),W(1,10),G2,AMP(11))
 CALL VVVL1X(W(1,2),W(1,3),W(1,10),G1,AMP(12))""")
 
+    def test_export_matrix_element_v4_standalone(self):
+        """Test the result of exporting a matrix element to file"""
+
+        fsock = StringIO.StringIO()
+
+        goal_matrix_f = \
+"""      SUBROUTINE SMATRIX(P,ANS)
+C     
+C     Generated by MadGraph 5 v. %(version)s, %(date)s
+C     By the MadGraph Development Team
+C     Please visit us at https://launchpad.net/madgraph5
+C     
+C     MadGraph StandAlone Version
+C     
+C     Returns amplitude squared summed/avg over colors
+C     and helicities
+C     for the point in phase space P(0:3,NEXTERNAL)
+C     
+C     Process: e+ e- > a a a
+C     
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=5)
+      INTEGER                 NCOMB
+      PARAMETER (             NCOMB=32)
+C     
+C     ARGUMENTS 
+C     
+      REAL*8 P(0:3,NEXTERNAL),ANS
+C     
+C     LOCAL VARIABLES 
+C     
+      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
+      REAL*8 T
+      REAL*8 MATRIX
+      INTEGER IHEL,IDEN, I
+      INTEGER JC(NEXTERNAL)
+      LOGICAL GOODHEL(NCOMB)
+      DATA NTRY/0/
+      DATA GOODHEL/NCOMB*.FALSE./
+      DATA (NHEL(IHEL,   1),IHEL=1,5) /-1,-1,-1,-1,-1/
+      DATA (NHEL(IHEL,   2),IHEL=1,5) /-1,-1,-1,-1, 1/
+      DATA (NHEL(IHEL,   3),IHEL=1,5) /-1,-1,-1, 1,-1/
+      DATA (NHEL(IHEL,   4),IHEL=1,5) /-1,-1,-1, 1, 1/
+      DATA (NHEL(IHEL,   5),IHEL=1,5) /-1,-1, 1,-1,-1/
+      DATA (NHEL(IHEL,   6),IHEL=1,5) /-1,-1, 1,-1, 1/
+      DATA (NHEL(IHEL,   7),IHEL=1,5) /-1,-1, 1, 1,-1/
+      DATA (NHEL(IHEL,   8),IHEL=1,5) /-1,-1, 1, 1, 1/
+      DATA (NHEL(IHEL,   9),IHEL=1,5) /-1, 1,-1,-1,-1/
+      DATA (NHEL(IHEL,  10),IHEL=1,5) /-1, 1,-1,-1, 1/
+      DATA (NHEL(IHEL,  11),IHEL=1,5) /-1, 1,-1, 1,-1/
+      DATA (NHEL(IHEL,  12),IHEL=1,5) /-1, 1,-1, 1, 1/
+      DATA (NHEL(IHEL,  13),IHEL=1,5) /-1, 1, 1,-1,-1/
+      DATA (NHEL(IHEL,  14),IHEL=1,5) /-1, 1, 1,-1, 1/
+      DATA (NHEL(IHEL,  15),IHEL=1,5) /-1, 1, 1, 1,-1/
+      DATA (NHEL(IHEL,  16),IHEL=1,5) /-1, 1, 1, 1, 1/
+      DATA (NHEL(IHEL,  17),IHEL=1,5) / 1,-1,-1,-1,-1/
+      DATA (NHEL(IHEL,  18),IHEL=1,5) / 1,-1,-1,-1, 1/
+      DATA (NHEL(IHEL,  19),IHEL=1,5) / 1,-1,-1, 1,-1/
+      DATA (NHEL(IHEL,  20),IHEL=1,5) / 1,-1,-1, 1, 1/
+      DATA (NHEL(IHEL,  21),IHEL=1,5) / 1,-1, 1,-1,-1/
+      DATA (NHEL(IHEL,  22),IHEL=1,5) / 1,-1, 1,-1, 1/
+      DATA (NHEL(IHEL,  23),IHEL=1,5) / 1,-1, 1, 1,-1/
+      DATA (NHEL(IHEL,  24),IHEL=1,5) / 1,-1, 1, 1, 1/
+      DATA (NHEL(IHEL,  25),IHEL=1,5) / 1, 1,-1,-1,-1/
+      DATA (NHEL(IHEL,  26),IHEL=1,5) / 1, 1,-1,-1, 1/
+      DATA (NHEL(IHEL,  27),IHEL=1,5) / 1, 1,-1, 1,-1/
+      DATA (NHEL(IHEL,  28),IHEL=1,5) / 1, 1,-1, 1, 1/
+      DATA (NHEL(IHEL,  29),IHEL=1,5) / 1, 1, 1,-1,-1/
+      DATA (NHEL(IHEL,  30),IHEL=1,5) / 1, 1, 1,-1, 1/
+      DATA (NHEL(IHEL,  31),IHEL=1,5) / 1, 1, 1, 1,-1/
+      DATA (NHEL(IHEL,  32),IHEL=1,5) / 1, 1, 1, 1, 1/
+      DATA IDEN/24/
+C     ----------
+C     BEGIN CODE
+C     ----------
+      NTRY=NTRY+1
+      DO IHEL=1,NEXTERNAL
+        JC(IHEL) = +1
+      ENDDO
+      ANS = 0D0
+      DO IHEL=1,NCOMB
+        IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
+          T=MATRIX(P ,NHEL(1,IHEL),JC(1))
+          ANS=ANS+T
+          IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
+            GOODHEL(IHEL)=.TRUE.
+          ENDIF
+        ENDIF
+      ENDDO
+      ANS=ANS/DBLE(IDEN)
+      END
+      
+      
+      REAL*8 FUNCTION MATRIX(P,NHEL,IC)
+C     
+C     Generated by MadGraph 5 v. %(version)s, %(date)s
+C     By the MadGraph Development Team
+C     Please visit us at https://launchpad.net/madgraph5
+C     
+C     Returns amplitude squared summed/avg over colors
+C     for the point with external lines W(0:6,NEXTERNAL)
+C     
+C     Process: e+ e- > a a a
+C     
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INTEGER    NGRAPHS
+      PARAMETER (NGRAPHS=6)
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=5)
+      INTEGER    NWAVEFUNCS, NCOLOR
+      PARAMETER (NWAVEFUNCS=11, NCOLOR=1)
+      REAL*8     ZERO
+      PARAMETER (ZERO=0D0)
+C     
+C     ARGUMENTS 
+C     
+      REAL*8 P(0:3,NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+C     
+C     LOCAL VARIABLES 
+C     
+      INTEGER I,J
+      COMPLEX*16 ZTEMP
+      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
+      COMPLEX*16 W(18,NWAVEFUNCS)
+C     
+C     GLOBAL VARIABLES
+C     
+      INCLUDE 'coupl.inc'
+C     
+C     COLOR DATA
+C     
+      DATA DENOM(1)/1/
+      DATA (CF(I,1),I=1,1) /1/
+C     ----------
+C     BEGIN CODE
+C     ----------
+      CALL OXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
+      CALL IXXXXX(P(0,2),ZERO,NHEL(2),+1*IC(2),W(1,2))
+      CALL VXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
+      CALL VXXXXX(P(0,4),ZERO,NHEL(4),+1*IC(4),W(1,4))
+      CALL VXXXXX(P(0,5),ZERO,NHEL(5),+1*IC(5),W(1,5))
+      CALL FVOXXX(W(1,1),W(1,3),MGVX12,ZERO,ZERO,W(1,6))
+      CALL FVIXXX(W(1,2),W(1,4),MGVX12,ZERO,ZERO,W(1,7))
+C     Amplitude(s) for diagram number 1
+      CALL IOVXXX(W(1,7),W(1,6),W(1,5),MGVX12,AMP(1))
+      CALL FVIXXX(W(1,2),W(1,5),MGVX12,ZERO,ZERO,W(1,8))
+C     Amplitude(s) for diagram number 2
+      CALL IOVXXX(W(1,8),W(1,6),W(1,4),MGVX12,AMP(2))
+      CALL FVOXXX(W(1,1),W(1,4),MGVX12,ZERO,ZERO,W(1,9))
+      CALL FVIXXX(W(1,2),W(1,3),MGVX12,ZERO,ZERO,W(1,10))
+C     Amplitude(s) for diagram number 3
+      CALL IOVXXX(W(1,10),W(1,9),W(1,5),MGVX12,AMP(3))
+C     Amplitude(s) for diagram number 4
+      CALL IOVXXX(W(1,8),W(1,9),W(1,3),MGVX12,AMP(4))
+      CALL FVOXXX(W(1,1),W(1,5),MGVX12,ZERO,ZERO,W(1,11))
+C     Amplitude(s) for diagram number 5
+      CALL IOVXXX(W(1,10),W(1,11),W(1,4),MGVX12,AMP(5))
+C     Amplitude(s) for diagram number 6
+      CALL IOVXXX(W(1,7),W(1,11),W(1,3),MGVX12,AMP(6))
+      JAMP(1)=-AMP(1)-AMP(2)-AMP(3)-AMP(4)-AMP(5)-AMP(6)
+      
+      MATRIX = 0.D0
+      DO I = 1, NCOLOR
+        ZTEMP = (0.D0,0.D0)
+        DO J = 1, NCOLOR
+          ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
+        ENDDO
+        MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)
+      ENDDO
+      END
+""" % misc.get_pkg_info()
+
+    def test_matrix_multistage_decay_chain_process(self):
+        """Test matrix.f for multistage decay chain
+        """
+
+        myfortranmodel = export_v4.HelasFortranModel()
+        fsock = StringIO.StringIO()
+
+        # Set up local model
+        
+        mybasemodel = base_objects.Model()
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A electron and positron
+        mypartlist.append(base_objects.Particle({'name':'e+',
+                      'antiname':'e-',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'e^+',
+                      'antitexname':'e^-',
+                      'line':'straight',
+                      'charge':-1.,
+                      'pdg_code':11,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        eminus = mypartlist[len(mypartlist) - 1]
+        eplus = copy.copy(eminus)
+        eplus.set('is_part', False)
+
+        # A mu and anti-mu
+        mypartlist.append(base_objects.Particle({'name':'mu+',
+                      'antiname':'mu-',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\mu^+',
+                      'antitexname':'\mu^-',
+                      'line':'straight',
+                      'charge':-1.,
+                      'pdg_code':13,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        muminus = mypartlist[len(mypartlist) - 1]
+        muplus = copy.copy(muminus)
+        muplus.set('is_part', False)
+
+        # A photon
+        mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        a = mypartlist[len(mypartlist) - 1]
+
+        # Coupling of e to gamma
+        myinterlist.append(base_objects.Interaction({
+                      'id': 7,
+                      'particles': base_objects.ParticleList(\
+                                            [eminus, \
+                                             eplus, \
+                                             a]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GAL'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of mu to gamma
+        myinterlist.append(base_objects.Interaction({
+                      'id': 16,
+                      'particles': base_objects.ParticleList(\
+                                            [muminus, \
+                                             muplus, \
+                                             a]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GAL'},
+                      'orders':{'QED':1}}))
+
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+        
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':'final'}))
+
+        mycoreproc = base_objects.Process({'legs':myleglist,
+                                           'model':mybasemodel})
+
+        me_core =  helas_objects.HelasMatrixElement(\
+            diagram_generation.Amplitude(mycoreproc))
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final'}))
+
+        mydecay11 = base_objects.Process({'legs':myleglist,
+                                          'model':mybasemodel})
+
+        me11 =  helas_objects.HelasMatrixElement(\
+            diagram_generation.Amplitude(mydecay11))
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final'}))
+
+        mydecay12 = base_objects.Process({'legs':myleglist,
+                                          'model':mybasemodel})
+
+        me12 =  helas_objects.HelasMatrixElement(\
+            diagram_generation.Amplitude(mydecay12))
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':13,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-13,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final'}))
+
+        mydecay2 = base_objects.Process({'legs':myleglist,
+                                         'model':mybasemodel})
+
+        me2 =  helas_objects.HelasMatrixElement(\
+            diagram_generation.Amplitude(mydecay2))
+
+        mydecay11.set('decay_chains', base_objects.ProcessList([mydecay2]))
+        mydecay12.set('decay_chains', base_objects.ProcessList([mydecay2]))
+
+        mycoreproc.set('decay_chains', base_objects.ProcessList([\
+            mydecay11, mydecay12]))
+
+        myamplitude = diagram_generation.DecayChainAmplitude(mycoreproc)
+
+        matrix_elements = helas_objects.HelasDecayChainProcess(myamplitude).\
+                          combine_decay_chain_processes()
+
+        me = matrix_elements[0]
+
+        # Check all ingredients in file here
+
+        self.assertEqual(me.get_nexternal_ninitial(), (10,2))
+        self.assertEqual(me.get_helicity_combinations(), 1024)
+        self.assertEqual(len(export_v4.get_helicity_lines(me).split("\n")), 1024)
+        # This has been tested against v4
+        self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
+                         """CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
+CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
+CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
+CALL OXXXXX(P(0,4),zero,NHEL(4),+1*IC(4),W(1,4))
+CALL IXXXXX(P(0,5),zero,NHEL(5),-1*IC(5),W(1,5))
+CALL VXXXXX(P(0,6),zero,NHEL(6),+1*IC(6),W(1,6))
+CALL FVOXXX(W(1,4),W(1,6),GAL,zero,zero,W(1,7))
+CALL JIOXXX(W(1,5),W(1,7),GAL,zero,zero,W(1,8))
+CALL FVOXXX(W(1,3),W(1,8),GAL,zero,zero,W(1,9))
+CALL IXXXXX(P(0,7),zero,NHEL(7),-1*IC(7),W(1,10))
+CALL OXXXXX(P(0,8),zero,NHEL(8),+1*IC(8),W(1,11))
+CALL IXXXXX(P(0,9),zero,NHEL(9),-1*IC(9),W(1,12))
+CALL VXXXXX(P(0,10),zero,NHEL(10),+1*IC(10),W(1,13))
+CALL FVOXXX(W(1,11),W(1,13),GAL,zero,zero,W(1,14))
+CALL JIOXXX(W(1,12),W(1,14),GAL,zero,zero,W(1,15))
+CALL FVIXXX(W(1,10),W(1,15),GAL,zero,zero,W(1,16))
+CALL FVOXXX(W(1,9),W(1,1),GAL,zero,zero,W(1,17))
+# Amplitude(s) for diagram number 1
+CALL IOVXXX(W(1,16),W(1,17),W(1,2),GAL,AMP(1))
+CALL FVIXXX(W(1,12),W(1,13),GAL,zero,zero,W(1,18))
+CALL JIOXXX(W(1,18),W(1,11),GAL,zero,zero,W(1,19))
+CALL FVIXXX(W(1,10),W(1,19),GAL,zero,zero,W(1,20))
+# Amplitude(s) for diagram number 2
+CALL IOVXXX(W(1,20),W(1,17),W(1,2),GAL,AMP(2))
+CALL FVIXXX(W(1,5),W(1,6),GAL,zero,zero,W(1,21))
+CALL JIOXXX(W(1,21),W(1,4),GAL,zero,zero,W(1,22))
+CALL FVOXXX(W(1,3),W(1,22),GAL,zero,zero,W(1,23))
+CALL FVOXXX(W(1,23),W(1,1),GAL,zero,zero,W(1,24))
+# Amplitude(s) for diagram number 3
+CALL IOVXXX(W(1,16),W(1,24),W(1,2),GAL,AMP(3))
+# Amplitude(s) for diagram number 4
+CALL IOVXXX(W(1,20),W(1,24),W(1,2),GAL,AMP(4))
+CALL FVIXXX(W(1,16),W(1,1),GAL,zero,zero,W(1,25))
+# Amplitude(s) for diagram number 5
+CALL IOVXXX(W(1,25),W(1,9),W(1,2),GAL,AMP(5))
+CALL FVIXXX(W(1,20),W(1,1),GAL,zero,zero,W(1,26))
+# Amplitude(s) for diagram number 6
+CALL IOVXXX(W(1,26),W(1,9),W(1,2),GAL,AMP(6))
+# Amplitude(s) for diagram number 7
+CALL IOVXXX(W(1,25),W(1,23),W(1,2),GAL,AMP(7))
+# Amplitude(s) for diagram number 8
+CALL IOVXXX(W(1,26),W(1,23),W(1,2),GAL,AMP(8))""")
+
+        export_v4.write_pmass_file(fsock, me, myfortranmodel)
+
+        self.assertEqual(fsock.getvalue(), """      PMASS(1)=ZERO
+      PMASS(2)=ZERO
+      PMASS(3)=ZERO
+      PMASS(4)=ZERO
+      PMASS(5)=ZERO
+      PMASS(6)=ZERO
+      PMASS(7)=ZERO
+      PMASS(8)=ZERO
+      PMASS(9)=ZERO
+      PMASS(10)=ZERO\n""")
+                         
+        
+    def test_matrix_4g_decay_chain_process(self):
+        """Test matrix.f for multistage decay chain
+        """
+
+        myfortranmodel = export_v4.HelasFortranModel()
+        fsock = StringIO.StringIO()
+
+        # Set up local model
+        
+        mybasemodel = base_objects.Model()
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        g = mypartlist[len(mypartlist) - 1]
+
+        # Gluon self-couplings
+        myinterlist.append(base_objects.Interaction({
+                      'id': 8,
+                      'particles': base_objects.ParticleList(\
+                                            [g, \
+                                             g, \
+                                             g]),
+                      'color': [color.ColorString([color.f(0, 1, 2)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 9,
+                      'particles': base_objects.ParticleList(\
+                                            [g, \
+                                             g, \
+                                             g,
+                                             g]),
+                      'color': [color.ColorString([color.f(0, 1, 2)]),
+                                color.ColorString([color.f(0, 1, 2)]),
+                                color.ColorString([color.f(0, 1, 2)])],
+                      'lorentz':['gggg1', 'gggg2', 'gggg3'],
+                      'couplings':{(0, 0):'GG',(1, 1):'GG',(2, 2):'GG'},
+                      'orders':{'QCD':2}}))
+
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+        
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+
+        mycoreproc = base_objects.Process({'legs':myleglist,
+                                           'model':mybasemodel})
+
+        me_core =  helas_objects.HelasMatrixElement(\
+            diagram_generation.Amplitude(mycoreproc))
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+
+        mydecay1 = base_objects.Process({'legs':myleglist,
+                                          'model':mybasemodel})
+
+        me1 =  helas_objects.HelasMatrixElement(\
+            diagram_generation.Amplitude(mydecay1))
+
+        mycoreproc.set('decay_chains', base_objects.ProcessList([\
+            mydecay1]))
+
+        myamplitude = diagram_generation.DecayChainAmplitude(mycoreproc)
+
+        matrix_elements = helas_objects.HelasDecayChainProcess(myamplitude).\
+                          combine_decay_chain_processes()
+
+        me = matrix_elements[0]
+
+        # Check all ingredients in file here
+
+        #export_v4.generate_subprocess_directory_v4_standalone(me,
+        #                                                      myfortranmodel)
+
+        goal = """16 82 [0, 0, 0]
+16 83 [0, 1, 0]
+16 84 [0, 2, 0]
+16 85 [1, 0, 0]
+16 86 [1, 1, 0]
+16 87 [1, 2, 0]
+16 88 [2, 0, 0]
+16 89 [2, 1, 0]
+16 90 [2, 2, 0]
+16 91 [0, 0, 1]
+16 92 [0, 1, 1]
+16 93 [0, 2, 1]
+16 94 [1, 0, 1]
+16 95 [1, 1, 1]
+16 96 [1, 2, 1]
+16 97 [2, 0, 1]
+16 98 [2, 1, 1]
+16 99 [2, 2, 1]
+16 100 [0, 0, 2]
+16 101 [0, 1, 2]
+16 102 [0, 2, 2]
+16 103 [1, 0, 2]
+16 104 [1, 1, 2]
+16 105 [1, 2, 2]
+16 106 [2, 0, 2]
+16 107 [2, 1, 2]
+16 108 [2, 2, 2]""".split("\n")
+
+        diagram = me.get('diagrams')[15]
+
+        for i, amp in enumerate(diagram.get('amplitudes')):
+            if diagram.get('number') == 16:
+                self.assertEqual("%d %d %s" % \
+                                 (diagram.get('number'), amp.get('number'), \
+                                  repr(amp.get('color_indices'))),
+                                 goal[i])
+
+        self.assertEqual(me.get_nexternal_ninitial(), (8,2))
+        self.assertEqual(me.get_helicity_combinations(), 256)
+        self.assertEqual(len(export_v4.get_helicity_lines(me).split("\n")), 256)
+        self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
+                         """CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
+CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
+CALL VXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
+CALL VXXXXX(P(0,4),zero,NHEL(4),+1*IC(4),W(1,4))
+CALL VXXXXX(P(0,5),zero,NHEL(5),+1*IC(5),W(1,5))
+CALL JVVXXX(W(1,3),W(1,4),GG,zero,zero,W(1,6))
+CALL JVVXXX(W(1,6),W(1,5),GG,zero,zero,W(1,7))
+CALL VXXXXX(P(0,6),zero,NHEL(6),+1*IC(6),W(1,8))
+CALL VXXXXX(P(0,7),zero,NHEL(7),+1*IC(7),W(1,9))
+CALL VXXXXX(P(0,8),zero,NHEL(8),+1*IC(8),W(1,10))
+CALL JVVXXX(W(1,8),W(1,9),GG,zero,zero,W(1,11))
+CALL JVVXXX(W(1,11),W(1,10),GG,zero,zero,W(1,12))
+# Amplitude(s) for diagram number 1
+CALL GGGGXX(W(1,1),W(1,2),W(1,7),W(1,12),GG,AMP(1))
+CALL GGGGXX(W(1,7),W(1,1),W(1,2),W(1,12),GG,AMP(2))
+CALL GGGGXX(W(1,2),W(1,7),W(1,1),W(1,12),GG,AMP(3))
+CALL JVVXXX(W(1,8),W(1,10),GG,zero,zero,W(1,13))
+CALL JVVXXX(W(1,13),W(1,9),GG,zero,zero,W(1,14))
+# Amplitude(s) for diagram number 2
+CALL GGGGXX(W(1,1),W(1,2),W(1,7),W(1,14),GG,AMP(4))
+CALL GGGGXX(W(1,7),W(1,1),W(1,2),W(1,14),GG,AMP(5))
+CALL GGGGXX(W(1,2),W(1,7),W(1,1),W(1,14),GG,AMP(6))
+CALL JVVXXX(W(1,9),W(1,10),GG,zero,zero,W(1,15))
+CALL JVVXXX(W(1,8),W(1,15),GG,zero,zero,W(1,16))
+# Amplitude(s) for diagram number 3
+CALL GGGGXX(W(1,1),W(1,2),W(1,7),W(1,16),GG,AMP(7))
+CALL GGGGXX(W(1,7),W(1,1),W(1,2),W(1,16),GG,AMP(8))
+CALL GGGGXX(W(1,2),W(1,7),W(1,1),W(1,16),GG,AMP(9))
+CALL JGGGXX(W(1,8),W(1,9),W(1,10),GG,W(1,17))
+CALL JGGGXX(W(1,10),W(1,8),W(1,9),GG,W(1,18))
+CALL JGGGXX(W(1,9),W(1,10),W(1,8),GG,W(1,19))
+# Amplitude(s) for diagram number 4
+CALL GGGGXX(W(1,1),W(1,2),W(1,7),W(1,17),GG,AMP(10))
+CALL GGGGXX(W(1,1),W(1,2),W(1,7),W(1,18),GG,AMP(11))
+CALL GGGGXX(W(1,1),W(1,2),W(1,7),W(1,19),GG,AMP(12))
+CALL GGGGXX(W(1,7),W(1,1),W(1,2),W(1,17),GG,AMP(13))
+CALL GGGGXX(W(1,7),W(1,1),W(1,2),W(1,18),GG,AMP(14))
+CALL GGGGXX(W(1,7),W(1,1),W(1,2),W(1,19),GG,AMP(15))
+CALL GGGGXX(W(1,2),W(1,7),W(1,1),W(1,17),GG,AMP(16))
+CALL GGGGXX(W(1,2),W(1,7),W(1,1),W(1,18),GG,AMP(17))
+CALL GGGGXX(W(1,2),W(1,7),W(1,1),W(1,19),GG,AMP(18))
+CALL JVVXXX(W(1,3),W(1,5),GG,zero,zero,W(1,20))
+CALL JVVXXX(W(1,20),W(1,4),GG,zero,zero,W(1,21))
+# Amplitude(s) for diagram number 5
+CALL GGGGXX(W(1,1),W(1,2),W(1,21),W(1,12),GG,AMP(19))
+CALL GGGGXX(W(1,21),W(1,1),W(1,2),W(1,12),GG,AMP(20))
+CALL GGGGXX(W(1,2),W(1,21),W(1,1),W(1,12),GG,AMP(21))
+# Amplitude(s) for diagram number 6
+CALL GGGGXX(W(1,1),W(1,2),W(1,21),W(1,14),GG,AMP(22))
+CALL GGGGXX(W(1,21),W(1,1),W(1,2),W(1,14),GG,AMP(23))
+CALL GGGGXX(W(1,2),W(1,21),W(1,1),W(1,14),GG,AMP(24))
+# Amplitude(s) for diagram number 7
+CALL GGGGXX(W(1,1),W(1,2),W(1,21),W(1,16),GG,AMP(25))
+CALL GGGGXX(W(1,21),W(1,1),W(1,2),W(1,16),GG,AMP(26))
+CALL GGGGXX(W(1,2),W(1,21),W(1,1),W(1,16),GG,AMP(27))
+# Amplitude(s) for diagram number 8
+CALL GGGGXX(W(1,1),W(1,2),W(1,21),W(1,17),GG,AMP(28))
+CALL GGGGXX(W(1,1),W(1,2),W(1,21),W(1,18),GG,AMP(29))
+CALL GGGGXX(W(1,1),W(1,2),W(1,21),W(1,19),GG,AMP(30))
+CALL GGGGXX(W(1,21),W(1,1),W(1,2),W(1,17),GG,AMP(31))
+CALL GGGGXX(W(1,21),W(1,1),W(1,2),W(1,18),GG,AMP(32))
+CALL GGGGXX(W(1,21),W(1,1),W(1,2),W(1,19),GG,AMP(33))
+CALL GGGGXX(W(1,2),W(1,21),W(1,1),W(1,17),GG,AMP(34))
+CALL GGGGXX(W(1,2),W(1,21),W(1,1),W(1,18),GG,AMP(35))
+CALL GGGGXX(W(1,2),W(1,21),W(1,1),W(1,19),GG,AMP(36))
+CALL JVVXXX(W(1,4),W(1,5),GG,zero,zero,W(1,22))
+CALL JVVXXX(W(1,3),W(1,22),GG,zero,zero,W(1,23))
+# Amplitude(s) for diagram number 9
+CALL GGGGXX(W(1,1),W(1,2),W(1,23),W(1,12),GG,AMP(37))
+CALL GGGGXX(W(1,23),W(1,1),W(1,2),W(1,12),GG,AMP(38))
+CALL GGGGXX(W(1,2),W(1,23),W(1,1),W(1,12),GG,AMP(39))
+# Amplitude(s) for diagram number 10
+CALL GGGGXX(W(1,1),W(1,2),W(1,23),W(1,14),GG,AMP(40))
+CALL GGGGXX(W(1,23),W(1,1),W(1,2),W(1,14),GG,AMP(41))
+CALL GGGGXX(W(1,2),W(1,23),W(1,1),W(1,14),GG,AMP(42))
+# Amplitude(s) for diagram number 11
+CALL GGGGXX(W(1,1),W(1,2),W(1,23),W(1,16),GG,AMP(43))
+CALL GGGGXX(W(1,23),W(1,1),W(1,2),W(1,16),GG,AMP(44))
+CALL GGGGXX(W(1,2),W(1,23),W(1,1),W(1,16),GG,AMP(45))
+# Amplitude(s) for diagram number 12
+CALL GGGGXX(W(1,1),W(1,2),W(1,23),W(1,17),GG,AMP(46))
+CALL GGGGXX(W(1,1),W(1,2),W(1,23),W(1,18),GG,AMP(47))
+CALL GGGGXX(W(1,1),W(1,2),W(1,23),W(1,19),GG,AMP(48))
+CALL GGGGXX(W(1,23),W(1,1),W(1,2),W(1,17),GG,AMP(49))
+CALL GGGGXX(W(1,23),W(1,1),W(1,2),W(1,18),GG,AMP(50))
+CALL GGGGXX(W(1,23),W(1,1),W(1,2),W(1,19),GG,AMP(51))
+CALL GGGGXX(W(1,2),W(1,23),W(1,1),W(1,17),GG,AMP(52))
+CALL GGGGXX(W(1,2),W(1,23),W(1,1),W(1,18),GG,AMP(53))
+CALL GGGGXX(W(1,2),W(1,23),W(1,1),W(1,19),GG,AMP(54))
+CALL JGGGXX(W(1,3),W(1,4),W(1,5),GG,W(1,24))
+CALL JGGGXX(W(1,5),W(1,3),W(1,4),GG,W(1,25))
+CALL JGGGXX(W(1,4),W(1,5),W(1,3),GG,W(1,26))
+# Amplitude(s) for diagram number 13
+CALL GGGGXX(W(1,1),W(1,2),W(1,24),W(1,12),GG,AMP(55))
+CALL GGGGXX(W(1,1),W(1,2),W(1,25),W(1,12),GG,AMP(56))
+CALL GGGGXX(W(1,1),W(1,2),W(1,26),W(1,12),GG,AMP(57))
+CALL GGGGXX(W(1,24),W(1,1),W(1,2),W(1,12),GG,AMP(58))
+CALL GGGGXX(W(1,25),W(1,1),W(1,2),W(1,12),GG,AMP(59))
+CALL GGGGXX(W(1,26),W(1,1),W(1,2),W(1,12),GG,AMP(60))
+CALL GGGGXX(W(1,2),W(1,24),W(1,1),W(1,12),GG,AMP(61))
+CALL GGGGXX(W(1,2),W(1,25),W(1,1),W(1,12),GG,AMP(62))
+CALL GGGGXX(W(1,2),W(1,26),W(1,1),W(1,12),GG,AMP(63))
+# Amplitude(s) for diagram number 14
+CALL GGGGXX(W(1,1),W(1,2),W(1,24),W(1,14),GG,AMP(64))
+CALL GGGGXX(W(1,1),W(1,2),W(1,25),W(1,14),GG,AMP(65))
+CALL GGGGXX(W(1,1),W(1,2),W(1,26),W(1,14),GG,AMP(66))
+CALL GGGGXX(W(1,24),W(1,1),W(1,2),W(1,14),GG,AMP(67))
+CALL GGGGXX(W(1,25),W(1,1),W(1,2),W(1,14),GG,AMP(68))
+CALL GGGGXX(W(1,26),W(1,1),W(1,2),W(1,14),GG,AMP(69))
+CALL GGGGXX(W(1,2),W(1,24),W(1,1),W(1,14),GG,AMP(70))
+CALL GGGGXX(W(1,2),W(1,25),W(1,1),W(1,14),GG,AMP(71))
+CALL GGGGXX(W(1,2),W(1,26),W(1,1),W(1,14),GG,AMP(72))
+# Amplitude(s) for diagram number 15
+CALL GGGGXX(W(1,1),W(1,2),W(1,24),W(1,16),GG,AMP(73))
+CALL GGGGXX(W(1,1),W(1,2),W(1,25),W(1,16),GG,AMP(74))
+CALL GGGGXX(W(1,1),W(1,2),W(1,26),W(1,16),GG,AMP(75))
+CALL GGGGXX(W(1,24),W(1,1),W(1,2),W(1,16),GG,AMP(76))
+CALL GGGGXX(W(1,25),W(1,1),W(1,2),W(1,16),GG,AMP(77))
+CALL GGGGXX(W(1,26),W(1,1),W(1,2),W(1,16),GG,AMP(78))
+CALL GGGGXX(W(1,2),W(1,24),W(1,1),W(1,16),GG,AMP(79))
+CALL GGGGXX(W(1,2),W(1,25),W(1,1),W(1,16),GG,AMP(80))
+CALL GGGGXX(W(1,2),W(1,26),W(1,1),W(1,16),GG,AMP(81))
+# Amplitude(s) for diagram number 16
+CALL GGGGXX(W(1,1),W(1,2),W(1,24),W(1,17),GG,AMP(82))
+CALL GGGGXX(W(1,1),W(1,2),W(1,24),W(1,18),GG,AMP(83))
+CALL GGGGXX(W(1,1),W(1,2),W(1,24),W(1,19),GG,AMP(84))
+CALL GGGGXX(W(1,1),W(1,2),W(1,25),W(1,17),GG,AMP(85))
+CALL GGGGXX(W(1,1),W(1,2),W(1,25),W(1,18),GG,AMP(86))
+CALL GGGGXX(W(1,1),W(1,2),W(1,25),W(1,19),GG,AMP(87))
+CALL GGGGXX(W(1,1),W(1,2),W(1,26),W(1,17),GG,AMP(88))
+CALL GGGGXX(W(1,1),W(1,2),W(1,26),W(1,18),GG,AMP(89))
+CALL GGGGXX(W(1,1),W(1,2),W(1,26),W(1,19),GG,AMP(90))
+CALL GGGGXX(W(1,24),W(1,1),W(1,2),W(1,17),GG,AMP(91))
+CALL GGGGXX(W(1,24),W(1,1),W(1,2),W(1,18),GG,AMP(92))
+CALL GGGGXX(W(1,24),W(1,1),W(1,2),W(1,19),GG,AMP(93))
+CALL GGGGXX(W(1,25),W(1,1),W(1,2),W(1,17),GG,AMP(94))
+CALL GGGGXX(W(1,25),W(1,1),W(1,2),W(1,18),GG,AMP(95))
+CALL GGGGXX(W(1,25),W(1,1),W(1,2),W(1,19),GG,AMP(96))
+CALL GGGGXX(W(1,26),W(1,1),W(1,2),W(1,17),GG,AMP(97))
+CALL GGGGXX(W(1,26),W(1,1),W(1,2),W(1,18),GG,AMP(98))
+CALL GGGGXX(W(1,26),W(1,1),W(1,2),W(1,19),GG,AMP(99))
+CALL GGGGXX(W(1,2),W(1,24),W(1,1),W(1,17),GG,AMP(100))
+CALL GGGGXX(W(1,2),W(1,24),W(1,1),W(1,18),GG,AMP(101))
+CALL GGGGXX(W(1,2),W(1,24),W(1,1),W(1,19),GG,AMP(102))
+CALL GGGGXX(W(1,2),W(1,25),W(1,1),W(1,17),GG,AMP(103))
+CALL GGGGXX(W(1,2),W(1,25),W(1,1),W(1,18),GG,AMP(104))
+CALL GGGGXX(W(1,2),W(1,25),W(1,1),W(1,19),GG,AMP(105))
+CALL GGGGXX(W(1,2),W(1,26),W(1,1),W(1,17),GG,AMP(106))
+CALL GGGGXX(W(1,2),W(1,26),W(1,1),W(1,18),GG,AMP(107))
+CALL GGGGXX(W(1,2),W(1,26),W(1,1),W(1,19),GG,AMP(108))
+CALL JVVXXX(W(1,1),W(1,2),GG,zero,zero,W(1,27))
+# Amplitude(s) for diagram number 17
+CALL VVVXXX(W(1,7),W(1,12),W(1,27),GG,AMP(109))
+# Amplitude(s) for diagram number 18
+CALL VVVXXX(W(1,7),W(1,14),W(1,27),GG,AMP(110))
+# Amplitude(s) for diagram number 19
+CALL VVVXXX(W(1,7),W(1,16),W(1,27),GG,AMP(111))
+# Amplitude(s) for diagram number 20
+CALL VVVXXX(W(1,7),W(1,17),W(1,27),GG,AMP(112))
+CALL VVVXXX(W(1,7),W(1,18),W(1,27),GG,AMP(113))
+CALL VVVXXX(W(1,7),W(1,19),W(1,27),GG,AMP(114))
+# Amplitude(s) for diagram number 21
+CALL VVVXXX(W(1,21),W(1,12),W(1,27),GG,AMP(115))
+# Amplitude(s) for diagram number 22
+CALL VVVXXX(W(1,21),W(1,14),W(1,27),GG,AMP(116))
+# Amplitude(s) for diagram number 23
+CALL VVVXXX(W(1,21),W(1,16),W(1,27),GG,AMP(117))
+# Amplitude(s) for diagram number 24
+CALL VVVXXX(W(1,21),W(1,17),W(1,27),GG,AMP(118))
+CALL VVVXXX(W(1,21),W(1,18),W(1,27),GG,AMP(119))
+CALL VVVXXX(W(1,21),W(1,19),W(1,27),GG,AMP(120))
+# Amplitude(s) for diagram number 25
+CALL VVVXXX(W(1,23),W(1,12),W(1,27),GG,AMP(121))
+# Amplitude(s) for diagram number 26
+CALL VVVXXX(W(1,23),W(1,14),W(1,27),GG,AMP(122))
+# Amplitude(s) for diagram number 27
+CALL VVVXXX(W(1,23),W(1,16),W(1,27),GG,AMP(123))
+# Amplitude(s) for diagram number 28
+CALL VVVXXX(W(1,23),W(1,17),W(1,27),GG,AMP(124))
+CALL VVVXXX(W(1,23),W(1,18),W(1,27),GG,AMP(125))
+CALL VVVXXX(W(1,23),W(1,19),W(1,27),GG,AMP(126))
+# Amplitude(s) for diagram number 29
+CALL VVVXXX(W(1,24),W(1,12),W(1,27),GG,AMP(127))
+CALL VVVXXX(W(1,25),W(1,12),W(1,27),GG,AMP(128))
+CALL VVVXXX(W(1,26),W(1,12),W(1,27),GG,AMP(129))
+# Amplitude(s) for diagram number 30
+CALL VVVXXX(W(1,24),W(1,14),W(1,27),GG,AMP(130))
+CALL VVVXXX(W(1,25),W(1,14),W(1,27),GG,AMP(131))
+CALL VVVXXX(W(1,26),W(1,14),W(1,27),GG,AMP(132))
+# Amplitude(s) for diagram number 31
+CALL VVVXXX(W(1,24),W(1,16),W(1,27),GG,AMP(133))
+CALL VVVXXX(W(1,25),W(1,16),W(1,27),GG,AMP(134))
+CALL VVVXXX(W(1,26),W(1,16),W(1,27),GG,AMP(135))
+# Amplitude(s) for diagram number 32
+CALL VVVXXX(W(1,24),W(1,17),W(1,27),GG,AMP(136))
+CALL VVVXXX(W(1,24),W(1,18),W(1,27),GG,AMP(137))
+CALL VVVXXX(W(1,24),W(1,19),W(1,27),GG,AMP(138))
+CALL VVVXXX(W(1,25),W(1,17),W(1,27),GG,AMP(139))
+CALL VVVXXX(W(1,25),W(1,18),W(1,27),GG,AMP(140))
+CALL VVVXXX(W(1,25),W(1,19),W(1,27),GG,AMP(141))
+CALL VVVXXX(W(1,26),W(1,17),W(1,27),GG,AMP(142))
+CALL VVVXXX(W(1,26),W(1,18),W(1,27),GG,AMP(143))
+CALL VVVXXX(W(1,26),W(1,19),W(1,27),GG,AMP(144))
+CALL JVVXXX(W(1,1),W(1,7),GG,zero,zero,W(1,28))
+# Amplitude(s) for diagram number 33
+CALL VVVXXX(W(1,2),W(1,12),W(1,28),GG,AMP(145))
+# Amplitude(s) for diagram number 34
+CALL VVVXXX(W(1,2),W(1,14),W(1,28),GG,AMP(146))
+# Amplitude(s) for diagram number 35
+CALL VVVXXX(W(1,2),W(1,16),W(1,28),GG,AMP(147))
+# Amplitude(s) for diagram number 36
+CALL VVVXXX(W(1,2),W(1,17),W(1,28),GG,AMP(148))
+CALL VVVXXX(W(1,2),W(1,18),W(1,28),GG,AMP(149))
+CALL VVVXXX(W(1,2),W(1,19),W(1,28),GG,AMP(150))
+CALL JVVXXX(W(1,1),W(1,21),GG,zero,zero,W(1,29))
+# Amplitude(s) for diagram number 37
+CALL VVVXXX(W(1,2),W(1,12),W(1,29),GG,AMP(151))
+# Amplitude(s) for diagram number 38
+CALL VVVXXX(W(1,2),W(1,14),W(1,29),GG,AMP(152))
+# Amplitude(s) for diagram number 39
+CALL VVVXXX(W(1,2),W(1,16),W(1,29),GG,AMP(153))
+# Amplitude(s) for diagram number 40
+CALL VVVXXX(W(1,2),W(1,17),W(1,29),GG,AMP(154))
+CALL VVVXXX(W(1,2),W(1,18),W(1,29),GG,AMP(155))
+CALL VVVXXX(W(1,2),W(1,19),W(1,29),GG,AMP(156))
+CALL JVVXXX(W(1,1),W(1,23),GG,zero,zero,W(1,30))
+# Amplitude(s) for diagram number 41
+CALL VVVXXX(W(1,2),W(1,12),W(1,30),GG,AMP(157))
+# Amplitude(s) for diagram number 42
+CALL VVVXXX(W(1,2),W(1,14),W(1,30),GG,AMP(158))
+# Amplitude(s) for diagram number 43
+CALL VVVXXX(W(1,2),W(1,16),W(1,30),GG,AMP(159))
+# Amplitude(s) for diagram number 44
+CALL VVVXXX(W(1,2),W(1,17),W(1,30),GG,AMP(160))
+CALL VVVXXX(W(1,2),W(1,18),W(1,30),GG,AMP(161))
+CALL VVVXXX(W(1,2),W(1,19),W(1,30),GG,AMP(162))
+CALL JVVXXX(W(1,1),W(1,24),GG,zero,zero,W(1,31))
+CALL JVVXXX(W(1,1),W(1,25),GG,zero,zero,W(1,32))
+CALL JVVXXX(W(1,1),W(1,26),GG,zero,zero,W(1,33))
+# Amplitude(s) for diagram number 45
+CALL VVVXXX(W(1,2),W(1,12),W(1,31),GG,AMP(163))
+CALL VVVXXX(W(1,2),W(1,12),W(1,32),GG,AMP(164))
+CALL VVVXXX(W(1,2),W(1,12),W(1,33),GG,AMP(165))
+# Amplitude(s) for diagram number 46
+CALL VVVXXX(W(1,2),W(1,14),W(1,31),GG,AMP(166))
+CALL VVVXXX(W(1,2),W(1,14),W(1,32),GG,AMP(167))
+CALL VVVXXX(W(1,2),W(1,14),W(1,33),GG,AMP(168))
+# Amplitude(s) for diagram number 47
+CALL VVVXXX(W(1,2),W(1,16),W(1,31),GG,AMP(169))
+CALL VVVXXX(W(1,2),W(1,16),W(1,32),GG,AMP(170))
+CALL VVVXXX(W(1,2),W(1,16),W(1,33),GG,AMP(171))
+# Amplitude(s) for diagram number 48
+CALL VVVXXX(W(1,2),W(1,17),W(1,31),GG,AMP(172))
+CALL VVVXXX(W(1,2),W(1,18),W(1,31),GG,AMP(173))
+CALL VVVXXX(W(1,2),W(1,19),W(1,31),GG,AMP(174))
+CALL VVVXXX(W(1,2),W(1,17),W(1,32),GG,AMP(175))
+CALL VVVXXX(W(1,2),W(1,18),W(1,32),GG,AMP(176))
+CALL VVVXXX(W(1,2),W(1,19),W(1,32),GG,AMP(177))
+CALL VVVXXX(W(1,2),W(1,17),W(1,33),GG,AMP(178))
+CALL VVVXXX(W(1,2),W(1,18),W(1,33),GG,AMP(179))
+CALL VVVXXX(W(1,2),W(1,19),W(1,33),GG,AMP(180))
+CALL JVVXXX(W(1,1),W(1,12),GG,zero,zero,W(1,34))
+# Amplitude(s) for diagram number 49
+CALL VVVXXX(W(1,2),W(1,7),W(1,34),GG,AMP(181))
+CALL JVVXXX(W(1,1),W(1,14),GG,zero,zero,W(1,35))
+# Amplitude(s) for diagram number 50
+CALL VVVXXX(W(1,2),W(1,7),W(1,35),GG,AMP(182))
+CALL JVVXXX(W(1,1),W(1,16),GG,zero,zero,W(1,36))
+# Amplitude(s) for diagram number 51
+CALL VVVXXX(W(1,2),W(1,7),W(1,36),GG,AMP(183))
+CALL JVVXXX(W(1,1),W(1,17),GG,zero,zero,W(1,37))
+CALL JVVXXX(W(1,1),W(1,18),GG,zero,zero,W(1,38))
+CALL JVVXXX(W(1,1),W(1,19),GG,zero,zero,W(1,39))
+# Amplitude(s) for diagram number 52
+CALL VVVXXX(W(1,2),W(1,7),W(1,37),GG,AMP(184))
+CALL VVVXXX(W(1,2),W(1,7),W(1,38),GG,AMP(185))
+CALL VVVXXX(W(1,2),W(1,7),W(1,39),GG,AMP(186))
+# Amplitude(s) for diagram number 53
+CALL VVVXXX(W(1,2),W(1,21),W(1,34),GG,AMP(187))
+# Amplitude(s) for diagram number 54
+CALL VVVXXX(W(1,2),W(1,21),W(1,35),GG,AMP(188))
+# Amplitude(s) for diagram number 55
+CALL VVVXXX(W(1,2),W(1,21),W(1,36),GG,AMP(189))
+# Amplitude(s) for diagram number 56
+CALL VVVXXX(W(1,2),W(1,21),W(1,37),GG,AMP(190))
+CALL VVVXXX(W(1,2),W(1,21),W(1,38),GG,AMP(191))
+CALL VVVXXX(W(1,2),W(1,21),W(1,39),GG,AMP(192))
+# Amplitude(s) for diagram number 57
+CALL VVVXXX(W(1,2),W(1,23),W(1,34),GG,AMP(193))
+# Amplitude(s) for diagram number 58
+CALL VVVXXX(W(1,2),W(1,23),W(1,35),GG,AMP(194))
+# Amplitude(s) for diagram number 59
+CALL VVVXXX(W(1,2),W(1,23),W(1,36),GG,AMP(195))
+# Amplitude(s) for diagram number 60
+CALL VVVXXX(W(1,2),W(1,23),W(1,37),GG,AMP(196))
+CALL VVVXXX(W(1,2),W(1,23),W(1,38),GG,AMP(197))
+CALL VVVXXX(W(1,2),W(1,23),W(1,39),GG,AMP(198))
+# Amplitude(s) for diagram number 61
+CALL VVVXXX(W(1,2),W(1,24),W(1,34),GG,AMP(199))
+CALL VVVXXX(W(1,2),W(1,25),W(1,34),GG,AMP(200))
+CALL VVVXXX(W(1,2),W(1,26),W(1,34),GG,AMP(201))
+# Amplitude(s) for diagram number 62
+CALL VVVXXX(W(1,2),W(1,24),W(1,35),GG,AMP(202))
+CALL VVVXXX(W(1,2),W(1,25),W(1,35),GG,AMP(203))
+CALL VVVXXX(W(1,2),W(1,26),W(1,35),GG,AMP(204))
+# Amplitude(s) for diagram number 63
+CALL VVVXXX(W(1,2),W(1,24),W(1,36),GG,AMP(205))
+CALL VVVXXX(W(1,2),W(1,25),W(1,36),GG,AMP(206))
+CALL VVVXXX(W(1,2),W(1,26),W(1,36),GG,AMP(207))
+# Amplitude(s) for diagram number 64
+CALL VVVXXX(W(1,2),W(1,24),W(1,37),GG,AMP(208))
+CALL VVVXXX(W(1,2),W(1,24),W(1,38),GG,AMP(209))
+CALL VVVXXX(W(1,2),W(1,24),W(1,39),GG,AMP(210))
+CALL VVVXXX(W(1,2),W(1,25),W(1,37),GG,AMP(211))
+CALL VVVXXX(W(1,2),W(1,25),W(1,38),GG,AMP(212))
+CALL VVVXXX(W(1,2),W(1,25),W(1,39),GG,AMP(213))
+CALL VVVXXX(W(1,2),W(1,26),W(1,37),GG,AMP(214))
+CALL VVVXXX(W(1,2),W(1,26),W(1,38),GG,AMP(215))
+CALL VVVXXX(W(1,2),W(1,26),W(1,39),GG,AMP(216))""")
+
+        export_v4.write_pmass_file(fsock, me, myfortranmodel)
+
+        self.assertEqual(fsock.getvalue(), """      PMASS(1)=ZERO
+      PMASS(2)=ZERO
+      PMASS(3)=ZERO
+      PMASS(4)=ZERO
+      PMASS(5)=ZERO
+      PMASS(6)=ZERO
+      PMASS(7)=ZERO
+      PMASS(8)=ZERO\n""")
+                         
+        
+    def test_export_majorana_decay_chain(self):
+        """Test decay chain with majorana particles e+e->n1n1
+        """
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A electron and positron
+        mypartlist.append(base_objects.Particle({'name':'e-',
+                      'antiname':'e+',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'e^-',
+                      'antitexname':'e^+',
+                      'line':'straight',
+                      'charge':-1.,
+                      'pdg_code':11,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        eminus = mypartlist[len(mypartlist) - 1]
+        eplus = copy.copy(eminus)
+        eplus.set('is_part', False)
+
+        # A E slepton and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'sl2-',
+                      'antiname':'sl2+',
+                      'spin':1,
+                      'color':1,
+                      'mass':'Msl2',
+                      'width':'Wsl2',
+                      'texname':'\tilde e^-',
+                      'antitexname':'\tilde e^+',
+                      'line':'dashed',
+                      'charge':1.,
+                      'pdg_code':1000011,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        seminus = mypartlist[len(mypartlist) - 1]
+        seplus = copy.copy(seminus)
+        seplus.set('is_part', False)
+
+        # A neutralino
+        mypartlist.append(base_objects.Particle({'name':'n1',
+                      'antiname':'n1',
+                      'spin':2,
+                      'color':1,
+                      'mass':'Mneu1',
+                      'width':'Wneu1',
+                      'texname':'\chi_0^1',
+                      'antitexname':'\chi_0^1',
+                      'line':'straight',
+                      'charge':0.,
+                      'pdg_code':1000022,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        n1 = mypartlist[len(mypartlist) - 1]
+
+        # A photon
+        mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        a = mypartlist[len(mypartlist) - 1]
+
+        # Coupling of n1 to e and se
+        myinterlist.append(base_objects.Interaction({
+                      'id': 103,
+                      'particles': base_objects.ParticleList(\
+                                            [n1, \
+                                             eminus, \
+                                             seplus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'MGVX350'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 104,
+                      'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             n1, \
+                                             seminus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'MGVX494'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of e to gamma
+        myinterlist.append(base_objects.Interaction({
+                      'id': 7,
+                      'particles': base_objects.ParticleList(\
+                                            [eminus, \
+                                             eplus, \
+                                             a]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'MGVX12'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of sl2 to gamma
+        myinterlist.append(base_objects.Interaction({
+                      'id': 8,
+                      'particles': base_objects.ParticleList(\
+                                            [a, \
+                                             seplus, \
+                                             seminus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'MGVX56'},
+                      'orders':{'QED':1}}))
+
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':'final'}))
+
+        mycoreproc = base_objects.Process({'legs':myleglist,
+                                       'model':mymodel})
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-1000011,
+                                         'state':'final'}))
+
+        mydecay1 = base_objects.Process({'legs':myleglist,
+                                         'model':mymodel})
+
+        mycoreproc.set('decay_chains', base_objects.ProcessList([\
+            mydecay1]))
+
+        myamplitude = diagram_generation.DecayChainAmplitude(mycoreproc)
+
+        matrix_element = helas_objects.HelasDecayChainProcess(myamplitude)
+
+        matrix_elements = matrix_element.combine_decay_chain_processes()
+
+        me = matrix_elements[0]
+        
+        myfortranmodel = export_v4.HelasFortranModel()
+
+        tmp =  "\n".join(myfortranmodel.get_matrix_element_calls(me))
+
+        # This has been checked against v4
+        self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
+                         """CALL IXXXXX(P(0,1),zero,NHEL(1),+1*IC(1),W(1,1))
+CALL OXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
+CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
+CALL SXXXXX(P(0,4),+1*IC(4),W(1,4))
+CALL FSOXXX(W(1,3),W(1,4),MGVX350,Mneu1,Wneu1,W(1,5))
+CALL IXXXXX(P(0,5),zero,NHEL(5),-1*IC(5),W(1,6))
+CALL SXXXXX(P(0,6),+1*IC(6),W(1,7))
+CALL FSICXX(W(1,6),W(1,7),MGVX350,Mneu1,Wneu1,W(1,8))
+CALL HIOXXX(W(1,1),W(1,5),MGVX494,Msl2,Wsl2,W(1,9))
+# Amplitude(s) for diagram number 1
+CALL IOSXXX(W(1,8),W(1,2),W(1,9),MGVX350,AMP(1))
+CALL OXXXXX(P(0,5),zero,NHEL(5),+1*IC(5),W(1,10))
+CALL FSOXXX(W(1,10),W(1,7),MGVX350,Mneu1,Wneu1,W(1,11))
+CALL HIOXXX(W(1,1),W(1,11),MGVX494,Msl2,Wsl2,W(1,12))
+CALL IXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,13))
+CALL FSICXX(W(1,13),W(1,4),MGVX350,Mneu1,Wneu1,W(1,14))
+# Amplitude(s) for diagram number 2
+CALL IOSXXX(W(1,14),W(1,2),W(1,12),MGVX350,AMP(2))""")
+
+        self.assertEqual(export_v4.get_JAMP_lines(me)[0],
+                         "JAMP(1)=+AMP(1)-AMP(2)")
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':1000011,
+                                         'state':'final'}))
+
+        mydecay2 = base_objects.Process({'legs':myleglist,
+                                         'model':mymodel})
+
+        mycoreproc.set('decay_chains', base_objects.ProcessList([\
+            mydecay1, mydecay2]))
+
+        myamplitude = diagram_generation.DecayChainAmplitude(mycoreproc)
+
+        matrix_element = helas_objects.HelasDecayChainProcess(myamplitude)
+
+        matrix_elements = matrix_element.combine_decay_chain_processes()
+
+        me = matrix_elements[0]
+        
+        myfortranmodel = export_v4.HelasFortranModel()
+
+        # This has been checked against v4
+        self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
+        """CALL IXXXXX(P(0,1),zero,NHEL(1),+1*IC(1),W(1,1))
+CALL OXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
+CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
+CALL SXXXXX(P(0,4),+1*IC(4),W(1,4))
+CALL FSOXXX(W(1,3),W(1,4),MGVX350,Mneu1,Wneu1,W(1,5))
+CALL IXXXXX(P(0,5),zero,NHEL(5),-1*IC(5),W(1,6))
+CALL SXXXXX(P(0,6),+1*IC(6),W(1,7))
+CALL FSIXXX(W(1,6),W(1,7),MGVX494,Mneu1,Wneu1,W(1,8))
+CALL HIOXXX(W(1,1),W(1,5),MGVX494,Msl2,Wsl2,W(1,9))
+# Amplitude(s) for diagram number 1
+CALL IOSXXX(W(1,8),W(1,2),W(1,9),MGVX350,AMP(1))
+CALL OXXXXX(P(0,5),zero,NHEL(5),+1*IC(5),W(1,10))
+CALL FSOCXX(W(1,10),W(1,7),MGVX494,Mneu1,Wneu1,W(1,11))
+CALL HIOXXX(W(1,1),W(1,11),MGVX494,Msl2,Wsl2,W(1,12))
+CALL IXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,13))
+CALL FSICXX(W(1,13),W(1,4),MGVX350,Mneu1,Wneu1,W(1,14))
+# Amplitude(s) for diagram number 2
+CALL IOSXXX(W(1,14),W(1,2),W(1,12),MGVX350,AMP(2))""")
+        
+        self.assertEqual(export_v4.get_JAMP_lines(me)[0],
+                         "JAMP(1)=+AMP(1)-AMP(2)")
+        
+        
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-1000011,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':'final'}))
+
+        mydecay3 = base_objects.Process({'legs':myleglist,
+                                         'model':mymodel})
+
+        me3 =  helas_objects.HelasMatrixElement(\
+            diagram_generation.Amplitude(mydecay3))
+
+        mycoreproc.set('decay_chains', base_objects.ProcessList([\
+            mydecay3]))
+
+        myamplitude = diagram_generation.DecayChainAmplitude(mycoreproc)
+
+        matrix_element = helas_objects.HelasDecayChainProcess(myamplitude)
+
+        matrix_elements = matrix_element.combine_decay_chain_processes()
+
+        me = matrix_elements[0]
+        
+        #export_v4.generate_subprocess_directory_v4_standalone(me,
+        #                                                      myfortranmodel)
+
+        # This has been checked against v4
+        self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
+                         """CALL IXXXXX(P(0,1),zero,NHEL(1),+1*IC(1),W(1,1))
+CALL OXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
+CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
+CALL SXXXXX(P(0,4),+1*IC(4),W(1,4))
+CALL VXXXXX(P(0,5),zero,NHEL(5),+1*IC(5),W(1,5))
+CALL FVOXXX(W(1,3),W(1,5),MGVX12,zero,zero,W(1,6))
+CALL FSOXXX(W(1,6),W(1,4),MGVX350,Mneu1,Wneu1,W(1,7))
+CALL IXXXXX(P(0,6),zero,NHEL(6),-1*IC(6),W(1,8))
+CALL SXXXXX(P(0,7),+1*IC(7),W(1,9))
+CALL VXXXXX(P(0,8),zero,NHEL(8),+1*IC(8),W(1,10))
+CALL FVICXX(W(1,8),W(1,10),MGVX12,zero,zero,W(1,11))
+CALL FSICXX(W(1,11),W(1,9),MGVX350,Mneu1,Wneu1,W(1,12))
+CALL HIOXXX(W(1,1),W(1,7),MGVX494,Msl2,Wsl2,W(1,13))
+# Amplitude(s) for diagram number 1
+CALL IOSXXX(W(1,12),W(1,2),W(1,13),MGVX350,AMP(1))
+CALL HVSXXX(W(1,10),W(1,9),MGVX56,Msl2,Wsl2,W(1,14))
+CALL FSICXX(W(1,8),W(1,14),MGVX350,Mneu1,Wneu1,W(1,15))
+# Amplitude(s) for diagram number 2
+CALL IOSXXX(W(1,15),W(1,2),W(1,13),MGVX350,AMP(2))
+CALL HVSXXX(W(1,5),W(1,4),MGVX56,Msl2,Wsl2,W(1,16))
+CALL FSOXXX(W(1,3),W(1,16),MGVX350,Mneu1,Wneu1,W(1,17))
+CALL HIOXXX(W(1,1),W(1,17),MGVX494,Msl2,Wsl2,W(1,18))
+# Amplitude(s) for diagram number 3
+CALL IOSXXX(W(1,12),W(1,2),W(1,18),MGVX350,AMP(3))
+# Amplitude(s) for diagram number 4
+CALL IOSXXX(W(1,15),W(1,2),W(1,18),MGVX350,AMP(4))
+CALL OXXXXX(P(0,6),zero,NHEL(6),+1*IC(6),W(1,19))
+CALL FVOXXX(W(1,19),W(1,10),MGVX12,zero,zero,W(1,20))
+CALL FSOXXX(W(1,20),W(1,9),MGVX350,Mneu1,Wneu1,W(1,21))
+CALL HIOXXX(W(1,1),W(1,21),MGVX494,Msl2,Wsl2,W(1,22))
+CALL IXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,23))
+CALL FVICXX(W(1,23),W(1,5),MGVX12,zero,zero,W(1,24))
+CALL FSICXX(W(1,24),W(1,4),MGVX350,Mneu1,Wneu1,W(1,25))
+# Amplitude(s) for diagram number 5
+CALL IOSXXX(W(1,25),W(1,2),W(1,22),MGVX350,AMP(5))
+CALL FSOXXX(W(1,19),W(1,14),MGVX350,Mneu1,Wneu1,W(1,26))
+CALL HIOXXX(W(1,1),W(1,26),MGVX494,Msl2,Wsl2,W(1,27))
+# Amplitude(s) for diagram number 6
+CALL IOSXXX(W(1,25),W(1,2),W(1,27),MGVX350,AMP(6))
+CALL FSICXX(W(1,23),W(1,16),MGVX350,Mneu1,Wneu1,W(1,28))
+# Amplitude(s) for diagram number 7
+CALL IOSXXX(W(1,28),W(1,2),W(1,22),MGVX350,AMP(7))
+# Amplitude(s) for diagram number 8
+CALL IOSXXX(W(1,28),W(1,2),W(1,27),MGVX350,AMP(8))""")
+
+        self.assertEqual(export_v4.get_JAMP_lines(me)[0],
+                         "JAMP(1)=+AMP(1)+AMP(2)+AMP(3)+AMP(4)-AMP(5)-AMP(6)-AMP(7)-AMP(8)")
+        
+    def test_export_complicated_majorana_decay_chain(self):
+        """Test complicated decay chain z e+ > n2 el+, n2 > e- e+ n1
+        """
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A electron and positron
+        mypartlist.append(base_objects.Particle({'name':'e-',
+                      'antiname':'e+',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'e^-',
+                      'antitexname':'e^+',
+                      'line':'straight',
+                      'charge':-1.,
+                      'pdg_code':11,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        eminus = mypartlist[len(mypartlist) - 1]
+        eplus = copy.copy(eminus)
+        eplus.set('is_part', False)
+
+        # A E slepton and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'el-',
+                      'antiname':'el+',
+                      'spin':1,
+                      'color':1,
+                      'mass':'Msl2',
+                      'width':'Wsl2',
+                      'texname':'\tilde e^-',
+                      'antitexname':'\tilde e^+',
+                      'line':'dashed',
+                      'charge':1.,
+                      'pdg_code':1000011,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        seminus = mypartlist[len(mypartlist) - 1]
+        seplus = copy.copy(seminus)
+        seplus.set('is_part', False)
+
+        # Neutralinos
+        mypartlist.append(base_objects.Particle({'name':'n1',
+                      'antiname':'n1',
+                      'spin':2,
+                      'color':1,
+                      'mass':'mn1',
+                      'width':'zero',
+                      'texname':'\chi_0^1',
+                      'antitexname':'\chi_0^1',
+                      'line':'straight',
+                      'charge':0.,
+                      'pdg_code':1000022,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        n1 = mypartlist[len(mypartlist) - 1]
+
+        mypartlist.append(base_objects.Particle({'name':'n2',
+                      'antiname':'n2',
+                      'spin':2,
+                      'color':1,
+                      'mass':'mn2',
+                      'width':'wn2',
+                      'texname':'\chi_0^2',
+                      'antitexname':'\chi_0^2',
+                      'line':'straight',
+                      'charge':0.,
+                      'pdg_code':1000023,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        n2 = mypartlist[len(mypartlist) - 1]
+
+        # A z
+        mypartlist.append(base_objects.Particle({'name':'z',
+                      'antiname':'z',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zmass',
+                      'width':'zwidth',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':23,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        z = mypartlist[len(mypartlist) - 1]
+
+        # Coupling of e to Z
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             eminus, \
+                                             z]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GZL'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of n1 to n2 and z
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [n1, \
+                                             n2, \
+                                             z]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GZN12'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of n1 and n2 to e and el
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             n1, \
+                                             seminus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GELN1M'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [n1, \
+                                             eminus, \
+                                             seplus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GELN1P'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 5,
+                      'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             n2, \
+                                             seminus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GELN2M'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 6,
+                      'particles': base_objects.ParticleList(\
+                                            [n2, \
+                                             eminus, \
+                                             seplus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GELN2P'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of n2 to z
+        myinterlist.append(base_objects.Interaction({
+                      'id': 7,
+                      'particles': base_objects.ParticleList(\
+                                            [n2, \
+                                             n2, \
+                                             z]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GZN22'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of el to z
+        myinterlist.append(base_objects.Interaction({
+                      'id': 8,
+                      'particles': base_objects.ParticleList(\
+                                            [z, \
+                                             seminus, \
+                                             seplus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GZELEL'},
+                      'orders':{'QED':1}}))
+
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':23,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':1000023,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-1000011,
+                                         'state':'final'}))
+
+        mycoreproc = base_objects.Process({'legs':myleglist,
+                                           'model':mymodel,
+                                           'forbidden_particles':[1000022]})
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1000023,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':'final'}))
+
+        mydecay1 = base_objects.Process({'legs':myleglist,
+                                         'model':mymodel})
+
+        mycoreproc.set('decay_chains', base_objects.ProcessList([\
+            mydecay1]))
+
+        myamplitude = diagram_generation.DecayChainAmplitude(mycoreproc)
+
+        matrix_element = helas_objects.HelasDecayChainProcess(myamplitude)
+
+        matrix_elements = matrix_element.combine_decay_chain_processes()
+
+        me = matrix_elements[0]
+        
+        myfortranmodel = export_v4.HelasFortranModel()
+
+        self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
+                         """CALL VXXXXX(P(0,1),zmass,NHEL(1),-1*IC(1),W(1,1))
+CALL OXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
+CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
+CALL IXXXXX(P(0,4),zero,NHEL(4),-1*IC(4),W(1,4))
+CALL IXXXXX(P(0,5),mn1,NHEL(5),-1*IC(5),W(1,5))
+CALL JIOXXX(W(1,4),W(1,3),GZL,zmass,zwidth,W(1,6))
+CALL FVIXXX(W(1,5),W(1,6),GZN12,mn2,wn2,W(1,7))
+CALL SXXXXX(P(0,6),+1*IC(6),W(1,8))
+CALL FVOXXX(W(1,2),W(1,1),GZL,zero,zero,W(1,9))
+# Amplitude(s) for diagram number 1
+CALL IOSXXX(W(1,7),W(1,9),W(1,8),GELN2P,AMP(1))
+CALL HIOXXX(W(1,5),W(1,3),GELN1P,Msl2,Wsl2,W(1,10))
+CALL FSIXXX(W(1,4),W(1,10),GELN2M,mn2,wn2,W(1,11))
+# Amplitude(s) for diagram number 2
+CALL IOSXXX(W(1,11),W(1,9),W(1,8),GELN2P,AMP(2))
+CALL OXXXXX(P(0,5),mn1,NHEL(5),+1*IC(5),W(1,12))
+CALL HIOXXX(W(1,4),W(1,12),GELN1M,Msl2,Wsl2,W(1,13))
+CALL IXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,14))
+CALL FSICXX(W(1,14),W(1,13),GELN2P,mn2,wn2,W(1,15))
+# Amplitude(s) for diagram number 3
+CALL IOSXXX(W(1,15),W(1,9),W(1,8),GELN2P,AMP(3))
+CALL FVIXXX(W(1,7),W(1,1),GZN22,mn2,wn2,W(1,16))
+# Amplitude(s) for diagram number 4
+CALL IOSXXX(W(1,16),W(1,2),W(1,8),GELN2P,AMP(4))
+CALL FVIXXX(W(1,11),W(1,1),GZN22,mn2,wn2,W(1,17))
+# Amplitude(s) for diagram number 5
+CALL IOSXXX(W(1,17),W(1,2),W(1,8),GELN2P,AMP(5))
+CALL FVIXXX(W(1,15),W(1,1),GZN22,mn2,wn2,W(1,18))
+# Amplitude(s) for diagram number 6
+CALL IOSXXX(W(1,18),W(1,2),W(1,8),GELN2P,AMP(6))
+CALL HVSXXX(W(1,1),W(1,8),-GZELEL,Msl2,Wsl2,W(1,19))
+# Amplitude(s) for diagram number 7
+CALL IOSXXX(W(1,7),W(1,2),W(1,19),GELN2P,AMP(7))
+# Amplitude(s) for diagram number 8
+CALL IOSXXX(W(1,11),W(1,2),W(1,19),GELN2P,AMP(8))
+# Amplitude(s) for diagram number 9
+CALL IOSXXX(W(1,15),W(1,2),W(1,19),GELN2P,AMP(9))""")
+        
+        self.assertEqual(export_v4.get_JAMP_lines(me)[0],
+                         "JAMP(1)=+AMP(1)-AMP(2)-AMP(3)+AMP(4)-AMP(5)-AMP(6)+AMP(7)-AMP(8)-AMP(9)")

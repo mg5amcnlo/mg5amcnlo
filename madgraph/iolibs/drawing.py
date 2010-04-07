@@ -86,12 +86,12 @@ class FeynmanLine(base_objects.Leg):
         return
 
     def def_end_point(self, vertex):
-        """-Re-Define the starting point of the line."""
+        """-Re-Define the starting point of the line. with check"""
 
         if not isinstance(vertex, VertexPoint):
             raise self.FeynmanLineError, 'The end point should be a ' + \
                  'Vertex_Point object'
-
+                 
         self.end = vertex
         vertex.add_line(self)
         return
@@ -797,7 +797,7 @@ class FeynmanDiagram:
         2) Add this vertex in vertexList of the diagram
         3) Update vertex.line list. (first update the leg into line if needed)
         4) assign line.start[end] to this vertex. (in end if start is already
-                assigned to another vertex). the start-end will be flipped later
+                assigned to another vertex). the start-end will be flip later
                 if needed."""
 
         #1) Extend to a vertex point
@@ -875,20 +875,32 @@ class FeynmanDiagram:
         #consequence we replace in line2 the common vertex by the second vertex 
         #present in line1, such that the new line2 is the sum of the two 
         #previous lines.
+        to_del = pos1
         if line1.end is line2.start:
             line2.def_begin_point(line1.start)
         else:
-            line2.def_end_point(line1.end)
+            if line1.end:
+                # Standard case
+                line2.def_end_point(line1.end)
+            else:
+                # line1 is a initial/final line. We need to keep her status
+                #so we will delete line2 instead of line1
+                to_del = pos2
+                line1.def_begin_point(line2.end)
         # Remove line completely
-        line1.start.remove_line(line1)
-        del self.lineList[pos1]
+        if to_del == pos1:
+            line1.start.remove_line(line1)
+            del self.lineList[pos1]
+        else:
+            line2.start.remove_line(line2)
+            del self.lineList[pos2]
         # Remove last_vertex
         self.vertexList.remove(last_vertex)
 
     def deal_last_line(self, last_line):
         """The line of the last vertex breaks the rules that line before
         '>' exist previously and the one after don't. The last one can also
-        already exist and for the one befor the '>' sometimes they arrive 
+        already exist and for the one before the '>' sometimes they arrive 
         with a second object which is equivalent to another one but not 
         the same object. discover those case and treat this properly."""
 
@@ -898,7 +910,6 @@ class FeynmanDiagram:
             id1 = self.find_leg_id(last_line)
             # Find if they are a second call to this line
             id2 = self.find_leg_id(last_line, end=len(self._treated_legs) - id1)
-
             if id2 is not None:
                 # Line is duplicate in linelist => remove this duplication
                 line = self.lineList[id2]
@@ -920,7 +931,7 @@ class FeynmanDiagram:
                     else:
                         line.def_start_point(last_line.start)
                     # Remove last_line from the vertex    
-                    last_line.begin.remove_line(last_line)
+                    last_line.start.remove_line(last_line)
 
                 # Remove last_line
                 self.lineList.remove(last_line)

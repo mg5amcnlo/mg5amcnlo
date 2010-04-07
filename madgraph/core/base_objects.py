@@ -332,7 +332,16 @@ class Particle(PhysicsObject):
         """Return the color code with a correct minus sign"""
 
         if not self['is_part'] and self['color'] in [3, 6]:
-            return -self['color']
+            return - self['color']
+        else:
+            return self['color']
+
+    def get_anti_color(self):
+        """Return the color code of the antiparticle with a correct minus sign
+        """
+
+        if self['is_part'] and self['color'] in [3, 6]:
+            return - self['color']
         else:
             return self['color']
 
@@ -821,7 +830,7 @@ class Leg(PhysicsObject):
                                                                     str(value)
 
         if name == 'from_group':
-            if not isinstance(value, bool):
+            if not isinstance(value, bool) and value != None:
                 raise self.PhysicsObjectError, \
                         "%s is not a valid boolean for leg flag from_group" % \
                                                                     str(value)
@@ -906,10 +915,24 @@ class LegList(PhysicsObjectList):
         else:
             return False
 
-    def can_combine_to_0(self, ref_dict_to0):
+    def can_combine_to_0(self, ref_dict_to0, is_decay_chain=False):
         """If has at least two 'from_group' True and in ref_dict_to0,
-           return the vertex (with id from ref_dict_to0), otherwise return None
-           """
+        
+        return the vertex (with id from ref_dict_to0), otherwise return None
+
+        If is_decay_chain = True, we only allow clustering of the
+        initial leg, since we want this to be the last wavefunction to
+        be evaluated.
+        """
+        if is_decay_chain:
+            # Special treatment - here we only allow combination to 0
+            # if the initial leg (marked by from_group = None) is
+            # unclustered, since we want this to stay until the very
+            # end.
+            return any(leg.get('from_group') == None for leg in self) and \
+                   ref_dict_to0.has_key(tuple(sorted([leg.get('id') \
+                                                      for leg in self])))
+
         if self.minimum_two_from_group():
             return ref_dict_to0.has_key(tuple(sorted([leg.get('id') for leg in self])))
         else:
@@ -1146,11 +1169,11 @@ class DiagramList(PhysicsObjectList):
 
         return isinstance(obj, Diagram)
 
-    def nice_string(self):
+    def nice_string(self, indent=0):
         """Returns a nicely formatted string"""
-        mystr = str(len(self)) + ' diagrams:\n'
+        mystr = " " * indent + str(len(self)) + ' diagrams:\n'
         for diag in self:
-            mystr = mystr + "  " + diag.nice_string() + '\n'
+            mystr = mystr + " " * indent + "  " + diag.nice_string() + '\n'
         return mystr[:-1]
 
 
@@ -1175,6 +1198,9 @@ class Process(PhysicsObject):
         self['required_s_channels'] = []
         self['forbidden_s_channels'] = []
         self['forbidden_particles'] = []
+        self['is_decay_chain'] = False
+        # Decay chain processes associated with this process
+        self['decay_chains'] = ProcessList()
 
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -1220,20 +1246,38 @@ class Process(PhysicsObject):
                     raise self.PhysicsObjectError, \
                       "Forbidden particles should have a positive PDG code" % str(value)
 
+        if name == 'is_decay_chain':
+            if not isinstance(value, bool):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid bool" % str(value)
+
+        if name == 'decay_chains':
+            if not isinstance(value, ProcessList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid ProcessList" % str(value)
+
         return True
+
+    def set(self, name, value):
+        """Special set for forbidden particles - set to abs value."""
+
+        if name == 'forbidden_particles':
+            value = [abs(i) for i in value]
+
+        return super(Process, self).set(name, value) # call the mother routine
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
         return ['legs', 'orders', 'model', 'id',
                 'required_s_channels', 'forbidden_s_channels',
-                'forbidden_particles']
+                'forbidden_particles', 'is_decay_chain', 'decay_chains']
 
-    def nice_string(self):
+    def nice_string(self, indent=0):
         """Returns a nicely formated string about current process
         content"""
 
-        mystr = "Process: "
+        mystr = " " * indent + "Process: "
         prevleg = None
         for leg in self['legs']:
             mypart = self['model'].get('particle_dict')[leg['id']]
@@ -1267,12 +1311,22 @@ class Process(PhysicsObject):
                 mystr = mystr + forbpart.get_name() + ' '
 
         if self['orders']:
-            mystr = mystr[:-1] + "\n"
+            mystr = mystr[:-1] + "\n" + " " * indent
             mystr = mystr + 'Orders: '
             mystr = mystr + ", ".join([key + '=' + repr(self['orders'][key]) \
                        for key in self['orders']]) + ' '
+
         # Remove last space
-        return mystr[:-1]
+        mystr = mystr[:-1]
+
+        if not self.get('decay_chains'):
+            return mystr
+
+        for decay in self['decay_chains']:
+            mystr = mystr + '\n' + \
+                    decay.nice_string(indent + 2).replace('Process', 'Decay')
+
+        return mystr
 
     def base_string(self):
         """Returns a string containing only the basic process."""
@@ -1328,6 +1382,9 @@ class Process(PhysicsObject):
         # Just to be safe, remove all spaces
         mystr = mystr.replace(' ', '')
 
+        for decay in self.get('decay_chains'):
+            mystr = mystr + decay.shell_string().replace("%d_" % decay.get('id'),
+                                                        "_", 1)
         return mystr
 
     def shell_string_v4(self):
@@ -1353,7 +1410,26 @@ class Process(PhysicsObject):
         # Just to be safe, remove all spaces
         mystr = mystr.replace(' ', '')
 
+        for decay in self.get('decay_chains'):
+            mystr = mystr + decay.shell_string_v4().replace("%d_" % decay.get('id'),
+                                                        "_", 1)
+
         return mystr
+
+    # Helper functions
+
+    def get_ninitial(self):
+        """Gives number of initial state particles"""
+
+        return len(filter(lambda leg: leg.get('state') == 'initial',
+                           self.get('legs')))
+
+    def get_initial_ids(self):
+        """Gives the pdg codes for initial state particles"""
+
+        return [leg.get('id') for leg in \
+                filter(lambda leg: leg.get('state') == 'initial',
+                       self.get('legs'))]
 
     def get_initial_pdg(self, number):
         """Return the pdg codes for initial state particles for beam number"""
@@ -1361,6 +1437,12 @@ class Process(PhysicsObject):
         return filter(lambda leg: leg.get('state') == 'initial' and\
                        leg.get('number') == number,
                        self.get('legs'))[0].get('id')
+
+    def get_final_legs(self):
+        """Gives the pdg codes for initial state particles"""
+
+        return filter(lambda leg: leg.get('state') == 'final',
+                       self.get('legs'))
 
 #===============================================================================
 # ProcessList
@@ -1377,7 +1459,7 @@ class ProcessList(PhysicsObjectList):
 #===============================================================================
 # ProcessDefinition
 #===============================================================================
-class ProcessDefinition(PhysicsObject):
+class ProcessDefinition(Process):
     """ProcessDefinition: list of multilegs (ordered)
                           dictionary of orders
                           model
@@ -1387,13 +1469,11 @@ class ProcessDefinition(PhysicsObject):
     def default_setup(self):
         """Default values for all properties"""
 
+        super(ProcessDefinition, self).default_setup()
+
         self['legs'] = MultiLegList()
-        self['orders'] = {}
-        self['model'] = Model()
-        self['id'] = 0
-        self['required_s_channels'] = []
-        self['forbidden_s_channels'] = []
-        self['forbidden_particles'] = []
+        # Decay chain processes associated with this process
+        self['decay_chains'] = ProcessDefinitionList()
 
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -1402,51 +1482,20 @@ class ProcessDefinition(PhysicsObject):
             if not isinstance(value, MultiLegList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid MultiLegList object" % str(value)
-        if name == 'orders':
-            Interaction.filter(Interaction(), 'orders', value)
+        elif name == 'decay_chains':
+            if not isinstance(value, ProcessDefinitionList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid ProcessDefinitionList" % str(value)
 
-        if name == 'model':
-            if not isinstance(value, Model):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid Model object" % str(value)
-        if name is 'id':
-            if not isinstance(value, int):
-                raise self.PhysicsObjectError, \
-                    "Process id %s is not an integer" % repr(value)
-
-        if name in ['required_s_channels',
-                    'forbidden_s_channels']:
-            if not isinstance(value, list):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid list" % str(value)
-            for i in value:
-                if not isinstance(i, int):
-                    raise self.PhysicsObjectError, \
-                          "%s is not a valid list of integers" % str(value)
-                if i == 0:
-                    raise self.PhysicsObjectError, \
-                      "Not valid PDG code %d for s-channel particle" % str(value)
-
-        if name == 'forbidden_particles':
-            if not isinstance(value, list):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid list" % str(value)
-            for i in value:
-                if not isinstance(i, int):
-                    raise self.PhysicsObjectError, \
-                          "%s is not a valid list of integers" % str(value)
-                if i <= 0:
-                    raise self.PhysicsObjectError, \
-                      "Forbidden particles should have a positive PDG code" % str(value)
+        else:
+            return super(ProcessDefinition, self).filter(name, value)
 
         return True
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return ['legs', 'orders', 'model', 'id',
-                'required_s_channels', 'forbidden_s_channels',
-                'forbidden_particles']
+        return super(ProcessDefinition, self).get_sorted_keys()
 
 #===============================================================================
 # ProcessDefinitionList

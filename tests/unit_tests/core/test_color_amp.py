@@ -211,7 +211,7 @@ class ColorAmpTest(unittest.TestCase):
         col_dict = my_col_basis.colorize(myamplitude['diagrams'][0],
                                      self.mymodel)
 
-        goal_dict = {(0, 0):color.ColorString([color.T(-1000, 1, 2),
+        goal_dict = {(0, 0):color.ColorString([color.T(-1000, 2, 1),
                                                color.f(3, 4, -1000)])}
 
         self.assertEqual(col_dict, goal_dict)
@@ -220,8 +220,8 @@ class ColorAmpTest(unittest.TestCase):
         col_dict = my_col_basis.colorize(myamplitude['diagrams'][1],
                                      self.mymodel)
 
-        goal_dict = {(0, 0):color.ColorString([color.T(3, 1, -1000),
-                                               color.T(4, -1000, 2)])}
+        goal_dict = {(0, 0):color.ColorString([color.T(3, -1000, 1),
+                                               color.T(4, 2, -1000)])}
 
         self.assertEqual(col_dict, goal_dict)
 
@@ -229,8 +229,8 @@ class ColorAmpTest(unittest.TestCase):
         col_dict = my_col_basis.colorize(myamplitude['diagrams'][2],
                                      self.mymodel)
 
-        goal_dict = {(0, 0):color.ColorString([color.T(4, 1, -1000),
-                                               color.T(3, -1000, 2)])}
+        goal_dict = {(0, 0):color.ColorString([color.T(4, -1000, 1),
+                                               color.T(3, 2, -1000)])}
 
         self.assertEqual(col_dict, goal_dict)
 
@@ -239,9 +239,9 @@ class ColorAmpTest(unittest.TestCase):
 
         myleglist = base_objects.LegList()
 
-        myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':'initial'}))
         myleglist.append(base_objects.Leg({'id':2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':-2,
                                          'state':'initial'}))
 
         myleglist.extend([base_objects.Leg({'id':21,
@@ -525,14 +525,14 @@ class ColorSquareTest(unittest.TestCase):
         for n in range(2):
             myleglist = base_objects.LegList()
 
-            myleglist.append(base_objects.Leg({'id':2,
-                                             'state':'initial'}))
             myleglist.append(base_objects.Leg({'id':-2,
                                              'state':'initial'}))
+            myleglist.append(base_objects.Leg({'id':2,
+                                             'state':'initial'}))
 
-            myleglist.extend([base_objects.Leg({'id':2,
+            myleglist.extend([base_objects.Leg({'id':-2,
                                                 'state':'final'}),
-                             base_objects.Leg({'id':-2,
+                             base_objects.Leg({'id':2,
                                                 'state':'final'})] * (n + 1))
 
             myprocess = base_objects.Process({'legs':myleglist,

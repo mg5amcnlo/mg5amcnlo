@@ -74,7 +74,7 @@ def read_particles_v4(fsock):
                         mypart.set('spin',
                                    spin_equiv[values[2].lower()])
                     else:
-                        raise ValueError, "Unvalid spin %s" % \
+                        raise ValueError, "Invalid spin %s" % \
                                 values[2]
 
                     if values[3].lower() in line_equiv.keys():
@@ -82,7 +82,7 @@ def read_particles_v4(fsock):
                                    line_equiv[values[3].lower()])
                     else:
                         raise ValueError, \
-                                "Unvalid line type %s" % values[3]
+                                "Invalid line type %s" % values[3]
 
                     mypart.set("mass", values[4])
                     mypart.set("width", values[5])
@@ -92,7 +92,7 @@ def read_particles_v4(fsock):
                                    color_equiv[values[6].lower()])
                     else:
                         raise ValueError, \
-                            "Unvalid color rep %s" % values[6]
+                            "Invalid color rep %s" % values[6]
 
                     mypart.set("texname", values[7])
                     mypart.set("pdg_code", int(values[8]))
@@ -154,7 +154,7 @@ def read_interactions_v4(fsock, ref_part_list):
                 spin_array = [part['spin'] for part in part_list]
                 if spin_array in [[2, 2, 1], # FFS
                                   [2, 2, 3]]:  # FFV
-                    part_list[0]['is_part'] = False
+                    part_list[0]['is_part'] = not part_list[0]['is_part']
 
                 myinter.set('particles', part_list)
 
@@ -174,21 +174,17 @@ def read_interactions_v4(fsock, ref_part_list):
                 elif colors == [-3, 3]:
                     # triplet-triplet-singlet coupling
                     myinter.set('color', [color.ColorString(\
-                        [color.T(part_list.index(color_parts[1]),
-                                 part_list.index(color_parts[0]))])])
+                        [color.T(1, 0)])])
                 elif colors == [8, 8]:
                     # octet-octet-singlet coupling
                     my_cs = color.ColorString(\
-                        [color.Tr(part_list.index(color_parts[0]),
-                                 part_list.index(color_parts[1]))])
+                        [color.Tr(0, 1)])
                     my_cs.coeff = fractions.Fraction(2)
                     myinter.set('color', [my_cs])
                 elif colors == [-3, 3, 8]:
                     # triplet-triplet-octet coupling
                     myinter.set('color', [color.ColorString(\
-                        [color.T(part_list.index(color_parts[2]),
-                                 part_list.index(color_parts[1]),
-                                 part_list.index(color_parts[0]))])])
+                        [color.T(2, 1, 0)])])
                 elif colors == [8, 8, 8]:
                     # Triple glue coupling
                     my_color_string = color.ColorString(\
@@ -197,12 +193,8 @@ def read_interactions_v4(fsock, ref_part_list):
                     myinter.set('color', [my_color_string])
                 elif colors == [-3, 3, 8, 8]:
                     my_cs = color.ColorString(\
-                        [color.f(part_list.index(color_parts[2]),
-                                 part_list.index(color_parts[3]),
-                                 - 1),
-                         color.T(-1,
-                                 part_list.index(color_parts[1]),
-                                 part_list.index(color_parts[0]))])
+                        [color.f(2, 3, -1),
+                         color.T(-1, 1, 0)])
                     my_cs.is_imaginary = True
                     myinter.set('color', [my_cs])
                 elif colors == [8, 8, 8, 8]:
@@ -242,6 +234,10 @@ def read_interactions_v4(fsock, ref_part_list):
                 # gggg
                 if pdg_codes == [21, 21, 21, 21]:
                     myinter.set('lorentz', ['gggg1', 'gggg2', 'gggg3'])
+
+                # go-go-g
+                if spin_array == [2, 2, 3] and colors == [8, 8, 8]:
+                    myinter.set('lorentz', ['go'])
 
                 # If extra flag, add this to Lorentz    
                 if len(values) > 3 * len(part_list) - 4:

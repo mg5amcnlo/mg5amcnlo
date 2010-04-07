@@ -1130,7 +1130,9 @@ class ProcessTest(unittest.TestCase):
                        'id': 1,
                        'required_s_channels':[],
                        'forbidden_s_channels':[],
-                       'forbidden_particles':[]}
+                       'forbidden_particles':[],
+                       'is_decay_chain': False,
+                       'decay_chains': base_objects.ProcessList()}
 
         self.myprocess = base_objects.Process(self.mydict)
 
@@ -1205,7 +1207,9 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'id\': 1,\n"
         goal = goal + "    \'required_s_channels\': [],\n"
         goal = goal + "    \'forbidden_s_channels\': [],\n"
-        goal = goal + "    \'forbidden_particles\': []\n}"
+        goal = goal + "    \'forbidden_particles\': [],\n"
+        goal = goal + "    \'is_decay_chain\': False,\n"
+        goal = goal + "    \'decay_chains\': []\n}"
 
         self.assertEqual(goal, str(self.myprocess))
 
@@ -1259,7 +1263,9 @@ class ProcessDefinitionTest(unittest.TestCase):
                        'id':3,
                        'required_s_channels':[],
                        'forbidden_s_channels':[],
-                       'forbidden_particles':[]}
+                       'forbidden_particles':[],
+                       'is_decay_chain': False,
+                       'decay_chains': base_objects.ProcessList()}
 
         self.my_process_definition = base_objects.ProcessDefinition(self.mydict)
 
@@ -1334,6 +1340,8 @@ class ProcessDefinitionTest(unittest.TestCase):
         goal = goal + "    \'id\': %s,\n" % repr(self.my_process_definition['id'])
         goal = goal + "    \'required_s_channels\': [],\n"
         goal = goal + "    \'forbidden_s_channels\': [],\n"
-        goal = goal + "    \'forbidden_particles\': []\n}"
+        goal = goal + "    \'forbidden_particles\': [],\n"
+        goal = goal + "    \'is_decay_chain\': False,\n"
+        goal = goal + "    \'decay_chains\': []\n}"
         self.assertEqual(goal, str(self.my_process_definition))
 

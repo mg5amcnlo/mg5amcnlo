@@ -95,16 +95,14 @@ class ColorBasis(dict):
         If the id0_rep list is not None, perform the requested replacement on the
         last leg number before going further."""
 
-        # Create a list of pdg codes entering the vertex ordered as in
-        # interactions.py
-        list_pdg = [part.get_pdg_code() for part in \
-               model.get_interaction(vertex.get('id')).get('particles')]
-        # Create a dictionary pdg code --> leg(s)
-        dict_pdg_leg = {}
+        # Create a list of (color,leg number) pairs for the vertex, where color
+        # can be negative for anti particles
+
+        color_num_pairs = []
 
         for index, leg in enumerate(vertex.get('legs')):
             curr_num = leg.get('number')
-            curr_pdg = leg.get('id')
+            curr_color = model.get('particle_dict')[leg.get('id')].get_color()
 
             # If this is the next-to-last vertex and the last vertex is
             # the special identity id=0, start by applying the replacement rule
@@ -114,12 +112,12 @@ class ColorBasis(dict):
                     curr_num = id0_rep[id0_rep.index(curr_num) - 1]
 
             # If this is the last leg and not the last vertex 
-            # flip part/antipart. If it is not the last, AND not the next-to-last
+            # flip color. If it is not the last, AND not the next-to-last
             # before an id=0 vertex, replace last index by a new summed index.
             if index == len(vertex.get('legs')) - 1 and \
                 vertex != diagram.get('vertices')[-1]:
-                curr_pdg = \
-                    model.get('particle_dict')[curr_pdg].get_anti_pdg_code()
+                curr_color = \
+                    model.get('particle_dict')[leg.get('id')].get_anti_color()
                 if not id0_rep:
                     repl_dict[curr_num] = min_index
                     min_index = min_index - 1
@@ -130,21 +128,23 @@ class ColorBasis(dict):
             except KeyError:
                 pass
 
-            try:
-                dict_pdg_leg[curr_pdg].append(curr_num)
-            except KeyError:
-                dict_pdg_leg[curr_pdg] = [curr_num]
+            # Discard color singlets
+            if curr_color != 1:
+                color_num_pairs.append((curr_color, curr_num))
+
+        # Order the color/number pairs according to increasing color (assumed
+        # to be the ordering chose in interactions.py). For identical colors,
+        # keep the normal leg ordering.
+        color_num_pairs = sorted(color_num_pairs, lambda p1, p2:p1[0] - p2[0])
 
         # Create a list of associated leg number following the same order
-        list_numbers = []
-        for pdg_code in list_pdg:
-            list_numbers.append(dict_pdg_leg[pdg_code].pop(0))
+        list_numbers = [p[1] for p in color_num_pairs]
+
         # ... and the associated dictionary for replacement
         match_dict = dict(enumerate(list_numbers))
 
         # Update the result dict using the current vertex ColorString object
         # If more than one, create different entries
-
         inter_color = model.get_interaction(vertex['id'])['color']
 
         # For colorless vertices, return a copy of res_dict
