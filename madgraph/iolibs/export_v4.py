@@ -502,7 +502,7 @@ C ----------
     return len(filter(lambda call: call.find('#') != 0, helas_calls))
 
 #===============================================================================
-# write_matrix_element_v4_madevent
+# write_auto_dsig_file
 #===============================================================================
 def write_auto_dsig_file(fsock, matrix_element, fortran_model):
     """Write the auto_dsig.f file for the differential cross section
@@ -625,7 +625,6 @@ C ----------
     for line in file.split('\n'):
         writer.write_fortran_line(fsock, line)
 
-
 #===============================================================================
 # write_nexternal_file
 #===============================================================================
@@ -692,6 +691,23 @@ def write_ngraphs_file(fsock, matrix_element, fortran_model):
 """   integer    n_max_cg
       parameter (n_max_cg=%d)""" % ngraphs
 
+
+    # Write the file
+    for line in file.split('\n'):
+        writer.write_fortran_line(fsock, line)
+
+    return True
+
+#===============================================================================
+# write_configs_file
+#===============================================================================
+def write_configs_file(fsock, matrix_element, fortran_model):
+    """Write the configs.inc file for MadEvent"""
+
+    writer = FortranWriter()
+
+    lines = []
+    i = 0
 
     # Write the file
     for line in file.split('\n'):
@@ -820,6 +836,12 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     filename = 'ngraphs.inc'
     files.write_to_file(filename,
                         write_ngraphs_file,
+                        matrix_element,
+                        fortran_model)
+
+    filename = 'configs.inc'
+    files.write_to_file(filename,
+                        write_configs_file,
                         matrix_element,
                         fortran_model)
 
