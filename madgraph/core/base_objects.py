@@ -1274,6 +1274,23 @@ class Process(PhysicsObject):
         # Remove last space
         return mystr[:-1]
 
+    def base_string(self):
+        """Returns a string containing only the basic process."""
+
+        mystr = ""
+        prevleg = None
+        for leg in self['legs']:
+            mypart = self['model'].get('particle_dict')[leg['id']]
+            if prevleg and prevleg['state'] == 'initial' \
+                   and leg['state'] == 'final':
+                # Separate initial and final legs by ">"
+                mystr = mystr + '> '
+            mystr = mystr + mypart.get_name() + ' '
+            prevleg = leg
+
+        # Remove last space
+        return mystr[:-1]
+
     def shell_string(self):
         """Returns process as string with '~' -> 'x' and '>' -> '_',
         including process number, intermediate s-channels and forbidden
@@ -1337,6 +1354,13 @@ class Process(PhysicsObject):
         mystr = mystr.replace(' ', '')
 
         return mystr
+
+    def get_initial_pdg(self, number):
+        """Return the pdg codes for initial state particles for beam number"""
+
+        return filter(lambda leg: leg.get('state') == 'initial' and\
+                       leg.get('number') == number,
+                       self.get('legs'))[0].get('id')
 
 #===============================================================================
 # ProcessList

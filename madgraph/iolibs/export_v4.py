@@ -190,7 +190,7 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      include "coupl.inc"
+      include 'coupl.inc'
 C  
 C COLOR DATA
 C  
@@ -300,7 +300,7 @@ C
 C  
 C CONSTANTS
 C  
-    Include "genps.inc"
+    Include 'genps.inc'
     INTEGER                 NCOMB,     NCROSS         
     PARAMETER (             NCOMB=%(ncomb)d, NCROSS=  1)
     INTEGER    THEL
@@ -445,7 +445,7 @@ C CONSTANTS
 C  
     INTEGER    NGRAPHS,    NEIGEN 
     PARAMETER (NGRAPHS=%(ngraphs)d,NEIGEN=  1) 
-    include "genps.inc"
+    include 'genps.inc'
     INTEGER    NWAVEFUNCS     , NCOLOR
     PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
     REAL*8     ZERO
@@ -468,7 +468,7 @@ C GLOBAL VARIABLES
 C  
     Double Precision amp2(maxamps), jamp2(0:maxamps)
     common/to_amps/  amp2,       jamp2
-    include "coupl.inc"
+    include 'coupl.inc'
 C  
 C COLOR DATA
 C  
@@ -492,7 +492,7 @@ C ----------
     Do I = 1, NCOLOR
         Jamp2(i)=Jamp2(i)+Jamp(i)*dconjg(Jamp(i))
     Enddo
-C      CALL GAUGECHECK(JAMP,ZTEMP,EIGEN_VEC,EIGEN_VAL,NCOLOR,NEIGEN) 
+
     END""" % replace_dict
 
     # Write the file
@@ -500,6 +500,131 @@ C      CALL GAUGECHECK(JAMP,ZTEMP,EIGEN_VEC,EIGEN_VAL,NCOLOR,NEIGEN)
         writer.write_fortran_line(fsock, line)
 
     return len(filter(lambda call: call.find('#') != 0, helas_calls))
+
+#===============================================================================
+# write_matrix_element_v4_madevent
+#===============================================================================
+def write_auto_dsig_file(fsock, matrix_element, fortran_model):
+    """Write the auto_dsig.f file for the differential cross section
+    calculation, includes pdf call information"""
+
+    if not matrix_element.get('processes') or \
+           not matrix_element.get('diagrams'):
+        return 0
+
+    nexternal, ninitial = matrix_element.get_nexternal_ninitial()
+
+    if ninitial < 1 or ninitial > 2:
+        raise FortranWriter.FortranWriterError, \
+              """Need ninitial = 1 or 2 to write auto_dsig file"""
+
+    writer = FortranWriter()
+
+    replace_dict = {}
+
+    # Extract version number and date from VERSION file
+    info_lines = get_mg5_info_lines()
+    replace_dict['info_lines'] = info_lines
+
+    # Extract process info lines
+    process_lines = get_process_info_lines(matrix_element)
+    replace_dict['process_lines'] = process_lines
+
+    pdf_lines = get_pdf_lines(matrix_element, ninitial)
+    replace_dict['pdf_lines'] = pdf_lines
+
+    if ninitial == 1:
+        # No conversion, since result of decay should be given in GeV
+        dsig_line = "pd(IPROC)*dsiguu"
+    else:
+        # Convert result (in GeV) to pb
+        dsig_line = "pd(IPROC)*conv*dsiguu"
+
+    replace_dict['dsig_line'] = dsig_line
+
+    file = \
+"""      DOUBLE PRECISION FUNCTION DSIG(PP,WGT)
+C ****************************************************
+C
+%(info_lines)s
+C
+%(process_lines)s
+C
+C     RETURNS DIFFERENTIAL CROSS SECTION
+C     Input:
+C             pp    4 momentum of external particles
+C             wgt   weight from Monte Carlo
+C     Output:
+C             Amplitude squared and summed
+C ****************************************************
+      IMPLICIT NONE
+C  
+C CONSTANTS
+C  
+      include 'genps.inc'
+      DOUBLE PRECISION       CONV
+      PARAMETER (CONV=389379.66*1000)  !CONV TO PICOBARNS
+      REAL*8     PI
+      PARAMETER (PI=3.1415926d0)
+C  
+C ARGUMENTS 
+C  
+      DOUBLE PRECISION PP(0:3,NEXTERNAL), WGT
+C  
+C LOCAL VARIABLES 
+C  
+      INTEGER I, ICROSS,ITYPE,LP
+      DOUBLE PRECISION P1(0:3,NEXTERNAL)
+      DOUBLE PRECISION u1,ub1,d1,db1,c1,cb1,s1,sb1,b1,bb1
+      DOUBLE PRECISION u2,ub2,d2,db2,c2,cb2,s2,sb2,b2,bb2
+      DOUBLE PRECISION g1,g2
+      DOUBLE PRECISION a1,a2
+      DOUBLE PRECISION XPQ(-7:7)
+      DOUBLE PRECISION DSIGUU
+C  
+C EXTERNAL FUNCTIONS
+C  
+      LOGICAL PASSCUTS
+      DOUBLE PRECISION ALPHAS2,REWGT,PDG2PDF
+C  
+C GLOBAL VARIABLES
+C  
+      INTEGER              IPROC
+      DOUBLE PRECISION PD(0:MAXPROC)
+      COMMON /SubProc/ PD, IPROC
+      include 'coupl.inc'
+      include 'run.inc'
+C  
+C DATA
+C  
+      DATA u1,ub1,d1,db1,c1,cb1,s1,sb1,b1,bb1/10*1d0/
+      DATA u2,ub2,d2,db2,c2,cb2,s2,sb2,b2,bb2/10*1d0/
+      DATA a1,g1/2*1d0/
+      DATA a2,g2/2*1d0/
+      DATA IPROC,ICROSS/1,1/
+C ----------
+C BEGIN CODE
+C ----------
+      DSIG=0D0
+      IF (PASSCUTS(PP)) THEN
+%(pdf_lines)s
+         CALL SMATRIX(PP,DSIGUU)                                              
+         dsiguu=dsiguu*rewgt(PP)
+         If (dsiguu.lt.1d199) then
+         dsig=%(dsig_line)s
+         else
+             write(*,*) "Error in matrix element"
+             dsiguu=0d0
+             dsig=0d0
+         endif
+         call unwgt(pp,%(dsig_line)s*wgt)
+      ENDIF
+      END""" % replace_dict
+
+    # Write the file
+    for line in file.split('\n'):
+        writer.write_fortran_line(fsock, line)
+
 
 #===============================================================================
 # write_nexternal_file
@@ -667,12 +792,18 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 
     logger.info('Creating files in directory %s' % dirpath)
 
-    # Create the matrix.f file and the nexternal.inc file
+    # Create the matrix.f file, auto_dsig.f file and all inc files
     filename = 'matrix.f'
     calls = files.write_to_file(filename,
                                 write_matrix_element_v4_madevent,
                                 matrix_element,
                                 fortran_model)
+
+    filename = 'auto_dsig.f'
+    files.write_to_file(filename,
+                                write_auto_dsig_file,
+                                matrix_element,
+                                fortran_model)    
 
     filename = 'nexternal.inc'
     files.write_to_file(filename,
@@ -881,6 +1012,73 @@ def get_JAMP_lines(matrix_element):
 
         return res_list
 
+def get_pdf_lines(matrix_element, ninitial):
+    """Generate the PDF lines for the auto_dsig.f file"""
+
+    processes = matrix_element.get('processes')
+
+    pdf_lines = ""
+
+    if ninitial == 1:
+        pdf_lines = "PD(0) = 0d0\nIPROC = 0\n"
+        for i, proc in enumerate(processes):
+            process_line = proc.base_string()
+            pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
+            pdf_lines = pdf_lines + "\nPD(IPROC)=PD(IPROC-1) + 1d0\n"
+    else:
+        # Set notation for the variables used for different particles
+        pdf_codes = {1: 'd', 2: 'u', 3: 's', 4: 'c', 5: 'b',
+                     21: 'g', 22: 'a'}
+        # Set conversion from PDG code to number used in PDF calls
+        pdgtopdf = {21: 0, 22: 7}
+        # Fill in missing entries
+        for key in pdf_codes.keys():
+            if key < 21:
+                pdf_codes[-key] = pdf_codes[key] + 'b'
+                pdgtopdf[key] = key
+                pdgtopdf[-key] = -key
+
+        # Pick out all initial state particles for the two beams
+        initial_states = [sorted(list(set([p.get_initial_pdg(1) for \
+                                           p in processes]))),
+                          sorted(list(set([p.get_initial_pdg(2) for \
+                                           p in processes])))]
+
+        # Get PDF values for the different initial states
+        for i, init_states in enumerate(initial_states):
+            pdf_lines = pdf_lines + \
+                   "IF (ABS(LPP(%d)) .GE. 1) THEN\nLP=SIGN(1,LPP(%d))\n" \
+                         % (i+1, i+1)
+
+            for initial_state in init_states:
+                if initial_state in pdf_codes.keys():
+                    pdf_lines = pdf_lines + \
+                                ("%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP," + \
+                                 "XBK(%d),DSQRT(Q2FACT(%d)))\n") % \
+                                 (pdf_codes[initial_state],
+                                  i+1, i+1, pdgtopdf[initial_state],
+                                  i+1, i+1)
+            pdf_lines = pdf_lines + "ENDIF\n"
+
+        # Add up PDFs for the different initial state particles
+        pdf_lines = pdf_lines + "PD(0) = 0d0\nIPROC = 0\n"
+        for proc in processes:
+            process_line = proc.base_string()
+            pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
+            pdf_lines = pdf_lines + "\nPD(IPROC)=PD(IPROC-1) + "
+            for ibeam in [1,2]:
+                initial_state = proc.get_initial_pdg(ibeam)
+                if initial_state in pdf_codes.keys():
+                    pdf_lines = pdf_lines + "%s%d*" % \
+                                (pdf_codes[initial_state], ibeam)
+                else:
+                    pdf_lines = pdf_lines + "1d0*"
+            # Remove last "*" from pdf_lines
+            pdf_lines = pdf_lines[:-1] + "\n"
+
+    # Remove last line break from pdf_lines
+    return pdf_lines[:-1]
+
 #===============================================================================
 # FortranWriter
 #===============================================================================
@@ -947,6 +1145,9 @@ class FortranWriter():
             # Convert to upper or lower case
             # Here we need to make exception for anything within quotes.
             (myline, part, post_comment) = myline.partition("!")
+            # Set space between line and post-comment
+            if part:
+                part = "  " + part
             # Replace all double quotes by single quotes
             myline = myline.replace('\"', '\'')
             # Downcase or upcase Fortran code, except for quotes
