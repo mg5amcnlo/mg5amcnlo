@@ -375,25 +375,13 @@ class HelasWavefunction(base_objects.PhysicsObject):
                           mother in self['mothers']])
         return array_rep
 
-    def get_pdg_code_outgoing(self):
+    def get_pdg_code(self):
         """Generate the corresponding pdg_code for an outgoing particle,
         taking into account fermion flow, for mother wavefunctions"""
 
-        if self.get('self_antipart'):
-            #This is its own antiparticle e.g. a gluon
-            return self.get('pdg_code')
+        return self.get('pdg_code')
 
-        if self.is_boson():
-            # This is a boson
-            return self.get('pdg_code')
-
-        if (self.get('state') == 'incoming' and self.get('is_part') \
-                or self.get('state') == 'outgoing' and not self.get('is_part')):
-            return - self.get('pdg_code')
-        else:
-            return self.get('pdg_code')
-
-    def get_pdg_code_incoming(self):
+    def get_anti_pdg_code(self):
         """Generate the corresponding pdg_code for an incoming particle,
         taking into account fermion flow, for mother wavefunctions"""
 
@@ -401,15 +389,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             #This is its own antiparticle e.g. gluon
             return self.get('pdg_code')
 
-        if self.is_boson():
-            # This is a boson
-            return - self.get('pdg_code')
-
-        if (self.get('state') == 'outgoing' and self.get('is_part') \
-                or self.get('state') == 'incoming' and not self.get('is_part')):
-            return - self.get('pdg_code')
-        else:
-            return self.get('pdg_code')
+        return -self.get('pdg_code')
 
     def set_scalar_coupling_sign(self, model):
         """Check if we need to add a minus sign due to non-identical
@@ -486,14 +466,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
             else:
                 self.set('state', mother.get_with_flow('state'))
                 self.set('is_part', mother.get_with_flow('is_part'))
-
-        # We want the particle created here to go into the next
-        # vertex, so we need to flip identity for incoming
-        # antiparticle and outgoing particle.
-        if not self.get('self_antipart') and \
-               (self.get('state') == 'incoming' and not self.get('is_part') \
-                or self.get('state') == 'outgoing' and self.get('is_part')):
-            self.set('pdg_code', -self.get('pdg_code'), model)
 
         return True
 
@@ -650,8 +622,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                            state != new_wf.get('state'),
                                            ['incoming', 'outgoing'])[0])
                 new_wf.set('is_part', not new_wf.get('is_part'))
-                if not new_wf.get('self_antipart'):
-                    new_wf.set('pdg_code', -new_wf.get('pdg_code'))
 
             try:
                 # Use the copy in wavefunctions instead.
@@ -800,12 +770,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
         legs = base_objects.LegList()
         for mother in self.get('mothers'):
             legs.append(base_objects.Leg({
-                'id': mother.get_pdg_code_outgoing(),
+                'id': mother.get_pdg_code(),
                 'number': mother.get('number_external'),
                 'state': mother.get('leg_state')
                 }))
         legs.append(base_objects.Leg({
-                'id': self.get_pdg_code_outgoing(),
+                'id': self.get_pdg_code(),
                 'number': self.get('number_external'),
                 'state': self.get('leg_state')
                 }))
@@ -1303,7 +1273,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         legs = base_objects.LegList()
         for mother in self.get('mothers'):
             legs.append(base_objects.Leg({
-                'id': mother.get_pdg_code_outgoing(),
+                'id': mother.get_pdg_code(),
                 'number': mother.get('number_external'),
                 'state': mother.get('leg_state')
                 }))
@@ -1599,14 +1569,21 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # Initially, have one wavefunction for each external leg.
         wf_number = len(process.get('legs'))
 
-        # For initial state bosons, need to flip PDG code (if has antipart)
+        # For initial state bosons, need to flip part-antipart
         # since all bosons should be treated as outgoing
         for key in external_wavefunctions.keys():
             wf = external_wavefunctions[key]
             if wf.is_boson() and wf.get('state') == 'initial' and \
                not wf.get('self_antipart'):
-                wf.set('pdg_code', -wf.get('pdg_code'))
                 wf.set('is_part', not wf.get('is_part'))
+
+        # For initial state particles, need to flip PDG code (if has
+        # antipart)
+        for key in external_wavefunctions.keys():
+            wf = external_wavefunctions[key]
+            if wf.get('leg_state') == 'initial' and \
+               not wf.get('self_antipart'):
+                wf.set('pdg_code', -wf.get('pdg_code'))
 
         # Now go through the diagrams, looking for undefined wavefunctions
 
@@ -2749,11 +2726,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         
         # Next sort according to interaction pdg codes
         
-        mother_codes = [ wf.get_pdg_code_outgoing() for wf \
+        mother_codes = [ wf.get_pdg_code() for wf \
                          in sorted_mothers1 ]
         pdg_codes = copy.copy(arg.get('pdg_codes'))
         if isinstance(arg, HelasWavefunction):
-            my_code = arg.get_pdg_code_incoming()
+            my_code = arg.get_anti_pdg_code()
             # We need to create the cyclic pdg_codes
             missing_index = pdg_codes.index(my_code)
             pdg_codes_cycl = pdg_codes[missing_index + 1:] + \
