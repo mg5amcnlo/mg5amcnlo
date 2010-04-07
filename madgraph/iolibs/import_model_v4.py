@@ -74,7 +74,7 @@ def read_particles_v4(fsock):
                         mypart.set('spin',
                                    spin_equiv[values[2].lower()])
                     else:
-                        raise ValueError, "Unvalid spin %s" % \
+                        raise ValueError, "Invalid spin %s" % \
                                 values[2]
 
                     if values[3].lower() in line_equiv.keys():
@@ -82,7 +82,7 @@ def read_particles_v4(fsock):
                                    line_equiv[values[3].lower()])
                     else:
                         raise ValueError, \
-                                "Unvalid line type %s" % values[3]
+                                "Invalid line type %s" % values[3]
 
                     mypart.set("mass", values[4])
                     mypart.set("width", values[5])
@@ -92,16 +92,10 @@ def read_particles_v4(fsock):
                                    color_equiv[values[6].lower()])
                     else:
                         raise ValueError, \
-                            "Unvalid color rep %s" % values[6]
+                            "Invalid color rep %s" % values[6]
 
                     mypart.set("texname", values[7])
                     mypart.set("pdg_code", int(values[8]))
-
-                    if mypart.get('pdg_code') < 0:
-                        mypart.set('pdg_code', -mypart.get('pdg_code'))
-                        tmp = mypart.get('name')
-                        mypart.set('name', mypart.get('antiname'))
-                        mypart.set('antiname', tmp)
 
                     mypart.set('charge', 0.)
                     mypart.set('antitexname', mypart.get('texname'))
@@ -160,7 +154,7 @@ def read_interactions_v4(fsock, ref_part_list):
                 spin_array = [part['spin'] for part in part_list]
                 if spin_array in [[2, 2, 1], # FFS
                                   [2, 2, 3]]:  # FFV
-                    part_list[0]['is_part'] = False
+                    part_list[0]['is_part'] = not part_list[0]['is_part']
 
                 myinter.set('particles', part_list)
 

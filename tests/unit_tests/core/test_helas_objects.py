@@ -2061,7 +2061,6 @@ class HelasMatrixElementTest(unittest.TestCase):
         for i, wf in enumerate(me.get_all_wavefunctions()):
             self.assertEqual(wf.get('number'), i + 1)        
 
-
 #===============================================================================
 # HelasDecayChainProcessTest
 #===============================================================================
