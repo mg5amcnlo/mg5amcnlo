@@ -197,8 +197,7 @@ def read_interactions_v4(fsock, ref_part_list):
                     my_cs2 = color.ColorString(\
                         [color.T(3, 2, 1, 0)])
                     myinter.set('color', [my_cs1, my_cs2])
-                    myinter.set('couplings', {(0, 0):values[len(part_list)],
-                                              (1, 0):values[len(part_list)]})
+
                 elif colors == [8, 8, 8, 8]:
                     # 4-glue / glue-glue-gluino-gluino coupling
                     cs1 = color.ColorString([color.f(0, 1, -1),
@@ -240,6 +239,7 @@ def read_interactions_v4(fsock, ref_part_list):
                 # go-go-g
                 if spin_array == [2, 2, 3] and colors == [8, 8, 8]:
                     myinter.set('lorentz', ['go'])
+
 
                 # If extra flag, add this to Lorentz    
                 if len(values) > 3 * len(part_list) - 4:
@@ -284,6 +284,12 @@ def read_interactions_v4(fsock, ref_part_list):
                                               values[len(part_list) + 1]})
                     #raise Interaction.PhysicsObjectError, \
                     #    "Only FR-style 4-vertices implemented."
+
+                # SPECIAL TREATMENT OF COLOR
+                # g g sq sq (two different color structures, same Lorentz)
+                if spin_array == [3, 3, 1, 1] and colors == [-3, 3, 8, 8]:
+                    myinter.set('couplings', {(0, 0):values[len(part_list)],
+                                              (1, 0):values[len(part_list)]})
 
                 # Coupling orders - needs to be fixed
                 order_list = values[2 * len(part_list) - 2: \
