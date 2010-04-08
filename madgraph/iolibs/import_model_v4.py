@@ -192,11 +192,13 @@ def read_interactions_v4(fsock, ref_part_list):
                     my_color_string.is_imaginary = True
                     myinter.set('color', [my_color_string])
                 elif colors == [-3, 3, 8, 8]:
-                    my_cs = color.ColorString(\
-                        [color.f(2, 3, -1),
-                         color.T(-1, 1, 0)])
-                    my_cs.is_imaginary = True
-                    myinter.set('color', [my_cs])
+                    my_cs1 = color.ColorString(\
+                        [color.T(2, 3, 1, 0)])
+                    my_cs2 = color.ColorString(\
+                        [color.T(3, 2, 1, 0)])
+                    myinter.set('color', [my_cs1, my_cs2])
+                    myinter.set('couplings', {(0, 0):values[len(part_list)],
+                                              (1, 0):values[len(part_list)]})
                 elif colors == [8, 8, 8, 8]:
                     # 4-glue / glue-glue-gluino-gluino coupling
                     cs1 = color.ColorString([color.f(0, 1, -1),

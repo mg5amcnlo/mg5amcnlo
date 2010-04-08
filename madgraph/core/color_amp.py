@@ -47,7 +47,7 @@ class ColorBasis(dict):
         """Takes a diagram and a model and outputs a dictionary with keys being
         color coefficient index tuples and values a color string (before 
         simplification)."""
-
+        print diagram.nice_string()
         # The smallest value used to create new summed indices
         min_index = -1000
         # The dictionary to be output
@@ -76,6 +76,7 @@ class ColorBasis(dict):
                         for cs in res_dict.values()]):
                     res_dict = {}
                 # Return since this must be the last vertex
+                print res_dict
                 return res_dict
 
         # NORMAL VERTICES WITH ID != 0 -----------------------------------------
@@ -86,6 +87,7 @@ class ColorBasis(dict):
         if all([cs == color_algebra.ColorString() \
                         for cs in res_dict.values()]):
             res_dict = {}
+        print res_dict
         return res_dict
 
     def add_vertex(self, vertex, diagram, model,
