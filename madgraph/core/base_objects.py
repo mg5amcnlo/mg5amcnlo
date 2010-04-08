@@ -1172,8 +1172,9 @@ class DiagramList(PhysicsObjectList):
     def nice_string(self, indent=0):
         """Returns a nicely formatted string"""
         mystr = " " * indent + str(len(self)) + ' diagrams:\n'
-        for diag in self:
-            mystr = mystr + " " * indent + "  " + diag.nice_string() + '\n'
+        for i, diag in enumerate(self):
+            mystr = mystr + " " * indent + str(i+1) + "  " + \
+                    diag.nice_string() + '\n'
         return mystr[:-1]
 
 
@@ -1393,7 +1394,7 @@ class Process(PhysicsObject):
 
         mystr = "%d_" % self['id']
         prevleg = None
-        for leg in self['legs']:
+        for leg in self.get_legs_with_decays():
             mypart = self['model'].get('particle_dict')[leg['id']]
             if prevleg and prevleg['state'] == 'initial' \
                    and leg['state'] == 'final':
@@ -1409,10 +1410,6 @@ class Process(PhysicsObject):
         mystr = mystr.replace('~', 'x')
         # Just to be safe, remove all spaces
         mystr = mystr.replace(' ', '')
-
-        for decay in self.get('decay_chains'):
-            mystr = mystr + decay.shell_string_v4().replace("%d_" % decay.get('id'),
-                                                        "_", 1)
 
         return mystr
 
@@ -1443,11 +1440,11 @@ class Process(PhysicsObject):
 
         return filter(lambda leg: leg.get('state') == 'final',
                        self.get('legs'))
-
+    
     def get_legs_with_decays(self):
         """Return process with all decay chains substituted in."""
 
-        legs = copy.copy(self.get('legs'))
+        legs = copy.deepcopy(self.get('legs'))
         if self.get('is_decay_chain'):
             legs.pop(0)
         ileg = 0
@@ -1458,6 +1455,9 @@ class Process(PhysicsObject):
             decay_legs = decay.get_legs_with_decays()
             legs = legs[:ileg] + decay_legs + legs[ileg+1:]
             ileg = ileg + len(decay_legs)
+
+        for ileg, leg in enumerate(legs):
+            leg.set('number', ileg + 1)
             
         return legs
 

@@ -1222,8 +1222,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4))\n"
-        goal = goal + "  ((2(2),3(21)>2(2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4))"
+        goal = goal + "1  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4))\n"
+        goal = goal + "2  ((2(2),3(21)>2(2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4))"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -1325,8 +1325,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4))\n"
-        goal = goal + "  ((2(2),3(21)>2(2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4))"
+        goal = goal + "1  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4))\n"
+        goal = goal + "2  ((2(2),3(21)>2(2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4))"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -1445,8 +1445,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "  ((1(22),2(-11)>1(-11),id:7),(3(22),4(11)>3(11),id:7),(1(-11),3(11),id:0))\n"
-        goal = goal + "  ((1(22),4(11)>1(11),id:7),(2(-11),3(22)>2(-11),id:7),(1(11),2(-11),id:0))"
+        goal = goal + "1  ((1(22),2(-11)>1(-11),id:7),(3(22),4(11)>3(11),id:7),(1(-11),3(11),id:0))\n"
+        goal = goal + "2  ((1(22),4(11)>1(11),id:7),(2(-11),3(22)>2(-11),id:7),(1(11),2(-11),id:0))"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -1540,8 +1540,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "  ((1(-11),2(22)>1(-11),id:7),(3(22),4(11)>3(11),id:7),(1(-11),3(11),id:0))\n"
-        goal = goal + "  ((1(-11),3(22)>1(-11),id:7),(2(22),4(11)>2(11),id:7),(1(-11),2(11),id:0))"
+        goal = goal + "1  ((1(-11),2(22)>1(-11),id:7),(3(22),4(11)>3(11),id:7),(1(-11),3(11),id:0))\n"
+        goal = goal + "2  ((1(-11),3(22)>1(-11),id:7),(2(22),4(11)>2(11),id:7),(1(-11),2(11),id:0))"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -2511,7 +2511,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                 self.assertEqual(wf.get('number_external'), i + 1)
 
     def test_multistage_decay_chain_process(self):
-        """Test a multistage decay chain g g > d d~, d > g d, g > u u~ g
+        """Test a multistage decay g g > d d~, d > g d, d~ > g d~, g > u u~ g
         """
 
         myleglist = base_objects.LegList()
@@ -2623,6 +2623,49 @@ class HelasMultiProcessTest(unittest.TestCase):
                                        matrix_elements[0].get_all_wavefunctions())):
             self.assertEqual(wf.get('number_external'), i + 1)
 
+        # Test the setting of wavefunctions as "onshell" if they
+        # correspond to a decaying particle
+        for i, wf in enumerate(matrix_elements[0].get_all_wavefunctions()):
+            if i in [6, 8, 13, 15, 18, 19, 21, 22, 24, 25, 27, 28]:
+                self.assert_(wf.get('onshell'))
+            else:
+                self.assert_(not wf.get('onshell'))
+
+        # Test Process.get_legs_with_decays
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':'initial',
+                                           'number': 1}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':'initial',
+                                           'number': 2}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':'final',
+                                           'number': 3}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                           'state':'final',
+                                           'number': 4}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':'final',
+                                           'number': 5}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                           'state':'final',
+                                           'number': 6}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':'final',
+                                           'number': 7}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                           'state':'final',
+                                           'number': 8}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':'final',
+                                           'number': 9}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                           'state':'final',
+                                           'number': 10}))
+        self.assertEqual(myleglist, matrix_elements[0].get('processes')[0].\
+                         get_legs_with_decays())
 
     def test_majorana_decay_chain_process(self):
         """Test decay chain with majorana particles e+e->n1n1

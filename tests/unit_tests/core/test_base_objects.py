@@ -1086,9 +1086,12 @@ class DiagramTest(unittest.TestCase):
         mylist = [self.mydiagram] * 10
         mydiagramlist = base_objects.DiagramList(mylist)
 
-        goal_string = "  (" + "(5(3),5(3),5(3),5(3),5(3),5(3),5(3),5(3),5(3)>5(3),id:3),"*10
-        goal_string = goal_string[:-1] + ")\n"
-        goal_string = goal_string * 10
+        goal_string1 = "  (" + "(5(3),5(3),5(3),5(3),5(3),5(3),5(3),5(3),5(3)>5(3),id:3),"*10
+        goal_string1 = goal_string1[:-1] + ")\n"
+
+        goal_string = ""
+        for i in range(10):
+            goal_string = goal_string + str(i+1) + goal_string1
 
         self.assertEqual(mydiagramlist.nice_string(),
                          "10 diagrams:\n" + goal_string[:-1])

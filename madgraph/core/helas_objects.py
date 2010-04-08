@@ -109,6 +109,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # The decay flag is used in processes with defined decay chains,
         # to indicate that this wavefunction has a decay defined
         self['decay'] = False
+        # The onshell flag is used in processes with defined decay
+        # chains, to indicate that this wavefunction is decayed and
+        # should be onshell
+        self['onshell'] = False
 
     # Customized constructor
     def __init__(self, *arguments):
@@ -287,6 +291,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                       "%s is not a valid list of mothers for wavefunction" % \
                       str(value)
+
+        if name in ['decay', 'onshell']:
+            if not isinstance(value, bool):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid bool" % str(value) + \
+                        " for decay or onshell"
 
         return True
 
@@ -841,6 +851,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
            self['lorentz'] != other['lorentz'] or \
            self['coupling'] != other['coupling'] or \
            self['state'] != other['state'] or \
+           self['onshell'] != other['onshell'] or \
            self['decay'] != other['decay'] or \
            self['decay'] and self['pdg_code'] != other['pdg_code']:
             return False
@@ -2075,11 +2086,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         # These are the wavefunctions which directly replace old_wf
                         final_decay_wfs = [amp.get('mothers')[1] for amp in \
                                               decay_diag.get('amplitudes')]
+
                         # Since we made deepcopy, need to syncronize
                         for i, wf in enumerate(final_decay_wfs):
                             final_decay_wfs[i] = \
                                                decay_diag_wfs[decay_diag_wfs.index(wf)]
-
                         # Remove final wavefunctions from decay_diag_wfs,
                         # since these will be replaced separately by
                         # replace_wavefunctions
@@ -2181,6 +2192,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                   decay_diag_wfs + diagram_wfs[old_wf_index:]
 
                     diagram.set('wavefunctions', HelasWavefunctionList(diagram_wfs))
+
+                    # Set the decay flag for final_decay_wfs, to
+                    # indicate that these correspond to decayed
+                    # particles
+                    for wf in final_decay_wfs:
+                        wf.set('onshell', True)
 
                     if len_decay == 1:
                         # Can use simplified treatment, by just modifying old_wf

@@ -1181,7 +1181,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 
     # Add subprocess to subproc.mg
     filename = 'subproc.mg'
-    files.write_to_file(filename,
+    files.append_to_file(filename,
                         write_subproc,
                         matrix_element,
                         fortran_model)    
