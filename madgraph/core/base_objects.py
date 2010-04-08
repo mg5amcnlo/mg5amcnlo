@@ -1444,6 +1444,23 @@ class Process(PhysicsObject):
         return filter(lambda leg: leg.get('state') == 'final',
                        self.get('legs'))
 
+    def get_legs_with_decays(self):
+        """Return process with all decay chains substituted in."""
+
+        legs = self.get('legs')
+        if self.get('is_decay_chain'):
+            legs.pop(0)
+        ileg = 0
+        for decay in self.get('decay_chains'):
+            while legs[ileg].get('state') == 'initial' or \
+                      legs[ileg].get('id') != decay.get('legs')[0].get('id'):
+                ileg = ileg + 1
+            decay_legs = decay.get_complete_proc()
+            legs = legs[:ileg] + decay_legs + legs[ileg+1:]
+            ileg = ileg + len(decay_legs)
+
+        return legs
+
 #===============================================================================
 # ProcessList
 #===============================================================================

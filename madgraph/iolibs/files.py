@@ -60,3 +60,24 @@ def write_to_file(filename, myfunct, *args):
         return None
 
     return ret_value
+
+#===============================================================================
+# append_to_file
+#===============================================================================
+def append_to_file(filename, myfunct, *args):
+    """Open a file for appending, apply the function myfunct (with
+    sock as an arg) on its content and return the result. Deals
+    properly with errors and returns None if something goes wrong.
+    """
+
+    try:
+        sock = open(filename, 'a')
+        try:
+            ret_value = myfunct(sock, *args)
+        finally:
+            sock.close()
+    except IOError, (errno, strerror):
+        logger.error("I/O error (%s): %s" % (errno, strerror))
+        return None
+
+    return ret_value
