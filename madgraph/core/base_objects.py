@@ -378,6 +378,11 @@ class Particle(PhysicsObject):
 
         return self['spin'] % 2 == 0
 
+    def is_boson(self):
+        """Returns True if this is a boson, False if fermion"""
+
+        return self['spin'] % 2 == 1
+
 #===============================================================================
 # ParticleList
 #===============================================================================
@@ -1459,7 +1464,7 @@ class Process(PhysicsObject):
         for ileg, leg in enumerate(legs):
             leg.set('number', ileg + 1)
             
-        return legs
+        return LegList(legs)
 
 #===============================================================================
 # ProcessList

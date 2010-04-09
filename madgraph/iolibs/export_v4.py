@@ -22,6 +22,7 @@ import os
 import re
 
 import madgraph.core.color_algebra as color
+import madgraph.iolibs.drawing_eps as draw
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
@@ -650,9 +651,14 @@ def write_configs_file(fsock, matrix_element, fortran_model):
 
     writer = FortranWriter()
 
+    # Extract number of external particles
+    (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+
     lines = []
 
     iconfig = 0
+
+    s_and_t_channels = []
 
     for idiag, diag in enumerate(matrix_element.get('base_amplitude').\
                                                 get('diagrams')):
@@ -662,7 +668,7 @@ def write_configs_file(fsock, matrix_element, fortran_model):
         iconfig = iconfig + 1
         helas_diag = matrix_element.get('diagrams')[idiag]
         amp_number = helas_diag.get('amplitudes')[0].get('number')
-        lines.append("# Diagram %d, Amplitude % %d" % \
+        lines.append("# Diagram %d, Amplitude %d" % \
                      (helas_diag.get('number'), amp_number))
         # Correspondance between the config and the amplitudes
         lines.append("data mapconfig(%d)/%d/" % (iconfig, amp_number))
@@ -670,56 +676,60 @@ def write_configs_file(fsock, matrix_element, fortran_model):
         # Need to reorganize the topology so that we start with all
         # final state external particles and work our way inwards
 
-        # NEEDS TO BE DONE
+        schannels, tchannels = helas_diag.get('amplitudes')[0].\
+                                     get_s_and_t_channels(ninitial)
 
-        # Pick out all s-channel and t-channel vertices
-        schannels = filter(lambda vert: \
-                           vert.get('legs')[-1].get('state') == 'final',
-                           diag.get('vertices')[:-1])
-        tchannels = filter(lambda vert: \
-                           vert.get('legs')[-1].get('state') == 'initial',
-                           diag.get('vertices')[:-1])
-        number_map = {}
-        prop_number = 0
+        s_and_t_channels.append([schannels, tchannels])
+
+        # Write out propagators for s-channel and t-channel vertices
         for vert in schannels + tchannels:
-            daughters = []
-            for leg in vert.get('legs')[:-1]:
-                try:
-                    daughters.append(number_map[leg.get('number')])
-                except KeyError:
-                    daughters.append(leg.get('number'))
-            prop_number = prop_number - 1
+            daughters = [leg.get('number') for leg in vert.get('legs')[:-1]]
             last_leg = vert.get('legs')[-1]
-            number_map[last_leg.get('number')] = prop_number
             lines.append("data (iforest(i,%d,%d),i=1,%d)/%s/" % \
-                         (prop_number, iconfig, len(daughters),
-                          ",".join(str(daughters))))
+                         (last_leg.get('number'), iconfig, len(daughters),
+                          ",".join([str(d) for d in daughters])))
             if vert in schannels:
                 lines.append("data sprop(%d,%d)/%d/" % \
-                             (prop_number, iconfig, last_leg.get('id')))
-            else:
+                             (last_leg.get('number'), iconfig,
+                              last_leg.get('id')))
+            elif vert in tchannels[:-1]:
                 lines.append("data tprid(%d,%d)/%d/" % \
-                             (prop_number, iconfig, last_leg.get('id')))
+                             (last_leg.get('number'), iconfig,
+                              last_leg.get('id')))
 
-        # Add propagator for the last vertex (the amplitude)
-        
+    # Write out number of configs
+    lines.append("# Number of configs")
+    lines.append("data mapconfig(0)/%d/" % iconfig)
+
     # Write the file
     for line in lines:
         writer.write_fortran_line(fsock, line)
 
-    return True
+    return iconfig, s_and_t_channels
 
 #===============================================================================
 # write_decayBW_file
 #===============================================================================
-def write_decayBW_file(fsock, matrix_element, fortran_model):
+def write_decayBW_file(fsock, matrix_element, fortran_model,
+                       s_and_t_channels):
     """Write the decayBW.inc file for MadEvent"""
 
     writer = FortranWriter()
 
     lines = []
 
-        
+    booldict = {False: ".false.", True: ".true."}
+
+    for iconf, config in enumerate(s_and_t_channels):
+        schannels = config[0]
+        for vertex in schannels:
+            # For the resulting leg, pick out whether it comes from
+            # decay or not, as given by the from_group flag
+            leg = vertex.get('legs')[-1]
+            lines.append("data gForceBW(%d,%d)/%s/" % \
+                         (leg.get('number'), iconf + 1,
+                          booldict[leg.get('from_group')]))
+
     # Write the file
     for line in lines:
         writer.write_fortran_line(fsock, line)
@@ -748,7 +758,7 @@ def write_dname_file(fsock, matrix_element, fortran_model):
 # write_iproc_file
 #===============================================================================
 def write_iproc_file(fsock, matrix_element, fortran_model):
-    """Write the nexternal.inc file for MG4"""
+    """Write the iproc.inc file for MG4"""
 
     writer = FortranWriter()
 
@@ -822,6 +832,10 @@ def write_mg_sym_file(fsock, matrix_element, fortran_model):
         else:
             identical_indices[leg.get('id')] = [i + ninitial + 1]
 
+    # Remove keys which have only one particle
+    for key in identical_indices.keys():
+        if len(identical_indices[key]) < 2:
+            del identical_indices[key]
     # Write mg.sym file
     lines.append(str(len(identical_indices.keys())))
     for key in identical_indices.keys():
@@ -838,7 +852,7 @@ def write_mg_sym_file(fsock, matrix_element, fortran_model):
 #===============================================================================
 # write_ncombs_file
 #===============================================================================
-def write_ncombs_file(fsock, matrix_element, fortran_model):
+def write_ncombs_file(fsock, matrix_element, fortran_model, ncombs):
     """Write the ncombs.inc file for MadEvent."""
 
     writer = FortranWriter()
@@ -849,7 +863,7 @@ def write_ncombs_file(fsock, matrix_element, fortran_model):
     # ncomb (used for clustering) is 2^(nexternal + 1)
     file = \
 """      integer    n_max_cl
-      parameter (n_max_cl=%d)""" % 2^(nexternal + 1)
+      parameter (n_max_cl=%d)""" % (2**(nexternal + 1))
 
     # Write the file
     
@@ -917,17 +931,12 @@ def write_pmass_file(fsock, matrix_element, fortran_model):
     
     lines = []
     for wf in matrix_element.get_external_wavefunctions():
-        if model.get('particle_dict')[wf.get('pdg_code')].\
-               get('mass') == "zero":
-            lines.append("pmass(%d)=%s" % \
-                         (wf.get('number_external'),
-                          model.get('particle_dict')[wf.get('pdg_code')].\
-                          get('mass')))
-        else:
-            lines.append("pmass(%d)=abs(%s)" % \
-                         (wf.get('number_external'),
-                          model.get('particle_dict')[wf.get('pdg_code')].\
-                          get('mass')))
+        mass = model.get('particle_dict')[wf.get('pdg_code')].get('mass')
+        if mass.lower() != "zero":
+            mass = "abs(%s)" % mass
+
+        lines.append("pmass(%d)=%s" % \
+                     (wf.get('number_external'), mass))
 
     # Write the file
     for line in lines:
@@ -938,7 +947,7 @@ def write_pmass_file(fsock, matrix_element, fortran_model):
 #===============================================================================
 # write_props_file
 #===============================================================================
-def write_props_file(fsock, matrix_element, fortran_model):
+def write_props_file(fsock, matrix_element, fortran_model, s_and_t_channels):
     """Write the props.inc file for MadEvent. Needs input from
     write_configs_file."""
 
@@ -946,7 +955,33 @@ def write_props_file(fsock, matrix_element, fortran_model):
 
     lines = []
 
-        
+    particle_dict = matrix_element.get('processes')[0].get('model').\
+                    get('particle_dict')
+
+    for iconf, configs in enumerate(s_and_t_channels):
+        for vertex in configs[0] + configs[1][:-1]:
+            leg = vertex.get('legs')[-1]
+            particle = particle_dict[leg.get('id')]
+            # Get mass
+            if particle.get('mass') == 'zero':
+                mass = particle.get('mass')
+            else:
+                mass = "abs(%s)" % particle.get('mass')
+            # Get width
+            if particle.get('width') == 'zero':
+                width = particle.get('width')
+            else:
+                width = "abs(%s)" % particle.get('width')
+
+            pow_part = 1 + int(particle.is_boson())
+
+            lines.append("pmass(%d,%d)  = %s" % \
+                         (leg.get('number'), iconf + 1, mass))
+            lines.append("pwidth(%d,%d) = %s" % \
+                         (leg.get('number'), iconf + 1, width))
+            lines.append("pow(%d,%d) = %d" % \
+                         (leg.get('number'), iconf + 1, pow_part))
+            
     # Write the file
     for line in lines:
         writer.write_fortran_line(fsock, line)
@@ -1081,17 +1116,18 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     #                    matrix_element,
     #                    fortran_model)
 
-    #filename = 'configs.inc'
-    #nconfigs = files.write_to_file(filename,
-    #                    write_configs_file,
-    #                    matrix_element,
-    #                    fortran_model)
+    filename = 'configs.inc'
+    nconfigs, s_and_t_channels = files.write_to_file(filename,
+                        write_configs_file,
+                        matrix_element,
+                        fortran_model)
 
-    #filename = 'decayBW.inc'
-    #files.write_to_file(filename,
-    #                    write_decayBW_file,
-    #                    matrix_element,
-    #                    fortran_model)
+    filename = 'decayBW.inc'
+    files.write_to_file(filename,
+                        write_decayBW_file,
+                        matrix_element,
+                        fortran_model,
+                        s_and_t_channels)
 
     filename = 'dname.mg'
     files.write_to_file(filename,
@@ -1117,11 +1153,12 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
                         matrix_element,
                         fortran_model)
 
-    #filename = 'ncombs.inc'
-    #files.write_to_file(filename,
-    #                    write_ncombs_file,
-    #                    matrix_element,
-    #                    fortran_model)
+    filename = 'ncombs.inc'
+    files.write_to_file(filename,
+                        write_ncombs_file,
+                        matrix_element,
+                        fortran_model,
+                        nconfigs)
 
     filename = 'nexternal.inc'
     files.write_to_file(filename,
@@ -1129,12 +1166,12 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
                         matrix_element,
                         fortran_model)
 
-    #filename = 'ngraphs.inc'
-    #files.write_to_file(filename,
-    #                    write_ngraphs_file,
-    #                    matrix_element,
-    #                    fortran_model,
-    #                    nconfigs)
+    filename = 'ngraphs.inc'
+    files.write_to_file(filename,
+                        write_ngraphs_file,
+                        matrix_element,
+                        fortran_model,
+                        nconfigs)
 
     filename = 'pmass.inc'
     files.write_to_file(filename,
@@ -1142,11 +1179,24 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
                         matrix_element,
                         fortran_model)
 
-    #filename = 'props.inc'
-    #files.write_to_file(filename,
-    #                    write_props_file,
-    #                    matrix_element,
-    #                    fortran_model)
+    filename = 'props.inc'
+    files.write_to_file(filename,
+                        write_props_file,
+                        matrix_element,
+                        fortran_model,
+                        s_and_t_channels)
+
+    # Generate diagrams
+    filename = "matrix.ps"
+    plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+                                         get('diagrams'),
+                                      filename,
+                                      model=matrix_element.get('processes')[0].\
+                                         get('model'),
+                                      amplitude='')
+    logging.info("Generating Feynman diagrams for " + \
+                 matrix_element.get('processes')[0].nice_string())
+    plot.draw()
 
     linkfiles = ['addmothers.f',
                  'cluster.f',

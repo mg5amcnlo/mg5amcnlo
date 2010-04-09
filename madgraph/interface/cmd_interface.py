@@ -635,9 +635,9 @@ class MadGraphCmd(cmd.Cmd):
                                 'orders': orders,
                                 'forbidden_particles': forbidden_particle_ids,
                                 'forbidden_s_channels': forbidden_schannel_ids,
-                                'required_s_channels': required_schannel_ids,
-                                'is_decay_chain': decay_process\
+                                'required_s_channels': required_schannel_ids
                                  })
+        #                       'is_decay_chain': decay_process\
         else:
             return None
 
@@ -710,7 +710,7 @@ class MadGraphCmd(cmd.Cmd):
                 calls = calls + \
                         export_v4.generate_subprocess_directory_v4_madevent(\
                             me, self.__curr_fortran_model, path)
-
+                
         print ("Generated helas calls for %d subprocesses " + \
               "(%d diagrams) in %0.3f s") % \
               (len(self.__curr_matrix_elements.get('matrix_elements')),
@@ -722,7 +722,7 @@ class MadGraphCmd(cmd.Cmd):
         # matrix elements, which allows proper diagram drawing also of
         # decay chain processes
         self.__curr_amps = diagram_generation.AmplitudeList(\
-               [me.get_base_amplitude() for me in \
+               [me.get('base_amplitude') for me in \
                 self.__curr_matrix_elements.get('matrix_elements')])
 
     def complete_export(self, text, line, begidx, endidx):
