@@ -963,7 +963,7 @@ def write_props_file(fsock, matrix_element, fortran_model, s_and_t_channels):
             leg = vertex.get('legs')[-1]
             particle = particle_dict[leg.get('id')]
             # Get mass
-            if particle.get('mass') == 'zero':
+            if particle.get('mass').lower() == 'zero':
                 mass = particle.get('mass')
             else:
                 mass = "abs(%s)" % particle.get('mass')

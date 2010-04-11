@@ -861,19 +861,25 @@ class HelasWavefunction(base_objects.PhysicsObject):
             # towards external initial state
             legs = base_objects.LegList()
 
-            for mother in final_mothers + init_mothers:
+            if ninitial == 1 or init_mothers[0].get('number_external') == 2:
+                mothers = final_mothers + init_mothers
+            else:
+                mothers = init_mothers + final_mothers
+                
+            for mother in mothers:
                 legs.append(base_objects.Leg({
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
                     'from_group': False
                     }))        
+
             if ninitial == 1 or init_mothers[0].get('number_external') == 1:
                 # For decay processes or if the mother is going
-                # towards external leg 1, add mother leg at end
+                # towards external leg 1, mother leg is resulting wf
                 legs.append(mother_leg)
             else:
-                # If we are going towards external leg 2, add before end
+                # If we are going towards external leg 2, add at start
                 legs.insert(-1,mother_leg)
 
             # Renumber resulting leg according to minimum leg number
@@ -924,6 +930,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     'from_group': False
                     }))        
             legs.insert(-1, mother_leg)
+
             # Renumber resulting leg according to minimum leg number
             legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
 
@@ -1437,8 +1444,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
         s-channel and in/down towards the highest number initial state
         leg."""
 
-        print "Amplitude ",self.get('number')
-
         schannels = base_objects.VertexList()
         tchannels = base_objects.VertexList()
 
@@ -1470,11 +1475,10 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     'state': mother.get('leg_state'),
                     'from_group': False
                     }))
+
             # Renumber resulting leg according to minimum leg number
             legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
             
-            print 3, [l.get('number') for l in legs], 's-channel'
-
             # Add vertex to s-channels
             schannels.append(base_objects.Vertex({
                 'id': self.get('interaction_id'),
@@ -1496,13 +1500,17 @@ class HelasAmplitude(base_objects.PhysicsObject):
             
             # Create vertex
             legs = base_objects.LegList()
-            for mother in final_mothers + [init_mothers1, init_mothers2]:
+            for mother in [init_mothers1] + final_mothers + [init_mothers2]:
                 legs.append(base_objects.Leg({
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
                     'from_group': False
                     }))
+            # Sort the legs
+            legs = base_objects.LegList(\
+                   sorted(legs[:-1], lambda l1, l2: l1.get('number') - \
+                          l2.get('number')) + legs[-1:])
             # Renumber resulting leg according to minimum leg number
             legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
 
@@ -1516,8 +1524,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
             schannels.extend(mother_s)
 
-            print 3, [l.get('number') for l in vertex.get('legs')], 't-channel'
-
             # Add vertex to t-channels
             tchannels.append(vertex)
 
@@ -1527,12 +1533,20 @@ class HelasAmplitude(base_objects.PhysicsObject):
             schannels.extend(mother_s)
             tchannels.extend(mother_t)
 
-        # Finally go through all vertices, and replace leg number with
-        # propagator number -1, -2, ...
+        # Finally go through all vertices, sort the legs and replace
+        # leg number with propagator number -1, -2, ...
         number_dict = {}
         nprop = 0
         for vertex in schannels + tchannels:
-            for leg in vertex.get('legs')[:-1]:
+            # Sort the legs
+            legs = vertex.get('legs')[:-1]
+            if vertex in schannels:
+                legs.sort(lambda l1, l2: l2.get('number') - \
+                          l1.get('number'))
+            else:
+                legs.sort(lambda l1, l2: l1.get('number') - \
+                          l2.get('number'))
+            for leg in legs:
                 try:
                     leg.set('number', number_dict[leg.get('number')])
                 except KeyError:
@@ -1541,6 +1555,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
             last_leg = vertex.get('legs')[-1]
             number_dict[last_leg.get('number')] = nprop
             last_leg.set('number', nprop)
+            legs.append(last_leg)
+            vertex.set('legs', base_objects.LegList(legs))
 
         return schannels, tchannels
 
