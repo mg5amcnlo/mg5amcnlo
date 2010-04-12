@@ -285,7 +285,7 @@ def write_matrix_element_v4_madevent(fsock, matrix_element, fortran_model):
     replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
     file = \
-"""      SUBROUTINE SMATRIX(P1,ANS)
+"""      SUBROUTINE SMATRIX(P,ANS)
 C  
 %(info_lines)s
 C 
@@ -302,23 +302,22 @@ C
 C CONSTANTS
 C  
     Include 'genps.inc'
-    INTEGER                 NCOMB,     NCROSS         
-    PARAMETER (             NCOMB=%(ncomb)d, NCROSS=  1)
+    INTEGER                 NCOMB         
+    PARAMETER (             NCOMB=%(ncomb)d)
     INTEGER    THEL
-    PARAMETER (THEL=NCOMB*NCROSS)
+    PARAMETER (THEL=NCOMB)
 C  
 C ARGUMENTS 
 C  
-    REAL*8 P1(0:3,NEXTERNAL),ANS(NCROSS)
+    REAL*8 P(0:3,NEXTERNAL),ANS
 C  
 C LOCAL VARIABLES 
 C  
     INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
-    REAL*8 T, P(0:3,NEXTERNAL)
-    REAL*8 MATRIX
-    INTEGER IHEL,IDEN(NCROSS),IC(NEXTERNAL,NCROSS)
+    REAL*8 T,MATRIX
+    INTEGER IHEL,IDEN
     INTEGER IPROC,JC(NEXTERNAL), I
-    LOGICAL GOODHEL(NCOMB,NCROSS)
+    LOGICAL GOODHEL(NCOMB)
     INTEGER NGRAPHS
     REAL*8 hwgt, xtot, xtry, xrej, xr, yfrac(0:ncomb)
     INTEGER idum, ngood, igood(ncomb), jhel, j, jj
@@ -347,18 +346,15 @@ C
     DATA warned, isum_hel/.false.,0/
     DATA multi_channel/.true./
     SAVE yfrac, igood, jhel
-    DATA NGRAPHS /    4/          
-    DATA jamp2(0) /   1/          
+    DATA NGRAPHS /%(ngraphs)d/          
+    DATA jamp2(0) /%(ncolor)d/          
     DATA GOODHEL/THEL*.FALSE./
 %(helicity_lines)s
-%(ic_line)s
 %(den_factor_line)s
 C ----------
 C BEGIN CODE
 C ----------
     NTRY=NTRY+1
-    DO IPROC=1,NCROSS
-    CALL SWITCHMOM(P1,P,IC(1,IPROC),JC,NEXTERNAL)
     DO IHEL=1,NEXTERNAL
        JC(IHEL) = +1
     ENDDO
@@ -372,11 +368,11 @@ C ----------
             jamp2(ihel)=0d0
         ENDDO
     ENDIF
-    ANS(IPROC) = 0D0
+    ANS = 0D0
     write(hel_buff,'(16i5)') (0,i=1,nexternal)
     IF (ISUM_HEL .EQ. 0 .OR. NTRY .LT. 10) THEN
         DO IHEL=1,NCOMB
-           IF (GOODHEL(IHEL,IPROC) .OR. NTRY .LT. 2) THEN
+           IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
                T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
              DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
@@ -385,9 +381,9 @@ C ----------
                  T=T*(2d0-ABS(POL(JJ)))
                ENDIF
              ENDDO
-             ANS(IPROC)=ANS(IPROC)+T
-             IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL,IPROC)) THEN
-                 GOODHEL(IHEL,IPROC)=.TRUE.
+             ANS=ANS+T
+             IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
+                 GOODHEL(IHEL)=.TRUE.
                  NGOOD = NGOOD +1
                  IGOOD(NGOOD) = IHEL
              ENDIF
@@ -409,7 +405,7 @@ C ----------
                 T=T*(2d0-ABS(POL(JJ)))
               ENDIF
             ENDDO
-            ANS(IPROC)=ANS(IPROC)+T*HWGT
+            ANS=ANS+T*HWGT
         ENDDO
         IF (ISUM_HEL .EQ. 1) THEN
             WRITE(HEL_BUFF,'(16i5)')(NHEL(i,IHEL),i=1,nexternal)
@@ -421,13 +417,12 @@ C ----------
             XTOT=XTOT+AMP2(MAPCONFIG(IHEL))
         ENDDO
         IF (XTOT.NE.0D0) THEN
-            ANS(IPROC)=ANS(IPROC)*AMP2(MAPCONFIG(ICONFIG))/XTOT
+            ANS=ANS*AMP2(MAPCONFIG(ICONFIG))/XTOT
         ELSE
-            ANS(IPROC)=0D0
+            ANS=0D0
         ENDIF
     ENDIF
-    ANS(IPROC)=ANS(IPROC)/DBLE(IDEN(IPROC))
-    ENDDO
+    ANS=ANS/DBLE(IDEN)
     END
  
  
@@ -575,7 +570,6 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER I, ICROSS,ITYPE,LP
-      DOUBLE PRECISION P1(0:3,NEXTERNAL)
       DOUBLE PRECISION u1,ub1,d1,db1,c1,cb1,s1,sb1,b1,bb1
       DOUBLE PRECISION u2,ub2,d2,db2,c2,cb2,s2,sb2,b2,bb2
       DOUBLE PRECISION g1,g2
@@ -682,7 +676,12 @@ def write_configs_file(fsock, matrix_element, fortran_model):
         s_and_t_channels.append([schannels, tchannels])
 
         # Write out propagators for s-channel and t-channel vertices
-        for vert in schannels + tchannels:
+        allchannels = schannels
+        if len(tchannels) > 1:
+            # Write out tchannels only if there are any non-trivial ones
+            allchannels = schannels + tchannels
+
+        for vert in allchannels:
             daughters = [leg.get('number') for leg in vert.get('legs')[:-1]]
             last_leg = vert.get('legs')[-1]
             lines.append("data (iforest(i,%d,%d),i=1,%d)/%s/" % \
