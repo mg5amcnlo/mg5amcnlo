@@ -210,7 +210,7 @@ class T(ColorObject):
 
         return None
 
-    def pair_simplify(self, col_obj, simplify_T_product=True):
+    def pair_simplify(self, col_obj, simplify_T_product=False):
         """Implement T(a,...,i,j)T(b,...,j,k) = T(a,...,b,...,i,k)
         and T(a,x,b,i,j)T(c,x,d,k,l) = 1/2(T(a,d,i,l)T(c,b,k,j)    
                                         -1/Nc T(a,b,i,j)T(c,d,k,l))
