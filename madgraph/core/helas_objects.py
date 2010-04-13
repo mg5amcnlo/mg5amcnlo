@@ -857,13 +857,16 @@ class HelasWavefunction(base_objects.PhysicsObject):
                   "get_s_and_t_channels can only handle up to 2 initial states"
 
         if len(init_mothers) == 1:
-            # This is a t-channel leg. Add vertex and start stepping down
-            # towards external initial state
+            # This is an s-channel or t-channel leg. Add vertex and
+            # continue stepping down towards external initial state
             legs = base_objects.LegList()
 
-            if ninitial == 1 or init_mothers[0].get('number_external') == 2:
+            if ninitial == 1 or init_mothers[0].get('number_external') == 2 \
+                   or init_mothers[0].get('leg_state') == 'final':
+                # This is a leg on its way towards the final vertex
                 mothers = final_mothers + init_mothers
             else:
+                # This is a t-channel leg going up towards leg number 1
                 mothers = init_mothers + final_mothers
                 
             for mother in mothers:
@@ -874,12 +877,14 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     'from_group': False
                     }))        
 
-            if ninitial == 1 or init_mothers[0].get('number_external') == 1:
+            if ninitial == 1 or (init_mothers[0].get('number_external') == 1 \
+                             and init_mothers[0].get('leg_state') == 'initial'):
                 # For decay processes or if the mother is going
                 # towards external leg 1, mother leg is resulting wf
                 legs.append(mother_leg)
             else:
-                # If we are going towards external leg 2, add at start
+                # If this is an s-channel leg or we are going towards
+                # external leg 2, mother leg is one of the mothers
                 legs.insert(-1,mother_leg)
 
             # Renumber resulting leg according to minimum leg number
@@ -895,9 +900,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
             schannels.extend(mother_s)
 
-            if ninitial == 1:
-                # For decay processes, only s-channels add vertex to
-                # s-channels
+            if ninitial == 1 or init_mothers[0].get('leg_state') == 'final':
+                # This leg is s-channel
                 schannels.append(vertex)
             elif init_mothers[0].get('number_external') == 1:
                 # If we are going towards external leg 1, add to
