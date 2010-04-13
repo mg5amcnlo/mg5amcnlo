@@ -20,6 +20,7 @@ import fractions
 import logging
 import os
 import re
+import sys
 
 import madgraph.core.color_algebra as color
 import madgraph.iolibs.drawing_eps as draw
@@ -1053,7 +1054,8 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
     files.write_to_file(filename,
                         write_ngraphs_file,
                         matrix_element,
-                        fortran_model)
+                        fortran_model,
+                        len(matrix_element.get_all_amplitudes()))
 
     linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
 
@@ -1196,6 +1198,9 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     logging.info("Generating Feynman diagrams for " + \
                  matrix_element.get('processes')[0].nice_string())
     plot.draw()
+
+    # Generate jpgs
+    os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
 
     linkfiles = ['addmothers.f',
                  'cluster.f',

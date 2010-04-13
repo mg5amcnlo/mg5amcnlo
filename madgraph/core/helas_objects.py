@@ -908,9 +908,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 # t-channels, at start
                 tchannels.insert(0, vertex)
 
-            print init_mothers[0].get('number_external'), \
-                  [l.get('number') for l in vertex.get('legs')], 't-channel'
-
         elif len(init_mothers) == 2:
             # This is a t-channel junction. Start with the leg going
             # towards external particle 1, and then do external
@@ -942,8 +939,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
             mother_s, tchannels = \
                       init_mothers1.get_s_and_t_channels(ninitial, legs[-1])
             schannels.extend(mother_s)
-
-            print [l.get('number') for l in vertex.get('legs')], 't-channel'
 
             # Add vertex
             tchannels.append(vertex)
