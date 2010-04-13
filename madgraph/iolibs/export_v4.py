@@ -629,8 +629,7 @@ def write_coloramps_file(fsock, matrix_element, fortran_model):
 
     writer = FortranWriter()
 
-    lines = []
-
+    lines = get_icolamp_lines(matrix_element)
         
     # Write the file
     for line in lines:
@@ -1111,11 +1110,11 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
                                 matrix_element,
                                 fortran_model)    
 
-    #filename = 'coloramps.inc'
-    #files.write_to_file(filename,
-    #                    write_coloramps_file,
-    #                    matrix_element,
-    #                    fortran_model)
+    filename = 'coloramps.inc'
+    files.write_to_file(filename,
+                        write_coloramps_file,
+                        matrix_element,
+                        fortran_model)
 
     filename = 'configs.inc'
     nconfigs, s_and_t_channels = files.write_to_file(filename,
@@ -1328,8 +1327,57 @@ def get_den_factor_line(matrix_element):
     return "DATA IDEN/%2r/" % \
            matrix_element.get_denominator_factor()
 
+def get_icolamp_lines(matrix_element):
+    """Return the ICOLAMP matrix, showing which AMPs are parts of
+    which JAMPs."""
+
+    ret_list = []
+
+    booldict = {False: ".false.", True: ".true."}
+
+    # Go through the JAMPs
+    color_basis = matrix_element.get('color_basis')
+
+    ncolor = 1
+    if color_basis:
+        ncolor = len(color_basis)
+
+    amplitudes = matrix_element.get_all_amplitudes()
+
+    ret_list.append("logical icolamp(%d,%d)" % \
+                    (len(amplitudes),ncolor))
+
+    for icolor in range(ncolor):
+        
+        # List of amplitude numbers used in this JAMP
+        amp_list = []
+
+        # Fill the amplitude number list for this JAMP
+        if matrix_element.get('color_basis'):
+            col_basis_elem = color_basis.keys()[icolor]
+            for diag_tuple in matrix_element.get('color_basis')[col_basis_elem]:
+                res_amp = filter(lambda amp: \
+                           tuple(amp.get('color_indices')) == diag_tuple[1],
+                            matrix_element.get('diagrams')[diag_tuple[0]].\
+                                                           get('amplitudes'))
+                if res_amp:
+                    amp_list.append(res_amp[0].get('number'))
+        else:
+            amp_list = range(1,len(amplitudes) + 1)
+
+        # List of True or False 
+        bool_list = [(i+1 in amp_list) for i in \
+                     range(len(amplitudes))]
+
+        ret_list.append("DATA(icolamp(i,%d),i=1,%d)/%s/" % \
+                            (icolor + 1, len(bool_list),
+                             ','.join(["%s" % booldict[i] for i in \
+                                       bool_list])))
+
+    return ret_list
+
 def get_JAMP_lines(matrix_element):
-    """Return the JAMP(1) = sum(fermionfactor * AMP(i)) line"""
+    """Return the JAMP = sum(fermionfactor * AMP(i)) lines"""
 
     if not matrix_element.get('color_basis'):
         res = "JAMP(1)="
