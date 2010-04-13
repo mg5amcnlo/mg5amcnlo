@@ -367,3 +367,39 @@ class ColorFactorTest(unittest.TestCase):
         '(2 I Tr(1,2,5,4,3))+(-2 I Tr(1,3,4,5,2))+(2 I Tr(1,5,3,4,2))+' + \
         '(2 I Tr(1,4,3,5,2))+(-2 I Tr(1,5,4,3,2))')
 
+    def test_color_flow(self):
+        """Test the color flow decomposition of objects containing only
+        T's and Tr's"""
+
+        my_color_factor = color.ColorFactor([
+                            color.ColorString([color.Tr(1, 2, 3)])])
+
+        self.assertEqual(my_color_factor.color_flow(),
+                         color.ColorFactor([
+                            color.ColorString([color.delta(501, 502),
+                                               color.delta(502, 503),
+                                               color.delta(503, 501)])]))
+
+        my_color_factor = color.ColorFactor([
+                            color.ColorString([color.T(1, 2, 3, 4, 5)])])
+
+        self.assertEqual(my_color_factor.color_flow(),
+                         color.ColorFactor([
+                            color.ColorString([color.delta(501, 502),
+                                               color.delta(502, 503),
+                                               color.delta(503, 504),
+                                               color.delta(4, 501),
+                                               color.delta(504, 5)])]))
+
+        my_color_factor = color.ColorFactor([
+                            color.ColorString([color.Tr(1, 2),
+                                               color.T(3, 4, 5)])])
+
+        self.assertEqual(my_color_factor.color_flow(),
+                         color.ColorFactor([
+                            color.ColorString([color.delta(501, 502),
+                                               color.delta(502, 501),
+                                               color.delta(503, 504),
+                                               color.delta(4, 503),
+                                               color.delta(504, 5)])]))
+

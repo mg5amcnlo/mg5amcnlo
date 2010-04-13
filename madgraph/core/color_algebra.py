@@ -78,6 +78,11 @@ class ColorObject(array.array):
 
     __copy__ = create_copy
 
+    def color_flow(self):
+        """Return the color flow decomposition of the current object."""
+
+        return None
+
 #===============================================================================
 # Tr
 #===============================================================================
@@ -162,6 +167,10 @@ class Tr(ColorObject):
 
         return None
 
+    def color_flow(self):
+        """Return the color flow decomposition of a trace object."""
+
+        return None
 #===============================================================================
 # T
 #===============================================================================
@@ -201,7 +210,7 @@ class T(ColorObject):
 
         return None
 
-    def pair_simplify(self, col_obj, simplify_T_product=False):
+    def pair_simplify(self, col_obj, simplify_T_product=True):
         """Implement T(a,...,i,j)T(b,...,j,k) = T(a,...,b,...,i,k)
         and T(a,x,b,i,j)T(c,x,d,k,l) = 1/2(T(a,d,i,l)T(c,b,k,j)    
                                         -1/Nc T(a,b,i,j)T(c,d,k,l))
@@ -305,6 +314,14 @@ class d(f):
         col_str2.coeff = fractions.Fraction(2, 1)
 
         return ColorFactor([col_str1, col_str2])
+
+#===============================================================================
+# delta
+#===============================================================================
+class delta(ColorObject):
+    """The delta(i,j) color object"""
+
+    pass
 
 #===============================================================================
 # ColorString
@@ -538,6 +555,36 @@ class ColorString(list):
                self.is_imaginary == col_str.is_imaginary and \
                self.to_canonical() == col_str.to_canonical()
 
+    def color_flow(self):
+        """Return the color flow decomposition of the current color string."""
+
+        offset = 500
+
+        res = ColorString()
+        res.coeff = self.coeff
+        res.is_imaginary = self.is_imaginary
+        res.Nc_power = res.Nc_power
+
+        for col_obj in self:
+            if col_obj.__class__.__name__ == 'Tr':
+                # Tr(1,2,3) = delta(101,102) delta(102,103) delta(103,101)
+                for i, index in enumerate(col_obj[:-1]):
+                    res.append(delta(offset + index, offset + col_obj[i + 1]))
+                res.append(delta(offset + col_obj[-1], offset + col_obj[0]))
+
+            elif col_obj.__class__.__name__ == 'T':
+                # T(1,2,3,4) = delta(101,102) delta(102,103) 
+                #              delta(3,101) delta(103,4)
+                for i, index in enumerate(col_obj[:-3]):
+                    res.append(delta(offset + index, offset + col_obj[i + 1]))
+                res.append(delta(offset + col_obj[-3], offset + col_obj[-3] + 1))
+                res.append(delta(col_obj[-2], offset + col_obj[0]))
+                res.append(delta(offset + col_obj[-3] + 1, col_obj[-1]))
+            else:
+                res.append(col_obj)
+
+        return res
+
 #===============================================================================
 # ColorFactor
 #===============================================================================
@@ -627,6 +674,15 @@ class ColorFactor(list):
         return res
 
     __copy__ = create_copy
+
+    def color_flow(self):
+        """Return the color flow decomposition of the current color factor."""
+
+        res = ColorFactor()
+        for col_str in self:
+            res.append(col_str.color_flow())
+
+        return res
 
 
 
