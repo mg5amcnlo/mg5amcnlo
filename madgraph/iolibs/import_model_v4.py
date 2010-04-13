@@ -149,11 +149,11 @@ def read_interactions_v4(fsock, ref_part_list):
                     raise Interaction.PhysicsObjectError, \
                         "Vertex with less than 3 known particles found."
 
-                # Flip part/antipart of second part when needed 
+                # Flip part/antipart of first part for FFV and FFS vertices
                 # according to v4 convention
                 spin_array = [part['spin'] for part in part_list]
-                if spin_array in [[2, 2, 1], # FFS
-                                  [2, 2, 3]]:  # FFV
+                if spin_array in [[2, 2, 1], [2, 2, 3]]  and \
+                   not part_list[0].get('self_antipart'):
                     part_list[0]['is_part'] = not part_list[0]['is_part']
 
                 myinter.set('particles', part_list)
@@ -214,9 +214,6 @@ def read_interactions_v4(fsock, ref_part_list):
                     logger.warning(\
                         "Color combination %s not yet implemented." % \
                         repr(colors))
-
-                # REMEMBER to set the 4g structure once we have
-                # decided how to deal with this vertex
 
                 # Set the Lorentz structure. Default for 3-particle
                 # vertices is empty string, for 4-particle pair of

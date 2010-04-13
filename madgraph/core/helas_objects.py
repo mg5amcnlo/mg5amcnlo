@@ -969,6 +969,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
            self['spin'] != other['spin'] or \
            self['self_antipart'] != other['self_antipart'] or \
            self['fermionflow'] != other['fermionflow'] or \
+           self['coupl_key'] != other['coupl_key'] or \
            self['mass'] != other['mass'] or \
            self['width'] != other['width'] or \
            self['color'] != other['color'] or \
@@ -1953,12 +1954,15 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                                    diagram_wavefunctions,
                                                    external_wavefunctions,
                                                    wf_number)
-
+                        
                         # Create new copy of number_wf_dict
                         new_number_wf_dict = copy.copy(number_wf_dict)
 
                         # Store wavefunction
-                        if not wf in diagram_wavefunctions:
+                        try:
+                            wf = diagram_wavefunctions[\
+                                    diagram_wavefunctions.index(wf)]
+                        except ValueError:
                             # Update wf number
                             wf_number = wf_number + 1
                             wf.set('number', wf_number)
@@ -1973,7 +1977,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                             except ValueError:
                                 diagram_wavefunctions.append(wf)
 
-                            new_number_wf_dict[last_leg.get('number')] = wf
+                        new_number_wf_dict[last_leg.get('number')] = wf
 
                         # Store the new copy of number_wf_dict
                         new_number_to_wavefunctions.append(\
@@ -2058,6 +2062,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         self.set('diagrams', helas_diagrams)
         # Sort all mothers according to the order wanted in Helas calls
+
         for wf in self.get_all_wavefunctions():
             wf.set('mothers', HelasMatrixElement.sorted_mothers(wf))
         for amp in self.get_all_amplitudes():
@@ -3014,7 +3019,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                              pdg_codes[:missing_index]
         else:
             pdg_codes_cycl = pdg_codes
-            
+
         sorted_mothers2 = HelasWavefunctionList()
         for code in pdg_codes_cycl:
             index = mother_codes.index(code)
