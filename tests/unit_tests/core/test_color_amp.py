@@ -488,39 +488,21 @@ class ColorSquareTest(unittest.TestCase):
     def test_color_matrix_multi_quarks(self):
         """Test the color matrix building for qq~ > n*(qq~) with n up to 2"""
 
-        goal = [fractions.Fraction(2, 1),
-                fractions.Fraction(72, 54)]
+        goal = [fractions.Fraction(9, 1),
+                fractions.Fraction(27, 1)]
 
 
 
-        goal_line1 = [(fractions.Fraction(2, 1), fractions.Fraction(-2, 3)),
-                      (fractions.Fraction(4, 3), fractions.Fraction(-5, 27),
-                       fractions.Fraction(7, 6), fractions.Fraction(-1, 3),
-                       fractions.Fraction(1, 9), fractions.Fraction(-7, 18),
-                       fractions.Fraction(-5, 27), fractions.Fraction(-7, 18),
-                       fractions.Fraction(1, 18), fractions.Fraction(31, 27),
-                       fractions.Fraction(-5, 27), fractions.Fraction(-7, 18),
-                       fractions.Fraction(-1, 3), fractions.Fraction(31, 27),
-                       fractions.Fraction(-1, 3), fractions.Fraction(-4, 9),
-                       fractions.Fraction(1, 9), fractions.Fraction(7, 6),
-                       fractions.Fraction(-1, 6), fractions.Fraction(-5, 27),
-                       fractions.Fraction(-1, 54), fractions.Fraction(1, 9),
-                       fractions.Fraction(1, 18), fractions.Fraction(1, 18),
-                       fractions.Fraction(4, 27), fractions.Fraction(-1, 54),
-                       fractions.Fraction(5, 9), fractions.Fraction(1, 9),
-                       fractions.Fraction(-4, 9), fractions.Fraction(-1, 54),
-                       fractions.Fraction(71, 54), fractions.Fraction(1, 18),
-                       fractions.Fraction(-7, 18), fractions.Fraction(-1, 3),
-                       fractions.Fraction(-1, 54), fractions.Fraction(5, 9))
+        goal_line1 = [(fractions.Fraction(9, 1), fractions.Fraction(3, 1)),
+                      (fractions.Fraction(27, 1), fractions.Fraction(9, 1),
+                       fractions.Fraction(3, 1), fractions.Fraction(3, 1),
+                       fractions.Fraction(9, 1), fractions.Fraction(9, 1))
                       ]
 
-        goal_den_list = [[3] * 2, [54] * 36]
+        goal_den_list = [[1] * 2, [1] * 6]
 
-        goal_first_line_num = [[6, -2],
-                               [72, -10, 63, -18, 6, -21, -10, -21, 3, 62, -10,
-                                - 21, -18, 62, -18, -24, 6, 63, -9, -10, -1, 6,
-                                3, 3, 8, -1, 30, 6, -24, -1, 71, 3, -21, -18,
-                                - 1, 30]]
+        goal_first_line_num = [[9, 3],
+                               [27, 9, 3, 3, 9, 9]]
 
         for n in range(2):
             myleglist = base_objects.LegList()
