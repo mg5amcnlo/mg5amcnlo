@@ -289,9 +289,9 @@ class ColorAmpTest(unittest.TestCase):
 
         myleglist = base_objects.LegList()
 
-        myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
         myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':2,
                                          'state':'initial'}))
 
         myleglist.append(base_objects.Leg({'id':22,
@@ -311,6 +311,58 @@ class ColorAmpTest(unittest.TestCase):
         new_col_basis = color_amp.ColorBasis(myamplitude)
 
         self.assertEqual(len(new_col_basis), 6)
+
+        # Test the color flow decomposition
+        self.assertEqual(new_col_basis.color_flow_decomposition(
+                                        {1:3, 2:-3, 3:1, 4:8, 5:8, 6:8}, 2),
+        [{1: [503, 0], 2: [0, 501], 3: [0, 0], 4: [502, 504], 5: [503, 502], 6: [504, 501]},
+         {1: [503, 0], 2: [0, 501], 3: [0, 0], 4: [502, 501], 5: [503, 504], 6: [504, 502]},
+         {1: [504, 0], 2: [0, 501], 3: [0, 0], 4: [502, 503], 5: [503, 501], 6: [504, 502]},
+         {1: [502, 0], 2: [0, 501], 3: [0, 0], 4: [502, 504], 5: [503, 501], 6: [504, 503]},
+         {1: [502, 0], 2: [0, 501], 3: [0, 0], 4: [502, 503], 5: [503, 504], 6: [504, 501]},
+         {1: [504, 0], 2: [0, 501], 3: [0, 0], 4: [502, 501], 5: [503, 502], 6: [504, 503]}])
+
+    def test_color_flow_string(self):
+        """Test the color flow decomposition of various color strings"""
+
+        # qq~>qq~
+        my_cs = color.ColorString([color.T(-1000, 1, 2), color.T(-1000, 3, 4)])
+
+        goal_cs = color.ColorString([color.T(1, 4), color.T(3, 2)])
+        goal_cs.coeff = fractions.Fraction(1, 2)
+
+        self.assertEqual(color_amp.ColorBasis.get_color_flow_string(my_cs, []),
+                         goal_cs)
+
+        # qq~>qq~g
+        my_cs = color.ColorString([color.T(-1000, 1, 2),
+                                   color.T(-1000, 3, 4),
+                                   color.T(5, 4, 6)])
+        goal_cs = color.ColorString([color.T(1, 2005),
+                                     color.T(3, 2),
+                                     color.T(1005, 6)])
+        goal_cs.coeff = fractions.Fraction(1, 4)
+        self.assertEqual(color_amp.ColorBasis.get_color_flow_string(my_cs,
+                                                         [(5, 1005, 2005)]),
+                         goal_cs)
+
+        # gg>gg
+        my_cs = color.ColorString([color.Tr(-1000, 1, 2),
+                                   color.Tr(-1000, 3, 4)])
+
+        goal_cs = color.ColorString([color.T(1001, 2002),
+                                     color.T(1002, 2003),
+                                     color.T(1003, 2004),
+                                     color.T(1004, 2001)])
+        goal_cs.coeff = fractions.Fraction(1, 32)
+
+        self.assertEqual(color_amp.ColorBasis.get_color_flow_string(my_cs,
+                                                         [(1, 1001, 2001),
+                                                          (2, 1002, 2002),
+                                                          (3, 1003, 2003),
+                                                          (4, 1004, 2004)]),
+                         goal_cs)
+
 
 class ColorSquareTest(unittest.TestCase):
     """Test class for the color_amp module"""

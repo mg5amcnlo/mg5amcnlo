@@ -630,7 +630,7 @@ def write_coloramps_file(fsock, matrix_element, fortran_model):
     writer = FortranWriter()
 
     lines = get_icolamp_lines(matrix_element)
-        
+
     # Write the file
     for line in lines:
         writer.write_fortran_line(fsock, line)
@@ -788,18 +788,44 @@ def write_leshouche_file(fsock, matrix_element, fortran_model):
     for iproc, proc in enumerate(matrix_element.get('processes')):
         legs = proc.get_legs_with_decays()
         lines.append("DATA (IDUP(i,%d),i=1,%d)/%s/" % \
-                     (iproc+1, nexternal,
+                     (iproc + 1, nexternal,
                       ",".join([str(l.get('id')) for l in legs])))
         for i in [1, 2]:
             lines.append("DATA (MOTHUP(%d,i,%d),i=1,%d)/%s/" % \
-                     (i, iproc+1, nexternal,
+                     (i, iproc + 1, nexternal,
                       ",".join([ "0" ] * ninitial + \
                                [ str(i) ] * (nexternal - ninitial))))
-        # Here go the color connections corresponding to the JAMPs
-        # NEEDS TO BE DONE
-        
+
+        # Here goes the color connections corresponding to the JAMPs
+        # Only one output, for the first subproc!
+        if iproc == 0:
+            # If no color basis, just output trivial color flow
+            if not matrix_element.get('color_basis'):
+                for i in [1, 2]:
+                    lines.append("DATA (ICOLUP(%3r,i,1),i=1,%3r)/%s/" % \
+                             (i, nexternal,
+                              ",".join([ "%3r" % 0 ] * ninitial + nexternal)))
+
+            else:
+                # First build a color representation dictionnary
+                repr_dict = {}
+                for l in legs:
+                    repr_dict[l.get('number')] = \
+                        proc.get('model').get_particle(l.get('id')).get_color()
+                # Get the list of color flows
+                color_flow_list = \
+                    matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
+                                                                               ninitial)
+                # And output them properly
+                for cf_i, color_flow_dict in enumerate(color_flow_list):
+                    for i in [0, 1]:
+                        lines.append("DATA (ICOLUP(%3r,i,%3r),i=1,%3r)/%s/" % \
+                             (i + 1, cf_i + 1, nexternal,
+                              ",".join(["%3r" % color_flow_dict[l.get('number')][i] \
+                                        for l in legs])))
+
     # Write the file
-    for line in file.split('\n'):
+    for line in lines:
         writer.write_fortran_line(fsock, line)
 
     return True
@@ -826,7 +852,7 @@ def write_mg_sym_file(fsock, matrix_element, fortran_model):
     # Extract identical particle info
     for i, leg in enumerate(final_legs):
         if leg.get('id') in identical_indices:
-            identical_indices[leg.get('id')].append( \
+            identical_indices[leg.get('id')].append(\
                                 i + ninitial + 1)
         else:
             identical_indices[leg.get('id')] = [i + ninitial + 1]
@@ -862,10 +888,10 @@ def write_ncombs_file(fsock, matrix_element, fortran_model, ncombs):
     # ncomb (used for clustering) is 2^(nexternal + 1)
     file = \
 """      integer    n_max_cl
-      parameter (n_max_cl=%d)""" % (2**(nexternal + 1))
+      parameter (n_max_cl=%d)""" % (2 ** (nexternal + 1))
 
     # Write the file
-    
+
     for line in file.split('\n'):
         writer.write_fortran_line(fsock, line)
 
@@ -927,7 +953,7 @@ def write_pmass_file(fsock, matrix_element, fortran_model):
     writer = FortranWriter()
 
     model = matrix_element.get('processes')[0].get('model')
-    
+
     lines = []
     for wf in matrix_element.get_external_wavefunctions():
         mass = model.get('particle_dict')[wf.get('pdg_code')].get('mass')
@@ -980,7 +1006,7 @@ def write_props_file(fsock, matrix_element, fortran_model, s_and_t_channels):
                          (leg.get('number'), iconf + 1, width))
             lines.append("pow(%d,%d) = %d" % \
                          (leg.get('number'), iconf + 1, pow_part))
-            
+
     # Write the file
     for line in lines:
         writer.write_fortran_line(fsock, line)
@@ -1108,7 +1134,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     files.write_to_file(filename,
                                 write_auto_dsig_file,
                                 matrix_element,
-                                fortran_model)    
+                                fortran_model)
 
     filename = 'coloramps.inc'
     files.write_to_file(filename,
@@ -1141,11 +1167,11 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
                         matrix_element,
                         fortran_model)
 
-    #filename = 'leshouche.inc'
-    #files.write_to_file(filename,
-    #                    write_leshouche_file,
-    #                    matrix_element,
-    #                    fortran_model)
+    filename = 'leshouche.inc'
+    files.write_to_file(filename,
+                        write_leshouche_file,
+                        matrix_element,
+                        fortran_model)
 
     filename = 'mg.sym'
     files.write_to_file(filename,
@@ -1237,7 +1263,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     files.append_to_file(filename,
                         write_subproc,
                         matrix_element,
-                        fortran_model)    
+                        fortran_model)
 
     if not calls:
         calls = 0
@@ -1345,10 +1371,10 @@ def get_icolamp_lines(matrix_element):
     amplitudes = matrix_element.get_all_amplitudes()
 
     ret_list.append("logical icolamp(%d,%d)" % \
-                    (len(amplitudes),ncolor))
+                    (len(amplitudes), ncolor))
 
     for icolor in range(ncolor):
-        
+
         # List of amplitude numbers used in this JAMP
         amp_list = []
 
@@ -1363,10 +1389,10 @@ def get_icolamp_lines(matrix_element):
                 if res_amp:
                     amp_list.append(res_amp[0].get('number'))
         else:
-            amp_list = range(1,len(amplitudes) + 1)
+            amp_list = range(1, len(amplitudes) + 1)
 
         # List of True or False 
-        bool_list = [(i+1 in amp_list) for i in \
+        bool_list = [(i + 1 in amp_list) for i in \
                      range(len(amplitudes))]
 
         ret_list.append("DATA(icolamp(i,%d),i=1,%d)/%s/" % \
@@ -1482,7 +1508,7 @@ def get_pdf_lines(matrix_element, ninitial):
         for i, init_states in enumerate(initial_states):
             pdf_lines = pdf_lines + \
                    "IF (ABS(LPP(%d)) .GE. 1) THEN\nLP=SIGN(1,LPP(%d))\n" \
-                         % (i+1, i+1)
+                         % (i + 1, i + 1)
 
             for initial_state in init_states:
                 if initial_state in pdf_codes.keys():
@@ -1490,8 +1516,8 @@ def get_pdf_lines(matrix_element, ninitial):
                                 ("%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP," + \
                                  "XBK(%d),DSQRT(Q2FACT(%d)))\n") % \
                                  (pdf_codes[initial_state],
-                                  i+1, i+1, pdgtopdf[initial_state],
-                                  i+1, i+1)
+                                  i + 1, i + 1, pdgtopdf[initial_state],
+                                  i + 1, i + 1)
             pdf_lines = pdf_lines + "ENDIF\n"
 
         # Add up PDFs for the different initial state particles
@@ -1500,7 +1526,7 @@ def get_pdf_lines(matrix_element, ninitial):
             process_line = proc.base_string()
             pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
             pdf_lines = pdf_lines + "\nPD(IPROC)=PD(IPROC-1) + "
-            for ibeam in [1,2]:
+            for ibeam in [1, 2]:
                 initial_state = proc.get_initial_pdg(ibeam)
                 if initial_state in pdf_codes.keys():
                     pdf_lines = pdf_lines + "%s%d*" % \

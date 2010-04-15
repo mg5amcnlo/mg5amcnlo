@@ -43,6 +43,11 @@ class ColorBasis(dict):
     # Dictionary store the raw colorize information
     _list_color_dict = []
 
+    class ColorBasisError(Exception):
+        """Exception raised if an error occurs in the definition
+        or the execution of a color basis object."""
+        pass
+
     def colorize(self, diagram, model):
         """Takes a diagram and a model and outputs a dictionary with keys being
         color coefficient index tuples and values a color string (before 
@@ -318,6 +323,120 @@ class ColorBasis(dict):
 
         return dict([v, k] for k, v in mydict.items())
 
+    @staticmethod
+    def get_color_flow_string(my_color_string, octet_indices):
+        """Return the color_flow_string (i.e., composed only of T's with 2 
+        indices) associated to my_color_string. Take a list of the external leg
+        color octet state indices as an input. Returns only the leading N 
+        contribution!"""
+
+        # Create a new color factor to allow for simplification
+        my_cf = color_algebra.ColorFactor([my_color_string])
+
+        # Add one T per external octet
+        for indices in octet_indices:
+            my_cf[0].append(color_algebra.T(indices[0],
+                                            indices[1],
+                                            indices[2]))
+
+        # Simplify the whole thing
+        my_cf = my_cf.full_simplify()
+
+        # Return the string with the highest N coefficient 
+        # (leading N decomposition), and the value of this coeff
+        max_coeff = max([cs.Nc_power for cs in my_cf])
+
+        res_cs = [cs for cs in my_cf if cs.Nc_power == max_coeff]
+
+        # If more than one string at leading N...
+        if len(res_cs) > 1:
+            raise ColorBasis.ColorBasisError, \
+             "More than one color string with leading N coeff: %s" % str(res_cs)
+
+        res_cs = res_cs[0]
+
+        # If the result string does not contain only T's with two indices
+        for col_obj in res_cs:
+            if col_obj.__class__.__name__ != 'T':
+                raise ColorBasis.ColorBasisError, \
+                  "Color flow decomposition %s contains non T elements" % \
+                                                                    str(res_cs)
+            if len(col_obj) != 2:
+                raise ColorBasis.ColorBasisError, \
+                  "Color flow decomposition %s contains T's w/o 2 indices" % \
+                                                                    str(res_cs)
+
+        return res_cs
+
+    def color_flow_decomposition(self, repr_dict, ninitial):
+        """Returns the color flow decomposition of the current basis, i.e. a 
+        list of dictionaries (one per color basis entry) with keys corresponding
+        to external leg numbers and values tuples containing two color indices
+        ( (0,0) for singlets, (X,0) for triplet, (0,X) for antitriplet and 
+        (X,Y) for octets). Other color representations are not yet supported 
+        here (an error is raised). Needs a dictionary with keys being external
+        leg numbers, and value the corresponding color representation."""
+
+        # Offsets used to introduce fake quark indices for gluons
+        offset1 = 1000
+        offset2 = 2000
+
+        res = []
+
+        for col_basis_entry in self.keys():
+
+            res_dict = {}
+            fake_repl = []
+
+            # Rebuild a color string from a CB entry
+            col_str = color_algebra.ColorString()
+            col_str.from_immutable(col_basis_entry)
+
+            for (leg_num, leg_repr) in repr_dict.items():
+                # By default, assign a (0,0) color flow
+                res_dict[leg_num] = [0, 0]
+
+                # Raise an error if external legs contain non supported repr
+                if leg_repr not in [1, 3, -3, 8]:
+                    raise ColorBasis.ColorBasisError, \
+        "Particle ID=%i has an unsupported color representation" % leg_repr
+
+                # Build the fake indices replacements for octets
+                if leg_repr == 8:
+                    fake_repl.append((leg_num,
+                                      offset1 + leg_num,
+                                      offset2 + leg_num))
+
+            # Get the actual color flow
+            col_str_flow = self.get_color_flow_string(col_str, fake_repl)
+
+            # Offset for color flow
+            offset = 501
+
+            for col_obj in col_str_flow:
+                for i, index in enumerate(col_obj):
+                    if index < offset1:
+                        res_dict[index][i] = offset
+                    elif index > offset1 and index < offset2:
+                        res_dict[index - offset1][0] = offset
+                    elif index > offset2:
+                        res_dict[index - offset2][1] = offset
+                offset = offset + 1
+
+            # Reverse ordering for initial state to stick to the (weird)
+            # les houches convention
+
+            for key in res_dict.keys():
+                if key <= ninitial:
+                    res_dict[key].reverse()
+
+            res.append(res_dict)
+
+        return res
+
+
+
+
 #===============================================================================
 # ColorMatrix
 #===============================================================================
@@ -528,3 +647,4 @@ class ColorMatrix(dict):
     def lcmm(*args):
         """Return lcm of args."""
         return reduce(ColorMatrix.lcm, args)
+
