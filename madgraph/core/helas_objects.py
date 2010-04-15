@@ -517,6 +517,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                    external_wavefunctions,
                                    self.get_with_flow('state'),
                                    wf_number)
+
         return self, wf_number
 
     def check_majorana_and_flip_flow(self, found_majorana,
@@ -717,7 +718,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             fermion_number_list.extend(in_list[1])
             fermion_number_list.extend(out_list[1])
         elif len(in_fermions) != len(out_fermions):
-            raise self.HelasWavefunctionError, \
+            raise self.PhysicsObjectError, \
                   "Error: %d incoming fermions != %d outgoing fermions" % \
                   (len(in_fermions), len(out_fermions))
 
@@ -1009,6 +1010,9 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
 
     # Helper functions
 
+    def to_array(self):
+        return array.array('i', [w.get('number') for w in self])
+
     def check_and_fix_fermion_flow(self,
                                    wavefunctions,
                                    diagram_wavefunctions,
@@ -1080,6 +1084,7 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                                                 external_wavefunctions,
                                                 wf_number,
                                                 force_flip_flow)
+
             # Replace old mother with new mother
             self[self.index(mother)] = new_mother
 
@@ -1107,6 +1112,7 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                                    my_state,
                                    wf_number,
                                    force_flip_flow)
+
         return wf_number
 
     def insert_own_mothers(self):
@@ -1328,8 +1334,9 @@ class HelasAmplitude(base_objects.PhysicsObject):
                                    wavefunctions,
                                    diagram_wavefunctions,
                                    external_wavefunctions,
-                                   'nostate',
+                                   "Nostate",
                                    wf_number)
+
 
     def needs_hermitian_conjugate(self):
         """Returns true if any of the mothers have negative
@@ -1388,7 +1395,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
             fermion_number_list.extend(in_list[1])
             fermion_number_list.extend(out_list[1])
         elif len(in_fermions) != len(out_fermions):
-            raise self.HelasWavefunctionError, \
+            raise self.PhysicsObjectError, \
                   "Error: %d incoming fermions != %d outgoing fermions" % \
                   (len(in_fermions), len(out_fermions))
 
@@ -1933,6 +1940,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     # Need one amplitude for each Lorentz/color structure,
                     # i.e. for each coupling
                     for coupl_key in inter.get('couplings').keys():
+
                         wf = HelasWavefunction(last_leg, vertex.get('id'), model)
                         wf.set('coupling', inter.get('couplings')[coupl_key])
                         # Special feature: For HVS vertices with the two
@@ -1958,7 +1966,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                                    diagram_wavefunctions,
                                                    external_wavefunctions,
                                                    wf_number)
-                        
+
                         # Create new copy of number_wf_dict
                         new_number_wf_dict = copy.copy(number_wf_dict)
 
@@ -2012,7 +2020,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 wf_number = mothers.check_and_fix_fermion_flow(wavefunctions,
                                               diagram_wavefunctions,
                                               external_wavefunctions,
-                                              'nostate',
+                                              "Nostate",
                                               wf_number)
                 
                 # Sort the wavefunctions according to number
@@ -2127,6 +2135,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
             earlier_wfs = []
 
+            earlier_wf_arrays = []
+
             for diagram in self.get('diagrams'):
 
                 if diagram.get('number') > 1:
@@ -2148,17 +2158,15 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 while diag_wfs[i:]:
                     try:
                         new_wf = earlier_wfs[\
-                                 earlier_wfs.index(diag_wfs[i])]
+                            earlier_wfs.index(diag_wfs[i])]
                         wf = diag_wfs.pop(i)
 
                         mother_wfs = filter(lambda a: wf in \
                                             a.get('mothers'),\
                                             diag_wfs[i:] + later_wfs + later_amps)
-                        for later_wf in mother_wfs:
-                            # Replace mother
-                            later_wf.get('mothers')[\
-                                   later_wf.get('mothers').index(wf)] = \
-                                   new_wf
+                        self.update_later_mothers(wf, new_wf, mother_wfs,
+                                                  [w.get('mothers').to_array() \
+                                                   for w in mother_wfs])
                     except ValueError:
                         i = i + 1
 
@@ -2387,6 +2395,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                               earlier_wavefunctions]
 
                         i = 0
+                        mother_arrays = [w.get('mothers').to_array() for \
+                                         w in final_decay_wfs]
                         while decay_diag_wfs[i:]:
                             wf = decay_diag_wfs[i]
                             try:
@@ -2400,15 +2410,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                     wf.set('number', numbers[0])
                                     continue
                                 decay_diag_wfs.pop(i)
-                                for later_wf in decay_diag_wfs[i:] + \
-                                                                   final_decay_wfs:
-                                    try:
-                                        # Replace mother
-                                        later_wf.get('mothers')[\
-                                              later_wf.get('mothers').index(wf)] = \
-                                                              new_wf
-                                    except ValueError:
-                                        pass
+                                pres_mother_arrays = [w.get('mothers').to_array() for \
+                                                      w in decay_diag_wfs[i:]] + \
+                                                      mother_arrays
+                                self.update_later_mothers(wf, new_wf,
+                                                          decay_diag_wfs[i:] + \
+                                                          final_decay_wfs,
+                                                          pres_mother_arrays)
                             except ValueError:
                                 i = i + 1
 
@@ -2439,6 +2447,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         for wf in final_decay_wfs:
                             decay_diag_wfs.remove(wf)
 
+                        
                     diagram_wfs = diagram.get('wavefunctions')
 
                     old_wf_index = [wf.get('number') for wf in \
@@ -2494,22 +2503,37 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 # Remove wavefunctions and replace mothers, to make
                 # sure we only have one copy of each wavefunction
                 # number
+
+                mother_arrays = [w.get('mothers').to_array() for \
+                                 w in later_wfs + later_amps]
+                
                 while diag_wfs[i:]:
                     try:
                         index = [w.get('number') for w in earlier_wfs].\
                                 index(diag_wfs[i].get('number'))
                         wf = diag_wfs.pop(i)
-                        for later_wf in diag_wfs[i:] + later_wfs + later_amps:
-                            try:
-                                # Replace mother
-                                later_wf.get('mothers')[\
-                                   later_wf.get('mothers').index(wf)] = \
-                                      earlier_wfs[index]
-
-                            except ValueError:
-                                pass
+                        pres_mother_arrays = [w.get('mothers').to_array() for \
+                                              w in diag_wfs[i:]] + \
+                                              mother_arrays
+                        self.update_later_mothers(wf, earlier_wfs[index],
+                                              diag_wfs[i:] + later_wfs + later_amps,
+                                              pres_mother_arrays)
                     except ValueError:
                         i = i + 1
+
+    def update_later_mothers(self, wf, new_wf, later_wfs, later_wf_arrays):
+        """Update mothers for all later wavefunctions"""
+
+        daughters = filter(lambda tup: wf.get('number') in tup[1],
+                              enumerate(later_wf_arrays))
+
+        for (index, mothers) in daughters:
+            try:
+                # Replace mother
+                later_wfs[index].get('mothers')[\
+                    mothers.index(wf.get('number'))] = new_wf
+            except ValueError:
+                pass
 
     def replace_wavefunctions(self, old_wf, new_wfs,
                               diagrams, numbers):
@@ -2591,7 +2615,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                               [wf1.get('number') for wf1 in wf.get('mothers')],
                               sum([diag.get('wavefunctions') for diag in \
                                    diagrams], []))
-        
+
         # Loop over daughter_wfs, multiply them and replace mothers
         for daughter_wf in daughter_wfs:
 

@@ -1368,7 +1368,7 @@ def get_icolamp_lines(matrix_element):
         # List of True or False 
         bool_list = [(i+1 in amp_list) for i in \
                      range(len(amplitudes))]
-
+        # Add line
         ret_list.append("DATA(icolamp(i,%d),i=1,%d)/%s/" % \
                             (icolor + 1, len(bool_list),
                              ','.join(["%s" % booldict[i] for i in \
