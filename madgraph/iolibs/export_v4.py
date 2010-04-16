@@ -791,10 +791,10 @@ def write_leshouche_file(fsock, matrix_element, fortran_model):
                      (iproc + 1, nexternal,
                       ",".join([str(l.get('id')) for l in legs])))
         for i in [1, 2]:
-            lines.append("DATA (MOTHUP(%d,i,%d),i=1,%d)/%s/" % \
+            lines.append("DATA (MOTHUP(%d,i,%3r),i=1,%2r)/%s/" % \
                      (i, iproc + 1, nexternal,
-                      ",".join([ "0" ] * ninitial + \
-                               [ str(i) ] * (nexternal - ninitial))))
+                      ",".join([ "%3r" % 0 ] * ninitial + \
+                               [ "%3r" % i ] * (nexternal - ninitial))))
 
         # Here goes the color connections corresponding to the JAMPs
         # Only one output, for the first subproc!
@@ -802,7 +802,7 @@ def write_leshouche_file(fsock, matrix_element, fortran_model):
             # If no color basis, just output trivial color flow
             if not matrix_element.get('color_basis'):
                 for i in [1, 2]:
-                    lines.append("DATA (ICOLUP(%3r,i,1),i=1,%3r)/%s/" % \
+                    lines.append("DATA (ICOLUP(%d,i,  1),i=1,%2r)/%s/" % \
                              (i, nexternal,
                               ",".join([ "%3r" % 0 ] * ninitial + nexternal)))
 
@@ -819,7 +819,7 @@ def write_leshouche_file(fsock, matrix_element, fortran_model):
                 # And output them properly
                 for cf_i, color_flow_dict in enumerate(color_flow_list):
                     for i in [0, 1]:
-                        lines.append("DATA (ICOLUP(%3r,i,%3r),i=1,%3r)/%s/" % \
+                        lines.append("DATA (ICOLUP(%d,i,%3r),i=1,%2r)/%s/" % \
                              (i + 1, cf_i + 1, nexternal,
                               ",".join(["%3r" % color_flow_dict[l.get('number')][i] \
                                         for l in legs])))
@@ -1264,6 +1264,9 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
                         write_subproc,
                         matrix_element,
                         fortran_model)
+    # Generate info page
+    os.system(os.path.join('..', 'bin', 'gen_infohtml-pl'))
+
 
     if not calls:
         calls = 0
