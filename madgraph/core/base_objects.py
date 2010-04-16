@@ -59,7 +59,7 @@ class PhysicsObject(dict):
 
         try:
             return dict.__getitem__(self, name)
-        except:
+        except KeyError:
             self.is_valid_prop(name) #raise the correct error
 
 
@@ -81,16 +81,9 @@ class PhysicsObject(dict):
 
         return True
 
-    def __getitem__(self, name):
-        """ Get the value of the property name."""
-
-        if self.is_valid_prop(name):
-            return dict.__getitem__(self, name)
-
     def get(self, name):
         """Get the value of the property name."""
 
-        #if self.is_valid_prop(name): #done automaticaly in __getitem__
         return self[name]
 
     def set(self, name, value):

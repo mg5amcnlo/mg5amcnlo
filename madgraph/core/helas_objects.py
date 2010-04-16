@@ -381,7 +381,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Lorentz or color structures
         array_rep.extend(list(self['coupl_key']))
         # Finally, the mother numbers
-        array_rep.extend([mother.get('number') for \
+        array_rep.extend([mother['number'] for \
                           mother in self['mothers']])
         return array_rep
 
@@ -987,8 +987,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
             return False
 
         # Check that mothers have the same numbers (only relevant info)
-        return sorted([mother.get('number') for mother in self['mothers']]) == \
-               sorted([mother.get('number') for mother in other['mothers']])
+        return sorted([mother['number'] for mother in self['mothers']]) == \
+               sorted([mother['number'] for mother in other['mothers']])
 
     def __ne__(self, other):
         """Overloading the nonequality operator, to make comparison easy"""
@@ -1011,7 +1011,7 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
     # Helper functions
 
     def to_array(self):
-        return array.array('i', [w.get('number') for w in self])
+        return array.array('i', [w['number'] for w in self])
 
     def check_and_fix_fermion_flow(self,
                                    wavefunctions,
@@ -1605,8 +1605,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
             return False
 
         # Check that mothers have the same numbers (only relevant info)
-        return sorted([mother.get('number') for mother in self['mothers']]) == \
-               sorted([mother.get('number') for mother in other['mothers']])
+        return sorted([mother['number'] for mother in self['mothers']]) == \
+               sorted([mother['number'] for mother in other['mothers']])
 
     def __ne__(self, other):
         """Overloading the nonequality operator, to make comparison easy"""
@@ -2137,22 +2137,19 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
             earlier_wf_arrays = []
 
+            mothers = self.get_all_wavefunctions() + self.get_all_amplitudes()
+            mother_arrays = [w['mothers'].to_array() \
+                             for w in mothers]
+
             for diagram in self.get('diagrams'):
 
                 if diagram.get('number') > 1:
                     earlier_wfs.extend(self.get('diagrams')[\
                         diagram.get('number') - 2].get('wavefunctions'))
 
-                later_wfs = sum([d.get('wavefunctions') for d in \
-                                   self.get('diagrams')[\
-                                     diagram.get('number'):]], [])
-
-                later_amps = sum([d.get('amplitudes') for d in \
-                                   self.get('diagrams')[\
-                                     diagram.get('number') - 1:]], [])
-
                 i = 0
                 diag_wfs = diagram.get('wavefunctions')
+                
 
                 # Remove wavefunctions and replace mothers
                 while diag_wfs[i:]:
@@ -2161,12 +2158,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                             earlier_wfs.index(diag_wfs[i])]
                         wf = diag_wfs.pop(i)
 
-                        mother_wfs = filter(lambda a: wf in \
-                                            a.get('mothers'),\
-                                            diag_wfs[i:] + later_wfs + later_amps)
-                        self.update_later_mothers(wf, new_wf, mother_wfs,
-                                                  [w.get('mothers').to_array() \
-                                                   for w in mother_wfs])
+                        self.update_later_mothers(wf, new_wf, mothers,
+                                                  mother_arrays)
                     except ValueError:
                         i = i + 1
 
