@@ -1711,7 +1711,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # base_amplitude is the Amplitude to be used in color
         # generation, drawing etc. For decay chain processes, this is
         # the Amplitude which corresponds to the combined process.
-        self['base_amplitude'] = diagram_generation.Amplitude()
+        self['base_amplitude'] = None
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
@@ -1737,7 +1737,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid ColorMatrix object" % str(value)
         if name == 'base_amplitude':
-            if not isinstance(value, diagram_generation.Amplitude):
+            if value != None and not \
+                   isinstance(value, diagram_generation.Amplitude):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid Amplitude object" % str(value)
         return True
@@ -1748,6 +1749,15 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         return ['processes', 'identical_particle_factor',
                 'diagrams', 'color_basis', 'color_matrix',
                 'base_amplitude']
+
+    # Enhanced get function
+    def get(self, name):
+        """Get the value of the property name."""
+
+        if name == 'base_amplitude' and not self[name]:
+            self['base_amplitude'] = self.get_base_amplitude()
+
+        return super(HelasMatrixElement, self).get(name)
 
     # Customized constructor
     def __init__(self, amplitude=None, optimization=1,
@@ -1765,9 +1775,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 self.calculate_fermionfactors()
                 self.calculate_identical_particle_factors()
                 if gen_color:
-                    my_amp = self.get_base_amplitude()
-                    self['base_amplitude'] = my_amp
-                    self.get('color_basis').build(my_amp)
+                    self.get('color_basis').build(self.get('base_amplitude'))
                     self.set('color_matrix',
                              color_amp.ColorMatrix(self.get('color_basis')))
             else:
