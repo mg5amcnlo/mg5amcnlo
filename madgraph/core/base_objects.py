@@ -1310,9 +1310,7 @@ class Process(PhysicsObject):
                 mystr = mystr + forbpart.get_name() + ' '
 
         if self['orders']:
-            mystr = mystr[:-1] + "\n" + " " * indent
-            mystr = mystr + 'Orders: '
-            mystr = mystr + ", ".join([key + '=' + repr(self['orders'][key]) \
+            mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
                        for key in self['orders']]) + ' '
 
         # Remove last space

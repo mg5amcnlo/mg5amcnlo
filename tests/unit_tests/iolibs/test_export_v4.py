@@ -773,23 +773,6 @@ CALL IOVXXX(W(1,1),W(1,6),W(1,7),MGVX15,AMP(2))""")
                       'couplings':{(0, 0):'GG'},
                       'orders':{'QCD':1}}))
 
-        myinterlist.append(base_objects.Interaction({
-                      'id': 3,
-                      'particles': base_objects.ParticleList(\
-                                            [g, \
-                                             g, \
-                                             g,
-                                             g]),
-                      'color': [color.ColorString([color.f(0, 1, -1),
-                                                   color.f(2, 3, -1)]),
-                                color.ColorString([color.f(2, 0, -1),
-                                                   color.f(1, 3, -1)]),
-                                color.ColorString([color.f(1, 2, -1),
-                                                   color.f(0, 3, -1)])],
-                      'lorentz':['gggg1', 'gggg2', 'gggg3'],
-                      'couplings':{(0, 0):'GG',(1, 1):'GG',(2, 2):'GG'},
-                      'orders':{'QCD':2}}))
-
         mybasemodel.set('particles', mypartlist)
         mybasemodel.set('interactions', myinterlist)
 
@@ -996,6 +979,157 @@ JAMP(6)=+1./4.*(+AMP(1)+AMP(3)+1./3.*AMP(4)+1./3.*AMP(5)+AMP(10)+1./3.*AMP(11)+1
       DATA (ICOLUP(1,I,  6),I=1, 6)/503,  0,502,  0,503,  0/
       DATA (ICOLUP(2,I,  6),I=1, 6)/  0,501,  0,501,  0,502/
 """)
+
+        # Test pdf output (for auto_dsig.f)
+
+        self.assertEqual(export_v4.get_pdf_lines(matrix_element, 2),
+                         """IF (ABS(LPP(1)) .GE. 1) THEN
+LP=SIGN(1,LPP(1))
+u1=PDG2PDF(ABS(LPP(1)),2*LP,XBK(1),DSQRT(Q2FACT(1)))
+ENDIF
+IF (ABS(LPP(2)) .GE. 1) THEN
+LP=SIGN(1,LPP(2))
+ub2=PDG2PDF(ABS(LPP(2)),-2*LP,XBK(2),DSQRT(Q2FACT(2)))
+ENDIF
+PD(0) = 0d0
+IPROC = 0
+IPROC=IPROC+1 ! u u~ > u u~ u u~
+PD(IPROC)=PD(IPROC-1) + u1*ub2""")
+
+    def test_generate_helas_diagrams_gg_gg(self):
+        """Test calls for g g > g g"""
+
+        # Set up local model
+        
+        mybasemodel = base_objects.Model()
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        g = mypartlist[len(mypartlist) - 1]
+
+        # Gluon self-couplings
+        my_color_string = color.ColorString([color.f(0, 1, 2)])
+        my_color_string.is_imaginary = True
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [g, \
+                                             g, \
+                                             g]),
+                      'color': [my_color_string],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [g, \
+                                             g, \
+                                             g,
+                                             g]),
+                      'color': [color.ColorString([color.f(0, 1, -1),
+                                                   color.f(2, 3, -1)]),
+                                color.ColorString([color.f(2, 0, -1),
+                                                   color.f(1, 3, -1)]),
+                                color.ColorString([color.f(1, 2, -1),
+                                                   color.f(0, 3, -1)])],
+                      'lorentz':['gggg1', 'gggg2', 'gggg3'],
+                      'couplings':{(0, 0):'GG',(1, 1):'GG',(2, 2):'GG'},
+                      'orders':{'QCD':2}}))
+
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'initial'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':'final'}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mybasemodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude)
+
+        # Test Helas calls
+
+        fortran_model = export_v4.HelasFortranModel()
+
+        self.assertEqual("\n".join(fortran_model.\
+                                   get_matrix_element_calls(matrix_element)),
+                         """CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
+CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
+CALL VXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
+CALL VXXXXX(P(0,4),zero,NHEL(4),+1*IC(4),W(1,4))
+# Amplitude(s) for diagram number 1
+CALL GGGGXX(W(1,1),W(1,2),W(1,3),W(1,4),GG,AMP(1))
+CALL GGGGXX(W(1,3),W(1,1),W(1,2),W(1,4),GG,AMP(2))
+CALL GGGGXX(W(1,2),W(1,3),W(1,1),W(1,4),GG,AMP(3))
+CALL JVVXXX(W(1,1),W(1,2),GG,zero,zero,W(1,5))
+# Amplitude(s) for diagram number 2
+CALL VVVXXX(W(1,3),W(1,4),W(1,5),GG,AMP(4))
+CALL JVVXXX(W(1,1),W(1,3),GG,zero,zero,W(1,6))
+# Amplitude(s) for diagram number 3
+CALL VVVXXX(W(1,2),W(1,4),W(1,6),GG,AMP(5))
+CALL JVVXXX(W(1,1),W(1,4),GG,zero,zero,W(1,7))
+# Amplitude(s) for diagram number 4
+CALL VVVXXX(W(1,2),W(1,3),W(1,7),GG,AMP(6))""")
+
+        # Test color matrix output
+        self.assertEqual("\n".join(export_v4.get_color_data_lines(\
+                         matrix_element)),
+                         """DATA Denom(1)/6/
+DATA (CF(i,  1),i=  1,  6) /   19,    4,   -2,   -2,   -2,   -2/
+C 1 Tr(1,4,3,2)
+DATA Denom(2)/6/
+DATA (CF(i,  2),i=  1,  6) /    4,   19,   -2,   -2,   -2,   -2/
+C 1 Tr(1,2,3,4)
+DATA Denom(3)/6/
+DATA (CF(i,  3),i=  1,  6) /   -2,   -2,   19,   -2,   -2,    4/
+C 1 Tr(1,3,4,2)
+DATA Denom(4)/6/
+DATA (CF(i,  4),i=  1,  6) /   -2,   -2,   -2,   19,    4,   -2/
+C 1 Tr(1,3,2,4)
+DATA Denom(5)/6/
+DATA (CF(i,  5),i=  1,  6) /   -2,   -2,   -2,    4,   19,   -2/
+C 1 Tr(1,4,2,3)
+DATA Denom(6)/6/
+DATA (CF(i,  6),i=  1,  6) /   -2,   -2,    4,   -2,   -2,   19/
+C 1 Tr(1,2,4,3)""")
+
+        # Test JAMP (color amplitude) output
+        self.assertEqual("\n".join(export_v4.get_JAMP_lines(matrix_element)),
+                         """JAMP(1)=+2*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))
+JAMP(2)=+2*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))
+JAMP(3)=+2*(+AMP(1)-AMP(2)-AMP(4)-AMP(5))
+JAMP(4)=+2*(-AMP(3)+AMP(2)+AMP(5)+AMP(6))
+JAMP(5)=+2*(-AMP(3)+AMP(2)+AMP(5)+AMP(6))
+JAMP(6)=+2*(+AMP(1)-AMP(2)-AMP(4)-AMP(5))""")
+        
 
     def test_generate_helas_diagrams_uu_susu(self):
         """Testing the helas diagram generation u u > su su with t-channel n1

@@ -2889,6 +2889,63 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         return spin_factor * color_factor * self['identical_particle_factor']
 
+    def get_color_amplitudes(self):
+        """Return a list of (coefficient, amplitude number) lists,
+        corresponding to the JAMPs for this matrix element. The
+        coefficients are given in the format (fermion factor, color
+        coeff (frac), imaginary, Nc power)."""
+
+        if not self.get('color_basis'):
+            # No color, simply add all amplitudes with correct factor
+            # for first color amplitude
+            col_amp = []
+            for diagram in self.get('diagrams'):
+                for amplitude in diagram.get('amplitudes'):
+                    col_amp.append(((amplitude.get('fermionfactor'),
+                                    1, False, 0),
+                                    amplitude.get('number')))
+            return [col_amp]
+
+        # There is a color basis - create a list of coefficients and
+        # amplitude numbers
+
+        col_amp_list = []
+        for i, col_basis_elem in \
+                enumerate(self.get('color_basis').keys()):
+
+            col_amp = []
+            for diag_tuple in self.get('color_basis')[col_basis_elem]:
+                res_amp = filter(lambda amp: \
+                          tuple(amp.get('color_indices')) == diag_tuple[1],
+                          self.get('diagrams')[diag_tuple[0]].get('amplitudes'))
+                if not res_amp:
+                    raise FortranWriter.FortranWriterError, \
+                          """No amplitude found for color structure
+                            %s and color index chain (%s) (diagram %i)""" % \
+                            (col_basis_elem,
+                             str(diag_tuple[1]),
+                             diag_tuple[0])
+
+                if len(res_amp) > 1:
+                    raise FortranWriter.FortranWriterError, \
+                        """More than one amplitude found for color structure
+                        %s and color index chain (%s) (diagram %i)""" % \
+                        (col_basis_elem,
+                         str(diag_tuple[1]),
+                         diag_tuple[0])
+
+                col_amp.append(((res_amp[0].get('fermionfactor'),
+                                 diag_tuple[2],
+                                 diag_tuple[3],
+                                 diag_tuple[4]),
+                                res_amp[0].get('number')))
+
+            col_amp_list.append(col_amp)
+
+        return col_amp_list
+
+        
+
     @staticmethod
     def check_equal_decay_processes(decay1, decay2):
         """Check if two single-sided decay processes

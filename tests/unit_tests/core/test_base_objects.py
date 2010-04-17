@@ -1219,8 +1219,7 @@ class ProcessTest(unittest.TestCase):
     def test_nice_string(self):
         """Test Process nice_string representation"""
 
-        goal_str = "Process: c c > c c c\n"
-        goal_str = goal_str + "Orders: QED=1, QCD=5"
+        goal_str = "Process: c c > c c c QED=1 QCD=5"
 
         self.assertEqual(goal_str, self.myprocess.nice_string())
 

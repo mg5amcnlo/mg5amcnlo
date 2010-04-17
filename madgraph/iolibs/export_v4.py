@@ -1364,37 +1364,20 @@ def get_icolamp_lines(matrix_element):
 
     booldict = {False: ".false.", True: ".true."}
 
-    # Go through the JAMPs
-    color_basis = matrix_element.get('color_basis')
-
-    ncolor = 1
-    if color_basis:
-        ncolor = len(color_basis)
-
     amplitudes = matrix_element.get_all_amplitudes()
 
+    color_amplitudes = matrix_element.get_color_amplitudes()
+
     ret_list.append("logical icolamp(%d,%d)" % \
-                    (len(amplitudes), ncolor))
+                    (len(amplitudes), len(color_amplitudes)))
 
     bool_list = []
 
-    for icolor in range(ncolor):
+    for icolor, coeff_list in \
+            enumerate(color_amplitudes):
 
         # List of amplitude numbers used in this JAMP
-        amp_list = []
-
-        # Fill the amplitude number list for this JAMP
-        if matrix_element.get('color_basis'):
-            col_basis_elem = color_basis.keys()[icolor]
-            for diag_tuple in matrix_element.get('color_basis')[col_basis_elem]:
-                res_amp = filter(lambda amp: \
-                           tuple(amp.get('color_indices')) == diag_tuple[1],
-                            matrix_element.get('diagrams')[diag_tuple[0]].\
-                                                           get('amplitudes'))
-                if res_amp:
-                    amp_list.append(res_amp[0].get('number'))
-        else:
-            amp_list = range(1, len(amplitudes) + 1)
+        amp_list = [amp_number for (dummy, amp_number) in coeff_list]
 
         # List of True or False 
         bool_list.extend([(i + 1 in amp_list) for i in \
@@ -1409,72 +1392,40 @@ def get_icolamp_lines(matrix_element):
 def get_JAMP_lines(matrix_element):
     """Return the JAMP = sum(fermionfactor * AMP(i)) lines"""
 
-    if not matrix_element.get('color_basis'):
-        res = "JAMP(1)="
-        # Add all amplitudes with correct fermion factor
-        for diagram in matrix_element.get('diagrams'):
-            for amplitude in diagram.get('amplitudes'):
-                res = res + "%sAMP(%d)" % (coeff(amplitude.get('fermionfactor'),
-                                                 1, False, 0),
-                                           amplitude.get('number'))
-        return [res]
-    else:
-        res_list = []
-        for i, col_basis_elem in \
-                enumerate(matrix_element.get('color_basis').keys()):
-            res = "JAMP(%i)=" % (i + 1)
+    res_list = []
 
-            # Optimization: if all contributions to that color basis element have
-            # the same coefficient (up to a sign), put it in front
-            list_fracs = [abs(diag_tuple[2]) for diag_tuple in \
-                          matrix_element.get('color_basis')[col_basis_elem]]
-            common_factor = False
-            diff_fracs = list(set(list_fracs))
-            if len(diff_fracs) == 1 and abs(diff_fracs[0]) != 1:
-                common_factor = True
-                global_factor = diff_fracs[0]
-                res = res + '%s(' % coeff(1, global_factor, False, 0)
+    for i, coeff_list in \
+            enumerate(matrix_element.get_color_amplitudes()):
 
+        res = "JAMP(%i)=" % (i + 1)
 
-            for diag_tuple in matrix_element.get('color_basis')[col_basis_elem]:
-                res_amp = filter(lambda amp: \
-                                 tuple(amp.get('color_indices')) == diag_tuple[1],
-                                 matrix_element.get('diagrams')[diag_tuple[0]].get('amplitudes'))
-                if res_amp:
-                    if len(res_amp) > 1:
-                        raise FortranWriter.FortranWriterError, \
-                            """More than one amplitude found for color structure
-                            %s and color index chain (%s) (diagram %i)""" % \
-                            (col_basis_elem,
-                             str(diag_tuple[1]),
-                             diag_tuple[0])
-                    else:
-                        if common_factor:
-                            res = res + "%sAMP(%d)" % (coeff(res_amp[0].get('fermionfactor'),
-                                                     diag_tuple[2] / abs(diag_tuple[2]),
-                                                     diag_tuple[3],
-                                                     diag_tuple[4]),
-                                                     res_amp[0].get('number'))
-                        else:
-                            res = res + "%sAMP(%d)" % (coeff(res_amp[0].get('fermionfactor'),
-                                                     diag_tuple[2],
-                                                     diag_tuple[3],
-                                                     diag_tuple[4]),
-                                                     res_amp[0].get('number'))
-                else:
-                    raise FortranWriter.FortranWriterError, \
-                            """No corresponding amplitude found for color structure
-                            %s and color index chain (%s) (diagram %i)""" % \
-                            (col_basis_elem,
-                             str(diag_tuple[1]),
-                             diag_tuple[0])
+        # Optimization: if all contributions to that color basis element have
+        # the same coefficient (up to a sign), put it in front
+        list_fracs = [abs(coefficient[0][1]) for coefficient in coeff_list]
+        common_factor = False
+        diff_fracs = list(set(list_fracs))
+        if len(diff_fracs) == 1 and abs(diff_fracs[0]) != 1:
+            common_factor = True
+            global_factor = diff_fracs[0]
+            res = res + '%s(' % coeff(1, global_factor, False, 0)
 
+        for (coefficient, amp_number) in coeff_list:
             if common_factor:
-                res = res + ')'
+                res = res + "%sAMP(%d)" % (coeff(coefficient[0],
+                                           coefficient[1]/abs(coefficient[1]),
+                                           coefficient[2],
+                                           coefficient[3]),
+                                           amp_number)
+            else:
+                res = res + "%sAMP(%d)" % (apply(coeff, coefficient),
+                                           amp_number)
 
-            res_list.append(res)
+        if common_factor:
+            res = res + ')'
 
-        return res_list
+        res_list.append(res)
+
+    return res_list
 
 def get_pdf_lines(matrix_element, ninitial):
     """Generate the PDF lines for the auto_dsig.f file"""
