@@ -151,6 +151,16 @@ class MadGraphCmd(cmd.Cmd):
         "*                                                          *\n" + \
         "************************************************************"
 
+    def default(self, line):
+        """Default action if line is not recognized"""
+        if line[0] == "#":
+            # This is a comment - do nothing
+            return
+        else:
+            # Faulty command
+            print "Command \"%s\" not recognized, please try again" % \
+                  line.split()[0]
+
     # Import files
     def do_import(self, line):
         """Import files with external formats"""
