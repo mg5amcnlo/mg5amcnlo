@@ -18,6 +18,7 @@
 """
 
 import cmd
+import copy
 import os
 import subprocess
 import sys
@@ -51,6 +52,9 @@ class MadGraphCmd(cmd.Cmd):
 
     __curr_model = base_objects.Model()
     __curr_amps = diagram_generation.AmplitudeList()
+    # __org_amps holds the original amplitudes before export (for
+    # decay chains, __curr_amps are replaced after export)
+    __org_amps = diagram_generation.AmplitudeList()
     __curr_matrix_elements = helas_objects.HelasMultiProcess()
     __curr_fortran_model = export_v4.HelasFortranModel()
     __multiparticles = {}
@@ -279,6 +283,7 @@ class MadGraphCmd(cmd.Cmd):
             else:
                 print 'Error: Could not load model from file ', args[1]
         elif args[0] == 'processes':
+            self.__org_amps = diagram_generation.AmplitudeList()
             self.__curr_amps = save_load_object.load_from_file(args[1])
             if isinstance(self.__curr_amps, diagram_generation.AmplitudeList):
                 cpu_time2 = time.time()
@@ -439,6 +444,7 @@ class MadGraphCmd(cmd.Cmd):
             myproc = diagram_generation.MultiProcess(myprocdef)
 
             self.__curr_amps = myproc.get('amplitudes')
+            self.__org_amps = copy.copy(self.__curr_amps)
 
             cpu_time2 = time.time()
 
@@ -700,11 +706,13 @@ class MadGraphCmd(cmd.Cmd):
                 myproc = diagram_generation.MultiProcess(myprocdef)
 
                 for amp in myproc.get('amplitudes'):
-                    if amp not in self.__curr_amps:
-                        self.__curr_amps.append(amp)
+                    if amp not in self.__org_amps:
+                        self.__org_amps.append(amp)
                     else:
                         print "Warning: Already in processes:"
                         print amp.nice_string_processes()
+
+                self.__curr_amps = copy.copy(self.__org_amps)
 
                 cpu_time2 = time.time()
 
@@ -896,7 +904,7 @@ class MadGraphCmd(cmd.Cmd):
         amplitudes = diagram_generation.AmplitudeList()
 
         for amp in self.__curr_amps:
-            amplitudes.extend(amp.get_amplitudes())
+            amplitudes.extend(amp.get_amplitudes())            
 
         for amp in amplitudes:
             filename = os.path.join(args[0], 'diagrams_' + \
