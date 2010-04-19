@@ -98,6 +98,10 @@ class Amplitude(base_objects.PhysicsObject):
         return self.get('process').nice_string(indent) + "\n" + \
                self.get('diagrams').nice_string(indent)
 
+    def nice_string_processes(self, indent=0):
+        """Returns a nicely formatted string of the amplitude process."""
+        return self.get('process').nice_string(indent)
+
     def generate_diagrams(self):
         """Generate diagrams. Algorithm:
 
@@ -639,6 +643,19 @@ class DecayChainAmplitude(Amplitude):
             mystr = mystr + " " * indent + "Decays:\n"
         for dec in self.get('decay_chains'):
             mystr = mystr + dec.nice_string(indent + 2) + "\n"
+
+        return  mystr[:-1]
+
+    def nice_string_processes(self, indent = 0):
+        """Returns a nicely formatted string of the amplitude processes."""
+        mystr = ""
+        for amplitude in self.get('amplitudes'):
+            mystr = mystr + amplitude.nice_string_processes(indent) + "\n"
+
+        if self.get('decay_chains'):
+            mystr = mystr + " " * indent + "Decays:\n"
+        for dec in self.get('decay_chains'):
+            mystr = mystr + dec.nice_string_processes(indent + 2) + "\n"
 
         return  mystr[:-1]
 

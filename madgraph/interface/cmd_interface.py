@@ -59,6 +59,7 @@ class MadGraphCmd(cmd.Cmd):
                       'interactions',
                       'processes',
                       'multiparticles']
+    __add_opts = ['process']
     __save_opts = ['model',
                    'processes']
     __import_formats = ['v4']
@@ -651,7 +652,83 @@ class MadGraphCmd(cmd.Cmd):
         else:
             return None
 
+    # Add a process to the existing multiprocess definition
     # Generate a new amplitude
+    def do_add(self, line):
+        """Generate an amplitude for a given process and add to
+        existing amplitudes"""
+
+        if len(line) < 1:
+            self.help_add()
+            return False
+
+        if len(self.__curr_model['particles']) == 0:
+            print "No particle list currently active, please create one first!"
+            return False
+
+        if len(self.__curr_model['interactions']) == 0:
+            print "No interaction list currently active," + \
+            " please create one first!"
+            return False
+
+        args = self.split_arg(line)
+        if len(args) < 2:
+            self.help_import()
+            return False
+
+        if args[0] == 'process':
+            # Rejoin line
+            line = ' '.join(args[1:])
+
+            # Reset Helas matrix elements
+            self.__curr_matrix_elements = helas_objects.HelasMultiProcess()
+
+            try:
+                if line.find(',') == -1:
+                    myprocdef = self.extract_process(line)
+                else:
+                    myprocdef, line = self.extract_decay_chain_process(line)
+            except self.MadGraphCmdError as error:
+                print "Empty or wrong format process, please try again. Error:\n" \
+                      + str(error)
+                myprocdef = None
+
+            if myprocdef:
+
+                cpu_time1 = time.time()
+
+                myproc = diagram_generation.MultiProcess(myprocdef)
+
+                for amp in myproc.get('amplitudes'):
+                    if amp not in self.__curr_amps:
+                        self.__curr_amps.append(amp)
+                    else:
+                        print "Warning: Already in processes:"
+                        print amp.nice_string_processes()
+
+                cpu_time2 = time.time()
+
+                nprocs = len(myproc.get('amplitudes'))
+                ndiags = sum([amp.get_number_of_diagrams() for \
+                                  amp in myproc.get('amplitudes')])
+                print "%i processes with %i diagrams generated in %0.3f s" % \
+                      (nprocs, ndiags, (cpu_time2 - cpu_time1))
+                ndiags = sum([amp.get_number_of_diagrams() for \
+                                  amp in self.__curr_amps])
+                print "Total: %i processes with %i diagrams" % \
+                      (len(self.__curr_amps), ndiags)                
+            else:
+                print "Empty or wrong format process, please try again."
+
+
+    def complete_add(self, text, line, begidx, endidx):
+        "Complete the add command"
+
+        # Format
+        if len(self.split_arg(line[0:begidx])) == 1:
+            return self.list_completion(text, self.__add_opts)
+
+    # Export a matrix element
     def do_export(self, line):
         """Export a generated amplitude to file"""
 
@@ -864,10 +941,20 @@ class MadGraphCmd(cmd.Cmd):
 
         print "syntax: generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2"
         print "-- generate diagrams for a given process"
-        print "   Example: u d~ > w+ > m+ vm g $ a / z h QED=3 QCD=0"
+        print "   Example: u d~ > w+ > m+ vm g $ a / z h QED=3 QCD=0 @1"
         print "Decay chain syntax:"
         print "   core process, decay1, (decay2, (decay3, ...)), ...  etc"
-        print "   Example: g g > t~ t, (t~ > W- b~, W- > e- ve~), t > W+ b"
+        print "   Example: g g > t~ t @2, (t~ > W- b~, W- > e- ve~), t > W+ b"
+        print "   Note that identical particles will all be decayed"
+
+    def help_add(self):
+
+        print "syntax: add process INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2"
+        print "-- generate diagrams for a process and add to existing processes"
+        print "   Syntax example: u d~ > w+ > m+ vm g $ a / z h QED=3 QCD=0 @1"
+        print "Decay chain syntax:"
+        print "   core process, decay1, (decay2, (decay3, ...)), ...  etc"
+        print "   Example: g g > t~ t @2, (t~ > W- b~, W- > e- ve~), t > W+ b"
         print "   Note that identical particles will all be decayed"
 
     def help_define(self):
