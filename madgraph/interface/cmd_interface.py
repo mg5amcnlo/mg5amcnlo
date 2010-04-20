@@ -601,7 +601,8 @@ class MadGraphCmd(cmd.Cmd):
                 myleglist.append(base_objects.MultiLeg({'ids':mylegids,
                                                         'state':state}))
             else:
-                print "No particle %s in model: skipped" % part_name
+                raise self.MadGraphCmdError,\
+                      "No particle %s in model" % part_name
 
         if filter(lambda leg: leg.get('state') == 'final', myleglist):
             # We have a valid process
