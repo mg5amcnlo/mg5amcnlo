@@ -306,6 +306,32 @@ class d(f):
         return ColorFactor([col_str1, col_str2])
 
 #===============================================================================
+# epsilon
+#===============================================================================
+class Epsilon(ColorObject):
+    """Espilon_ijk color object for three triplets"""
+
+    def __init__(self, *args):
+        """Ensure e_ijk objects have strictly 3 indices"""
+
+        super(Epsilon, self).__init__()
+        if len(args) != 3:
+            raise ValueError, \
+                "Epsilon objects must have three indices!"
+
+    def pair_simplify(self, col_obj):
+        """Implement e_ijk ae_klm = T(i,l)T(j,m) - T(i,m)T(j,l)"""
+
+        if isinstance(col_obj, AEpsilon):
+            eps_indices = self[:]
+            aeps_indices = col_obj[:]
+            if
+            col_str1 = ColorString[T(self[0], col_obj[1]),
+                                   T(self[1], col_obj[2])]
+            col_str1 = ColorString[T(self[0], col_obj[1]),
+                                   T(self[1], col_obj[0])]
+
+#===============================================================================
 # ColorString
 #===============================================================================
 class ColorString(list):
