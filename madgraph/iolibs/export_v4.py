@@ -303,6 +303,7 @@ C
 C CONSTANTS
 C  
     Include 'genps.inc'
+    Include 'maxamps.inc'
     INTEGER                 NCOMB         
     PARAMETER (             NCOMB=%(ncomb)d)
     INTEGER    THEL
@@ -443,6 +444,7 @@ C
     INTEGER    NGRAPHS,    NEIGEN 
     PARAMETER (NGRAPHS=%(ngraphs)d,NEIGEN=  1) 
     include 'genps.inc'
+    include 'maxamps.inc'
     INTEGER    NWAVEFUNCS     , NCOLOR
     PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
     REAL*8     ZERO
@@ -831,6 +833,24 @@ def write_leshouche_file(fsock, matrix_element, fortran_model):
     return True
 
 #===============================================================================
+# write_maxamps_file
+#===============================================================================
+def write_maxamps_file(fsock, matrix_element, fortran_model):
+    """Write the maxamps.inc file for MG4."""
+
+    writer = FortranWriter()
+
+    file = \
+"""   integer    maxamps
+      parameter (maxamps=%d)""" % len(matrix_element.get_all_amplitudes())
+
+    # Write the file
+    for line in file.split('\n'):
+        writer.write_fortran_line(fsock, line)
+
+    return True
+
+#===============================================================================
 # write_mg_sym_file
 #===============================================================================
 def write_mg_sym_file(fsock, matrix_element, fortran_model):
@@ -1107,21 +1127,24 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 
     cwd = os.getcwd()
 
+    os.chdir(path)
+
+    pathdir = os.getcwd()
+
     # Create the directory PN_xx_xxxxx in the specified path
-    dirpath = os.path.join(path, \
-                   "P%s" % matrix_element.get('processes')[0].shell_string_v4())
+    subprocdir = "P%s" % matrix_element.get('processes')[0].shell_string_v4()
     try:
-        os.mkdir(dirpath)
+        os.mkdir(subprocdir)
     except os.error as error:
-        logger.warning(error.strerror + " " + dirpath)
+        logger.warning(error.strerror + " " + subprocdir)
 
     try:
-        os.chdir(dirpath)
+        os.chdir(subprocdir)
     except os.error:
-        logger.error('Could not cd to directory %s' % dirpath)
+        logger.error('Could not cd to directory %s' % subprocdir)
         return 0
 
-    logger.info('Creating files in directory %s' % dirpath)
+    logger.info('Creating files in directory %s' % subprocdir)
 
     # Create the matrix.f file, auto_dsig.f file and all inc files
     filename = 'matrix.f'
@@ -1170,6 +1193,12 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     filename = 'leshouche.inc'
     files.write_to_file(filename,
                         write_leshouche_file,
+                        matrix_element,
+                        fortran_model)
+
+    filename = 'maxamps.inc'
+    files.write_to_file(filename,
+                        write_maxamps_file,
                         matrix_element,
                         fortran_model)
 
@@ -1255,8 +1284,8 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
         except os.error:
             logger.warning('Could not link to ' + os.path.join('..', file))
 
-    # Return to original PWD
-    os.chdir(cwd)
+    # Return to SubProcesses dir
+    os.chdir(pathdir)
 
     # Add subprocess to subproc.mg
     filename = 'subproc.mg'
@@ -1267,6 +1296,8 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     # Generate info page
     os.system(os.path.join('..', 'bin', 'gen_infohtml-pl'))
 
+    # Return to original dir
+    os.chdir(cwd)
 
     if not calls:
         calls = 0
