@@ -976,7 +976,11 @@ class MadGraphCmd(cmd.Cmd):
               " FILEPATH"
         print """-- export matrix elements. For v4standalone, the resulting
         files will be FILEPATH/matrix_\"process_string\".f. For v4sa_dirs,
-        the result is a set of complete MG4 Standalone process directories."""
+        the result is a set of complete MG4 Standalone process directories.
+        For v4madevent, the path needs to be to a MadEvent SubProcesses
+        directory, and the result is the Pxxx directories (including the
+        diagram .ps and .jpg files) for the subprocesses as well as a
+        correctly generated subproc.mg file."""
 
     def help_draw(self):
         print "syntax: draw FILEPATH [option=value]"
