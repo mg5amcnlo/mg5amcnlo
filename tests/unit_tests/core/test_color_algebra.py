@@ -179,6 +179,25 @@ class ColorObjectTest(unittest.TestCase):
         self.assertEqual(my_d.simplify(),
                          color.ColorFactor([col_str1, col_str2]))
 
+    def test_epsilon_object(self):
+        """Test the epsilon object"""
+
+        # Espilon should have exactly 3 indices!
+        self.assertRaises(ValueError,
+                         color.Epsilon,
+                         1, 2)
+
+        my_epsilon1 = color.Epsilon(2, 3, 1)
+        my_epsilon2 = color.Epsilon(5, 1, 4)
+        my_epsilon2.complex_conjugate()
+
+        my_goal_str1 = color.ColorString([color.T(2, 4), color.T(3, 5)])
+        my_goal_str2 = color.ColorString([color.T(2, 5), color.T(3, 4)])
+        my_goal_str2.coeff = fractions.Fraction(-1
+                                              )
+        self.assertEqual(my_epsilon1.pair_simplify(my_epsilon2),
+                         color.ColorFactor([my_goal_str1, my_goal_str2]))
+
 
 class ColorStringTest(unittest.TestCase):
     """Test class for the ColorString objects"""

@@ -309,7 +309,10 @@ class d(f):
 # epsilon
 #===============================================================================
 class Epsilon(ColorObject):
-    """Espilon_ijk color object for three triplets"""
+    """Espilon_ijk color object for three triplets/antitriplets"""
+
+    # If this tag is true, ijk are triplet indices, otherwise antitriplet
+    triplets = True
 
     def __init__(self, *args):
         """Ensure e_ijk objects have strictly 3 indices"""
@@ -320,16 +323,36 @@ class Epsilon(ColorObject):
                 "Epsilon objects must have three indices!"
 
     def pair_simplify(self, col_obj):
-        """Implement e_ijk ae_klm = T(i,l)T(j,m) - T(i,m)T(j,l)"""
+        """Implement e_ijk ae_ilm = T(j,l)T(k,m) - T(j,m)T(k,l)"""
 
-        if isinstance(col_obj, AEpsilon):
+        if isinstance(col_obj, Epsilon) and col_obj.triplets != self.triplets:
+
+            incommon = False
             eps_indices = self[:]
             aeps_indices = col_obj[:]
-            if
-            col_str1 = ColorString[T(self[0], col_obj[1]),
-                                   T(self[1], col_obj[2])]
-            col_str1 = ColorString[T(self[0], col_obj[1]),
-                                   T(self[1], col_obj[0])]
+            for i in self:
+                if i in col_obj:
+                    incommon = True
+                    com_index_eps = self.index(i)
+                    com_index_aeps = col_obj.index(i)
+
+            if incommon:
+                eps_indices = self[com_index_eps:] + self[:com_index_eps]
+                aeps_indices = col_obj[com_index_aeps:] + col_obj[:com_index_aeps]
+                col_str1 = ColorString([T(eps_indices[1], aeps_indices[1]),
+                                       T(eps_indices[2], aeps_indices[2])])
+                col_str2 = ColorString([T(eps_indices[1], aeps_indices[2]),
+                                       T(eps_indices[2], aeps_indices[1])])
+
+                col_str2.coeff = fractions.Fraction(-1, 1)
+
+                return ColorFactor([col_str1, col_str2])
+
+    def complex_conjugate(self):
+        """Complex conjugation. Overwritten here because complex conjugation
+        interchange triplets and antitriplets."""
+
+        self.triplets = not self.triplets
 
 #===============================================================================
 # ColorString
