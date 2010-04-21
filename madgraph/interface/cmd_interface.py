@@ -74,7 +74,13 @@ class MadGraphCmd(cmd.Cmd):
         """Exception raised if an error occurs in the execution
         of command."""
         pass
-
+    
+    def __init__(self,*arg,**opt):
+        """ add a tracker of the history """
+        
+        self.history = []
+        cmd.Cmd.__init__(self, *arg, **opt)
+        
     def split_arg(self, line):
         """Split a line of arguments"""
         return line.split()
@@ -158,6 +164,13 @@ class MadGraphCmd(cmd.Cmd):
     def precmd(self, line):
         """ force the printing of the line if this is executed with an stdin """
         
+        #update the history of this suite of command
+        if line.startswith('import v4') and 'proc_card' in line:
+            # if we import a proc_card clean the history
+            self.history = []
+        else:
+            self.history.append(line)
+            
         if not self.use_rawinput:
             print line
         return line
@@ -743,6 +756,52 @@ class MadGraphCmd(cmd.Cmd):
         # Format
         if len(self.split_arg(line[0:begidx])) == 1:
             return self.list_completion(text, self.__add_opts)
+        
+    # Write the list of command line use in this session
+    def do_history(self,line):
+        """write in a file the suite of command that was used"""
+        
+        # Start of the actual routine
+
+        args = self.split_arg(line)
+
+        if len(args) != 1:
+            self.help_history()
+            return False
+        
+        output_file = open(args[0],'w')
+        # Define a simple header for the file
+        creation_time = time.asctime() 
+        time_info = \
+        '#     automaticaly generated the %s%s*\n' % (creation_time, ' '*(27-len(creation_time)))
+        text = \
+        '#************************************************************\n' + \
+        '#                        MadGraph 5                         *\n' + \
+        '#                                                           *\n' + \
+        '#     The MadGraph Development Team - Please visit us at    *\n' + \
+        '#             https://launchpad.net/madgraph5               *\n' + \
+        '#                                                           *\n' + \
+        '#************************************************************\n' + \
+        '#                                                           *\n' + \
+        '#               Command File for MadGraph 5                 *\n' + \
+        '#                                                           *\n' + \
+        '#     run as ./bin/mg5  filename                            *\n' + \
+        time_info + \
+        '#                                                           *\n' + \
+        '#************************************************************\n'
+        # Add the comand used 
+        text += '\n'.join(self.history[:-1]) #don't print history
+        
+        #write this information in a file
+        output_file.write(text)
+        output_file.close()
+
+    def complete_history(self, text, line, begidx, endidx):
+        "Complete the add command"
+
+        # Format
+        if len(self.split_arg(line[0:begidx])) == 1:
+            return self.path_completion(text)
 
     # Export a matrix element
     def do_export(self, line):
@@ -988,6 +1047,11 @@ class MadGraphCmd(cmd.Cmd):
         directory, and the result is the Pxxx directories (including the
         diagram .ps and .jpg files) for the subprocesses as well as a
         correctly generated subproc.mg file."""
+
+    def help_history(self):
+        print "syntax: history FILEPATH"
+        print "-- write in the specified files all the call to MG5 that you have """
+        print "   perform since that you have open this command line applet."""
 
     def help_draw(self):
         print "syntax: draw FILEPATH [option=value]"
