@@ -3469,7 +3469,7 @@ CALL IOSXXX(W(1,28),W(1,2),W(1,27),MGVX350,AMP(8))""")
       DATA (IFOREST(I,-4,1),I=1,2)/4,-3/
       DATA SPROP(-4,1)/1000022/
       DATA (IFOREST(I,-5,1),I=1,2)/1,-4/
-      DATA TPRID(-5,1)/11/
+      DATA TPRID(-5,1)/-1000011/
       DATA (IFOREST(I,-6,1),I=1,2)/-5,-2/
 C     Diagram 2, Amplitude 2
       DATA MAPCONFIG(2)/2/
@@ -3482,7 +3482,7 @@ C     Diagram 2, Amplitude 2
       DATA (IFOREST(I,-4,2),I=1,2)/4,-3/
       DATA SPROP(-4,2)/1000022/
       DATA (IFOREST(I,-5,2),I=1,2)/1,-4/
-      DATA TPRID(-5,2)/11/
+      DATA TPRID(-5,2)/-1000011/
       DATA (IFOREST(I,-6,2),I=1,2)/-5,-2/
 C     Diagram 3, Amplitude 3
       DATA MAPCONFIG(3)/3/
@@ -3495,7 +3495,7 @@ C     Diagram 3, Amplitude 3
       DATA (IFOREST(I,-4,3),I=1,2)/-3,3/
       DATA SPROP(-4,3)/1000022/
       DATA (IFOREST(I,-5,3),I=1,2)/1,-4/
-      DATA TPRID(-5,3)/11/
+      DATA TPRID(-5,3)/-1000011/
       DATA (IFOREST(I,-6,3),I=1,2)/-5,-2/
 C     Diagram 4, Amplitude 4
       DATA MAPCONFIG(4)/4/
@@ -3508,7 +3508,7 @@ C     Diagram 4, Amplitude 4
       DATA (IFOREST(I,-4,4),I=1,2)/-3,3/
       DATA SPROP(-4,4)/1000022/
       DATA (IFOREST(I,-5,4),I=1,2)/1,-4/
-      DATA TPRID(-5,4)/11/
+      DATA TPRID(-5,4)/-1000011/
       DATA (IFOREST(I,-6,4),I=1,2)/-5,-2/
 C     Diagram 5, Amplitude 5
       DATA MAPCONFIG(5)/5/
@@ -3521,7 +3521,7 @@ C     Diagram 5, Amplitude 5
       DATA (IFOREST(I,-4,5),I=1,2)/7,-3/
       DATA SPROP(-4,5)/1000022/
       DATA (IFOREST(I,-5,5),I=1,2)/1,-4/
-      DATA TPRID(-5,5)/11/
+      DATA TPRID(-5,5)/-1000011/
       DATA (IFOREST(I,-6,5),I=1,2)/-5,-2/
 C     Diagram 6, Amplitude 6
       DATA MAPCONFIG(6)/6/
@@ -3534,7 +3534,7 @@ C     Diagram 6, Amplitude 6
       DATA (IFOREST(I,-4,6),I=1,2)/-3,6/
       DATA SPROP(-4,6)/1000022/
       DATA (IFOREST(I,-5,6),I=1,2)/1,-4/
-      DATA TPRID(-5,6)/11/
+      DATA TPRID(-5,6)/-1000011/
       DATA (IFOREST(I,-6,6),I=1,2)/-5,-2/
 C     Diagram 7, Amplitude 7
       DATA MAPCONFIG(7)/7/
@@ -3547,7 +3547,7 @@ C     Diagram 7, Amplitude 7
       DATA (IFOREST(I,-4,7),I=1,2)/7,-3/
       DATA SPROP(-4,7)/1000022/
       DATA (IFOREST(I,-5,7),I=1,2)/1,-4/
-      DATA TPRID(-5,7)/11/
+      DATA TPRID(-5,7)/-1000011/
       DATA (IFOREST(I,-6,7),I=1,2)/-5,-2/
 C     Diagram 8, Amplitude 8
       DATA MAPCONFIG(8)/8/
@@ -3560,7 +3560,7 @@ C     Diagram 8, Amplitude 8
       DATA (IFOREST(I,-4,8),I=1,2)/-3,6/
       DATA SPROP(-4,8)/1000022/
       DATA (IFOREST(I,-5,8),I=1,2)/1,-4/
-      DATA TPRID(-5,8)/11/
+      DATA TPRID(-5,8)/-1000011/
       DATA (IFOREST(I,-6,8),I=1,2)/-5,-2/
 C     Number of configs
       DATA MAPCONFIG(0)/8/

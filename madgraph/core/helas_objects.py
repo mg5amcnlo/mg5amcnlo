@@ -2132,11 +2132,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # we have multiple fermion flows, i.e., either multiple replaced
         # wavefunctions or  majorana fermions and multiple diagrams
         flows = reduce(lambda i1, i2: i1*i2,
-                            [len(replace_dict[i]) for i in decay_dict.keys()],
-                       0)
+                       [len(replace_dict[i]) for i in decay_dict.keys()], 1)
         diagrams = reduce(lambda i1, i2: i1*i2,
                                [len(decay_dict[i].get('diagrams')) for i in \
-                                decay_dict.keys()],0)
+                                decay_dict.keys()], 1)
 
         if flows > 1 or (diagrams > 1 and got_majoranas):
 
