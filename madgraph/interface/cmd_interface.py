@@ -1028,7 +1028,7 @@ class MadGraphCmd(cmd.Cmd):
 if __name__ == '__main__':
     
     opt = sys.argv
-    if len(opt) > 1:)
+    if len(opt) > 1:
         # The first argument of sys.argv is the name of the program
         input_file = open(opt[1],'rU')
         cmd_line = MadGraphCmd(stdin=input_file)
