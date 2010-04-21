@@ -303,6 +303,7 @@ C
 C CONSTANTS
 C  
     Include 'genps.inc'
+    Include 'nexternal.inc'
     Include 'maxamps.inc'
     INTEGER                 NCOMB         
     PARAMETER (             NCOMB=%(ncomb)d)
@@ -444,6 +445,7 @@ C
     INTEGER    NGRAPHS,    NEIGEN 
     PARAMETER (NGRAPHS=%(ngraphs)d,NEIGEN=  1) 
     include 'genps.inc'
+    include 'nexternal.inc'
     include 'maxamps.inc'
     INTEGER    NWAVEFUNCS     , NCOLOR
     PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
