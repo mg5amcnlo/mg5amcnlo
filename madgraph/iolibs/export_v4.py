@@ -563,6 +563,7 @@ C
 C CONSTANTS
 C  
       include 'genps.inc'
+      include 'nexternal.inc'
       DOUBLE PRECISION       CONV
       PARAMETER (CONV=389379.66*1000)  !CONV TO PICOBARNS
       REAL*8     PI
