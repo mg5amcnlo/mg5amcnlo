@@ -20,6 +20,7 @@ import logging
 import os
 import re
 
+
 import madgraph.core.color_algebra as color
 from madgraph.core.base_objects import Particle, ParticleList
 from madgraph.core.base_objects import Interaction, InteractionList
@@ -406,10 +407,22 @@ class Reader_proc_card():
         for process in self.process:
             process.analyze_process(self.particles_name)
         
+        #Now we are in position to write the lines call
         lines = []    
+        #first write the lines associate to the multiparton definition
         for multipart in self.multipart:
             data = self.separate_particle(multipart, self.particles_name)
             lines.append('define '+' '.join(data))
+        
+        # secondly define the lines associate with diagram
+        for i,process in enumerate(self.process):
+            if i == 0:
+                lines.append('generate %s'% process.repr(self.couplings_name))                
+            else:
+                lines.append('add process %s' % process.repr(self.couplings_name))
+        
+        #finally export the madevent output
+        lines.append('export v4madevent .')
         
         return lines
         
@@ -439,9 +452,14 @@ class Reader_proc_card():
         #    if not try with 3, 2, 1 
         #    if still not -> exit.
         
-        pos = 0        #current starting position      
+        pos = 0        # current starting position 
+        old_pos = -1   # check that we don't have infinite loop    
         line += '     '  #add 4 blank for security
         while pos < len(line) - 4:
+            if pos == old_pos:
+                logging.error('Invalid set of caracter: %s' % line[pos:pos+4])
+                return
+            old_pos = pos
             # check for pontless caracter
             if line[pos] in [' ','\n','\t']:
                 pos += 1
@@ -459,18 +477,20 @@ class Reader_proc_card():
 class Process_info():
     """ this is the basic object of a process"""
     
+    
+    
     def __init__(self, line):
         """ initialize information"""
             
         self.particles = [] # list tuple (level, particle)
         self.couplings = {}
-        self.decay = []
+        self.decays = []
         self.tag = ''
         self.s_forbid = []
         self.forbid =[]
         self.line = line
         self.separate_particle = Reader_proc_card.separate_particle
-            
+    
     def analyze_process(self, particles_name):
         """add a line information
             two format are possible (decay chains or not
@@ -493,7 +513,7 @@ class Process_info():
         # extract (S-)forbidden particle
         pos_forbid = line.find('/')
         pos_sforbid = line.find('$')
-            
+        
         #select the restriction (pos is -1 if not defined)
         if pos_forbid != -1 and pos_sforbid != -1:
             if  pos_forbid > pos_sforbid :
@@ -501,26 +521,26 @@ class Process_info():
                                                                  particles_name)
                 self.sforbid = self.separate_particle(\
                                     line[pos_sforbid:pos_forbid], particles_name)
-                line = line[min(pos_forbid,pos_sforbid):]
+                line = line[:min(pos_forbid,pos_sforbid)]
             else:
                 self.forbid = self.separate_particle(\
                                    line[pos_forbid:pos_sforbid], particles_name)
                 self.s_forbid = self.separate_particle(line[pos_sforbid:], \
                                                            particles_name)
-                line = line[min(pos_forbid,pos_sforbid):]
+                line = line[:min(pos_forbid,pos_sforbid)]
         elif pos_forbid != -1:
             self.forbid = self.separate_particle(line[pos_forbid:], \
                                                                  particles_name)
-            line = line[pos_forbid:]
+            line = line[:pos_forbid]
         elif pos_sforbid != -1:
             self.sforbid = self.separate_particle(line[pos_sforbid:], \
                                                                  particles_name)
-            line = line[pos_sforbid:]
+            line = line[:pos_sforbid]
                 
         # Deal with decay chains, returns lines whitout the decay (and treat 
         #the different decays.
         if '(' in line:
-            line = self.treat_decay_chain(line)
+            line = self.treat_decay_chain(line, particles_name)
             
         #define the level of each particle
         level_content = line.split('>')
@@ -529,7 +549,7 @@ class Process_info():
             [self.particles.append((level,name)) for name in particles]
             
             
-    def treat_decay_chain(self,line):
+    def treat_decay_chain(self, line, particles_name):
         """ split the information of the decays """
             
         level = 0 #depth of the decay chain
@@ -545,8 +565,11 @@ class Process_info():
             elif caracter == ')':
                 level -=1
                 if level == 0: #store the information
-                    self.decay = Process_info(decay_line)
-                    out_line = decay_line[:decay_line.find('>')]
+                    self.decays.append(Process_info(decay_line))
+                    self.decays[-1].put_constraints(self.forbid, self.s_forbid, \
+                                                                 self.couplings)
+                    self.decays[-1].analyze_process(particles_name)
+                    out_line += decay_line[:decay_line.find('>')]
                 else:
                     decay_line += ')'
                 continue
@@ -554,207 +577,66 @@ class Process_info():
                 decay_line += caracter
             else:
                 out_line += caracter
-                
         return out_line
         
     def add_coupling(self, line):
         data = line.split('=')
         self.couplings[data[0]]=int(data[1])
-    
-
-
-
-########### OLD #####################################
-    def produce_mg5_call(self, model_dir='../Models'):
-
-        self.collect_info()
-
-        
-        self.treat_process()
-        
-        out='import v4 %s/%s \n' % (model_dir,self.model)
-        for line in self.multipart:
-            out+='define '+self.put_space_between_particles(line)[0]
-        out += '\n'.join(self.mg5_process)
-        
-        out += '\nexport v4madevent .\n'
-        for i in range(0,5):
-            out = out.replace('  ',' ')
-        #ff=open(mg5_file,'w')
-        #ff.writelines(out)
-        #ff.close()        
-        
-        
- 
-
-    def charge_model(self, Model_dir='../../Models'):
-        """charge the particle information of the model in order to know how to \
-        split the line information"""
-        
-        return
-     
         
     
-    def treat_decay_chains(self,line, restriction='',order={} ,mode=0):
-        """ 
-        initial format 
-        p p > ( t > b ( w+ > e+ ve) ) ( z > u u~ ) h /a $mu+ QED=6 @1
-        should pass in 
-        p p > t z h /a $mu+ QED=6 @1, (t > b w+ /a $mu+ QED=6, \
-                                w+ > e+ ve/a $mu+ QED=6), z > u u~/a $mu+ QED=6 
-        """
+    def put_constraints(self,forbid, s_forbid, couplings):
+        """ associate some restriction to this diagram"""
         
-        tag=''
-        #first deal with tag
-        if '@' in line:
-            split=line.split('@')
-            line = split[0]
-            tag = split[1]
-        
-        #second deal with restriction
-        if not restriction and restriction !=0:
-            pos = []
-            pos.append(line.find('/'))
-            pos.append(line.find('$'))
-            order = line.find('=')
-            if order!= -1:
-                end_pos=line.rfind(' ',0, order)
-            else:
-                end_pos = -1
-            while 1:
-                try:
-                    pos.remove(-1)
-                except:
-                    break
-            if pos:
-                min_pos = min(pos)
-                restriction = line[min_pos:end_pos]
-                order = line[end_pos:]
-                line = line[:min_pos]
-            elif end_pos!=-1:
-                line = line[:end_pos]
-                restriction = 0
-                order = line[end_pos:]
-         
-            order = self.convert_order_in_dict(order)
-        
-        out = ''
-        incoming = ''
-        is_incoming = 1
-        in_decay = ''
-        nb_part = 0
-        decay = []
-        is_in_decay = 0
-        
-        split_line = line.split()
-        for data in split_line:
-            if data == '>':
-                is_incoming =0
-            elif is_incoming:
-                incoming += data + ' '
-            
-            if not is_in_decay and data not in ['>','(',')']:
-                nb_part += 1
-                out += data + ' '
-            elif not is_in_decay and data == '>':
-                out += '>'
-            elif data == '(':
-                is_in_decay += 1
-                if is_in_decay!=1:
-                    in_decay += '( '
-            elif data == ')':
-                is_in_decay -=1
-                if is_in_decay:
-                    in_decay +=') '
-                else:
-                    before , after = self.treat_decay_chains(in_decay, restriction, order, mode=1)
-                    out += before
-                    decay.append(after)
-                    in_decay = ''
-            else:
-                in_decay += data+' '
-        
-        if restriction:
-            out += ' %s ' % restriction 
-        
-        out += self.restrict_order(order, nb_part - 2)
-        if tag:
-            out+=' @%s ' % tag
-        for one_decay in decay:
-            if ',' in one_decay:
-                out += ', ( %s)' % (one_decay)
-            else:
-                out += ', %s ' % (one_decay)
-        
-        
-        if mode:
-            return incoming, out
-        else:
-            return out
+        self.forbid = forbid
+        self.s_forbid = s_forbid
+        self.couplings = couplings
 
-    def treat_process(self):
-        """first split to request (split in end_coup)"""
+    def repr(self, model_coupling):
         
-        process_list = self.process.split('end_coup\n')
-        for subprocess in process_list[:-1]:
-            self.mg5_process.append(self.treat_one_process(subprocess))
-        
-        return self.mg5_process
-    
-    def treat_one_process(self, lines):
-        """return the line in MG5 format"""
-        
-        tag = ''
-        lines_list = lines.split('\n')
-        if '@' in lines_list[0]:
-            split = lines_list[0].split('@')
-            lines_list[0] = split[0]
-            tag = split[1]
-        if ',' in lines_list[0]:
-            logging.error('not accepting new format yet')
-            return
-        out, nb_part = self.put_space_between_particles(lines_list[0])
-        out += self.create_order_restriction(lines_list[1:-1],nb_part -2)
-        if tag:
-            out = 'add process '+ out +'@'+tag
-        else:
-            out = 'generate '+out
-        
-        if '(' in out and ',' not in out:   
-            return self.treat_decay_chains(out)
-        return out
-    
-    def create_order_restriction(self,lines_list, max_order=99):
-        out=''
-        couplings = set()
-        for line in lines_list:
-            #out += line+' '
-            split = line.split()[0].split('=')
-            coupl = split[0]
-            order = int(split[1])
-            if order < max_order:
-                out += line + ' '
-            couplings.add(coupl)
-        
-        for coupl in self.couplings_name - couplings:
-            out+='%s=0 ' % coupl
-        return out
-    
-    def convert_order_in_dict(self, order):
-        out = {}
-        split=order.split('=')
-        for i in range(0, len(split),2):
-            out[split[i]] = int(split[i+1])
-            
-        return out
-    
-    def restrict_order(self,dict_coupl_order,max_level):
         text = ''
-        for coupling, order in dict_coupl_order.items():
-            if order < max_level:
-                text += '%s=%s' % (coupling, order)
-        return text
+        # Write the process
+        cur_level = 0
+        for level, particle in self.particles:
+            if level > cur_level:
+                text += '> '
+                cur_level +=1
+            text += '%s ' % particle
+
+        # Write the constraints
+        if self.forbid:
+            text+='/ '+' '.join(self.forbid)
+        if self.s_forbid:
+            text+='$ '+' '.join(self.s_forbid)
         
+        #write the rules associate to the couplings
+        text += self.repr_couplings(model_coupling, len(self.particles))
+        
+        # write the tag
+        if self.tag:
+            text += '@%s ' % self.tag
+
+        #treat decay_chains
+        for decay in self.decays:
+            decay_text = decay.repr(model_coupling)
+            if ',' in decay_text:
+                text +=', (%s) ' % decay_text
+            else:
+                text += ', %s ' % decay_text
+        
+        return text
+    
+    def repr_couplings(self, model_coupling, nb_part):
+        """return the assignement of coupling for this process"""
+
+        out=''
+        for coupling in model_coupling:
+            if self.couplings.has_key(coupling):
+                if self.couplings[coupling] < nb_part - 2:
+                    out += '%s=%s ' %(coupling, self.couplings[coupling])
+            else:
+                out += '%s=0 ' % coupling
+        
+        return out 
     
     
     

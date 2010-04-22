@@ -790,8 +790,12 @@ class MadGraphCmd(cmd.Cmd):
 
         args = self.split_arg(line)
 
-        if len(args) != 1:
+        if len(args) > 1:
             self.help_history()
+            return False
+        
+        if len(args) == 0:
+            print '\n'.join(self.history[:-1]) #don't print history
             return False
         
         output_file = open(args[0],'w')
