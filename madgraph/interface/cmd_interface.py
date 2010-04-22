@@ -31,7 +31,7 @@ import logging
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.files as files
 
-import madgraph.iolibs.import_model_v4 as import_v4
+import madgraph.iolibs.import_v4 as import_v4
 #import madgraph.iolibs.save_model as save_model
 import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.iolibs.export_v4 as export_v4
@@ -200,6 +200,7 @@ class MadGraphCmd(cmd.Cmd):
                                             import_v4.read_particles_v4))
                 print "%d particles imported" % \
                       len(self.__curr_model['particles'])
+                return True
             if filename.endswith('interactions.dat'):
                 if len(self.__curr_model['particles']) == 0:
                     print "No particle list currently active,",
@@ -212,6 +213,13 @@ class MadGraphCmd(cmd.Cmd):
                                             self.__curr_model['particles']))
                 print "%d interactions imported" % \
                       len(self.__curr_model['interactions'])
+                return True
+            if filename == 'proc_card.dat':
+                self.import_mg4_proc_card(filepath)
+                return True
+           
+            #not valid File
+            return False
 
         args = self.split_arg(line)
         if len(args) != 2:
@@ -220,19 +228,14 @@ class MadGraphCmd(cmd.Cmd):
 
         if args[0] == 'v4':
 
-            files_to_import = ('particles.dat', 'interactions.dat')
-
             if os.path.isdir(args[1]):
+                files_to_import = ('particles.dat', 'interactions.dat')
                 for filename in files_to_import:
                     if os.path.isfile(os.path.join(args[1], filename)):
                         import_v4file(self, os.path.join(args[1], filename))
 
             elif os.path.isfile(args[1]):
-                suceed = 0
-                for i in range(0, len(files_to_import)):
-                    if args[1].endswith(files_to_import[i]):
-                        import_v4file(self, args[1])
-                        suceed = 1
+                suceed = import_v4file(self, args[1])
                 if not suceed:
 #                if os.path.basename(args[1]) in files_to_import:
 #                    import_v4file(self, args[1])
@@ -260,6 +263,28 @@ class MadGraphCmd(cmd.Cmd):
                                         base_dir=\
                                           self.split_arg(line[0:begidx])[2])
 
+    def import_mg4_proc_card(self, filepath):
+        # read the proc_card.dat
+        reader = files.read_from_file(filepath, import_v4.read_proc_card_v4)
+        # import the model
+        modelsdir = os.path.dirname(filepath) + '/../../Models/'
+        line = self.onecmd_full('import v4 %s%s' % (modelsdir,reader.model))
+        
+        # Now that we have the model we can split the information
+        lines = reader.treat_data(self.__curr_model)
+        for line in lines:
+            self.onecmd_full(line)
+        return 
+
+    def onecmd_full(self,line):
+        """for third party call, call the line with pre and postfix treatment """
+        print line
+        line = self.precmd(line)
+        stop = self.onecmd(line)
+        stop = self.postcmd(stop, line)
+        return stop      
+        
+        
     def do_save(self, line):
         """Save information to file"""
 
