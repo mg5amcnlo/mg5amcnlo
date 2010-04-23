@@ -155,16 +155,23 @@ class MadGraphCmd(cmd.Cmd):
         "*               Type 'help' for in-line help.              *\n" + \
         "*                                                          *\n" + \
         "************************************************************"
+
     def precmd(self, line):
         """ force the printing of the line if this is executed with an stdin """
-        
         if not self.use_rawinput:
             print line
+
         return line
     
+
+    def emptyline(self):
+        """If empty line, do nothing. Default is repeat previous command."""
+
+        pass
     
     def default(self, line):
         """Default action if line is not recognized"""
+
         if line[0] == "#":
             # This is a comment - do nothing
             return
