@@ -422,7 +422,7 @@ class Reader_proc_card():
                 lines.append('add process %s' % process.repr(self.couplings_name))
         
         #finally export the madevent output
-        lines.append('export v4madevent .')
+        lines.append('export v4madevent SubProcesses')
         
         return lines
         

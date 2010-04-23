@@ -66,7 +66,7 @@ class MadGraphCmd(cmd.Cmd):
     __add_opts = ['process']
     __save_opts = ['model',
                    'processes']
-    __import_formats = ['v4']
+    __import_formats = ['v4', 'v5']
     __export_formats = ['v4standalone', 'v4sa_dirs', 'v4madevent']
 
 
@@ -164,15 +164,14 @@ class MadGraphCmd(cmd.Cmd):
     def precmd(self, line):
         """ force the printing of the line if this is executed with an stdin """
         
-        #update the history of this suite of command
-        if line.startswith('import v4') and 'proc_card' in line:
-            # if we import a proc_card clean the history
-            self.history = []
-        else:
-            self.history.append(line)
-            
+        # Update the history of this suite of command
+        self.history.append(line)
+        
+        # Print the calling line in the non interactive mode    
         if not self.use_rawinput:
             print line
+        
+        # Apply the line
         return line
     
     
@@ -201,7 +200,7 @@ class MadGraphCmd(cmd.Cmd):
                 print "%d particles imported" % \
                       len(self.__curr_model['particles'])
                 return True
-            if filename.endswith('interactions.dat'):
+            elif filename.endswith('interactions.dat'):
                 if len(self.__curr_model['particles']) == 0:
                     print "No particle list currently active,",
                     print "please create one first!"
@@ -214,7 +213,7 @@ class MadGraphCmd(cmd.Cmd):
                 print "%d interactions imported" % \
                       len(self.__curr_model['interactions'])
                 return True
-            if filename == 'proc_card.dat':
+            elif filename == 'proc_card.dat':
                 self.import_mg4_proc_card(filepath)
                 return True
            
@@ -233,6 +232,9 @@ class MadGraphCmd(cmd.Cmd):
                 for filename in files_to_import:
                     if os.path.isfile(os.path.join(args[1], filename)):
                         import_v4file(self, os.path.join(args[1], filename))
+                    else:
+                        print "%s files doesn't exist in %s directory" % \
+                                        (filename, os.path.basename(args[1]))
 
             elif os.path.isfile(args[1]):
                 suceed = import_v4file(self, args[1])
@@ -242,9 +244,23 @@ class MadGraphCmd(cmd.Cmd):
 #                else:
                     print "%s is not a valid v4 file name" % \
                                         os.path.basename(args[1])
+            elif os.path.isdir(os.path.join(os.path.pardir, 'Models', args[1])):
+                modeldir = os.path.join(os.path.pardir, 'Models', args[1])
+                files_to_import = ('particles.dat', 'interactions.dat')
+                for filename in files_to_import:
+                    if os.path.isfile(os.path.join(modeldir, filename)):
+                        import_v4file(self, os.path.join(modeldir, filename))
+                    else:
+                        print "%s files doesn't exist in %s directory" % \
+                                    (filename, os.path.join(modeldir, args[1]))            
             else:
                 print "Path %s is not a valid pathname" % args[1]
-
+        
+        elif args[0] == 'v5':
+            if not os.path.isfile(args[1]):
+                print "Path %s is not a valid pathname" % args[1]
+            else:
+                self.import_mg5_proc_card(args[1])
 
     def complete_import(self, text, line, begidx, endidx):
         "Complete the import command"
@@ -264,17 +280,41 @@ class MadGraphCmd(cmd.Cmd):
                                           self.split_arg(line[0:begidx])[2])
 
     def import_mg4_proc_card(self, filepath):
+        # change the status of this line in the history -> pass in comment
+        self.history[-1] = '#%s' % self.history[-1] 
+        path = os.path
+        up = path.pardir
         # read the proc_card.dat
         reader = files.read_from_file(filepath, import_v4.read_proc_card_v4)
         # import the model
-        modelsdir = os.path.dirname(filepath) + '/../../Models/'
-        line = self.onecmd_full('import v4 %s%s' % (modelsdir,reader.model))
+        model_dir_possibility = \
+                      [path.join(up,'Models'), 
+                      path.join(path.dirname(filepath), up, up , 'Models'),
+                      path.dirname(path.realpath( __file__ )), up, up, 'Models']
         
+        for i, model_dir in enumerate(model_dir_possibility):
+            if os.path.isdir(model_dir):
+                line = self.onecmd_full('import v4 %s' % (reader.model))
+                break
+            elif i == len(model_dir_possibility) -1:
+                print 'Impossible to locate \'Models\' directory'
+                return
+
         # Now that we have the model we can split the information
         lines = reader.treat_data(self.__curr_model)
         for line in lines:
             self.onecmd_full(line)
+            
         return 
+
+    def import_mg5_proc_card(self, filepath):
+        # change the status of this line in the history -> pass in comment
+        self.history[-1] = '#%s' % self.history[-1]
+ 
+        for line in open(filepath):
+            self.onecmd_full(line.replace('\n',''))
+        return
+
 
     def onecmd_full(self,line):
         """for third party call, call the line with pre and postfix treatment """
@@ -819,7 +859,7 @@ class MadGraphCmd(cmd.Cmd):
         '#                                                           *\n' + \
         '#************************************************************\n'
         # Add the comand used 
-        text += '\n'.join(self.history[:-1]) #don't print history
+        text += '\n'.join(self.history[:-1]) + '\n' #don't print history
         
         #write this information in a file
         output_file.write(text)
@@ -1078,7 +1118,7 @@ class MadGraphCmd(cmd.Cmd):
         correctly generated subproc.mg file."""
 
     def help_history(self):
-        print "syntax: history FILEPATH"
+        print "syntax: history [FILEPATH=stdout]"
         print "-- write in the specified files all the call to MG5 that you have """
         print "   perform since that you have open this command line applet."""
 
