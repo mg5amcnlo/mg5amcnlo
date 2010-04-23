@@ -311,8 +311,13 @@ class MadGraphCmd(cmd.Cmd):
         # change the status of this line in the history -> pass in comment
         self.history[-1] = '#%s' % self.history[-1]
  
+        # Read the lines of the file and execute them
         for line in open(filepath):
-            self.onecmd_full(line.replace('\n',''))
+            #remove pointless spaces and \n
+            line = line.replace('\n','').strip()
+            # execute the line if this one is not empty
+            if line:
+                self.onecmd_full(line)
         return
 
 

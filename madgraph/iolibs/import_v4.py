@@ -328,7 +328,7 @@ class Reader_proc_card():
     """ read a proc_card.dat in the mg4 format and creates the equivalent routine \
     for mg5"""
     
-    #tag in order 
+    #tag in the proc_card.dat which split the proc_card content
     begin_process = "# Begin PROCESS # This is TAG. Do not modify this line\n"
     end_process = "# End PROCESS  # This is TAG. Do not modify this line\n"
     begin_model = "# Begin MODEL  # This is TAG. Do not modify this line\n"
@@ -336,38 +336,37 @@ class Reader_proc_card():
     begin_multipart = "# Begin MULTIPARTICLES # This is TAG. Do not modify this line\n"
     end_multipart = "# End  MULTIPARTICLES # This is TAG. Do not modify this line\n" 
         
-   # line pattern
+    # line pattern (remove comment at the end of the line)
     pat_line =re.compile(r"""^\s*(?P<info>[^\#]*[\w+-~])\s*[\#]*""",re.DOTALL)
     
-    def __init__(self, fsock, model_dir='../Models'):
+    def __init__(self, fsock):
         """init the variable"""
 
-        self.process = [] 
-        self.model = ""
-        self.model_dir = model_dir
-        self.multipart = []
-        self.particles_name = set()
-        self.couplings_name = set()
-        self.mg5_process = []
+        self.process = [] # List of Process
+        self.model = ""   # name of the model
+        self.multipart = [] # list of the mg4 definition of multiparticle
+        self.particles_name = set() # set of authorize particle name
+        self.couplings_name = set() # set of mandatory couplings
+        #self.mg5_process = [] 
         
-        # Reading the files and first storing of information
-        #whithout any knowledge of the model
+        # Reading the files and store the information in string format.
         self.collect_info(fsock)
 
     
     def collect_info(self, fp):
         """read the file and fullfill the variable with mg4 line"""
         
-        # skip the introduction
+        # skip the introduction of the file
         for line in iter(fp.readline, self.begin_process):
             pass
         
         # store process information
         process_open = False
+        # an 'end_coup' stop the current process, 'done' finish the list of process
         for line in iter(fp.readline, self.end_process):
             analyze_line = self.pat_line.search(line)
             if analyze_line:
-                data = analyze_line.group('info')
+                data = analyze_line.group('info') #skip the comment
                 if not process_open and 'done' not in data:
                     process_open = True
                     self.process.append(Process_info(data))
@@ -380,7 +379,7 @@ class Reader_proc_card():
         for line in iter(fp.readline, self.begin_model):
             pass        
         
-        #load the model
+        #load the model name
         for line in iter(fp.readline, self.end_model):
             analyze_line = self.pat_line.search(line)
             if analyze_line:
@@ -430,11 +429,14 @@ class Reader_proc_card():
     def extract_info_from_model(self, model):
         """ creates the self.particles_name (list of all valid name)
             and self.couplings_name (list of all couplings)"""
-            
+        
+        # add in self.particles_name (it contains normally the mulpart name 
+        #already) all the valid name of particle of the model    
         for particle in model['particles']:
             self.particles_name.add(particle['name'])
             self.particles_name.add(particle['antiname'])
 
+        # add in self;couplings_name the couplings name of the model
         for interaction in model['interactions']:
             for coupling in interaction['orders'].keys():
                 self.couplings_name.add(coupling)
@@ -457,15 +459,15 @@ class Reader_proc_card():
         line += '     '  #add 4 blank for security
         while pos < len(line) - 4:
             if pos == old_pos:
-                logging.error('Invalid set of caracter: %s' % line[pos:pos+4])
+                logging.error('Invalid set of character: %s' % line[pos:pos+4])
                 return
             old_pos = pos
-            # check for pontless caracter
+            # check for pointless character
             if line[pos] in [' ','\n','\t']:
                 pos += 1
                 continue
             
-            # try to find a match at 4(then 3/2/1) caracter
+            # try to find a match at 4(then 3/2/1) charater
             for i in range(4,0,-1):
                 if line[pos:pos+i] in possible_str:
                     out.append(line[pos:pos + i])
@@ -483,12 +485,14 @@ class Process_info():
         """ initialize information"""
             
         self.particles = [] # list tuple (level, particle)
-        self.couplings = {}
-        self.decays = []
-        self.tag = ''
-        self.s_forbid = []
-        self.forbid =[]
-        self.line = line
+        self.couplings = {} # coupling -> max_order
+        self.decays = []    # Process_info of the decays
+        self.tag = ''       # tag of the process
+        self.s_forbid = []  # list of particles forbids in s channel
+        self.forbid =[]     # list of particles forbids
+        self.line = line    # initialization line
+        
+        #some shortcut
         self.separate_particle = Reader_proc_card.separate_particle
     
     def analyze_process(self, particles_name):
@@ -505,9 +509,9 @@ class Process_info():
             self.tag = split[1]
             
 
-        # ensure that we deal with old format
+        # check if we have a MG5 format
         if ',' in line:
-            logging.error('not accepting new format yet')
+            self.is_valid = True
             return
             
         # extract (S-)forbidden particle
@@ -554,15 +558,15 @@ class Process_info():
             
         level = 0 #depth of the decay chain
         out_line = '' # core process
-        for caracter in line:
-            if caracter == '(':
+        for character in line:
+            if character == '(':
                 level += 1
                 if level == 1:
                     decay_line = "" # initialize a new decay info
                 else:
                     decay_line += '('
                 continue
-            elif caracter == ')':
+            elif character == ')':
                 level -=1
                 if level == 0: #store the information
                     self.decays.append(Process_info(decay_line))
@@ -574,12 +578,13 @@ class Process_info():
                     decay_line += ')'
                 continue
             elif level:
-                decay_line += caracter
+                decay_line += character
             else:
-                out_line += caracter
+                out_line += character
         return out_line
         
     def add_coupling(self, line):
+        """ add the coupling information to the process"""
         data = line.split('=')
         self.couplings[data[0]]=int(data[1])
         
@@ -592,6 +597,10 @@ class Process_info():
         self.couplings = couplings
 
     def repr(self, model_coupling):
+        """ return a valid mg5 format for this process """
+        
+        if hasattr(self, 'is_valid'):
+            return self.line
         
         text = ''
         # Write the process
@@ -626,14 +635,16 @@ class Process_info():
         return text
     
     def repr_couplings(self, model_coupling, nb_part):
-        """return the assignement of coupling for this process"""
+        """return the assignment of coupling for this process"""
 
         out=''
         for coupling in model_coupling:
             if self.couplings.has_key(coupling):
+                # if coupling is define check that he is not pointless
                 if self.couplings[coupling] < nb_part - 2:
                     out += '%s=%s ' %(coupling, self.couplings[coupling])
             else:
+                # if not define put to zero (mg4 default)
                 out += '%s=0 ' % coupling
         
         return out 
