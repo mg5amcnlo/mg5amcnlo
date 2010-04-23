@@ -24,7 +24,7 @@ import unittest
 import madgraph.core.base_objects as base_objects
 import madgraph.iolibs.drawing as drawing
 import madgraph.iolibs.drawing_eps as draw_eps
-import madgraph.iolibs.import_model_v4 as import_v4
+import madgraph.iolibs.import_v4 as import_v4
 import madgraph.iolibs.files as files
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]

@@ -19,7 +19,7 @@ import StringIO
 import unittest
 import copy
 
-import madgraph.iolibs.import_model_v4 as import_v4
+import madgraph.iolibs.import_v4 as import_v4
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 

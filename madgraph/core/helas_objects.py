@@ -864,7 +864,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
             if ninitial == 1 or init_mothers[0].get('number_external') == 2 \
                    or init_mothers[0].get('leg_state') == 'final':
-                # This is a leg on its way towards the final vertex
+                # This is an s-channel or a leg on its way towards the
+                # final vertex
                 mothers = final_mothers + init_mothers
             else:
                 # This is a t-channel leg going up towards leg number 1
@@ -942,7 +943,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
             # Add s- and t-channels going down towards leg 1
             mother_s, tchannels = \
-                      init_mothers1.get_s_and_t_channels(ninitial, legs[-1])
+                      init_mothers1.get_s_and_t_channels(ninitial, legs[0])
             schannels.extend(mother_s)
 
             # Add vertex
