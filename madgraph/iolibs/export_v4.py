@@ -23,6 +23,7 @@ import re
 import sys
 
 import madgraph.core.color_algebra as color
+import madgraph.iolibs.drawing as draw_lib
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.files as files
@@ -779,10 +780,16 @@ def write_iproc_file(fsock, matrix_element, fortran_model):
 #===============================================================================
 # write_leshouche_file
 #===============================================================================
-def write_leshouche_file(fsock, matrix_element, fortran_model):
+def write_leshouche_file(fsock, matrix_element, fortran_model,
+                         color_flow_list):
     """Write the leshouche.inc file for MG4"""
 
     writer = FortranWriter()
+
+    if color_flow_list:
+        mirror = True
+    else:
+        mirror = False
 
     replace_dict = {}
 
@@ -806,6 +813,7 @@ def write_leshouche_file(fsock, matrix_element, fortran_model):
         if iproc == 0:
             # If no color basis, just output trivial color flow
             if not matrix_element.get('color_basis'):
+                color_flow_list = None
                 for i in [1, 2]:
                     lines.append("DATA (ICOLUP(%d,i,  1),i=1,%2r)/%s/" % \
                              (i, nexternal,
@@ -813,27 +821,34 @@ def write_leshouche_file(fsock, matrix_element, fortran_model):
 
             else:
                 # First build a color representation dictionnary
-                repr_dict = {}
-                for l in legs:
-                    repr_dict[l.get('number')] = \
-                        proc.get('model').get_particle(l.get('id')).get_color()
-                # Get the list of color flows
-                color_flow_list = \
-                    matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
-                                                                               ninitial)
+                if not color_flow_list:
+                    repr_dict = {}
+                    for l in legs:
+                        repr_dict[l.get('number')] = \
+                         proc.get('model').get_particle(l.get('id')).get_color()
+                        # Get the list of color flows
+                    color_flow_list = \
+                                    matrix_element.get('color_basis').\
+                                    color_flow_decomposition(repr_dict,
+                                                             ninitial)
                 # And output them properly
                 for cf_i, color_flow_dict in enumerate(color_flow_list):
                     for i in [0, 1]:
-                        lines.append("DATA (ICOLUP(%d,i,%3r),i=1,%2r)/%s/" % \
-                             (i + 1, cf_i + 1, nexternal,
-                              ",".join(["%3r" % color_flow_dict[l.get('number')][i] \
-                                        for l in legs])))
-
+                        if mirror:
+                            lines.append("DATA (ICOLUP(%d,i,%3r),i=1,%2r)/%s/" % \
+                                         (i + 1, cf_i + 1, nexternal,
+                                          ",".join(["%3r" % color_flow_dict[l.get('number')][i] \
+                                                    for l in [legs[1], legs[0]] + legs[2:]])))
+                        else:
+                            lines.append("DATA (ICOLUP(%d,i,%3r),i=1,%2r)/%s/" % \
+                                         (i + 1, cf_i + 1, nexternal,
+                                          ",".join(["%3r" % color_flow_dict[l.get('number')][i] \
+                                                    for l in legs])))
     # Write the file
     for line in lines:
         writer.write_fortran_line(fsock, line)
 
-    return True
+    return color_flow_list
 
 #===============================================================================
 # write_maxamps_file
@@ -1055,74 +1070,78 @@ def write_subproc(fsock, matrix_element, fortran_model):
 #===============================================================================
 # generate_subprocess_directory_v4_standalone
 #===============================================================================
-def generate_subprocess_directory_v4_standalone(matrix_element,
-                                                fortran_model,
-                                                path=os.getcwd()):
+def generate_subprocess_directories_v4_standalone(matrix_element,
+                                                  fortran_model,
+                                                  path=os.getcwd()):
     """Generate the Pxxxxx directory for a subprocess in MG4 standalone,
     including the necessary matrix.f and nexternal.inc files"""
 
     cwd = os.getcwd()
+    calls = 0
+    matrix_elements = [matrix_element]
+    print "mirrors:", len(matrix_element.get('mirror_processes'))
+    if matrix_element.get('mirror_processes'):
+        matrix_elements.append(matrix_element.get_mirror_matrix_element())
 
-    # Create the directory PN_xx_xxxxx in the specified path
-    dirpath = os.path.join(path, \
-                   "P%s" % matrix_element.get('processes')[0].shell_string_v4())
-    try:
-        os.mkdir(dirpath)
-    except os.error as error:
-        logger.warning(error.strerror + " " + dirpath)
+    for matrix_element in matrix_elements:
+        # Create the directory PN_xx_xxxxx in the specified path
+        dirpath = os.path.join(path, \
+                       "P%s" % matrix_element.get('processes')[0].shell_string_v4())
+        try:
+            os.mkdir(dirpath)
+        except os.error as error:
+            logger.warning(error.strerror + " " + dirpath)
 
-    try:
-        os.chdir(dirpath)
-    except os.error:
-        logger.error('Could not cd to directory %s' % dirpath)
-        return 0
+        try:
+            os.chdir(dirpath)
+        except os.error:
+            logger.error('Could not cd to directory %s' % dirpath)
+            return 0
 
-    logger.info('Creating files in directory %s' % dirpath)
+        logger.info('Creating files in directory %s' % dirpath)
 
-    # Create the matrix.f file and the nexternal.inc file
-    filename = 'matrix.f'
-    calls = files.write_to_file(filename,
-                                write_matrix_element_v4_standalone,
-                                matrix_element,
-                                fortran_model)
+        # Create the matrix.f file and the nexternal.inc file
+        filename = 'matrix.f'
+        calls = calls + files.write_to_file(filename,
+                                            write_matrix_element_v4_standalone,
+                                            matrix_element,
+                                            fortran_model)
 
-    filename = 'nexternal.inc'
-    files.write_to_file(filename,
-                        write_nexternal_file,
-                        matrix_element,
-                        fortran_model)
+        filename = 'nexternal.inc'
+        files.write_to_file(filename,
+                            write_nexternal_file,
+                            matrix_element,
+                            fortran_model)
 
-    filename = 'pmass.inc'
-    files.write_to_file(filename,
-                        write_pmass_file,
-                        matrix_element,
-                        fortran_model)
+        filename = 'pmass.inc'
+        files.write_to_file(filename,
+                            write_pmass_file,
+                            matrix_element,
+                            fortran_model)
 
-    filename = 'ngraphs.inc'
-    files.write_to_file(filename,
-                        write_ngraphs_file,
-                        matrix_element,
-                        fortran_model,
-                        len(matrix_element.get_all_amplitudes()))
+        filename = 'ngraphs.inc'
+        files.write_to_file(filename,
+                            write_ngraphs_file,
+                            matrix_element,
+                            fortran_model,
+                            len(matrix_element.get_all_amplitudes()))
 
-    linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
+        linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
 
-    try:
-        for file in linkfiles:
-            os.symlink(os.path.join('..', file), file)
-    except os.error:
-        logger.warning('Could not link to ' + os.path.join('..', file))
+        try:
+            for file in linkfiles:
+                os.symlink(os.path.join('..', file), file)
+        except os.error:
+            logger.warning('Could not link to ' + os.path.join('..', file))
 
-    # Return to original PWD
-    os.chdir(cwd)
+        # Return to original PWD
+        os.chdir(cwd)
 
-    if not calls:
-        calls = 0
     return calls
 #===============================================================================
 # generate_subprocess_directory_v4_madevent
 #===============================================================================
-def generate_subprocess_directory_v4_madevent(matrix_element,
+def generate_subprocess_directories_v4_madevent(matrix_element,
                                                 fortran_model,
                                                 path=os.getcwd()):
     """Generate the Pxxxxx directory for a subprocess in MG4 madevent,
@@ -1134,170 +1153,187 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 
     pathdir = os.getcwd()
 
-    # Create the directory PN_xx_xxxxx in the specified path
-    subprocdir = "P%s" % matrix_element.get('processes')[0].shell_string_v4()
-    try:
-        os.mkdir(subprocdir)
-    except os.error as error:
-        logger.warning(error.strerror + " " + subprocdir)
+    calls = 0
+    matrix_elements = [matrix_element]
+    plot = None
 
-    try:
-        os.chdir(subprocdir)
-    except os.error:
-        logger.error('Could not cd to directory %s' % subprocdir)
-        return 0
+    if matrix_element.get('mirror_processes'):
+        matrix_elements.append(matrix_element.get_mirror_matrix_element())
 
-    logger.info('Creating files in directory %s' % subprocdir)
+    color_flow_list = None
 
-    # Create the matrix.f file, auto_dsig.f file and all inc files
-    filename = 'matrix.f'
-    calls = files.write_to_file(filename,
-                                write_matrix_element_v4_madevent,
-                                matrix_element,
-                                fortran_model)
-
-    filename = 'auto_dsig.f'
-    files.write_to_file(filename,
-                                write_auto_dsig_file,
-                                matrix_element,
-                                fortran_model)
-
-    filename = 'coloramps.inc'
-    files.write_to_file(filename,
-                        write_coloramps_file,
-                        matrix_element,
-                        fortran_model)
-
-    filename = 'configs.inc'
-    nconfigs, s_and_t_channels = files.write_to_file(filename,
-                        write_configs_file,
-                        matrix_element,
-                        fortran_model)
-
-    filename = 'decayBW.inc'
-    files.write_to_file(filename,
-                        write_decayBW_file,
-                        matrix_element,
-                        fortran_model,
-                        s_and_t_channels)
-
-    filename = 'dname.mg'
-    files.write_to_file(filename,
-                        write_dname_file,
-                        matrix_element,
-                        fortran_model)
-
-    filename = 'iproc.dat'
-    files.write_to_file(filename,
-                        write_iproc_file,
-                        matrix_element,
-                        fortran_model)
-
-    filename = 'leshouche.inc'
-    files.write_to_file(filename,
-                        write_leshouche_file,
-                        matrix_element,
-                        fortran_model)
-
-    filename = 'maxamps.inc'
-    files.write_to_file(filename,
-                        write_maxamps_file,
-                        matrix_element,
-                        fortran_model)
-
-    filename = 'mg.sym'
-    files.write_to_file(filename,
-                        write_mg_sym_file,
-                        matrix_element,
-                        fortran_model)
-
-    filename = 'ncombs.inc'
-    files.write_to_file(filename,
-                        write_ncombs_file,
-                        matrix_element,
-                        fortran_model,
-                        nconfigs)
-
-    filename = 'nexternal.inc'
-    files.write_to_file(filename,
-                        write_nexternal_file,
-                        matrix_element,
-                        fortran_model)
-
-    filename = 'ngraphs.inc'
-    files.write_to_file(filename,
-                        write_ngraphs_file,
-                        matrix_element,
-                        fortran_model,
-                        nconfigs)
-
-    filename = 'pmass.inc'
-    files.write_to_file(filename,
-                        write_pmass_file,
-                        matrix_element,
-                        fortran_model)
-
-    filename = 'props.inc'
-    files.write_to_file(filename,
-                        write_props_file,
-                        matrix_element,
-                        fortran_model,
-                        s_and_t_channels)
-
-    # Generate diagrams
-    filename = "matrix.ps"
-    plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
-                                         get('diagrams'),
-                                      filename,
-                                      model=matrix_element.get('processes')[0].\
-                                         get('model'),
-                                      amplitude='')
-    logging.info("Generating Feynman diagrams for " + \
-                 matrix_element.get('processes')[0].nice_string())
-    plot.draw()
-
-    # Generate jpgs
-    os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
-
-    linkfiles = ['addmothers.f',
-                 'cluster.f',
-                 'cluster.inc',
-                 'coupl.inc',
-                 'cuts.f',
-                 'cuts.inc',
-                 'driver.f',
-                 'genps.f',
-                 'genps.inc',
-                 'initcluster.f',
-                 'makefile',
-                 'message.inc',
-                 'myamp.f',
-                 'reweight.f',
-                 'run.inc',
-                 'setcuts.f',
-                 'setscales.f',
-                 'sudakov.inc',
-                 'symmetry.f',
-                 'unwgt.f']
-
-
-    for file in linkfiles:
+    for i, matrix_element in enumerate(matrix_elements):
+        
+        # Create the directory PN_xx_xxxxx in the specified path
+        subprocdir = "P%s" % matrix_element.get('processes')[0].shell_string_v4()
         try:
-            os.symlink(os.path.join('..', file), file)
+            os.mkdir(subprocdir)
+        except os.error as error:
+            logger.warning(error.strerror + " " + subprocdir)
+
+        try:
+            os.chdir(subprocdir)
         except os.error:
-            logger.warning('Could not link to ' + os.path.join('..', file))
+            logger.error('Could not cd to directory %s' % subprocdir)
+            return 0
 
-    # Return to SubProcesses dir
-    os.chdir(pathdir)
+        logger.info('Creating files in directory %s' % subprocdir)
 
-    # Add subprocess to subproc.mg
-    filename = 'subproc.mg'
-    files.append_to_file(filename,
-                        write_subproc,
-                        matrix_element,
-                        fortran_model)
-    # Generate info page
-    os.system(os.path.join('..', 'bin', 'gen_infohtml-pl'))
+        # Create the matrix.f file, auto_dsig.f file and all inc files
+        filename = 'matrix.f'
+        calls = files.write_to_file(filename,
+                                    write_matrix_element_v4_madevent,
+                                    matrix_element,
+                                    fortran_model)
+
+        filename = 'auto_dsig.f'
+        files.write_to_file(filename,
+                                    write_auto_dsig_file,
+                                    matrix_element,
+                                    fortran_model)
+
+        filename = 'coloramps.inc'
+        files.write_to_file(filename,
+                            write_coloramps_file,
+                            matrix_element,
+                            fortran_model)
+
+        filename = 'configs.inc'
+        nconfigs, s_and_t_channels = files.write_to_file(filename,
+                            write_configs_file,
+                            matrix_element,
+                            fortran_model)
+
+        filename = 'decayBW.inc'
+        files.write_to_file(filename,
+                            write_decayBW_file,
+                            matrix_element,
+                            fortran_model,
+                            s_and_t_channels)
+
+        filename = 'dname.mg'
+        files.write_to_file(filename,
+                            write_dname_file,
+                            matrix_element,
+                            fortran_model)
+
+        filename = 'iproc.dat'
+        files.write_to_file(filename,
+                            write_iproc_file,
+                            matrix_element,
+                            fortran_model)
+
+        filename = 'leshouche.inc'
+        color_flow_list = files.write_to_file(filename,
+                                              write_leshouche_file,
+                                              matrix_element,
+                                              fortran_model,
+                                              color_flow_list)
+
+        filename = 'maxamps.inc'
+        files.write_to_file(filename,
+                            write_maxamps_file,
+                            matrix_element,
+                            fortran_model)
+
+        filename = 'mg.sym'
+        files.write_to_file(filename,
+                            write_mg_sym_file,
+                            matrix_element,
+                            fortran_model)
+
+        filename = 'ncombs.inc'
+        files.write_to_file(filename,
+                            write_ncombs_file,
+                            matrix_element,
+                            fortran_model,
+                            nconfigs)
+
+        filename = 'nexternal.inc'
+        files.write_to_file(filename,
+                            write_nexternal_file,
+                            matrix_element,
+                            fortran_model)
+
+        filename = 'ngraphs.inc'
+        files.write_to_file(filename,
+                            write_ngraphs_file,
+                            matrix_element,
+                            fortran_model,
+                            nconfigs)
+
+        filename = 'pmass.inc'
+        files.write_to_file(filename,
+                            write_pmass_file,
+                            matrix_element,
+                            fortran_model)
+
+        filename = 'props.inc'
+        files.write_to_file(filename,
+                            write_props_file,
+                            matrix_element,
+                            fortran_model,
+                            s_and_t_channels)
+
+        # Generate diagrams
+        filename = "matrix.ps"
+        if not plot:
+            plot = draw.MultiEpsDiagramDrawer(\
+                matrix_element.get('base_amplitude').get('diagrams'),
+                filename,
+                model=matrix_element.get('processes')[0].get('model'),
+                amplitude='')
+            draw_opt = draw_lib.DrawOption()
+        else:
+            # This is the mirror process
+            #draw_opt.set('mirror_initial_state', True)
+            pass
+        logging.info("Generating Feynman diagrams for " + \
+                     matrix_element.get('processes')[0].nice_string())
+        plot.draw(opt=draw_opt)
+
+        # Generate jpgs
+        os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
+
+        linkfiles = ['addmothers.f',
+                     'cluster.f',
+                     'cluster.inc',
+                     'coupl.inc',
+                     'cuts.f',
+                     'cuts.inc',
+                     'driver.f',
+                     'genps.f',
+                     'genps.inc',
+                     'initcluster.f',
+                     'makefile',
+                     'message.inc',
+                     'myamp.f',
+                     'reweight.f',
+                     'run.inc',
+                     'setcuts.f',
+                     'setscales.f',
+                     'sudakov.inc',
+                     'symmetry.f',
+                     'unwgt.f']
+
+
+        for file in linkfiles:
+            try:
+                os.symlink(os.path.join('..', file), file)
+            except os.error:
+                logger.warning('Could not link to ' + os.path.join('..', file))
+
+        # Return to SubProcesses dir
+        os.chdir(pathdir)
+
+        # Add subprocess to subproc.mg
+        filename = 'subproc.mg'
+        files.append_to_file(filename,
+                            write_subproc,
+                            matrix_element,
+                            fortran_model)
+        # Generate info page
+        os.system(os.path.join('..', 'bin', 'gen_infohtml-pl'))
 
     # Return to original dir
     os.chdir(cwd)
