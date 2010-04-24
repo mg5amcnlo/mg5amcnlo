@@ -1713,9 +1713,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # generation, drawing etc. For decay chain processes, this is
         # the Amplitude which corresponds to the combined process.
         self['base_amplitude'] = None
-        # Mirror process is the process with initial states switched,
-        # if it is present in multiprocess definition
-        self['mirror_processes'] = base_objects.ProcessList()
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
@@ -1775,9 +1772,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             if isinstance(amplitude, diagram_generation.Amplitude):
                 super(HelasMatrixElement, self).__init__()
                 self.get('processes').append(amplitude.get('process'))
-                if amplitude.get('mirror_process'):
-                    self.get('mirror_processes').append(\
-                        amplitude.get('mirror_process'))
                 self.generate_helas_diagrams(amplitude, optimization, decay_ids)
                 self.calculate_fermionfactors()
                 self.calculate_identical_particle_factors()
@@ -2230,8 +2224,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         number_external = old_wfs[0].get('number_external')
 
-        # Insert the decay process in the process and mirror_processes
-        for process in self.get('processes') + self.get('mirror_processes'):
+        # Insert the decay process in the process
+        for process in self.get('processes'):
             process.get('decay_chains').append(\
                    decay.get('processes')[0])
 
@@ -2722,37 +2716,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                     reduce(lambda x1, x2: x1 * x2,
                                     [me.get('identical_particle_factor') \
                                      for me in decay_chains], 1)
-
-    def get_mirror_matrix_element(self):
-        """Generate the mirror matrix element corresponding to the
-        mirror processes"""
-
-        if not self.get('mirror_processes'):
-            return None
-        
-        mirror_me = copy.deepcopy(self)
-        # Avoid deepcopy of model
-        for proc, mirror_proc in zip(self.get('processes'),
-                                       mirror_me.get('processes')):
-            mirror_proc.set('model', proc.get('model'))
-            for dc, mirror_dc in zip(proc.get('decay_chains'),
-                                     mirror_proc.get('decay_chains')):
-                mirror_dc.set('model', dc.get('model'))
-        
-                                       
-        diagram1 = mirror_me.get('diagrams')[0]
-        wfs = diagram1.get('wavefunctions')
-        diagram1.set('wavefunctions', HelasWavefunctionList(\
-                      [wfs[1], wfs[0]] + wfs[2:]))
-        for wf in filter(lambda wf: wf.get('number_external') in [1,2],
-                         mirror_me.get_all_wavefunctions()):
-            wf.set('number_external', 3 - wf.get('number_external'))
-            if wf.get('number') in [1,2]:            
-                wf.set('number', 3 - wf.get('number'))
-                
-        mirror_me.set('processes', mirror_me.get('mirror_processes'))
-        mirror_me.set('base_amplitude', mirror_me.get_base_amplitude())
-        return mirror_me
 
     def calculate_fermionfactors(self):
         """Generate the fermion factors for all diagrams in the matrix element
@@ -3398,9 +3361,6 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                 # Avoid Python copying the complete model every time
                 matrix_element.get('processes')[0].set('model', \
                                 core_process.get('processes')[0].get('model'))
-                if matrix_element.get('mirror_processes'):
-                    matrix_element.get('mirror_processes')[0].set('model', \
-                                  core_process.get('processes')[0].get('model'))
 
                 # Insert the decay chains
                 logger.info("Combine %s with decays %s" % \
@@ -3470,22 +3430,19 @@ class HelasMultiProcess(base_objects.PhysicsObject):
 
         return ['matrix_elements']
 
-    def __init__(self, argument=None, optimization = 1):
+    def __init__(self, argument=None):
         """Allow initialization with AmplitudeList"""
 
         if isinstance(argument, diagram_generation.AmplitudeList):
             super(HelasMultiProcess, self).__init__()
-            self.generate_matrix_elements(argument,
-                                          optimization = optimization)
+            self.generate_matrix_elements(argument)
         elif isinstance(argument, diagram_generation.MultiProcess):
             super(HelasMultiProcess, self).__init__()
-            self.generate_matrix_elements(argument.get('amplitudes'),
-                                          optimization = optimization)
+            self.generate_matrix_elements(argument.get('amplitudes'))
         elif isinstance(argument, diagram_generation.Amplitude):
             super(HelasMultiProcess, self).__init__()
             self.generate_matrix_elements(\
-                diagram_generation.AmplitudeList([argument]),
-                optimization = optimization)
+                diagram_generation.AmplitudeList([argument]))
         elif argument:
             # call the mother routine
             super(HelasMultiProcess, self).__init__(argument)
@@ -3493,7 +3450,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             # call the mother routine
             super(HelasMultiProcess, self).__init__()
 
-    def generate_matrix_elements(self, amplitudes, optimization = 1):
+    def generate_matrix_elements(self, amplitudes):
         """Generate the HelasMatrixElements for the Amplitudes,
         identifying processes with identical matrix elements, as
         defined by HelasMatrixElement.__eq__"""
@@ -3519,9 +3476,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                          amplitude.get('process').nice_string().\
                                            replace('Process', 'process'))
                 matrix_element_list = [HelasMatrixElement(amplitude,
-                                                          gen_color = False,
-                                                          optimization = \
-                                                          optimization)]
+                                                          gen_color=False)]
             for matrix_element in matrix_element_list:
                 if not isinstance(matrix_element, HelasMatrixElement):
                     raise self.PhysicsObjectError, \
@@ -3530,14 +3485,11 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     # If an identical matrix element is already in the list,
                     # then simply add this process to the list of
                     # processes for that matrix element
-                    index = matrix_elements.index(matrix_element)
-                    other_processes = matrix_elements[index].get('processes')
-                    other_mirrors = \
-                               matrix_elements[index].get('mirror_processes')
+                    other_processes = matrix_elements[\
+                    matrix_elements.index(matrix_element)].get('processes')
                     logger.info("Combining process with %s" % \
                       other_processes[0].nice_string().replace('Process: ', ''))
                     other_processes.extend(matrix_element.get('processes'))
-                    other_mirrors.extend(matrix_element.get('mirror_processes'))
                 except ValueError:
                     # Otherwise, if the matrix element has any diagrams,
                     # add this matrix element.

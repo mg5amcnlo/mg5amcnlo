@@ -804,21 +804,21 @@ class MadGraphCmd(cmd.Cmd):
                 else:
                     print "Creating new file %s" % filename
                 calls = calls + files.write_to_file(filename,
-                                export_v4.write_matrix_element_v4_standalone,
-                                me,
-                                self.__curr_fortran_model)
+                                                    export_v4.write_matrix_element_v4_standalone,
+                                                    me,
+                                                    self.__curr_fortran_model)
 
 
         if args[0] == 'v4sa_dirs':
             for me in self.__curr_matrix_elements.get('matrix_elements'):
                 calls = calls + \
-                     export_v4.generate_subprocess_directories_v4_standalone(\
+                        export_v4.generate_subprocess_directory_v4_standalone(\
                             me, self.__curr_fortran_model, path)
 
         if args[0] == 'v4madevent':
             for me in self.__curr_matrix_elements.get('matrix_elements'):
                 calls = calls + \
-                      export_v4.generate_subprocess_directories_v4_madevent(\
+                        export_v4.generate_subprocess_directory_v4_madevent(\
                             me, self.__curr_fortran_model, path)
                 
         print ("Generated helas calls for %d subprocesses " + \

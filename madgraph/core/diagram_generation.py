@@ -39,9 +39,6 @@ class Amplitude(base_objects.PhysicsObject):
 
         self['process'] = base_objects.Process()
         self['diagrams'] = None
-        # Mirror process is the process with initial states switched,
-        # if it is present in multiprocess definition
-        self['mirror_process'] = None
 
     def __init__(self, argument=None):
         """Allow initialization with Process"""
@@ -852,34 +849,7 @@ class MultiProcess(base_objects.PhysicsObject):
                 # In that case don't check process
                 if tuple(sorted_legs) in failed_procs:
                     continue
-                # Check if mirror process already present among amplitudes.
-                # Only relevant if two initial particles and standard case
-                if process.get_ninitial() == 2 and \
-                   all([l.get('state') == 'initial' for l in \
-                        process.get('legs')[:2]]) and \
-                        [l.get('number') for l in process.get('legs')[:2]] \
-                        == [0,0]:
-                    mirror_process = copy.copy(process)
-                    mirror_process.set('legs', base_objects.LegList(\
-                        [copy.copy(process.get('legs')[1]),
-                         copy.copy(process.get('legs')[0])] + \
-                        process.get('legs')[2:]))
-                    for i, leg in enumerate(mirror_process.get('legs')):
-                        leg.set('number', i + 1)
-                    mirror_amps = filter(lambda amp: amp.get('process') == \
-                                         mirror_process, amplitudes)
-                    if mirror_amps:
-                        # Need to set leg number also for initial legs
-                        for i, leg in enumerate(process.get('legs')[:2]):
-                            leg.set('number', i + 1)
-                        mirror_amps[0].set('mirror_process', process)
-                        logger.info("Combined process %s with mirror %s " % \
-                              (process.nice_string().\
-                               replace('Process', 'process'),
-                               mirror_amps[0].get('process').nice_string().\
-                               replace('Process', 'process')))
-                        continue
-                    
+
                 amplitude = Amplitude({"process": process})
                 if not amplitude.generate_diagrams():
                     # Add process to failed_procs
