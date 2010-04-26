@@ -1329,6 +1329,10 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 
     for file in linkfiles:
         ln('../'+ file ,'.')
+    
+    #import nexternal/leshouch in Source
+    ln('nexternal.inc','../../Source', log=False)
+    ln('leshouche.inc','../../Source', log=False)
 
     # Return to SubProcesses dir
     os.chdir(pathdir)
