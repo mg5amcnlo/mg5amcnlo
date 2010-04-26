@@ -483,11 +483,10 @@ class ColorMatrix(dict):
         to be symmetric."""
 
         canonical_dict = {}
-
         for i1, struct1 in \
-                    sorted(enumerate(self._col_basis1.keys())):
+                    enumerate(sorted(self._col_basis1.keys())):
             for i2, struct2 in \
-                    sorted(enumerate(self._col_basis2.keys())):
+                    enumerate(sorted(self._col_basis2.keys())):
 
                 # Only scan upper right triangle if symmetric
                 if is_symmetric and i2 < i1:

@@ -2912,7 +2912,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         col_amp_list = []
         for i, col_basis_elem in \
-                sorted(enumerate(self.get('color_basis').keys())):
+                enumerate(sorted(self.get('color_basis').keys())):
 
             col_amp = []
             for diag_tuple in self.get('color_basis')[col_basis_elem]:

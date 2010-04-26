@@ -486,22 +486,23 @@ class ColorSquareTest(unittest.TestCase):
                 fractions.Fraction(455, 108),
                 fractions.Fraction(3641, 648)]
 
+
         goal_line1 = [(fractions.Fraction(7, 3), fractions.Fraction(-2, 3)),
-                     (fractions.Fraction(19, 6), fractions.Fraction(2, 3),
+                     (fractions.Fraction(19, 6), fractions.Fraction(-1, 3),
                     fractions.Fraction(-1, 3), fractions.Fraction(-1, 3),
-                    fractions.Fraction(-1, 3), fractions.Fraction(-1, 3)),
+                    fractions.Fraction(-1, 3), fractions.Fraction(2, 3)),
                     (fractions.Fraction(455, 108), fractions.Fraction(-29, 54),
-                    fractions.Fraction(17, 27), fractions.Fraction(17, 27),
+                    fractions.Fraction(-29, 54), fractions.Fraction(7, 54),
+                    fractions.Fraction(7, 54), fractions.Fraction(17, 27),
                     fractions.Fraction(-29, 54), fractions.Fraction(-1, 27),
-                    fractions.Fraction(17, 27), fractions.Fraction(7, 54),
-                    fractions.Fraction(7, 54), fractions.Fraction(5, 108),
-                    fractions.Fraction(7, 54), fractions.Fraction(5, 108),
-                    fractions.Fraction(-10, 27), fractions.Fraction(-1, 27),
                     fractions.Fraction(7, 54), fractions.Fraction(-29, 54),
+                    fractions.Fraction(5, 108), fractions.Fraction(-1, 27),
+                    fractions.Fraction(7, 54), fractions.Fraction(5, 108),
+                    fractions.Fraction(17, 27), fractions.Fraction(-1, 27),
+                    fractions.Fraction(7, 54), fractions.Fraction(17, 27),
+                    fractions.Fraction(-29, 54), fractions.Fraction(-1, 27),
                     fractions.Fraction(-1, 27), fractions.Fraction(17, 27),
-                    fractions.Fraction(-1, 27), fractions.Fraction(-1, 27),
-                    fractions.Fraction(-29, 54), fractions.Fraction(17, 27),
-                    fractions.Fraction(-29, 54), fractions.Fraction(7, 54))]
+                    fractions.Fraction(17, 27), fractions.Fraction(-10, 27))]
 
         for n in range(3):
             myleglist = base_objects.LegList()
@@ -526,7 +527,6 @@ class ColorSquareTest(unittest.TestCase):
             col_basis = color_amp.ColorBasis(myamplitude)
 
             col_matrix = color_amp.ColorMatrix(col_basis, Nc=3)
-
             # Check diagonal
             for i in range(len(col_basis.items())):
                 self.assertEqual(col_matrix.col_matrix_fixed_Nc[(i, i)],
@@ -547,14 +547,14 @@ class ColorSquareTest(unittest.TestCase):
 
         goal_line1 = [(fractions.Fraction(9, 1), fractions.Fraction(3, 1)),
                       (fractions.Fraction(27, 1), fractions.Fraction(9, 1),
-                       fractions.Fraction(3, 1), fractions.Fraction(3, 1),
-                       fractions.Fraction(9, 1), fractions.Fraction(9, 1))
+                       fractions.Fraction(9, 1), fractions.Fraction(3, 1),
+                       fractions.Fraction(3, 1), fractions.Fraction(9, 1))
                       ]
 
         goal_den_list = [[1] * 2, [1] * 6]
 
         goal_first_line_num = [[9, 3],
-                               [27, 9, 3, 3, 9, 9]]
+                               [27, 9, 9, 3, 3, 9]]
 
         for n in range(2):
             myleglist = base_objects.LegList()
@@ -581,7 +581,6 @@ class ColorSquareTest(unittest.TestCase):
             col_basis = color_amp.ColorBasis(myamplitude)
 
             col_matrix = color_amp.ColorMatrix(col_basis, Nc=3)
-
             # Check diagonal
             for i in range(len(col_basis.items())):
                 self.assertEqual(col_matrix.col_matrix_fixed_Nc[(i, i)],
