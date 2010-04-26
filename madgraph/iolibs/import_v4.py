@@ -427,8 +427,8 @@ class Reader_proc_card():
         #finally export the madevent output
         lines.append('setup madeventv4 %s -f' % os.path.split(self.process_path)[1])
         lines.append('export v4madevent')
-        lines.append('history %s' % os.path.join(self.process_path, 'Cards', \
-                                                            'mg5_proc_card.dat'))
+        lines.append('history %s' % os.path.relpath(
+                os.path.join(self.process_path, 'Cards', 'proc_card_mg5.dat')))
         
         return lines
         

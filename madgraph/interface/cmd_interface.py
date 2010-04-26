@@ -48,16 +48,17 @@ root_path = os.path.split(root_path)[0]
 
 #position of MG_ME
 MGME_dir = None
-MGME_dir_pos = [os.path.join(root_path,os.path.pardir),
+MGME_dir_possibility = [os.path.join(root_path,os.path.pardir),
                 os.path.join(os.getcwd(),os.path.pardir),
                 os.getcwd()]
 
-for position in MGME_dir_pos:
-    if os.path.exists(os.path.join(position, 'MGMEVersion.txt')):
-        MGME_dir = position
-        del MGME_dir_pos
+for position in MGME_dir_possibility:
+    if os.path.exists(os.path.join(position, 'MGMEVersion.txt')) and \
+                    os.path.exists(os.path.join(position, 'UpdateNotes.txt')):
+        MGME_dir = os.path.realpath(position)
+        del MGME_dir_possibility
         break
-    
+print MGME_dir
 #===============================================================================
 # MadGraphCmd
 #===============================================================================
@@ -261,6 +262,10 @@ class MadGraphCmd(cmd.Cmd):
                 print "Path %s is not a valid pathname" % args[1]
                 return False
             #Load the directory
+            if os.path.exists(os.path.join(self.__model_dir, 'model.pkl')):
+                self.do_load('model %s' % os.path.join(self.__model_dir, \
+                                                                   'model.pkl'))
+                return
             files_to_import = ('particles.dat', 'interactions.dat')
             for filename in files_to_import:
                 if os.path.isfile(os.path.join(self.__model_dir, filename)):
@@ -268,6 +273,8 @@ class MadGraphCmd(cmd.Cmd):
                 else:
                     print "%s files doesn't exist in %s directory" % \
                                         (filename, os.path.basename(args[1]))
+            #save model for next usage
+            self.do_save('model %s ' % os.path.join(self.__model_dir, 'model.pkl'))
                         
         elif args[0] == 'v5':
             if not os.path.isfile(args[1]):
@@ -390,9 +397,9 @@ class MadGraphCmd(cmd.Cmd):
             print '  for example: import v4 sm'
             return False
         
-        name = args[1]
-        if not force and os.path.isdir(os.path.join(mgme_dir, name)):
-            print 'INFO: directory %s already exists.' %  name
+        dir_path = os.path.join(mgme_dir,args[1])
+        if not force and os.path.isdir(dir_path):
+            print 'INFO: directory %s already exists.' %  args[1]
             if clean:
                 print 'If you continue this directory will be cleaned'
 
@@ -401,12 +408,12 @@ class MadGraphCmd(cmd.Cmd):
                 print 'stop'
                 return False
 
-        export_v4.copy_v4template(mgme_dir, name, self.__model_dir, clean)
+        export_v4.copy_v4template(mgme_dir, dir_path, self.__model_dir, clean)
         # Import the model
         print 'import model files %s in directory %s' % \
-                       (os.path.basename(self.__model_dir), name)        
-        export_v4.export_model(self.__model_dir, os.path.join(mgme_dir, name))
-        self.__export_dir = os.path.join(mgme_dir, name)
+                       (os.path.basename(self.__model_dir), args[1])        
+        export_v4.export_model(self.__model_dir, dir_path)
+        self.__export_dir = dir_path
         
         
     def complete_setup(self, text, line, begidx, endidx):
