@@ -922,6 +922,7 @@ CALL IOVXXX(W(1,29),W(1,2),W(1,14),GG,AMP(41))
 # Amplitude(s) for diagram number 42
 CALL IOVXXX(W(1,33),W(1,2),W(1,12),GG,AMP(42))""")
 
+        #print matrix_element.get('color_basis')
         # Test color matrix output
         self.assertEqual("\n".join(export_v4.get_color_data_lines(matrix_element)),
                          """DATA Denom(1)/1/
@@ -945,13 +946,12 @@ C 1 T(2,6) T(3,4) T(5,1)""")
 
         # Test JAMP (color amplitude) output
         self.assertEqual('\n'.join(export_v4.get_JAMP_lines(matrix_element)),
-                         """JAMP(1)=+1./4.*(+1./9.*AMP(1)+1./9.*AMP(2)+1./3.*AMP(4)+1./3.*AMP(5)+1./3.*AMP(7)+1./3.*AMP(8)+1./9.*AMP(9)+1./9.*AMP(10)+AMP(14)+complex(0,1)*AMP(16)+AMP(17)+1./3.*AMP(19)+1./3.*AMP(20)+AMP(22)+complex(0,1)*AMP(23)+1./3.*AMP(27)+1./3.*AMP(28)+AMP(29)+AMP(31)+1./3.*AMP(33)+1./3.*AMP(34)+1./3.*AMP(35)+1./3.*AMP(36)+AMP(37)+1./9.*AMP(39)+1./9.*AMP(40))
-JAMP(2)=+1./4.*(-1./3.*AMP(1)-1./3.*AMP(2)-1./9.*AMP(4)-1./9.*AMP(5)-1./9.*AMP(7)-1./9.*AMP(8)-1./3.*AMP(9)-1./3.*AMP(10)-AMP(12)-complex(0,1)*AMP(13)-1./3.*AMP(17)-1./3.*AMP(18)-AMP(19)-AMP(25)-complex(0,1)*AMP(26)-AMP(27)-1./3.*AMP(29)-1./3.*AMP(30)-1./3.*AMP(31)-1./3.*AMP(32)-AMP(33)-AMP(35)-1./3.*AMP(37)-1./3.*AMP(38)-1./9.*AMP(41)-1./9.*AMP(42))
-JAMP(3)=+1./4.*(-AMP(4)-complex(0,1)*AMP(6)-AMP(7)-1./3.*AMP(9)-1./3.*AMP(10)-1./9.*AMP(11)-1./9.*AMP(12)-1./3.*AMP(14)-1./3.*AMP(15)-1./3.*AMP(17)-1./3.*AMP(18)-1./9.*AMP(19)-1./9.*AMP(20)-1./3.*AMP(21)-1./3.*AMP(22)-AMP(24)+complex(0,1)*AMP(26)-AMP(28)-1./3.*AMP(31)-1./3.*AMP(32)-1./9.*AMP(33)-1./9.*AMP(34)-AMP(36)-1./3.*AMP(39)-1./3.*AMP(40)-AMP(41))
-JAMP(4)=+1./4.*(+AMP(1)-complex(0,1)*AMP(3)+1./3.*AMP(4)+1./3.*AMP(5)+AMP(10)+1./3.*AMP(11)+1./3.*AMP(12)+AMP(15)-complex(0,1)*AMP(16)+AMP(18)+1./9.*AMP(21)+1./9.*AMP(22)+1./3.*AMP(24)+1./3.*AMP(25)+1./3.*AMP(27)+1./3.*AMP(28)+1./9.*AMP(29)+1./9.*AMP(30)+1./9.*AMP(31)+1./9.*AMP(32)+1./3.*AMP(33)+1./3.*AMP(34)+AMP(38)+AMP(40)+1./3.*AMP(41)+1./3.*AMP(42))
-JAMP(5)=+1./4.*(+AMP(2)+complex(0,1)*AMP(3)+1./3.*AMP(7)+1./3.*AMP(8)+AMP(9)+1./3.*AMP(11)+1./3.*AMP(12)+1./9.*AMP(14)+1./9.*AMP(15)+1./9.*AMP(17)+1./9.*AMP(18)+1./3.*AMP(19)+1./3.*AMP(20)+AMP(21)-complex(0,1)*AMP(23)+1./3.*AMP(24)+1./3.*AMP(25)+AMP(30)+AMP(32)+1./3.*AMP(35)+1./3.*AMP(36)+1./9.*AMP(37)+1./9.*AMP(38)+AMP(39)+1./3.*AMP(41)+1./3.*AMP(42))
-JAMP(6)=+1./4.*(-1./3.*AMP(1)-1./3.*AMP(2)-AMP(5)+complex(0,1)*AMP(6)-AMP(8)-AMP(11)+complex(0,1)*AMP(13)-1./3.*AMP(14)-1./3.*AMP(15)-AMP(20)-1./3.*AMP(21)-1./3.*AMP(22)-1./9.*AMP(24)-1./9.*AMP(25)-1./9.*AMP(27)-1./9.*AMP(28)-1./3.*AMP(29)-1./3.*AMP(30)-AMP(34)-1./9.*AMP(35)-1./9.*AMP(36)-1./3.*AMP(37)-1./3.*AMP(38)-1./3.*AMP(39)-1./3.*AMP(40)-AMP(42))""")
-
+                         """JAMP(1)=+1./4.*(+1./9.*AMP(1)+1./9.*AMP(2)+1./3.*AMP(4)+1./3.*AMP(5)+1./3.*AMP(7)+1./3.*AMP(8)+1./9.*AMP(9)+1./9.*AMP(10)+AMP(14)-AMP(16)+AMP(17)+1./3.*AMP(19)+1./3.*AMP(20)+AMP(22)-AMP(23)+1./3.*AMP(27)+1./3.*AMP(28)+AMP(29)+AMP(31)+1./3.*AMP(33)+1./3.*AMP(34)+1./3.*AMP(35)+1./3.*AMP(36)+AMP(37)+1./9.*AMP(39)+1./9.*AMP(40))
+JAMP(2)=+1./4.*(-1./3.*AMP(1)-1./3.*AMP(2)-1./9.*AMP(4)-1./9.*AMP(5)-1./9.*AMP(7)-1./9.*AMP(8)-1./3.*AMP(9)-1./3.*AMP(10)-AMP(12)+AMP(13)-1./3.*AMP(17)-1./3.*AMP(18)-AMP(19)-AMP(25)+AMP(26)-AMP(27)-1./3.*AMP(29)-1./3.*AMP(30)-1./3.*AMP(31)-1./3.*AMP(32)-AMP(33)-AMP(35)-1./3.*AMP(37)-1./3.*AMP(38)-1./9.*AMP(41)-1./9.*AMP(42))
+JAMP(3)=+1./4.*(-AMP(4)+AMP(6)-AMP(7)-1./3.*AMP(9)-1./3.*AMP(10)-1./9.*AMP(11)-1./9.*AMP(12)-1./3.*AMP(14)-1./3.*AMP(15)-1./3.*AMP(17)-1./3.*AMP(18)-1./9.*AMP(19)-1./9.*AMP(20)-1./3.*AMP(21)-1./3.*AMP(22)-AMP(24)-AMP(26)-AMP(28)-1./3.*AMP(31)-1./3.*AMP(32)-1./9.*AMP(33)-1./9.*AMP(34)-AMP(36)-1./3.*AMP(39)-1./3.*AMP(40)-AMP(41))
+JAMP(4)=+1./4.*(+AMP(1)+AMP(3)+1./3.*AMP(4)+1./3.*AMP(5)+AMP(10)+1./3.*AMP(11)+1./3.*AMP(12)+AMP(15)+AMP(16)+AMP(18)+1./9.*AMP(21)+1./9.*AMP(22)+1./3.*AMP(24)+1./3.*AMP(25)+1./3.*AMP(27)+1./3.*AMP(28)+1./9.*AMP(29)+1./9.*AMP(30)+1./9.*AMP(31)+1./9.*AMP(32)+1./3.*AMP(33)+1./3.*AMP(34)+AMP(38)+AMP(40)+1./3.*AMP(41)+1./3.*AMP(42))
+JAMP(5)=+1./4.*(+AMP(2)-AMP(3)+1./3.*AMP(7)+1./3.*AMP(8)+AMP(9)+1./3.*AMP(11)+1./3.*AMP(12)+1./9.*AMP(14)+1./9.*AMP(15)+1./9.*AMP(17)+1./9.*AMP(18)+1./3.*AMP(19)+1./3.*AMP(20)+AMP(21)+AMP(23)+1./3.*AMP(24)+1./3.*AMP(25)+AMP(30)+AMP(32)+1./3.*AMP(35)+1./3.*AMP(36)+1./9.*AMP(37)+1./9.*AMP(38)+AMP(39)+1./3.*AMP(41)+1./3.*AMP(42))
+JAMP(6)=+1./4.*(-1./3.*AMP(1)-1./3.*AMP(2)-AMP(5)-AMP(6)-AMP(8)-AMP(11)-AMP(13)-1./3.*AMP(14)-1./3.*AMP(15)-AMP(20)-1./3.*AMP(21)-1./3.*AMP(22)-1./9.*AMP(24)-1./9.*AMP(25)-1./9.*AMP(27)-1./9.*AMP(28)-1./3.*AMP(29)-1./3.*AMP(30)-AMP(34)-1./9.*AMP(35)-1./9.*AMP(36)-1./3.*AMP(37)-1./3.*AMP(38)-1./3.*AMP(39)-1./3.*AMP(40)-AMP(42))""")
         # Test coloramps.inc output
         self.assertEqual(export_v4.get_icolamp_lines(matrix_element),
                          ['logical icolamp(42,6)', 'DATA icolamp/.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.false.,.false.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.false.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.false.,.true.,.true.,.false.,.false.,.true.,.true.,.false.,.false.,.false.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.false.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.true.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.false.,.true.,.true.,.true.,.false.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.false.,.true.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.true.,.true.,.true.,.false.,.false.,.false.,.true.,.false.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.true.,.false.,.false.,.false.,.false.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.false.,.true.,.true.,.false.,.true.,.false.,.false.,.true.,.false.,.true.,.true.,.true.,.false.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.false.,.false.,.true.,.true.,.true.,.true.,.true.,.true.,.true.,.false.,.true./'])
@@ -964,18 +964,18 @@ JAMP(6)=+1./4.*(-1./3.*AMP(1)-1./3.*AMP(2)-AMP(5)+complex(0,1)*AMP(6)-AMP(8)-AMP
                          """      DATA (IDUP(I,1),I=1,6)/2,-2,2,-2,2,-2/
       DATA (MOTHUP(1,I,  1),I=1, 6)/  0,  0,  1,  1,  1,  1/
       DATA (MOTHUP(2,I,  1),I=1, 6)/  0,  0,  2,  2,  2,  2/
-      DATA (ICOLUP(1,I,  1),I=1, 6)/502,  0,502,  0,503,  0/
-      DATA (ICOLUP(2,I,  1),I=1, 6)/  0,501,  0,501,  0,503/
+      DATA (ICOLUP(1,I,  1),I=1, 6)/501,  0,502,  0,503,  0/
+      DATA (ICOLUP(2,I,  1),I=1, 6)/  0,501,  0,502,  0,503/
       DATA (ICOLUP(1,I,  2),I=1, 6)/501,  0,502,  0,503,  0/
-      DATA (ICOLUP(2,I,  2),I=1, 6)/  0,501,  0,502,  0,503/
-      DATA (ICOLUP(1,I,  3),I=1, 6)/501,  0,502,  0,503,  0/
-      DATA (ICOLUP(2,I,  3),I=1, 6)/  0,501,  0,503,  0,502/
+      DATA (ICOLUP(2,I,  2),I=1, 6)/  0,501,  0,503,  0,502/
+      DATA (ICOLUP(1,I,  3),I=1, 6)/502,  0,502,  0,503,  0/
+      DATA (ICOLUP(2,I,  3),I=1, 6)/  0,501,  0,501,  0,503/
       DATA (ICOLUP(1,I,  4),I=1, 6)/503,  0,502,  0,503,  0/
-      DATA (ICOLUP(2,I,  4),I=1, 6)/  0,501,  0,502,  0,501/
+      DATA (ICOLUP(2,I,  4),I=1, 6)/  0,501,  0,501,  0,502/
       DATA (ICOLUP(1,I,  5),I=1, 6)/502,  0,502,  0,503,  0/
       DATA (ICOLUP(2,I,  5),I=1, 6)/  0,501,  0,503,  0,501/
       DATA (ICOLUP(1,I,  6),I=1, 6)/503,  0,502,  0,503,  0/
-      DATA (ICOLUP(2,I,  6),I=1, 6)/  0,501,  0,501,  0,502/
+      DATA (ICOLUP(2,I,  6),I=1, 6)/  0,501,  0,502,  0,501/
 """)
 
         # Test pdf output (for auto_dsig.f)

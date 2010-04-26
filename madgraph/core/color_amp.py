@@ -81,6 +81,7 @@ class ColorBasis(dict):
                         for cs in res_dict.values()]):
                     res_dict = {}
                 # Return since this must be the last vertex
+
                 return res_dict
 
         # NORMAL VERTICES WITH ID != 0 -----------------------------------------
@@ -91,6 +92,7 @@ class ColorBasis(dict):
         if all([cs == color_algebra.ColorString() \
                         for cs in res_dict.values()]):
             res_dict = {}
+
         return res_dict
 
     def add_vertex(self, vertex, diagram, model,
@@ -290,6 +292,14 @@ class ColorBasis(dict):
         or 1 arguments). If one arguments is given, it's interpreted as 
         an amplitude."""
 
+        dict.__init__(self)
+
+        # Dictionary to save simplifications already done in a canonical form
+        self._canonical_dict = {}
+
+        # Dictionary store the raw colorize information
+        self._list_color_dict = []
+
         if len(args) not in (0, 1):
             raise ValueError, \
                 "Object ColorBasis must be initialized with 0 or 1 arguments"
@@ -383,7 +393,7 @@ class ColorBasis(dict):
 
         res = []
 
-        for col_basis_entry in self.keys():
+        for col_basis_entry in sorted(self.keys()):
 
             res_dict = {}
             fake_repl = []
