@@ -318,8 +318,8 @@ def read_interactions_v4(fsock, ref_part_list):
 #===============================================================================
 def read_proc_card_v4(fsock):
 
-    modeldir = os.path.dirname(fsock.name) + '../../Models'
-    reader = Reader_proc_card(fsock, modeldir)
+    #modeldir = os.path.dirname(fsock.name) + '../../Models'
+    reader = Reader_proc_card(fsock)
     return reader
 
 
@@ -347,6 +347,10 @@ class Reader_proc_card():
         self.multipart = [] # list of the mg4 definition of multiparticle
         self.particles_name = set() # set of authorize particle name
         self.couplings_name = set() # set of mandatory couplings
+        print os.path.dirname(fsock.name)
+        self.process_path = os.path.realpath(os.path.join( 
+                                        os.path.dirname(fsock.name), os.pardir))
+        print self.process_path
         #self.mg5_process = [] 
         
         # Reading the files and store the information in string format.
@@ -421,7 +425,10 @@ class Reader_proc_card():
                 lines.append('add process %s' % process.repr(self.couplings_name))
         
         #finally export the madevent output
-        lines.append('export v4madevent SubProcesses')
+        lines.append('setup madeventv4 %s -f' % os.path.split(self.process_path)[1])
+        lines.append('export v4madevent')
+        lines.append('history %s' % os.path.join(self.process_path, 'Cards', \
+                                                            'mg5_proc_card.dat'))
         
         return lines
         

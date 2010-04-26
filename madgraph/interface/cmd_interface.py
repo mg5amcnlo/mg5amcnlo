@@ -12,21 +12,20 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-
 """A user friendly command line interface to access MadGraph features.
    Uses the cmd package for command interpretation and tab completion.
 """
 
+import atexit
 import cmd
 import copy
+import logging
 import os
+import re
+import readline
 import subprocess
 import sys
 import time
-import readline
-import atexit
-import re
-import logging
 
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.files as files
@@ -43,7 +42,22 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing as draw_lib
 import madgraph.iolibs.drawing_eps as draw
 
+#position of MG5
+root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
+root_path = os.path.split(root_path)[0]
 
+#position of MG_ME
+MGME_dir = None
+MGME_dir_pos = [os.path.join(root_path,os.path.pardir),
+                os.path.join(os.getcwd(),os.path.pardir),
+                os.getcwd()]
+
+for position in MGME_dir_pos:
+    if os.path.exists(os.path.join(position, 'MGMEVersion.txt')):
+        MGME_dir = position
+        del MGME_dir_pos
+        break
+    
 #===============================================================================
 # MadGraphCmd
 #===============================================================================
@@ -51,6 +65,7 @@ class MadGraphCmd(cmd.Cmd):
     """The command line processor of MadGraph"""
 
     __curr_model = base_objects.Model()
+    __model_dir = None
     __curr_amps = diagram_generation.AmplitudeList()
     # __org_amps holds the original amplitudes before export (for
     # decay chains, __curr_amps are replaced after export)
@@ -64,11 +79,11 @@ class MadGraphCmd(cmd.Cmd):
                       'processes',
                       'multiparticles']
     __add_opts = ['process']
-    __save_opts = ['model',
-                   'processes']
+    __save_opts = ['model', 'processes']
     __import_formats = ['v4', 'v5']
     __export_formats = ['v4standalone', 'v4sa_dirs', 'v4madevent']
-
+    __export_dir = None
+    
 
     class MadGraphCmdError(Exception):
         """Exception raised if an error occurs in the execution
@@ -225,37 +240,35 @@ class MadGraphCmd(cmd.Cmd):
             self.help_import()
             return False
 
+
         if args[0] == 'v4':
-
-            if os.path.isdir(args[1]):
-                files_to_import = ('particles.dat', 'interactions.dat')
-                for filename in files_to_import:
-                    if os.path.isfile(os.path.join(args[1], filename)):
-                        import_v4file(self, os.path.join(args[1], filename))
-                    else:
-                        print "%s files doesn't exist in %s directory" % \
-                                        (filename, os.path.basename(args[1]))
-
-            elif os.path.isfile(args[1]):
+            # Check for a file
+            if os.path.isfile(args[1]):
                 suceed = import_v4file(self, args[1])
                 if not suceed:
-#                if os.path.basename(args[1]) in files_to_import:
-#                    import_v4file(self, args[1])
-#                else:
                     print "%s is not a valid v4 file name" % \
                                         os.path.basename(args[1])
-            elif os.path.isdir(os.path.join(os.path.pardir, 'Models', args[1])):
-                modeldir = os.path.join(os.path.pardir, 'Models', args[1])
-                files_to_import = ('particles.dat', 'interactions.dat')
-                for filename in files_to_import:
-                    if os.path.isfile(os.path.join(modeldir, filename)):
-                        import_v4file(self, os.path.join(modeldir, filename))
-                    else:
-                        print "%s files doesn't exist in %s directory" % \
-                                    (filename, os.path.join(modeldir, args[1]))            
+                else:
+                    self.__model_dir = os.path.dirname(args[1])
+                return
+            
+            # Check for a valid directory
+            if os.path.isdir(args[1]):
+                self.__model_dir = args[1]
+            elif os.path.isdir(os.path.join(MGME_dir, 'Models', args[1])):
+                self.__model_dir = os.path.join(MGME_dir, 'Models', args[1])
             else:
                 print "Path %s is not a valid pathname" % args[1]
-        
+                return False
+            #Load the directory
+            files_to_import = ('particles.dat', 'interactions.dat')
+            for filename in files_to_import:
+                if os.path.isfile(os.path.join(self.__model_dir, filename)):
+                    import_v4file(self, os.path.join(self.__model_dir, filename))
+                else:
+                    print "%s files doesn't exist in %s directory" % \
+                                        (filename, os.path.basename(args[1]))
+                        
         elif args[0] == 'v5':
             if not os.path.isfile(args[1]):
                 print "Path %s is not a valid pathname" % args[1]
@@ -280,6 +293,8 @@ class MadGraphCmd(cmd.Cmd):
                                           self.split_arg(line[0:begidx])[2])
 
     def import_mg4_proc_card(self, filepath):
+        """ read a V4 proc card, convert it and run it in mg5"""
+        
         # change the status of this line in the history -> pass in comment
         self.history[-1] = '#%s' % self.history[-1] 
         path = os.path
@@ -353,6 +368,85 @@ class MadGraphCmd(cmd.Cmd):
                 print 'No processes to save!'
         else:
             self.help_save()
+            
+    def do_setup(self, line):
+        """Initialize a new Template or reinitialize one"""
+        
+        args = self.split_arg(line)
+        clean = '-noclean' not in args
+        force = '-f' in args 
+        dir= '-d' in args
+        if dir:
+            mgme_dir = args[args.find('-d')+1]
+        else:
+            mgme_dir = MGME_dir
+                        
+        if len(args) < 2:
+            self.help_setup()
+            return False
+        
+        if not self.__model_dir:
+            print 'No model found. Please import a model first and then retry'
+            print '  for example: import v4 sm'
+            return False
+        
+        name = args[1]
+        if not force and os.path.isdir(os.path.join(mgme_dir, name)):
+            print 'INFO: directory %s already exists.' %  name
+            if clean:
+                print 'If you continue this directory will be cleaned'
+
+            answer = raw_input('Do you want to continue? [y/n]')
+            if answer != 'y':
+                print 'stop'
+                return False
+
+        export_v4.copy_v4template(mgme_dir, name, self.__model_dir, clean)
+        # Import the model
+        print 'import model files %s in directory %s' % \
+                       (os.path.basename(self.__model_dir), name)        
+        export_v4.export_model(self.__model_dir, os.path.join(mgme_dir, name))
+        self.__export_dir = os.path.join(mgme_dir, name)
+        
+        
+    def complete_setup(self, text, line, begidx, endidx):
+        "Complete the setup command"
+
+        possible_option = ['-d ', '-f', '-noclean']
+        possible_option2 = ['d ', 'f', 'noclean']
+        possible_format = ['madeventv4']
+        #don't propose directory use by MG_ME
+        forbidden_name = ['MadGraphII','Template','pythia-pgs', 'CVS', 
+                            'Calculators', 'MadAnalysis', 'SimpleAnalysis', 'mg5',
+                            'DECAY', 'EventConverter', 'Models', 'ExRootAnalysis', 
+                            'HELAS', 'Transfer_Fct']
+        # Format
+        if len(self.split_arg(line[0:begidx])) == 1:
+            return self.list_completion(text, possible_format)
+        
+        #name of the run =>proposes old run name
+        if len(self.split_arg(line[0:begidx])) == 2:
+            mgme_pos = [os.path.join(root_path,os.path.pardir),
+                        os.path.join(os.getcwd(),os.path.pardir),
+                        os.getcwd()]
+            for pos in mgme_pos:
+                if os.path.isdir(os.path.join(pos, 'Template')):
+                    content =[name for name in os.listdir(pos) if \
+                                    name not in forbidden_name and \
+                                    os.path.isdir(os.path.join(pos, name))]
+                
+                    return self.list_completion(text, content)
+
+        # Returning options
+        if len(self.split_arg(line[0:begidx])) > 2:
+            if self.split_arg(line[0:begidx])[-1] == '-d':
+                return self.path_completion(text)
+            elif  self.split_arg(line[0:begidx])[-2] == '-d' and line[-1]!=' ':
+                return self.path_completion(text, self.split_arg(line[0:begidx])[-1])
+            elif self.split_arg(line[0:begidx])[-1] == '-':
+                return self.list_completion(text, possible_option2)
+            else:
+                return self.list_completion(text, possible_option)
 
     def do_load(self, line):
         """Load information from file"""
@@ -902,11 +996,10 @@ class MadGraphCmd(cmd.Cmd):
 
         args = self.split_arg(line)
 
-        if len(args) < 1:
-            self.help_export()
-            return False
-
-        if len(args) != 2 or args[0] not in self.__export_formats:
+        if len(args) == 0 or (len(args) == 1 and not self.__export_dir) or \
+                                            args[0] not in self.__export_formats:
+            print len(args), (len(args) == 1 and not self.__export_dir),args[0] not in self.__export_formats
+            print args
             self.help_export()
             return False
 
@@ -914,12 +1007,17 @@ class MadGraphCmd(cmd.Cmd):
             print "No process generated, please generate a process!"
             return False
 
-        if not os.path.isdir(args[1]):
-            print "%s is not a valid directory for export file" % args[1]
+        if len(args) == 1:
+            path = os.path.join(self.__export_dir,'SubProcesses')
+        else:
+            path = args[1]
+
+        if not os.path.isdir(path):
+            print "%s is not a valid directory for export file" % path
+            return False
 
         ndiags, cpu_time = generate_matrix_elements(self)
         calls = 0
-        path = args[1]
 
         if args[0] == 'v4standalone':
             for me in self.__curr_matrix_elements.get('matrix_elements'):
@@ -1086,6 +1184,17 @@ class MadGraphCmd(cmd.Cmd):
         print "syntax: display " + "|".join(self.__display_opts)
         print "-- display a the status of various internal state variables"
 
+    def help_setup(self):
+        print "syntax madeventv4 name [options]"
+        print "-- Create a copy of the V4 Template 'name' in the MG_ME directory."
+        print "   options:"
+        print "      -f: force the cleaning of the directory if this one exist"
+        print "      -d PATH: specify the directory where to create name"
+        print "      -noclean: no cleaning perform in name (simple storing position)"
+        print "   Example:"
+        print "       setup madeventv4 MYRUN"
+        print "       setup madeventv4 MYRUN -d ../MG_ME -f"
+        
     def help_generate(self):
 
         print "syntax: generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2"
@@ -1120,7 +1229,8 @@ class MadGraphCmd(cmd.Cmd):
         For v4madevent, the path needs to be to a MadEvent SubProcesses
         directory, and the result is the Pxxx directories (including the
         diagram .ps and .jpg files) for the subprocesses as well as a
-        correctly generated subproc.mg file."""
+        correctly generated subproc.mg file. Note that if you have run the 
+        'setup', FILEPATH is optional."""
 
     def help_history(self):
         print "syntax: history [FILEPATH=stdout]"
@@ -1131,7 +1241,7 @@ class MadGraphCmd(cmd.Cmd):
         print "syntax: draw FILEPATH [option=value]"
         print "-- draw the diagrams in eps format"
         print "   Files will be FILEPATH/diagrams_\"process_string\".eps"
-        print "   Example: draw plot_dir "
+        print "   Example: draw plot_dir ."
         print "   Possible option: "
         print "        horizontal [False]: force S-channel to be horizontal"
         print "        external [0]: authorizes external particles to end"
