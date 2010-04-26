@@ -1379,7 +1379,7 @@ def get_color_data_lines(matrix_element, n=6):
                                 (index + 1, k + 1, min(k + n, len(num_list)),
                                  ','.join(["%5r" % i for i in num_list[k:k + n]])))
 
-            my_cs.from_immutable(matrix_element.get('color_basis').keys()[index])
+            my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[index])
             ret_list.append("C %s" % repr(my_cs))
         return ret_list
 
@@ -1446,7 +1446,7 @@ def get_JAMP_lines(matrix_element):
         for (coefficient, amp_number) in coeff_list:
             if common_factor:
                 res = res + "%sAMP(%d)" % (coeff(coefficient[0],
-                                           coefficient[1]/abs(coefficient[1]),
+                                           coefficient[1] / abs(coefficient[1]),
                                            coefficient[2],
                                            coefficient[3]),
                                            amp_number)
