@@ -65,8 +65,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # width = 'zero'
         # is_part = 'true'    Particle not antiparticle
         # self_antipart='false'   gluon, photo, h, or majorana would be true
-        self['particle'] = None
-        self['antiparticle'] = None
+        self['particle'] = base_objects.Particle()
+        self['antiparticle'] = base_objects.Particle()
         self['is_part'] = True
         # Properties related to the interaction generating the propagator
         # For an e- produced from an e+e-A vertex would have the following
@@ -159,45 +159,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
     def filter(self, name, value):
         """Filter for valid wavefunction property values."""
 
-        if name == 'pdg_code':
-            if not isinstance(value, int):
+        if name in ['particle', 'antiparticle']:
+            if not isinstance(value, base_objects.Particle):
                 raise self.PhysicsObjectError, \
-                      "%s is not a valid pdg_code for wavefunction" % \
-                      str(value)
+                    "%s tag %s is not a particle" % (name, repr(value))            
 
-        if name in ['name', 'antiname']:
-            # Must start with a letter, followed by letters,  digits,
-            # - and + only
-            p = re.compile('\A[a-zA-Z]+[\w]*[\-\+]*~?\Z')
-            if not p.match(value):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid particle name" % value
-
-        if name is 'spin':
-            if not isinstance(value, int):
-                raise self.PhysicsObjectError, \
-                    "Spin %s is not an integer" % repr(value)
-            if value < 1 or value > 5:
-                raise self.PhysicsObjectError, \
-                   "Spin %i is smaller than one" % value
-
-        if name is 'color':
-            if not isinstance(value, int):
-                raise self.PhysicsObjectError, \
-                    "Color %s is not an integer" % repr(value)
-            if value not in [1, 3, 6, 8]:
-                raise self.PhysicsObjectError, \
-                   "Color %i is not valid" % value
-
-        if name in ['mass', 'width']:
-            # Must start with a letter, followed by letters, digits or _
-            p = re.compile('\A[a-zA-Z]+[\w\_]*\Z')
-            if not p.match(value):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid name for mass/width variable" % \
-                        value
-
-        if name in ['is_part', 'self_antipart']:
+        if name == 'is_part':
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError, \
                     "%s tag %s is not a boolean" % (name, repr(value))
@@ -361,8 +328,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['pdg_code', 'name', 'antiname', 'spin', 'color',
-                'mass', 'width', 'is_part', 'self_antipart',
+        return ['particle', 'antiparticle', 'is_part',
                 'interaction_id', 'pdg_codes', 'inter_color', 'lorentz',
                 'coupling', 'coupl_key', 'state', 'number_external',
                 'number', 'fermionflow', 'mothers']
@@ -789,7 +755,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return (tuple(res), self.get('lorentz'))
 
-    def get_base_vertices(self, wf_dict):
+    def get_base_vertices(self, wf_dict, optimization = 1):
         """Recursive method to get a base_objects.VertexList
         corresponding to this wavefunction and its mothers."""
 
@@ -801,7 +767,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Add vertices for all mothers
         for mother in self.get('mothers'):
             # This is where recursion happens
-            vertices.extend(mother.get_base_vertices(wf_dict))
+            vertices.extend(mother.get_base_vertices(wf_dict, optimization))
         # Generate last vertex
         legs = base_objects.LegList()
         for mother in self.get('mothers'):
@@ -814,7 +780,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     'state': mother.get('leg_state'),
                     'from_group': mother.get('onshell')
                     })
-                wf_dict[mother.get('number')] = leg
+                if optimization != 0:
+                    wf_dict[mother.get('number')] = leg
             legs.append(leg)
         # We use the from_group flag to indicate whether this outgoing
         # leg corresponds to a decaying (onshell) particle or not
@@ -1440,7 +1407,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         return (-1) ** nflips
 
-    def get_base_diagram(self, wf_dict):
+    def get_base_diagram(self, wf_dict, optimization = 1):
         """Return the base_objects.Diagram which corresponds to this
         amplitude, using a recursive method for the wavefunctions."""
 
@@ -1448,7 +1415,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         # Add vertices for all mothers
         for mother in self.get('mothers'):
-            vertices.extend(mother.get_base_vertices(wf_dict))
+            vertices.extend(mother.get_base_vertices(wf_dict, optimization))
         # Generate last vertex
         legs = base_objects.LegList()
         for mother in self.get('mothers'):
@@ -1461,7 +1428,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     'state': mother.get('leg_state'),
                     'from_group': mother.get('onshell')
                     })
-                wf_dict[mother.get('number')] = leg
+                if optimization != 0:
+                    wf_dict[mother.get('number')] = leg
             legs.append(leg)
 
         vertices.append(base_objects.Vertex({
@@ -2775,12 +2743,17 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # Need to take care of diagram numbering for decay chains
         # before this can be used for those!
 
+        optimization = 1
+        if len(filter(lambda wf: wf.get('number') == 1,
+                      self.get_all_wavefunctions())):
+            optimization = 0
+
         model = self.get('processes')[0].get('model')
 
         wf_dict = {}
         diagrams = base_objects.DiagramList()
         for diag in self.get('diagrams'):
-            diagrams.append(diag.get('amplitudes')[0].get_base_diagram(wf_dict))
+            diagrams.append(diag.get('amplitudes')[0].get_base_diagram(wf_dict, optimization))
 
         return diagram_generation.Amplitude({\
             'process': self.get('processes')[0],

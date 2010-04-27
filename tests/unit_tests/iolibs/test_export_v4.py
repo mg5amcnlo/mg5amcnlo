@@ -455,11 +455,11 @@ class HelasFortranModelTest(test_helas_objects.HelasModelTest):
             mothers.remove(wf)
             wf.set('mothers', mothers)
             if not wf.get('self_antipart'):
-                wf.set('pdg_code', -wf.get('pdg_code'))
+                wf.flip_part_antipart()
             self.assertEqual(fortran_model.get_wavefunction_call(wf),
                              goal[goal_counter])
             if not wf.get('self_antipart'):
-                wf.set('pdg_code', -wf.get('pdg_code'))
+                wf.flip_part_antipart()
             goal_counter = goal_counter + 1
 
         amplitude = helas_objects.HelasAmplitude({\

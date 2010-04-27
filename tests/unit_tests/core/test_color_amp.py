@@ -189,12 +189,12 @@ class ColorAmpTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
+                                         'state':False}))
 
         myleglist.extend([base_objects.Leg({'id':21,
-                                            'state':'final'})] * 2)
+                                            'state':True})] * 2)
 
         myprocess = base_objects.Process({'legs':myleglist,
                                         'model':self.mymodel})
@@ -240,12 +240,12 @@ class ColorAmpTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':'initial'}))
+                                         'state':False}))
 
         myleglist.extend([base_objects.Leg({'id':21,
-                                            'state':'final'})] * 3)
+                                            'state':True})] * 3)
 
         myprocess = base_objects.Process({'legs':myleglist,
                                         'model':self.mymodel})
@@ -290,14 +290,14 @@ class ColorAmpTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
+                                         'state':False}))
 
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.extend([base_objects.Leg({'id':21,
-                                            'state':'final'})] * 3)
+                                            'state':True})] * 3)
 
         myprocess = base_objects.Process({'legs':myleglist,
                                         'model':self.mymodel})
@@ -508,12 +508,12 @@ class ColorSquareTest(unittest.TestCase):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':21,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':21,
-                                             'state':'initial'}))
+                                             'state':False}))
 
             myleglist.extend([base_objects.Leg({'id':21,
-                                                'state':'final'})] * (n + 1))
+                                                'state':True})] * (n + 1))
 
             myprocess = base_objects.Process({'legs':myleglist,
                                             'model':self.mymodel})
@@ -560,14 +560,14 @@ class ColorSquareTest(unittest.TestCase):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':-2,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':2,
-                                             'state':'initial'}))
+                                             'state':False}))
 
             myleglist.extend([base_objects.Leg({'id':-2,
-                                                'state':'final'}),
+                                                'state':True}),
                              base_objects.Leg({'id':2,
-                                                'state':'final'})] * (n + 1))
+                                                'state':True})] * (n + 1))
 
             myprocess = base_objects.Process({'legs':myleglist,
                                             'model':self.mymodel})
@@ -608,12 +608,12 @@ class ColorSquareTest(unittest.TestCase):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':21,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':21,
-                                             'state':'initial'}))
+                                             'state':False}))
 
             myleglist.extend([base_objects.Leg({'id':21,
-                                                'state':'final'})] * 2)
+                                                'state':True})] * 2)
 
             myprocess = base_objects.Process({'legs':myleglist,
                                             'model':self.mymodel})
