@@ -188,7 +188,7 @@ class Amplitude(base_objects.PhysicsObject):
 
             # Need to flip part-antipart for incoming particles, 
             # so they are all outgoing
-            if leg.get('state') == 'initial':
+            if leg.get('state') == False:
                 part = model.get('particle_dict')[leg.get('id')]
                 leg.set('id', part.get_anti_pdg_code())
 
@@ -239,7 +239,7 @@ class Amplitude(base_objects.PhysicsObject):
         # Note that we shouldn't look at the last vertex in each
         # diagram, since that is the n->0 vertex
         if self['process'].get('required_s_channels'):
-            ninitial = len(filter(lambda leg: leg.get('state') == 'initial',
+            ninitial = len(filter(lambda leg: leg.get('state') == False,
                               self['process'].get('legs')))
             res = base_objects.DiagramList(\
                 filter(lambda diagram: \
@@ -255,7 +255,7 @@ class Amplitude(base_objects.PhysicsObject):
         # Note that we shouldn't look at the last vertex in each
         # diagram, since that is the n->0 vertex
         if self['process'].get('forbidden_s_channels'):
-            ninitial = len(filter(lambda leg: leg.get('state') == 'initial',
+            ninitial = len(filter(lambda leg: leg.get('state') == False,
                               self['process'].get('legs')))
             res = base_objects.DiagramList(\
                 filter(lambda diagram: \
@@ -491,11 +491,11 @@ class Amplitude(base_objects.PhysicsObject):
                     number = min([leg.get('number') for leg in entry])
                     # 3) state is final, unless there is exactly one initial 
                     # state particle involved in the combination -> t-channel
-                    if len(filter(lambda leg: leg.get('state') == 'initial',
+                    if len(filter(lambda leg: leg.get('state') == False,
                                   entry)) == 1:
-                        state = 'initial'
+                        state = False
                     else:
-                        state = 'final'
+                        state = True
                     # 4) from_group is True, by definition
 
                     # Create and add the object
@@ -795,15 +795,15 @@ class MultiProcess(base_objects.PhysicsObject):
         model = process_definition['model']
         
         isids = [leg['ids'] for leg in \
-                 filter(lambda leg: leg['state'] == 'initial', process_definition['legs'])]
+                 filter(lambda leg: leg['state'] == False, process_definition['legs'])]
         fsids = [leg['ids'] for leg in \
-                 filter(lambda leg: leg['state'] == 'final', process_definition['legs'])]
+                 filter(lambda leg: leg['state'] == True, process_definition['legs'])]
 
         # Generate all combinations for the initial state
         
         for prod in apply(itertools.product, isids):
             islegs = [\
-                    base_objects.Leg({'id':id, 'state': 'initial'}) \
+                    base_objects.Leg({'id':id, 'state': False}) \
                     for id in prod]
 
             # Generate all combinations for the final state, and make
@@ -823,7 +823,7 @@ class MultiProcess(base_objects.PhysicsObject):
                 leg_list = [copy.copy(leg) for leg in islegs]
                 
                 leg_list.extend([\
-                        base_objects.Leg({'id':id, 'state': 'final'}) \
+                        base_objects.Leg({'id':id, 'state': True}) \
                         for id in prod])
                 
                 legs = base_objects.LegList(leg_list)

@@ -741,7 +741,7 @@ class FeynmanDiagram:
                 vertex_point = VertexPoint(vertex)
                 self.vertexList.append(vertex_point)
                 # If initial state particle, we will need to flip begin-end
-                if line.get('state') == 'initial':
+                if line.get('state') == False:
                     if line.start:
                         line.inverse_begin_end()
                     line.def_begin_point(vertex_point)
@@ -988,7 +988,7 @@ class FeynmanDiagram:
                 continue
             # Check if T-channel or not. Note that T-channel tag is wrongly 
             #define if only one particle in initial state.
-            if line.get('state') == 'initial':
+            if line.get('state') == False:
                 # This is T vertex. => level is 1
                 line.end.def_level(1)
             else:
@@ -1027,7 +1027,7 @@ class FeynmanDiagram:
         evolution direction (which will be the wrong one at the next step)."""
 
         for line in t_vertex.line:
-            if line.get('state') == 'initial' and line.start is t_vertex:
+            if line.get('state') == False and line.start is t_vertex:
                 return line.end
 
     def find_vertex_at_level(self, previous_level):
@@ -1046,7 +1046,7 @@ class FeynmanDiagram:
                 continue
 
             for line in vertex.line:
-                if line.start is vertex and line.get('state') == 'final':
+                if line.start is vertex and line.get('state') == True:
                         vertex_at_level.append(line.end)
 
         return vertex_at_level
@@ -1244,8 +1244,8 @@ class FeynmanDiagram:
         This occur for 1>X diagram where T-channel are wrongly define."""
         
         for line in self.lineList:
-            if line.get('state') == 'initial':
-                line.set('state','final')
+            if line.get('state') == False:
+                line.set('state', True)
 
 
     def solve_line_direction(self):
@@ -1257,7 +1257,7 @@ class FeynmanDiagram:
 
         # Use the basic rules. Assigns correctly but for T-channel
         for line in self.lineList:
-            if line.get('state') == 'final':
+            if line.get('state') == True:
                 line.define_line_orientation()
         # The define line orientation use level information and in consequence 
         #fails on T-Channel. So in consequence we still have to fix T-channel
@@ -1280,7 +1280,7 @@ class FeynmanDiagram:
             for line in t_vertex.line:
 
                 # Identify the next T-channel particles
-                if line.get('state') == 'initial' and t_old is not line and \
+                if line.get('state') == False and t_old is not line and \
                     line.start is t_vertex:
                     t_next = line
                     
@@ -1331,7 +1331,7 @@ class FeynmanDiagram:
             if line.is_external():
                 # Check the size of final particles to restrict to the max_size
                 #constraints.
-                if line.get('state') == 'initial' or not line.is_external():
+                if line.get('state') == False or not line.is_external():
                     continue 
                 size = line.get_length() * self.max_level
                 if size > finalsize:

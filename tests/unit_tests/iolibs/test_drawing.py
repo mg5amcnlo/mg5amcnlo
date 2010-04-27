@@ -53,7 +53,7 @@ class TestFeynmanLine(unittest.TestCase):
         self.my_line = drawing.FeynmanLine(11)
         myleglist = base_objects.LegList([base_objects.Leg({'id':3,
                                       'number':5,
-                                      'state':'final',
+                                      'state':True,
                                       'from_group':False})] * 10)
         self.mydict = {'id':3,
                       'legs':myleglist}
@@ -67,7 +67,7 @@ class TestFeynmanLine(unittest.TestCase):
 
         myleglist = base_objects.LegList([base_objects.Leg({'id':id,
                                       'number':5,
-                                      'state':'final',
+                                      'state':True,
                                       'from_group':False})] * 10)
         mydict = {'id':3,
                       'legs':myleglist}
@@ -87,7 +87,7 @@ class TestFeynmanLine(unittest.TestCase):
     def def_model_line(id=22):
         """fast way to create a line with a link to a model"""
 
-        leg = base_objects.Leg({'id': id, 'number': 1, 'state':'initial',
+        leg = base_objects.Leg({'id': id, 'number': 1, 'state':False,
                             'from_group':False})
         #extend the leg to FeynmanLine Object
         my_line = drawing.FeynmanLine(leg.get('id'), base_objects.Leg(leg))
@@ -506,7 +506,7 @@ class TestVertexPoint(unittest.TestCase):
         self.line4 = drawing.FeynmanLine(11)
         self.myleglist = base_objects.LegList([base_objects.Leg({'id':3,
                                       'number':5,
-                                      'state':'final',
+                                      'state':True,
                                       'from_group':False})] * 10)
         self.mydict = {'id':3,
                       'legs':self.myleglist}
@@ -636,7 +636,7 @@ class TestVertexPoint(unittest.TestCase):
 
         vertex = base_objects.Vertex({'id':0, 'legs':base_objects.LegList([])})
         vertexpoint = drawing.VertexPoint(vertex)
-        leg1 = base_objects.Leg({'id':22, 'number':1, 'state':'initial',
+        leg1 = base_objects.Leg({'id':22, 'number':1, 'state':False,
                             'from_group':False})
         line1 = drawing.FeynmanLine(22, leg1)
         line1.def_begin_point(vertexpoint)
@@ -647,17 +647,17 @@ class TestVertexPoint(unittest.TestCase):
         """Test if it's possible to fuse two vertex"""
 
         # Test diagram gg>gg via a S-channel
-        leg1 = base_objects.Leg({'id':22, 'number':1, 'state':'initial',
+        leg1 = base_objects.Leg({'id':22, 'number':1, 'state':False,
                             'from_group':False})
-        leg2 = base_objects.Leg({'id':22, 'number':2, 'state':'initial',
+        leg2 = base_objects.Leg({'id':22, 'number':2, 'state':False,
                             'from_group':False})
-        leg3 = base_objects.Leg({'id':22, 'number':3, 'state':'final',
+        leg3 = base_objects.Leg({'id':22, 'number':3, 'state':True,
                             'from_group':False})
-        leg4 = base_objects.Leg({'id':22, 'number':4, 'state':'final',
+        leg4 = base_objects.Leg({'id':22, 'number':4, 'state':True,
                             'from_group':False})
 
         #intermediate particle +vertex associate
-        leg_s = base_objects.Leg({'id':22, 'number':1, 'state':'final',
+        leg_s = base_objects.Leg({'id':22, 'number':1, 'state':True,
                         'from_group':True})
         vertex1 = base_objects.Vertex({'id':1, \
                         'legs':base_objects.LegList([leg1, leg2, leg_s])})
@@ -710,22 +710,22 @@ class TestFeynmanDiagram(unittest.TestCase):
     """
 
     #test diagram gg>gg via a T-channel
-    leg1 = base_objects.Leg({'id':22, 'number':1, 'state':'initial',
+    leg1 = base_objects.Leg({'id':22, 'number':1, 'state':False,
                             'from_group':False})
-    leg2 = base_objects.Leg({'id':22, 'number':2, 'state':'initial',
+    leg2 = base_objects.Leg({'id':22, 'number':2, 'state':False,
                             'from_group':False})
-    leg3 = base_objects.Leg({'id':22, 'number':3, 'state':'final',
+    leg3 = base_objects.Leg({'id':22, 'number':3, 'state':True,
                             'from_group':False})
-    leg4 = base_objects.Leg({'id':22, 'number':4, 'state':'final',
+    leg4 = base_objects.Leg({'id':22, 'number':4, 'state':True,
                             'from_group':False})
 
     #intermediate particle +vertex associate
-    leg_t1 = base_objects.Leg({'id':22, 'number':1, 'state':'initial',
+    leg_t1 = base_objects.Leg({'id':22, 'number':1, 'state':False,
                         'from_group':True})
     vertex1 = base_objects.Vertex({'id':1, \
                         'legs':base_objects.LegList([leg1, leg3, leg_t1])})
 
-    leg_t2 = base_objects.Leg({'id':22, 'number':2, 'state':'initial',
+    leg_t2 = base_objects.Leg({'id':22, 'number':2, 'state':False,
                         'from_group':True})
     vertex2 = base_objects.Vertex({'id':2, \
                         'legs':base_objects.LegList([leg2, leg4, leg_t2])})
@@ -737,22 +737,22 @@ class TestFeynmanDiagram(unittest.TestCase):
     t_diagram_dict = {'vertices':vertexlist}
 
     #test diagram gg>gg via a S-channel
-    leg1 = base_objects.Leg({'id':22, 'number':1, 'state':'initial',
+    leg1 = base_objects.Leg({'id':22, 'number':1, 'state':False,
                             'from_group':False})
-    leg2 = base_objects.Leg({'id':22, 'number':2, 'state':'initial',
+    leg2 = base_objects.Leg({'id':22, 'number':2, 'state':False,
                             'from_group':False})
-    leg3 = base_objects.Leg({'id':22, 'number':3, 'state':'final',
+    leg3 = base_objects.Leg({'id':22, 'number':3, 'state':True,
                             'from_group':False})
-    leg4 = base_objects.Leg({'id':22, 'number':4, 'state':'final',
+    leg4 = base_objects.Leg({'id':22, 'number':4, 'state':True,
                             'from_group':False})
 
     #intermediate particle +vertex associate
-    leg_s = base_objects.Leg({'id':22, 'number':1, 'state':'final',
+    leg_s = base_objects.Leg({'id':22, 'number':1, 'state':True,
                         'from_group':True})
     vertex1 = base_objects.Vertex({'id':1, \
                         'legs':base_objects.LegList([leg1, leg2, leg_s])})
 
-    leg_temp = base_objects.Leg({'id':22, 'number':1, 'state':'final',
+    leg_temp = base_objects.Leg({'id':22, 'number':1, 'state':True,
                             'from_group':False})
 
     vertex2 = base_objects.Vertex({'id':2, \

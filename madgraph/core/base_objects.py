@@ -806,7 +806,8 @@ class Leg(PhysicsObject):
 
         self['id'] = 0
         self['number'] = 0
-        self['state'] = 'final'
+        # True = final, False = initial (boolean to save memory)
+        self['state'] = True
         self['from_group'] = True
 
     def filter(self, name, value):
@@ -818,13 +819,9 @@ class Leg(PhysicsObject):
                         "%s is not a valid integer for leg id" % str(value)
 
         if name == 'state':
-            if not isinstance(value, str):
+            if not isinstance(value, bool):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid string for leg state" % \
-                                                                    str(value)
-            if value not in ['initial', 'final']:
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid leg state (initial|final)" % \
+                        "%s is not a valid leg state (True|False)" % \
                                                                     str(value)
 
         if name == 'from_group':
@@ -860,8 +857,8 @@ class Leg(PhysicsObject):
 
         part = model.get('particle_dict')[self['id']]
         return part.is_fermion() and \
-               (self.get('state') == 'initial' and part.get('is_part') or \
-                self.get('state') == 'final' and not part.get('is_part'))
+               (self.get('state') == False and part.get('is_part') or \
+                self.get('state') == True and not part.get('is_part'))
 
     def is_outgoing_fermion(self, model):
         """Returns True if leg is an outgoing fermion, i.e., initial
@@ -873,8 +870,8 @@ class Leg(PhysicsObject):
 
         part = model.get('particle_dict')[self['id']]
         return part.is_fermion() and \
-               (self.get('state') == 'final' and part.get('is_part') or \
-                self.get('state') == 'initial' and not part.get('is_part'))
+               (self.get('state') == True and part.get('is_part') or \
+                self.get('state') == False and not part.get('is_part'))
 
 #===============================================================================
 # LegList
@@ -947,7 +944,7 @@ class LegList(PhysicsObjectList):
             return res
 
         for leg in self:
-            if leg.get('state') == 'initial':
+            if leg.get('state') == False:
                 res.append(model.get('particle_dict')[leg.get('id')].get_anti_pdg_code())
             else:
                 res.append(leg.get('id'))
@@ -965,7 +962,7 @@ class MultiLeg(PhysicsObject):
         """Default values for all properties"""
 
         self['ids'] = []
-        self['state'] = 'final'
+        self['state'] = True
 
     def filter(self, name, value):
         """Filter for valid multileg property values."""
@@ -980,11 +977,7 @@ class MultiLeg(PhysicsObject):
                           "%s is not a valid list of integers" % str(value)
 
         if name == 'state':
-            if not isinstance(value, str):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid string for leg state" % \
-                                                                    str(value)
-            if value not in ['initial', 'final']:
+            if not isinstance(value, bool):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid leg state (initial|final)" % \
                                                                     str(value)
@@ -1051,8 +1044,8 @@ class Vertex(PhysicsObject):
 
         if ninitial == 1:
             # For one initial particle, all legs are s-channel
-            # Only need to flip particle id if state is 'initial'
-            if leg.get('state') == 'final':
+            # Only need to flip particle id if state is False
+            if leg.get('state') == True:
                 return leg.get('id')
             else:
                 return model.get('particle_dict')[leg.get('id')].\
@@ -1060,7 +1053,7 @@ class Vertex(PhysicsObject):
 
         # Number of initial particles is at least 2
         if self.get('id') == 0 or \
-           leg.get('state') == 'initial':
+           leg.get('state') == False:
             # identity vertex or t-channel particle
             return 0
 
@@ -1074,7 +1067,7 @@ class Vertex(PhysicsObject):
 
         ## Check if the other legs are initial or final.
         ## If the latter, return leg id, if the former, return -leg id
-        #if self.get('legs')[0].get('state') == 'final':
+        #if self.get('legs')[0].get('state') == True:
         #    return leg.get('id')
         #else:
         #    return model.get('particle_dict')[leg.get('id')].\
@@ -1280,8 +1273,8 @@ class Process(PhysicsObject):
         prevleg = None
         for leg in self['legs']:
             mypart = self['model'].get('particle_dict')[leg['id']]
-            if prevleg and prevleg['state'] == 'initial' \
-                   and leg['state'] == 'final':
+            if prevleg and prevleg['state'] == False \
+                   and leg['state'] == True:
                 # Separate initial and final legs by ">"
                 mystr = mystr + '> '
                 # Add required s-channels
@@ -1332,8 +1325,8 @@ class Process(PhysicsObject):
         prevleg = None
         for leg in self['legs']:
             mypart = self['model'].get('particle_dict')[leg['id']]
-            if prevleg and prevleg['state'] == 'initial' \
-                   and leg['state'] == 'final':
+            if prevleg and prevleg['state'] == False \
+                   and leg['state'] == True:
                 # Separate initial and final legs by ">"
                 mystr = mystr + '> '
             mystr = mystr + mypart.get_name() + ' '
@@ -1351,8 +1344,8 @@ class Process(PhysicsObject):
         prevleg = None
         for leg in self['legs']:
             mypart = self['model'].get('particle_dict')[leg['id']]
-            if prevleg and prevleg['state'] == 'initial' \
-                   and leg['state'] == 'final':
+            if prevleg and prevleg['state'] == False \
+                   and leg['state'] == True:
                 # Separate initial and final legs by ">"
                 mystr = mystr + '_'
                 # Add required s-channels
@@ -1392,8 +1385,8 @@ class Process(PhysicsObject):
         prevleg = None
         for leg in self.get_legs_with_decays():
             mypart = self['model'].get('particle_dict')[leg['id']]
-            if prevleg and prevleg['state'] == 'initial' \
-                   and leg['state'] == 'final':
+            if prevleg and prevleg['state'] == False \
+                   and leg['state'] == True:
                 # Separate initial and final legs by ">"
                 mystr = mystr + '_'
             if mypart['is_part']:
@@ -1414,27 +1407,27 @@ class Process(PhysicsObject):
     def get_ninitial(self):
         """Gives number of initial state particles"""
 
-        return len(filter(lambda leg: leg.get('state') == 'initial',
+        return len(filter(lambda leg: leg.get('state') == False,
                            self.get('legs')))
 
     def get_initial_ids(self):
         """Gives the pdg codes for initial state particles"""
 
         return [leg.get('id') for leg in \
-                filter(lambda leg: leg.get('state') == 'initial',
+                filter(lambda leg: leg.get('state') == False,
                        self.get('legs'))]
 
     def get_initial_pdg(self, number):
         """Return the pdg codes for initial state particles for beam number"""
 
-        return filter(lambda leg: leg.get('state') == 'initial' and\
+        return filter(lambda leg: leg.get('state') == False and\
                        leg.get('number') == number,
                        self.get('legs'))[0].get('id')
 
     def get_final_legs(self):
         """Gives the pdg codes for initial state particles"""
 
-        return filter(lambda leg: leg.get('state') == 'final',
+        return filter(lambda leg: leg.get('state') == True,
                        self.get('legs'))
     
     def get_legs_with_decays(self):
@@ -1445,7 +1438,7 @@ class Process(PhysicsObject):
             legs.pop(0)
         ileg = 0
         for decay in self.get('decay_chains'):
-            while legs[ileg].get('state') == 'initial' or \
+            while legs[ileg].get('state') == False or \
                       legs[ileg].get('id') != decay.get('legs')[0].get('id'):
                 ileg = ileg + 1
             decay_legs = decay.get_legs_with_decays()

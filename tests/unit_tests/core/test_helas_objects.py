@@ -788,13 +788,13 @@ class HelasMatrixElementTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -833,15 +833,15 @@ class HelasMatrixElementTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -855,15 +855,15 @@ class HelasMatrixElementTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':23,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -883,13 +883,13 @@ class HelasMatrixElementTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -914,15 +914,15 @@ class HelasMatrixElementTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -962,17 +962,17 @@ class HelasMatrixElementTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -1159,17 +1159,17 @@ class HelasMatrixElementTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-1000011,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':1000011,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
@@ -1206,15 +1206,15 @@ class HelasMatrixElementTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -1309,15 +1309,15 @@ class HelasMatrixElementTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -1431,13 +1431,13 @@ class HelasMatrixElementTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -1526,13 +1526,13 @@ class HelasMatrixElementTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -1620,13 +1620,13 @@ class HelasMatrixElementTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -1645,7 +1645,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         # Test g g > g g g
 
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -1667,7 +1667,7 @@ class HelasMatrixElementTest(unittest.TestCase):
         # Test g g > g g g g
 
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -1803,19 +1803,19 @@ class HelasMatrixElementTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':24,
-                                           'state':'initial',
+                                           'state':False,
                                            'number': 1}))
         myleglist.append(base_objects.Leg({'id':23,
-                                         'state':'final',
+                                         'state':True,
                                            'number': 2}))
         myleglist.append(base_objects.Leg({'id':-24,
-                                         'state':'initial',
+                                         'state':False,
                                            'number': 3}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final',
+                                         'state':True,
                                            'number': 5}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final',
+                                         'state':True,
                                            'number': 4}))
 
         mymothers = helas_objects.HelasWavefunctionList(\
@@ -2033,15 +2033,15 @@ class HelasMatrixElementTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':23,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':1000023,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':1000023,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                            'model':mymodel})
@@ -2184,20 +2184,20 @@ class HelasDecayChainProcessTest(unittest.TestCase):
 
         p = [1, -1, 2, -2, 21]
 
-        my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': 'final'});
+        my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': True});
 
         # Define the multiprocess
         my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * 4])
         
-        my_multi_leglist[0].set('state', 'initial')
-        my_multi_leglist[1].set('state', 'initial')
+        my_multi_leglist[0].set('state', False)
+        my_multi_leglist[1].set('state', False)
         
         my_process_definition = base_objects.ProcessDefinition({\
                                      'legs':my_multi_leglist,
                                      'model':self.mymodel})
         my_decay_leglist = base_objects.MultiLegList([copy.copy(leg) \
                                           for leg in [my_multi_leg] * 4])
-        my_decay_leglist[0].set('state', 'initial')
+        my_decay_leglist[0].set('state', False)
         my_decay_processes = base_objects.ProcessDefinition({\
                                'legs':my_decay_leglist,
                                'model':self.mymodel})
@@ -2340,13 +2340,13 @@ class HelasMultiProcessTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':1,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':1,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc1 = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -2358,13 +2358,13 @@ class HelasMultiProcessTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc2 = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -2375,6 +2375,8 @@ class HelasMultiProcessTest(unittest.TestCase):
 
         myamplitudes = diagram_generation.AmplitudeList([ myamplitude1,
                                                           myamplitude2 ])
+        # myamplitudes is emptied by the HelasMultiProcess
+        myamplcopy = copy.copy(myamplitudes)
 
         my_matrix_element1 = helas_objects.HelasMatrixElement(myamplitude1)
         my_multiprocess = helas_objects.HelasMultiProcess(myamplitudes)
@@ -2387,9 +2389,9 @@ class HelasMultiProcessTest(unittest.TestCase):
                          get('diagrams'),
                          my_matrix_element1.get('diagrams'))
 
-        myamplitudes[0].get('process').set('id', 10)
+        myamplcopy[0].get('process').set('id', 10)
 
-        my_multiprocess = helas_objects.HelasMultiProcess(myamplitudes)
+        my_multiprocess = helas_objects.HelasMultiProcess(myamplcopy)
         self.assertEqual(len(my_multiprocess.get('matrix_elements')), 2)
 
 
@@ -2403,7 +2405,7 @@ class HelasMultiProcessTest(unittest.TestCase):
 
         p = [1, -1, 2, -2, 21]
 
-        my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': 'final'});
+        my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': True});
 
         goal_number_matrix_elements = [22, 34]
 
@@ -2413,8 +2415,8 @@ class HelasMultiProcessTest(unittest.TestCase):
             my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for \
                                             leg in [my_multi_leg] * (2 + nfs)])
 
-            my_multi_leglist[0].set('state', 'initial')
-            my_multi_leglist[1].set('state', 'initial')
+            my_multi_leglist[0].set('state', False)
+            my_multi_leglist[1].set('state', False)
 
             my_process_definition = base_objects.ProcessDefinition({\
                             'legs':my_multi_leglist,
@@ -2435,13 +2437,13 @@ class HelasMultiProcessTest(unittest.TestCase):
 
         p = [1, -1, 2, -2, 21]
 
-        my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': 'final'});
+        my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': True});
 
         # Define the multiprocess
         my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * 4])
         
-        my_multi_leglist[0].set('state', 'initial')
-        my_multi_leglist[1].set('state', 'initial')
+        my_multi_leglist[0].set('state', False)
+        my_multi_leglist[1].set('state', False)
         my_multi_leglist[0].set('ids', [21])
         my_multi_leglist[1].set('ids', [21])
         
@@ -2449,14 +2451,14 @@ class HelasMultiProcessTest(unittest.TestCase):
                                      'legs':my_multi_leglist,
                                      'model':self.mymodel})
         #my_multi_leg = base_objects.MultiLeg({'ids': [1, -1, 21],
-        #                                              'state': 'final'});
+        #                                              'state': True});
         my_decay_leglist = base_objects.MultiLegList([copy.copy(leg) \
                                           for leg in [my_multi_leg] * 4])
-        my_decay_leglist[0].set('state', 'initial')
-        my_multi_leg2 = base_objects.MultiLeg({'ids': [21], 'state': 'final'});
+        my_decay_leglist[0].set('state', False)
+        my_multi_leg2 = base_objects.MultiLeg({'ids': [21], 'state': True});
         my_decay_leglist2 = base_objects.MultiLegList([copy.copy(leg) \
                                           for leg in [my_multi_leg2] * 4])
-        my_decay_leglist2[0].set('state', 'initial')
+        my_decay_leglist2[0].set('state', False)
         my_decay_processes = base_objects.ProcessDefinitionList(\
             [base_objects.ProcessDefinition({\
                                'legs':my_decay_leglist,
@@ -2517,13 +2519,13 @@ class HelasMultiProcessTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':1,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':'final'}))
+                                         'state':True}))
 
         mycoreproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -2534,11 +2536,11 @@ class HelasMultiProcessTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':1,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':1,
-                                         'state':'final'}))
+                                         'state':True}))
 
         mydecay11 = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -2549,11 +2551,11 @@ class HelasMultiProcessTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':'final'}))
+                                         'state':True}))
 
         mydecay12 = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -2564,13 +2566,13 @@ class HelasMultiProcessTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
 
         mydecay2 = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -2635,34 +2637,34 @@ class HelasMultiProcessTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':21,
-                                           'state':'initial',
+                                           'state':False,
                                            'number': 1}))
         myleglist.append(base_objects.Leg({'id':21,
-                                           'state':'initial',
+                                           'state':False,
                                            'number': 2}))
         myleglist.append(base_objects.Leg({'id':2,
-                                           'state':'final',
+                                           'state':True,
                                            'number': 3}))
         myleglist.append(base_objects.Leg({'id':-2,
-                                           'state':'final',
+                                           'state':True,
                                            'number': 4}))
         myleglist.append(base_objects.Leg({'id':21,
-                                           'state':'final',
+                                           'state':True,
                                            'number': 5}))
         myleglist.append(base_objects.Leg({'id':1,
-                                           'state':'final',
+                                           'state':True,
                                            'number': 6}))
         myleglist.append(base_objects.Leg({'id':2,
-                                           'state':'final',
+                                           'state':True,
                                            'number': 7}))
         myleglist.append(base_objects.Leg({'id':-2,
-                                           'state':'final',
+                                           'state':True,
                                            'number': 8}))
         myleglist.append(base_objects.Leg({'id':21,
-                                           'state':'final',
+                                           'state':True,
                                            'number': 9}))
         myleglist.append(base_objects.Leg({'id':-1,
-                                           'state':'final',
+                                           'state':True,
                                            'number': 10}))
         self.assertEqual(myleglist, matrix_elements[0].get('processes')[0].\
                          get_legs_with_decays())
@@ -2800,13 +2802,13 @@ class HelasMultiProcessTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':1000022,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':1000022,
-                                         'state':'final'}))
+                                         'state':True}))
 
         mycoreproc = base_objects.Process({'legs':myleglist,
                                        'model':mymodel})
@@ -2814,11 +2816,11 @@ class HelasMultiProcessTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':1000022,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-1000011,
-                                         'state':'final'}))
+                                         'state':True}))
 
         mydecay1 = base_objects.Process({'legs':myleglist,
                                          'model':mymodel})
@@ -2826,11 +2828,11 @@ class HelasMultiProcessTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':1000022,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':1000011,
-                                         'state':'final'}))
+                                         'state':True}))
 
         mydecay2 = base_objects.Process({'legs':myleglist,
                                          'model':mymodel})
@@ -2877,13 +2879,13 @@ class HelasMultiProcessTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':1000022,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-1000011,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
 
         mydecay3 = base_objects.Process({'legs':myleglist,
                                          'model':mymodel,
@@ -2950,15 +2952,15 @@ class HelasMultiProcessTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':1,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':1,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':1,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc1 = base_objects.Process({'legs':myleglist,
                                         'model':self.mymodel,
@@ -2974,15 +2976,15 @@ class HelasMultiProcessTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':1,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':1,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':1,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc2 = base_objects.Process({'legs':myleglist,
                                         'model':self.mymodel,
