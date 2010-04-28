@@ -824,9 +824,9 @@ class MadGraphCmd(cmd.Cmd):
         # Replace the amplitudes with the actual amplitudes from the
         # matrix elements, which allows proper diagram drawing also of
         # decay chain processes
-        #self.__curr_amps = diagram_generation.AmplitudeList(\
-        #       [me.get('base_amplitude') for me in \
-        #        self.__curr_matrix_elements.get('matrix_elements')])
+        self.__curr_amps = diagram_generation.AmplitudeList(\
+               [me.get('base_amplitude') for me in \
+                self.__curr_matrix_elements.get('matrix_elements')])
 
     def complete_export(self, text, line, begidx, endidx):
         "Complete the export command"
