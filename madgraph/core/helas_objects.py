@@ -2227,6 +2227,17 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         decay_elements = [copy.deepcopy(d) for d in \
                           [ decay.get('diagrams') ] * len(old_wfs)]
 
+        # Need to replace Particle in all wavefunctions to avoid
+        # deepcopy
+        idecay = 0
+        for decay_element in decay_elements:
+            for idiag, diagram in enumerate(decay.get('diagrams')):
+                wfs = diagram.get('wavefunctions')
+                decay_diag = decay_element[idiag]
+                for i, wf in enumerate(decay_diag.get('wavefunctions')):
+                    wf.set('particle', wfs[i].get('particle'))
+                    wf.set('antiparticle', wfs[i].get('antiparticle'))
+
         for decay_element in decay_elements:
 
             # Remove the unwanted initial state wavefunctions from decay
@@ -2336,7 +2347,17 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
                         # Don't want to affect original decay
                         # wavefunctions, so need to deepcopy
-                        decay_diag_wfs = copy.deepcopy(decay_diag.get('wavefunctions'))
+                        decay_diag_wfs = copy.deepcopy(\
+                                                decay_diag.get('wavefunctions'))
+                        # Need to replace Particle in all
+                        # wavefunctions to avoid deepcopy
+                        idecay = 0
+                        for i, wf in enumerate(decay_diag.get('wavefunctions')):
+                            decay_diag_wfs[i].set('particle', \
+                                                  wf.get('particle'))
+                            decay_diag_wfs[i].set('antiparticle', \
+                                                  wf.get('antiparticle'))
+
                         # Complete decay_diag_wfs with the mother wavefunctions
                         # to allow for independent fermion flow flips
                         decay_diag_wfs = decay_diag_wfs.insert_own_mothers()
@@ -3364,8 +3385,16 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                 # Make sure to not modify the original matrix element
                 matrix_element = copy.deepcopy(core_process)
                 # Avoid Python copying the complete model every time
-                matrix_element.get('processes')[0].set('model', \
-                                core_process.get('processes')[0].get('model'))
+                for i, process in enumerate(matrix_element.get('processes')):
+                    process.set('model',
+                            core_process.get('processes')[i].get('model'))
+                # Need to replace Particle in all wavefunctions to avoid
+                # deepcopy
+                idecay = 0
+                org_wfs = core_process.get_all_wavefunctions()
+                for i, wf in enumerate(matrix_element.get_all_wavefunctions()):
+                    wf.set('particle', org_wfs[i].get('particle'))
+                    wf.set('antiparticle', org_wfs[i].get('antiparticle'))
 
                 # Insert the decay chains
                 logger.info("Combine %s with decays %s" % \
