@@ -2745,7 +2745,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         optimization = 1
         if len(filter(lambda wf: wf.get('number') == 1,
-                      self.get_all_wavefunctions())):
+                      self.get_all_wavefunctions())) > 1:
             optimization = 0
 
         model = self.get('processes')[0].get('model')
@@ -3201,7 +3201,10 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
         # since these should not be combined in a MultiProcess
         decay_ids = dc_amplitude.get_decay_ids()
 
-        for amplitude in dc_amplitude.get('amplitudes'):
+        while dc_amplitude.get('amplitudes'):
+            # Pop the amplitude to save memory space
+            amplitude = dc_amplitude.get('amplitudes').pop(0)
+
             logger.info("Generating Helas calls for %s" % \
                         amplitude.get('process').nice_string().\
                                             replace('Process', 'process'))
@@ -3225,7 +3228,9 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                        matrix_element.get('diagrams'):
                     matrix_elements.append(matrix_element)
 
-        for decay_chain in dc_amplitude.get('decay_chains'):
+        while dc_amplitude.get('decay_chains'):
+            # Pop the amplitude to save memory space
+            decay_chain = dc_amplitude.get('decay_chains').pop(0)
             self['decay_chains'].append(HelasDecayChainProcess(\
                 decay_chain))
 
@@ -3263,7 +3268,9 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                          for element in elements]
                          for elements in decay_elements]
 
-        for core_process in self['core_processes']:
+        while self['core_processes']:
+            # Pop the process to save memory space
+            core_process = self['core_processes'].pop(0)
             # Get all final state legs
             fs_legs = core_process.get('processes')[0].get_final_legs()
             fs_ids = [leg.get('id') for leg in fs_legs]
@@ -3466,6 +3473,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         matrix_elements = self.get('matrix_elements')
 
         while amplitudes:
+            # Pop the amplitude to save memory space
             amplitude = amplitudes.pop(0)
             if isinstance(amplitude, diagram_generation.DecayChainAmplitude):
                 matrix_element_list = HelasDecayChainProcess(amplitude).\
