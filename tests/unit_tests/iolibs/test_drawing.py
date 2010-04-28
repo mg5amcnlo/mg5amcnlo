@@ -17,6 +17,11 @@
 
 from __future__ import division
 
+# The following two lines (suitably modified) are needed to run the
+# diagram generation using __main__
+#import sys
+#sys.path.append('/home/alwall/MadEvent/MG5/madevent_output')
+
 import os
 import pickle
 import unittest
@@ -1575,7 +1580,7 @@ if __name__ == '__main__':
     process_diag['t h > t g W+ W-'] = [0, 1, 2, 3, 4, 5, 6, 7]
     process_diag['u u > Z u u g'] = [26]
     process_diag['u~ u~ > Z u~ u~ g'] = [26]
-    process_diag['u~ u~ > e+ e- u~ u~ g'] =[1,8]
+    process_diag['u~ u~ > e+ e- u~ u~ g'] = [1,8]
 
     from madgraph.interface.cmd_interface import MadGraphCmd
     cmd = MadGraphCmd()

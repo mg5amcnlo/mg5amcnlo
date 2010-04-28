@@ -935,8 +935,10 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions1 = helas_objects.HelasWavefunctionList()
         wavefunctions1.append(helas_objects.HelasWavefunction(\
             myleglist[0], 0, self.mymodel))
+        wavefunctions1[-1].flip_part_antipart()
         wavefunctions1.append(helas_objects.HelasWavefunction(\
             myleglist[1], 0, self.mymodel))
+        wavefunctions1[-1].flip_part_antipart()
         wavefunctions1.append(helas_objects.HelasWavefunction(\
             myleglist[2], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction(\
@@ -944,9 +946,11 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions1.append(helas_objects.HelasWavefunction(\
             myleglist[4], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction())
-        wavefunctions1[5].set('particle', 2, self.mymodel)
+        wavefunctions1[5].set('particle', -2, self.mymodel)
         wavefunctions1[5].set('number_external', 1)
         wavefunctions1[5].set('state', 'incoming')
+        wavefunctions1[5].set('is_part',
+                              False)
         wavefunctions1[5].set('mothers',
                               helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[0], wavefunctions1[2]]))
@@ -972,9 +976,10 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         wavefunctions2 = helas_objects.HelasWavefunctionList()
         wavefunctions2.append(helas_objects.HelasWavefunction())
-        wavefunctions2[0].set('particle', -2, self.mymodel)
+        wavefunctions2[0].set('particle', 2, self.mymodel)
         wavefunctions2[0].set('number_external', 2)
         wavefunctions2[0].set('state', 'outgoing')
+        wavefunctions2[0].set('is_part', True)
         wavefunctions2[0].set('mothers', helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[1], wavefunctions1[2]]))
         wavefunctions2[0].set('interaction_id', 3, self.mymodel)
@@ -1038,8 +1043,10 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions1 = helas_objects.HelasWavefunctionList()
         wavefunctions1.append(helas_objects.HelasWavefunction(\
             myleglist[0], 0, self.mymodel))
+        wavefunctions1[-1].flip_part_antipart()
         wavefunctions1.append(helas_objects.HelasWavefunction(\
             myleglist[1], 0, self.mymodel))
+        wavefunctions1[-1].flip_part_antipart()
         wavefunctions1.append(helas_objects.HelasWavefunction(\
             myleglist[2], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction(\
@@ -1047,9 +1054,10 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions1.append(helas_objects.HelasWavefunction(\
             myleglist[4], 0, self.mymodel))
         wavefunctions1.append(helas_objects.HelasWavefunction())
-        wavefunctions1[5].set('particle', 2, self.mymodel)
+        wavefunctions1[5].set('particle', -2, self.mymodel)
         wavefunctions1[5].set('number_external', 1)
         wavefunctions1[5].set('state', 'incoming')
+        wavefunctions1[5].set('is_part', False)
         wavefunctions1[5].set('mothers',
                               helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[0], wavefunctions1[2]]))
@@ -1076,8 +1084,10 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions2 = helas_objects.HelasWavefunctionList()
         wavefunctions2.append(helas_objects.HelasWavefunction(\
             myleglist[0], 0, self.mymodel))
+        wavefunctions2[-1].flip_part_antipart()
         wavefunctions2.append(helas_objects.HelasWavefunction(\
             myleglist[1], 0, self.mymodel))
+        wavefunctions2[-1].flip_part_antipart()
         wavefunctions2.append(helas_objects.HelasWavefunction(\
             myleglist[2], 0, self.mymodel))
         wavefunctions2.append(helas_objects.HelasWavefunction(\
@@ -1085,9 +1095,10 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunctions2.append(helas_objects.HelasWavefunction(\
             myleglist[4], 0, self.mymodel))
         wavefunctions2.append(helas_objects.HelasWavefunction())
-        wavefunctions2[5].set('particle', -2, self.mymodel)
+        wavefunctions2[5].set('particle', 2, self.mymodel)
         wavefunctions2[5].set('number_external', 2)
         wavefunctions2[5].set('state', 'outgoing')
+        wavefunctions2[5].set('is_part', True)
         wavefunctions2[5].set('mothers', helas_objects.HelasWavefunctionList(\
                          [wavefunctions1[1], wavefunctions1[2]]))
         wavefunctions2[5].set('interaction_id', 3, self.mymodel)
