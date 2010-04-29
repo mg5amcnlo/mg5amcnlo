@@ -274,10 +274,13 @@ class MadGraphCmd(cmd.Cmd):
             self.do_save('model %s ' % os.path.join(self.__model_dir, 'model.pkl'))
         
         elif args[0] == 'proc_v4':
-            if len(args) == 1 and self.__:
+            if len(args) == 1 and self.__export_dir:
                 proc_card = os.path.join(self.__export_dir, '')            
-            else:
+            elif len(args) == 2:
                 proc_card = args[1]
+            else:
+                logging.error('No default directory are setup')
+
             self.import_mg4_proc_card(proc_card)   
                                      
         elif args[0] == 'command':
@@ -307,9 +310,8 @@ class MadGraphCmd(cmd.Cmd):
         """ read a V4 proc card, convert it and run it in mg5"""
         
         # change the status of this line in the history -> pass in comment
-        self.history[-1] = '#%s' % self.history[-1] 
-        path = os.path
-        up = path.pardir
+        self.history[-1] = '#%s' % self.history[-1]
+         
         # read the proc_card.dat
         reader = files.read_from_file(filepath, import_v4.read_proc_card_v4)
         
@@ -324,6 +326,8 @@ class MadGraphCmd(cmd.Cmd):
         # Now that we have the model we can split the information
         lines = reader.treat_data(self.__curr_model)
         for line in lines:
+            if 'setup' in line and self.__export_dir:
+                continue
             self.onecmd_full(line)
             
         return 
@@ -1176,6 +1180,7 @@ class MadGraphCmd(cmd.Cmd):
     def help_save(self):
         print "syntax: save %s FILENAME" % "|".join(self.__save_opts)
         print "-- save information as file FILENAME"
+
 
     def help_load(self):
         print "syntax: load %s FILENAME" % "|".join(self.__save_opts)
