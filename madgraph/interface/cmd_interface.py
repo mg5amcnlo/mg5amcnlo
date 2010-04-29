@@ -58,7 +58,6 @@ for position in MGME_dir_possibility:
         MGME_dir = os.path.realpath(position)
         del MGME_dir_possibility
         break
-print MGME_dir
 #===============================================================================
 # MadGraphCmd
 #===============================================================================
@@ -81,10 +80,9 @@ class MadGraphCmd(cmd.Cmd):
                       'multiparticles']
     __add_opts = ['process']
     __save_opts = ['model', 'processes']
-    __import_formats = ['v4', 'v5']
-    __export_formats = ['v4standalone', 'v4sa_dirs', 'v4madevent']
-    __export_dir = None
-    
+    __import_formats = ['model_v4', 'proc_v4','proc']
+    __export_formats = ['standalone_v4', 'sa_dirs_v4', 'madevent_v4']
+    __export_dir = None 
 
     class MadGraphCmdError(Exception):
         """Exception raised if an error occurs in the execution
@@ -229,9 +227,7 @@ class MadGraphCmd(cmd.Cmd):
                 print "%d interactions imported" % \
                       len(self.__curr_model['interactions'])
                 return True
-            elif filename == 'proc_card.dat':
-                self.import_mg4_proc_card(filepath)
-                return True
+
            
             #not valid File
             return False
@@ -242,7 +238,7 @@ class MadGraphCmd(cmd.Cmd):
             return False
 
 
-        if args[0] == 'v4':
+        if args[0] == 'model_v4':
             # Check for a file
             if os.path.isfile(args[1]):
                 suceed = import_v4file(self, args[1])
@@ -261,6 +257,7 @@ class MadGraphCmd(cmd.Cmd):
             else:
                 print "Path %s is not a valid pathname" % args[1]
                 return False
+            
             #Load the directory
             if os.path.exists(os.path.join(self.__model_dir, 'model.pkl')):
                 self.do_load('model %s' % os.path.join(self.__model_dir, \
@@ -275,8 +272,15 @@ class MadGraphCmd(cmd.Cmd):
                                         (filename, os.path.basename(args[1]))
             #save model for next usage
             self.do_save('model %s ' % os.path.join(self.__model_dir, 'model.pkl'))
-                        
-        elif args[0] == 'v5':
+        
+        elif args[0] == 'proc_v4':
+            if len(args) == 1 and self.__:
+                proc_card = os.path.join(self.__export_dir, '')            
+            else:
+                proc_card = args[1]
+            self.import_mg4_proc_card(proc_card)   
+                                     
+        elif args[0] == 'command':
             if not os.path.isfile(args[1]):
                 print "Path %s is not a valid pathname" % args[1]
             else:
@@ -308,19 +312,14 @@ class MadGraphCmd(cmd.Cmd):
         up = path.pardir
         # read the proc_card.dat
         reader = files.read_from_file(filepath, import_v4.read_proc_card_v4)
-        # import the model
-        model_dir_possibility = \
-                      [path.join(up,'Models'), 
-                      path.join(path.dirname(filepath), up, up , 'Models'),
-                      path.dirname(path.realpath( __file__ )), up, up, 'Models']
         
-        for i, model_dir in enumerate(model_dir_possibility):
-            if os.path.isdir(model_dir):
-                line = self.onecmd_full('import v4 %s' % (reader.model))
-                break
-            elif i == len(model_dir_possibility) -1:
-                print 'Impossible to locate \'Models\' directory'
-                return
+        if MGME_dir:
+            #model_dir = os.path.join(MGME_dir, 'Models')
+            line = self.onecmd_full('import model_v4 %s' % (reader.model))
+        else:
+            logging.error('No MG_ME installation detected')
+            return    
+
 
         # Now that we have the model we can split the information
         lines = reader.treat_data(self.__curr_model)
@@ -394,7 +393,7 @@ class MadGraphCmd(cmd.Cmd):
         
         if not self.__model_dir:
             print 'No model found. Please import a model first and then retry'
-            print '  for example: import v4 sm'
+            print '  for example do : import v4 sm'
             return False
         
         dir_path = os.path.join(mgme_dir,args[1])
@@ -421,7 +420,7 @@ class MadGraphCmd(cmd.Cmd):
 
         possible_option = ['-d ', '-f', '-noclean']
         possible_option2 = ['d ', 'f', 'noclean']
-        possible_format = ['madeventv4']
+        possible_format = ['madevent_v4']
         #don't propose directory use by MG_ME
         forbidden_name = ['MadGraphII','Template','pythia-pgs', 'CVS', 
                             'Calculators', 'MadAnalysis', 'SimpleAnalysis', 'mg5',
@@ -1183,24 +1182,38 @@ class MadGraphCmd(cmd.Cmd):
         print "-- load information from file FILENAME"
 
     def help_import(self):
+        
         print "syntax: import " + "|".join(self.__import_formats) + \
               " FILENAME"
         print "-- imports file(s) in various formats"
-
+        print
+        print "   import model_v4 MODEL_info :"
+        print "      Import a MG4 Model in MG5 Model"""
+        print "      Model_info could be the name of the model"""
+        print "                 or the path to MG4_Model directory"""
+        print
+        print "   import proc_v4 [PATH] :"  
+        print "      Execute MG5 based on a proc_card.dat in MG4 format."""
+        print "      Path to the proc_card is optional if you have setup a"
+        print "      madevent directory"
+        print 
+        print "   import command PATH :"
+        print "      Execute the list of command in the file at PATH"
+        
     def help_display(self):
         print "syntax: display " + "|".join(self.__display_opts)
         print "-- display a the status of various internal state variables"
 
     def help_setup(self):
-        print "syntax madeventv4 name [options]"
+        print "syntax madevent_v4 name [options]"
         print "-- Create a copy of the V4 Template 'name' in the MG_ME directory."
         print "   options:"
         print "      -f: force the cleaning of the directory if this one exist"
         print "      -d PATH: specify the directory where to create name"
         print "      -noclean: no cleaning perform in name (simple storing position)"
         print "   Example:"
-        print "       setup madeventv4 MYRUN"
-        print "       setup madeventv4 MYRUN -d ../MG_ME -f"
+        print "       setup madevent_v4 MYRUN"
+        print "       setup madevent_v4 MYRUN -d ../MG_ME -f"
         
     def help_generate(self):
 
@@ -1230,10 +1243,10 @@ class MadGraphCmd(cmd.Cmd):
     def help_export(self):
         print "syntax: export " + "|".join(self.__export_formats) + \
               " FILEPATH"
-        print """-- export matrix elements. For v4standalone, the resulting
-        files will be FILEPATH/matrix_\"process_string\".f. For v4sa_dirs,
+        print """-- export matrix elements. For standalone_v4, the resulting
+        files will be FILEPATH/matrix_\"process_string\".f. For sa_dirs_v4,
         the result is a set of complete MG4 Standalone process directories.
-        For v4madevent, the path needs to be to a MadEvent SubProcesses
+        For madevent_v4, the path needs to be to a MadEvent SubProcesses
         directory, and the result is the Pxxx directories (including the
         diagram .ps and .jpg files) for the subprocesses as well as a
         correctly generated subproc.mg file. Note that if you have run the 

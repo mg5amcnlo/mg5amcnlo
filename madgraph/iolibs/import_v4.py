@@ -425,8 +425,8 @@ class Reader_proc_card():
                 lines.append('add process %s' % process.repr(self.couplings_name))
         
         #finally export the madevent output
-        lines.append('setup madeventv4 %s -f' % os.path.split(self.process_path)[1])
-        lines.append('export v4madevent')
+        lines.append('setup madevent_v4 %s -f' % os.path.split(self.process_path)[1])
+        lines.append('export madevent_v4')
         lines.append('history %s' % os.path.relpath(
                 os.path.join(self.process_path, 'Cards', 'proc_card_mg5.dat')))
         
@@ -457,7 +457,7 @@ class Reader_proc_card():
         out = []            # list of the particles
         # The procedure to find particles is the following
         #  - check if the combination of 4 string form a valid particle name
-        #    if it is, move of 4 caracter and check for the next particle i
+        #    if it is, move of 4 characters and check for the next particles.
         #    if not try with 3, 2, 1 
         #    if still not -> exit.
         
@@ -465,6 +465,7 @@ class Reader_proc_card():
         old_pos = -1   # check that we don't have infinite loop    
         line += '     '  #add 4 blank for security
         while pos < len(line) - 4:
+            #Check for infinite loop
             if pos == old_pos:
                 logging.error('Invalid set of character: %s' % line[pos:pos+4])
                 return
@@ -474,7 +475,7 @@ class Reader_proc_card():
                 pos += 1
                 continue
             
-            # try to find a match at 4(then 3/2/1) charater
+            # try to find a match at 4(then 3/2/1) characters
             for i in range(4,0,-1):
                 if line[pos:pos+i] in possible_str:
                     out.append(line[pos:pos + i])

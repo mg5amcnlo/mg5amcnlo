@@ -15,18 +15,16 @@
 
 """Methods and classes to export matrix elements to v4 format."""
 
-import copy
 import fractions
 import logging
 import os
 import re
-import sys
 import shutil
 import subprocess
 
 import madgraph.core.color_algebra as color
-import madgraph.iolibs.drawing_eps as draw
 import madgraph.core.helas_objects as helas_objects
+import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
 
@@ -43,7 +41,7 @@ def copy_v4template(mgme_dir, dir_path, model_dir, clean):
     #First copy the full template tree if dir_path doesn't exit
     if not os.path.isdir(dir_path):
         print 'initialize a new directory: %s' % os.path.basename(dir_path)
-        shutil.copytree(os.path.join(mgme_dir,'Template'), dir_path)
+        shutil.copytree(os.path.join(mgme_dir,'Template'), dir_path, True)
 
     #Ensure that the Template is clean
     if clean:
@@ -52,6 +50,12 @@ def copy_v4template(mgme_dir, dir_path, model_dir, clean):
         os.chdir(dir_path)
         subprocess.call([os.path.join('bin','clean_template')])
         os.chdir(old_pos)
+        
+        #Write version info
+        MG_version = misc.get_pkg_info()
+        open(os.path.join(dir_path,'SubProcesses','MGVersion.txt'), 'w').write(
+                                                          MG_version['version'])
+        
             
 #===============================================================================
 # write_matrix_element_v4_standalone
