@@ -17,6 +17,11 @@
 
 from __future__ import division
 
+# The following two lines (suitably modified) are needed to run the
+# diagram generation using __main__
+#import sys
+#sys.path.append('/home/alwall/MadEvent/MG5/madevent_output')
+
 import os
 import pickle
 import unittest
@@ -53,7 +58,7 @@ class TestFeynmanLine(unittest.TestCase):
         self.my_line = drawing.FeynmanLine(11)
         myleglist = base_objects.LegList([base_objects.Leg({'id':3,
                                       'number':5,
-                                      'state':'final',
+                                      'state':True,
                                       'from_group':False})] * 10)
         self.mydict = {'id':3,
                       'legs':myleglist}
@@ -67,7 +72,7 @@ class TestFeynmanLine(unittest.TestCase):
 
         myleglist = base_objects.LegList([base_objects.Leg({'id':id,
                                       'number':5,
-                                      'state':'final',
+                                      'state':True,
                                       'from_group':False})] * 10)
         mydict = {'id':3,
                       'legs':myleglist}
@@ -87,7 +92,7 @@ class TestFeynmanLine(unittest.TestCase):
     def def_model_line(id=22):
         """fast way to create a line with a link to a model"""
 
-        leg = base_objects.Leg({'id': id, 'number': 1, 'state':'initial',
+        leg = base_objects.Leg({'id': id, 'number': 1, 'state':False,
                             'from_group':False})
         #extend the leg to FeynmanLine Object
         my_line = drawing.FeynmanLine(leg.get('id'), base_objects.Leg(leg))
@@ -421,9 +426,9 @@ class TestFeynmanLine(unittest.TestCase):
         my_line2 = self.def_line([0.1, 0.1], [0.4, 0.5]) #normal
         my_line3 = self.def_line([0, 0.5], [0, 1])       
 
-        self.assertAlmostEqual(my_line1.get_length(),0.3)
-        self.assertAlmostEqual(my_line2.get_length(),0.5)
-        self.assertAlmostEqual(my_line3.get_length(),0.5)
+        self.assertAlmostEqual(my_line1.get_length(), 0.3)
+        self.assertAlmostEqual(my_line2.get_length(), 0.5)
+        self.assertAlmostEqual(my_line3.get_length(), 0.5)
 
     def test_hasordinate(self):
         """Test if we can recover the ordinate at any position"""
@@ -506,7 +511,7 @@ class TestVertexPoint(unittest.TestCase):
         self.line4 = drawing.FeynmanLine(11)
         self.myleglist = base_objects.LegList([base_objects.Leg({'id':3,
                                       'number':5,
-                                      'state':'final',
+                                      'state':True,
                                       'from_group':False})] * 10)
         self.mydict = {'id':3,
                       'legs':self.myleglist}
@@ -636,7 +641,7 @@ class TestVertexPoint(unittest.TestCase):
 
         vertex = base_objects.Vertex({'id':0, 'legs':base_objects.LegList([])})
         vertexpoint = drawing.VertexPoint(vertex)
-        leg1 = base_objects.Leg({'id':22, 'number':1, 'state':'initial',
+        leg1 = base_objects.Leg({'id':22, 'number':1, 'state':False,
                             'from_group':False})
         line1 = drawing.FeynmanLine(22, leg1)
         line1.def_begin_point(vertexpoint)
@@ -647,17 +652,17 @@ class TestVertexPoint(unittest.TestCase):
         """Test if it's possible to fuse two vertex"""
 
         # Test diagram gg>gg via a S-channel
-        leg1 = base_objects.Leg({'id':22, 'number':1, 'state':'initial',
+        leg1 = base_objects.Leg({'id':22, 'number':1, 'state':False,
                             'from_group':False})
-        leg2 = base_objects.Leg({'id':22, 'number':2, 'state':'initial',
+        leg2 = base_objects.Leg({'id':22, 'number':2, 'state':False,
                             'from_group':False})
-        leg3 = base_objects.Leg({'id':22, 'number':3, 'state':'final',
+        leg3 = base_objects.Leg({'id':22, 'number':3, 'state':True,
                             'from_group':False})
-        leg4 = base_objects.Leg({'id':22, 'number':4, 'state':'final',
+        leg4 = base_objects.Leg({'id':22, 'number':4, 'state':True,
                             'from_group':False})
 
         #intermediate particle +vertex associate
-        leg_s = base_objects.Leg({'id':22, 'number':1, 'state':'final',
+        leg_s = base_objects.Leg({'id':22, 'number':1, 'state':True,
                         'from_group':True})
         vertex1 = base_objects.Vertex({'id':1, \
                         'legs':base_objects.LegList([leg1, leg2, leg_s])})
@@ -710,22 +715,22 @@ class TestFeynmanDiagram(unittest.TestCase):
     """
 
     #test diagram gg>gg via a T-channel
-    leg1 = base_objects.Leg({'id':22, 'number':1, 'state':'initial',
+    leg1 = base_objects.Leg({'id':22, 'number':1, 'state':False,
                             'from_group':False})
-    leg2 = base_objects.Leg({'id':22, 'number':2, 'state':'initial',
+    leg2 = base_objects.Leg({'id':22, 'number':2, 'state':False,
                             'from_group':False})
-    leg3 = base_objects.Leg({'id':22, 'number':3, 'state':'final',
+    leg3 = base_objects.Leg({'id':22, 'number':3, 'state':True,
                             'from_group':False})
-    leg4 = base_objects.Leg({'id':22, 'number':4, 'state':'final',
+    leg4 = base_objects.Leg({'id':22, 'number':4, 'state':True,
                             'from_group':False})
 
     #intermediate particle +vertex associate
-    leg_t1 = base_objects.Leg({'id':22, 'number':1, 'state':'initial',
+    leg_t1 = base_objects.Leg({'id':22, 'number':1, 'state':False,
                         'from_group':True})
     vertex1 = base_objects.Vertex({'id':1, \
                         'legs':base_objects.LegList([leg1, leg3, leg_t1])})
 
-    leg_t2 = base_objects.Leg({'id':22, 'number':2, 'state':'initial',
+    leg_t2 = base_objects.Leg({'id':22, 'number':2, 'state':False,
                         'from_group':True})
     vertex2 = base_objects.Vertex({'id':2, \
                         'legs':base_objects.LegList([leg2, leg4, leg_t2])})
@@ -737,22 +742,22 @@ class TestFeynmanDiagram(unittest.TestCase):
     t_diagram_dict = {'vertices':vertexlist}
 
     #test diagram gg>gg via a S-channel
-    leg1 = base_objects.Leg({'id':22, 'number':1, 'state':'initial',
+    leg1 = base_objects.Leg({'id':22, 'number':1, 'state':False,
                             'from_group':False})
-    leg2 = base_objects.Leg({'id':22, 'number':2, 'state':'initial',
+    leg2 = base_objects.Leg({'id':22, 'number':2, 'state':False,
                             'from_group':False})
-    leg3 = base_objects.Leg({'id':22, 'number':3, 'state':'final',
+    leg3 = base_objects.Leg({'id':22, 'number':3, 'state':True,
                             'from_group':False})
-    leg4 = base_objects.Leg({'id':22, 'number':4, 'state':'final',
+    leg4 = base_objects.Leg({'id':22, 'number':4, 'state':True,
                             'from_group':False})
 
     #intermediate particle +vertex associate
-    leg_s = base_objects.Leg({'id':22, 'number':1, 'state':'final',
+    leg_s = base_objects.Leg({'id':22, 'number':1, 'state':True,
                         'from_group':True})
     vertex1 = base_objects.Vertex({'id':1, \
                         'legs':base_objects.LegList([leg1, leg2, leg_s])})
 
-    leg_temp = base_objects.Leg({'id':22, 'number':1, 'state':'final',
+    leg_temp = base_objects.Leg({'id':22, 'number':1, 'state':True,
                             'from_group':False})
 
     vertex2 = base_objects.Vertex({'id':2, \
@@ -777,7 +782,7 @@ class TestFeynmanDiagram(unittest.TestCase):
     def setUp(self):
         """Basic building of the object needed to build the test"""
 
-        opt=drawing.DrawOption({'external':1,'horizontal':1,'max_size':0})
+        opt = drawing.DrawOption({'external':1, 'horizontal':1, 'max_size':0})
         # gg>g(g>uux)g (via a T channel)  
         mix_diagram = self.store_diagram['g g > g g u u~'][18]
         self.mix_drawing = drawing.FeynmanDiagram(mix_diagram, _model, opt)
@@ -1249,7 +1254,7 @@ class TestFeynmanDiagram(unittest.TestCase):
             diagram_list.append(diagram)
             
         for i in range(8):
-            for j in range(i,8):
+            for j in range(i, 8):
                 if i == j:
                     self.assertTrue(diagram_list[i] == diagram_list[j])
                 else:
@@ -1264,7 +1269,7 @@ class TestFeynmanDiagram(unittest.TestCase):
             diagram_list.append(diagram)
             
         for i in range(2):
-            for j in range(i,2):
+            for j in range(i, 2):
                 if i == j:
                     self.assertTrue(diagram_list[i] == diagram_list[j])
                 else:
@@ -1297,7 +1302,7 @@ class TestFeynmanDiagram(unittest.TestCase):
         diagram = drawing.FeynmanDiagram(diagram, _model)
         diagram.main()
         self.assertFalse(diagram._debug_has_intersection())
-        self.assertEqual(len(diagram.lineList),8)
+        self.assertEqual(len(diagram.lineList), 8)
 
         diagram = self.store_diagram['g g > g g g g'][0]
         diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
@@ -1351,7 +1356,7 @@ class TestFeynmanDiagram(unittest.TestCase):
         #T-channel in one level
         diagram = self.store_diagram['u~ u~ > e+ e- u~ u~ g'][1]
         option = drawing.DrawOption({'external':1.5})
-        diagram = drawing.FeynmanDiagram(diagram, _model,opt=option)
+        diagram = drawing.FeynmanDiagram(diagram, _model, opt=option)
         diagram.load_diagram()
         diagram.define_level()
         diagram.find_initial_vertex_position()
@@ -1360,20 +1365,20 @@ class TestFeynmanDiagram(unittest.TestCase):
         #check that all line end at y=1
         for line in diagram.lineList:
             if line.is_external() and line.get('number') > 2:
-                self.assertEquals(line.end.pos_x,1)
+                self.assertEquals(line.end.pos_x, 1)
 
         #T-chanel (3 T-vertex and the central decay in 2 level decay)
         diagram = self.store_diagram['u~ u~ > e+ e- u~ u~ g'][8]
         option = drawing.DrawOption({'external':1.5, 'max_size':0})
-        diagram = drawing.FeynmanDiagram(diagram, _model,opt=option)
+        diagram = drawing.FeynmanDiagram(diagram, _model, opt=option)
         diagram.load_diagram()
         diagram.define_level()
         diagram.find_initial_vertex_position()
         diagram.adjust_position()
         for line in diagram.lineList:
-            if line.is_external() and line.get('number') in [5,7]:
-                dist=(line.end.pos_x-line.start.pos_x)*diagram.max_level
-                self.assertEquals(dist,1.5)
+            if line.is_external() and line.get('number') in [5, 7]:
+                dist = (line.end.pos_x - line.start.pos_x) * diagram.max_level
+                self.assertEquals(dist, 1.5)
         
         
         
@@ -1411,7 +1416,7 @@ class TestFeynmanDiagram(unittest.TestCase):
 
         # Standard verification + test position of external particles on border
         diagram = self.store_diagram['g g > g g g g'][93]
-        opt = drawing.DrawOption({'external':1,'max_size':0})
+        opt = drawing.DrawOption({'external':1, 'max_size':0})
         diagram = drawing.FeynmanDiagramHorizontal(diagram, _model, opt)
         diagram.load_diagram()
         diagram.define_level()
@@ -1460,19 +1465,19 @@ class TestDrawingOption(unittest.TestCase):
         """Test that the DrawingEPS returns valid result"""
         
         horizontal_list = [True, False]
-        external_list = [0,1,1.5]
-        contract_unpropa_list =[True, False]
-        max_size_list = [0,1.8]
+        external_list = [0, 1, 1.5]
+        contract_unpropa_list = [True, False]
+        max_size_list = [0, 1.8]
         
         opt = drawing.DrawOption()
         for horizontal in horizontal_list:
             opt.set('horizontal', horizontal)
             for external in external_list:
-                opt.set('external',external)
+                opt.set('external', external)
                 for contract_unpropa in contract_unpropa_list:
-                    opt.set('contract_non_propagating',contract_unpropa)
+                    opt.set('contract_non_propagating', contract_unpropa)
                     for max_size in max_size_list:
-                        opt.set('max_size',max_size)
+                        opt.set('max_size', max_size)
                         
                         plot = draw_eps.EpsDiagramDrawer(diagram, \
                                         '__testdiag__.eps', model=_model, \
@@ -1575,7 +1580,8 @@ if __name__ == '__main__':
     process_diag['t h > t g W+ W-'] = [0, 1, 2, 3, 4, 5, 6, 7]
     process_diag['u u > Z u u g'] = [26]
     process_diag['u~ u~ > Z u~ u~ g'] = [26]
-    process_diag['u~ u~ > e+ e- u~ u~ g'] =[1,8]
+    process_diag['u~ u~ > e+ e- u~ u~ g'] = [1, 8]
+    process_diag['e- e+ > t t~, t > w+ b'] = [0]
 
     from madgraph.interface.cmd_interface import MadGraphCmd
     cmd = MadGraphCmd()
@@ -1589,9 +1595,21 @@ if __name__ == '__main__':
     for gen_line, pos_list in process_diag.items():
         print gen_line, ':',
         cmd.do_generate(gen_line)
+        #Look for decay chains
+        if ',' in gen_line:
+            amp = cmd._MadGraphCmd__curr_amps[0]
+            import madgraph.core.helas_objects as helas_objects
+            matrix_elements = \
+            helas_objects.HelasDecayChainProcess(amp).combine_decay_chain_processes()
+            if matrix_elements:
+                amplitude = matrix_elements[0].get('base_amplitude')     
+        else:
+            amplitude = cmd._MadGraphCmd__curr_amps[0]
+            
+                                                    
         diag_content[gen_line] = {}
         for pos in pos_list:
-            diag_content[gen_line][pos] =cmd._MadGraphCmd__curr_amps[0]['diagrams'][pos]
+            diag_content[gen_line][pos] = amplitude['diagrams'][pos]
 
     # Store the diagrams  
     file_test_diagram = open(os.path.join(_file_path , \

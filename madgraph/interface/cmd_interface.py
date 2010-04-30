@@ -67,9 +67,6 @@ class MadGraphCmd(cmd.Cmd):
     __curr_model = base_objects.Model()
     __model_dir = None
     __curr_amps = diagram_generation.AmplitudeList()
-    # __org_amps holds the original amplitudes before export (for
-    # decay chains, __curr_amps are replaced after export)
-    __org_amps = diagram_generation.AmplitudeList()
     __curr_matrix_elements = helas_objects.HelasMultiProcess()
     __curr_fortran_model = export_v4.HelasFortranModel()
     __multiparticles = {}
@@ -175,23 +172,27 @@ class MadGraphCmd(cmd.Cmd):
         "*               Type 'help' for in-line help.              *\n" + \
         "*                                                          *\n" + \
         "************************************************************"
-        
+
     def precmd(self, line):
         """ force the printing of the line if this is executed with an stdin """
-        
         # Update the history of this suite of command
         self.history.append(line)
         
         # Print the calling line in the non interactive mode    
         if not self.use_rawinput:
             print line
-        
-        # Apply the line
+        # execute the line command
         return line
     
+
+    def emptyline(self):
+        """If empty line, do nothing. Default is repeat previous command."""
+
+        pass
     
     def default(self, line):
         """Default action if line is not recognized"""
+
         if line[0] == "#":
             # This is a comment - do nothing
             return
@@ -480,7 +481,6 @@ class MadGraphCmd(cmd.Cmd):
             else:
                 print 'Error: Could not load model from file ', args[1]
         elif args[0] == 'processes':
-            self.__org_amps = diagram_generation.AmplitudeList()
             self.__curr_amps = save_load_object.load_from_file(args[1])
             if isinstance(self.__curr_amps, diagram_generation.AmplitudeList):
                 cpu_time2 = time.time()
@@ -641,7 +641,6 @@ class MadGraphCmd(cmd.Cmd):
             myproc = diagram_generation.MultiProcess(myprocdef)
 
             self.__curr_amps = myproc.get('amplitudes')
-            self.__org_amps = copy.copy(self.__curr_amps)
 
             cpu_time2 = time.time()
 
@@ -773,7 +772,7 @@ class MadGraphCmd(cmd.Cmd):
         args = self.split_arg(line)
 
         myleglist = base_objects.MultiLegList()
-        state = 'initial'
+        state = False
         number = 1
 
         # Extract process
@@ -783,7 +782,7 @@ class MadGraphCmd(cmd.Cmd):
                 if not myleglist:
                     raise self.MadGraphCmdError, \
                           "No final state particles"
-                state = 'final'
+                state = True
                 continue
 
             mylegids = []
@@ -801,7 +800,7 @@ class MadGraphCmd(cmd.Cmd):
                 raise self.MadGraphCmdError, \
                       "No particle %s in model" % part_name
 
-        if filter(lambda leg: leg.get('state') == 'final', myleglist):
+        if filter(lambda leg: leg.get('state') == True, myleglist):
             # We have a valid process
 
             # Now extract restrictions
@@ -810,7 +809,7 @@ class MadGraphCmd(cmd.Cmd):
             required_schannel_ids = []
 
             decay_process = len(filter(lambda leg: \
-                                       leg.get('state') == 'initial',
+                                       leg.get('state') == False,
                                        myleglist)) == 1
 
             if forbidden_particles:
@@ -904,13 +903,11 @@ class MadGraphCmd(cmd.Cmd):
                 myproc = diagram_generation.MultiProcess(myprocdef)
 
                 for amp in myproc.get('amplitudes'):
-                    if amp not in self.__org_amps:
-                        self.__org_amps.append(amp)
+                    if amp not in self.__curr_amps:
+                        self.__curr_amps.append(amp)
                     else:
                         print "Warning: Already in processes:"
                         print amp.nice_string_processes()
-
-                self.__curr_amps = copy.copy(self.__org_amps)
 
                 cpu_time2 = time.time()
 
@@ -1078,9 +1075,9 @@ class MadGraphCmd(cmd.Cmd):
         # Replace the amplitudes with the actual amplitudes from the
         # matrix elements, which allows proper diagram drawing also of
         # decay chain processes
-        self.__curr_amps = diagram_generation.AmplitudeList(\
-               [me.get('base_amplitude') for me in \
-                self.__curr_matrix_elements.get('matrix_elements')])
+        #self.__curr_amps = diagram_generation.AmplitudeList(\
+        #       [me.get('base_amplitude') for me in \
+        #        self.__curr_matrix_elements.get('matrix_elements')])
 
     def complete_export(self, text, line, begidx, endidx):
         "Complete the export command"

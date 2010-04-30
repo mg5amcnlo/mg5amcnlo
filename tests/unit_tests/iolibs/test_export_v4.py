@@ -99,15 +99,15 @@ class IOExportV4Test(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -116,7 +116,7 @@ class IOExportV4Test(unittest.TestCase):
 
         self.mymatrixelement = helas_objects.HelasMatrixElement(myamplitude)
         self.myfortranmodel.downcase = False
-        
+
     def tearDown(self):
         pass
 
@@ -428,13 +428,13 @@ class HelasFortranModelTest(test_helas_objects.HelasModelTest):
 
         myleglist.append(base_objects.Leg({'id':11,
                                            'number': 1,
-                                           'state':'initial'}))
+                                           'state':False}))
         myleglist.append(base_objects.Leg({'id':-11,
                                            'number': 2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':22,
                                            'number': 3,
-                                         'state':'initial'}))
+                                         'state':False}))
 
         wfs = helas_objects.HelasWavefunctionList(\
             [ helas_objects.HelasWavefunction(leg, 7,
@@ -455,11 +455,11 @@ class HelasFortranModelTest(test_helas_objects.HelasModelTest):
             mothers.remove(wf)
             wf.set('mothers', mothers)
             if not wf.get('self_antipart'):
-                wf.set('pdg_code', -wf.get('pdg_code'))
+                wf.flip_part_antipart()
             self.assertEqual(fortran_model.get_wavefunction_call(wf),
                              goal[goal_counter])
             if not wf.get('self_antipart'):
-                wf.set('pdg_code', -wf.get('pdg_code'))
+                wf.flip_part_antipart()
             goal_counter = goal_counter + 1
 
         amplitude = helas_objects.HelasAmplitude({\
@@ -475,13 +475,13 @@ class HelasFortranModelTest(test_helas_objects.HelasModelTest):
 
         myleglist.append(base_objects.Leg({'id':21,
                                            'number': 1,
-                                           'state':'initial'}))
+                                           'state':False}))
         myleglist.append(base_objects.Leg({'id':21,
                                            'number': 2,
-                                           'state':'initial'}))
+                                           'state':False}))
         myleglist.append(base_objects.Leg({'id': 8000002,
                                            'number': 3,
-                                           'state':'initial'}))
+                                           'state':False}))
 
         wfs = helas_objects.HelasWavefunctionList(\
             [ helas_objects.HelasWavefunction(leg, 5,
@@ -534,16 +534,16 @@ class HelasFortranModelTest(test_helas_objects.HelasModelTest):
 
         myleglist.append(base_objects.Leg({'id':24,
                                            'number': 1,
-                                           'state':'initial'}))
+                                           'state':False}))
         myleglist.append(base_objects.Leg({'id':-24,
                                            'number': 2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id': 24,
                                            'number': 3,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-24,
                                            'number': 4,
-                                         'state':'initial'}))
+                                         'state':False}))
 
         wfs = helas_objects.HelasWavefunctionList(\
             [ helas_objects.HelasWavefunction(leg, 8,
@@ -574,16 +574,16 @@ class HelasFortranModelTest(test_helas_objects.HelasModelTest):
 
         myleglist.append(base_objects.Leg({'id':24,
                                            'number': 1,
-                                           'state':'initial'}))
+                                           'state':False}))
         myleglist.append(base_objects.Leg({'id':-24,
                                            'number': 2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id': 23,
                                            'number': 3,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id': 23,
                                            'number': 4,
-                                         'state':'initial'}))
+                                         'state':False}))
 
         wfs = helas_objects.HelasWavefunctionList(\
             [ helas_objects.HelasWavefunction(leg, 9,
@@ -620,13 +620,13 @@ class HelasFortranModelTest(test_helas_objects.HelasModelTest):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mybasemodel})
@@ -659,15 +659,15 @@ CALL IOVXXX(W(1,6),W(1,4),W(1,2),MGVX12,AMP(2))""")
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mybasemodel})
@@ -705,7 +705,7 @@ CALL IOVXXX(W(1,1),W(1,6),W(1,7),MGVX15,AMP(2))""")
         """Test calls for u u~ > u u~ u u~"""
 
         # Set up local model
-        
+
         mybasemodel = base_objects.Model()
         mypartlist = base_objects.ParticleList()
         myinterlist = base_objects.InteractionList()
@@ -779,17 +779,17 @@ CALL IOVXXX(W(1,1),W(1,6),W(1,7),MGVX15,AMP(2))""")
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
@@ -922,62 +922,60 @@ CALL IOVXXX(W(1,29),W(1,2),W(1,14),GG,AMP(41))
 # Amplitude(s) for diagram number 42
 CALL IOVXXX(W(1,33),W(1,2),W(1,12),GG,AMP(42))""")
 
+        #print matrix_element.get('color_basis')
         # Test color matrix output
         self.assertEqual("\n".join(export_v4.get_color_data_lines(matrix_element)),
                          """DATA Denom(1)/1/
-DATA (CF(i,  1),i=  1,  6) /   27,    9,    3,    3,    9,    9/
-C 1 T(2,4) T(3,1) T(5,6)
-DATA Denom(2)/1/
-DATA (CF(i,  2),i=  1,  6) /    9,   27,    9,    9,    3,    3/
+DATA (CF(i,  1),i=  1,  6) /   27,    9,    9,    3,    3,    9/
 C 1 T(2,1) T(3,4) T(5,6)
-DATA Denom(3)/1/
-DATA (CF(i,  3),i=  1,  6) /    3,    9,   27,    3,    9,    9/
+DATA Denom(2)/1/
+DATA (CF(i,  2),i=  1,  6) /    9,   27,    3,    9,    9,    3/
 C 1 T(2,1) T(3,6) T(5,4)
+DATA Denom(3)/1/
+DATA (CF(i,  3),i=  1,  6) /    9,    3,   27,    9,    9,    3/
+C 1 T(2,4) T(3,1) T(5,6)
 DATA Denom(4)/1/
-DATA (CF(i,  4),i=  1,  6) /    3,    9,    3,   27,    9,    9/
-C 1 T(2,6) T(3,4) T(5,1)
+DATA (CF(i,  4),i=  1,  6) /    3,    9,    9,   27,    3,    9/
+C 1 T(2,4) T(3,6) T(5,1)
 DATA Denom(5)/1/
-DATA (CF(i,  5),i=  1,  6) /    9,    3,    9,    9,   27,    3/
+DATA (CF(i,  5),i=  1,  6) /    3,    9,    9,    3,   27,    9/
 C 1 T(2,6) T(3,1) T(5,4)
 DATA Denom(6)/1/
-DATA (CF(i,  6),i=  1,  6) /    9,    3,    9,    9,    3,   27/
-C 1 T(2,4) T(3,6) T(5,1)""")
+DATA (CF(i,  6),i=  1,  6) /    9,    3,    3,    9,    9,   27/
+C 1 T(2,6) T(3,4) T(5,1)""")
 
         # Test JAMP (color amplitude) output
         self.assertEqual('\n'.join(export_v4.get_JAMP_lines(matrix_element)),
-                         """JAMP(1)=+1./4.*(-AMP(4)+AMP(6)-AMP(7)-1./3.*AMP(9)-1./3.*AMP(10)-1./9.*AMP(11)-1./9.*AMP(12)-1./3.*AMP(14)-1./3.*AMP(15)-1./3.*AMP(17)-1./3.*AMP(18)-1./9.*AMP(19)-1./9.*AMP(20)-1./3.*AMP(21)-1./3.*AMP(22)-AMP(24)-AMP(26)-AMP(28)-1./3.*AMP(31)-1./3.*AMP(32)-1./9.*AMP(33)-1./9.*AMP(34)-AMP(36)-1./3.*AMP(39)-1./3.*AMP(40)-AMP(41))
-JAMP(2)=+1./4.*(+1./9.*AMP(1)+1./9.*AMP(2)+1./3.*AMP(4)+1./3.*AMP(5)+1./3.*AMP(7)+1./3.*AMP(8)+1./9.*AMP(9)+1./9.*AMP(10)+AMP(14)-AMP(16)+AMP(17)+1./3.*AMP(19)+1./3.*AMP(20)+AMP(22)-AMP(23)+1./3.*AMP(27)+1./3.*AMP(28)+AMP(29)+AMP(31)+1./3.*AMP(33)+1./3.*AMP(34)+1./3.*AMP(35)+1./3.*AMP(36)+AMP(37)+1./9.*AMP(39)+1./9.*AMP(40))
-JAMP(3)=+1./4.*(-1./3.*AMP(1)-1./3.*AMP(2)-1./9.*AMP(4)-1./9.*AMP(5)-1./9.*AMP(7)-1./9.*AMP(8)-1./3.*AMP(9)-1./3.*AMP(10)-AMP(12)+AMP(13)-1./3.*AMP(17)-1./3.*AMP(18)-AMP(19)-AMP(25)+AMP(26)-AMP(27)-1./3.*AMP(29)-1./3.*AMP(30)-1./3.*AMP(31)-1./3.*AMP(32)-AMP(33)-AMP(35)-1./3.*AMP(37)-1./3.*AMP(38)-1./9.*AMP(41)-1./9.*AMP(42))
-JAMP(4)=+1./4.*(-1./3.*AMP(1)-1./3.*AMP(2)-AMP(5)-AMP(6)-AMP(8)-AMP(11)-AMP(13)-1./3.*AMP(14)-1./3.*AMP(15)-AMP(20)-1./3.*AMP(21)-1./3.*AMP(22)-1./9.*AMP(24)-1./9.*AMP(25)-1./9.*AMP(27)-1./9.*AMP(28)-1./3.*AMP(29)-1./3.*AMP(30)-AMP(34)-1./9.*AMP(35)-1./9.*AMP(36)-1./3.*AMP(37)-1./3.*AMP(38)-1./3.*AMP(39)-1./3.*AMP(40)-AMP(42))
+                         """JAMP(1)=+1./4.*(+1./9.*AMP(1)+1./9.*AMP(2)+1./3.*AMP(4)+1./3.*AMP(5)+1./3.*AMP(7)+1./3.*AMP(8)+1./9.*AMP(9)+1./9.*AMP(10)+AMP(14)-AMP(16)+AMP(17)+1./3.*AMP(19)+1./3.*AMP(20)+AMP(22)-AMP(23)+1./3.*AMP(27)+1./3.*AMP(28)+AMP(29)+AMP(31)+1./3.*AMP(33)+1./3.*AMP(34)+1./3.*AMP(35)+1./3.*AMP(36)+AMP(37)+1./9.*AMP(39)+1./9.*AMP(40))
+JAMP(2)=+1./4.*(-1./3.*AMP(1)-1./3.*AMP(2)-1./9.*AMP(4)-1./9.*AMP(5)-1./9.*AMP(7)-1./9.*AMP(8)-1./3.*AMP(9)-1./3.*AMP(10)-AMP(12)+AMP(13)-1./3.*AMP(17)-1./3.*AMP(18)-AMP(19)-AMP(25)+AMP(26)-AMP(27)-1./3.*AMP(29)-1./3.*AMP(30)-1./3.*AMP(31)-1./3.*AMP(32)-AMP(33)-AMP(35)-1./3.*AMP(37)-1./3.*AMP(38)-1./9.*AMP(41)-1./9.*AMP(42))
+JAMP(3)=+1./4.*(-AMP(4)+AMP(6)-AMP(7)-1./3.*AMP(9)-1./3.*AMP(10)-1./9.*AMP(11)-1./9.*AMP(12)-1./3.*AMP(14)-1./3.*AMP(15)-1./3.*AMP(17)-1./3.*AMP(18)-1./9.*AMP(19)-1./9.*AMP(20)-1./3.*AMP(21)-1./3.*AMP(22)-AMP(24)-AMP(26)-AMP(28)-1./3.*AMP(31)-1./3.*AMP(32)-1./9.*AMP(33)-1./9.*AMP(34)-AMP(36)-1./3.*AMP(39)-1./3.*AMP(40)-AMP(41))
+JAMP(4)=+1./4.*(+AMP(1)+AMP(3)+1./3.*AMP(4)+1./3.*AMP(5)+AMP(10)+1./3.*AMP(11)+1./3.*AMP(12)+AMP(15)+AMP(16)+AMP(18)+1./9.*AMP(21)+1./9.*AMP(22)+1./3.*AMP(24)+1./3.*AMP(25)+1./3.*AMP(27)+1./3.*AMP(28)+1./9.*AMP(29)+1./9.*AMP(30)+1./9.*AMP(31)+1./9.*AMP(32)+1./3.*AMP(33)+1./3.*AMP(34)+AMP(38)+AMP(40)+1./3.*AMP(41)+1./3.*AMP(42))
 JAMP(5)=+1./4.*(+AMP(2)-AMP(3)+1./3.*AMP(7)+1./3.*AMP(8)+AMP(9)+1./3.*AMP(11)+1./3.*AMP(12)+1./9.*AMP(14)+1./9.*AMP(15)+1./9.*AMP(17)+1./9.*AMP(18)+1./3.*AMP(19)+1./3.*AMP(20)+AMP(21)+AMP(23)+1./3.*AMP(24)+1./3.*AMP(25)+AMP(30)+AMP(32)+1./3.*AMP(35)+1./3.*AMP(36)+1./9.*AMP(37)+1./9.*AMP(38)+AMP(39)+1./3.*AMP(41)+1./3.*AMP(42))
-JAMP(6)=+1./4.*(+AMP(1)+AMP(3)+1./3.*AMP(4)+1./3.*AMP(5)+AMP(10)+1./3.*AMP(11)+1./3.*AMP(12)+AMP(15)+AMP(16)+AMP(18)+1./9.*AMP(21)+1./9.*AMP(22)+1./3.*AMP(24)+1./3.*AMP(25)+1./3.*AMP(27)+1./3.*AMP(28)+1./9.*AMP(29)+1./9.*AMP(30)+1./9.*AMP(31)+1./9.*AMP(32)+1./3.*AMP(33)+1./3.*AMP(34)+AMP(38)+AMP(40)+1./3.*AMP(41)+1./3.*AMP(42))""")
-
+JAMP(6)=+1./4.*(-1./3.*AMP(1)-1./3.*AMP(2)-AMP(5)-AMP(6)-AMP(8)-AMP(11)-AMP(13)-1./3.*AMP(14)-1./3.*AMP(15)-AMP(20)-1./3.*AMP(21)-1./3.*AMP(22)-1./9.*AMP(24)-1./9.*AMP(25)-1./9.*AMP(27)-1./9.*AMP(28)-1./3.*AMP(29)-1./3.*AMP(30)-AMP(34)-1./9.*AMP(35)-1./9.*AMP(36)-1./3.*AMP(37)-1./3.*AMP(38)-1./3.*AMP(39)-1./3.*AMP(40)-AMP(42))""")
         # Test coloramps.inc output
-        
         self.assertEqual(export_v4.get_icolamp_lines(matrix_element),
-                         ["logical icolamp(42,6)",
-                          "DATA icolamp/.false.,.false.,.false.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.false.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.true.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.false.,.false.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.false.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.false.,.true.,.true.,.false.,.false.,.true.,.true.,.true.,.true.,.false.,.false.,.true.,.true.,.false.,.true.,.false.,.false.,.true.,.false.,.true.,.true.,.true.,.false.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.false.,.false.,.true.,.true.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.false.,.true.,.true.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.true.,.false.,.false.,.false.,.false.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.true.,.false.,.true.,.true.,.true.,.false.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.false.,.true.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.true.,.true.,.true.,.false.,.false.,.false.,.true.,.false.,.true.,.true.,.true./"])
+                         ['logical icolamp(42,6)', 'DATA icolamp/.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.false.,.false.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.false.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.false.,.true.,.true.,.false.,.false.,.true.,.true.,.false.,.false.,.false.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.false.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.true.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.false.,.true.,.true.,.true.,.false.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.false.,.true.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.true.,.true.,.true.,.false.,.false.,.false.,.true.,.false.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.true.,.false.,.false.,.false.,.false.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.false.,.true.,.true.,.false.,.true.,.false.,.false.,.true.,.false.,.true.,.true.,.true.,.false.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.false.,.false.,.true.,.true.,.true.,.true.,.true.,.true.,.true.,.false.,.true./'])
 
         # Test leshouche.inc output
         fsock = StringIO.StringIO()
         export_v4.write_leshouche_file(fsock, matrix_element, fortran_model)
-        
+
         self.assertEqual(fsock.getvalue(),
                          """      DATA (IDUP(I,1),I=1,6)/2,-2,2,-2,2,-2/
       DATA (MOTHUP(1,I,  1),I=1, 6)/  0,  0,  1,  1,  1,  1/
       DATA (MOTHUP(2,I,  1),I=1, 6)/  0,  0,  2,  2,  2,  2/
-      DATA (ICOLUP(1,I,  1),I=1, 6)/502,  0,502,  0,503,  0/
-      DATA (ICOLUP(2,I,  1),I=1, 6)/  0,501,  0,501,  0,503/
+      DATA (ICOLUP(1,I,  1),I=1, 6)/501,  0,502,  0,503,  0/
+      DATA (ICOLUP(2,I,  1),I=1, 6)/  0,501,  0,502,  0,503/
       DATA (ICOLUP(1,I,  2),I=1, 6)/501,  0,502,  0,503,  0/
-      DATA (ICOLUP(2,I,  2),I=1, 6)/  0,501,  0,502,  0,503/
-      DATA (ICOLUP(1,I,  3),I=1, 6)/501,  0,502,  0,503,  0/
-      DATA (ICOLUP(2,I,  3),I=1, 6)/  0,501,  0,503,  0,502/
+      DATA (ICOLUP(2,I,  2),I=1, 6)/  0,501,  0,503,  0,502/
+      DATA (ICOLUP(1,I,  3),I=1, 6)/502,  0,502,  0,503,  0/
+      DATA (ICOLUP(2,I,  3),I=1, 6)/  0,501,  0,501,  0,503/
       DATA (ICOLUP(1,I,  4),I=1, 6)/503,  0,502,  0,503,  0/
-      DATA (ICOLUP(2,I,  4),I=1, 6)/  0,501,  0,502,  0,501/
+      DATA (ICOLUP(2,I,  4),I=1, 6)/  0,501,  0,501,  0,502/
       DATA (ICOLUP(1,I,  5),I=1, 6)/502,  0,502,  0,503,  0/
       DATA (ICOLUP(2,I,  5),I=1, 6)/  0,501,  0,503,  0,501/
       DATA (ICOLUP(1,I,  6),I=1, 6)/503,  0,502,  0,503,  0/
-      DATA (ICOLUP(2,I,  6),I=1, 6)/  0,501,  0,501,  0,502/
+      DATA (ICOLUP(2,I,  6),I=1, 6)/  0,501,  0,502,  0,501/
 """)
 
         # Test pdf output (for auto_dsig.f)
@@ -1000,7 +998,7 @@ PD(IPROC)=PD(IPROC-1) + u1*ub2""")
         """Test calls for g g > g g"""
 
         # Set up local model
-        
+
         mybasemodel = base_objects.Model()
         mypartlist = base_objects.ParticleList()
         myinterlist = base_objects.InteractionList()
@@ -1051,7 +1049,7 @@ PD(IPROC)=PD(IPROC-1) + u1*ub2""")
                                 color.ColorString([color.f(1, 2, -1),
                                                    color.f(0, 3, -1)])],
                       'lorentz':['gggg1', 'gggg2', 'gggg3'],
-                      'couplings':{(0, 0):'GG',(1, 1):'GG',(2, 2):'GG'},
+                      'couplings':{(0, 0):'GG', (1, 1):'GG', (2, 2):'GG'},
                       'orders':{'QCD':2}}))
 
         mybasemodel.set('particles', mypartlist)
@@ -1060,13 +1058,13 @@ PD(IPROC)=PD(IPROC-1) + u1*ub2""")
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
@@ -1103,33 +1101,32 @@ CALL VVVXXX(W(1,2),W(1,3),W(1,7),GG,AMP(6))""")
         self.assertEqual("\n".join(export_v4.get_color_data_lines(\
                          matrix_element)),
                          """DATA Denom(1)/6/
-DATA (CF(i,  1),i=  1,  6) /   19,    4,   -2,   -2,   -2,   -2/
-C 1 Tr(1,4,3,2)
-DATA Denom(2)/6/
-DATA (CF(i,  2),i=  1,  6) /    4,   19,   -2,   -2,   -2,   -2/
+DATA (CF(i,  1),i=  1,  6) /   19,   -2,   -2,   -2,   -2,    4/
 C 1 Tr(1,2,3,4)
+DATA Denom(2)/6/
+DATA (CF(i,  2),i=  1,  6) /   -2,   19,   -2,    4,   -2,   -2/
+C 1 Tr(1,2,4,3)
 DATA Denom(3)/6/
-DATA (CF(i,  3),i=  1,  6) /   -2,   -2,   19,   -2,   -2,    4/
-C 1 Tr(1,3,4,2)
-DATA Denom(4)/6/
-DATA (CF(i,  4),i=  1,  6) /   -2,   -2,   -2,   19,    4,   -2/
+DATA (CF(i,  3),i=  1,  6) /   -2,   -2,   19,   -2,    4,   -2/
 C 1 Tr(1,3,2,4)
+DATA Denom(4)/6/
+DATA (CF(i,  4),i=  1,  6) /   -2,    4,   -2,   19,   -2,   -2/
+C 1 Tr(1,3,4,2)
 DATA Denom(5)/6/
-DATA (CF(i,  5),i=  1,  6) /   -2,   -2,   -2,    4,   19,   -2/
-C 1 Tr(1,4,2,3)
-DATA Denom(6)/6/
-DATA (CF(i,  6),i=  1,  6) /   -2,   -2,    4,   -2,   -2,   19/
-C 1 Tr(1,2,4,3)""")
+DATA (CF(i,  5),i=  1,  6) /   -2,   -2,    4,   -2,   19,   -2/
+C 1 Tr(1,4,2,3)\nDATA Denom(6)/6/
+DATA (CF(i,  6),i=  1,  6) /    4,   -2,   -2,   -2,   -2,   19/
+C 1 Tr(1,4,3,2)""")
 
         # Test JAMP (color amplitude) output
         self.assertEqual("\n".join(export_v4.get_JAMP_lines(matrix_element)),
                          """JAMP(1)=+2*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))
-JAMP(2)=+2*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))
-JAMP(3)=+2*(+AMP(1)-AMP(2)-AMP(4)-AMP(5))
-JAMP(4)=+2*(-AMP(3)+AMP(2)+AMP(5)+AMP(6))
+JAMP(2)=+2*(+AMP(1)-AMP(2)-AMP(4)-AMP(5))
+JAMP(3)=+2*(-AMP(3)+AMP(2)+AMP(5)+AMP(6))
+JAMP(4)=+2*(+AMP(1)-AMP(2)-AMP(4)-AMP(5))
 JAMP(5)=+2*(-AMP(3)+AMP(2)+AMP(5)+AMP(6))
-JAMP(6)=+2*(+AMP(1)-AMP(2)-AMP(4)-AMP(5))""")
-        
+JAMP(6)=+2*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))""")
+
 
     def test_generate_helas_diagrams_uu_susu(self):
         """Testing the helas diagram generation u u > su su with t-channel n1
@@ -1138,13 +1135,13 @@ JAMP(6)=+2*(+AMP(1)-AMP(2)-AMP(4)-AMP(5))""")
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':1000002,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':1000002,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mybasemodel})
@@ -1175,13 +1172,13 @@ CALL IOSXXX(W(1,2),W(1,6),W(1,3),MGVX575,AMP(2))""")
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':23,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':23,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':1000022,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':1000022,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mybasemodel})
@@ -1207,7 +1204,7 @@ CALL IOVXXX(W(1,6),W(1,3),W(1,2),GZN11,AMP(2))""")
 
         self.assertEqual(export_v4.get_JAMP_lines(matrix_element)[0],
                          "JAMP(1)=-AMP(1)-AMP(2)")
-        
+
 
     def test_generate_helas_diagrams_epem_elpelmepem(self):
         """Testing the helas diagram generation e+ e- > sl2+ sl2- e+ e-
@@ -1303,17 +1300,17 @@ CALL IOVXXX(W(1,6),W(1,3),W(1,2),GZN11,AMP(2))""")
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-1000011,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':1000011,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
@@ -1383,15 +1380,15 @@ CALL IOSXXX(W(1,2),W(1,19),W(1,24),MGVX494,AMP(8))""")
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':1000002,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':1000002,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mybasemodel})
@@ -1530,13 +1527,13 @@ CALL IOSCXX(W(1,13),W(1,1),W(1,10),MGVX575,AMP(8))""")
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-12,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-12,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
@@ -1663,13 +1660,13 @@ CALL IOVXXX(W(1,4),W(1,3),W(1,5),MGVX27,AMP(1))""")
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':24,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-24,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':24,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-24,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
@@ -1845,13 +1842,13 @@ CALL VVVXXX(W(1,2),W(1,4),W(1,8),MGVX5,AMP(5))""")
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':24,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-24,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':23,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
@@ -2021,15 +2018,15 @@ CALL VVVXXX(W(1,6),W(1,2),W(1,3),MGVX5,AMP(3))""")
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':24,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-24,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':24,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-24,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
@@ -2168,7 +2165,7 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
                                              A]),
                       'color': [],
                       'lorentz':['L1', 'L2'],
-                      'couplings':{(0, 0):'G1',(0, 1):'G2'},
+                      'couplings':{(0, 0):'G1', (0, 1):'G2'},
                       'orders':{'QED':1}}))
 
         mybasemodel = base_objects.Model()
@@ -2178,13 +2175,13 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':45,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':45,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':45,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':45,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
@@ -2410,7 +2407,7 @@ C     Amplitude(s) for diagram number 6
         fsock = StringIO.StringIO()
 
         # Set up local model
-        
+
         mybasemodel = base_objects.Model()
         mypartlist = base_objects.ParticleList()
         myinterlist = base_objects.InteractionList()
@@ -2496,70 +2493,70 @@ C     Amplitude(s) for diagram number 6
 
         mybasemodel.set('particles', mypartlist)
         mybasemodel.set('interactions', myinterlist)
-        
+
 
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'final'}))
+                                         'state':True}))
 
         mycoreproc = base_objects.Process({'legs':myleglist,
                                            'model':mybasemodel})
 
-        me_core =  helas_objects.HelasMatrixElement(\
+        me_core = helas_objects.HelasMatrixElement(\
             diagram_generation.Amplitude(mycoreproc))
 
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
 
         mydecay11 = base_objects.Process({'legs':myleglist,
                                           'model':mybasemodel})
 
-        me11 =  helas_objects.HelasMatrixElement(\
+        me11 = helas_objects.HelasMatrixElement(\
             diagram_generation.Amplitude(mydecay11))
 
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
 
         mydecay12 = base_objects.Process({'legs':myleglist,
                                           'model':mybasemodel})
 
-        me12 =  helas_objects.HelasMatrixElement(\
+        me12 = helas_objects.HelasMatrixElement(\
             diagram_generation.Amplitude(mydecay12))
 
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':13,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-13,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
 
         mydecay2 = base_objects.Process({'legs':myleglist,
                                          'model':mybasemodel})
 
-        me2 =  helas_objects.HelasMatrixElement(\
+        me2 = helas_objects.HelasMatrixElement(\
             diagram_generation.Amplitude(mydecay2))
 
         mydecay11.set('decay_chains', base_objects.ProcessList([mydecay2]))
@@ -2577,7 +2574,7 @@ C     Amplitude(s) for diagram number 6
 
         # Check all ingredients in file here
 
-        self.assertEqual(me.get_nexternal_ninitial(), (10,2))
+        self.assertEqual(me.get_nexternal_ninitial(), (10, 2))
         self.assertEqual(me.get_helicity_combinations(), 1024)
         self.assertEqual(len(export_v4.get_helicity_lines(me).split("\n")), 1024)
         # This has been tested against v4
@@ -2637,8 +2634,8 @@ CALL IOVXXX(W(1,26),W(1,23),W(1,2),GAL,AMP(8))""")
       PMASS(8)=ZERO
       PMASS(9)=ZERO
       PMASS(10)=ZERO\n""")
-                         
-        
+
+
     def test_matrix_4g_decay_chain_process(self):
         """Test matrix.f for multistage decay chain
         """
@@ -2647,7 +2644,7 @@ CALL IOVXXX(W(1,26),W(1,23),W(1,2),GAL,AMP(8))""")
         fsock = StringIO.StringIO()
 
         # Set up local model
-        
+
         mybasemodel = base_objects.Model()
         mypartlist = base_objects.ParticleList()
         myinterlist = base_objects.InteractionList()
@@ -2693,45 +2690,45 @@ CALL IOVXXX(W(1,26),W(1,23),W(1,2),GAL,AMP(8))""")
                                 color.ColorString([color.f(0, 1, 2)]),
                                 color.ColorString([color.f(0, 1, 2)])],
                       'lorentz':['gggg1', 'gggg2', 'gggg3'],
-                      'couplings':{(0, 0):'GG',(1, 1):'GG',(2, 2):'GG'},
+                      'couplings':{(0, 0):'GG', (1, 1):'GG', (2, 2):'GG'},
                       'orders':{'QCD':2}}))
 
         mybasemodel.set('particles', mypartlist)
         mybasemodel.set('interactions', myinterlist)
-        
+
 
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
 
         mycoreproc = base_objects.Process({'legs':myleglist,
                                            'model':mybasemodel})
 
-        me_core =  helas_objects.HelasMatrixElement(\
+        me_core = helas_objects.HelasMatrixElement(\
             diagram_generation.Amplitude(mycoreproc))
 
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
 
         mydecay1 = base_objects.Process({'legs':myleglist,
                                           'model':mybasemodel})
 
-        me1 =  helas_objects.HelasMatrixElement(\
+        me1 = helas_objects.HelasMatrixElement(\
             diagram_generation.Amplitude(mydecay1))
 
         mycoreproc.set('decay_chains', base_objects.ProcessList([\
@@ -2786,7 +2783,7 @@ CALL IOVXXX(W(1,26),W(1,23),W(1,2),GAL,AMP(8))""")
                                   repr(amp.get('color_indices'))),
                                  goal[i])
 
-        self.assertEqual(me.get_nexternal_ninitial(), (8,2))
+        self.assertEqual(me.get_nexternal_ninitial(), (8, 2))
         self.assertEqual(me.get_helicity_combinations(), 256)
         self.assertEqual(len(export_v4.get_helicity_lines(me).split("\n")), 256)
         self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
@@ -3120,8 +3117,8 @@ CALL VVVXXX(W(1,2),W(1,26),W(1,39),GG,AMP(216))""")
       PMASS(6)=ZERO
       PMASS(7)=ZERO
       PMASS(8)=ZERO\n""")
-                         
-        
+
+
     def test_export_majorana_decay_chain(self):
         """Test decay chain with majorana particles e+e->n1n1
         """
@@ -3258,13 +3255,13 @@ CALL VVVXXX(W(1,2),W(1,26),W(1,39),GG,AMP(216))""")
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':1000022,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':1000022,
-                                         'state':'final'}))
+                                         'state':True}))
 
         mycoreproc = base_objects.Process({'legs':myleglist,
                                        'model':mymodel})
@@ -3272,11 +3269,11 @@ CALL VVVXXX(W(1,2),W(1,26),W(1,39),GG,AMP(216))""")
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':1000022,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-1000011,
-                                         'state':'final'}))
+                                         'state':True}))
 
         mydecay1 = base_objects.Process({'legs':myleglist,
                                          'model':mymodel})
@@ -3291,7 +3288,7 @@ CALL VVVXXX(W(1,2),W(1,26),W(1,39),GG,AMP(216))""")
         matrix_elements = matrix_element.combine_decay_chain_processes()
 
         me = matrix_elements[0]
-        
+
         myfortranmodel = export_v4.HelasFortranModel()
 
         # This has been checked against v4
@@ -3323,11 +3320,11 @@ CALL IOSXXX(W(1,14),W(1,2),W(1,12),MGVX350,AMP(2))""")
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':1000022,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':1000011,
-                                         'state':'final'}))
+                                         'state':True}))
 
         mydecay2 = base_objects.Process({'legs':myleglist,
                                          'model':mymodel})
@@ -3342,7 +3339,7 @@ CALL IOSXXX(W(1,14),W(1,2),W(1,12),MGVX350,AMP(2))""")
         matrix_elements = matrix_element.combine_decay_chain_processes()
 
         me = matrix_elements[0]
-        
+
         myfortranmodel = export_v4.HelasFortranModel()
 
         # This has been checked against v4
@@ -3365,28 +3362,28 @@ CALL IXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,13))
 CALL FSICXX(W(1,13),W(1,4),MGVX350,Mneu1,Wneu1,W(1,14))
 # Amplitude(s) for diagram number 2
 CALL IOSXXX(W(1,14),W(1,2),W(1,12),MGVX350,AMP(2))""")
-        
+
         self.assertEqual(export_v4.get_JAMP_lines(me)[0],
                          "JAMP(1)=+AMP(1)-AMP(2)")
-        
-        
+
+
         # e- e+ > n1 n1 / z sl5-, n1 > e- sl2+ a
 
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':1000022,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-1000011,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
 
         mydecay3 = base_objects.Process({'legs':myleglist,
                                          'model':mymodel})
 
-        me3 =  helas_objects.HelasMatrixElement(\
+        me3 = helas_objects.HelasMatrixElement(\
             diagram_generation.Amplitude(mydecay3))
 
         mycoreproc.set('decay_chains', base_objects.ProcessList([\
@@ -3399,7 +3396,7 @@ CALL IOSXXX(W(1,14),W(1,2),W(1,12),MGVX350,AMP(2))""")
         matrix_elements = matrix_element.combine_decay_chain_processes()
 
         me = matrix_elements[0]
-        
+
         # This has been checked against v4
         self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
                          """CALL IXXXXX(P(0,1),zero,NHEL(1),+1*IC(1),W(1,1))
@@ -3609,8 +3606,8 @@ C     Number of configs
       DATA GFORCEBW(-4,8)/.TRUE./
 """)
 
-        
-        
+
+
     def test_export_complicated_majorana_decay_chain(self):
         """Test complicated decay chain z e+ > n2 el+, n2 > e- e+ n1
         """
@@ -3807,13 +3804,13 @@ C     Number of configs
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':23,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':1000023,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-1000011,
-                                         'state':'final'}))
+                                         'state':True}))
 
         mycoreproc = base_objects.Process({'legs':myleglist,
                                            'model':mymodel,
@@ -3822,13 +3819,13 @@ C     Number of configs
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':1000023,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':1000022,
-                                         'state':'final'}))
+                                         'state':True}))
 
         mydecay1 = base_objects.Process({'legs':myleglist,
                                          'model':mymodel})
@@ -3843,7 +3840,7 @@ C     Number of configs
         matrix_elements = matrix_element.combine_decay_chain_processes()
 
         me = matrix_elements[0]
-        
+
         myfortranmodel = export_v4.HelasFortranModel()
 
         self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
@@ -3884,6 +3881,6 @@ CALL IOSXXX(W(1,7),W(1,2),W(1,19),GELN2P,AMP(7))
 CALL IOSXXX(W(1,11),W(1,2),W(1,19),GELN2P,AMP(8))
 # Amplitude(s) for diagram number 9
 CALL IOSXXX(W(1,15),W(1,2),W(1,19),GELN2P,AMP(9))""")
-        
+
         self.assertEqual(export_v4.get_JAMP_lines(me)[0],
                          "JAMP(1)=+AMP(1)-AMP(2)-AMP(3)+AMP(4)-AMP(5)-AMP(6)+AMP(7)-AMP(8)-AMP(9)")
