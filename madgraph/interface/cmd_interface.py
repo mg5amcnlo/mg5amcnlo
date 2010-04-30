@@ -234,9 +234,11 @@ class MadGraphCmd(cmd.Cmd):
             return False
 
         args = self.split_arg(line)
-        if len(args) != 2:
+        if len(args) != 2 or args[0] not in self.__import_formats:
             self.help_import()
             return False
+        
+        
 
 
         if args[0] == 'model_v4':
@@ -1056,13 +1058,8 @@ class MadGraphCmd(cmd.Cmd):
                         export_v4.generate_subprocess_directory_v4_madevent(\
                             me, self.__curr_fortran_model, path)
             
-            # Check how the run was done
-            call_from_mg4 = [1 for command in self.history \
-                        if command.startswith('import') and 'proc_v4' in command]
-            
-            card_path = os.path.join(path,os.path.pardir,'Cards','proc_card.dat')
-            if not call_from_mg4:
-                export_v4.write_mg4_proc_card(card_path,
+            card_path = os.path.join(path,os.path.pardir,'Cards','proc_def.dat')
+            export_v4.write_mg4_proc_card(card_path,
                                 os.path.split(self.__model_dir)[-1],
                                 self.__curr_matrix_elements.get('matrix_elements'))
                 
