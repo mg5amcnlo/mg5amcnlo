@@ -755,7 +755,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return (tuple(res), self.get('lorentz'))
 
-    def get_base_vertices(self, wf_dict, optimization = 1):
+    def get_base_vertices(self, wf_dict = {}, vx_list = [], optimization = 1):
         """Recursive method to get a base_objects.VertexList
         corresponding to this wavefunction and its mothers."""
 
@@ -767,9 +767,25 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Add vertices for all mothers
         for mother in self.get('mothers'):
             # This is where recursion happens
-            vertices.extend(mother.get_base_vertices(wf_dict, optimization))
+            vertices.extend(mother.get_base_vertices(wf_dict, vx_list,
+                                                     optimization))
         # Generate last vertex
         legs = base_objects.LegList()
+
+        # We use the from_group flag to indicate whether this outgoing
+        # leg corresponds to a decaying (onshell) particle or not
+        try:
+            lastleg = wf_dict[self.get('number')]
+        except KeyError:            
+            lastleg = base_objects.Leg({
+                'id': self.get_pdg_code(),
+                'number': self.get('number_external'),
+                'state': self.get('leg_state'),
+                'from_group': self.get('onshell')
+                })
+            if optimization != 0:
+                wf_dict[self.get('number')] = lastleg
+
         for mother in self.get('mothers'):
             try:
                 leg = wf_dict[mother.get('number')]
@@ -783,19 +799,20 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if optimization != 0:
                     wf_dict[mother.get('number')] = leg
             legs.append(leg)
-        # We use the from_group flag to indicate whether this outgoing
-        # leg corresponds to a decaying (onshell) particle or not
-        leg = base_objects.Leg({
-            'id': self.get_pdg_code(),
-            'number': self.get('number_external'),
-            'state': self.get('leg_state'),
-            'from_group': self.get('onshell')
-            })
-        legs.append(leg)
 
-        vertices.append(base_objects.Vertex({
+        legs.append(lastleg)
+
+        vertex = base_objects.Vertex({
             'id': self.get('interaction_id'),
-            'legs': legs}))
+            'legs': legs})
+
+        try:
+            index = vx_list.index(vertex)
+            vertex = vx_list[index]
+        except ValueError:
+            pass
+        
+        vertices.append(vertex)
 
         return vertices
 
@@ -833,7 +850,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                self.get('mothers'))
 
         for mother in final_mothers:
-            schannels.extend(mother.get_base_vertices({}))
+            schannels.extend(mother.get_base_vertices(optimization = 0))
 
         # Extract initial state mothers
         init_mothers = filter(lambda wf: wf.get('number_external') <= ninitial,
@@ -1407,7 +1424,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         return (-1) ** nflips
 
-    def get_base_diagram(self, wf_dict, optimization = 1):
+    def get_base_diagram(self, wf_dict = {}, vx_list = [], optimization = 1):
         """Return the base_objects.Diagram which corresponds to this
         amplitude, using a recursive method for the wavefunctions."""
 
@@ -1415,7 +1432,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         # Add vertices for all mothers
         for mother in self.get('mothers'):
-            vertices.extend(mother.get_base_vertices(wf_dict, optimization))
+            vertices.extend(mother.get_base_vertices(wf_dict, vx_list,
+                                                     optimization))
         # Generate last vertex
         legs = base_objects.LegList()
         for mother in self.get('mothers'):
@@ -1452,7 +1470,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                                self.get('mothers'))
 
         for mother in final_mothers:
-            schannels.extend(mother.get_base_vertices({}))
+            schannels.extend(mother.get_base_vertices(optimization = 0))
 
         # Extract initial state mothers
         init_mothers = filter(lambda wf: wf.get('number_external') <= ninitial,
@@ -2772,9 +2790,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         model = self.get('processes')[0].get('model')
 
         wf_dict = {}
+        vx_list = []
         diagrams = base_objects.DiagramList()
         for diag in self.get('diagrams'):
-            diagrams.append(diag.get('amplitudes')[0].get_base_diagram(wf_dict, optimization))
+            diagrams.append(diag.get('amplitudes')[0].get_base_diagram(\
+                wf_dict, vx_list, optimization))
 
         return diagram_generation.Amplitude({\
             'process': self.get('processes')[0],

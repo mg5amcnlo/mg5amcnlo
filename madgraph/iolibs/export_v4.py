@@ -28,6 +28,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
 
+_file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('export_v4')
 
 #===============================================================================
@@ -96,122 +97,9 @@ def write_matrix_element_v4_standalone(fsock, matrix_element, fortran_model):
     jamp_lines = get_JAMP_lines(matrix_element)
     replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
-    file = \
-"""      SUBROUTINE SMATRIX(P,ANS)
-C  
-%(info_lines)s
-C 
-C MadGraph StandAlone Version
-C 
-C Returns amplitude squared summed/avg over colors
-c and helicities
-c for the point in phase space P(0:3,NEXTERNAL)
-C  
-%(process_lines)s
-C  
-      IMPLICIT NONE
-C  
-C CONSTANTS
-C  
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=%(nexternal)d)
-      INTEGER                 NCOMB         
-      PARAMETER (             NCOMB=%(ncomb)d)
-C  
-C ARGUMENTS 
-C  
-      REAL*8 P(0:3,NEXTERNAL),ANS
-C  
-C LOCAL VARIABLES 
-C  
-      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
-      REAL*8 T
-      REAL*8 MATRIX
-      INTEGER IHEL,IDEN, I
-      INTEGER JC(NEXTERNAL)
-      LOGICAL GOODHEL(NCOMB)
-      DATA NTRY/0/
-      DATA GOODHEL/NCOMB*.FALSE./
-%(helicity_lines)s
-%(den_factor_line)s
-C ----------
-C BEGIN CODE
-C ----------
-      NTRY=NTRY+1
-      DO IHEL=1,NEXTERNAL
-         JC(IHEL) = +1
-      ENDDO
-      ANS = 0D0
-          DO IHEL=1,NCOMB
-             IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
-                 T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
-               ANS=ANS+T
-               IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
-                   GOODHEL(IHEL)=.TRUE.
-               ENDIF
-             ENDIF
-          ENDDO
-      ANS=ANS/DBLE(IDEN)
-      END
-       
-       
-      REAL*8 FUNCTION MATRIX(P,NHEL,IC)
-C  
-%(info_lines)s
-C
-C Returns amplitude squared summed/avg over colors
-c for the point with external lines W(0:6,NEXTERNAL)
-C  
-%(process_lines)s
-C  
-      IMPLICIT NONE
-C  
-C CONSTANTS
-C  
-      INTEGER    NGRAPHS
-      PARAMETER (NGRAPHS=%(ngraphs)d) 
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=%(nexternal)d)
-      INTEGER    NWAVEFUNCS, NCOLOR
-      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
-      REAL*8     ZERO
-      PARAMETER (ZERO=0D0)
-C  
-C ARGUMENTS 
-C  
-      REAL*8 P(0:3,NEXTERNAL)
-      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
-C  
-C LOCAL VARIABLES 
-C  
-      INTEGER I,J
-      COMPLEX*16 ZTEMP
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
-      COMPLEX*16 W(18,NWAVEFUNCS)
-C  
-C GLOBAL VARIABLES
-C  
-      include 'coupl.inc'
-C  
-C COLOR DATA
-C  
-%(color_data_lines)s
-C ----------
-C BEGIN CODE
-C ----------
-%(helas_calls)s
-%(jamp_lines)s
-
-      MATRIX = 0.D0 
-      DO I = 1, NCOLOR
-          ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-              ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
-          ENDDO
-          MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
-      ENDDO
-      END""" % replace_dict
+    file = open(os.path.join(_file_path, \
+                      'iolibs/template_files/matrix_standalone_v4.inc')).read()
+    file = file % replace_dict
 
     # Write the file
     for line in file.split('\n'):
@@ -285,217 +173,10 @@ def write_matrix_element_v4_madevent(fsock, matrix_element, fortran_model):
     jamp_lines = get_JAMP_lines(matrix_element)
     replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
-    file = \
-"""      SUBROUTINE SMATRIX(P,ANS)
-C  
-%(info_lines)s
-C 
-C MadGraph for Madevent Version
-C 
-C Returns amplitude squared summed/avg over colors
-c and helicities
-c for the point in phase space P(0:3,NEXTERNAL)
-C  
-%(process_lines)s
-C  
-    IMPLICIT NONE
-C  
-C CONSTANTS
-C  
-    Include 'genps.inc'
-    Include 'nexternal.inc'
-    Include 'maxamps.inc'
-    INTEGER                 NCOMB         
-    PARAMETER (             NCOMB=%(ncomb)d)
-    INTEGER    THEL
-    PARAMETER (THEL=NCOMB)
-C  
-C ARGUMENTS 
-C  
-    REAL*8 P(0:3,NEXTERNAL),ANS
-C  
-C LOCAL VARIABLES 
-C  
-    INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
-    REAL*8 T,MATRIX
-    INTEGER IHEL,IDEN
-    INTEGER IPROC,JC(NEXTERNAL), I
-    LOGICAL GOODHEL(NCOMB)
-    INTEGER NGRAPHS
-    REAL*8 hwgt, xtot, xtry, xrej, xr, yfrac(0:ncomb)
-    INTEGER idum, ngood, igood(ncomb), jhel, j, jj
-    LOGICAL warned
-    REAL     xran1
-    EXTERNAL xran1
-C  
-C GLOBAL VARIABLES
-C  
-    Double Precision amp2(maxamps), jamp2(0:maxamps)
-    common/to_amps/  amp2,       jamp2
+    file = open(os.path.join(_file_path, \
+                      'iolibs/template_files/matrix_madevent_v4.inc')).read()
+    file = file % replace_dict
     
-    character*79         hel_buff
-    common/to_helicity/  hel_buff
-    
-    REAL*8 POL(2)
-    common/to_polarization/ POL
-    
-    integer          isum_hel
-    logical                    multi_channel
-    common/to_matrix/isum_hel, multi_channel
-    INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
-    common/to_mconfigs/mapconfig, iconfig
-    DATA NTRY,IDUM /0,-1/
-    DATA xtry, xrej, ngood /0,0,0/
-    DATA warned, isum_hel/.false.,0/
-    DATA multi_channel/.true./
-    SAVE yfrac, igood, jhel
-    DATA NGRAPHS /%(ngraphs)d/          
-    DATA jamp2(0) /%(ncolor)d/          
-    DATA GOODHEL/THEL*.FALSE./
-%(helicity_lines)s
-%(den_factor_line)s
-C ----------
-C BEGIN CODE
-C ----------
-    NTRY=NTRY+1
-    DO IHEL=1,NEXTERNAL
-       JC(IHEL) = +1
-    ENDDO
-     
-    IF (multi_channel) THEN
-        DO IHEL=1,NGRAPHS
-            amp2(ihel)=0d0
-            jamp2(ihel)=0d0
-        ENDDO
-        DO IHEL=1,int(jamp2(0))
-            jamp2(ihel)=0d0
-        ENDDO
-    ENDIF
-    ANS = 0D0
-    write(hel_buff,'(16i5)') (0,i=1,nexternal)
-    IF (ISUM_HEL .EQ. 0 .OR. NTRY .LT. 10) THEN
-        DO IHEL=1,NCOMB
-           IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
-               T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
-             DO JJ=1,nincoming
-               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
-                 T=T*ABS(POL(JJ))
-               ELSE IF(POL(JJ).NE.1d0)THEN
-                 T=T*(2d0-ABS(POL(JJ)))
-               ENDIF
-             ENDDO
-             ANS=ANS+T
-             IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
-                 GOODHEL(IHEL)=.TRUE.
-                 NGOOD = NGOOD +1
-                 IGOOD(NGOOD) = IHEL
-             ENDIF
-           ENDIF
-        ENDDO
-        JHEL = 1
-        ISUM_HEL=MIN(ISUM_HEL,NGOOD)
-    ELSE              !RANDOM HELICITY
-        DO J=1,ISUM_HEL
-            JHEL=JHEL+1
-            IF (JHEL .GT. NGOOD) JHEL=1
-            HWGT = REAL(NGOOD)/REAL(ISUM_HEL)
-            IHEL = IGOOD(JHEL)
-            T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
-            DO JJ=1,nincoming
-              IF(POL(JJ).NE.1d0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
-                T=T*ABS(POL(JJ))
-              ELSE IF(POL(JJ).NE.1d0)THEN
-                T=T*(2d0-ABS(POL(JJ)))
-              ENDIF
-            ENDDO
-            ANS=ANS+T*HWGT
-        ENDDO
-        IF (ISUM_HEL .EQ. 1) THEN
-            WRITE(HEL_BUFF,'(16i5)')(NHEL(i,IHEL),i=1,nexternal)
-        ENDIF
-    ENDIF
-    IF (MULTI_CHANNEL) THEN
-        XTOT=0D0
-        DO IHEL=1,MAPCONFIG(0)
-            XTOT=XTOT+AMP2(MAPCONFIG(IHEL))
-        ENDDO
-        IF (XTOT.NE.0D0) THEN
-            ANS=ANS*AMP2(MAPCONFIG(ICONFIG))/XTOT
-        ELSE
-            ANS=0D0
-        ENDIF
-    ENDIF
-    ANS=ANS/DBLE(IDEN)
-    END
- 
- 
-REAL*8 FUNCTION MATRIX(P,NHEL,IC)
-C  
-%(info_lines)s
-C
-C Returns amplitude squared summed/avg over colors
-c for the point with external lines W(0:6,NEXTERNAL)
-C  
-%(process_lines)s
-C  
-    IMPLICIT NONE
-C  
-C CONSTANTS
-C  
-    INTEGER    NGRAPHS,    NEIGEN 
-    PARAMETER (NGRAPHS=%(ngraphs)d,NEIGEN=  1) 
-    include 'genps.inc'
-    include 'nexternal.inc'
-    include 'maxamps.inc'
-    INTEGER    NWAVEFUNCS     , NCOLOR
-    PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
-    REAL*8     ZERO
-    PARAMETER (ZERO=0D0)
-C  
-C ARGUMENTS 
-C  
-    REAL*8 P(0:3,NEXTERNAL)
-    INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
-C  
-C LOCAL VARIABLES 
-C  
-    INTEGER I,J
-    COMPLEX*16 ZTEMP
-    REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-    COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
-    COMPLEX*16 W(18,NWAVEFUNCS)
-C  
-C GLOBAL VARIABLES
-C  
-    Double Precision amp2(maxamps), jamp2(0:maxamps)
-    common/to_amps/  amp2,       jamp2
-    include 'coupl.inc'
-C  
-C COLOR DATA
-C  
-%(color_data_lines)s
-C ----------
-C BEGIN CODE
-C ----------
-%(helas_calls)s
-%(jamp_lines)s
-    MATRIX = 0.D0 
-    DO I = 1, NCOLOR
-        ZTEMP = (0.D0,0.D0)
-        DO J = 1, NCOLOR
-            ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
-        ENDDO
-        MATRIX =MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
-    ENDDO
-    Do I = 1, NGRAPHS
-        amp2(i)=amp2(i)+amp(i)*dconjg(amp(i))
-    Enddo
-    Do I = 1, NCOLOR
-        Jamp2(i)=Jamp2(i)+Jamp(i)*dconjg(Jamp(i))
-    Enddo
-
-    END""" % replace_dict
-
     # Write the file
     for line in file.split('\n'):
         writer.write_fortran_line(fsock, line)
@@ -543,84 +224,9 @@ def write_auto_dsig_file(fsock, matrix_element, fortran_model):
 
     replace_dict['dsig_line'] = dsig_line
 
-    file = \
-"""      DOUBLE PRECISION FUNCTION DSIG(PP,WGT)
-C ****************************************************
-C
-%(info_lines)s
-C
-%(process_lines)s
-C
-C     RETURNS DIFFERENTIAL CROSS SECTION
-C     Input:
-C             pp    4 momentum of external particles
-C             wgt   weight from Monte Carlo
-C     Output:
-C             Amplitude squared and summed
-C ****************************************************
-      IMPLICIT NONE
-C  
-C CONSTANTS
-C  
-      include 'genps.inc'
-      include 'nexternal.inc'
-      DOUBLE PRECISION       CONV
-      PARAMETER (CONV=389379.66*1000)  !CONV TO PICOBARNS
-      REAL*8     PI
-      PARAMETER (PI=3.1415926d0)
-C  
-C ARGUMENTS 
-C  
-      DOUBLE PRECISION PP(0:3,NEXTERNAL), WGT
-C  
-C LOCAL VARIABLES 
-C  
-      INTEGER I, ICROSS,ITYPE,LP
-      DOUBLE PRECISION u1,ub1,d1,db1,c1,cb1,s1,sb1,b1,bb1
-      DOUBLE PRECISION u2,ub2,d2,db2,c2,cb2,s2,sb2,b2,bb2
-      DOUBLE PRECISION g1,g2
-      DOUBLE PRECISION a1,a2
-      DOUBLE PRECISION XPQ(-7:7)
-      DOUBLE PRECISION DSIGUU
-C  
-C EXTERNAL FUNCTIONS
-C  
-      LOGICAL PASSCUTS
-      DOUBLE PRECISION ALPHAS2,REWGT,PDG2PDF
-C  
-C GLOBAL VARIABLES
-C  
-      INTEGER              IPROC
-      DOUBLE PRECISION PD(0:MAXPROC)
-      COMMON /SubProc/ PD, IPROC
-      include 'coupl.inc'
-      include 'run.inc'
-C  
-C DATA
-C  
-      DATA u1,ub1,d1,db1,c1,cb1,s1,sb1,b1,bb1/10*1d0/
-      DATA u2,ub2,d2,db2,c2,cb2,s2,sb2,b2,bb2/10*1d0/
-      DATA a1,g1/2*1d0/
-      DATA a2,g2/2*1d0/
-      DATA IPROC,ICROSS/1,1/
-C ----------
-C BEGIN CODE
-C ----------
-      DSIG=0D0
-      IF (PASSCUTS(PP)) THEN
-%(pdf_lines)s
-         CALL SMATRIX(PP,DSIGUU)                                              
-         dsiguu=dsiguu*rewgt(PP)
-         If (dsiguu.lt.1d199) then
-         dsig=%(dsig_line)s
-         else
-             write(*,*) "Error in matrix element"
-             dsiguu=0d0
-             dsig=0d0
-         endif
-         call unwgt(pp,%(dsig_line)s*wgt)
-      ENDIF
-      END""" % replace_dict
+    file = open(os.path.join(_file_path, \
+                      'iolibs/template_files/auto_dsig_v4.inc')).read()
+    file = file % replace_dict
 
     # Write the file
     for line in file.split('\n'):
@@ -843,9 +449,9 @@ def write_maxamps_file(fsock, matrix_element, fortran_model):
 
     writer = FortranWriter()
 
-    file = \
-"""   integer    maxamps
-      parameter (maxamps=%d)""" % len(matrix_element.get_all_amplitudes())
+    file = "       integer    maxamps"
+    file = file + "parameter (maxamps=%d)" % \
+           len(matrix_element.get_all_amplitudes())
 
     # Write the file
     for line in file.split('\n'):
@@ -909,9 +515,8 @@ def write_ncombs_file(fsock, matrix_element, fortran_model, ncombs):
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
     # ncomb (used for clustering) is 2^(nexternal + 1)
-    file = \
-"""      integer    n_max_cl
-      parameter (n_max_cl=%d)""" % (2 ** (nexternal + 1))
+    file = "       integer    n_max_cl"
+    file = file + "parameter (n_max_cl=%d)" % (2 ** (nexternal + 1))
 
     # Write the file
 
@@ -941,7 +546,6 @@ def write_nexternal_file(fsock, matrix_element, fortran_model):
       integer    nincoming
       parameter (nincoming=%(ninitial)d)""" % replace_dict
 
-
     # Write the file
     for line in file.split('\n'):
         writer.write_fortran_line(fsock, line)
@@ -957,9 +561,8 @@ def write_ngraphs_file(fsock, matrix_element, fortran_model, nconfigs):
 
     writer = FortranWriter()
 
-    file = \
-"""   integer    n_max_cg
-      parameter (n_max_cg=%d)""" % nconfigs
+    file = "       integer    n_max_cg"
+    file = file + "parameter (n_max_cg=%d)" % nconfigs
 
     # Write the file
     for line in file.split('\n'):
