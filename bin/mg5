@@ -55,7 +55,7 @@ if options.file or args:
     else:
         input_file = options.file
         
-    input_file = open(input_file,'rU')
+    input_file = cmd_interface.cmdfile(input_file,'rU')
     cmd_line = cmd_interface.MadGraphCmd(stdin=input_file)
     cmd_line.use_rawinput = False #put it in non interactive mode
     cmd_line.cmdloop()

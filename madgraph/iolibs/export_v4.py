@@ -27,6 +27,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
+import madgraph.iolibs.template_files as Template
 
 logger = logging.getLogger('export_v4')
 
@@ -56,7 +57,62 @@ def copy_v4template(mgme_dir, dir_path, model_dir, clean):
         open(os.path.join(dir_path,'SubProcesses','MGVersion.txt'), 'w').write(
                                                           MG_version['version'])
         
-            
+#===============================================================================
+# write a madgraph 4 proc_card.dat
+#===============================================================================
+def write_mg4_proc_card(file_pos, modelname, processlist):
+    """ write an equivalent of the MG4 proc_card in order that all the Madevent
+    Perl script of MadEvent4 are still working properly for pure MG5 run."""
+    
+    proc_card_template = Template.mg4_proc_card.mg4_template
+    process_template = Template.mg4_proc_card.process_template
+    process_text=''
+    # First compute the output for the process
+    for process in processlist:
+        process_name = get_process_info_lines(process).split(':')[-1]
+        core_process=''
+        coupling=''
+        for info in process_name.split():
+            if '=' in info:
+                coupling += info + '\n'
+            else:
+                core_process += info+' '
+        
+        process_text += process_template.substitute({'process': core_process, \
+                                                        'coupling': coupling})
+        
+    text = proc_card_template.substitute({'process': process_text,
+                                        'model': modelname,
+                                        'multiparticle':''})
+    ff = open(file_pos,'w')
+    ff.write(text)
+    ff.close()
+
+#===============================================================================
+# Create Web Page via external routines
+#===============================================================================
+def create_v4_webpage(dir_path):
+    """call the perl script creating the web interface for MadEvent"""
+
+    old_pos = os.getcwd()
+    os.chdir(os.path.join(dir_path,'SubProcesses'))
+    subprocess.call([os.path.join(dir_path, 'bin','gen_infohtml-pl')])
+    
+    os.chdir(os.path.pardir)
+    subprocess.call([os.path.join(dir_path, 'bin','gen_crossxhtml-pl')])
+    [mv(name,'./HTML/') for name in os.listdir('.') if \
+                        (name.endswith('.html') or name.endswith('.jpg')) and \
+                        name != 'index.html']               
+    
+    subprocess.call([os.path.join(dir_path, 'bin','gen_cardhtml-pl')])
+    if os.path.exists(os.path.join('SubProcesses','subproc.mg')):
+        if os.path.exists('madevent.tar.gz'):
+            os.remove('madevent.tar.gz')
+        subprocess.call(['make'])
+    
+    #return to the initial dir
+    os.chdir(old_pos)               
+           
 #===============================================================================
 # write_matrix_element_v4_standalone
 #===============================================================================
@@ -2180,8 +2236,23 @@ def mv(path1, path2):
     """simple mv taking linux or mix format entry"""
     path1 = format_path(path1)
     path2 = format_path(path2)
-    shutil.move(path1, path2)
-
+    try:
+        shutil.move(path1, path2)
+    except:
+        # An error can occur if the files exist at final destination
+        if os.path.isfile(path2):
+            os.remove(path2)
+            shutil.move(path1, path2)
+            return
+        elif os.path.isdir(path2) and os.path.exists(
+                                   os.path.join(path2,os.path.basename(path1))):      
+            path2 = os.path.join(path2,os.path.basename(path1))
+            print path2
+            os.remove(path2)
+            shutil.move(path1, path2)
+        else:
+            raise
+        
 def ln(file_pos, starting_dir, name='', log=True):
     """a simple way to have a symbolic link whithout to have to change directory
     starting_point is the directory where to write the link

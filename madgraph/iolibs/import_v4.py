@@ -397,8 +397,9 @@ class Reader_proc_card():
         #store multipart information
         for line in iter(fp.readline, self.end_multipart):
             data=line.split()
-            self.particles_name.add(data[0].lower())
-            self.multipart.append(line)   
+            if data:
+                self.particles_name.add(data[0].lower())
+                self.multipart.append(line)   
         
     
     def treat_data(self, model):
@@ -427,6 +428,7 @@ class Reader_proc_card():
         #finally export the madevent output
         lines.append('setup madevent_v4 %s -f' % os.path.split(self.process_path)[1])
         lines.append('export madevent_v4')
+        lines.append('makehtml madevent_v4')
         lines.append('history %s' % os.path.relpath(
                 os.path.join(self.process_path, 'Cards', 'proc_card_mg5.dat')))
         

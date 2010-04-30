@@ -80,7 +80,7 @@ class MadGraphCmd(cmd.Cmd):
                       'multiparticles']
     __add_opts = ['process']
     __save_opts = ['model', 'processes']
-    __import_formats = ['model_v4', 'proc_v4','proc']
+    __import_formats = ['model_v4', 'proc_v4','command']
     __export_formats = ['standalone_v4', 'sa_dirs_v4', 'madevent_v4']
     __export_dir = None 
 
@@ -175,6 +175,7 @@ class MadGraphCmd(cmd.Cmd):
         "*               Type 'help' for in-line help.              *\n" + \
         "*                                                          *\n" + \
         "************************************************************"
+        
     def precmd(self, line):
         """ force the printing of the line if this is executed with an stdin """
         
@@ -337,7 +338,7 @@ class MadGraphCmd(cmd.Cmd):
         self.history[-1] = '#%s' % self.history[-1]
  
         # Read the lines of the file and execute them
-        for line in open(filepath):
+        for line in cmdfile(filepath):
             #remove pointless spaces and \n
             line = line.replace('\n','').strip()
             # execute the line if this one is not empty
@@ -1029,7 +1030,7 @@ class MadGraphCmd(cmd.Cmd):
         ndiags, cpu_time = generate_matrix_elements(self)
         calls = 0
 
-        if args[0] == 'v4standalone':
+        if args[0] == 'standalone_v4':
             for me in self.__curr_matrix_elements.get('matrix_elements'):
                 filename = os.path.join(path, 'matrix_' + \
                            me.get('processes')[0].shell_string() + ".f")
@@ -1043,17 +1044,27 @@ class MadGraphCmd(cmd.Cmd):
                                                     self.__curr_fortran_model)
 
 
-        if args[0] == 'v4sa_dirs':
+        if args[0] == 'sa_dirs_v4':
             for me in self.__curr_matrix_elements.get('matrix_elements'):
                 calls = calls + \
                         export_v4.generate_subprocess_directory_v4_standalone(\
                             me, self.__curr_fortran_model, path)
 
-        if args[0] == 'v4madevent':
+        if args[0] == 'madevent_v4':
             for me in self.__curr_matrix_elements.get('matrix_elements'):
                 calls = calls + \
                         export_v4.generate_subprocess_directory_v4_madevent(\
                             me, self.__curr_fortran_model, path)
+            
+            # Check how the run was done
+            call_from_mg4 = [1 for command in self.history \
+                        if command.startswith('import') and 'proc_v4' in command]
+            
+            card_path = os.path.join(path,os.path.pardir,'Cards','proc_card.dat')
+            if not call_from_mg4:
+                export_v4.write_mg4_proc_card(card_path,
+                                os.path.split(self.__model_dir)[-1],
+                                self.__curr_matrix_elements.get('matrix_elements'))
                 
         print ("Generated helas calls for %d subprocesses " + \
               "(%d diagrams) in %0.3f s") % \
@@ -1171,6 +1182,49 @@ class MadGraphCmd(cmd.Cmd):
         stop = time.time()
         print 'time to draw', stop - start
 
+    def do_makehtml(self, line):
+        """ make the html output for a MAdevent directory """
+        
+        args = self.split_arg(line)
+        
+        if len(args)<1:
+            self.help_makehtml()
+            return False
+        
+        if args[0] != 'madevent_v4':
+            self.help_makehtml()
+            return False
+        
+        if (len(args) == 1 and not self.__export_dir) or \
+                        (len(args)>1 and not os.path.isdir(args[1])):
+            self.help_makehtml()
+            return False            
+        
+        if self.__export_dir:
+            dir_path = self.__export_dir
+        else: 
+            dir_path = args[1]
+        
+        print 'creating html pages'    
+        export_v4.create_v4_webpage(dir_path)
+        
+    def complete_makehtml(self, text, line, begidx, endidx):
+        """ format: makehtlm madevent_v4 [PATH]"""
+        
+        # Format
+        if len(self.split_arg(line[0:begidx])) == 1:
+            return self.list_completion(text, ['madevent_v4'])
+       
+        # Filename if directory is not given
+        if len(self.split_arg(line[0:begidx])) == 2:
+            return self.path_completion(text)
+
+        # Filename if directory is given
+        if len(self.split_arg(line[0:begidx])) == 3:
+            return self.path_completion(text,
+                                        base_dir=\
+                                          self.split_arg(line[0:begidx])[2]) 
+
 
     # Quit
     def do_quit(self, line):
@@ -1262,6 +1316,12 @@ class MadGraphCmd(cmd.Cmd):
         print "-- write in the specified files all the call to MG5 that you have """
         print "   perform since that you have open this command line applet."""
 
+    def help_makehtml(self):
+        print "syntax: makehtlm madevent_v4 [PATH]"
+        print "-- create the web page related to the directory PATH"
+        print "   by default PATH is the directory defined with the setup command"
+        
+
     def help_draw(self):
         print "syntax: draw FILEPATH [option=value]"
         print "-- draw the diagrams in eps format"
@@ -1293,6 +1353,22 @@ class MadGraphCmd(cmd.Cmd):
 
     do_EOF = do_quit
     help_EOF = help_quit
+
+
+#===============================================================================
+# 
+#===============================================================================
+class cmdfile(file):
+    
+    def readline(self,*arg,**opt):
+        """readline outputing a \n at the end ot the read line"""
+        line = file.readline(self, *arg, **opt)
+        if line.endswith('\n'):
+            return line
+        elif line:
+            return line + '\n'
+        else:
+            return line
 
 #===============================================================================
 # __main__
