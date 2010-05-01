@@ -22,6 +22,7 @@ import re
 import shutil
 import subprocess
 
+
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing_eps as draw
@@ -435,10 +436,6 @@ def write_decayBW_file(fsock, matrix_element, fortran_model,
 def write_dname_file(fsock, matrix_element, fortran_model):
     """Write the dname.mg file for MG4"""
 
-    writer = FortranWriter()
-
-    replace_dict = {}
-
     line = "DIRNAME=P%s" % \
            matrix_element.get('processes')[0].shell_string_v4()
 
@@ -455,8 +452,6 @@ def write_iproc_file(fsock, matrix_element, fortran_model):
 
     writer = FortranWriter()
 
-    replace_dict = {}
-
     line = "%d" % \
            matrix_element.get('processes')[0].get('id')
 
@@ -472,8 +467,6 @@ def write_leshouche_file(fsock, matrix_element, fortran_model):
     """Write the leshouche.inc file for MG4"""
 
     writer = FortranWriter()
-
-    replace_dict = {}
 
     # Extract number of external particles
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
@@ -573,6 +566,7 @@ def write_mg_sym_file(fsock, matrix_element, fortran_model):
     for key in identical_indices.keys():
         if len(identical_indices[key]) < 2:
             del identical_indices[key]
+            
     # Write mg.sym file
     lines.append(str(len(identical_indices.keys())))
     for key in identical_indices.keys():
@@ -623,8 +617,8 @@ def write_nexternal_file(fsock, matrix_element, fortran_model):
     replace_dict['nexternal'] = nexternal
     replace_dict['ninitial'] = ninitial
 
-    file = \
-"""   integer    nexternal
+    file = """ \
+      integer    nexternal
       parameter (nexternal=%(nexternal)d)
       integer    nincoming
       parameter (nincoming=%(ninitial)d)""" % replace_dict
@@ -728,8 +722,6 @@ def write_props_file(fsock, matrix_element, fortran_model, s_and_t_channels):
 def write_subproc(fsock, matrix_element, fortran_model):
     """Append this subprocess to the subproc.mg file for MG4"""
 
-    replace_dict = {}
-
     line = "P%s" % \
            matrix_element.get('processes')[0].shell_string_v4()
 
@@ -816,11 +808,9 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
 
     linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
 
-    try:
-        for file in linkfiles:
-            os.symlink(os.path.join('..', file), file)
-    except os.error:
-        logger.warning('Could not link to ' + os.path.join('..', file))
+    
+    for file in linkfiles:
+        ln('../%s' % file)
 
     # Return to original PWD
     os.chdir(cwd)
@@ -989,7 +979,6 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
                  'symmetry.f',
                  'unwgt.f']
 
-
     for file in linkfiles:
         ln('../'+ file ,'.')
     
@@ -1121,8 +1110,7 @@ def get_icolamp_lines(matrix_element):
 
     bool_list = []
 
-    for icolor, coeff_list in \
-            enumerate(color_amplitudes):
+    for coeff_list in color_amplitudes:
 
         # List of amplitude numbers used in this JAMP
         amp_list = [amp_number for (dummy, amp_number) in coeff_list]
@@ -1285,7 +1273,6 @@ class FortranWriter():
                   "write_fortran_line must have a single line as argument"
 
         # Check if this line is a comment
-        comment = False
         if self.__comment_pattern.search(line):
             # This is a comment
             myline = " " * (5 + self.__indent) + line.lstrip()[1:].lstrip()
@@ -1863,7 +1850,7 @@ def mv(path1, path2):
         else:
             raise
         
-def ln(file_pos, starting_dir, name='', log=True):
+def ln(file_pos, starting_dir='.', name='', log=True):
     """a simple way to have a symbolic link whithout to have to change directory
     starting_point is the directory where to write the link
     file_pos is the file to link
