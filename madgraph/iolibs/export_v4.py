@@ -15,12 +15,10 @@
 
 """Methods and classes to export matrix elements to v4 format."""
 
-import copy
 import fractions
 import logging
 import os
 import re
-import sys
 
 import madgraph.core.color_algebra as color
 import madgraph.iolibs.drawing_eps as draw
@@ -352,10 +350,6 @@ def write_decayBW_file(fsock, matrix_element, fortran_model,
 def write_dname_file(fsock, matrix_element, fortran_model):
     """Write the dname.mg file for MG4"""
 
-    writer = FortranWriter()
-
-    replace_dict = {}
-
     line = "DIRNAME=P%s" % \
            matrix_element.get('processes')[0].shell_string_v4()
 
@@ -372,8 +366,6 @@ def write_iproc_file(fsock, matrix_element, fortran_model):
 
     writer = FortranWriter()
 
-    replace_dict = {}
-
     line = "%d" % \
            matrix_element.get('processes')[0].get('id')
 
@@ -389,8 +381,6 @@ def write_leshouche_file(fsock, matrix_element, fortran_model):
     """Write the leshouche.inc file for MG4"""
 
     writer = FortranWriter()
-
-    replace_dict = {}
 
     # Extract number of external particles
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
@@ -490,6 +480,7 @@ def write_mg_sym_file(fsock, matrix_element, fortran_model):
     for key in identical_indices.keys():
         if len(identical_indices[key]) < 2:
             del identical_indices[key]
+            
     # Write mg.sym file
     lines.append(str(len(identical_indices.keys())))
     for key in identical_indices.keys():
@@ -540,8 +531,8 @@ def write_nexternal_file(fsock, matrix_element, fortran_model):
     replace_dict['nexternal'] = nexternal
     replace_dict['ninitial'] = ninitial
 
-    file = \
-"""   integer    nexternal
+    file = """ \
+      integer    nexternal
       parameter (nexternal=%(nexternal)d)
       integer    nincoming
       parameter (nincoming=%(ninitial)d)""" % replace_dict
@@ -644,8 +635,6 @@ def write_props_file(fsock, matrix_element, fortran_model, s_and_t_channels):
 #===============================================================================
 def write_subproc(fsock, matrix_element, fortran_model):
     """Append this subprocess to the subproc.mg file for MG4"""
-
-    replace_dict = {}
 
     line = "P%s" % \
            matrix_element.get('processes')[0].shell_string_v4()
@@ -883,7 +872,6 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
                  'symmetry.f',
                  'unwgt.f']
 
-
     for file in linkfiles:
         try:
             os.symlink(os.path.join('..', file), file)
@@ -1014,8 +1002,7 @@ def get_icolamp_lines(matrix_element):
 
     bool_list = []
 
-    for icolor, coeff_list in \
-            enumerate(color_amplitudes):
+    for coeff_list in color_amplitudes:
 
         # List of amplitude numbers used in this JAMP
         amp_list = [amp_number for (dummy, amp_number) in coeff_list]
