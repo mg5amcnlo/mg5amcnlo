@@ -268,6 +268,9 @@ class Amplitude(base_objects.PhysicsObject):
         # Set diagrams to res
         self['diagrams'] = res
 
+        # Trim down number of legs and vertices used to save memory
+        self.trim_diagrams()
+
         if res:
             logger.info("Process has %d diagrams" % len(res))
 
@@ -548,6 +551,28 @@ class Amplitude(base_objects.PhysicsObject):
                             base_objects.VertexList(flat_vx_lists[i])))
 
         return res
+
+    def trim_diagrams(self):
+        """Reduce the number of legs and vertices used in memory."""
+
+        legs = []
+        vertices = []
+
+        for diagram in self.get('diagrams'):
+            for ivx, vertex in enumerate(diagram.get('vertices')):
+                for ileg, leg in enumerate(vertex.get('legs')):
+                    leg.set('from_group', False)
+                    try:
+                        index = legs.index(leg)
+                        vertex.get('legs')[ileg] = legs[index]
+                    except ValueError:
+                        legs.append(leg)
+                try:
+                    index = vertices.index(vertex)
+                    diagram.get('vertices')[ivx] = vertices[index]
+                except ValueError:
+                    vertices.append(vertex)
+        
 
 #===============================================================================
 # AmplitudeList

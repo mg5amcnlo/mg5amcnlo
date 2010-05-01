@@ -755,7 +755,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return (tuple(res), self.get('lorentz'))
 
-    def get_base_vertices(self, wf_dict, optimization = 1):
+    def get_base_vertices(self, wf_dict = {}, vx_list = [], optimization = 1):
         """Recursive method to get a base_objects.VertexList
         corresponding to this wavefunction and its mothers."""
 
@@ -767,9 +767,25 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Add vertices for all mothers
         for mother in self.get('mothers'):
             # This is where recursion happens
-            vertices.extend(mother.get_base_vertices(wf_dict, optimization))
+            vertices.extend(mother.get_base_vertices(wf_dict, vx_list,
+                                                     optimization))
         # Generate last vertex
         legs = base_objects.LegList()
+
+        # We use the from_group flag to indicate whether this outgoing
+        # leg corresponds to a decaying (onshell) particle or not
+        try:
+            lastleg = wf_dict[self.get('number')]
+        except KeyError:            
+            lastleg = base_objects.Leg({
+                'id': self.get_pdg_code(),
+                'number': self.get('number_external'),
+                'state': self.get('leg_state'),
+                'from_group': self.get('onshell')
+                })
+            if optimization != 0:
+                wf_dict[self.get('number')] = lastleg
+
         for mother in self.get('mothers'):
             try:
                 leg = wf_dict[mother.get('number')]
@@ -783,19 +799,20 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if optimization != 0:
                     wf_dict[mother.get('number')] = leg
             legs.append(leg)
-        # We use the from_group flag to indicate whether this outgoing
-        # leg corresponds to a decaying (onshell) particle or not
-        leg = base_objects.Leg({
-            'id': self.get_pdg_code(),
-            'number': self.get('number_external'),
-            'state': self.get('leg_state'),
-            'from_group': self.get('onshell')
-            })
-        legs.append(leg)
 
-        vertices.append(base_objects.Vertex({
+        legs.append(lastleg)
+
+        vertex = base_objects.Vertex({
             'id': self.get('interaction_id'),
-            'legs': legs}))
+            'legs': legs})
+
+        try:
+            index = vx_list.index(vertex)
+            vertex = vx_list[index]
+        except ValueError:
+            pass
+        
+        vertices.append(vertex)
 
         return vertices
 
@@ -833,7 +850,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                self.get('mothers'))
 
         for mother in final_mothers:
-            schannels.extend(mother.get_base_vertices({}))
+            schannels.extend(mother.get_base_vertices(optimization = 0))
 
         # Extract initial state mothers
         init_mothers = filter(lambda wf: wf.get('number_external') <= ninitial,
@@ -1407,7 +1424,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         return (-1) ** nflips
 
-    def get_base_diagram(self, wf_dict, optimization = 1):
+    def get_base_diagram(self, wf_dict = {}, vx_list = [], optimization = 1):
         """Return the base_objects.Diagram which corresponds to this
         amplitude, using a recursive method for the wavefunctions."""
 
@@ -1415,7 +1432,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         # Add vertices for all mothers
         for mother in self.get('mothers'):
-            vertices.extend(mother.get_base_vertices(wf_dict, optimization))
+            vertices.extend(mother.get_base_vertices(wf_dict, vx_list,
+                                                     optimization))
         # Generate last vertex
         legs = base_objects.LegList()
         for mother in self.get('mothers'):
@@ -1452,7 +1470,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                                self.get('mothers'))
 
         for mother in final_mothers:
-            schannels.extend(mother.get_base_vertices({}))
+            schannels.extend(mother.get_base_vertices(optimization = 0))
 
         # Extract initial state mothers
         init_mothers = filter(lambda wf: wf.get('number_external') <= ninitial,
@@ -2227,6 +2245,17 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         decay_elements = [copy.deepcopy(d) for d in \
                           [ decay.get('diagrams') ] * len(old_wfs)]
 
+        # Need to replace Particle in all wavefunctions to avoid
+        # deepcopy
+        idecay = 0
+        for decay_element in decay_elements:
+            for idiag, diagram in enumerate(decay.get('diagrams')):
+                wfs = diagram.get('wavefunctions')
+                decay_diag = decay_element[idiag]
+                for i, wf in enumerate(decay_diag.get('wavefunctions')):
+                    wf.set('particle', wfs[i].get('particle'))
+                    wf.set('antiparticle', wfs[i].get('antiparticle'))
+
         for decay_element in decay_elements:
 
             # Remove the unwanted initial state wavefunctions from decay
@@ -2336,7 +2365,17 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
                         # Don't want to affect original decay
                         # wavefunctions, so need to deepcopy
-                        decay_diag_wfs = copy.deepcopy(decay_diag.get('wavefunctions'))
+                        decay_diag_wfs = copy.deepcopy(\
+                                                decay_diag.get('wavefunctions'))
+                        # Need to replace Particle in all
+                        # wavefunctions to avoid deepcopy
+                        idecay = 0
+                        for i, wf in enumerate(decay_diag.get('wavefunctions')):
+                            decay_diag_wfs[i].set('particle', \
+                                                  wf.get('particle'))
+                            decay_diag_wfs[i].set('antiparticle', \
+                                                  wf.get('antiparticle'))
+
                         # Complete decay_diag_wfs with the mother wavefunctions
                         # to allow for independent fermion flow flips
                         decay_diag_wfs = decay_diag_wfs.insert_own_mothers()
@@ -2751,9 +2790,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         model = self.get('processes')[0].get('model')
 
         wf_dict = {}
+        vx_list = []
         diagrams = base_objects.DiagramList()
         for diag in self.get('diagrams'):
-            diagrams.append(diag.get('amplitudes')[0].get_base_diagram(wf_dict, optimization))
+            diagrams.append(diag.get('amplitudes')[0].get_base_diagram(\
+                wf_dict, vx_list, optimization))
 
         return diagram_generation.Amplitude({\
             'process': self.get('processes')[0],
@@ -3364,8 +3405,16 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                 # Make sure to not modify the original matrix element
                 matrix_element = copy.deepcopy(core_process)
                 # Avoid Python copying the complete model every time
-                matrix_element.get('processes')[0].set('model', \
-                                core_process.get('processes')[0].get('model'))
+                for i, process in enumerate(matrix_element.get('processes')):
+                    process.set('model',
+                            core_process.get('processes')[i].get('model'))
+                # Need to replace Particle in all wavefunctions to avoid
+                # deepcopy
+                idecay = 0
+                org_wfs = core_process.get_all_wavefunctions()
+                for i, wf in enumerate(matrix_element.get_all_wavefunctions()):
+                    wf.set('particle', org_wfs[i].get('particle'))
+                    wf.set('antiparticle', org_wfs[i].get('antiparticle'))
 
                 # Insert the decay chains
                 logger.info("Combine %s with decays %s" % \
