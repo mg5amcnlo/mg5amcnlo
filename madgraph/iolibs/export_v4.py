@@ -1165,7 +1165,6 @@ class FortranWriter():
                   "write_fortran_line must have a single line as argument"
 
         # Check if this line is a comment
-        comment = False
         if self.__comment_pattern.search(line):
             # This is a comment
             myline = " " * (5 + self.__indent) + line.lstrip()[1:].lstrip()
