@@ -525,12 +525,10 @@ class Process_info():
         # extract (S-)forbidden particle
         pos_forbid = line.find('/')
         pos_sforbid = line.find('$')
-        print 'INFO', pos_forbid,pos_sforbid
         
         #select the restriction (pos is -1 if not defined)
         if pos_forbid != -1 and pos_sforbid != -1:
             if  pos_forbid > pos_sforbid :
-                print 'first'
                 self.forbid = self.separate_particle(line[pos_forbid + 1:], \
                                                                  particles_name)
                 self.s_forbid = self.separate_particle(\
@@ -543,13 +541,10 @@ class Process_info():
                                                            particles_name)
                 line = line[:min(pos_forbid,pos_sforbid)]
         elif pos_forbid != -1:
-            print 'anal2'
             self.forbid = self.separate_particle(line[pos_forbid+1:], \
                                                                  particles_name)
             line = line[:pos_forbid]
         elif pos_sforbid != -1:
-            print 'anal3',[line[pos_sforbid+1:]]
-            print self.separate_particle('a', particles_name)
             self.s_forbid = self.separate_particle(line[pos_sforbid+1:], \
                                                                  particles_name)
             line = line[:pos_sforbid]

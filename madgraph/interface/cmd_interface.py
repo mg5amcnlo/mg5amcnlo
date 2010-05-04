@@ -90,6 +90,7 @@ class MadGraphCmd(cmd.Cmd):
         """ add a tracker of the history """
         
         self.history = []
+        self.save_line = ''
         cmd.Cmd.__init__(self, *arg, **opt)
         self.__generate_info = "" # information line on the generation
         
@@ -182,6 +183,17 @@ class MadGraphCmd(cmd.Cmd):
         # Print the calling line in the non interactive mode    
         if not self.use_rawinput:
             print line
+        
+        #Check if they are a save line:
+        if self.save_line:
+            line = self.save_line + line 
+            self.save_line = ''
+        
+        #Check that the line is complete
+        if line.endswith('\\'):
+            self.save_line = line[:-1]
+            return '' # do nothing   
+            
         # execute the line command
         return line
     
@@ -353,7 +365,6 @@ class MadGraphCmd(cmd.Cmd):
 
     def onecmd_full(self, line):
         """for third party call, call the line with pre and postfix treatment """
-        print line
         line = self.precmd(line)
         stop = self.onecmd(line)
         stop = self.postcmd(stop, line)
@@ -1015,8 +1026,6 @@ class MadGraphCmd(cmd.Cmd):
 
         if len(args) == 0 or (len(args) == 1 and not self.__export_dir) or \
                                             args[0] not in self.__export_formats:
-            print len(args), (len(args) == 1 and not self.__export_dir), args[0] not in self.__export_formats
-            print args
             self.help_export()
             return False
 
@@ -1207,18 +1216,27 @@ class MadGraphCmd(cmd.Cmd):
             dir_path = self.__export_dir
         else: 
             dir_path = args[1]
+            
+        #look if the user ask to bypass the jpeg creation
+        if '--nojpeg' in args:
+            makejpg = False
+        else:
+            makejpg = True
         
         print 'creating html pages'    
-        export_v4.create_v4_webpage(dir_path)
-        os.system('touch %s/done' % dir_path)
+        export_v4.create_v4_webpage(dir_path, makejpg)
+        os.system('touch %s/done' % os.path.join(dir_path,'Subprocesses'))
         
     def complete_makehtml(self, text, line, begidx, endidx):
-        """ format: makehtlm madevent_v4 [PATH]"""
+        """ format: makehtlm madevent_v4 [PATH] [--nojpeg]"""
         
         # Format
         if len(self.split_arg(line[0:begidx])) == 1:
             return self.list_completion(text, ['madevent_v4'])
-       
+        
+        if text.startswith('-'):
+            return self.list_completion(text, ['--nojpeg'])
+
         # Filename if directory is not given
         if len(self.split_arg(line[0:begidx])) == 2:
             return self.path_completion(text)

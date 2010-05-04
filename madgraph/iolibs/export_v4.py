@@ -87,11 +87,24 @@ def write_mg4_proc_card(file_pos, modelname, process_str):
 #===============================================================================
 # Create Web Page via external routines
 #===============================================================================
-def create_v4_webpage(dir_path):
+def create_v4_webpage(dir_path, makejpg):
     """call the perl script creating the web interface for MadEvent"""
 
     old_pos = os.getcwd()
+    
     os.chdir(os.path.join(dir_path,'SubProcesses'))
+    P_dir_list = [proc for proc in os.listdir('.') if os.path.isdir(proc) and \
+                                                                proc[0] == 'P']
+    
+    # Convert the poscript in jpg files (if authorize)
+    if makejpg:
+        for Pdir in P_dir_list:
+            os.chdir(Pdir)
+            subprocess.call([os.path.join(dir_path, 'bin','gen_jpeg-pl')])
+            os.chdir(os.path.pardir)
+    
+    # Create the WebPage using perl script
+    subprocess.call([os.path.join(dir_path, 'bin','gen_cardhtml-pl')])
     subprocess.call([os.path.join(dir_path, 'bin','gen_infohtml-pl')])
     
     os.chdir(os.path.pardir)
@@ -949,8 +962,8 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
                  matrix_element.get('processes')[0].nice_string())
     plot.draw()
 
-    # Generate jpgs
-    os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
+    # Generate jpgs -> pass in make_html
+    #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
 
     linkfiles = ['addmothers.f',
                  'cluster.f',
@@ -1838,7 +1851,6 @@ def mv(path1, path2):
         elif os.path.isdir(path2) and os.path.exists(
                                    os.path.join(path2,os.path.basename(path1))):      
             path2 = os.path.join(path2,os.path.basename(path1))
-            print path2
             os.remove(path2)
             shutil.move(path1, path2)
         else:
