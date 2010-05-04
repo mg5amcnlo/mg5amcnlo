@@ -337,7 +337,7 @@ class Reader_proc_card():
     end_multipart = "# End  MULTIPARTICLES # This is TAG. Do not modify this line\n" 
         
     # line pattern (remove comment at the end of the line)
-    pat_line =re.compile(r"""^\s*(?P<info>[^\#]*[\w+-~])\s*[\#]*""",re.DOTALL)
+    pat_line =re.compile(r"""^\s*(?P<info>[^\#]*[\S)])\s*(\#|$)""",re.DOTALL)
     
     def __init__(self, fsock):
         """init the variable"""
@@ -347,11 +347,8 @@ class Reader_proc_card():
         self.multipart = [] # list of the mg4 definition of multiparticle
         self.particles_name = set() # set of authorize particle name
         self.couplings_name = set() # set of mandatory couplings
-        print os.path.dirname(fsock.name)
         self.process_path = os.path.realpath(os.path.join( 
                                         os.path.dirname(fsock.name), os.pardir))
-        print self.process_path
-        #self.mg5_process = [] 
         
         # Reading the files and store the information in string format.
         self.collect_info(fsock)
