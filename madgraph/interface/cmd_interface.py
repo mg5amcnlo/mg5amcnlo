@@ -895,7 +895,11 @@ class MadGraphCmd(cmd.Cmd):
         if args[0] == 'process':
             # Rejoin line
             line = ' '.join(args[1:])
-
+            
+            # store the first process (for the perl script)
+            if not self.__generate_info:
+                self.__generate_info = line
+                
             # Reset Helas matrix elements
             self.__curr_matrix_elements = helas_objects.HelasMultiProcess()
 
