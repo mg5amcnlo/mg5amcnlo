@@ -91,6 +91,7 @@ class MadGraphCmd(cmd.Cmd):
         
         self.history = []
         cmd.Cmd.__init__(self, *arg, **opt)
+        self.__generate_info = "" # information line on the generation
         
     def split_arg(self, line):
         """Split a line of arguments"""
@@ -623,6 +624,7 @@ class MadGraphCmd(cmd.Cmd):
 
         # Reset Helas matrix elements
         self.__curr_matrix_elements = helas_objects.HelasMultiProcess()
+        self.__generate_info = line
 
         try:
             if line.find(',') == -1:
@@ -1060,10 +1062,12 @@ class MadGraphCmd(cmd.Cmd):
                         export_v4.generate_subprocess_directory_v4_madevent(\
                             me, self.__curr_fortran_model, path)
             
-            card_path = os.path.join(path, os.path.pardir, 'Cards', 'proc_def.dat')
-            export_v4.write_mg4_proc_card(card_path,
+            card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
+                                                                'procdef_mg5.dat')
+            if self.__generate_info:
+                export_v4.write_mg4_proc_card(card_path,
                                 os.path.split(self.__model_dir)[-1],
-                                self.__curr_matrix_elements.get('matrix_elements'))
+                                self.__generate_info)
                 
         print ("Generated helas calls for %d subprocesses " + \
               "(%d diagrams) in %0.3f s") % \
@@ -1206,6 +1210,7 @@ class MadGraphCmd(cmd.Cmd):
         
         print 'creating html pages'    
         export_v4.create_v4_webpage(dir_path)
+        os.system('touch %s/done' % dir_path)
         
     def complete_makehtml(self, text, line, begidx, endidx):
         """ format: makehtlm madevent_v4 [PATH]"""

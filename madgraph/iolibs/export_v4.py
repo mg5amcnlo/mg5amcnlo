@@ -62,27 +62,21 @@ def copy_v4template(mgme_dir, dir_path, model_dir, clean):
 #===============================================================================
 # write a madgraph 4 proc_card.dat
 #===============================================================================
-def write_mg4_proc_card(file_pos, modelname, processlist):
+def write_mg4_proc_card(file_pos, modelname, process_str):
     """ write an equivalent of the MG4 proc_card in order that all the Madevent
     Perl script of MadEvent4 are still working properly for pure MG5 run."""
     
     proc_card_template = Template.mg4_proc_card.mg4_template
     process_template = Template.mg4_proc_card.process_template
     process_text=''
-    # First compute the output for the process
-    for process in processlist:
-        process_name = get_process_info_lines(process).split(':')[-1]
-        core_process=''
-        coupling=''
-        for info in process_name.split():
-            if '=' in info:
-                coupling += info + '\n'
-            else:
-                core_process += info+' '
-        
-        process_text += process_template.substitute({'process': core_process, \
+    coupling=''
+    # First find the coupling
+    for info in process_str.split():
+        if '=' in info:
+            coupling += info + '\n'
+    process_text += process_template.substitute({'process': process_str, \
                                                         'coupling': coupling})
-        
+    
     text = proc_card_template.substitute({'process': process_text,
                                         'model': modelname,
                                         'multiparticle':''})

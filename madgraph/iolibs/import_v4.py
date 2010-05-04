@@ -508,6 +508,7 @@ class Process_info():
             pp>h>WWj /a $u @3
             pp>(h>WW)j /a $u @3
         """
+
         line = self.line
         #extract the tag
         if '@' in line:
@@ -524,30 +525,36 @@ class Process_info():
         # extract (S-)forbidden particle
         pos_forbid = line.find('/')
         pos_sforbid = line.find('$')
+        print 'INFO', pos_forbid,pos_sforbid
         
         #select the restriction (pos is -1 if not defined)
         if pos_forbid != -1 and pos_sforbid != -1:
             if  pos_forbid > pos_sforbid :
-                self.forbid = self.separate_particle(line[pos_forbid:], \
+                print 'first'
+                self.forbid = self.separate_particle(line[pos_forbid + 1:], \
                                                                  particles_name)
-                self.sforbid = self.separate_particle(\
-                                    line[pos_sforbid:pos_forbid], particles_name)
+                self.s_forbid = self.separate_particle(\
+                                    line[pos_sforbid + 1:pos_forbid], particles_name)
                 line = line[:min(pos_forbid,pos_sforbid)]
             else:
                 self.forbid = self.separate_particle(\
-                                   line[pos_forbid:pos_sforbid], particles_name)
-                self.s_forbid = self.separate_particle(line[pos_sforbid:], \
+                                   line[pos_forbid + 1:pos_sforbid], particles_name)
+                self.s_forbid = self.separate_particle(line[pos_sforbid + 1:], \
                                                            particles_name)
                 line = line[:min(pos_forbid,pos_sforbid)]
         elif pos_forbid != -1:
-            self.forbid = self.separate_particle(line[pos_forbid:], \
+            print 'anal2'
+            self.forbid = self.separate_particle(line[pos_forbid+1:], \
                                                                  particles_name)
             line = line[:pos_forbid]
         elif pos_sforbid != -1:
-            self.sforbid = self.separate_particle(line[pos_sforbid:], \
+            print 'anal3',[line[pos_sforbid+1:]]
+            print self.separate_particle('a', particles_name)
+            self.s_forbid = self.separate_particle(line[pos_sforbid+1:], \
                                                                  particles_name)
             line = line[:pos_sforbid]
-                
+            
+        print line, self.forbid,self.s_forbid       
         # Deal with decay chains, returns lines whitout the decay (and treat 
         #the different decays.
         if '(' in line:
@@ -620,9 +627,9 @@ class Process_info():
 
         # Write the constraints
         if self.forbid:
-            text+='/ '+' '.join(self.forbid)
+            text+='/ '+' '.join(self.forbid)+ ' '
         if self.s_forbid:
-            text+='$ '+' '.join(self.s_forbid)
+            text+='$ '+' '.join(self.s_forbid)+ ' '
         
         #write the rules associate to the couplings
         text += self.repr_couplings(model_coupling, len(self.particles))
