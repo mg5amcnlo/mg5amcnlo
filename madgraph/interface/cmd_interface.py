@@ -18,7 +18,6 @@
 
 import atexit
 import cmd
-import copy
 import logging
 import os
 import re
