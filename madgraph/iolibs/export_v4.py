@@ -439,7 +439,7 @@ def write_maxamps_file(fsock, matrix_element, fortran_model):
 
     writer = FortranWriter()
 
-    file = "       integer    maxamps"
+    file = "       integer    maxamps\n"
     file = file + "parameter (maxamps=%d)" % \
            len(matrix_element.get_all_amplitudes())
 
@@ -460,10 +460,10 @@ def write_mg_sym_file(fsock, matrix_element, fortran_model):
     lines = []
 
     # Extract process with all decays included
-    final_legs = filter(lambda leg: leg.get('state') == 'final',
+    final_legs = filter(lambda leg: leg.get('state') == True,
                    matrix_element.get('processes')[0].get_legs_with_decays())
 
-    ninitial = len(filter(lambda leg: leg.get('state') == 'initial',
+    ninitial = len(filter(lambda leg: leg.get('state') == False,
                           matrix_element.get('processes')[0].get('legs')))
 
     identical_indices = {}
@@ -497,7 +497,7 @@ def write_mg_sym_file(fsock, matrix_element, fortran_model):
 #===============================================================================
 # write_ncombs_file
 #===============================================================================
-def write_ncombs_file(fsock, matrix_element, fortran_model, ncombs):
+def write_ncombs_file(fsock, matrix_element, fortran_model):
     """Write the ncombs.inc file for MadEvent."""
 
     writer = FortranWriter()
@@ -506,7 +506,7 @@ def write_ncombs_file(fsock, matrix_element, fortran_model, ncombs):
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
     # ncomb (used for clustering) is 2^(nexternal + 1)
-    file = "       integer    n_max_cl"
+    file = "       integer    n_max_cl\n"
     file = file + "parameter (n_max_cl=%d)" % (2 ** (nexternal + 1))
 
     # Write the file
@@ -552,7 +552,7 @@ def write_ngraphs_file(fsock, matrix_element, fortran_model, nconfigs):
 
     writer = FortranWriter()
 
-    file = "       integer    n_max_cg"
+    file = "       integer    n_max_cg\n"
     file = file + "parameter (n_max_cg=%d)" % nconfigs
 
     # Write the file
@@ -807,8 +807,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     files.write_to_file(filename,
                         write_ncombs_file,
                         matrix_element,
-                        fortran_model,
-                        nconfigs)
+                        fortran_model)
 
     filename = 'nexternal.inc'
     files.write_to_file(filename,

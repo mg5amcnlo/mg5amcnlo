@@ -702,7 +702,7 @@ CALL JIOXXX(W(1,5),W(1,4),MGVX12,zero,zero,W(1,7))
 CALL IOVXXX(W(1,1),W(1,6),W(1,7),MGVX15,AMP(2))""")
 
     def test_generate_helas_diagrams_uux_uuxuux(self):
-        """Test calls for u u~ > u u~ u u~"""
+        """Test calls for u u~ > u u~ u u~ and MadEvent files"""
 
         # Set up local model
 
@@ -993,6 +993,18 @@ PD(0) = 0d0
 IPROC = 0
 IPROC=IPROC+1 ! u u~ > u u~ u u~
 PD(IPROC)=PD(IPROC-1) + u1*ub2""")
+
+        # Test mg.sym
+        fsock = StringIO.StringIO()
+        export_v4.write_mg_sym_file(fsock, matrix_element, fortran_model)
+        self.assertEqual(fsock.getvalue(),
+                         """      2
+      2
+      3
+      5
+      2
+      4
+      6\n""")
 
     def test_generate_helas_diagrams_gg_gg(self):
         """Test calls for g g > g g"""
@@ -3120,7 +3132,7 @@ CALL VVVXXX(W(1,2),W(1,26),W(1,39),GG,AMP(216))""")
 
 
     def test_export_majorana_decay_chain(self):
-        """Test decay chain with majorana particles e+e->n1n1
+        """Test decay chain with majorana particles and MadEvent files
         """
 
         mypartlist = base_objects.ParticleList()
@@ -3606,6 +3618,178 @@ C     Number of configs
       DATA GFORCEBW(-4,8)/.TRUE./
 """)
 
+        fortran_model = export_v4.HelasFortranModel()
+
+        # Test dname.mg
+        fsock = StringIO.StringIO()
+        export_v4.write_dname_file(fsock, me, fortran_model)
+        self.assertEqual(fsock.getvalue(), "DIRNAME=P0_e-e+_e-sl2+ae-sl2+a\n")
+        # Test iproc.inc
+        fsock = StringIO.StringIO()
+        export_v4.write_iproc_file(fsock, me, fortran_model)
+        self.assertEqual(fsock.getvalue(), "      0\n")
+        # Test maxamps.inc
+        fsock = StringIO.StringIO()
+        export_v4.write_maxamps_file(fsock, me, fortran_model)
+        self.assertEqual(fsock.getvalue(),
+                      "      INTEGER    MAXAMPS\n      PARAMETER (MAXAMPS=8)\n")
+        # Test mg.sym
+        fsock = StringIO.StringIO()
+        export_v4.write_mg_sym_file(fsock, me, fortran_model)
+        self.assertEqual(fsock.getvalue(), """      3
+      2
+      3
+      6
+      2
+      4
+      7
+      2
+      5
+      8\n""")
+        # Test ncombs.inc
+        fsock = StringIO.StringIO()
+        export_v4.write_ncombs_file(fsock, me, fortran_model)
+        self.assertEqual(fsock.getvalue(),
+                         """      INTEGER    N_MAX_CL
+      PARAMETER (N_MAX_CL=512)\n""")
+        # Test nexternal.inc
+        fsock = StringIO.StringIO()
+        export_v4.write_nexternal_file(fsock, me, fortran_model)
+        self.assertEqual(fsock.getvalue(),
+                         """      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=8)
+      INTEGER    NINCOMING
+      PARAMETER (NINCOMING=2)\n""")
+        # Test ngraphs.inc
+        fsock = StringIO.StringIO()
+        export_v4.write_ngraphs_file(fsock, me, fortran_model, nconfig)
+        self.assertEqual(fsock.getvalue(),
+                         """      INTEGER    N_MAX_CG
+      PARAMETER (N_MAX_CG=8)\n""")
+        # Test props.inc
+        fsock = StringIO.StringIO()
+        export_v4.write_props_file(fsock, me, fortran_model, s_and_t_channels)
+        self.assertEqual(fsock.getvalue(),
+                         """      PMASS(-1,1)  = ZERO
+      PWIDTH(-1,1) = ZERO
+      POW(-1,1) = 1
+      PMASS(-2,1)  = ABS(MNEU1)
+      PWIDTH(-2,1) = ABS(WNEU1)
+      POW(-2,1) = 1
+      PMASS(-3,1)  = ZERO
+      PWIDTH(-3,1) = ZERO
+      POW(-3,1) = 1
+      PMASS(-4,1)  = ABS(MNEU1)
+      PWIDTH(-4,1) = ABS(WNEU1)
+      POW(-4,1) = 1
+      PMASS(-5,1)  = ABS(MSL2)
+      PWIDTH(-5,1) = ABS(WSL2)
+      POW(-5,1) = 2
+      PMASS(-1,2)  = ABS(MSL2)
+      PWIDTH(-1,2) = ABS(WSL2)
+      POW(-1,2) = 2
+      PMASS(-2,2)  = ABS(MNEU1)
+      PWIDTH(-2,2) = ABS(WNEU1)
+      POW(-2,2) = 1
+      PMASS(-3,2)  = ZERO
+      PWIDTH(-3,2) = ZERO
+      POW(-3,2) = 1
+      PMASS(-4,2)  = ABS(MNEU1)
+      PWIDTH(-4,2) = ABS(WNEU1)
+      POW(-4,2) = 1
+      PMASS(-5,2)  = ABS(MSL2)
+      PWIDTH(-5,2) = ABS(WSL2)
+      POW(-5,2) = 2
+      PMASS(-1,3)  = ZERO
+      PWIDTH(-1,3) = ZERO
+      POW(-1,3) = 1
+      PMASS(-2,3)  = ABS(MNEU1)
+      PWIDTH(-2,3) = ABS(WNEU1)
+      POW(-2,3) = 1
+      PMASS(-3,3)  = ABS(MSL2)
+      PWIDTH(-3,3) = ABS(WSL2)
+      POW(-3,3) = 2
+      PMASS(-4,3)  = ABS(MNEU1)
+      PWIDTH(-4,3) = ABS(WNEU1)
+      POW(-4,3) = 1
+      PMASS(-5,3)  = ABS(MSL2)
+      PWIDTH(-5,3) = ABS(WSL2)
+      POW(-5,3) = 2
+      PMASS(-1,4)  = ABS(MSL2)
+      PWIDTH(-1,4) = ABS(WSL2)
+      POW(-1,4) = 2
+      PMASS(-2,4)  = ABS(MNEU1)
+      PWIDTH(-2,4) = ABS(WNEU1)
+      POW(-2,4) = 1
+      PMASS(-3,4)  = ABS(MSL2)
+      PWIDTH(-3,4) = ABS(WSL2)
+      POW(-3,4) = 2
+      PMASS(-4,4)  = ABS(MNEU1)
+      PWIDTH(-4,4) = ABS(WNEU1)
+      POW(-4,4) = 1
+      PMASS(-5,4)  = ABS(MSL2)
+      PWIDTH(-5,4) = ABS(WSL2)
+      POW(-5,4) = 2
+      PMASS(-1,5)  = ZERO
+      PWIDTH(-1,5) = ZERO
+      POW(-1,5) = 1
+      PMASS(-2,5)  = ABS(MNEU1)
+      PWIDTH(-2,5) = ABS(WNEU1)
+      POW(-2,5) = 1
+      PMASS(-3,5)  = ZERO
+      PWIDTH(-3,5) = ZERO
+      POW(-3,5) = 1
+      PMASS(-4,5)  = ABS(MNEU1)
+      PWIDTH(-4,5) = ABS(WNEU1)
+      POW(-4,5) = 1
+      PMASS(-5,5)  = ABS(MSL2)
+      PWIDTH(-5,5) = ABS(WSL2)
+      POW(-5,5) = 2
+      PMASS(-1,6)  = ZERO
+      PWIDTH(-1,6) = ZERO
+      POW(-1,6) = 1
+      PMASS(-2,6)  = ABS(MNEU1)
+      PWIDTH(-2,6) = ABS(WNEU1)
+      POW(-2,6) = 1
+      PMASS(-3,6)  = ABS(MSL2)
+      PWIDTH(-3,6) = ABS(WSL2)
+      POW(-3,6) = 2
+      PMASS(-4,6)  = ABS(MNEU1)
+      PWIDTH(-4,6) = ABS(WNEU1)
+      POW(-4,6) = 1
+      PMASS(-5,6)  = ABS(MSL2)
+      PWIDTH(-5,6) = ABS(WSL2)
+      POW(-5,6) = 2
+      PMASS(-1,7)  = ABS(MSL2)
+      PWIDTH(-1,7) = ABS(WSL2)
+      POW(-1,7) = 2
+      PMASS(-2,7)  = ABS(MNEU1)
+      PWIDTH(-2,7) = ABS(WNEU1)
+      POW(-2,7) = 1
+      PMASS(-3,7)  = ZERO
+      PWIDTH(-3,7) = ZERO
+      POW(-3,7) = 1
+      PMASS(-4,7)  = ABS(MNEU1)
+      PWIDTH(-4,7) = ABS(WNEU1)
+      POW(-4,7) = 1
+      PMASS(-5,7)  = ABS(MSL2)
+      PWIDTH(-5,7) = ABS(WSL2)
+      POW(-5,7) = 2
+      PMASS(-1,8)  = ABS(MSL2)
+      PWIDTH(-1,8) = ABS(WSL2)
+      POW(-1,8) = 2
+      PMASS(-2,8)  = ABS(MNEU1)
+      PWIDTH(-2,8) = ABS(WNEU1)
+      POW(-2,8) = 1
+      PMASS(-3,8)  = ABS(MSL2)
+      PWIDTH(-3,8) = ABS(WSL2)
+      POW(-3,8) = 2
+      PMASS(-4,8)  = ABS(MNEU1)
+      PWIDTH(-4,8) = ABS(WNEU1)
+      POW(-4,8) = 1
+      PMASS(-5,8)  = ABS(MSL2)
+      PWIDTH(-5,8) = ABS(WSL2)
+      POW(-5,8) = 2\n""")
 
 
     def test_export_complicated_majorana_decay_chain(self):
