@@ -163,12 +163,19 @@ class MadGraphCmd(cmd.Cmd):
         self.intro = \
         "************************************************************\n" + \
         "*                                                          *\n" + \
-        "*          W E L C O M E  to  M A D G R A P H  5           *\n" + \
+        "*           W E L C O M E  to  M A D G R A P H  5          *\n" + \
+        "*                                                          *\n" + \
+        "*                                                          *\n" + \
+        "*                 *                       *                *\n" + \
+        "*                   *        * *        *                  *\n" + \
+        "*                     * * * * 5 * * * *                    *\n" + \
+        "*                   *        * *        *                  *\n" + \
+        "*                 *                       *                *\n" + \
         "*                                                          *\n" + \
         info_line + \
         "*                                                          *\n" + \
         "*    The MadGraph Development Team - Please visit us at    *\n" + \
-        "*              https://launchpad.net/madgraph5             *\n" + \
+        "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
         "*                                                          *\n" + \
         "*               Type 'help' for in-line help.              *\n" + \
         "*                                                          *\n" + \
@@ -972,22 +979,29 @@ class MadGraphCmd(cmd.Cmd):
         creation_time = time.asctime() 
         time_info = \
         '#     automaticaly generated the %s%s*\n' % (creation_time, ' ' * \
-                                                      (27 - len(creation_time)))
+                                                      (26 - len(creation_time)))
         text = \
-        '#************************************************************\n' + \
-        '#                        MadGraph 5                         *\n' + \
-        '#                                                           *\n' + \
-        '#     The MadGraph Development Team - Please visit us at    *\n' + \
-        '#             https://launchpad.net/madgraph5               *\n' + \
-        '#                                                           *\n' + \
-        '#************************************************************\n' + \
-        '#                                                           *\n' + \
-        '#               Command File for MadGraph 5                 *\n' + \
-        '#                                                           *\n' + \
-        '#     run as ./bin/mg5  filename                            *\n' + \
+        '#***********************************************************\n' + \
+        '#                         MadGraph 5                       *\n' + \
+        '#                                                          *\n' + \
+        "#                 *                       *                *\n" + \
+        "#                   *        * *        *                  *\n" + \
+        "#                     * * * * 5 * * * *                    *\n" + \
+        "#                   *        * *        *                  *\n" + \
+        "#                 *                       *                *\n" + \
+        "#                                                          *\n" + \
+        "#                                                          *\n" + \
+        "#    The MadGraph Development Team - Please visit us at    *\n" + \
+        "#    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        '#                                                          *\n' + \
+        '#***********************************************************\n' + \
+        '#                                                          *\n' + \
+        '#               Command File for MadGraph 5                *\n' + \
+        '#                                                          *\n' + \
+        '#     run as ./bin/mg5  filename                           *\n' + \
         time_info + \
-        '#                                                           *\n' + \
-        '#************************************************************\n'
+        '#                                                          *\n' + \
+        '#***********************************************************\n'
         # Add the comand used 
         text += '\n'.join(self.history[:-1]) + '\n' #don't print history
         
@@ -1387,7 +1401,9 @@ class MadGraphCmd(cmd.Cmd):
 class cmdfile(file):
     
     def readline(self, *arg, **opt):
-        """readline outputing a \n at the end ot the read line"""
+        """readline method treating correctly a line whithout \n at the end
+           (add it)
+        """
         line = file.readline(self, *arg, **opt)
         if line.endswith('\n'):
             return line
