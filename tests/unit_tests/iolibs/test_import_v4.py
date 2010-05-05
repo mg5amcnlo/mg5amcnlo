@@ -18,11 +18,14 @@
 import StringIO
 import unittest
 import copy
+import os
 
 import madgraph.iolibs.import_v4 as import_v4
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
+import madgraph.iolibs.files as files
 
+_file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 #===============================================================================
 # IOImportV4Test
 #===============================================================================
@@ -233,4 +236,64 @@ class IOImportV4Test(unittest.TestCase):
         self.assertEqual(import_v4.read_interactions_v4(fsock_inter,
                                                         myparts),
                                                 goal_inter_list)
+
+
+class ProcCardV4ReaderTest(unittest.TestCase):
+    """Test class for the proc_card v4 module"""
+
+    def setUp(self):
+        """ open the proc_card and initialize the object"""
+        v4proccard_file = open(os.path.join(_file_path, os.path.pardir, 'input_files', \
+                                       'v4_proc_card.dat'))
+        
+        self.proccard = import_v4.ProcCardv4Reader(v4proccard_file)
+        
+        # First define a valid model for Standard Model
+        model = base_objects.Model()
+        # Import Particles information
+        input_path = os.path.join(_file_path, '../input_files/v4_sm_particles.dat')
+        model.set('particles', files.read_from_file(input_path,
+                                            import_v4.read_particles_v4))
+        # Import Interaction information
+        input_path = os.path.join(_file_path , '../input_files/v4_sm_interactions.dat')
+        model.set('interactions', files.read_from_file(input_path, \
+                                               import_v4.read_interactions_v4, \
+                                               model.get('particles')))
+        self.model = model
+        
+    def test_check_init(self):
+        """ check the initialization of the reader"""
+        #the initialization is done in the setUp subroutine
+        
+        proccard = self.proccard
+        
+        self.assertEqual(len(proccard.process), 6)
+        self.assertEqual(proccard.model, 'sm')
+        self.assertEqual(len(proccard.multipart), 6)
+        # Check that multiparticles are already loaded
+        self.assertEqual(proccard.particles_name, set(
+                                           ['l-', 'j', 'vl', 'l+', 'p', 'vl~']))
+        self.assertEqual(proccard.couplings_name, set())
+        
+    def test_line_creation(self):
+        lines = self.proccard.extract_command_lines(self.model)
+        solution =['define p u u~ c c~ d d~ s s~ g',
+                   'define j u u~ c c~ d d~ s s~ g', 
+                   'define l+ e+ mu+', 
+                   'define l- e- mu-', 
+                   'define vl ve vm', 
+                   'define vl~ ve~ vm~', 
+                   'generate p p > e- ve~ @1 ', 
+                   'add process p p > z @2 , (z > w+ w- , w- > mu- vm  ) ',
+                   'add process p p > t t~ $ a QED=0 @3 ', 
+                   'add process p p > t t~ $ g / a QED=0 @2 ', 
+                   'add process p p > z $ a / g @4 , (z > w+ w- $ a / g , w- > mu- vm $ a / g  ) ',
+                   'add process p p > z z $ a / g QED=1 @4 , (z > w+ w- $ a / g , w- > mu- vm $ a / g  ) , z > w+ w- $ a / g  ',
+                   'setup madevent_v4 tests -f', 
+                   'export madevent_v4', 
+                   'makehtml madevent_v4', 
+                   'history tests/Cards/proc_card_mg5.dat']    
+        self.assertEqual(len(lines),len(solution))
+        for i,command in enumerate(lines):
+            self.assertEqual(command,solution[i])
 

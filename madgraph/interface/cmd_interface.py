@@ -340,7 +340,7 @@ class MadGraphCmd(cmd.Cmd):
 
 
         # Now that we have the model we can split the information
-        lines = reader.treat_data(self.__curr_model)
+        lines = reader.extract_command_lines(self.__curr_model)
         for line in lines:
             if 'setup' in line and self.__export_dir:
                 continue
