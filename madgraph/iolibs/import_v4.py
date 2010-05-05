@@ -25,7 +25,7 @@ import madgraph.core.color_algebra as color
 from madgraph.core.base_objects import Particle, ParticleList
 from madgraph.core.base_objects import Interaction, InteractionList
 
-logger = logging.getLogger('import_model_v4')
+logger = logging.getLogger('import_v4')
 
 #===============================================================================
 # read_particles_v4
@@ -318,13 +318,12 @@ def read_interactions_v4(fsock, ref_part_list):
 #===============================================================================
 def read_proc_card_v4(fsock):
 
-    #modeldir = os.path.dirname(fsock.name) + '../../Models'
-    reader = Reader_proc_card(fsock)
+    reader = ProcCardv4Reader(fsock)
     return reader
 
 
 
-class Reader_proc_card():
+class ProcCardv4Reader():
     """ read a proc_card.dat in the mg4 format and creates the equivalent routine \
     for mg5"""
     
@@ -342,7 +341,7 @@ class Reader_proc_card():
     def __init__(self, fsock):
         """init the variable"""
 
-        self.process = [] # List of Process
+        self.process = [] # List of ProcessInfo
         self.model = ""   # name of the model
         self.multipart = [] # list of the mg4 definition of multiparticle
         self.particles_name = set() # set of authorize particle name
@@ -351,10 +350,10 @@ class Reader_proc_card():
                                         os.path.dirname(fsock.name), os.pardir))
         
         # Reading the files and store the information in string format.
-        self.collect_info(fsock)
+        self.analyze_v4_proc_card(fsock)
 
     
-    def collect_info(self, fp):
+    def analyze_v4_proc_card(self, fp):
         """read the file and fullfill the variable with mg4 line"""
         
         # skip the introduction of the file
@@ -370,7 +369,7 @@ class Reader_proc_card():
                 data = analyze_line.group('info') #skip the comment
                 if not process_open and 'done' not in data:
                     process_open = True
-                    self.process.append(Process_info(data))
+                    self.process.append(ProcessInfo(data))
                 elif 'end_coup' in data:
                     process_open = False
                 elif 'done' not in data:
@@ -399,18 +398,19 @@ class Reader_proc_card():
                 self.multipart.append(line)   
         
     
-    def treat_data(self, model):
+    def extract_command_lines(self, model):
         
         # extract useful information of the model
         self.extract_info_from_model(model)
         
-        #use to develop the data for the processes
+        # use the model information for the splitting in particles of the mg4
+        #process line.
         for process in self.process:
             process.analyze_process(self.particles_name)
         
         #Now we are in position to write the lines call
         lines = []    
-        #first write the lines associate to the multiparton definition
+        #first write the lines associate to the multiparticls definition
         for multipart in self.multipart:
             data = self.separate_particle(multipart, self.particles_name)
             lines.append('define '+' '.join(data))
@@ -418,9 +418,9 @@ class Reader_proc_card():
         # secondly define the lines associate with diagram
         for i,process in enumerate(self.process):
             if i == 0:
-                lines.append('generate %s'% process.repr(self.couplings_name))                
+                lines.append('generate %s'% process.mg5_process_line(self.couplings_name))                
             else:
-                lines.append('add process %s' % process.repr(self.couplings_name))
+                lines.append('add process %s' % process.mg5_process_line(self.couplings_name))
         
         #finally export the madevent output
         lines.append('setup madevent_v4 %s -f' % os.path.split(self.process_path)[1])
@@ -442,7 +442,7 @@ class Reader_proc_card():
             self.particles_name.add(particle['name'])
             self.particles_name.add(particle['antiname'])
 
-        # add in self;couplings_name the couplings name of the model
+        # add in self.couplings_name the couplings name of the model
         for interaction in model['interactions']:
             for coupling in interaction['orders'].keys():
                 self.couplings_name.add(coupling)
@@ -483,28 +483,26 @@ class Reader_proc_card():
                 
         return out
     
-class Process_info():
-    """ this is the basic object of a process"""
-    
-    
+class ProcessInfo():
+    """This is the basic object for storing process information"""
     
     def __init__(self, line):
-        """ initialize information"""
+        """Initialize information"""
             
         self.particles = [] # list tuple (level, particle)
         self.couplings = {} # coupling -> max_order
-        self.decays = []    # Process_info of the decays
+        self.decays = []    # ProcessInfo of the decays
         self.tag = ''       # tag of the process
         self.s_forbid = []  # list of particles forbids in s channel
         self.forbid =[]     # list of particles forbids
         self.line = line    # initialization line
         
         #some shortcut
-        self.separate_particle = Reader_proc_card.separate_particle
+        self.separate_particle = ProcCardv4Reader.separate_particle
     
     def analyze_process(self, particles_name):
-        """add a line information
-            two format are possible (decay chains or not
+        """Add a line information
+            two format are possible (decay chains or not)
             pp>h>WWj /a $u @3
             pp>(h>WW)j /a $u @3
         """
@@ -526,7 +524,8 @@ class Process_info():
         pos_forbid = line.find('/')
         pos_sforbid = line.find('$')
         
-        #select the restriction (pos is -1 if not defined)
+        # Select the restrictions (pos is -1 if not defined)
+        #and remove the restrictions from the line
         if pos_forbid != -1 and pos_sforbid != -1:
             if  pos_forbid > pos_sforbid :
                 self.forbid = self.separate_particle(line[pos_forbid + 1:], \
@@ -540,16 +539,17 @@ class Process_info():
                 self.s_forbid = self.separate_particle(line[pos_sforbid + 1:], \
                                                            particles_name)
                 line = line[:min(pos_forbid,pos_sforbid)]
+        # Same but if they are no S-forbidden particles
         elif pos_forbid != -1:
             self.forbid = self.separate_particle(line[pos_forbid+1:], \
                                                                  particles_name)
             line = line[:pos_forbid]
+        # Same but if they are no forbidden particles
         elif pos_sforbid != -1:
             self.s_forbid = self.separate_particle(line[pos_sforbid+1:], \
                                                                  particles_name)
             line = line[:pos_sforbid]
             
-        print line, self.forbid,self.s_forbid       
         # Deal with decay chains, returns lines whitout the decay (and treat 
         #the different decays.
         if '(' in line:
@@ -563,7 +563,7 @@ class Process_info():
             
             
     def treat_decay_chain(self, line, particles_name):
-        """ split the information of the decays """
+        """Split the information of the decays into a tree of ProcessInfo."""
             
         level = 0 #depth of the decay chain
         out_line = '' # core process
@@ -578,8 +578,8 @@ class Process_info():
             elif character == ')':
                 level -=1
                 if level == 0: #store the information
-                    self.decays.append(Process_info(decay_line))
-                    self.decays[-1].put_constraints(self.forbid, self.s_forbid, \
+                    self.decays.append(ProcessInfo(decay_line))
+                    self.decays[-1].add_restrictions(self.forbid, self.s_forbid, \
                                                                  self.couplings)
                     self.decays[-1].analyze_process(particles_name)
                     out_line += decay_line[:decay_line.find('>')]
@@ -593,20 +593,20 @@ class Process_info():
         return out_line
         
     def add_coupling(self, line):
-        """ add the coupling information to the process"""
+        """Add the coupling information to the process"""
         data = line.split('=')
         self.couplings[data[0]]=int(data[1])
         
     
-    def put_constraints(self,forbid, s_forbid, couplings):
-        """ associate some restriction to this diagram"""
+    def add_restrictions(self,forbid, s_forbid, couplings):
+        """Associate some restriction to this diagram"""
         
         self.forbid = forbid
         self.s_forbid = s_forbid
         self.couplings = couplings
 
-    def repr(self, model_coupling):
-        """ return a valid mg5 format for this process """
+    def mg5_process_line(self, model_coupling):
+        """Return a valid mg5 format for this process """
         
         if hasattr(self, 'is_valid'):
             return self.line
@@ -627,7 +627,7 @@ class Process_info():
             text+='$ '+' '.join(self.s_forbid)+ ' '
         
         #write the rules associate to the couplings
-        text += self.repr_couplings(model_coupling, len(self.particles))
+        text += self.mg5_couplings_line(model_coupling, len(self.particles))
         
         # write the tag
         if self.tag:
@@ -635,7 +635,7 @@ class Process_info():
 
         #treat decay_chains
         for decay in self.decays:
-            decay_text = decay.repr(model_coupling)
+            decay_text = decay.mg5_process_line(model_coupling)
             if ',' in decay_text:
                 text +=', (%s) ' % decay_text
             else:
@@ -643,8 +643,8 @@ class Process_info():
         
         return text
     
-    def repr_couplings(self, model_coupling, nb_part):
-        """return the assignment of coupling for this process"""
+    def mg5_couplings_line(self, model_coupling, nb_part):
+        """Return the assignment of coupling for this process"""
 
         out=''
         for coupling in model_coupling:

@@ -60,9 +60,9 @@ def copy_v4template(mgme_dir, dir_path, model_dir, clean):
                                                           MG_version['version'])
         
 #===============================================================================
-# write a madgraph 4 proc_card.dat
+# write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
 #===============================================================================
-def write_mg4_proc_card(file_pos, modelname, process_str):
+def write_procdef_mg5(file_pos, modelname, process_str):
     """ write an equivalent of the MG4 proc_card in order that all the Madevent
     Perl script of MadEvent4 are still working properly for pure MG5 run."""
     
@@ -70,10 +70,24 @@ def write_mg4_proc_card(file_pos, modelname, process_str):
     process_template = Template.mg4_proc_card.process_template
     process_text=''
     coupling=''
-    # First find the coupling
+    new_process_content = []
+    
+    
+    # First find the coupling and suppress the coupling from process_str
+    #But first ensure that coupling are define whithout spaces:
+    process_str = process_str.replace(' =','=')
+    process_str = process_str.replace('= ','=')
+    #now loop on the element and treat all the coupling
     for info in process_str.split():
         if '=' in info:
             coupling += info + '\n'
+        else:
+            new_process_content.append(info)
+    # Recombine the process_str (which is the input process_str without coupling
+    #info)
+    process_str = ' '.join(new_process_content)
+    
+    #format the SubProcess
     process_text += process_template.substitute({'process': process_str, \
                                                         'coupling': coupling})
     

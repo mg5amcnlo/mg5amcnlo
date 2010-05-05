@@ -1077,7 +1077,7 @@ class MadGraphCmd(cmd.Cmd):
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
                                                                 'procdef_mg5.dat')
             if self.__generate_info:
-                export_v4.write_mg4_proc_card(card_path,
+                export_v4.write_procdef_mg5(card_path,
                                 os.path.split(self.__model_dir)[-1],
                                 self.__generate_info)
                 
@@ -1228,7 +1228,7 @@ class MadGraphCmd(cmd.Cmd):
         
         print 'creating html pages'    
         export_v4.create_v4_webpage(dir_path, makejpg)
-        os.system('touch %s/done' % os.path.join(dir_path,'Subprocesses'))
+        os.system('touch %s/done' % os.path.join(dir_path,'SubProcesses'))
         
     def complete_makehtml(self, text, line, begidx, endidx):
         """ format: makehtlm madevent_v4 [PATH] [--nojpeg]"""
