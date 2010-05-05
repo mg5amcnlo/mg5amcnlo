@@ -621,10 +621,11 @@ class ProcessInfo():
             text += '%s ' % particle
 
         # Write the constraints
-        if self.forbid:
-            text+='/ '+' '.join(self.forbid)+ ' '
         if self.s_forbid:
             text+='$ '+' '.join(self.s_forbid)+ ' '
+        if self.forbid:
+            text+='/ '+' '.join(self.forbid)+ ' '
+
         
         #write the rules associate to the couplings
         text += self.mg5_couplings_line(model_coupling, len(self.particles))
