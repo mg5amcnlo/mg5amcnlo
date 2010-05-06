@@ -39,9 +39,7 @@ DrawDiagramsEPS:
 
 from __future__ import division
 
-import math
 import os
-import time
 
 import madgraph.iolibs.drawing as draw
 import madgraph.core.base_objects as base_objects
@@ -84,7 +82,8 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
 
         # File Header
         text = "%!PS-Adobe-2.0\n"
-        text += "%%" + "BoundingBox: -20 -20 %s  %s \n" % (self.width, self.height)
+        text += "%%" + "BoundingBox: -20 -20 %s  %s \n" % \
+                                                       (self.width, self.height)
         text += "%%DocumentFonts: Helvetica\n"
         text += "%%" + "Pages:  %s \n" % self.npage
         self.file.writelines(text)
@@ -186,8 +185,8 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         x, y = self.rescale(x, y)
         #write the text
         self.text += ' %s  %s moveto \n' % (x, y)
-        self.text += '( diagram %s )   show\n' % (number + 1) # +1 because python
-                                                            #start to count at
+        self.text += '( diagram %s )   show\n' % (number + 1) # +1 python
+                                                            #starts to count at
                                                             #zero.
 
 
@@ -234,17 +233,17 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         
         # compute gap from middle point
         if abs(x1 - x2) < 1e-3:
-            dx= 0.015
-            dy= - 0.01
+            dx = 0.015
+            dy = -0.01
         elif abs(y1 - y2) < 1e-3:
-            dx = - 0.01
+            dx = -0.01
             dy = 0.025
-        elif ((x1 < x2) == (y1 < y2) ):
+        elif ((x1 < x2) == (y1 < y2)):
             dx = -0.03 * len(name)
-            dy =  0.02  * len(name) #d * 0.12
+            dy = 0.02 * len(name) #d * 0.12
         else:
-            dx =  0.01 #0.05
-            dy =  0.02 #d * 0.12 
+            dx = 0.01 #0.05
+            dy = 0.02 #d * 0.12 
             
         # Assign position
         x_pos = (x1 + x2) / 2 + dx
@@ -286,13 +285,13 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
     nb_line = 3
     nb_col = 2
 
-    def __init__(self, diagramlist=None, file='diagram.eps', \
+    def __init__(self, diagramlist=None, filename='diagram.eps', \
                   model=None, amplitude=None):
         """Define basic variable and store some global information
         all argument are optional
         diagramlist : are the list of object to draw. item should inherit 
                 from either  base_objects.Diagram  or drawing_lib.FeynmanDiagram
-        file: filename of the file to write
+        filename: filename of the file to write
         model: model associate to the diagram. In principle use only if diagram
             inherit from base_objects.Diagram
         amplitude: amplitude associate to the diagram. NOT USE for the moment.
@@ -300,7 +299,8 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
             order to adjust fermion flow in case of Majorana fermion."""
 
         #use standard initialization but without any diagram
-        super(MultiEpsDiagramDrawer, self).__init__(None, file , model, amplitude)
+        super(MultiEpsDiagramDrawer, self).__init__(None, filename , model, \
+                                                                      amplitude)
 
         #additional information
         self.block_nb = 0  # keep track of the number of diagram already written
@@ -367,7 +367,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         # Loop on all diagram
         for diagram in diagramlist:
             # Check if they need to be convert in correct format
-            diagram = self.convert_diagram(diagram, self.model,'', opt)
+            diagram = self.convert_diagram(diagram, self.model, '', opt)
             # Write the code associate to this diagram
             self.draw_diagram(diagram)
 

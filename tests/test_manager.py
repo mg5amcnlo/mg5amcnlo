@@ -89,7 +89,9 @@ class TestFinder(list):
         list.__init__(self)
 
         self.package = package
-        if self.package[-1] != '/': self.package += '/'
+        self.rule = []
+        if self.package[-1] != '/': 
+            self.package += '/'
         self.restrict_to(expression, re_opt)
         self.launch_pos = ''
 
@@ -139,15 +141,15 @@ class TestFinder(list):
         if move:
             self.go_to_initpos()
 
-    def collect_file(self, file, checking=True):
+    def collect_file(self, filename, checking=True):
         """ Find the different class instance derivated of TestCase """
 
-        pyname = self.passin_pyformat(file)
+        pyname = self.passin_pyformat(filename)
         exec('import ' + pyname + ' as obj')
 
         #look at class
         for name in dir(obj):
-            exec('class_=obj.' + name)
+            class_ = getattr(obj, name)
             if inspect.isclass(class_) and \
                     issubclass(class_, unittest.TestCase):
                 if checking:
@@ -204,8 +206,11 @@ class TestFinder(list):
 
         self.rule = []
         for expr in expression:
-            if not expr.startswith('^'): expr = '^' + expr #fix the begin of the re
-            if not expr.endswith('$'): expr = expr + '$' #fix the end of the re
+            #fix the beginning/end of the regular expression
+            if not expr.startswith('^'):
+                expr = '^' + expr 
+            if not expr.endswith('$'):
+                expr = expr + '$' 
             self.rule.append(re.compile(expr, re_opt))
 
     def check_valid(self, name):
@@ -278,7 +283,8 @@ class TestFinder(list):
 
         #print name
         #sanity
-        if name.startswith('./'): name = name[2:]
+        if name.startswith('./'): 
+            name = name[2:]
         name = name.replace('//', '/')
         # init with solution #
         out = [name]

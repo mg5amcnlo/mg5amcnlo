@@ -100,7 +100,7 @@ class MadGraphCmd(cmd.Cmd):
     def list_completion(self, text, list):
         """Propose completions of text in list"""
         if not text:
-                completions = list
+            completions = list
         else:
             completions = [ f
                             for f in list
@@ -289,12 +289,14 @@ class MadGraphCmd(cmd.Cmd):
             files_to_import = ('particles.dat', 'interactions.dat')
             for filename in files_to_import:
                 if os.path.isfile(os.path.join(self.__model_dir, filename)):
-                    import_v4file(self, os.path.join(self.__model_dir, filename))
+                    import_v4file(self, os.path.join(self.__model_dir, \
+                                                                      filename))
                 else:
                     print "%s files doesn't exist in %s directory" % \
                                         (filename, os.path.basename(args[1]))
             #save model for next usage
-            self.do_save('model %s ' % os.path.join(self.__model_dir, 'model.pkl'))
+            self.do_save('model %s ' % os.path.join(self.__model_dir, \
+                                                                   'model.pkl'))
         
         elif args[0] == 'proc_v4':
             if len(args) == 1 and self.__export_dir:
@@ -360,7 +362,7 @@ class MadGraphCmd(cmd.Cmd):
         self.history[-1] = '#%s' % self.history[-1]
  
         # Read the lines of the file and execute them
-        for line in cmdfile(filepath):
+        for line in CmdFile(filepath):
             #remove pointless spaces and \n
             line = line.replace('\n', '').strip()
             # execute the line if this one is not empty
@@ -370,7 +372,7 @@ class MadGraphCmd(cmd.Cmd):
 
 
     def onecmd_full(self, line):
-        """for third party call, call the line with pre and postfix treatment """
+        """for third party call, call the line with pre and postfix treatment"""
         print line
         line = self.precmd(line)
         stop = self.onecmd(line)
@@ -420,7 +422,7 @@ class MadGraphCmd(cmd.Cmd):
         
         if not self.__model_dir:
             print 'No model found. Please import a model first and then retry'
-            print '  for example do : import v4 sm'
+            print '  for example do : import model_v4 sm'
             return False
         
         dir_path = os.path.join(mgme_dir, args[1])
@@ -450,9 +452,9 @@ class MadGraphCmd(cmd.Cmd):
         possible_format = ['madevent_v4']
         #don't propose directory use by MG_ME
         forbidden_name = ['MadGraphII', 'Template', 'pythia-pgs', 'CVS',
-                            'Calculators', 'MadAnalysis', 'SimpleAnalysis', 'mg5',
-                            'DECAY', 'EventConverter', 'Models', 'ExRootAnalysis',
-                            'HELAS', 'Transfer_Fct']
+                            'Calculators', 'MadAnalysis', 'SimpleAnalysis', 
+                            'mg5', 'DECAY', 'EventConverter', 'Models', 
+                            'ExRootAnalysis', 'HELAS', 'Transfer_Fct']
         # Format
         if len(self.split_arg(line[0:begidx])) == 1:
             return self.list_completion(text, possible_format)
@@ -475,7 +477,8 @@ class MadGraphCmd(cmd.Cmd):
             if self.split_arg(line[0:begidx])[-1] == '-d':
                 return self.path_completion(text)
             elif  self.split_arg(line[0:begidx])[-2] == '-d' and line[-1] != ' ':
-                return self.path_completion(text, self.split_arg(line[0:begidx])[-1])
+                return self.path_completion(text, \
+                                             self.split_arg(line[0:begidx])[-1])
             elif self.split_arg(line[0:begidx])[-1] == '-':
                 return self.list_completion(text, possible_option2)
             else:
@@ -835,9 +838,11 @@ class MadGraphCmd(cmd.Cmd):
                 args = self.split_arg(forbidden_particles)
                 for part_name in args:
                     if part_name in self.__multiparticles:
-                        forbidden_particle_ids.extend(self.__multiparticles[part_name])
+                        forbidden_particle_ids.extend( \
+                                               self.__multiparticles[part_name])
                     else:
-                        mypart = self.__curr_model['particles'].find_name(part_name)
+                        mypart = self.__curr_model['particles'].find_name( \
+                                                                      part_name)
                         if mypart:
                             forbidden_particle_ids.append(mypart.get_pdg_code())
 
@@ -845,9 +850,11 @@ class MadGraphCmd(cmd.Cmd):
                 args = self.split_arg(forbidden_schannels)
                 for part_name in args:
                     if part_name in self.__multiparticles:
-                        forbidden_schannel_ids.extend(self.__multiparticles[part_name])
+                        forbidden_schannel_ids.extend(\
+                                               self.__multiparticles[part_name])
                     else:
-                        mypart = self.__curr_model['particles'].find_name(part_name)
+                        mypart = self.__curr_model['particles'].find_name(\
+                                                                      part_name)
                         if mypart:
                             forbidden_schannel_ids.append(mypart.get_pdg_code())
 
@@ -855,9 +862,11 @@ class MadGraphCmd(cmd.Cmd):
                 args = self.split_arg(required_schannels)
                 for part_name in args:
                     if part_name in self.__multiparticles:
-                        required_schannel_ids.extend(self.__multiparticles[part_name])
+                        required_schannel_ids.extend(\
+                                               self.__multiparticles[part_name])
                     else:
-                        mypart = self.__curr_model['particles'].find_name(part_name)
+                        mypart = self.__curr_model['particles'].find_name(\
+                                                                      part_name)
                         if mypart:
                             required_schannel_ids.append(mypart.get_pdg_code())
 
@@ -915,8 +924,8 @@ class MadGraphCmd(cmd.Cmd):
                 else:
                     myprocdef, line = self.extract_decay_chain_process(line)
             except self.MadGraphCmdError as error:
-                print "Empty or wrong format process, please try again. Error:\n" \
-                      + str(error)
+                print "Empty or wrong format process, please try again. Error:" 
+                print error
                 myprocdef = None
 
             if myprocdef:
@@ -1042,7 +1051,7 @@ class MadGraphCmd(cmd.Cmd):
         args = self.split_arg(line)
 
         if len(args) == 0 or (len(args) == 1 and not self.__export_dir) or \
-                                            args[0] not in self.__export_formats:
+                                           args[0] not in self.__export_formats:
             self.help_export()
             return False
 
@@ -1071,9 +1080,8 @@ class MadGraphCmd(cmd.Cmd):
                 else:
                     print "Creating new file %s" % filename
                 calls = calls + files.write_to_file(filename,
-                                                    export_v4.write_matrix_element_v4_standalone,
-                                                    me,
-                                                    self.__curr_fortran_model)
+                                   export_v4.write_matrix_element_v4_standalone,
+                                   me, self.__curr_fortran_model)
 
 
         if args[0] == 'sa_dirs_v4':
@@ -1089,7 +1097,7 @@ class MadGraphCmd(cmd.Cmd):
                             me, self.__curr_fortran_model, path)
             
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
-                                                                'procdef_mg5.dat')
+                                                              'procdef_mg5.dat')
             if self.__generate_info:
                 export_v4.write_procdef_mg5(card_path,
                                 os.path.split(self.__model_dir)[-1],
@@ -1304,11 +1312,11 @@ class MadGraphCmd(cmd.Cmd):
 
     def help_setup(self):
         print "syntax madevent_v4 name [options]"
-        print "-- Create a copy of the V4 Template 'name' in the MG_ME directory."
+        print "-- Create a copy of the V4 Template in the MG_ME directory."
         print "   options:"
         print "      -f: force the cleaning of the directory if this one exist"
         print "      -d PATH: specify the directory where to create name"
-        print "      -noclean: no cleaning perform in name (simple storing position)"
+        print "      -noclean: no cleaning perform in name"
         print "   Example:"
         print "       setup madevent_v4 MYRUN"
         print "       setup madevent_v4 MYRUN -d ../MG_ME -f"
@@ -1352,7 +1360,7 @@ class MadGraphCmd(cmd.Cmd):
 
     def help_history(self):
         print "syntax: history [FILEPATH] [-clean] "
-        print "-- write in the specified files all the call to MG5 that you have """
+        print "-- write in the specified files all the call to MG5 that you have"""
         print "   perform since that you have open this command line applet."""
         print "   -clean option will remove all the entry of the history"""
 
@@ -1398,7 +1406,8 @@ class MadGraphCmd(cmd.Cmd):
 #===============================================================================
 # 
 #===============================================================================
-class cmdfile(file):
+class CmdFile(file):
+    """ a class for command input file -in order to debug cmd \n problem"""
     
     def readline(self, *arg, **opt):
         """readline method treating correctly a line whithout \n at the end
@@ -1418,10 +1427,10 @@ class cmdfile(file):
 
 if __name__ == '__main__':
     
-    opt = sys.argv
-    if len(opt) > 1:
+    run_option = sys.argv
+    if len(run_option) > 1:
         # The first argument of sys.argv is the name of the program
-        input_file = open(opt[1], 'rU')
+        input_file = open(run_option[1], 'rU')
         cmd_line = MadGraphCmd(stdin=input_file)
         cmd_line.use_rawinput = False #put it in non interactive mode
         cmd_line.cmdloop()
