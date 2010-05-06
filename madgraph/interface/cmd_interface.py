@@ -792,7 +792,6 @@ class MadGraphCmd(cmd.Cmd):
 
         myleglist = base_objects.MultiLegList()
         state = False
-        number = 1
 
         # Extract process
         for part_name in args:
@@ -827,9 +826,9 @@ class MadGraphCmd(cmd.Cmd):
             forbidden_schannel_ids = []
             required_schannel_ids = []
 
-            decay_process = len(filter(lambda leg: \
-                                       leg.get('state') == False,
-                                       myleglist)) == 1
+            #decay_process = len(filter(lambda leg: \
+            #                           leg.get('state') == False,
+            #                           myleglist)) == 1
 
             if forbidden_particles:
                 args = self.split_arg(forbidden_particles)
