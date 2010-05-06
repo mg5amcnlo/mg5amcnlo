@@ -371,6 +371,7 @@ class MadGraphCmd(cmd.Cmd):
 
     def onecmd_full(self, line):
         """for third party call, call the line with pre and postfix treatment """
+        print line
         line = self.precmd(line)
         stop = self.onecmd(line)
         stop = self.postcmd(stop, line)

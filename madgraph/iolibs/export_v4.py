@@ -768,10 +768,11 @@ def export_model(model_path, process_path):
     model_path = process_path + '/Source/MODEL/'
     ln(model_path + '/ident_card.dat', process_path + '/Cards', log=False)
     cp(model_path + '/param_card.dat', process_path + '/Cards')
-    mv(model_path + '/param_card.dat', process_path + '/Cards/param_card_defalult.dat')
+    mv(model_path + '/param_card.dat', process_path + '/Cards/param_card_default.dat')
     ln(model_path + '/particles.dat', process_path + '/SubProcesses')
     ln(model_path + '/interactions.dat', process_path + '/SubProcesses')
     ln(model_path + '/coupl.inc', process_path + '/Source')
+    ln(model_path + '/coupl.inc', process_path + '/SubProcesses')
     ln(process_path + '/Source/run.inc', process_path + '/SubProcesses', log=False)
 
 #===============================================================================
@@ -1885,7 +1886,8 @@ def ln(file_pos, starting_dir='.', name='', log=True):
                         os.path.join(starting_dir, name))
     except:
         if log:
-            logger.warning('Could not link to %s' % file_pos)
+            logger.warning('Could not link %s at position: %s' % (file_pos, \
+                                                os.path.realpath(starting_dir)))
 
 
 
