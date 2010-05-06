@@ -1319,11 +1319,11 @@ class Process(PhysicsObject):
         return mystr
 
     def base_string(self):
-        """Returns a string containing only the basic process."""
+        """Returns a string containing only the basic process (w/ decays)."""
 
         mystr = ""
         prevleg = None
-        for leg in self['legs']:
+        for leg in self.get_legs_with_decays():
             mypart = self['model'].get('particle_dict')[leg['id']]
             if prevleg and prevleg['state'] == False \
                    and leg['state'] == True:
