@@ -1467,6 +1467,102 @@ class MadGraphCmd(cmd.Cmd):
 #===============================================================================
 # 
 #===============================================================================
+class MadGraphWebCmd(MadGraphCmd):
+    """The Command line for the web. The same but more secure and whithout
+    interactivity"""
+    
+    def do_shell(self, line):
+        "Run a shell command"
+        #Obvious security reason
+        pass
+    
+    def preloop(self):
+        """Initializing before starting the main loop"""
+
+        self.prompt = ''
+        # Check that we are in a non interactive mode
+        assert(self.use_rawinput == False)
+
+    def do_setup(self, line):
+        """Initialize a new Template or reinitialize one"""
+        
+        args = self.split_arg(line)
+        clean = '-noclean' not in args
+        force = '-f' in args 
+        dir = '-d' in args
+        if dir:
+            mgme_dir = args[args.find('-d') + 1]
+        else:
+            mgme_dir = MGME_dir
+                        
+        if len(args) < 2:
+            self.help_setup()
+            return False
+        
+        if not self.__model_dir:
+            print 'No model found. Please import a model first and then retry'
+            print '  for example do : import model_v4 sm'
+            return False
+        
+        # Check for special directory treatment
+        if args[1] == '.':
+            if self.use_rawinput: # Interactive mode
+                if 'Cards' in os.listdir('.'):
+                    args[1] = os.path.split(os.path.realpath('.'))[-1]
+                    print os.path.realpath('.')
+                elif 'Cards' in os.listdir('..'):
+                    args[1] = os.path.split(os.path.realpath('..'))[-1]
+                    print os.path.realpath('..'), '..'
+                else:
+                    print 'not valid \'.\' option in this context'
+                    self.help_setup()    
+            else: # read a file
+                input_path = os.path.realpath(self.stdin.name).split( \
+                                                               os.path.sep)
+                if input_path[-2] != 'Cards':
+                    print 'not valid \'.\' option in this context'
+                    self.help_setup()
+                    sys.exit('EXIT: wrong setup syntax')
+                else:
+                    args[1] = input_path[-3]
+                    
+        elif args[1] == 'auto':
+            name_dir = lambda i: 'PROC_%s_%s' % \
+                                        (os.path.split(self.__model_dir)[-1], i)
+            auto_path = lambda i: os.path.join(mgme_dir, name_dir(i))     
+            
+            for i in range(500):
+                if os.path.isdir(auto_path(i)):
+                    continue
+                else:
+                    args[1] = name_dir(i) 
+                    break
+        dir_path = os.path.join(mgme_dir, args[1])
+        if not force and os.path.isdir(dir_path):
+            print 'INFO: directory %s already exists.' % args[1]
+            if clean:
+                print 'If you continue this directory will be cleaned'
+
+            answer = raw_input('Do you want to continue? [y/n]')
+            if answer != 'y':
+                print 'stop'
+                return False
+
+        export_v4.copy_v4template(mgme_dir, dir_path, self.__model_dir, clean)
+        # Import the model
+        print 'import model files %s in directory %s' % \
+                       (os.path.basename(self.__model_dir), args[1])        
+        export_v4.export_model(self.__model_dir, dir_path)
+        self.__export_dir = dir_path    
+        
+        
+    
+    
+    
+
+#===============================================================================
+# 
+#===============================================================================
 class CmdFile(file):
     """ a class for command input file -in order to debug cmd \n problem"""
     
