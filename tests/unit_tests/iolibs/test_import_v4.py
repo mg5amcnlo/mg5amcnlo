@@ -291,7 +291,7 @@ class ProcCardV4ReaderTest(unittest.TestCase):
                    'add process p p > z z $ a / g QED=1 @4 , (z > w+ w- $ a / g , w- > mu- vm $ a / g  ) , z > w+ w- $ a / g  ',
                    'add process p p > Z Z, Z > W+ W- $a /g @4',
                    'add process p p > Z Z QCD=2 @4',
-                   'setup madevent_v4 tests -f', 
+                   'setup madevent_v4 . -f', 
                    'export madevent_v4', 
                    'makehtml madevent_v4', 
                    'history tests/Cards/proc_card_mg5.dat']    

@@ -438,15 +438,16 @@ class MadGraphCmd(cmd.Cmd):
                     args[1] = os.path.split(os.path.realpath('..'))[-1]
                 else:
                     print 'not valid \'.\' option in this context'
-                    print self.help_setup()    
+                    self.help_setup()    
             else: # read a file
-                input_path = os.path.split(os.path.realpath(self.stdin.name))
-                if input_path[-1] != 'Cards':
+                input_path = os.path.realpath(self.stdin.name).split( \
+                                                               os.path.sep)
+                if input_path[-2] != 'Cards':
                     print 'not valid \'.\' option in this context'
-                    print self.help_setup()
-                    sys.exit('wrong setup syntax')
+                    self.help_setup()
+                    sys.exit('EXIT: wrong setup syntax')
                 else:
-                    args[1] = input_path[-2]
+                    args[1] = input_path[-3]
                     
         elif args[1] == 'auto':
             name_dir = lambda i: 'PROC_%s_%s' % \
@@ -494,17 +495,12 @@ class MadGraphCmd(cmd.Cmd):
             return self.list_completion(text, possible_format)
         
         #name of the run =>proposes old run name
-        if len(self.split_arg(line[0:begidx])) == 2:
-            mgme_pos = [os.path.join(root_path, os.path.pardir),
-                        os.path.join(os.getcwd(), os.path.pardir),
-                        os.getcwd()]
-            for pos in mgme_pos:
-                if os.path.isdir(os.path.join(pos, 'Template')):
-                    content = [name for name in os.listdir(pos) if \
+        if len(self.split_arg(line[0:begidx])) == 2: 
+            content = [name for name in os.listdir(MGME_dir) if \
                                     name not in forbidden_name and \
-                                    os.path.isdir(os.path.join(pos, name))]
-                
-                    return self.list_completion(text, content)
+                                    os.path.isdir(os.path.join(MGME_dir, name))]
+            content += ['.', 'auto']
+            return self.list_completion(text, content)
 
         # Returning options
         if len(self.split_arg(line[0:begidx])) > 2:
@@ -1045,6 +1041,10 @@ class MadGraphCmd(cmd.Cmd):
         time_info + \
         '#                                                          *\n' + \
         '#***********************************************************\n'
+        
+        #Avoid repetition of header
+        if self.history[0] == '#'+'*' * 59:
+            text=''
         # Add the comand used 
         text += '\n'.join(self.history) + '\n' 
         
@@ -1344,8 +1344,13 @@ class MadGraphCmd(cmd.Cmd):
         print "-- display a the status of various internal state variables"
 
     def help_setup(self):
-        print "syntax madevent_v4 name [options]"
+        print "syntax madevent_v4 name|.|auto [options]"
         print "-- Create a copy of the V4 Template in the MG_ME directory."
+        print "   name will be the name of the copy the madevent Template that"
+        print "     will be use by default in following steps"
+        print "   If you put '.' instead of a name, the code will try to locate"
+        print "     a valid copy of the Template under focus"
+        print "   If you put 'auto' instead an automatic name will be created"  
         print "   options:"
         print "      -f: force the cleaning of the directory if this one exist"
         print "      -d PATH: specify the directory where to create name"
@@ -1442,17 +1447,28 @@ class MadGraphCmd(cmd.Cmd):
 class CmdFile(file):
     """ a class for command input file -in order to debug cmd \n problem"""
     
+    def __init__(self, name, opt):
+        
+        file.__init__(self, name, 'rU')
+        self.text = file.read(self)
+        self.close()
+        self.lines = self.text.split('\n')
+        print self.lines
+    
     def readline(self, *arg, **opt):
         """readline method treating correctly a line whithout \n at the end
            (add it)
         """
-        line = file.readline(self, *arg, **opt)
+        if self.lines:
+            line = self.lines.pop(0)
+        else:
+            return ''
+        
         if line.endswith('\n'):
             return line
-        elif line:
-            return line + '\n'
         else:
-            return line
+            return line + '\n'
+
 
 #===============================================================================
 # __main__

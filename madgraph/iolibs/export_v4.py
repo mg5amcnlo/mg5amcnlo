@@ -120,9 +120,11 @@ def create_v4_webpage(dir_path, makejpg):
     
     logger.info("Generate web pages")
     # Create the WebPage using perl script
-    subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')])
-    subprocess.call([os.path.join(dir_path, 'bin', 'gen_infohtml-pl')])
-    
+    devnull = os.open(os.devnull, os.O_RDWR)
+    subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')], \
+                                                            stdout=devnull)
+    subprocess.call([os.path.join(dir_path, 'bin', 'gen_infohtml-pl')], \
+                                                            stdout=devnull)
     os.chdir(os.path.pardir)
     subprocess.call([os.path.join(dir_path, 'bin', 'gen_crossxhtml-pl')])
     [mv(name, './HTML/') for name in os.listdir('.') if \
