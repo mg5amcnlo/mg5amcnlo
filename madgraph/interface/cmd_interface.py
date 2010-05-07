@@ -199,6 +199,10 @@ class MadGraphCmd(cmd.Cmd):
         if line.endswith('\\'):
             self.save_line = line[:-1]
             return '' # do nothing   
+        
+        #remove comment
+        if '#' in line:
+            line = line.split('#')[0]
             
         # execute the line command
         return line
@@ -425,6 +429,36 @@ class MadGraphCmd(cmd.Cmd):
             print '  for example do : import model_v4 sm'
             return False
         
+        # Check for special directory treatment
+        if args[1] == '.':
+            if self.use_rawinput: # Interactive mode
+                if 'Cards' in os.listdir('.'):
+                    args[1] = os.path.split(os.path.realpath('.'))[-1]
+                elif 'Cards' in os.listdir('..'):
+                    args[1] = os.path.split(os.path.realpath('..'))[-1]
+                else:
+                    print 'not valid \'.\' option in this context'
+                    print self.help_setup()    
+            else: # read a file
+                input_path = os.path.split(os.path.realpath(self.stdin.name))
+                if input_path[-1] != 'Cards':
+                    print 'not valid \'.\' option in this context'
+                    print self.help_setup()
+                    sys.exit('wrong setup syntax')
+                else:
+                    args[1] = input_path[-2]
+                    
+        elif args[1] == 'auto':
+            name_dir = lambda i: 'PROC_%s_%s' % \
+                                        (os.path.split(self.__model_dir)[-1], i)
+            auto_path = lambda i: os.path.join(mgme_dir, name_dir(i))     
+            
+            for i in range(500):
+                if os.path.isdir(auto_path(i)):
+                    continue
+                else:
+                    args[1] = name_dir(i) 
+                    break
         dir_path = os.path.join(mgme_dir, args[1])
         if not force and os.path.isdir(dir_path):
             print 'INFO: directory %s already exists.' % args[1]
@@ -976,7 +1010,7 @@ class MadGraphCmd(cmd.Cmd):
             return False
         
         if len(args) == 0:
-            print '\n'.join(self.history[:-1]) #don't print history
+            print '\n'.join(self.history)
             return False
         elif args[0] == 'clean':
             self.history = []
@@ -1012,7 +1046,7 @@ class MadGraphCmd(cmd.Cmd):
         '#                                                          *\n' + \
         '#***********************************************************\n'
         # Add the comand used 
-        text += '\n'.join(self.history[:-1]) + '\n' #don't print history
+        text += '\n'.join(self.history) + '\n' 
         
         #write this information in a file
         output_file.write(text)
@@ -1248,7 +1282,6 @@ class MadGraphCmd(cmd.Cmd):
         else:
             makejpg = True
         
-        print 'creating html pages'    
         export_v4.create_v4_webpage(dir_path, makejpg)
         os.system('touch %s/done' % os.path.join(dir_path,'SubProcesses'))
         

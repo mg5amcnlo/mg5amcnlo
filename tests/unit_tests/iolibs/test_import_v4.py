@@ -267,7 +267,7 @@ class ProcCardV4ReaderTest(unittest.TestCase):
         
         proccard = self.proccard
         
-        self.assertEqual(len(proccard.process), 6)
+        self.assertEqual(len(proccard.process), 8)
         self.assertEqual(proccard.model, 'sm')
         self.assertEqual(len(proccard.multipart), 6)
         # Check that multiparticles are already loaded
@@ -289,6 +289,8 @@ class ProcCardV4ReaderTest(unittest.TestCase):
                    'add process p p > t t~ $ g / a QED=0 @2 ', 
                    'add process p p > z $ a / g @4 , (z > w+ w- $ a / g , w- > mu- vm $ a / g  ) ',
                    'add process p p > z z $ a / g QED=1 @4 , (z > w+ w- $ a / g , w- > mu- vm $ a / g  ) , z > w+ w- $ a / g  ',
+                   'add process p p > Z Z, Z > W+ W- $a /g @4',
+                   'add process p p > Z Z QCD=2 @4',
                    'setup madevent_v4 tests -f', 
                    'export madevent_v4', 
                    'makehtml madevent_v4', 

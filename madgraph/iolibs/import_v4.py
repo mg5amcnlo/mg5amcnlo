@@ -436,8 +436,7 @@ class ProcCardv4Reader():
                                   process.mg5_process_line(self.couplings_name))
         
         #finally export the madevent output
-        lines.append('setup madevent_v4 %s -f' % \
-                                            os.path.split(self.process_path)[1])
+        lines.append('setup madevent_v4 . -f')
         lines.append('export madevent_v4')
         lines.append('makehtml madevent_v4')
         lines.append('history %s' % os.path.relpath(
@@ -511,6 +510,7 @@ class ProcessInfo():
         self.forbid = []     # list of particles forbids
         self.line = line    # initialization line
         
+        self.is_mg5_valid = False
         #some shortcut
         self.separate_particle = ProcCardv4Reader.separate_particle
     
@@ -530,7 +530,8 @@ class ProcessInfo():
             
 
         # check if we have a MG5 format
-        if ',' in line:
+        if ',' in line or '=' in line:
+            self.is_mg5_valid = True
             return
             
         # extract (S-)forbidden particle
@@ -593,7 +594,7 @@ class ProcessInfo():
                 if level == 0: #store the information
                     self.decays.append(ProcessInfo(decay_line))
                     self.decays[-1].add_restrictions(self.forbid, self.s_forbid,
-                                                                 self.couplings)
+                                                                 None)
                     self.decays[-1].analyze_process(particles_name)
                     out_line += decay_line[:decay_line.find('>')]
                 else:
@@ -621,7 +622,7 @@ class ProcessInfo():
     def mg5_process_line(self, model_coupling):
         """Return a valid mg5 format for this process """
         
-        if hasattr(self, 'is_valid'):
+        if self.is_mg5_valid:
             return self.line
         
         text = ''
@@ -639,9 +640,9 @@ class ProcessInfo():
         if self.forbid:
             text += '/ ' + ' '.join(self.forbid) + ' '
 
-        
-        #write the rules associate to the couplings
-        text += self.mg5_couplings_line(model_coupling, len(self.particles))
+        if self.couplings:
+            #write the rules associate to the couplings
+            text += self.mg5_couplings_line(model_coupling, len(self.particles))
         
         # write the tag
         if self.tag:

@@ -112,11 +112,13 @@ def create_v4_webpage(dir_path, makejpg):
     
     # Convert the poscript in jpg files (if authorize)
     if makejpg:
+        logger.info("Generate jpeg diagrams")
         for Pdir in P_dir_list:
             os.chdir(Pdir)
             subprocess.call([os.path.join(dir_path, 'bin', 'gen_jpeg-pl')])
             os.chdir(os.path.pardir)
     
+    logger.info("Generate web pages")
     # Create the WebPage using perl script
     subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')])
     subprocess.call([os.path.join(dir_path, 'bin', 'gen_infohtml-pl')])

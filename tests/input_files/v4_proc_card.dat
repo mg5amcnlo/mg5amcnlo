@@ -1,4 +1,4 @@
-#*********************************************************************
+ #*********************************************************************
 #                        MadGraph/MadEvent                           *
 #                   http://madgraph.hep.uiuc.edu                     *
 #                                                                    *
@@ -57,6 +57,16 @@ QED=4              # Max QED couplings
 end_coup           # End the couplings input
 
 pp>(Z>W+(W->mu-vm)) (Z>W+W-)$a /g@4      # Second Process
+QCD=99             # Max QCD couplings
+QED=1              # Max QED couplings
+end_coup           # End the couplings input
+
+p p > Z Z, Z > W+ W- $a /g @4      # Second Process
+QCD=99             # Max QCD couplings
+QED=1              # Max QED couplings
+end_coup           # End the couplings input
+
+p p > Z Z QCD=2 @4      # Second Process
 QCD=99             # Max QCD couplings
 QED=1              # Max QED couplings
 end_coup           # End the couplings input
