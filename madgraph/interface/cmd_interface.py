@@ -78,8 +78,7 @@ class MadGraphCmd(cmd.Cmd):
     __save_opts = ['model', 'processes']
     __import_formats = ['model_v4', 'proc_v4', 'command']
     __export_formats = ['standalone_v4', 'sa_dirs_v4', 'madevent_v4']
-    __export_dir = None 
-
+    
     class MadGraphCmdError(Exception):
         """Exception raised if an error occurs in the execution
         of command."""
@@ -92,6 +91,20 @@ class MadGraphCmd(cmd.Cmd):
         self.save_line = ''
         cmd.Cmd.__init__(self, *arg, **opt)
         self.__generate_info = "" # information line on the generation
+        
+        # detect if we have an a priori location for the output:
+        if 'Cards' in os.listdir('.'):
+            self.__export_dir = os.path.split(os.path.realpath('.'))[-1]
+        elif 'Cards' in os.listdir('..'):
+            self.__export_dir = os.path.split(os.path.realpath('..'))[-1]
+        elif self.stdin != sys.stdin:
+            input_path = os.path.realpath(self.stdin.name).split(os.path.sep)
+            if input_path[-2] == 'Cards':
+                self.__export_dir = os.path.sep.join(input_path[:-2])
+            else:
+                self.__export_dir = None
+        else:
+            self.__export_dir = None 
         
     def split_arg(self, line):
         """Split a line of arguments"""
@@ -262,9 +275,6 @@ class MadGraphCmd(cmd.Cmd):
             self.help_import()
             return False
         
-        
-
-
         if args[0] == 'model_v4':
             # Check for a file
             if os.path.isfile(args[1]):
@@ -314,13 +324,15 @@ class MadGraphCmd(cmd.Cmd):
                 proc_card = args[1]
             else:
                 logging.error('No default directory are setup')
-
+            
+            self.check_for_export_dir(proc_card)
             self.import_mg4_proc_card(proc_card)   
                                      
         elif args[0] == 'command':
             if not os.path.isfile(args[1]):
                 print "Path %s is not a valid pathname" % args[1]
             else:
+                self.check_for_export_dir(args[1])
                 self.import_mg5_proc_card(args[1])
 
     def complete_import(self, text, line, begidx, endidx):
@@ -360,8 +372,6 @@ class MadGraphCmd(cmd.Cmd):
         # Now that we have the model we can split the information
         lines = reader.extract_command_lines(self.__curr_model)
         for line in lines:
-            if 'setup' in line and self.__export_dir:
-                continue
             self.onecmd_full(line)
             
         return 
@@ -436,24 +446,12 @@ class MadGraphCmd(cmd.Cmd):
         
         # Check for special directory treatment
         if args[1] == '.':
-            if self.use_rawinput: # Interactive mode
-                if 'Cards' in os.listdir('.'):
-                    args[1] = os.path.split(os.path.realpath('.'))[-1]
-                elif 'Cards' in os.listdir('..'):
-                    args[1] = os.path.split(os.path.realpath('..'))[-1]
-                else:
-                    print 'not valid \'.\' option in this context'
-                    self.help_setup()    
-            else: # read a file
-                input_path = os.path.realpath(self.stdin.name).split( \
-                                                               os.path.sep)
-                if input_path[-2] != 'Cards':
-                    print 'not valid \'.\' option in this context'
-                    self.help_setup()
-                    sys.exit('EXIT: wrong setup syntax')
-                else:
-                    args[1] = input_path[-3]
-                    
+            if self.__export_dir:
+                args[1] = self.__export_dir
+            else:
+                print 'No possible working directory are detected'
+                self.help_setup()    
+                return False
         elif args[1] == 'auto':
             name_dir = lambda i: 'PROC_%s_%s' % \
                                         (os.path.split(self.__model_dir)[-1], i)
@@ -465,6 +463,7 @@ class MadGraphCmd(cmd.Cmd):
                 else:
                     args[1] = name_dir(i) 
                     break
+                
         dir_path = os.path.join(mgme_dir, args[1])
         if not force and os.path.isdir(dir_path):
             print 'INFO: directory %s already exists.' % args[1]
@@ -786,6 +785,18 @@ class MadGraphCmd(cmd.Cmd):
         # Return the core process (ends recursion when there are no
         # more decays)
         return core_process, line
+    
+    def check_for_export_dir(self, filepath):
+        """Check if the files is in a valid export directory and assing it to
+        export path if if is"""
+        
+        # keep previous if a previous one is defined
+        if self.__export_dir:
+            return
+        
+        path_split = filepath.split(os.path.sep)
+        if path_split[-2] == 'Cards':
+            self.__export_dir = os.path.sep.join(path_split[:-2])
         
     def extract_process(self, line, proc_number = 0):
         """Extract a process definition from a string. Returns
