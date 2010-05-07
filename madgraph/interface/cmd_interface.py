@@ -551,7 +551,7 @@ class MadGraphCmd(cmd.Cmd):
         # and process number, starting from the back
 
         # Start with process number (identified by "@")
-        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*(.+)$")
+        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*(.*)$")
         proc_number_re = proc_number_pattern.match(line)
         if proc_number_re:
             proc_number = int(proc_number_re.group(2))
