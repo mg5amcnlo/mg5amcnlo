@@ -1481,7 +1481,6 @@ class MadGraphWebCmd(MadGraphCmd):
 
         self.prompt = ''
         # Check that we are in a non interactive mode
-        assert(self.use_rawinput == False)
 
     def do_setup(self, line):
         """Initialize a new Template or reinitialize one"""

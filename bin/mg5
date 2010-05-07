@@ -67,5 +67,8 @@ if options.file or args:
         cmd_line.cmdloop()
 else:
     # Interactive mode
-    cmd_interface.MadGraphCmd().cmdloop()
+    if options.web:
+        cmd_interface.MadGraphWebCmd().cmdloop()
+    else:
+        cmd_interface.MadGraphCmd().cmdloop()
 
