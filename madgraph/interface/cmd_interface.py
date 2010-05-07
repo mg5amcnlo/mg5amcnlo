@@ -279,8 +279,13 @@ class MadGraphCmd(cmd.Cmd):
             # Check for a valid directory
             if os.path.isdir(args[1]):
                 self.__model_dir = args[1]
-            elif os.path.isdir(os.path.join(MGME_dir, 'Models', args[1])):
+            elif MGME_dir and os.path.isdir(os.path.join(MGME_dir, 'Models', \
+                                                                      args[1])):
                 self.__model_dir = os.path.join(MGME_dir, 'Models', args[1])
+            elif not MGME_dir:
+                print "Path %s is not a valid pathname" % args[1]
+                print "and no MG_ME installation detected in other to search in Models"
+                return False                
             else:
                 print "Path %s is not a valid pathname" % args[1]
                 return False
@@ -712,6 +717,16 @@ class MadGraphCmd(cmd.Cmd):
         """Recursively extract a decay chain process definition from a
         string. Returns a ProcessDefinition."""
 
+        # Start with process number (identified by "@")
+        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*(.*)$")
+        proc_number_re = proc_number_pattern.match(line)
+        proc_number = 0
+        if proc_number_re:
+            proc_number = int(proc_number_re.group(2))
+            line = proc_number_re.group(1) + \
+                   proc_number_re.group(3)
+            print line
+            
         index_comma = line.find(",")
         index_par = line.find(")")
         min_index = index_comma
@@ -719,9 +734,9 @@ class MadGraphCmd(cmd.Cmd):
             min_index = index_par
         
         if min_index > -1:
-            core_process = self.extract_process(line[:min_index])
+            core_process = self.extract_process(line[:min_index], proc_number)
         else:
-            core_process = self.extract_process(line)
+            core_process = self.extract_process(line, proc_number)
 
         #level_down = False
 
@@ -772,7 +787,7 @@ class MadGraphCmd(cmd.Cmd):
         # more decays)
         return core_process, line
         
-    def extract_process(self, line):
+    def extract_process(self, line, proc_number = 0):
         """Extract a process definition from a string. Returns
         a ProcessDefinition."""
 
@@ -781,12 +796,12 @@ class MadGraphCmd(cmd.Cmd):
         # and process number, starting from the back
 
         # Start with process number (identified by "@")
-        proc_number_pattern = re.compile("^(.+)\s*@\s*(\d+)\s*$")
+        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*(.*)$")
         proc_number_re = proc_number_pattern.match(line)
-        proc_number = 0
         if proc_number_re:
             proc_number = int(proc_number_re.group(2))
-            line = proc_number_re.group(1)
+            line = proc_number_re.group(1) + \
+                   proc_number_re.group(3)
 
         # Start with coupling orders (identified by "=")
         order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
@@ -801,11 +816,19 @@ class MadGraphCmd(cmd.Cmd):
         line = line.lower()
 
         # Now check for forbidden particles, specified using "/"
-        forbidden_particles_re = re.match("^(.+)\s*/\s*(.+)\s*$", line)
+        slash = line.find("/")
+        dollar = line.find("$")
         forbidden_particles = ""
-        if forbidden_particles_re:
-            forbidden_particles = forbidden_particles_re.group(2)
-            line = forbidden_particles_re.group(1)
+        if slash > 0:
+            if dollar > slash:
+                forbidden_particles_re = re.match("^(.+)\s*/\s*(.+\s*)(\$.*)$", line)
+            else:
+                forbidden_particles_re = re.match("^(.+)\s*/\s*(.+\s*)$", line)
+            if forbidden_particles_re:
+                forbidden_particles = forbidden_particles_re.group(2)
+                line = forbidden_particles_re.group(1)
+                if len(forbidden_particles_re.groups()) > 2:
+                    line = line + forbidden_particles_re.group(3)
 
         # Now check for forbidden schannels, specified using "$"
         forbidden_schannels_re = re.match("^(.+)\s*\$\s*(.+)\s*$", line)
