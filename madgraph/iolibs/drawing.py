@@ -138,8 +138,8 @@ class FeynmanLine(base_objects.Leg):
         """Change the particle in his anti-particle if this type is 
         equal to 'inversetype'."""
 
-        type = self.get_info('line')
-        if type == inversetype:
+        drawtype = self.get_info('line')
+        if drawtype == inversetype:
             self.inverse_part_antipart()
 
     def inverse_part_antipart(self):
@@ -600,7 +600,7 @@ class VertexPoint(base_objects.Vertex):
         tag = 0
         for i, line in enumerate(self.line):
             tag += line.get('number') / 10 ** (-i)
-        tag = tag * 10 ** (i + 1)
+        tag = tag * 10 ** (len(self.line) + 1)
         return tag
 
     def __eq__(self, other):
@@ -815,15 +815,15 @@ class FeynmanDiagram:
             if i + 1 == len(vertex.get('legs')):
                 # Find if leg is in self._treated_legs and returns the position 
                 #in that list
-                id = self.find_leg_id2(leg)
+                mg_id = self.find_leg_id2(leg)
             else:
                 # Find  thelast item in self._treated_legs with same number and
                 #returns the position in that list 
-                id = self.find_leg_id(leg)
+                mg_id = self.find_leg_id(leg)
 
             # Define-recover the line associate to this leg                  
-            if id:
-                line = self.lineList[id]
+            if mg_id:
+                line = self.lineList[mg_id]
             else:
                 line = self._load_leg(leg)
 
@@ -971,7 +971,7 @@ class FeynmanDiagram:
             self.def_next_level_from(vertex) #auto recursive operation
 
 
-    def def_next_level_from(self, vertex, data=[]):
+    def def_next_level_from(self, vertex):
         """Define level for adjacent vertex.
         If those vertex is already defined do nothing
         Otherwise define as level+1 (at level 1 if T-channel) 

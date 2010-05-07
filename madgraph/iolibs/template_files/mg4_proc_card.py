@@ -15,7 +15,7 @@
 import string
 
 
-mg4_template= string.Template("""\
+mg4_template = string.Template("""\
 #*********************************************************************
 #                        MadGraph/MadEvent                           *
 #                   http://madgraph.hep.uiuc.edu                     *

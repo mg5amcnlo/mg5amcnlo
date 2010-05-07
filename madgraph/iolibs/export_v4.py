@@ -44,19 +44,19 @@ def copy_v4template(mgme_dir, dir_path, model_dir, clean):
     #First copy the full template tree if dir_path doesn't exit
     if not os.path.isdir(dir_path):
         print 'initialize a new directory: %s' % os.path.basename(dir_path)
-        shutil.copytree(os.path.join(mgme_dir,'Template'), dir_path, True)
+        shutil.copytree(os.path.join(mgme_dir, 'Template'), dir_path, True)
 
     #Ensure that the Template is clean
     if clean:
         print 'remove old information in %s' % os.path.basename(dir_path)
         old_pos = os.getcwd()
         os.chdir(dir_path)
-        subprocess.call([os.path.join('bin','clean_template')])
+        subprocess.call([os.path.join('bin', 'clean_template')])
         os.chdir(old_pos)
         
         #Write version info
         MG_version = misc.get_pkg_info()
-        open(os.path.join(dir_path,'SubProcesses','MGVersion.txt'), 'w').write(
+        open(os.path.join(dir_path, 'SubProcesses', 'MGVersion.txt'), 'w').write(
                                                           MG_version['version'])
         
 #===============================================================================
@@ -68,15 +68,15 @@ def write_procdef_mg5(file_pos, modelname, process_str):
     
     proc_card_template = Template.mg4_proc_card.mg4_template
     process_template = Template.mg4_proc_card.process_template
-    process_text=''
-    coupling=''
+    process_text = ''
+    coupling = ''
     new_process_content = []
     
     
     # First find the coupling and suppress the coupling from process_str
     #But first ensure that coupling are define whithout spaces:
-    process_str = process_str.replace(' =','=')
-    process_str = process_str.replace('= ','=')
+    process_str = process_str.replace(' =', '=')
+    process_str = process_str.replace('= ', '=')
     #now loop on the element and treat all the coupling
     for info in process_str.split():
         if '=' in info:
@@ -94,7 +94,7 @@ def write_procdef_mg5(file_pos, modelname, process_str):
     text = proc_card_template.substitute({'process': process_text,
                                         'model': modelname,
                                         'multiparticle':''})
-    ff = open(file_pos,'w')
+    ff = open(file_pos, 'w')
     ff.write(text)
     ff.close()
 
@@ -106,7 +106,7 @@ def create_v4_webpage(dir_path, makejpg):
 
     old_pos = os.getcwd()
     
-    os.chdir(os.path.join(dir_path,'SubProcesses'))
+    os.chdir(os.path.join(dir_path, 'SubProcesses'))
     P_dir_list = [proc for proc in os.listdir('.') if os.path.isdir(proc) and \
                                                                 proc[0] == 'P']
     
@@ -114,21 +114,21 @@ def create_v4_webpage(dir_path, makejpg):
     if makejpg:
         for Pdir in P_dir_list:
             os.chdir(Pdir)
-            subprocess.call([os.path.join(dir_path, 'bin','gen_jpeg-pl')])
+            subprocess.call([os.path.join(dir_path, 'bin', 'gen_jpeg-pl')])
             os.chdir(os.path.pardir)
     
     # Create the WebPage using perl script
-    subprocess.call([os.path.join(dir_path, 'bin','gen_cardhtml-pl')])
-    subprocess.call([os.path.join(dir_path, 'bin','gen_infohtml-pl')])
+    subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')])
+    subprocess.call([os.path.join(dir_path, 'bin', 'gen_infohtml-pl')])
     
     os.chdir(os.path.pardir)
-    subprocess.call([os.path.join(dir_path, 'bin','gen_crossxhtml-pl')])
-    [mv(name,'./HTML/') for name in os.listdir('.') if \
+    subprocess.call([os.path.join(dir_path, 'bin', 'gen_crossxhtml-pl')])
+    [mv(name, './HTML/') for name in os.listdir('.') if \
                         (name.endswith('.html') or name.endswith('.jpg')) and \
                         name != 'index.html']               
     
-    subprocess.call([os.path.join(dir_path, 'bin','gen_cardhtml-pl')])
-    if os.path.exists(os.path.join('SubProcesses','subproc.mg')):
+    subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')])
+    if os.path.exists(os.path.join('SubProcesses', 'subproc.mg')):
         if os.path.exists('madevent.tar.gz'):
             os.remove('madevent.tar.gz')
         subprocess.call(['make'])
@@ -1001,11 +1001,11 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
                  'unwgt.f']
 
     for file in linkfiles:
-        ln('../'+ file ,'.')
+        ln('../' + file , '.')
     
     #import nexternal/leshouch in Source
-    ln('nexternal.inc','../../Source', log=False)
-    ln('leshouche.inc','../../Source', log=False)
+    ln('nexternal.inc', '../../Source', log=False)
+    ln('leshouche.inc', '../../Source', log=False)
 
     # Return to SubProcesses dir
     os.chdir(pathdir)
@@ -1863,8 +1863,8 @@ def mv(path1, path2):
             shutil.move(path1, path2)
             return
         elif os.path.isdir(path2) and os.path.exists(
-                                   os.path.join(path2,os.path.basename(path1))):      
-            path2 = os.path.join(path2,os.path.basename(path1))
+                                   os.path.join(path2, os.path.basename(path1))):      
+            path2 = os.path.join(path2, os.path.basename(path1))
             os.remove(path2)
             shutil.move(path1, path2)
         else:
@@ -1879,10 +1879,10 @@ def ln(file_pos, starting_dir='.', name='', log=True):
     file_pos = format_path(file_pos)
     starting_dir = format_path(starting_dir)
     if not name:
-        name= os.path.split(file_pos)[1]
+        name = os.path.split(file_pos)[1]
         
     try:
-        os.symlink(os.path.relpath( file_pos, starting_dir), \
+        os.symlink(os.path.relpath(file_pos, starting_dir), \
                         os.path.join(starting_dir, name))
     except:
         if log:
