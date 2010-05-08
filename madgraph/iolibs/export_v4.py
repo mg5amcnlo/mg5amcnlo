@@ -121,9 +121,12 @@ def create_v4_webpage(dir_path, makejpg):
     logger.info("Generate web pages")
     # Create the WebPage using perl script
     if os.path.exists(os.path.join('SubProcesses', 'subproc.mg')):
+        print "subproc.mg is there"
         if os.path.exists('madevent.tar.gz'):
             os.remove('madevent.tar.gz')
-        subprocess.call(['make'])
+        print "doing make"
+        subprocess.call(['make'],stdout='comp.out')
+    print 'start wevb'
     devnull = os.open(os.devnull, os.O_RDWR)
     subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')], \
                                                             stdout=devnull)
