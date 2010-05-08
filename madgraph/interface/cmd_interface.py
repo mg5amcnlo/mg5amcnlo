@@ -644,8 +644,9 @@ class MadGraphCmd_Web(CmdExtended, HelpToCmd, CheckValidForCmd):
     _import_formats = ['model_v4', 'proc_v4', 'command']
     _export_formats = ['standalone_v4', 'sa_dirs_v4', 'madevent_v4']
     
-    writing_dir = os.path.join(os.environ('MADGRAPH_DATA'),
-                               os.environ('REMOTE_USER'))
+    print os.environ
+    writing_dir = os.path.join(os.environ['MADGRAPH_DATA'],
+                               os.environ['REMOTE_USER'])
     
     def __init__(self, *arg, **opt):
         """ add a tracker of the history """
