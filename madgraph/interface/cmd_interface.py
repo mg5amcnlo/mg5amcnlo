@@ -1463,6 +1463,66 @@ class MadGraphCmd_Web(CmdExtended, HelpToCmd, CheckValidForCmd):
         
         export_v4.create_v4_webpage(dir_path, makejpg)
         os.system('touch %s/done' % os.path.join(dir_path,'SubProcesses'))
+
+
+    def do_setup(self, line):
+        """Initialize a new Template or reinitialize one"""
+        
+        args = split_arg(line)
+        clean = '-noclean' not in args
+        force = '-f' in args 
+        dir = '-d' in args
+        if dir:
+            mgme_dir = args[args.find('-d') + 1]
+        else:
+            mgme_dir = MGME_dir
+                        
+        if len(args) < 2:
+            self.help_setup()
+            return False
+        
+        if not self._model_dir:
+            print 'No model found. Please import a model first and then retry'
+            print '  for example do : import model_v4 sm'
+            return False
+        
+        # Check for special directory treatment
+        if args[1] == '.':
+            if self._export_dir:
+                args[1] = self._export_dir
+            else:
+                print 'No possible working directory are detected'
+                self.help_setup()    
+                return False
+        elif args[1] == 'auto':
+            name_dir = lambda i: 'PROC_%s_%s' % \
+                                        (os.path.split(self._model_dir)[-1], i)
+            auto_path = lambda i: os.path.join(mgme_dir, name_dir(i))     
+            
+            for i in range(500):
+                if os.path.isdir(auto_path(i)):
+                    continue
+                else:
+                    args[1] = name_dir(i) 
+                    break
+                
+        dir_path = os.path.join(mgme_dir, args[1])
+        if not force and os.path.isdir(dir_path):
+            print 'INFO: directory %s already exists.' % args[1]
+            if clean:
+                print 'If you continue this directory will be cleaned'
+
+            answer = raw_input('Do you want to continue? [y/n]')
+            if answer != 'y':
+                print 'stop'
+                return False
+
+        export_v4.copy_v4template(mgme_dir, dir_path, self._model_dir, clean)
+        # Import the model
+        print 'import model files %s in directory %s' % \
+                       (os.path.basename(self._model_dir), args[1])        
+        export_v4.export_model(self._model_dir, dir_path)
+        self._export_dir = dir_path
         
  
 #===============================================================================
@@ -1532,64 +1592,7 @@ class MadGraphCmd(MadGraphCmd_Web, CompleterForCmd):
             print "running shell command:", line
             subprocess.call(line, shell=True)
    
-    def do_setup(self, line):
-        """Initialize a new Template or reinitialize one"""
-        
-        args = split_arg(line)
-        clean = '-noclean' not in args
-        force = '-f' in args 
-        dir = '-d' in args
-        if dir:
-            mgme_dir = args[args.find('-d') + 1]
-        else:
-            mgme_dir = MGME_dir
-                        
-        if len(args) < 2:
-            self.help_setup()
-            return False
-        
-        if not self._model_dir:
-            print 'No model found. Please import a model first and then retry'
-            print '  for example do : import model_v4 sm'
-            return False
-        
-        # Check for special directory treatment
-        if args[1] == '.':
-            if self._export_dir:
-                args[1] = self._export_dir
-            else:
-                print 'No possible working directory are detected'
-                self.help_setup()    
-                return False
-        elif args[1] == 'auto':
-            name_dir = lambda i: 'PROC_%s_%s' % \
-                                        (os.path.split(self._model_dir)[-1], i)
-            auto_path = lambda i: os.path.join(mgme_dir, name_dir(i))     
-            
-            for i in range(500):
-                if os.path.isdir(auto_path(i)):
-                    continue
-                else:
-                    args[1] = name_dir(i) 
-                    break
-                
-        dir_path = os.path.join(mgme_dir, args[1])
-        if not force and os.path.isdir(dir_path):
-            print 'INFO: directory %s already exists.' % args[1]
-            if clean:
-                print 'If you continue this directory will be cleaned'
-
-            answer = raw_input('Do you want to continue? [y/n]')
-            if answer != 'y':
-                print 'stop'
-                return False
-
-        export_v4.copy_v4template(mgme_dir, dir_path, self._model_dir, clean)
-        # Import the model
-        print 'import model files %s in directory %s' % \
-                       (os.path.basename(self._model_dir), args[1])        
-        export_v4.export_model(self._model_dir, dir_path)
-        self._export_dir = dir_path    
+    
     
     
 #===============================================================================
