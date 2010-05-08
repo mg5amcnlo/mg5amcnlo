@@ -138,6 +138,7 @@ def create_v4_webpage(dir_path, makejpg):
             os.remove('madevent.tar.gz')
         print "doing make"
         subprocess.call(['make'])
+        subprocess.call(['gunzip','madevent.tar'])
     print 'start wevb'    
     
     
