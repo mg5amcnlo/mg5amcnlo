@@ -427,7 +427,7 @@ class CheckValidForCmd(object):
 #===============================================================================
 # CompleteForCmd
 #===============================================================================
-class CompleterForCmd(object):
+class CompleteForCmd(object):
     """ The Series of help routine for the MadGraphCmd"""
     
     def list_completion(self, text, list):
@@ -643,6 +643,9 @@ class MadGraphCmd_Web(CmdExtended, HelpToCmd, CheckValidForCmd):
     _save_opts = ['model', 'processes']
     _import_formats = ['model_v4', 'proc_v4', 'command']
     _export_formats = ['standalone_v4', 'sa_dirs_v4', 'madevent_v4']
+    
+    writing_dir = os.path.join(os.environ('MADGRAPH_DATA'),
+                               os.environ('REMOTE_USER'))
     
     def __init__(self, *arg, **opt):
         """ add a tracker of the history """
@@ -1497,7 +1500,7 @@ class MadGraphCmd_Web(CmdExtended, HelpToCmd, CheckValidForCmd):
         elif args[1] == 'auto':
             name_dir = lambda i: 'PROC_%s_%s' % \
                                         (os.path.split(self._model_dir)[-1], i)
-            auto_path = lambda i: os.path.join(mgme_dir, name_dir(i))     
+            auto_path = lambda i: os.path.join(self.writing_dir, name_dir(i))     
             
             for i in range(500):
                 if os.path.isdir(auto_path(i)):
@@ -1506,7 +1509,7 @@ class MadGraphCmd_Web(CmdExtended, HelpToCmd, CheckValidForCmd):
                     args[1] = name_dir(i) 
                     break
                 
-        dir_path = os.path.join(mgme_dir, args[1])
+        dir_path = os.path.join(self.writing_dir, args[1])
         if not force and os.path.isdir(dir_path):
             print 'INFO: directory %s already exists.' % args[1]
             if clean:
@@ -1528,8 +1531,10 @@ class MadGraphCmd_Web(CmdExtended, HelpToCmd, CheckValidForCmd):
 #===============================================================================
 # MadGraphCmd
 #===============================================================================
-class MadGraphCmd(MadGraphCmd_Web, CompleterForCmd):
+class MadGraphCmd(MadGraphCmd_Web, CompleteForCmd):
     """The command line processor of MadGraph""" 
+    
+    writing_dir = MGME_dir
     
     def preloop(self):
         """Initializing before starting the main loop"""
