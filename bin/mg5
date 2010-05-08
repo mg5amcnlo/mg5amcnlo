@@ -37,7 +37,7 @@ parser.add_option("-l", "--logging", default='INFO',
                   help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
 parser.add_option("-f", "--file", default='',
 					help="use script file FILE")
-parser.add_option("","--web", action="store_true", default=False, dest='web' \
+parser.add_option("","--web", action="store_true", default=False, dest='web', \
                  help='force to be in secure mode')
 
 (options, args) = parser.parse_args()
