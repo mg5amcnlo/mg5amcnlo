@@ -120,6 +120,10 @@ def create_v4_webpage(dir_path, makejpg):
     
     logger.info("Generate web pages")
     # Create the WebPage using perl script
+    if os.path.exists(os.path.join('SubProcesses', 'subproc.mg')):
+        if os.path.exists('madevent.tar.gz'):
+            os.remove('madevent.tar.gz')
+        subprocess.call(['make'])
     devnull = os.open(os.devnull, os.O_RDWR)
     subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')], \
                                                             stdout=devnull)
@@ -132,10 +136,6 @@ def create_v4_webpage(dir_path, makejpg):
                         name != 'index.html']               
     
     subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')])
-    if os.path.exists(os.path.join('SubProcesses', 'subproc.mg')):
-        if os.path.exists('madevent.tar.gz'):
-            os.remove('madevent.tar.gz')
-        subprocess.call(['make'])
     
     #return to the initial dir
     os.chdir(old_pos)               
