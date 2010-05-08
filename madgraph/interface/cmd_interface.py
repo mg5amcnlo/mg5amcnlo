@@ -1345,7 +1345,7 @@ class MadGraphCmd_Web(CmdExtended, HelpToCmd, CheckValidForCmd):
         
         if MGME_dir:
             #model_dir = os.path.join(MGME_dir, 'Models')
-            line = self.onecmd_full('import model_v4 %s' % (reader.model))
+            line = self.exec_cmd('import model_v4 %s' % (reader.model))
         else:
             logging.error('No MG_ME installation detected')
             return    
@@ -1354,7 +1354,7 @@ class MadGraphCmd_Web(CmdExtended, HelpToCmd, CheckValidForCmd):
         # Now that we have the model we can split the information
         lines = reader.extract_command_lines(self._curr_model)
         for line in lines:
-            self.onecmd_full(line)
+            self.exec_cmd(line)
             
         return 
 
@@ -1368,7 +1368,7 @@ class MadGraphCmd_Web(CmdExtended, HelpToCmd, CheckValidForCmd):
             line = line.replace('\n', '').strip()
             # execute the line if this one is not empty
             if line:
-                self.onecmd_full(line)
+                self.exec_cmd(line)
         return
     
     def check_for_export_dir(self, filepath):
