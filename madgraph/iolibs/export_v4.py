@@ -138,7 +138,8 @@ def create_v4_webpage(dir_path, makejpg):
             os.remove('madevent.tar.gz')
         print "doing make"
         os.system('make > make.out')
-        os.system('gunzip madevent.tar >> make.out')
+        os.system('which gunzip')
+        os.system('gunzip madevent.tar > make2.out')
         os.system('ls >>make.out')
         #subprocess.call(['make'])
         #subprocess.call(['gunzip','madevent.tar'])
