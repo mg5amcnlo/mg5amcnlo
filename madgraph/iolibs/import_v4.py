@@ -439,8 +439,7 @@ class ProcCardv4Reader():
         lines.append('setup madevent_v4 . -f')
         lines.append('export madevent_v4')
         lines.append('makehtml madevent_v4')
-        lines.append('history %s' % os.path.relpath(
-                os.path.join(self.process_path, 'Cards', 'proc_card_mg5.dat')))
+        lines.append('history .')
         
         return lines
         

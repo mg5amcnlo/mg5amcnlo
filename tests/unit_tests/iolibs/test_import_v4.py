@@ -294,7 +294,7 @@ class ProcCardV4ReaderTest(unittest.TestCase):
                    'setup madevent_v4 . -f', 
                    'export madevent_v4', 
                    'makehtml madevent_v4', 
-                   'history tests/Cards/proc_card_mg5.dat']    
+                   'history .']    
         self.assertEqual(len(lines),len(solution))
         for i,command in enumerate(lines):
             self.assertEqual(command,solution[i])

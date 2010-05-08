@@ -1464,9 +1464,10 @@ class MadGraphCmd_Web(CmdExtended, HelpToCmd, CheckValidForCmd):
             makejpg = False
         else:
             makejpg = True
-        
+            
+        os.system('touch %s/done' % os.path.join(dir_path,'SubProcesses'))        
         export_v4.create_v4_webpage(dir_path, makejpg)
-        os.system('touch %s/done' % os.path.join(dir_path,'SubProcesses'))
+
 
 
     def do_setup(self, line):
