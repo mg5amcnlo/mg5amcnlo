@@ -58,7 +58,7 @@ if options.file or args:
         input_file = options.file
     input_file = cmd_interface.CmdFile(input_file,'rU')
     if options.web:
-        cmd_line = cmd_interface.MadGraphWebCmd(stdin=input_file)
+        cmd_line = cmd_interface.MadGraphCmd_Web(stdin=input_file)
         cmd_line.use_rawinput = False #put it in non interactive mode
         cmd_line.cmdloop()    
     else:
@@ -68,7 +68,7 @@ if options.file or args:
 else:
     # Interactive mode
     if options.web:
-        cmd_interface.MadGraphWebCmd().cmdloop()
+        cmd_interface.MadGraphCmd_Web().cmdloop()
     else:
         cmd_interface.MadGraphCmd().cmdloop()
 
