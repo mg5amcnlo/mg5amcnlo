@@ -51,7 +51,10 @@ def copy_v4template(mgme_dir, dir_path, model_dir, clean):
         print 'remove old information in %s' % os.path.basename(dir_path)
         old_pos = os.getcwd()
         os.chdir(dir_path)
-        subprocess.call([os.path.join('bin', 'clean_template')])
+        if os.environ['MADGRAPH_BASE']:
+            subprocess.call([os.path.join('bin', 'clean_template'), '--web'])
+        else:
+            subprocess.call([os.path.join('bin', 'clean_template')])
         os.chdir(old_pos)
         
         #Write version info
