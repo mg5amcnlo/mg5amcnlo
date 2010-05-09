@@ -136,17 +136,9 @@ def create_v4_webpage(dir_path, makejpg):
                         name != 'index.html']               
     
     if os.path.exists(os.path.join('SubProcesses', 'subproc.mg')):
-        print "subproc.mg is there"
         if os.path.exists('madevent.tar.gz'):
             os.remove('madevent.tar.gz')
-        print "doing make"
-        os.system('make > make.out')
-        os.system('which gunzip > make2.out')
-        os.system('gunzip madevent.tar >> make2.out')
-        os.system('ls >>make2.out')
-        #subprocess.call(['make'])
-        #subprocess.call(['gunzip','madevent.tar'])
-    print 'start wevb'    
+        subprocess.call(['make'], stdout=devnull)
     
     
     subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')])

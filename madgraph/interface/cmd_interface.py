@@ -644,7 +644,6 @@ class MadGraphCmd_Web(CmdExtended, HelpToCmd, CheckValidForCmd):
     _import_formats = ['model_v4', 'proc_v4', 'command']
     _export_formats = ['standalone_v4', 'sa_dirs_v4', 'madevent_v4']
     
-    print os.environ
     if os.environ.has_key('_CONDOR_SCRATCH_DIR'):
         writing_dir = os.path.join(os.environ['_CONDOR_SCRATCH_DIR'], \
                                                                  os.path.pardir)
