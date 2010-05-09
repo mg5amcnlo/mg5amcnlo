@@ -645,7 +645,10 @@ class MadGraphCmd_Web(CmdExtended, HelpToCmd, CheckValidForCmd):
     _export_formats = ['standalone_v4', 'sa_dirs_v4', 'madevent_v4']
     
     print os.environ
-    writing_dir = os.path.join(os.environ['MADGRAPH_DATA'],
+    if os.environ.has_key('_CONDOR_SCRATCH_DIR'):
+        writing_dir = os.environ.has_key('_CONDOR_SCRATCH_DIR')
+    else:
+        writing_dir = os.path.join(os.environ['MADGRAPH_DATA'],
                                os.environ['REMOTE_USER'])
     
     def __init__(self, *arg, **opt):
