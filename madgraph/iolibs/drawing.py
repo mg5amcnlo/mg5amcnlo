@@ -1857,7 +1857,7 @@ class DrawOption(object):
         for value in ['external','add_gap','horizontal','max_size',
                       'contract_non_propagating']:
             if hasattr(opt, value):
-                self.set(value, opt.value)
+                self.set(value, getattr(opt, value))
 
     def set(self, key, value):
         """Check and attribute the given value."""

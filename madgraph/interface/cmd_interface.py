@@ -401,9 +401,17 @@ class CheckValidForCmd(object):
     def check_import(self, args):
         """check the validity of line"""
         
-        if len(args) != 2 or args[0] not in self._import_formats:
+        if not args or  args[0] not in self._import_formats:
             self.help_import()
             return False
+        
+        if args[0] != 'proc_v4' and len(args) != 2:
+            self.help_import()
+            return False
+        
+        if args[0] == 'proc_v4' and len(args)!=2 and not self._export_dir:
+            self.help_import()
+            return False            
         
         return True
     
@@ -531,9 +539,9 @@ class CompleteForCmd(object):
 
         #option
         if len(split_arg(line[0:begidx])) >= 2:
-            option = ['external=', 'horizontal=', 'add_gap=', 'max_size=', \
-                                'contract_non_propagating=']
-            return self.list_completion(text, option)
+            opt = ['horizontal', 'external=', 'max_size=', 'add_gap=',
+                                'non_propagating','--']
+            return self.list_completion(text, opt)
 
     def complete_load(self, text, line, begidx, endidx):
         "Complete the load command"
@@ -628,7 +636,7 @@ class CompleteForCmd(object):
 #===============================================================================
 # MadGraphCmd
 #===============================================================================
-class MadGraphCmd_Web(CmdExtended, HelpToCmd, CheckValidForCmd):
+class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd):
     """The command line processor of MadGraph"""    
     
     _curr_model = base_objects.Model()
@@ -643,14 +651,7 @@ class MadGraphCmd_Web(CmdExtended, HelpToCmd, CheckValidForCmd):
     _save_opts = ['model', 'processes']
     _import_formats = ['model_v4', 'proc_v4', 'command']
     _export_formats = ['standalone_v4', 'sa_dirs_v4', 'madevent_v4']
-    
-    if os.environ.has_key('_CONDOR_SCRATCH_DIR'):
-        writing_dir = os.path.join(os.environ['_CONDOR_SCRATCH_DIR'], \
-                                                                 os.path.pardir)
-    else:
-        writing_dir = os.path.join(os.environ['MADGRAPH_DATA'],
-                               os.environ['REMOTE_USER'])
-    
+        
     def __init__(self, *arg, **opt):
         """ add a tracker of the history """
 
@@ -929,7 +930,7 @@ class MadGraphCmd_Web(CmdExtended, HelpToCmd, CheckValidForCmd):
         self._generate_info = line
 
         try:
-            if line.find(',') == -1:
+            if ',' not in line:
                 myprocdef = self.extract_process(line)
             else:
                 myprocdef, line = self.extract_decay_chain_process(line)
@@ -960,13 +961,15 @@ class MadGraphCmd_Web(CmdExtended, HelpToCmd, CheckValidForCmd):
         a ProcessDefinition."""
 
         # Perform sanity modifications on the lines:
-        # Add a space after any + - ~ > , $ / 
-        space_after=re.compile(r"(?P<tag>[+-/\,\\$\\>])(?P<carac>[^\s+-])")
-        line = space_after.sub(r'\g<tag> \g<carac>',line)
         # Add a space before any > , $ /
         space_before=re.compile(r"(?P<carac>\S)(?P<tag>[/\,\\$\\>])")
         line = space_before.sub(r'\g<carac> \g<tag>',line)       
+        # Add a space after any + - ~ > , $ / 
+        space_after=re.compile(r"(?P<tag>[+-/\,\\$\\>])(?P<carac>[^\s+-])")
+        line = space_after.sub(r'\g<tag> \g<carac>',line)
+        
 
+        print line
         # Use regular expressions to extract s-channel propagators,
         # forbidden s-channel propagators/particles, coupling orders
         # and process number, starting from the back
@@ -1327,7 +1330,8 @@ class MadGraphCmd_Web(CmdExtended, HelpToCmd, CheckValidForCmd):
         
         elif args[0] == 'proc_v4':
             if len(args) == 1 and self._export_dir:
-                proc_card = os.path.join(self._export_dir, '')            
+                proc_card = os.path.join(self._export_dir, 'Cards', \
+                                                                'proc_card.dat')
             elif len(args) == 2:
                 proc_card = args[1]
             else:
@@ -1539,12 +1543,29 @@ class MadGraphCmd_Web(CmdExtended, HelpToCmd, CheckValidForCmd):
                        (os.path.basename(self._model_dir), args[1])        
         export_v4.export_model(self._model_dir, dir_path)
         self._export_dir = dir_path
-        
- 
+
 #===============================================================================
 # MadGraphCmd
 #===============================================================================
-class MadGraphCmd(MadGraphCmd_Web, CompleteForCmd):
+class MadGraphCmdWeb(MadGraphCmd):
+    """The command line processor of MadGraph"""         
+ 
+    def __init__(self, *arg, **opt):
+    
+        if os.environ.has_key('_CONDOR_SCRATCH_DIR'):
+            self.writing_dir = os.path.join(os.environ['_CONDOR_SCRATCH_DIR'], \
+                                                                 os.path.pardir)
+        else:
+            self.writing_dir = os.path.join(os.environ['MADGRAPH_DATA'],
+                               os.environ['REMOTE_USER'])
+        
+        #standard initialization
+        MadGraphCmd.__init__(self, *arg, **opt)
+
+#===============================================================================
+# MadGraphCmd
+#===============================================================================
+class MadGraphCmdShell(MadGraphCmd, CompleteForCmd):
     """The command line processor of MadGraph""" 
     
     writing_dir = MGME_dir
@@ -1619,9 +1640,9 @@ class MadGraphCmd(MadGraphCmd_Web, CompleteForCmd):
 class CmdFile(file):
     """ a class for command input file -in order to debug cmd \n problem"""
     
-    def __init__(self, name, opt):
+    def __init__(self, name, opt='rU'):
         
-        file.__init__(self, name, 'rU')
+        file.__init__(self, name, opt)
         self.text = file.read(self)
         self.close()
         self.lines = self.text.split('\n')
@@ -1638,8 +1659,12 @@ class CmdFile(file):
         if line.endswith('\n'):
             return line
         else:
-            return line + '\n'    
+            return line + '\n'
     
+    def __next__(self):
+        return self.lines.__next__()    
+    def __iter__(self):
+        return self.lines.__iter__()
   
 #===============================================================================
 # Draw Command Parser

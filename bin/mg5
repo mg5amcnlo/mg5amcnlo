@@ -58,17 +58,17 @@ if options.file or args:
         input_file = options.file
     input_file = cmd_interface.CmdFile(input_file,'rU')
     if options.web:
-        cmd_line = cmd_interface.MadGraphCmd_Web(stdin=input_file)
+        cmd_line = cmd_interface.MadGraphCmdWeb(stdin=input_file)
         cmd_line.use_rawinput = False #put it in non interactive mode
         cmd_line.cmdloop()    
     else:
-        cmd_line = cmd_interface.MadGraphCmd(stdin=input_file)
+        cmd_line = cmd_interface.MadGraphCmdShell(stdin=input_file)
         cmd_line.use_rawinput = False #put it in non interactive mode
         cmd_line.cmdloop()
 else:
     # Interactive mode
     if options.web:
-        cmd_interface.MadGraphCmd_Web().cmdloop()
+        cmd_interface.MadGraphCmdWeb().cmdloop()
     else:
-        cmd_interface.MadGraphCmd().cmdloop()
+        cmd_interface.MadGraphCmdShell().cmdloop()
 
