@@ -414,6 +414,13 @@ class CheckValidForCmd(object):
         
         return True
     
+    def check_load(self, args):
+        """ check the validity of the line"""
+        
+        if len(args) != 2:
+            self.help_load()
+            return False
+        
     def check_makehtml(self, args):
         """check the validity of the line"""
     
@@ -431,10 +438,107 @@ class CheckValidForCmd(object):
             return False
         return True
     
+    def check_save(self, args):
+        """ check the validity of the line"""
+        if len(args) != 2:
+            self.help_save()
+            return False
+    
+    def check_setup(self, args):
+        """ check the validity of the line"""
+        
+        if len(args) < 2:
+            self.help_setup()
+            return False
+        
+        if not self._model_dir:
+            print 'No model found. Please import a model first and then retry'
+            print '  for example do : import model_v4 sm'
+            return False
+
+#===============================================================================
+# CheckValidForCmdWeb
+#===============================================================================
+class CheckValidForCmdWeb(object):
+    """ Check the validity of input line for web entry
+    (no explicit path authorized)"""
+    
+    def check_draw(self, args):
+        """check the validity of line
+        syntax: draw FILEPATH [option=value]
+        """
+        # return False since they are always a path
+        return False
+      
+    def check_export(self, args):
+        """check the validity of line
+        syntax: export MODE FILEPATH
+        No FilePath authorized on the web
+        """  
+        if len(args) >= 1:
+            return False
+        
+        return CheckValidForCmd.check_export(self, args)
+    
+    def check_history(self, args):
+        """check the validity of line
+        No Path authorize for the Web"""
+        
+        if len(args) == 1 and args[1] not in ['.','clean']:
+            return False
+        
+        return CheckValidForCmd.check_history(self, args)
+        
+    def check_import(self, args):
+        """check the validity of line
+        No Path authorize for the Web"""
+        
+        #if len(args) >= 2 and args[0] == 'proc_v4':
+        #    return False
+        
+        return CheckValidForCmd.check_import(self, args)
+        
+    def check_makehtml(self, args):
+        """check the validity of the line
+        No Path authorize for the Web"""
+    
+        if len(args) > 1:
+            return False
+        
+        return CheckValidForCmd.check_makehtml(self, args)
+        
+    def check_load(self, args):
+        """ check the validity of the line
+        No Path authorize for the Web"""
+        
+        if len(args)==2:
+            if args[0] != 'model':
+                return False
+            if 'model.pkl' not in args[1]:
+                return False
+            if not os.path.realpath(args[1]).startswith(os.path.join(MGME_dir, \
+                                                                    'Models')):
+                return False
+            
+        
+    def check_save(self, args):
+        """ not authorize on web"""
+        return False
+    
+    
+    def check_setup(self, args):
+        """ check the validity of the line"""
+        
+        if not CheckValidForCmd.check_setup(self, args):
+            return False
+        
+        if '/' in args[2]:
+            return False
+    
 #===============================================================================
 # CompleteForCmd
 #===============================================================================
-class CompleteForCmd(object):
+class CompleteForCmd(CheckValidForCmd):
     """ The Series of help routine for the MadGraphCmd"""
     
     def list_completion(self, text, list):
@@ -635,7 +739,7 @@ class CompleteForCmd(object):
 #===============================================================================
 # MadGraphCmd
 #===============================================================================
-class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd):
+class MadGraphCmd(CmdExtended, HelpToCmd):
     """The command line processor of MadGraph"""    
     
     _curr_model = base_objects.Model()
@@ -1407,9 +1511,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd):
         """Load information from file"""
 
         args = split_arg(line)
-        if len(args) != 2:
-            self.help_load()
-            return False
+        if not self.check_load(args):
+            return
+
 
         cpu_time1 = time.time()
         if args[0] == 'model':
@@ -1440,8 +1544,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd):
         """Save information to file"""
 
         args = split_arg(line)
-        if len(args) != 2:
-            self.help_save()
+        if not self.check_save(args):
             return False
 
         if args[0] == 'model':
@@ -1489,6 +1592,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd):
         """Initialize a new Template or reinitialize one"""
         
         args = split_arg(line)
+        if not self.check_setup(args):
+            return False
+        
         clean = '-noclean' not in args
         force = '-f' in args 
         dir = '-d' in args
@@ -1496,16 +1602,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd):
             mgme_dir = args[args.find('-d') + 1]
         else:
             mgme_dir = MGME_dir
-                        
-        if len(args) < 2:
-            self.help_setup()
-            return False
-        
-        if not self._model_dir:
-            print 'No model found. Please import a model first and then retry'
-            print '  for example do : import model_v4 sm'
-            return False
-        
+                                
         # Check for special directory treatment
         if args[1] == '.':
             if self._export_dir:
@@ -1547,7 +1644,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd):
 #===============================================================================
 # MadGraphCmd
 #===============================================================================
-class MadGraphCmdWeb(MadGraphCmd):
+class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
     """The command line processor of MadGraph"""         
  
     def __init__(self, *arg, **opt):
@@ -1565,7 +1662,7 @@ class MadGraphCmdWeb(MadGraphCmd):
 #===============================================================================
 # MadGraphCmd
 #===============================================================================
-class MadGraphCmdShell(MadGraphCmd, CompleteForCmd):
+class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
     """The command line processor of MadGraph""" 
     
     writing_dir = MGME_dir
