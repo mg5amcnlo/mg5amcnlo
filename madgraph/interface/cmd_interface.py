@@ -961,7 +961,7 @@ class MadGraphCmd_Web(CmdExtended, HelpToCmd, CheckValidForCmd):
 
         # Perform sanity modifications on the lines:
         # Add a space after any + - ~ > , $ / 
-        space_after=re.compile(r"(?P<tag>[+-/\,\\$\\>])(?P<carac>\S)")
+        space_after=re.compile(r"(?P<tag>[+-/\,\\$\\>])(?P<carac>[^\s+-])")
         line = space_after.sub(r'\g<tag> \g<carac>',line)
         # Add a space before any > , $ /
         space_before=re.compile(r"(?P<carac>\S)(?P<tag>[/\,\\$\\>])")
