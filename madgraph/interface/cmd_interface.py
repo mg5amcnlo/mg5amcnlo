@@ -58,7 +58,6 @@ for position in MGME_dir_possibility:
         MGME_dir = os.path.realpath(position)
         break
 del MGME_dir_possibility
-
 #===============================================================================
 # CmdExtended
 #===============================================================================
@@ -834,7 +833,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd):
 
             logging.info("Drawing " + \
                          amp.get('process').nice_string())
-            plot.draw(opt=options)
+            #plot.draw(opt=options)
+            plot.draw()
             print "Wrote file " + filename
 
         stop = time.time()

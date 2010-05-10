@@ -348,6 +348,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         # Standard method
         super(MultiEpsDiagramDrawer, self).draw_diagram(diagram, self.block_nb)
         # But keep track how many diagrams are already drawn
+        
         self.block_nb += 1
 
 
