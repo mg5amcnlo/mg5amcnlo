@@ -1005,7 +1005,7 @@ class TestFeynmanDiagram(unittest.TestCase):
         x_position = [1 / 3, 1 / 3, 2 / 3, 1 / 3, 0.0, 2 / 3, 0.0, 2 / 3, 1.0, 1.0]
         y_position = [1 / 6, 5 / 6, 1 / 2, 1 / 2, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0]
 
-
+        print level, [data.level for data in self.mix_drawing.vertexList]
         for i in range(0, 10):
             self.assertEquals(self.mix_drawing.vertexList[i].level, \
                               level[i])

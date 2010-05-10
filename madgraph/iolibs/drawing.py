@@ -1854,10 +1854,14 @@ class DrawOption(object):
         self.max_size = 1.5
         self.contract_non_propagating = True
 
-        for value in ['external','add_gap','horizontal','max_size',
-                      'contract_non_propagating']:
-            if hasattr(opt, value):
-                self.set(value, getattr(opt, value))
+        if isinstance(opt, dict):
+            for key, value in opt.items():
+                self.set(key, value)
+        else:    
+            for value in ['external','add_gap','horizontal','max_size',
+                                                    'contract_non_propagating']:
+                if hasattr(opt, value):
+                    self.set(value, getattr(opt, value))
 
     def set(self, key, value):
         """Check and attribute the given value."""
