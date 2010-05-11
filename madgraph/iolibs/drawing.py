@@ -685,6 +685,7 @@ class FeynmanDiagram:
         
         #internal parameter
         self._treated_legs = [] # List of leg, in the same order as lineList
+        self._available_legs = {} # List of line which can/should be reuse.
         self._ext_distance_up = self.opt.external
         self._ext_distance_down = self.opt.external
         
@@ -792,6 +793,15 @@ class FeynmanDiagram:
             if  (self._treated_legs[i] is leg):
                 return i
 
+    def find_leg_id3(self, gen_id):
+        """Find the position of leg in self._treated_legs but only if this b
+        belongs to an available particles"""
+        
+        try:
+            return self._available_legs[gen_id]
+        except:
+            return None
+
     def load_vertex(self, vertex):
         """1) Extend the vertex to a VertexPoint. 
         2) Add this vertex in vertexList of the diagram
@@ -805,27 +815,34 @@ class FeynmanDiagram:
 
         #2) Add to the vertexList of the diagram
         self.vertexList.append(vertex_point)
-
+        
         # Loop over the leg associate to the diagram
         for i, leg in enumerate(vertex.get('legs')):
 
+            gen_id = leg.get('number')
             # Search if leg exist: two case exist corresponding if it is the 
             #line of vertex or not. Corresponding to that change mode to find
             #if the leg exist or not.
-            if i + 1 == len(vertex.get('legs')):
-                # Find if leg is in self._treated_legs and returns the position 
-                #in that list
-                mg_id = self.find_leg_id2(leg)
-            else:
-                # Find  thelast item in self._treated_legs with same number and
-                #returns the position in that list 
-                mg_id = self.find_leg_id(leg)
+            mg_id = self.find_leg_id3(gen_id)
+            
+            #if i + 1 == len(vertex.get('legs')):
+            #    # Find if leg is in self._treated_legs and returns the position 
+            #    #in that list
+            #    mg_id = self.find_leg_id2(leg, len(self._treated_legs) - \
+            #                                                       previous_len)
+            #else:
+            #    # Find  thelast item in self._treated_legs with same number and
+            #    #returns the position in that list 
+            #    mg_id = self.find_leg_id(leg)
 
             # Define-recover the line associate to this leg                  
             if mg_id:
+                del self._available_legs[gen_id]
                 line = self.lineList[mg_id]
             else:
                 line = self._load_leg(leg)
+                if i + 1 == len(vertex.get('legs')):
+                    self._available_legs[gen_id] = len(self._treated_legs) - 1
 
             # Associate the vertex to the line at the correct place
             line.add_vertex(vertex_point)
@@ -1887,4 +1904,4 @@ class DrawOption(object):
         """Convert the value in a number"""
         
         return float(value)
-        
+ 
