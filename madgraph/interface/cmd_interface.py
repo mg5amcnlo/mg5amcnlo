@@ -478,7 +478,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         syntax: export MODE FILEPATH
         No FilePath authorized on the web
         """  
-        if len(args) >= 1:
+        if len(args) > 1:
             return False
         
         return CheckValidForCmd.check_export(self, args)
@@ -547,6 +547,8 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         
         if '/' in args[2]:
             return False
+        
+        return True
     
 #===============================================================================
 # CompleteForCmd
