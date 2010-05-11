@@ -390,38 +390,3 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.text += '/Helvetica findfont 10 scalefont setfont\n'
         self.text += ' 240         770  moveto\n'
         self.text += ' (Diagrams by MadGraph) show\n'
-
-if __name__ == '__main__':
-
-    from madgraph.interface.cmd_interface import MadGraphCmd    
-    cmd = MadGraphCmd()
-    cmd.do_import('model_v4 ' + _file_path + \
-                                    '../tests/input_files/v4_sm_particles.dat')
-    cmd.do_import('model_v4 ' + _file_path + \
-                                '../tests/input_files/v4_sm_interactions.dat')    
-        
-    if 0:
-        cmd.do_generate('g g > g g')
-        diagrams = cmd._MadGraphCmd__curr_amps[0]['diagrams']
-    
-    #use a store diagram
-    else:
-        import pickle
-        filehandler = open(os.path.join(_file_path, \
-                                    '../tests/input_files/test_draw.obj'), 'r') 
-        store_diagram = pickle.load(filehandler)
-        diagrams = base_objects.DiagramList()
-        diagrams.append(store_diagram['g g > g g'][1])
-        
-    opt=draw.DrawOption({'external':1.5,'add_gap':0.5})
-    plot = MultiEpsDiagramDrawer(diagrams, 'diagram.eps',
-                             model=cmd._MadGraphCmd__curr_model,
-                             amplitude='')
-    import cProfile
-    import time
-    start = time.time()
-    plot.draw(opt=opt)
-    #cProfile.run('plot.draw()')
-    stop = time.time()
-    print 'time to draw', stop - start       
-
