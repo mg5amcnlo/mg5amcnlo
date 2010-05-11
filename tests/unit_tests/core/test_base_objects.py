@@ -628,7 +628,7 @@ class LegTest(unittest.TestCase):
 
         self.mydict = {'id':3,
                       'number':5,
-                      'state':'final',
+                      'state':True,
                       'from_group':False}
 
         self.myleg = base_objects.Leg(self.mydict)
@@ -689,8 +689,8 @@ class LegTest(unittest.TestCase):
                         'right_list':[1, 2, 3, 4, 5],
                         'wrong_list':['a', {}]},
                        {'prop':'state',
-                        'right_list':['initial', 'final'],
-                        'wrong_list':[0, 'wrong']}
+                        'right_list':[False, True],
+                        'wrong_list':[1, 'wrong']}
                        ]
 
         temp_leg = self.myleg
@@ -707,7 +707,7 @@ class LegTest(unittest.TestCase):
         goal = "{\n"
         goal = goal + "    \'id\': 3,\n"
         goal = goal + "    \'number\': 5,\n"
-        goal = goal + "    \'state\': \'final\',\n"
+        goal = goal + "    \'state\': True,\n"
         goal = goal + "    \'from_group\': False\n}"
 
         self.assertEqual(goal, str(self.myleg))
@@ -772,7 +772,7 @@ class MultiLegTest(unittest.TestCase):
     def setUp(self):
 
         self.mydict = {'ids':[3, 2, 5],
-                      'state':'final'}
+                      'state':True}
 
         self.my_multi_leg = base_objects.MultiLeg(self.mydict)
 
@@ -829,7 +829,7 @@ class MultiLegTest(unittest.TestCase):
                         'right_list':[[0], [3, 4, 5]],
                         'wrong_list':['', 1, 0.0]},
                        {'prop':'state',
-                        'right_list':['initial', 'final'],
+                        'right_list':[False, True],
                         'wrong_list':[0, 'wrong']}
                        ]
 
@@ -846,7 +846,7 @@ class MultiLegTest(unittest.TestCase):
 
         goal = "{\n"
         goal = goal + "    \'ids\': [3, 2, 5],\n"
-        goal = goal + "    \'state\': \'final\'\n}"
+        goal = goal + "    \'state\': True\n}"
 
         self.assertEqual(goal, str(self.my_multi_leg))
 
@@ -876,7 +876,7 @@ class VertexTest(unittest.TestCase):
     myvertex = None
     myleglist = base_objects.LegList([base_objects.Leg({'id':3,
                                       'number':5,
-                                      'state':'final',
+                                      'state':True,
                                       'from_group':False})] * 10)
 
     def setUp(self):
@@ -985,7 +985,7 @@ class DiagramTest(unittest.TestCase):
     mydiagram = None
     myleglist = base_objects.LegList([base_objects.Leg({'id':3,
                                       'number':5,
-                                      'state':'final',
+                                      'state':True,
                                       'from_group':False})] * 10)
     myvertexlist = base_objects.VertexList([base_objects.Vertex({'id':3,
                                       'legs':myleglist})] * 10)
@@ -1086,9 +1086,12 @@ class DiagramTest(unittest.TestCase):
         mylist = [self.mydiagram] * 10
         mydiagramlist = base_objects.DiagramList(mylist)
 
-        goal_string = "  (" + "(5(3),5(3),5(3),5(3),5(3),5(3),5(3),5(3),5(3)>5(3),id:3),"*10
-        goal_string = goal_string[:-1] + ")\n"
-        goal_string = goal_string * 10
+        goal_string1 = "  (" + "(5(3),5(3),5(3),5(3),5(3),5(3),5(3),5(3),5(3)>5(3),id:3),"*10
+        goal_string1 = goal_string1[:-1] + ")\n"
+
+        goal_string = ""
+        for i in range(10):
+            goal_string = goal_string + str(i+1) + goal_string1
 
         self.assertEqual(mydiagramlist.nice_string(),
                          "10 diagrams:\n" + goal_string[:-1])
@@ -1117,12 +1120,12 @@ class ProcessTest(unittest.TestCase):
         self.myleglist = base_objects.LegList(\
             [copy.copy(base_objects.Leg({'id':3,
                                          'number':5,
-                                         'state':'final',
+                                         'state':True,
                                          'from_group':False})) for \
              dummy in range(5)])
 
-        self.myleglist[0].set('state', 'initial')
-        self.myleglist[1].set('state', 'initial')
+        self.myleglist[0].set('state', False)
+        self.myleglist[1].set('state', False)
 
         self.mydict = {'legs':self.myleglist,
                        'orders':{'QCD':5, 'QED':1},
@@ -1130,7 +1133,9 @@ class ProcessTest(unittest.TestCase):
                        'id': 1,
                        'required_s_channels':[],
                        'forbidden_s_channels':[],
-                       'forbidden_particles':[]}
+                       'forbidden_particles':[],
+                       'is_decay_chain': False,
+                       'decay_chains': base_objects.ProcessList()}
 
         self.myprocess = base_objects.Process(self.mydict)
 
@@ -1205,15 +1210,16 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'id\': 1,\n"
         goal = goal + "    \'required_s_channels\': [],\n"
         goal = goal + "    \'forbidden_s_channels\': [],\n"
-        goal = goal + "    \'forbidden_particles\': []\n}"
+        goal = goal + "    \'forbidden_particles\': [],\n"
+        goal = goal + "    \'is_decay_chain\': False,\n"
+        goal = goal + "    \'decay_chains\': []\n}"
 
         self.assertEqual(goal, str(self.myprocess))
 
     def test_nice_string(self):
         """Test Process nice_string representation"""
 
-        goal_str = "Process: c c > c c c\n"
-        goal_str = goal_str + "Orders: QED=1, QCD=5"
+        goal_str = "Process: c c > c c c QED=1 QCD=5"
 
         self.assertEqual(goal_str, self.myprocess.nice_string())
 
@@ -1247,11 +1253,11 @@ class ProcessDefinitionTest(unittest.TestCase):
 
         self.my_multi_leglist = base_objects.MultiLegList(\
             [copy.copy(base_objects.MultiLeg({'ids':[3, 4, 5],
-                                              'state':'final'})) for \
+                                              'state':True})) for \
              dummy in range(5)])
 
-        self.my_multi_leglist[0].set('state', 'initial')
-        self.my_multi_leglist[1].set('state', 'initial')
+        self.my_multi_leglist[0].set('state', False)
+        self.my_multi_leglist[1].set('state', False)
 
         self.mydict = {'legs':self.my_multi_leglist,
                        'orders':{'QCD':5, 'QED':1},
@@ -1259,7 +1265,9 @@ class ProcessDefinitionTest(unittest.TestCase):
                        'id':3,
                        'required_s_channels':[],
                        'forbidden_s_channels':[],
-                       'forbidden_particles':[]}
+                       'forbidden_particles':[],
+                       'is_decay_chain': False,
+                       'decay_chains': base_objects.ProcessList()}
 
         self.my_process_definition = base_objects.ProcessDefinition(self.mydict)
 
@@ -1334,6 +1342,8 @@ class ProcessDefinitionTest(unittest.TestCase):
         goal = goal + "    \'id\': %s,\n" % repr(self.my_process_definition['id'])
         goal = goal + "    \'required_s_channels\': [],\n"
         goal = goal + "    \'forbidden_s_channels\': [],\n"
-        goal = goal + "    \'forbidden_particles\': []\n}"
+        goal = goal + "    \'forbidden_particles\': [],\n"
+        goal = goal + "    \'is_decay_chain\': False,\n"
+        goal = goal + "    \'decay_chains\': []\n}"
         self.assertEqual(goal, str(self.my_process_definition))
 

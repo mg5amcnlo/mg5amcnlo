@@ -78,6 +78,7 @@ class ColorObject(array.array):
 
     __copy__ = create_copy
 
+
 #===============================================================================
 # Tr
 #===============================================================================
@@ -201,11 +202,10 @@ class T(ColorObject):
 
         return None
 
-    def pair_simplify(self, col_obj, simplify_T_product=False):
+    def pair_simplify(self, col_obj):
         """Implement T(a,...,i,j)T(b,...,j,k) = T(a,...,b,...,i,k)
         and T(a,x,b,i,j)T(c,x,d,k,l) = 1/2(T(a,d,i,l)T(c,b,k,j)    
-                                        -1/Nc T(a,b,i,j)T(c,d,k,l))
-        but only if the simplify_T_product tag is True."""
+                                        -1/Nc T(a,b,i,j)T(c,d,k,l))."""
 
         if isinstance(col_obj, T):
             ij1 = self[-2:]
@@ -219,30 +219,29 @@ class T(ColorObject):
                                                                ij2[1]])))])])
             # T(a,x,b,i,j)T(c,x,d,k,l) = 1/2(T(a,d,i,l)T(c,b,k,j)    
             #                          -1/Nc T(a,b,i,j)T(c,d,k,l))
-            if simplify_T_product:
-                for i1, index1 in enumerate(self[:-2]):
-                    for i2, index2 in enumerate(col_obj[:-2]):
-                        if index1 == index2:
-                            a = self[:i1]
-                            b = self[i1 + 1:-2]
-                            c = col_obj[:i2]
-                            d = col_obj[i2 + 1:-2]
-                            col_str1 = ColorString([T(*(a + d + \
-                                                       array.array('i',
-                                                        [ij1[0], ij2[1]]))),
-                                                   T(*(c + b + \
-                                                       array.array('i',
-                                                        [ij2[0], ij1[1]])))])
-                            col_str2 = ColorString([T(*(a + b + \
-                                                       array.array('i',
-                                                        [ij1[0], ij1[1]]))),
-                                                   T(*(c + d + \
-                                                       array.array('i',
-                                                        [ij2[0], ij2[1]])))])
-                            col_str1.coeff = fractions.Fraction(1, 2)
-                            col_str2.coeff = fractions.Fraction(-1, 2)
-                            col_str2.Nc_power = -1
-                            return ColorFactor([col_str1, col_str2])
+            for i1, index1 in enumerate(self[:-2]):
+                for i2, index2 in enumerate(col_obj[:-2]):
+                    if index1 == index2:
+                        a = self[:i1]
+                        b = self[i1 + 1:-2]
+                        c = col_obj[:i2]
+                        d = col_obj[i2 + 1:-2]
+                        col_str1 = ColorString([T(*(a + d + \
+                                                   array.array('i',
+                                                    [ij1[0], ij2[1]]))),
+                                               T(*(c + b + \
+                                                   array.array('i',
+                                                    [ij2[0], ij1[1]])))])
+                        col_str2 = ColorString([T(*(a + b + \
+                                                   array.array('i',
+                                                    [ij1[0], ij1[1]]))),
+                                               T(*(c + d + \
+                                                   array.array('i',
+                                                    [ij2[0], ij2[1]])))])
+                        col_str1.coeff = fractions.Fraction(1, 2)
+                        col_str2.coeff = fractions.Fraction(-1, 2)
+                        col_str2.Nc_power = -1
+                        return ColorFactor([col_str1, col_str2])
 
     def complex_conjugate(self):
         """Complex conjugation. Overwritten here because the two last indices
@@ -627,6 +626,7 @@ class ColorFactor(list):
         return res
 
     __copy__ = create_copy
+
 
 
 

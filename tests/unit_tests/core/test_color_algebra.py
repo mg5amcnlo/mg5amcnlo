@@ -140,7 +140,7 @@ class ColorObjectTest(unittest.TestCase):
         col_str1.coeff = fractions.Fraction(1, 2)
         col_str2.coeff = fractions.Fraction(-1, 2)
         col_str2.Nc_power = -1
-        self.assertEqual(my_T1.pair_simplify(my_T3, simplify_T_product=True),
+        self.assertEqual(my_T1.pair_simplify(my_T3),
                          color.ColorFactor([col_str1, col_str2]))
 
     def test_f_object(self):
@@ -366,4 +366,5 @@ class ColorFactorTest(unittest.TestCase):
         '(2 I Tr(1,2,3,4,5))+(-2 I Tr(1,2,5,3,4))+(-2 I Tr(1,2,4,3,5))+' + \
         '(2 I Tr(1,2,5,4,3))+(-2 I Tr(1,3,4,5,2))+(2 I Tr(1,5,3,4,2))+' + \
         '(2 I Tr(1,4,3,5,2))+(-2 I Tr(1,5,4,3,2))')
+
 

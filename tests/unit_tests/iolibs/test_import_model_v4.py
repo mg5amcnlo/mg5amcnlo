@@ -117,6 +117,7 @@ class IOImportV4Test(unittest.TestCase):
                                     g   g   T1 MGVX2   QCD a
                                     w+   w-   w+   w- MGVX6   DUM0   QED QED n
                                     e-   ve   w- MGVX24   QED
+                                    e+   ve~   w+ MGVX25   QED
                                     u   u   g MGVX1   QCD
                                     u   u   a MGVX4   QED
                                     # And now some bad format entries
@@ -132,9 +133,12 @@ class IOImportV4Test(unittest.TestCase):
         wplus = copy.copy(myparts[14])
         wmin = copy.copy(myparts[14])
         wmin.set('is_part', False)
+        eminus = copy.copy(myparts[3])
         eplus = copy.copy(myparts[3])
         eplus.set('is_part', False)
         enu = copy.copy(myparts[0])
+        enubar = copy.copy(myparts[0])
+        enubar.set('is_part', False)
         photon = copy.copy(myparts[12])
         gluon = copy.copy(myparts[15])
         t1 = copy.copy(myparts[17])
@@ -194,6 +198,17 @@ class IOImportV4Test(unittest.TestCase):
                      base_objects.Interaction(
                                     {'id':5,
                                      'particles':base_objects.ParticleList([
+                                                                eminus,
+                                                                enubar,
+                                                                wplus]),
+                                     'color':[],
+                                     'lorentz':[''],
+                                     'couplings':{(0, 0):'MGVX25'},
+                                     'orders':{'QED':1}}),
+
+                     base_objects.Interaction(
+                                    {'id':6,
+                                     'particles':base_objects.ParticleList([
                                                                 ubar,
                                                                 u,
                                                                 gluon]),
@@ -204,7 +219,7 @@ class IOImportV4Test(unittest.TestCase):
                                      'orders':{'QCD':1}}),
 
                      base_objects.Interaction(
-                                    {'id':6,
+                                    {'id':7,
                                      'particles':base_objects.ParticleList([
                                                                 ubar,
                                                                 u,

@@ -15,17 +15,18 @@
 
 """Methods and classes to export matrix elements to v4 format."""
 
-import copy
 import fractions
 import logging
 import os
 import re
 
 import madgraph.core.color_algebra as color
+import madgraph.iolibs.drawing_eps as draw
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
 
+_file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('export_v4')
 
 #===============================================================================
@@ -94,122 +95,9 @@ def write_matrix_element_v4_standalone(fsock, matrix_element, fortran_model):
     jamp_lines = get_JAMP_lines(matrix_element)
     replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
-    file = \
-"""      SUBROUTINE SMATRIX(P,ANS)
-C  
-%(info_lines)s
-C 
-C MadGraph StandAlone Version
-C 
-C Returns amplitude squared summed/avg over colors
-c and helicities
-c for the point in phase space P(0:3,NEXTERNAL)
-C  
-%(process_lines)s
-C  
-      IMPLICIT NONE
-C  
-C CONSTANTS
-C  
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=%(nexternal)d)
-      INTEGER                 NCOMB         
-      PARAMETER (             NCOMB=%(ncomb)d)
-C  
-C ARGUMENTS 
-C  
-      REAL*8 P(0:3,NEXTERNAL),ANS
-C  
-C LOCAL VARIABLES 
-C  
-      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
-      REAL*8 T
-      REAL*8 MATRIX
-      INTEGER IHEL,IDEN, I
-      INTEGER JC(NEXTERNAL)
-      LOGICAL GOODHEL(NCOMB)
-      DATA NTRY/0/
-      DATA GOODHEL/NCOMB*.FALSE./
-%(helicity_lines)s
-%(den_factor_line)s
-C ----------
-C BEGIN CODE
-C ----------
-      NTRY=NTRY+1
-      DO IHEL=1,NEXTERNAL
-         JC(IHEL) = +1
-      ENDDO
-      ANS = 0D0
-          DO IHEL=1,NCOMB
-             IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
-                 T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
-               ANS=ANS+T
-               IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
-                   GOODHEL(IHEL)=.TRUE.
-               ENDIF
-             ENDIF
-          ENDDO
-      ANS=ANS/DBLE(IDEN)
-      END
-       
-       
-      REAL*8 FUNCTION MATRIX(P,NHEL,IC)
-C  
-%(info_lines)s
-C
-C Returns amplitude squared summed/avg over colors
-c for the point with external lines W(0:6,NEXTERNAL)
-C  
-%(process_lines)s
-C  
-      IMPLICIT NONE
-C  
-C CONSTANTS
-C  
-      INTEGER    NGRAPHS
-      PARAMETER (NGRAPHS=%(ngraphs)d) 
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=%(nexternal)d)
-      INTEGER    NWAVEFUNCS, NCOLOR
-      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
-      REAL*8     ZERO
-      PARAMETER (ZERO=0D0)
-C  
-C ARGUMENTS 
-C  
-      REAL*8 P(0:3,NEXTERNAL)
-      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
-C  
-C LOCAL VARIABLES 
-C  
-      INTEGER I,J
-      COMPLEX*16 ZTEMP
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
-      COMPLEX*16 W(18,NWAVEFUNCS)
-C  
-C GLOBAL VARIABLES
-C  
-      include "coupl.inc"
-C  
-C COLOR DATA
-C  
-%(color_data_lines)s
-C ----------
-C BEGIN CODE
-C ----------
-%(helas_calls)s
-%(jamp_lines)s
-
-      MATRIX = 0.D0 
-      DO I = 1, NCOLOR
-          ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-              ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
-          ENDDO
-          MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
-      ENDDO
-      END""" % replace_dict
+    file = open(os.path.join(_file_path, \
+                      'iolibs/template_files/matrix_standalone_v4.inc')).read()
+    file = file % replace_dict
 
     # Write the file
     for line in file.split('\n'):
@@ -217,6 +105,416 @@ C ----------
 
     return len(filter(lambda call: call.find('#') != 0, helas_calls))
 
+#===============================================================================
+# write_matrix_element_v4_madevent
+#===============================================================================
+def write_matrix_element_v4_madevent(fsock, matrix_element, fortran_model):
+    """Export a matrix element to a matrix.f file in MG4 madevent format"""
+
+    if not matrix_element.get('processes') or \
+           not matrix_element.get('diagrams'):
+        return 0
+
+    writer = FortranWriter()
+    # Set lowercase/uppercase Fortran code
+    FortranWriter.downcase = False
+
+    replace_dict = {}
+
+    # Extract version number and date from VERSION file
+    info_lines = get_mg5_info_lines()
+    replace_dict['info_lines'] = info_lines
+
+    # Extract process info lines
+    process_lines = get_process_info_lines(matrix_element)
+    replace_dict['process_lines'] = process_lines
+
+    # Extract ncomb
+    ncomb = matrix_element.get_helicity_combinations()
+    replace_dict['ncomb'] = ncomb
+
+    # Extract helicity lines
+    helicity_lines = get_helicity_lines(matrix_element)
+    replace_dict['helicity_lines'] = helicity_lines
+
+    # Extract IC line
+    ic_line = get_ic_line(matrix_element)
+    replace_dict['ic_line'] = ic_line
+
+    # Extract overall denominator
+    # Averaging initial state color, spin, and identical FS particles
+    den_factor_line = get_den_factor_line(matrix_element)
+    replace_dict['den_factor_line'] = den_factor_line
+
+    # Extract ngraphs
+    ngraphs = matrix_element.get_number_of_amplitudes()
+    replace_dict['ngraphs'] = ngraphs
+
+    # Extract nwavefuncs
+    nwavefuncs = matrix_element.get_number_of_wavefunctions()
+    replace_dict['nwavefuncs'] = nwavefuncs
+
+    # Extract ncolor
+    ncolor = max(1, len(matrix_element.get('color_basis')))
+    replace_dict['ncolor'] = ncolor
+
+    # Extract color data lines
+    color_data_lines = get_color_data_lines(matrix_element)
+    replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+
+    # Extract helas calls
+    helas_calls = fortran_model.get_matrix_element_calls(\
+                matrix_element)
+    replace_dict['helas_calls'] = "\n".join(helas_calls)
+
+    # Extract JAMP lines
+    jamp_lines = get_JAMP_lines(matrix_element)
+    replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+
+    file = open(os.path.join(_file_path, \
+                      'iolibs/template_files/matrix_madevent_v4.inc')).read()
+    file = file % replace_dict
+    
+    # Write the file
+    for line in file.split('\n'):
+        writer.write_fortran_line(fsock, line)
+
+    return len(filter(lambda call: call.find('#') != 0, helas_calls))
+
+#===============================================================================
+# write_auto_dsig_file
+#===============================================================================
+def write_auto_dsig_file(fsock, matrix_element, fortran_model):
+    """Write the auto_dsig.f file for the differential cross section
+    calculation, includes pdf call information"""
+
+    if not matrix_element.get('processes') or \
+           not matrix_element.get('diagrams'):
+        return 0
+
+    nexternal, ninitial = matrix_element.get_nexternal_ninitial()
+
+    if ninitial < 1 or ninitial > 2:
+        raise FortranWriter.FortranWriterError, \
+              """Need ninitial = 1 or 2 to write auto_dsig file"""
+
+    writer = FortranWriter()
+
+    replace_dict = {}
+
+    # Extract version number and date from VERSION file
+    info_lines = get_mg5_info_lines()
+    replace_dict['info_lines'] = info_lines
+
+    # Extract process info lines
+    process_lines = get_process_info_lines(matrix_element)
+    replace_dict['process_lines'] = process_lines
+
+    pdf_lines = get_pdf_lines(matrix_element, ninitial)
+    replace_dict['pdf_lines'] = pdf_lines
+
+    if ninitial == 1:
+        # No conversion, since result of decay should be given in GeV
+        dsig_line = "pd(IPROC)*dsiguu"
+    else:
+        # Convert result (in GeV) to pb
+        dsig_line = "pd(IPROC)*conv*dsiguu"
+
+    replace_dict['dsig_line'] = dsig_line
+
+    file = open(os.path.join(_file_path, \
+                      'iolibs/template_files/auto_dsig_v4.inc')).read()
+    file = file % replace_dict
+
+    # Write the file
+    for line in file.split('\n'):
+        writer.write_fortran_line(fsock, line)
+
+#===============================================================================
+# write_coloramps_file
+#===============================================================================
+def write_coloramps_file(fsock, matrix_element, fortran_model):
+    """Write the coloramps.inc file for MadEvent"""
+
+    writer = FortranWriter()
+
+    lines = get_icolamp_lines(matrix_element)
+
+    # Write the file
+    for line in lines:
+        writer.write_fortran_line(fsock, line)
+
+    return True
+
+#===============================================================================
+# write_configs_file
+#===============================================================================
+def write_configs_file(fsock, matrix_element, fortran_model):
+    """Write the configs.inc file for MadEvent"""
+
+    writer = FortranWriter()
+
+    # Extract number of external particles
+    (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+
+    lines = []
+
+    iconfig = 0
+
+    s_and_t_channels = []
+
+    for idiag, diag in enumerate(matrix_element.get('base_amplitude').\
+                                                get('diagrams')):
+        if any([len(vert.get('legs')) > 3 for vert in diag.get('vertices')]):
+            # Only 3-vertices allowed in configs.inc
+            continue
+        iconfig = iconfig + 1
+        helas_diag = matrix_element.get('diagrams')[idiag]
+        amp_number = helas_diag.get('amplitudes')[0].get('number')
+        lines.append("# Diagram %d, Amplitude %d" % \
+                     (helas_diag.get('number'), amp_number))
+        # Correspondance between the config and the amplitudes
+        lines.append("data mapconfig(%d)/%d/" % (iconfig, amp_number))
+
+        # Need to reorganize the topology so that we start with all
+        # final state external particles and work our way inwards
+
+        schannels, tchannels = helas_diag.get('amplitudes')[0].\
+                                     get_s_and_t_channels(ninitial)
+
+        s_and_t_channels.append([schannels, tchannels])
+
+        # Write out propagators for s-channel and t-channel vertices
+        allchannels = schannels
+        if len(tchannels) > 1:
+            # Write out tchannels only if there are any non-trivial ones
+            allchannels = schannels + tchannels
+
+        for vert in allchannels:
+            daughters = [leg.get('number') for leg in vert.get('legs')[:-1]]
+            last_leg = vert.get('legs')[-1]
+            lines.append("data (iforest(i,%d,%d),i=1,%d)/%s/" % \
+                         (last_leg.get('number'), iconfig, len(daughters),
+                          ",".join([str(d) for d in daughters])))
+            if vert in schannels:
+                lines.append("data sprop(%d,%d)/%d/" % \
+                             (last_leg.get('number'), iconfig,
+                              last_leg.get('id')))
+            elif vert in tchannels[:-1]:
+                lines.append("data tprid(%d,%d)/%d/" % \
+                             (last_leg.get('number'), iconfig,
+                              last_leg.get('id')))
+
+    # Write out number of configs
+    lines.append("# Number of configs")
+    lines.append("data mapconfig(0)/%d/" % iconfig)
+
+    # Write the file
+    for line in lines:
+        writer.write_fortran_line(fsock, line)
+
+    return iconfig, s_and_t_channels
+
+#===============================================================================
+# write_decayBW_file
+#===============================================================================
+def write_decayBW_file(fsock, matrix_element, fortran_model,
+                       s_and_t_channels):
+    """Write the decayBW.inc file for MadEvent"""
+
+    writer = FortranWriter()
+
+    lines = []
+
+    booldict = {False: ".false.", True: ".true."}
+
+    for iconf, config in enumerate(s_and_t_channels):
+        schannels = config[0]
+        for vertex in schannels:
+            # For the resulting leg, pick out whether it comes from
+            # decay or not, as given by the from_group flag
+            leg = vertex.get('legs')[-1]
+            lines.append("data gForceBW(%d,%d)/%s/" % \
+                         (leg.get('number'), iconf + 1,
+                          booldict[leg.get('from_group')]))
+
+    # Write the file
+    for line in lines:
+        writer.write_fortran_line(fsock, line)
+
+    return True
+
+#===============================================================================
+# write_dname_file
+#===============================================================================
+def write_dname_file(fsock, matrix_element, fortran_model):
+    """Write the dname.mg file for MG4"""
+
+    line = "DIRNAME=P%s" % \
+           matrix_element.get('processes')[0].shell_string_v4()
+
+    # Write the file
+    fsock.write(line + "\n")
+
+    return True
+
+#===============================================================================
+# write_iproc_file
+#===============================================================================
+def write_iproc_file(fsock, matrix_element, fortran_model):
+    """Write the iproc.inc file for MG4"""
+
+    writer = FortranWriter()
+
+    line = "%d" % \
+           matrix_element.get('processes')[0].get('id')
+
+    # Write the file
+    writer.write_fortran_line(fsock, line)
+
+    return True
+
+#===============================================================================
+# write_leshouche_file
+#===============================================================================
+def write_leshouche_file(fsock, matrix_element, fortran_model):
+    """Write the leshouche.inc file for MG4"""
+
+    writer = FortranWriter()
+
+    # Extract number of external particles
+    (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+
+    lines = []
+    for iproc, proc in enumerate(matrix_element.get('processes')):
+        legs = proc.get_legs_with_decays()
+        lines.append("DATA (IDUP(i,%d),i=1,%d)/%s/" % \
+                     (iproc + 1, nexternal,
+                      ",".join([str(l.get('id')) for l in legs])))
+        for i in [1, 2]:
+            lines.append("DATA (MOTHUP(%d,i,%3r),i=1,%2r)/%s/" % \
+                     (i, iproc + 1, nexternal,
+                      ",".join([ "%3r" % 0 ] * ninitial + \
+                               [ "%3r" % i ] * (nexternal - ninitial))))
+
+        # Here goes the color connections corresponding to the JAMPs
+        # Only one output, for the first subproc!
+        if iproc == 0:
+            # If no color basis, just output trivial color flow
+            if not matrix_element.get('color_basis'):
+                for i in [1, 2]:
+                    lines.append("DATA (ICOLUP(%d,i,  1),i=1,%2r)/%s/" % \
+                             (i, nexternal,
+                              ",".join([ "%3r" % 0 ] * nexternal)))
+
+            else:
+                # First build a color representation dictionnary
+                repr_dict = {}
+                for l in legs:
+                    repr_dict[l.get('number')] = \
+                        proc.get('model').get_particle(l.get('id')).get_color()
+                # Get the list of color flows
+                color_flow_list = \
+                    matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
+                                                                               ninitial)
+                # And output them properly
+                for cf_i, color_flow_dict in enumerate(color_flow_list):
+                    for i in [0, 1]:
+                        lines.append("DATA (ICOLUP(%d,i,%3r),i=1,%2r)/%s/" % \
+                             (i + 1, cf_i + 1, nexternal,
+                              ",".join(["%3r" % color_flow_dict[l.get('number')][i] \
+                                        for l in legs])))
+
+    # Write the file
+    for line in lines:
+        writer.write_fortran_line(fsock, line)
+
+    return True
+
+#===============================================================================
+# write_maxamps_file
+#===============================================================================
+def write_maxamps_file(fsock, matrix_element, fortran_model):
+    """Write the maxamps.inc file for MG4."""
+
+    writer = FortranWriter()
+
+    file = "       integer    maxamps\n"
+    file = file + "parameter (maxamps=%d)" % \
+           len(matrix_element.get_all_amplitudes())
+
+    # Write the file
+    for line in file.split('\n'):
+        writer.write_fortran_line(fsock, line)
+
+    return True
+
+#===============================================================================
+# write_mg_sym_file
+#===============================================================================
+def write_mg_sym_file(fsock, matrix_element, fortran_model):
+    """Write the mg.sym file for MadEvent."""
+
+    writer = FortranWriter()
+
+    lines = []
+
+    # Extract process with all decays included
+    final_legs = filter(lambda leg: leg.get('state') == True,
+                   matrix_element.get('processes')[0].get_legs_with_decays())
+
+    ninitial = len(filter(lambda leg: leg.get('state') == False,
+                          matrix_element.get('processes')[0].get('legs')))
+
+    identical_indices = {}
+
+    # Extract identical particle info
+    for i, leg in enumerate(final_legs):
+        if leg.get('id') in identical_indices:
+            identical_indices[leg.get('id')].append(\
+                                i + ninitial + 1)
+        else:
+            identical_indices[leg.get('id')] = [i + ninitial + 1]
+
+    # Remove keys which have only one particle
+    for key in identical_indices.keys():
+        if len(identical_indices[key]) < 2:
+            del identical_indices[key]
+            
+    # Write mg.sym file
+    lines.append(str(len(identical_indices.keys())))
+    for key in identical_indices.keys():
+        lines.append(str(len(identical_indices[key])))
+        for number in identical_indices[key]:
+            lines.append(str(number))
+
+    # Write the file
+    for line in lines:
+        writer.write_fortran_line(fsock, line)
+
+    return True
+
+#===============================================================================
+# write_ncombs_file
+#===============================================================================
+def write_ncombs_file(fsock, matrix_element, fortran_model):
+    """Write the ncombs.inc file for MadEvent."""
+
+    writer = FortranWriter()
+
+    # Extract number of external particles
+    (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+
+    # ncomb (used for clustering) is 2^(nexternal + 1)
+    file = "       integer    n_max_cl\n"
+    file = file + "parameter (n_max_cl=%d)" % (2 ** (nexternal + 1))
+
+    # Write the file
+
+    for line in file.split('\n'):
+        writer.write_fortran_line(fsock, line)
+
+    return True
 
 #===============================================================================
 # write_nexternal_file
@@ -233,12 +531,29 @@ def write_nexternal_file(fsock, matrix_element, fortran_model):
     replace_dict['nexternal'] = nexternal
     replace_dict['ninitial'] = ninitial
 
-    file = \
-"""   integer    nexternal
+    file = """ \
+      integer    nexternal
       parameter (nexternal=%(nexternal)d)
       integer    nincoming
       parameter (nincoming=%(ninitial)d)""" % replace_dict
 
+    # Write the file
+    for line in file.split('\n'):
+        writer.write_fortran_line(fsock, line)
+
+    return True
+
+#===============================================================================
+# write_ngraphs_file
+#===============================================================================
+def write_ngraphs_file(fsock, matrix_element, fortran_model, nconfigs):
+    """Write the ngraphs.inc file for MG4. Needs input from
+    write_configs_file."""
+
+    writer = FortranWriter()
+
+    file = "       integer    n_max_cg\n"
+    file = file + "parameter (n_max_cg=%d)" % nconfigs
 
     # Write the file
     for line in file.split('\n'):
@@ -254,14 +569,16 @@ def write_pmass_file(fsock, matrix_element, fortran_model):
 
     writer = FortranWriter()
 
-    process = matrix_element.get('processes')[0]
-    model = process.get('model')
-    
+    model = matrix_element.get('processes')[0].get('model')
+
     lines = []
-    for i, leg in enumerate(process.get('legs')):
-        lines.append("pmass(%d)=abs(%s)" % \
-                     (i + 1, model.get('particle_dict')[leg.get('id')].\
-                      get('mass')))
+    for wf in matrix_element.get_external_wavefunctions():
+        mass = model.get('particle_dict')[wf.get('pdg_code')].get('mass')
+        if mass.lower() != "zero":
+            mass = "abs(%s)" % mass
+
+        lines.append("pmass(%d)=%s" % \
+                     (wf.get('number_external'), mass))
 
     # Write the file
     for line in lines:
@@ -270,24 +587,60 @@ def write_pmass_file(fsock, matrix_element, fortran_model):
     return True
 
 #===============================================================================
-# write_ngraphs_file
+# write_props_file
 #===============================================================================
-def write_ngraphs_file(fsock, matrix_element, fortran_model):
-    """Write the ngraphs.inc file for MG4"""
+def write_props_file(fsock, matrix_element, fortran_model, s_and_t_channels):
+    """Write the props.inc file for MadEvent. Needs input from
+    write_configs_file."""
 
     writer = FortranWriter()
 
-    # Extract number of amplitudes
-    ngraphs = matrix_element.get_number_of_amplitudes()
+    lines = []
 
-    file = \
-"""   integer    n_max_cg
-      parameter (n_max_cg=%d)""" % ngraphs
+    particle_dict = matrix_element.get('processes')[0].get('model').\
+                    get('particle_dict')
 
+    for iconf, configs in enumerate(s_and_t_channels):
+        for vertex in configs[0] + configs[1][:-1]:
+            leg = vertex.get('legs')[-1]
+            particle = particle_dict[leg.get('id')]
+            # Get mass
+            if particle.get('mass').lower() == 'zero':
+                mass = particle.get('mass')
+            else:
+                mass = "abs(%s)" % particle.get('mass')
+            # Get width
+            if particle.get('width') == 'zero':
+                width = particle.get('width')
+            else:
+                width = "abs(%s)" % particle.get('width')
+
+            pow_part = 1 + int(particle.is_boson())
+
+            lines.append("pmass(%d,%d)  = %s" % \
+                         (leg.get('number'), iconf + 1, mass))
+            lines.append("pwidth(%d,%d) = %s" % \
+                         (leg.get('number'), iconf + 1, width))
+            lines.append("pow(%d,%d) = %d" % \
+                         (leg.get('number'), iconf + 1, pow_part))
 
     # Write the file
-    for line in file.split('\n'):
+    for line in lines:
         writer.write_fortran_line(fsock, line)
+
+    return True
+
+#===============================================================================
+# write_subproc
+#===============================================================================
+def write_subproc(fsock, matrix_element, fortran_model):
+    """Append this subprocess to the subproc.mg file for MG4"""
+
+    line = "P%s" % \
+           matrix_element.get('processes')[0].shell_string_v4()
+
+    # Write line to file
+    fsock.write(line + "\n")
 
     return True
 
@@ -296,7 +649,7 @@ def write_ngraphs_file(fsock, matrix_element, fortran_model):
 #===============================================================================
 def generate_subprocess_directory_v4_standalone(matrix_element,
                                                 fortran_model,
-                                                path = os.getcwd()):
+                                                path=os.getcwd()):
     """Generate the Pxxxxx directory for a subprocess in MG4 standalone,
     including the necessary matrix.f and nexternal.inc files"""
 
@@ -309,7 +662,7 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
         os.mkdir(dirpath)
     except os.error as error:
         logger.warning(error.strerror + " " + dirpath)
-    
+
     try:
         os.chdir(dirpath)
     except os.error:
@@ -341,17 +694,202 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
     files.write_to_file(filename,
                         write_ngraphs_file,
                         matrix_element,
-                        fortran_model)
+                        fortran_model,
+                        len(matrix_element.get_all_amplitudes()))
 
     linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
 
     try:
         for file in linkfiles:
-            os.symlink(os.path.join('..',file), file)
+            os.symlink(os.path.join('..', file), file)
     except os.error:
-        logger.warning('Could not link to ' + os.path.join('..',file))
-            
+        logger.warning('Could not link to ' + os.path.join('..', file))
+
     # Return to original PWD
+    os.chdir(cwd)
+
+    if not calls:
+        calls = 0
+    return calls
+#===============================================================================
+# generate_subprocess_directory_v4_madevent
+#===============================================================================
+def generate_subprocess_directory_v4_madevent(matrix_element,
+                                                fortran_model,
+                                                path=os.getcwd()):
+    """Generate the Pxxxxx directory for a subprocess in MG4 madevent,
+    including the necessary matrix.f and various helper files"""
+
+    cwd = os.getcwd()
+
+    os.chdir(path)
+
+    pathdir = os.getcwd()
+
+    # Create the directory PN_xx_xxxxx in the specified path
+    subprocdir = "P%s" % matrix_element.get('processes')[0].shell_string_v4()
+    try:
+        os.mkdir(subprocdir)
+    except os.error as error:
+        logger.warning(error.strerror + " " + subprocdir)
+
+    try:
+        os.chdir(subprocdir)
+    except os.error:
+        logger.error('Could not cd to directory %s' % subprocdir)
+        return 0
+
+    logger.info('Creating files in directory %s' % subprocdir)
+
+    # Create the matrix.f file, auto_dsig.f file and all inc files
+    filename = 'matrix.f'
+    calls = files.write_to_file(filename,
+                                write_matrix_element_v4_madevent,
+                                matrix_element,
+                                fortran_model)
+
+    filename = 'auto_dsig.f'
+    files.write_to_file(filename,
+                                write_auto_dsig_file,
+                                matrix_element,
+                                fortran_model)
+
+    filename = 'coloramps.inc'
+    files.write_to_file(filename,
+                        write_coloramps_file,
+                        matrix_element,
+                        fortran_model)
+
+    filename = 'configs.inc'
+    nconfigs, s_and_t_channels = files.write_to_file(filename,
+                        write_configs_file,
+                        matrix_element,
+                        fortran_model)
+
+    filename = 'decayBW.inc'
+    files.write_to_file(filename,
+                        write_decayBW_file,
+                        matrix_element,
+                        fortran_model,
+                        s_and_t_channels)
+
+    filename = 'dname.mg'
+    files.write_to_file(filename,
+                        write_dname_file,
+                        matrix_element,
+                        fortran_model)
+
+    filename = 'iproc.dat'
+    files.write_to_file(filename,
+                        write_iproc_file,
+                        matrix_element,
+                        fortran_model)
+
+    filename = 'leshouche.inc'
+    files.write_to_file(filename,
+                        write_leshouche_file,
+                        matrix_element,
+                        fortran_model)
+
+    filename = 'maxamps.inc'
+    files.write_to_file(filename,
+                        write_maxamps_file,
+                        matrix_element,
+                        fortran_model)
+
+    filename = 'mg.sym'
+    files.write_to_file(filename,
+                        write_mg_sym_file,
+                        matrix_element,
+                        fortran_model)
+
+    filename = 'ncombs.inc'
+    files.write_to_file(filename,
+                        write_ncombs_file,
+                        matrix_element,
+                        fortran_model)
+
+    filename = 'nexternal.inc'
+    files.write_to_file(filename,
+                        write_nexternal_file,
+                        matrix_element,
+                        fortran_model)
+
+    filename = 'ngraphs.inc'
+    files.write_to_file(filename,
+                        write_ngraphs_file,
+                        matrix_element,
+                        fortran_model,
+                        nconfigs)
+
+    filename = 'pmass.inc'
+    files.write_to_file(filename,
+                        write_pmass_file,
+                        matrix_element,
+                        fortran_model)
+
+    filename = 'props.inc'
+    files.write_to_file(filename,
+                        write_props_file,
+                        matrix_element,
+                        fortran_model,
+                        s_and_t_channels)
+
+    # Generate diagrams
+    filename = "matrix.ps"
+    plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+                                         get('diagrams'),
+                                      filename,
+                                      model=matrix_element.get('processes')[0].\
+                                         get('model'),
+                                      amplitude='')
+    logging.info("Generating Feynman diagrams for " + \
+                 matrix_element.get('processes')[0].nice_string())
+    plot.draw()
+
+    # Generate jpgs
+    os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
+
+    linkfiles = ['addmothers.f',
+                 'cluster.f',
+                 'cluster.inc',
+                 'coupl.inc',
+                 'cuts.f',
+                 'cuts.inc',
+                 'driver.f',
+                 'genps.f',
+                 'genps.inc',
+                 'initcluster.f',
+                 'makefile',
+                 'message.inc',
+                 'myamp.f',
+                 'reweight.f',
+                 'run.inc',
+                 'setcuts.f',
+                 'setscales.f',
+                 'sudakov.inc',
+                 'symmetry.f',
+                 'unwgt.f']
+
+    for file in linkfiles:
+        try:
+            os.symlink(os.path.join('..', file), file)
+        except os.error:
+            logger.warning('Could not link to ' + os.path.join('..', file))
+
+    # Return to SubProcesses dir
+    os.chdir(pathdir)
+
+    # Add subprocess to subproc.mg
+    filename = 'subproc.mg'
+    files.append_to_file(filename,
+                        write_subproc,
+                        matrix_element,
+                        fortran_model)
+    # Generate info page
+    os.system(os.path.join('..', 'bin', 'gen_infohtml-pl'))
+
+    # Return to original dir
     os.chdir(cwd)
 
     if not calls:
@@ -367,18 +905,23 @@ def get_mg5_info_lines():
 
     info = misc.get_pkg_info()
     info_lines = ""
-    if info.has_key('version') and  info.has_key('date'):
+    if info and info.has_key('version') and  info.has_key('date'):
         info_lines = "C  Generated by MadGraph 5 v. %s, %s\n" % \
                      (info['version'], info['date'])
         info_lines = info_lines + \
                      "C  By the MadGraph Development Team\n" + \
                      "C  Please visit us at https://launchpad.net/madgraph5"
+    else:
+        info_lines = "C  Generated by MadGraph 5\n" + \
+                     "C  By the MadGraph Development Team\n" + \
+                     "C  Please visit us at https://launchpad.net/madgraph5"        
+
     return info_lines
 
 def get_process_info_lines(matrix_element):
     """Return info lines describing the processes for this matrix element"""
 
-    return"\n".join([ "C " + process.nice_string().replace('\n', '\nC ') \
+    return"\n".join([ "C " + process.nice_string().replace('\n', '\nC * ') \
                      for process in matrix_element.get('processes')])
 
 
@@ -396,6 +939,17 @@ def get_helicity_lines(matrix_element):
              ",".join(['%2r'] * len(helicities)) + "/") % tuple(int_list))
 
     return "\n".join(helicity_line_list)
+
+def get_ic_line(matrix_element):
+    """Return the IC definition line coming after helicities, required by
+    switchmom in madevent"""
+
+    nexternal = matrix_element.get_nexternal_ninitial()[0]
+    int_list = range(1, nexternal + 1)
+
+    return "DATA (IC(IHEL,1),IHEL=1,%i) /%s/" % (nexternal,
+                                                 ",".join([str(i) for \
+                                                           i in int_list]))
 
 def get_color_data_lines(matrix_element, n=6):
     """Return the color matrix definition lines for this matrix element. Split
@@ -419,8 +973,7 @@ def get_color_data_lines(matrix_element, n=6):
                 ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
                                 (index + 1, k + 1, min(k + n, len(num_list)),
                                  ','.join(["%5r" % i for i in num_list[k:k + n]])))
-
-            my_cs.from_immutable(matrix_element.get('color_basis').keys()[index])
+            my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[index])
             ret_list.append("C %s" % repr(my_cs))
         return ret_list
 
@@ -431,75 +984,145 @@ def get_den_factor_line(matrix_element):
     return "DATA IDEN/%2r/" % \
            matrix_element.get_denominator_factor()
 
+def get_icolamp_lines(matrix_element):
+    """Return the ICOLAMP matrix, showing which AMPs are parts of
+    which JAMPs."""
+
+    ret_list = []
+
+    booldict = {False: ".false.", True: ".true."}
+
+    amplitudes = matrix_element.get_all_amplitudes()
+
+    color_amplitudes = matrix_element.get_color_amplitudes()
+
+    ret_list.append("logical icolamp(%d,%d)" % \
+                    (len(amplitudes), len(color_amplitudes)))
+
+    bool_list = []
+
+    for coeff_list in color_amplitudes:
+
+        # List of amplitude numbers used in this JAMP
+        amp_list = [amp_number for (dummy, amp_number) in coeff_list]
+
+        # List of True or False 
+        bool_list.extend([(i + 1 in amp_list) for i in \
+                          range(len(amplitudes))])
+    # Add line
+    ret_list.append("DATA icolamp/%s/" % \
+                         ','.join(["%s" % booldict[i] for i in \
+                                   bool_list]))
+
+    return ret_list
+
 def get_JAMP_lines(matrix_element):
-    """Return the JAMP(1) = sum(fermionfactor * AMP(i)) line"""
+    """Return the JAMP = sum(fermionfactor * AMP(i)) lines"""
 
-    if not matrix_element.get('color_basis'):
-        res = "JAMP(1)="
-        # Add all amplitudes with correct fermion factor
-        for diagram in matrix_element.get('diagrams'):
-            for amplitude in diagram.get('amplitudes'):
-                res = res + "%sAMP(%d)" % (coeff(amplitude.get('fermionfactor'),
-                                                 1, False, 0),
-                                           amplitude.get('number'))
-        return [res]
-    else:
-        res_list = []
-        for i, col_basis_elem in \
-                enumerate(matrix_element.get('color_basis').keys()):
-            res = "JAMP(%i)=" % (i + 1)
+    res_list = []
 
-            # Optimization: if all contributions to that color basis element have
-            # the same coefficient (up to a sign), put it in front
-            list_fracs = [abs(diag_tuple[2]) for diag_tuple in \
-                          matrix_element.get('color_basis')[col_basis_elem]]
-            common_factor = False
-            diff_fracs = list(set(list_fracs))
-            if len(diff_fracs) == 1 and abs(diff_fracs[0]) != 1:
-                common_factor = True
-                global_factor = diff_fracs[0]
-                res = res + '%s(' % coeff(1, global_factor, False, 0)
+    for i, coeff_list in \
+            enumerate(matrix_element.get_color_amplitudes()):
 
+        res = "JAMP(%i)=" % (i + 1)
 
-            for diag_tuple in matrix_element.get('color_basis')[col_basis_elem]:
-                res_amp = filter(lambda amp: \
-                                 tuple(amp.get('color_indices')) == diag_tuple[1],
-                                 matrix_element.get('diagrams')[diag_tuple[0]].get('amplitudes'))
-                if res_amp:
-                    if len(res_amp) > 1:
-                        raise FortranWriter.FortranWriterError, \
-                            """More than one amplitude found for color structure
-                            %s and color index chain (%s) (diagram %i)""" % \
-                            (col_basis_elem,
-                             str(diag_tuple[1]),
-                             diag_tuple[0])
-                    else:
-                        if common_factor:
-                            res = res + "%sAMP(%d)" % (coeff(res_amp[0].get('fermionfactor'),
-                                                     diag_tuple[2] / abs(diag_tuple[2]),
-                                                     diag_tuple[3],
-                                                     diag_tuple[4]),
-                                                     res_amp[0].get('number'))
-                        else:
-                            res = res + "%sAMP(%d)" % (coeff(res_amp[0].get('fermionfactor'),
-                                                     diag_tuple[2],
-                                                     diag_tuple[3],
-                                                     diag_tuple[4]),
-                                                     res_amp[0].get('number'))
-                else:
-                    raise FortranWriter.FortranWriterError, \
-                            """No corresponding amplitude found for color structure
-                            %s and color index chain (%s) (diagram %i)""" % \
-                            (col_basis_elem,
-                             str(diag_tuple[1]),
-                             diag_tuple[0])
+        # Optimization: if all contributions to that color basis element have
+        # the same coefficient (up to a sign), put it in front
+        list_fracs = [abs(coefficient[0][1]) for coefficient in coeff_list]
+        common_factor = False
+        diff_fracs = list(set(list_fracs))
+        if len(diff_fracs) == 1 and abs(diff_fracs[0]) != 1:
+            common_factor = True
+            global_factor = diff_fracs[0]
+            res = res + '%s(' % coeff(1, global_factor, False, 0)
 
+        for (coefficient, amp_number) in coeff_list:
             if common_factor:
-                res = res + ')'
+                res = res + "%sAMP(%d)" % (coeff(coefficient[0],
+                                           coefficient[1] / abs(coefficient[1]),
+                                           coefficient[2],
+                                           coefficient[3]),
+                                           amp_number)
+            else:
+                res = res + "%sAMP(%d)" % (coeff(coefficient[0],
+                                           coefficient[1],
+                                           coefficient[2],
+                                           coefficient[3]),
+                                           amp_number)
 
-            res_list.append(res)
+        if common_factor:
+            res = res + ')'
 
-        return res_list
+        res_list.append(res)
+
+    return res_list
+
+def get_pdf_lines(matrix_element, ninitial):
+    """Generate the PDF lines for the auto_dsig.f file"""
+
+    processes = matrix_element.get('processes')
+
+    pdf_lines = ""
+
+    if ninitial == 1:
+        pdf_lines = "PD(0) = 0d0\nIPROC = 0\n"
+        for i, proc in enumerate(processes):
+            process_line = proc.base_string()
+            pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
+            pdf_lines = pdf_lines + "\nPD(IPROC)=PD(IPROC-1) + 1d0\n"
+    else:
+        # Set notation for the variables used for different particles
+        pdf_codes = {1: 'd', 2: 'u', 3: 's', 4: 'c', 5: 'b',
+                     21: 'g', 22: 'a'}
+        # Set conversion from PDG code to number used in PDF calls
+        pdgtopdf = {21: 0, 22: 7}
+        # Fill in missing entries
+        for key in pdf_codes.keys():
+            if key < 21:
+                pdf_codes[-key] = pdf_codes[key] + 'b'
+                pdgtopdf[key] = key
+                pdgtopdf[-key] = -key
+
+        # Pick out all initial state particles for the two beams
+        initial_states = [sorted(list(set([p.get_initial_pdg(1) for \
+                                           p in processes]))),
+                          sorted(list(set([p.get_initial_pdg(2) for \
+                                           p in processes])))]
+
+        # Get PDF values for the different initial states
+        for i, init_states in enumerate(initial_states):
+            pdf_lines = pdf_lines + \
+                   "IF (ABS(LPP(%d)) .GE. 1) THEN\nLP=SIGN(1,LPP(%d))\n" \
+                         % (i + 1, i + 1)
+
+            for initial_state in init_states:
+                if initial_state in pdf_codes.keys():
+                    pdf_lines = pdf_lines + \
+                                ("%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP," + \
+                                 "XBK(%d),DSQRT(Q2FACT(%d)))\n") % \
+                                 (pdf_codes[initial_state],
+                                  i + 1, i + 1, pdgtopdf[initial_state],
+                                  i + 1, i + 1)
+            pdf_lines = pdf_lines + "ENDIF\n"
+
+        # Add up PDFs for the different initial state particles
+        pdf_lines = pdf_lines + "PD(0) = 0d0\nIPROC = 0\n"
+        for proc in processes:
+            process_line = proc.base_string()
+            pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
+            pdf_lines = pdf_lines + "\nPD(IPROC)=PD(IPROC-1) + "
+            for ibeam in [1, 2]:
+                initial_state = proc.get_initial_pdg(ibeam)
+                if initial_state in pdf_codes.keys():
+                    pdf_lines = pdf_lines + "%s%d*" % \
+                                (pdf_codes[initial_state], ibeam)
+                else:
+                    pdf_lines = pdf_lines + "1d0*"
+            # Remove last "*" from pdf_lines
+            pdf_lines = pdf_lines[:-1] + "\n"
+
+    # Remove last line break from pdf_lines
+    return pdf_lines[:-1]
 
 #===============================================================================
 # FortranWriter
@@ -515,7 +1138,7 @@ class FortranWriter():
 
     # Parameters defining the output of the Fortran writer
     keyword_pairs = {'^if.+then\s*$': ('^endif', 2),
-                     '^do': ('^enddo\s*$', 2),
+                     '^do\s+': ('^enddo\s*$', 2),
                      '^subroutine': ('^end\s*$', 0),
                      'function': ('^end\s*$', 0)}
     single_indents = {'^else\s*$':-2,
@@ -541,7 +1164,6 @@ class FortranWriter():
                   "write_fortran_line must have a single line as argument"
 
         # Check if this line is a comment
-        comment = False
         if self.__comment_pattern.search(line):
             # This is a comment
             myline = " " * (5 + self.__indent) + line.lstrip()[1:].lstrip()
@@ -567,6 +1189,9 @@ class FortranWriter():
             # Convert to upper or lower case
             # Here we need to make exception for anything within quotes.
             (myline, part, post_comment) = myline.partition("!")
+            # Set space between line and post-comment
+            if part:
+                part = "  " + part
             # Replace all double quotes by single quotes
             myline = myline.replace('\"', '\'')
             # Downcase or upcase Fortran code, except for quotes
@@ -668,7 +1293,6 @@ class HelasFortranModel(helas_objects.HelasModel):
     sort_wf = {'O': 0, 'I': 1, 'S': 2, 'T': 3, 'V': 4}
     sort_amp = {'S': 1, 'V': 2, 'T': 0, 'O': 3, 'I': 4}
 
-
     def default_setup(self):
         """Set up special Helas calls (wavefunctions and amplitudes)
         that can not be done automatically by generate_helas_call"""
@@ -684,8 +1308,8 @@ class HelasFortranModel(helas_objects.HelasModel):
 
         call = lambda wf: \
                "CALL UVVAXX(W(1,%d),W(1,%d),%s,zero,zero,zero,W(1,%d))" % \
-               (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
-                HelasFortranModel.sorted_mothers(wf)[1].get('number'),
+               (wf.get('mothers')[0].get('number'),
+                wf.get('mothers')[1].get('number'),
 
                 wf.get('coupling'),
                 wf.get('number'))
@@ -695,8 +1319,8 @@ class HelasFortranModel(helas_objects.HelasModel):
 
         call = lambda wf: \
                "CALL JVTAXX(W(1,%d),W(1,%d),%s,zero,zero,W(1,%d))" % \
-               (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
-                HelasFortranModel.sorted_mothers(wf)[1].get('number'),
+               (wf.get('mothers')[0].get('number'),
+                wf.get('mothers')[1].get('number'),
 
                 wf.get('coupling'),
                 wf.get('number'))
@@ -706,9 +1330,9 @@ class HelasFortranModel(helas_objects.HelasModel):
 
         call = lambda amp: \
                "CALL VVTAXX(W(1,%d),W(1,%d),W(1,%d),%s,zero,AMP(%d))" % \
-               (HelasFortranModel.sorted_mothers(amp)[0].get('number'),
-                HelasFortranModel.sorted_mothers(amp)[1].get('number'),
-                HelasFortranModel.sorted_mothers(amp)[2].get('number'),
+               (amp.get('mothers')[0].get('number'),
+                amp.get('mothers')[1].get('number'),
+                amp.get('mothers')[2].get('number'),
 
                 amp.get('coupling'),
                 amp.get('number'))
@@ -719,57 +1343,57 @@ class HelasFortranModel(helas_objects.HelasModel):
         key = ((3, 3, 3, 3), 'gggg1')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
-               (HelasFortranModel.sorted_mothers(wf)[0].get('number'),
-                HelasFortranModel.sorted_mothers(wf)[1].get('number'),
-                HelasFortranModel.sorted_mothers(wf)[2].get('number'),
+               (wf.get('mothers')[0].get('number'),
+                wf.get('mothers')[1].get('number'),
+                wf.get('mothers')[2].get('number'),
                 wf.get('coupling'),
                 wf.get('number'))
         self.add_wavefunction(key, call)
         key = ((3, 3, 3, 3), 'gggg1')
         call = lambda amp: \
                "CALL GGGGXX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,AMP(%d))" % \
-               (HelasFortranModel.sorted_mothers(amp)[0].get('number'),
-                HelasFortranModel.sorted_mothers(amp)[1].get('number'),
-                HelasFortranModel.sorted_mothers(amp)[2].get('number'),
-                HelasFortranModel.sorted_mothers(amp)[3].get('number'),
+               (amp.get('mothers')[0].get('number'),
+                amp.get('mothers')[1].get('number'),
+                amp.get('mothers')[2].get('number'),
+                amp.get('mothers')[3].get('number'),
                 amp.get('coupling'),
                 amp.get('number'))
         self.add_amplitude(key, call)
         key = ((3, 3, 3, 3), 'gggg2')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
-               (HelasFortranModel.sorted_mothers(wf)[2].get('number'),
-                HelasFortranModel.sorted_mothers(wf)[0].get('number'),
-                HelasFortranModel.sorted_mothers(wf)[1].get('number'),
+               (wf.get('mothers')[2].get('number'),
+                wf.get('mothers')[0].get('number'),
+                wf.get('mothers')[1].get('number'),
                 wf.get('coupling'),
                 wf.get('number'))
         self.add_wavefunction(key, call)
         key = ((3, 3, 3, 3), 'gggg2')
         call = lambda amp: \
                "CALL GGGGXX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,AMP(%d))" % \
-               (HelasFortranModel.sorted_mothers(amp)[2].get('number'),
-                HelasFortranModel.sorted_mothers(amp)[0].get('number'),
-                HelasFortranModel.sorted_mothers(amp)[1].get('number'),
-                HelasFortranModel.sorted_mothers(amp)[3].get('number'),
+               (amp.get('mothers')[2].get('number'),
+                amp.get('mothers')[0].get('number'),
+                amp.get('mothers')[1].get('number'),
+                amp.get('mothers')[3].get('number'),
                 amp.get('coupling'),
                 amp.get('number'))
         self.add_amplitude(key, call)
         key = ((3, 3, 3, 3), 'gggg3')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
-               (HelasFortranModel.sorted_mothers(wf)[1].get('number'),
-                HelasFortranModel.sorted_mothers(wf)[2].get('number'),
-                HelasFortranModel.sorted_mothers(wf)[0].get('number'),
+               (wf.get('mothers')[1].get('number'),
+                wf.get('mothers')[2].get('number'),
+                wf.get('mothers')[0].get('number'),
                 wf.get('coupling'),
                 wf.get('number'))
         self.add_wavefunction(key, call)
         key = ((3, 3, 3, 3), 'gggg3')
         call = lambda amp: \
                "CALL GGGGXX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,AMP(%d))" % \
-               (HelasFortranModel.sorted_mothers(amp)[1].get('number'),
-                HelasFortranModel.sorted_mothers(amp)[2].get('number'),
-                HelasFortranModel.sorted_mothers(amp)[0].get('number'),
-                HelasFortranModel.sorted_mothers(amp)[3].get('number'),
+               (amp.get('mothers')[1].get('number'),
+                amp.get('mothers')[2].get('number'),
+                amp.get('mothers')[0].get('number'),
+                amp.get('mothers')[3].get('number'),
                 amp.get('coupling'),
                 amp.get('number'))
         self.add_amplitude(key, call)
@@ -845,6 +1469,13 @@ class HelasFortranModel(helas_objects.HelasModel):
         call = "CALL "
 
         call_function = None
+
+        if isinstance(argument, helas_objects.HelasAmplitude) and \
+           argument.get('interaction_id') == 0:
+            call = "#"
+            call_function = lambda amp: call
+            self.add_amplitude(argument.get_call_key(), call_function)
+            return
 
         if isinstance(argument, helas_objects.HelasWavefunction) and \
                not argument.get('mothers'):
@@ -964,9 +1595,9 @@ class HelasFortranModel(helas_objects.HelasModel):
                 # Create call for wavefunction
                 if len(argument.get('mothers')) == 2:
                     call_function = lambda wf: call % \
-                                    (HelasFortranModel.sorted_mothers(wf)[0].\
+                                    (wf.get('mothers')[0].\
                                      get('number'),
-                                     HelasFortranModel.sorted_mothers(wf)[1].\
+                                     wf.get('mothers')[1].\
                                      get('number'),
                                      wf.get_with_flow('coupling'),
                                      wf.get('mass'),
@@ -974,11 +1605,11 @@ class HelasFortranModel(helas_objects.HelasModel):
                                      wf.get('number'))
                 else:
                     call_function = lambda wf: call % \
-                                    (HelasFortranModel.sorted_mothers(wf)[0].\
+                                    (wf.get('mothers')[0].\
                                      get('number'),
-                                     HelasFortranModel.sorted_mothers(wf)[1].\
+                                     wf.get('mothers')[1].\
                                      get('number'),
-                                     HelasFortranModel.sorted_mothers(wf)[2].\
+                                     wf.get('mothers')[2].\
                                      get('number'),
                                      wf.get_with_flow('coupling'),
                                      wf.get('mass'),
@@ -988,24 +1619,24 @@ class HelasFortranModel(helas_objects.HelasModel):
                 # Create call for amplitude
                 if len(argument.get('mothers')) == 3:
                     call_function = lambda amp: call % \
-                                    (HelasFortranModel.sorted_mothers(amp)[0].\
+                                    (amp.get('mothers')[0].\
                                      get('number'),
-                                     HelasFortranModel.sorted_mothers(amp)[1].\
+                                     amp.get('mothers')[1].\
                                      get('number'),
-                                     HelasFortranModel.sorted_mothers(amp)[2].\
+                                     amp.get('mothers')[2].\
                                      get('number'),
 
                                      amp.get('coupling'),
                                      amp.get('number'))
                 else:
                     call_function = lambda amp: call % \
-                                    (HelasFortranModel.sorted_mothers(amp)[0].\
+                                    (amp.get('mothers')[0].\
                                      get('number'),
-                                     HelasFortranModel.sorted_mothers(amp)[1].\
+                                     amp.get('mothers')[1].\
                                      get('number'),
-                                     HelasFortranModel.sorted_mothers(amp)[2].\
+                                     amp.get('mothers')[2].\
                                      get('number'),
-                                     HelasFortranModel.sorted_mothers(amp)[3].\
+                                     amp.get('mothers')[3].\
                                      get('number'),
                                      amp.get('coupling'),
                                      amp.get('number'))
@@ -1017,55 +1648,6 @@ class HelasFortranModel(helas_objects.HelasModel):
             self.add_amplitude(argument.get_call_key(), call_function)
 
     # Static helper functions
-
-    @staticmethod
-    def sorted_mothers(arg):
-        """Gives a list of mother wavefunctions sorted according to
-        1. the spin order needed in the Fortran Helas calls and
-        2. the order of the particles in the interaction (cyclic)
-        (3. the number for the external leg)"""
-
-        if isinstance(arg, helas_objects.HelasWavefunction) or \
-           isinstance(arg, helas_objects.HelasAmplitude):
-            # First sort according to number_external number
-            #sorted_mothers1 = sorted(arg.get('mothers'),
-            #                         lambda wf1, wf2: \
-            #                         wf1.get('number_external') - \
-            #                         wf2.get('number_external'))
-            sorted_mothers1 = copy.copy(arg.get('mothers'))
-
-            # Next sort according to interaction pdg codes
-            mother_codes = [ wf.get_pdg_code_outgoing() for wf \
-                             in sorted_mothers1 ]
-            pdg_codes = copy.copy(arg.get('pdg_codes'))
-            if isinstance(arg, helas_objects.HelasWavefunction):
-                my_code = arg.get_pdg_code_incoming()
-                # We need to create the cyclic pdg_codes
-                missing_index = pdg_codes.index(my_code)
-                pdg_codes_cycl = pdg_codes[missing_index + 1:]
-                pdg_codes_cycl.extend(pdg_codes[:missing_index])
-            else:
-                pdg_codes_cycl = pdg_codes
-
-            sorted_mothers2 = helas_objects.HelasWavefunctionList()
-            for code in pdg_codes_cycl:
-                index = mother_codes.index(code)
-                mother_codes.pop(index)
-                sorted_mothers2.append(sorted_mothers1.pop(index))
-
-            if sorted_mothers1:
-                raise HelasFortranModel.PhysicsObjectError, \
-                          "Mismatch of pdg codes, %s != %s" % \
-                          (repr(mother_codes), repr(pdg_codes_cycl))
-
-            # Next sort according to spin_state_number
-            return sorted(sorted_mothers2, lambda wf1, wf2: \
-                          HelasFortranModel.sort_amp[\
-                          HelasFortranModel.mother_dict[wf2.\
-                                                    get_spin_state_number()]]\
-                          - HelasFortranModel.sort_amp[\
-                          HelasFortranModel.mother_dict[wf1.\
-                                                    get_spin_state_number()]])
 
     @staticmethod
     def sorted_letters(arg):

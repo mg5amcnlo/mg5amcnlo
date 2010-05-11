@@ -189,12 +189,12 @@ class ColorAmpTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
+                                         'state':False}))
 
         myleglist.extend([base_objects.Leg({'id':21,
-                                            'state':'final'})] * 2)
+                                            'state':True})] * 2)
 
         myprocess = base_objects.Process({'legs':myleglist,
                                         'model':self.mymodel})
@@ -211,7 +211,7 @@ class ColorAmpTest(unittest.TestCase):
         col_dict = my_col_basis.colorize(myamplitude['diagrams'][0],
                                      self.mymodel)
 
-        goal_dict = {(0, 0):color.ColorString([color.T(-1000, 1, 2),
+        goal_dict = {(0, 0):color.ColorString([color.T(-1000, 2, 1),
                                                color.f(3, 4, -1000)])}
 
         self.assertEqual(col_dict, goal_dict)
@@ -220,8 +220,8 @@ class ColorAmpTest(unittest.TestCase):
         col_dict = my_col_basis.colorize(myamplitude['diagrams'][1],
                                      self.mymodel)
 
-        goal_dict = {(0, 0):color.ColorString([color.T(3, 1, -1000),
-                                               color.T(4, -1000, 2)])}
+        goal_dict = {(0, 0):color.ColorString([color.T(3, -1000, 1),
+                                               color.T(4, 2, -1000)])}
 
         self.assertEqual(col_dict, goal_dict)
 
@@ -229,8 +229,8 @@ class ColorAmpTest(unittest.TestCase):
         col_dict = my_col_basis.colorize(myamplitude['diagrams'][2],
                                      self.mymodel)
 
-        goal_dict = {(0, 0):color.ColorString([color.T(4, 1, -1000),
-                                               color.T(3, -1000, 2)])}
+        goal_dict = {(0, 0):color.ColorString([color.T(4, -1000, 1),
+                                               color.T(3, 2, -1000)])}
 
         self.assertEqual(col_dict, goal_dict)
 
@@ -239,13 +239,13 @@ class ColorAmpTest(unittest.TestCase):
 
         myleglist = base_objects.LegList()
 
-        myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':'initial'}))
         myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':False}))
 
         myleglist.extend([base_objects.Leg({'id':21,
-                                            'state':'final'})] * 3)
+                                            'state':True})] * 3)
 
         myprocess = base_objects.Process({'legs':myleglist,
                                         'model':self.mymodel})
@@ -289,15 +289,15 @@ class ColorAmpTest(unittest.TestCase):
 
         myleglist = base_objects.LegList()
 
-        myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
         myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':'initial'}))
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
 
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.extend([base_objects.Leg({'id':21,
-                                            'state':'final'})] * 3)
+                                            'state':True})] * 3)
 
         myprocess = base_objects.Process({'legs':myleglist,
                                         'model':self.mymodel})
@@ -311,6 +311,58 @@ class ColorAmpTest(unittest.TestCase):
         new_col_basis = color_amp.ColorBasis(myamplitude)
 
         self.assertEqual(len(new_col_basis), 6)
+
+        # Test the color flow decomposition
+        self.assertEqual(new_col_basis.color_flow_decomposition(
+                                        {1:3, 2:-3, 3:1, 4:8, 5:8, 6:8}, 2),
+        [{1: [504, 0], 2: [0, 501], 3: [0, 0], 4: [502, 501], 5: [503, 502], 6: [504, 503]},
+         {1: [503, 0], 2: [0, 501], 3: [0, 0], 4: [502, 501], 5: [503, 504], 6: [504, 502]},
+         {1: [504, 0], 2: [0, 501], 3: [0, 0], 4: [502, 503], 5: [503, 501], 6: [504, 502]},
+         {1: [502, 0], 2: [0, 501], 3: [0, 0], 4: [502, 504], 5: [503, 501], 6: [504, 503]},
+         {1: [503, 0], 2: [0, 501], 3: [0, 0], 4: [502, 504], 5: [503, 502], 6: [504, 501]},
+         {1: [502, 0], 2: [0, 501], 3: [0, 0], 4: [502, 503], 5: [503, 504], 6: [504, 501]}])
+
+    def test_color_flow_string(self):
+        """Test the color flow decomposition of various color strings"""
+
+        # qq~>qq~
+        my_cs = color.ColorString([color.T(-1000, 1, 2), color.T(-1000, 3, 4)])
+
+        goal_cs = color.ColorString([color.T(1, 4), color.T(3, 2)])
+        goal_cs.coeff = fractions.Fraction(1, 2)
+
+        self.assertEqual(color_amp.ColorBasis.get_color_flow_string(my_cs, []),
+                         goal_cs)
+
+        # qq~>qq~g
+        my_cs = color.ColorString([color.T(-1000, 1, 2),
+                                   color.T(-1000, 3, 4),
+                                   color.T(5, 4, 6)])
+        goal_cs = color.ColorString([color.T(1, 2005),
+                                     color.T(3, 2),
+                                     color.T(1005, 6)])
+        goal_cs.coeff = fractions.Fraction(1, 4)
+        self.assertEqual(color_amp.ColorBasis.get_color_flow_string(my_cs,
+                                                         [(5, 1005, 2005)]),
+                         goal_cs)
+
+        # gg>gg
+        my_cs = color.ColorString([color.Tr(-1000, 1, 2),
+                                   color.Tr(-1000, 3, 4)])
+
+        goal_cs = color.ColorString([color.T(1001, 2002),
+                                     color.T(1002, 2003),
+                                     color.T(1003, 2004),
+                                     color.T(1004, 2001)])
+        goal_cs.coeff = fractions.Fraction(1, 32)
+
+        self.assertEqual(color_amp.ColorBasis.get_color_flow_string(my_cs,
+                                                         [(1, 1001, 2001),
+                                                          (2, 1002, 2002),
+                                                          (3, 1003, 2003),
+                                                          (4, 1004, 2004)]),
+                         goal_cs)
+
 
 class ColorSquareTest(unittest.TestCase):
     """Test class for the color_amp module"""
@@ -434,33 +486,34 @@ class ColorSquareTest(unittest.TestCase):
                 fractions.Fraction(455, 108),
                 fractions.Fraction(3641, 648)]
 
+
         goal_line1 = [(fractions.Fraction(7, 3), fractions.Fraction(-2, 3)),
-                     (fractions.Fraction(19, 6), fractions.Fraction(2, 3),
+                     (fractions.Fraction(19, 6), fractions.Fraction(-1, 3),
                     fractions.Fraction(-1, 3), fractions.Fraction(-1, 3),
-                    fractions.Fraction(-1, 3), fractions.Fraction(-1, 3)),
+                    fractions.Fraction(-1, 3), fractions.Fraction(2, 3)),
                     (fractions.Fraction(455, 108), fractions.Fraction(-29, 54),
-                    fractions.Fraction(17, 27), fractions.Fraction(17, 27),
+                    fractions.Fraction(-29, 54), fractions.Fraction(7, 54),
+                    fractions.Fraction(7, 54), fractions.Fraction(17, 27),
                     fractions.Fraction(-29, 54), fractions.Fraction(-1, 27),
-                    fractions.Fraction(17, 27), fractions.Fraction(7, 54),
-                    fractions.Fraction(7, 54), fractions.Fraction(5, 108),
-                    fractions.Fraction(7, 54), fractions.Fraction(5, 108),
-                    fractions.Fraction(-10, 27), fractions.Fraction(-1, 27),
                     fractions.Fraction(7, 54), fractions.Fraction(-29, 54),
+                    fractions.Fraction(5, 108), fractions.Fraction(-1, 27),
+                    fractions.Fraction(7, 54), fractions.Fraction(5, 108),
+                    fractions.Fraction(17, 27), fractions.Fraction(-1, 27),
+                    fractions.Fraction(7, 54), fractions.Fraction(17, 27),
+                    fractions.Fraction(-29, 54), fractions.Fraction(-1, 27),
                     fractions.Fraction(-1, 27), fractions.Fraction(17, 27),
-                    fractions.Fraction(-1, 27), fractions.Fraction(-1, 27),
-                    fractions.Fraction(-29, 54), fractions.Fraction(17, 27),
-                    fractions.Fraction(-29, 54), fractions.Fraction(7, 54))]
+                    fractions.Fraction(17, 27), fractions.Fraction(-10, 27))]
 
         for n in range(3):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':21,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':21,
-                                             'state':'initial'}))
+                                             'state':False}))
 
             myleglist.extend([base_objects.Leg({'id':21,
-                                                'state':'final'})] * (n + 1))
+                                                'state':True})] * (n + 1))
 
             myprocess = base_objects.Process({'legs':myleglist,
                                             'model':self.mymodel})
@@ -474,7 +527,6 @@ class ColorSquareTest(unittest.TestCase):
             col_basis = color_amp.ColorBasis(myamplitude)
 
             col_matrix = color_amp.ColorMatrix(col_basis, Nc=3)
-
             # Check diagonal
             for i in range(len(col_basis.items())):
                 self.assertEqual(col_matrix.col_matrix_fixed_Nc[(i, i)],
@@ -488,52 +540,34 @@ class ColorSquareTest(unittest.TestCase):
     def test_color_matrix_multi_quarks(self):
         """Test the color matrix building for qq~ > n*(qq~) with n up to 2"""
 
-        goal = [fractions.Fraction(2, 1),
-                fractions.Fraction(72, 54)]
+        goal = [fractions.Fraction(9, 1),
+                fractions.Fraction(27, 1)]
 
 
 
-        goal_line1 = [(fractions.Fraction(2, 1), fractions.Fraction(-2, 3)),
-                      (fractions.Fraction(4, 3), fractions.Fraction(-5, 27),
-                       fractions.Fraction(7, 6), fractions.Fraction(-1, 3),
-                       fractions.Fraction(1, 9), fractions.Fraction(-7, 18),
-                       fractions.Fraction(-5, 27), fractions.Fraction(-7, 18),
-                       fractions.Fraction(1, 18), fractions.Fraction(31, 27),
-                       fractions.Fraction(-5, 27), fractions.Fraction(-7, 18),
-                       fractions.Fraction(-1, 3), fractions.Fraction(31, 27),
-                       fractions.Fraction(-1, 3), fractions.Fraction(-4, 9),
-                       fractions.Fraction(1, 9), fractions.Fraction(7, 6),
-                       fractions.Fraction(-1, 6), fractions.Fraction(-5, 27),
-                       fractions.Fraction(-1, 54), fractions.Fraction(1, 9),
-                       fractions.Fraction(1, 18), fractions.Fraction(1, 18),
-                       fractions.Fraction(4, 27), fractions.Fraction(-1, 54),
-                       fractions.Fraction(5, 9), fractions.Fraction(1, 9),
-                       fractions.Fraction(-4, 9), fractions.Fraction(-1, 54),
-                       fractions.Fraction(71, 54), fractions.Fraction(1, 18),
-                       fractions.Fraction(-7, 18), fractions.Fraction(-1, 3),
-                       fractions.Fraction(-1, 54), fractions.Fraction(5, 9))
+        goal_line1 = [(fractions.Fraction(9, 1), fractions.Fraction(3, 1)),
+                      (fractions.Fraction(27, 1), fractions.Fraction(9, 1),
+                       fractions.Fraction(9, 1), fractions.Fraction(3, 1),
+                       fractions.Fraction(3, 1), fractions.Fraction(9, 1))
                       ]
 
-        goal_den_list = [[3] * 2, [54] * 36]
+        goal_den_list = [[1] * 2, [1] * 6]
 
-        goal_first_line_num = [[6, -2],
-                               [72, -10, 63, -18, 6, -21, -10, -21, 3, 62, -10,
-                                - 21, -18, 62, -18, -24, 6, 63, -9, -10, -1, 6,
-                                3, 3, 8, -1, 30, 6, -24, -1, 71, 3, -21, -18,
-                                - 1, 30]]
+        goal_first_line_num = [[9, 3],
+                               [27, 9, 9, 3, 3, 9]]
 
         for n in range(2):
             myleglist = base_objects.LegList()
 
-            myleglist.append(base_objects.Leg({'id':2,
-                                             'state':'initial'}))
             myleglist.append(base_objects.Leg({'id':-2,
-                                             'state':'initial'}))
+                                             'state':False}))
+            myleglist.append(base_objects.Leg({'id':2,
+                                             'state':False}))
 
-            myleglist.extend([base_objects.Leg({'id':2,
-                                                'state':'final'}),
-                             base_objects.Leg({'id':-2,
-                                                'state':'final'})] * (n + 1))
+            myleglist.extend([base_objects.Leg({'id':-2,
+                                                'state':True}),
+                             base_objects.Leg({'id':2,
+                                                'state':True})] * (n + 1))
 
             myprocess = base_objects.Process({'legs':myleglist,
                                             'model':self.mymodel})
@@ -547,7 +581,6 @@ class ColorSquareTest(unittest.TestCase):
             col_basis = color_amp.ColorBasis(myamplitude)
 
             col_matrix = color_amp.ColorMatrix(col_basis, Nc=3)
-
             # Check diagonal
             for i in range(len(col_basis.items())):
                 self.assertEqual(col_matrix.col_matrix_fixed_Nc[(i, i)],
@@ -575,12 +608,12 @@ class ColorSquareTest(unittest.TestCase):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':21,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':21,
-                                             'state':'initial'}))
+                                             'state':False}))
 
             myleglist.extend([base_objects.Leg({'id':21,
-                                                'state':'final'})] * 2)
+                                                'state':True})] * 2)
 
             myprocess = base_objects.Process({'legs':myleglist,
                                             'model':self.mymodel})

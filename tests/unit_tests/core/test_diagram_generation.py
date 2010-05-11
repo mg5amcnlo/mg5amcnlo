@@ -35,7 +35,7 @@ class AmplitudeTest(unittest.TestCase):
 
     myleglist = base_objects.LegList([base_objects.Leg({'id':3,
                                       'number':5,
-                                      'state':'final',
+                                      'state':True,
                                       'from_group':False})] * 10)
     myvertexlist = base_objects.VertexList([base_objects.Vertex({'id':3,
                                       'legs':myleglist})] * 10)
@@ -318,10 +318,10 @@ class DiagramGenerationTest(unittest.TestCase):
         # Four gluon legs with two initial state
         myleglist = base_objects.LegList([base_objects.Leg({'id':21,
                                               'number':num,
-                                              'state':'final'}) \
+                                              'state':True}) \
                                               for num in range(1, 5)])
-        myleglist[0].set('state', 'initial')
-        myleglist[1].set('state', 'initial')
+        myleglist[0].set('state', False)
+        myleglist[1].set('state', False)
 
         l1 = myleglist[0]
         l2 = myleglist[1]
@@ -357,34 +357,34 @@ class DiagramGenerationTest(unittest.TestCase):
         # Define all possible legs obtained after merging combinations
         l12 = base_objects.Leg({'id':21,
                                 'number':1,
-                                'state':'final'})
+                                'state':True})
         l13 = base_objects.Leg({'id':21,
                                 'number':1,
-                                'state':'initial'})
+                                'state':False})
         l14 = base_objects.Leg({'id':21,
                                 'number':1,
-                                'state':'initial'})
+                                'state':False})
         l23 = base_objects.Leg({'id':21,
                                 'number':2,
-                                'state':'initial'})
+                                'state':False})
         l24 = base_objects.Leg({'id':21,
                                 'number':2,
-                                'state':'initial'})
+                                'state':False})
         l34 = base_objects.Leg({'id':21,
                                 'number':3,
-                                'state':'final'})
+                                'state':True})
         l123 = base_objects.Leg({'id':21,
                                 'number':1,
-                                'state':'final'})
+                                'state':True})
         l124 = base_objects.Leg({'id':21,
                                 'number':1,
-                                'state':'final'})
+                                'state':True})
         l134 = base_objects.Leg({'id':21,
                                 'number':1,
-                                'state':'initial'})
+                                'state':False})
         l234 = base_objects.Leg({'id':21,
                                 'number':2,
-                                'state':'initial'})
+                                'state':False})
 
         # Associated vertices
         vx12 = base_objects.Vertex({'legs':base_objects.LegList([l1, l2, l12]), 'id': 1})
@@ -444,16 +444,16 @@ class DiagramGenerationTest(unittest.TestCase):
 
         myleglist.append(base_objects.Leg({'id':-2,
                                          'number':1,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':2,
                                          'number':2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':1,
                                          'number':3,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-1,
                                          'number':4,
-                                         'state':'final'}))
+                                         'state':True}))
         l1 = myleglist[0]
         l2 = myleglist[1]
         l3 = myleglist[2]
@@ -479,16 +479,16 @@ class DiagramGenerationTest(unittest.TestCase):
 
         l12glue = base_objects.Leg({'id':21,
                                 'number':1,
-                                'state':'final'})
+                                'state':True})
         l12phot = base_objects.Leg({'id':22,
                                 'number':1,
-                                'state':'final'})
+                                'state':True})
         l34glue = base_objects.Leg({'id':21,
                                 'number':3,
-                                'state':'final'})
+                                'state':True})
         l34phot = base_objects.Leg({'id':22,
                                 'number':3,
-                                'state':'final'})
+                                'state':True})
         vx12glue = base_objects.Vertex(
             {'legs':base_objects.LegList([l1, l2, l12glue]), 'id':3})
         vx12phot = base_objects.Vertex(
@@ -526,22 +526,22 @@ class DiagramGenerationTest(unittest.TestCase):
 
         myleglist.append(base_objects.Leg({'id':-2,
                                          'number':1,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':2,
                                          'number':2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':2,
                                          'number':3,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-2,
                                          'number':4,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':2,
                                          'number':5,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':-2,
                                          'number':6,
-                                         'state':'final'}))
+                                         'state':True}))
         l1 = myleglist[0]
         l2 = myleglist[1]
         l3 = myleglist[2]
@@ -588,10 +588,10 @@ class DiagramGenerationTest(unittest.TestCase):
 
             # Create the amplitude
             myleglist = base_objects.LegList([base_objects.Leg({'id':21,
-                                              'state':'initial'})] * 2)
+                                              'state':False})] * 2)
 
             myleglist.extend([base_objects.Leg({'id':21,
-                                              'state':'final'})] * ngluon)
+                                              'state':True})] * ngluon)
 
             myproc = base_objects.Process({'legs':myleglist,
                                                 'orders':{'QCD':ngluon},
@@ -615,13 +615,13 @@ class DiagramGenerationTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':1,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
@@ -641,15 +641,15 @@ class DiagramGenerationTest(unittest.TestCase):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':-1,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':1,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':-1,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.append(base_objects.Leg({'id':1,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.extend([base_objects.Leg({'id':21,
-                                                 'state':'final'})] * ngluons)
+                                                 'state':True})] * ngluons)
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel})
@@ -670,15 +670,15 @@ class DiagramGenerationTest(unittest.TestCase):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':-1,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':1,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':-2,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.append(base_objects.Leg({'id':2,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.extend([base_objects.Leg({'id':21,
-                                                 'state':'final'})] * ngluons)
+                                                 'state':True})] * ngluons)
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel})
@@ -696,19 +696,19 @@ class DiagramGenerationTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':1,
-                                           'state':'initial',
+                                           'state':False,
                                            'number': 1}))
         myleglist.append(base_objects.Leg({'id':-1,
-                                           'state':'initial',
+                                           'state':False,
                                            'number': 2}))
         myleglist.append(base_objects.Leg({'id':-2,
-                                           'state':'final',
+                                           'state':True,
                                            'number': 3}))
         myleglist.append(base_objects.Leg({'id':2,
-                                           'state':'final',
+                                           'state':True,
                                            'number': 4}))
         myleglist.append(base_objects.Leg({'id':21,
-                                           'state':'final',
+                                           'state':True,
                                            'number': 5}))
 
         myproc = base_objects.Process({'legs':myleglist,
@@ -735,13 +735,13 @@ class DiagramGenerationTest(unittest.TestCase):
 
         l12glue = base_objects.Leg({'id':21,
                                     'number':1,
-                                    'state':'final'})
+                                    'state':True})
         l34glue = base_objects.Leg({'id':21,
                                     'number':3,
-                                    'state':'final'})
+                                    'state':True})
         l35 = base_objects.Leg({'id':-2,
                                 'number':3,
-                                'state':'final'})
+                                'state':True})
 
         vx12glue = base_objects.Vertex(
             {'legs':base_objects.LegList([l1, l2, l12glue]), 'id':5})
@@ -778,15 +778,15 @@ class DiagramGenerationTest(unittest.TestCase):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':-1,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':1,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':-2,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.append(base_objects.Leg({'id':2,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.extend([base_objects.Leg({'id':1,
-                                                'state':'final'})] * nquarks)
+                                                'state':True})] * nquarks)
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel})
@@ -806,12 +806,12 @@ class DiagramGenerationTest(unittest.TestCase):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':-1,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':1,
-                                             'state':'initial'}))
+                                             'state':False}))
 
             myleglist.extend([base_objects.Leg({'id':22,
-                                                'state':'final'})] * nphot)
+                                                'state':True})] * nphot)
 
             myproc = base_objects.Process({'legs':myleglist,
                                             'orders':{'QED':nphot},
@@ -839,14 +839,14 @@ class DiagramGenerationTest(unittest.TestCase):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':-11,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':11,
-                                             'state':'initial'}))
+                                             'state':False}))
 
             myleglist.extend([base_objects.Leg({'id':11,
-                                                'state':'final'}),
+                                                'state':True}),
                               base_objects.Leg({'id':-11,
-                                                'state':'final'})] * npairs)
+                                                'state':True})] * npairs)
 
             myproc = base_objects.Process({'legs':myleglist,
                                             'orders':{'QED':npairs * 2},
@@ -1070,13 +1070,13 @@ class DiagramGenerationTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':2,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':'initial'}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':1,
-                                         'state':'final'}))
+                                         'state':True}))
         myleglist.append(base_objects.Leg({'id':12,
-                                         'state':'final'}))
+                                         'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mymodel})
@@ -1101,15 +1101,15 @@ class DiagramGenerationTest(unittest.TestCase):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':-1,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':1,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':-2,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.append(base_objects.Leg({'id':2,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.extend([base_objects.Leg({'id':21,
-                                                 'state':'final'})] * ngluons)
+                                                 'state':True})] * ngluons)
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
@@ -1174,15 +1174,15 @@ class DiagramGenerationTest(unittest.TestCase):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':-1,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':1,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':-1,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.append(base_objects.Leg({'id':1,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.extend([base_objects.Leg({'id':21,
-                                                 'state':'final'})] * ngluons)
+                                                 'state':True})] * ngluons)
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
@@ -1220,15 +1220,15 @@ class DiagramGenerationTest(unittest.TestCase):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':-1,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':1,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':-1,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.append(base_objects.Leg({'id':1,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.extend([base_objects.Leg({'id':21,
-                                                 'state':'final'})] * ngluons)
+                                                 'state':True})] * ngluons)
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
@@ -1246,15 +1246,15 @@ class DiagramGenerationTest(unittest.TestCase):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':1,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':22,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':1,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.append(base_objects.Leg({'id':22,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.extend([base_objects.Leg({'id':21,
-                                                 'state':'final'})] * ngluons)
+                                                 'state':True})] * ngluons)
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
@@ -1293,15 +1293,15 @@ class DiagramGenerationTest(unittest.TestCase):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':-1,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':1,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':-1,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.append(base_objects.Leg({'id':1,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.extend([base_objects.Leg({'id':21,
-                                                 'state':'final'})] * ngluons)
+                                                 'state':True})] * ngluons)
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
@@ -1319,15 +1319,15 @@ class DiagramGenerationTest(unittest.TestCase):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':1,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':22,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':1,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.append(base_objects.Leg({'id':22,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.extend([base_objects.Leg({'id':21,
-                                                 'state':'final'})] * ngluons)
+                                                 'state':True})] * ngluons)
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
@@ -1367,15 +1367,15 @@ class DiagramGenerationTest(unittest.TestCase):
             myleglist = base_objects.LegList()
 
             myleglist.append(base_objects.Leg({'id':1,
-                                             'state':'initial'}))
+                                             'state':False}))
             myleglist.append(base_objects.Leg({'id':1,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.append(base_objects.Leg({'id':2,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.append(base_objects.Leg({'id':-2,
-                                             'state':'final'}))
+                                             'state':True}))
             myleglist.extend([base_objects.Leg({'id':22,
-                                                 'state':'final'})] * nphotons)
+                                                 'state':True})] * nphotons)
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
@@ -1430,6 +1430,52 @@ class DiagramGenerationTest(unittest.TestCase):
             self.myamplitude.generate_diagrams()
 
             self.assertEqual(len(self.myamplitude.get('diagrams')), 0)
+
+    def test_decay_chain_generation(self):
+        """Test the number of diagram generated for uu~>gg (s, t and u channels)
+        """
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+
+        myproc1 = base_objects.Process({'legs':myleglist,
+                                        'model':self.mymodel,
+                                        'is_decay_chain': True})
+
+        myamplitude1 = diagram_generation.Amplitude()
+        myamplitude1.set('process', myproc1)
+        myamplitude1.generate_diagrams()
+
+        self.assertEqual(len(myamplitude1.get('diagrams')), 3)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':True}))
+
+        myproc2 = base_objects.Process({'legs':myleglist,
+                                        'model':self.mymodel,
+                                        'is_decay_chain': True})
+
+        myamplitude2 = diagram_generation.Amplitude()
+        myamplitude2.set('process', myproc2)
+        myamplitude2.generate_diagrams()
+
+        self.assertEqual(len(myamplitude2.get('diagrams')), 3)
 
 
 #===============================================================================
@@ -1611,6 +1657,283 @@ class MultiparticleTest(unittest.TestCase):
 
         self.mymodel.set('particles', self.mypartlist)
         self.mymodel.set('interactions', self.myinterlist)
+
+#===============================================================================
+# DecayChainAmplitudeTest
+#===============================================================================
+class DecayChainAmplitudeTest(unittest.TestCase):
+    """Test class for the DecayChainAmplitude object"""
+
+    mydict = {}
+    mymodel = base_objects.Model()
+    my_amplitudes = diagram_generation.AmplitudeList()
+    my_decay_chains = diagram_generation.DecayChainAmplitudeList()
+    my_decay_chain = diagram_generation.DecayChainAmplitude()
+
+    def setUp(self):
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        # A quark U and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        antiu = copy.copy(mypartlist[1])
+        antiu.set('is_part', False)
+
+        # A quark D and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'d',
+                      'antiname':'d~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'d',
+                      'antitexname':'\bar d',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':1,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        antid = copy.copy(mypartlist[2])
+        antid.set('is_part', False)
+
+        # A photon
+        mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        # A electron and positron
+        mypartlist.append(base_objects.Particle({'name':'e+',
+                      'antiname':'e-',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'e^+',
+                      'antitexname':'e^-',
+                      'line':'straight',
+                      'charge':-1.,
+                      'pdg_code':11,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        antie = copy.copy(mypartlist[4])
+        antie.set('is_part', False)
+
+        # 3 gluon vertiex
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [mypartlist[0]] * 3),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'G'},
+                      'orders':{'QCD':1}}))
+
+        # 4 gluon vertex
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [mypartlist[0]] * 4),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'G^2'},
+                      'orders':{'QCD':2}}))
+
+        # Gluon and photon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [mypartlist[1], \
+                                             antiu, \
+                                             mypartlist[0]]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [mypartlist[1], \
+                                             antiu, \
+                                             mypartlist[3]]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 5,
+                      'particles': base_objects.ParticleList(\
+                                            [mypartlist[2], \
+                                             antid, \
+                                             mypartlist[0]]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 6,
+                      'particles': base_objects.ParticleList(\
+                                            [mypartlist[2], \
+                                             antid, \
+                                             mypartlist[3]]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of e to gamma
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 7,
+                      'particles': base_objects.ParticleList(\
+                                            [mypartlist[4], \
+                                             antie, \
+                                             mypartlist[3]]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        self.mymodel.set('particles', mypartlist)
+        self.mymodel.set('interactions', myinterlist)
+
+        self.mydict = {'amplitudes': self.my_amplitudes,
+                       'decay_chains': self.my_decay_chains}
+
+        self.my_decay_chain = diagram_generation.DecayChainAmplitude(\
+            self.mydict)
+
+    def test_setget_process_correct(self):
+        "Test correct DecayChainAmplitude object __init__, get and set"
+
+        myprocess2 = diagram_generation.DecayChainAmplitude()
+
+        for prop in self.mydict.keys():
+            myprocess2.set(prop, self.mydict[prop])
+
+        self.assertEqual(self.my_decay_chain, myprocess2)
+
+        
+    def test_setget_process_exceptions(self):
+        "Test error raising in DecayChainAmplitude __init__, get and set"
+
+        wrong_dict = self.mydict
+        wrong_dict['wrongparam'] = 'wrongvalue'
+
+        a_number = 0
+
+        # Test init
+        self.assertRaises(diagram_generation.DecayChainAmplitude.PhysicsObjectError,
+                          diagram_generation.DecayChainAmplitude,
+                          wrong_dict)
+        self.assertRaises(diagram_generation.DecayChainAmplitude.PhysicsObjectError,
+                          diagram_generation.DecayChainAmplitude,
+                          a_number)
+
+        # Test get
+        self.assertRaises(diagram_generation.DecayChainAmplitude.PhysicsObjectError,
+                          self.my_decay_chain.get,
+                          a_number)
+        self.assertRaises(diagram_generation.DecayChainAmplitude.PhysicsObjectError,
+                          self.my_decay_chain.get,
+                          'wrongparam')
+
+        # Test set
+        self.assertRaises(diagram_generation.DecayChainAmplitude.PhysicsObjectError,
+                          self.my_decay_chain.set,
+                          a_number, 0)
+        self.assertRaises(diagram_generation.DecayChainAmplitude.PhysicsObjectError,
+                          self.my_decay_chain.set,
+                          'wrongparam', 0)
+
+    def test_representation(self):
+        """Test process object string representation."""
+
+        goal = "{\n"
+        goal = goal + "    \'amplitudes\': %s,\n" % repr(diagram_generation.AmplitudeList())
+        goal = goal + "    \'decay_chains\': %s\n}" % repr(diagram_generation.AmplitudeList())
+
+        self.assertEqual(goal, str(self.my_decay_chain))
+
+    def test_decay_chain_pp_jj(self):
+        """Test a decay chain process pp > jj, j > jj based on
+        multiparticle lists
+        """
+
+        p = [1, -1, 2, -2, 21]
+
+        my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': True});
+
+        # Define the multiprocess
+        my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * 4])
+        
+        my_multi_leglist[0].set('state', False)
+        my_multi_leglist[1].set('state', False)
+        
+        my_process_definition = base_objects.ProcessDefinition({'legs':my_multi_leglist,
+                                                                'model':self.mymodel})
+        my_decay_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * 4])
+        my_decay_leglist[0].set('state', False)
+        my_decay_processes = base_objects.ProcessDefinition({\
+                               'legs':my_decay_leglist,
+                               'model':self.mymodel})
+
+        my_process_definition.set('decay_chains',
+                                  base_objects.ProcessDefinitionList(\
+                                    [my_decay_processes]))
+
+        my_decay_chain_amps = diagram_generation.DecayChainAmplitude(\
+                                                   my_process_definition)
+        
+        self.assertEqual(len(my_decay_chain_amps.get('amplitudes')), 35)
+        self.assertEqual(len(my_decay_chain_amps.get('decay_chains')), 1)
+        self.assertEqual(len(my_decay_chain_amps.get('decay_chains')[0].\
+                             get('amplitudes')), 15)
 
 #===============================================================================
 # MultiProcessTest
@@ -1800,11 +2123,11 @@ class MultiProcessTest(unittest.TestCase):
 
         self.my_multi_leglist = base_objects.MultiLegList(\
             [copy.copy(base_objects.MultiLeg({'ids':[3, 4, 5],
-                                              'state':'final'})) for \
+                                              'state':True})) for \
              dummy in range(5)])
 
-        self.my_multi_leglist[0].set('state', 'initial')
-        self.my_multi_leglist[1].set('state', 'initial')
+        self.my_multi_leglist[0].set('state', False)
+        self.my_multi_leglist[1].set('state', False)
 
         mydict = {'legs':self.my_multi_leglist,
                   'orders':{'QCD':5, 'QED':1},
@@ -1882,7 +2205,7 @@ class MultiProcessTest(unittest.TestCase):
 
         p = [1, -1, 2, -2, 21]
 
-        my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': 'final'});
+        my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': True});
 
         goal_number_processes = [219, 379]
 
@@ -1980,8 +2303,8 @@ class MultiProcessTest(unittest.TestCase):
             # Define the multiprocess
             my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * (2 + nfs)])
 
-            my_multi_leglist[0].set('state', 'initial')
-            my_multi_leglist[1].set('state', 'initial')
+            my_multi_leglist[0].set('state', False)
+            my_multi_leglist[1].set('state', False)
 
             my_process_definition = base_objects.ProcessDefinition({'legs':my_multi_leglist,
                                                                     'model':self.mymodel})
@@ -2015,7 +2338,7 @@ class MultiProcessTest(unittest.TestCase):
 
         p = [1, -1, 2, -2, 21]
 
-        my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': 'final'});
+        my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': True});
 
         goal_number_processes = [8, 24]
 
@@ -2059,8 +2382,8 @@ class MultiProcessTest(unittest.TestCase):
             # Define the multiprocess
             my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * (2 + nfs)])
 
-            my_multi_leglist[0].set('state', 'initial')
-            my_multi_leglist[1].set('state', 'initial')
+            my_multi_leglist[0].set('state', False)
+            my_multi_leglist[1].set('state', False)
 
             my_process_definition = base_objects.ProcessDefinition({'legs':my_multi_leglist,
                                                                     'model':self.mymodel,

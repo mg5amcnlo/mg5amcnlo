@@ -18,6 +18,7 @@
 """
 
 import cmd
+import copy
 import os
 import subprocess
 import sys
@@ -59,10 +60,17 @@ class MadGraphCmd(cmd.Cmd):
                       'interactions',
                       'processes',
                       'multiparticles']
+    __add_opts = ['process']
     __save_opts = ['model',
                    'processes']
     __import_formats = ['v4']
-    __export_formats = ['v4standalone', 'v4sa_dirs']
+    __export_formats = ['v4standalone', 'v4sa_dirs', 'v4madevent']
+
+
+    class MadGraphCmdError(Exception):
+        """Exception raised if an error occurs in the execution
+        of command."""
+        pass
 
     def split_arg(self, line):
         """Split a line of arguments"""
@@ -145,6 +153,30 @@ class MadGraphCmd(cmd.Cmd):
         "*                                                          *\n" + \
         "************************************************************"
 
+    def precmd(self, line):
+        """ force the printing of the line if this is executed with an stdin """
+        if not self.use_rawinput:
+            print line
+
+        return line
+    
+
+    def emptyline(self):
+        """If empty line, do nothing. Default is repeat previous command."""
+
+        pass
+    
+    def default(self, line):
+        """Default action if line is not recognized"""
+
+        if line[0] == "#":
+            # This is a comment - do nothing
+            return
+        else:
+            # Faulty command
+            print "Command \"%s\" not recognized, please try again" % \
+                  line.split()[0]
+
     # Import files
     def do_import(self, line):
         """Import files with external formats"""
@@ -201,6 +233,10 @@ class MadGraphCmd(cmd.Cmd):
             else:
                 print "Path %s is not a valid pathname" % args[1]
 
+        else:
+            self.help_import()
+            return False            
+
 
     def complete_import(self, text, line, begidx, endidx):
         "Complete the import command"
@@ -231,18 +267,18 @@ class MadGraphCmd(cmd.Cmd):
             if self.__curr_model:
                 #save_model.save_model(args[1], self.__curr_model)
                 if save_load_object.save_to_file(args[1], self.__curr_model):
-                    print 'Saved model to file ',args[1]
+                    print 'Saved model to file ', args[1]
             else:
                 print 'No model to save!'
         elif args[0] == 'processes':
             if self.__curr_amps:
                 if save_load_object.save_to_file(args[1], self.__curr_amps):
-                    print 'Saved processes to file ',args[1]
+                    print 'Saved processes to file ', args[1]
             else:
                 print 'No processes to save!'
         else:
             self.help_save()
-                
+
     def do_load(self, line):
         """Load information from file"""
 
@@ -260,7 +296,7 @@ class MadGraphCmd(cmd.Cmd):
                 print "Loaded model from file in %0.3f s" % \
                       (cpu_time2 - cpu_time1)
             else:
-                print 'Error: Could not load model from file ',args[1]
+                print 'Error: Could not load model from file ', args[1]
         elif args[0] == 'processes':
             self.__curr_amps = save_load_object.load_from_file(args[1])
             if isinstance(self.__curr_amps, diagram_generation.AmplitudeList):
@@ -272,10 +308,10 @@ class MadGraphCmd(cmd.Cmd):
                                         get('process').get('model')
                     print "Model set from process."
             else:
-                print 'Error: Could not load processes from file ',args[1]
+                print 'Error: Could not load processes from file ', args[1]
         else:
             self.help_save()
-                
+
     def complete_save(self, text, line, begidx, endidx):
         "Complete the save command"
 
@@ -320,10 +356,10 @@ class MadGraphCmd(cmd.Cmd):
 
         #option
         if len(self.split_arg(line[0:begidx])) >= 2:
-            option=['external=', 'horizontal=', 'add_gap=','max_size=', \
+            option = ['external=', 'horizontal=', 'add_gap=', 'max_size=', \
                                 'contract_non_propagating=']
             return self.list_completion(text, option)
-        
+
     # Display
     def do_display(self, line):
         """Display current internal status"""
@@ -348,7 +384,7 @@ class MadGraphCmd(cmd.Cmd):
                 print part['name'],
             print ''
 
-        if args[0] == 'interactions':
+        elif args[0] == 'interactions':
             print "Current model contains %i interactions" % \
                     len(self.__curr_model['interactions'])
             for inter in self.__curr_model['interactions']:
@@ -360,15 +396,16 @@ class MadGraphCmd(cmd.Cmd):
                         print part['antiname'],
                 print
 
-        if args[0] == 'processes':
+        elif args[0] == 'processes':
             for amp in self.__curr_amps:
-                print amp.get('process').nice_string()
-                print amp.get('diagrams').nice_string()
-
-        if args[0] == 'multiparticles':
+                print amp.nice_string()
+        elif args[0] == 'multiparticles':
             print 'Multiparticle labels:'
             for key in self.__multiparticles:
                 print key, " = ", self.__multiparticles[key]
+
+        else:
+            self.help_display()
 
     def complete_display(self, text, line, begidx, endidx):
         "Complete the display command"
@@ -404,17 +441,129 @@ class MadGraphCmd(cmd.Cmd):
             " please create one first!"
             return False
 
+        # Reset Helas matrix elements
+        self.__curr_matrix_elements = helas_objects.HelasMultiProcess()
+
+        try:
+            if line.find(',') == -1:
+                myprocdef = self.extract_process(line)
+            else:
+                myprocdef, line = self.extract_decay_chain_process(line)
+        except self.MadGraphCmdError as error:
+            print "Empty or wrong format process, please try again. Error:\n" \
+                  + str(error)
+            myprocdef = None
+            
+        if myprocdef:
+
+            cpu_time1 = time.time()
+
+            myproc = diagram_generation.MultiProcess(myprocdef)
+
+            self.__curr_amps = myproc.get('amplitudes')
+
+            cpu_time2 = time.time()
+
+            nprocs = len(self.__curr_amps)
+            ndiags = sum([amp.get_number_of_diagrams() for \
+                              amp in self.__curr_amps])
+            print "%i processes with %i diagrams generated in %0.3f s" % \
+                  (nprocs, ndiags, (cpu_time2 - cpu_time1))
+
+        else:
+            print "Empty or wrong format process, please try again."
+
+
+    # Helper functions
+    def extract_decay_chain_process(self, line, level_down = False):
+        """Recursively extract a decay chain process definition from a
+        string. Returns a ProcessDefinition."""
+
+        # Start with process number (identified by "@")
+        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*(.*)$")
+        proc_number_re = proc_number_pattern.match(line)
+        proc_number = 0
+        if proc_number_re:
+            proc_number = int(proc_number_re.group(2))
+            line = proc_number_re.group(1) + \
+                   proc_number_re.group(3)
+            print line
+            
+        index_comma = line.find(",")
+        index_par = line.find(")")
+        min_index = index_comma
+        if index_par > -1 and (index_par < min_index or min_index == -1):
+            min_index = index_par
+        
+        if min_index > -1:
+            core_process = self.extract_process(line[:min_index], proc_number)
+        else:
+            core_process = self.extract_process(line, proc_number)
+
+        #level_down = False
+
+        while index_comma > -1:
+            line = line[index_comma + 1:]
+            index_par = line.find(')')
+            if line.lstrip()[0] == '(':
+                # Go down one level in process hierarchy
+                #level_down = True
+                line = line.lstrip()[1:]
+                # This is where recursion happens
+                decay_process, line = \
+                            self.extract_decay_chain_process(line,
+                                                             level_down = True)
+                index_comma = line.find(",")
+                index_par = line.find(')')
+            else:
+                index_comma = line.find(",")
+                min_index = index_comma
+                if index_par > -1 and \
+                       (index_par < min_index or min_index == -1):
+                    min_index = index_par
+                if min_index > -1:
+                    decay_process = self.extract_process(line[:min_index])
+                else:
+                    decay_process = self.extract_process(line)
+
+            core_process.get('decay_chains').append(decay_process)
+
+            if level_down:
+                if index_par == -1:
+                    raise self.MadGraphCmdError,\
+                      "Missing ending parenthesis for decay process"
+
+                if index_par < index_comma:
+                    line = line[index_par + 1:]
+                    level_down = False
+                    break
+
+        if level_down:
+            index_par = line.find(')')
+            if index_par == -1:
+                raise self.MadGraphCmdError,\
+                      "Missing ending parenthesis for decay process"
+            line = line[index_par + 1:]
+            
+        # Return the core process (ends recursion when there are no
+        # more decays)
+        return core_process, line
+        
+    def extract_process(self, line, proc_number = 0):
+        """Extract a process definition from a string. Returns
+        a ProcessDefinition."""
+
         # Use regular expressions to extract s-channel propagators,
         # forbidden s-channel propagators/particles, coupling orders
         # and process number, starting from the back
 
         # Start with process number (identified by "@")
-        proc_number_pattern = re.compile("^(.+)\s*@\s*(\d+)\s*$")
+        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*(.*)$")
         proc_number_re = proc_number_pattern.match(line)
-        proc_number = 0
         if proc_number_re:
             proc_number = int(proc_number_re.group(2))
-            line = proc_number_re.group(1)
+            line = proc_number_re.group(1) + \
+                   proc_number_re.group(3)
 
         # Start with coupling orders (identified by "=")
         order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
@@ -429,11 +578,19 @@ class MadGraphCmd(cmd.Cmd):
         line = line.lower()
 
         # Now check for forbidden particles, specified using "/"
-        forbidden_particles_re = re.match("^(.+)\s*/\s*(.+)\s*$", line)
+        slash = line.find("/")
+        dollar = line.find("$")
         forbidden_particles = ""
-        if forbidden_particles_re:
-            forbidden_particles = forbidden_particles_re.group(2)
-            line = forbidden_particles_re.group(1)
+        if slash > 0:
+            if dollar > slash:
+                forbidden_particles_re = re.match("^(.+)\s*/\s*(.+\s*)(\$.*)$", line)
+            else:
+                forbidden_particles_re = re.match("^(.+)\s*/\s*(.+\s*)$", line)
+            if forbidden_particles_re:
+                forbidden_particles = forbidden_particles_re.group(2)
+                line = forbidden_particles_re.group(1)
+                if len(forbidden_particles_re.groups()) > 2:
+                    line = line + forbidden_particles_re.group(3)
 
         # Now check for forbidden schannels, specified using "$"
         forbidden_schannels_re = re.match("^(.+)\s*\$\s*(.+)\s*$", line)
@@ -452,21 +609,18 @@ class MadGraphCmd(cmd.Cmd):
 
         args = self.split_arg(line)
 
-        # Reset Helas matrix elements
-        self.__curr_matrix_elements = helas_objects.HelasMultiProcess()
-
         myleglist = base_objects.MultiLegList()
-        state = 'initial'
+        state = False
         number = 1
 
         # Extract process
         for part_name in args:
 
             if part_name == '>':
-                if not len(myleglist):
-                    print "Empty or wrong format process, please try again."
-                    return False
-                state = 'final'
+                if not myleglist:
+                    raise self.MadGraphCmdError, \
+                          "No final state particles"
+                state = True
                 continue
 
             mylegids = []
@@ -481,15 +635,20 @@ class MadGraphCmd(cmd.Cmd):
                 myleglist.append(base_objects.MultiLeg({'ids':mylegids,
                                                         'state':state}))
             else:
-                print "No particle %s in model: skipped" % part_name
+                raise self.MadGraphCmdError,\
+                      "No particle %s in model" % part_name
 
-        if filter(lambda leg: leg.get('state') == 'final', myleglist):
+        if filter(lambda leg: leg.get('state') == True, myleglist):
             # We have a valid process
 
             # Now extract restrictions
             forbidden_particle_ids = []
             forbidden_schannel_ids = []
             required_schannel_ids = []
+
+            decay_process = len(filter(lambda leg: \
+                                       leg.get('state') == False,
+                                       myleglist)) == 1
 
             if forbidden_particles:
                 args = self.split_arg(forbidden_particles)
@@ -521,37 +680,98 @@ class MadGraphCmd(cmd.Cmd):
                         if mypart:
                             required_schannel_ids.append(mypart.get_pdg_code())
 
-
-
-            myprocdef = base_objects.ProcessDefinitionList([\
+            return \
                 base_objects.ProcessDefinition({'legs': myleglist,
-                                                'model': self.__curr_model,
-                                                'id': proc_number,
-                                                'orders': orders,
-                                                'forbidden_particles': forbidden_particle_ids,
-                                                'forbidden_s_channels': forbidden_schannel_ids,
-                                                'required_s_channels': required_schannel_ids \
-                                                })])
-            myproc = diagram_generation.MultiProcess({'process_definitions':\
-                                                      myprocdef})
-
-            cpu_time1 = time.time()
-
-            self.__curr_amps = myproc.get('amplitudes')
-
-            cpu_time2 = time.time()
-
-            nprocs = len(filter(lambda amp: amp.get("diagrams"),
-                                self.__curr_amps))
-            ndiags = sum([len(amp.get('diagrams')) for \
-                              amp in self.__curr_amps])
-            print "%i processes with %i diagrams generated in %0.3f s" % \
-                  (nprocs, ndiags, (cpu_time2 - cpu_time1))
-
+                                'model': self.__curr_model,
+                                'id': proc_number,
+                                'orders': orders,
+                                'forbidden_particles': forbidden_particle_ids,
+                                'forbidden_s_channels': forbidden_schannel_ids,
+                                'required_s_channels': required_schannel_ids
+                                 })
+        #                       'is_decay_chain': decay_process\
         else:
-            print "Empty or wrong format process, please try again."
+            return None
 
+    # Add a process to the existing multiprocess definition
     # Generate a new amplitude
+    def do_add(self, line):
+        """Generate an amplitude for a given process and add to
+        existing amplitudes"""
+
+        if len(line) < 1:
+            self.help_add()
+            return False
+
+        if len(self.__curr_model['particles']) == 0:
+            print "No particle list currently active, please create one first!"
+            return False
+
+        if len(self.__curr_model['interactions']) == 0:
+            print "No interaction list currently active," + \
+            " please create one first!"
+            return False
+
+        args = self.split_arg(line)
+        if len(args) < 2:
+            self.help_import()
+            return False
+
+        if args[0] == 'process':
+            # Rejoin line
+            line = ' '.join(args[1:])
+
+            # Reset Helas matrix elements
+            self.__curr_matrix_elements = helas_objects.HelasMultiProcess()
+
+            try:
+                if line.find(',') == -1:
+                    myprocdef = self.extract_process(line)
+                else:
+                    myprocdef, line = self.extract_decay_chain_process(line)
+            except self.MadGraphCmdError as error:
+                print "Empty or wrong format process, please try again. Error:\n" \
+                      + str(error)
+                myprocdef = None
+
+            if myprocdef:
+
+                cpu_time1 = time.time()
+
+                myproc = diagram_generation.MultiProcess(myprocdef)
+
+                for amp in myproc.get('amplitudes'):
+                    if amp not in self.__curr_amps:
+                        self.__curr_amps.append(amp)
+                    else:
+                        print "Warning: Already in processes:"
+                        print amp.nice_string_processes()
+
+                cpu_time2 = time.time()
+
+                nprocs = len(myproc.get('amplitudes'))
+                ndiags = sum([amp.get_number_of_diagrams() for \
+                                  amp in myproc.get('amplitudes')])
+                print "%i processes with %i diagrams generated in %0.3f s" % \
+                      (nprocs, ndiags, (cpu_time2 - cpu_time1))
+                ndiags = sum([amp.get_number_of_diagrams() for \
+                                  amp in self.__curr_amps])
+                print "Total: %i processes with %i diagrams" % \
+                      (len(self.__curr_amps), ndiags)                
+            else:
+                print "Empty or wrong format process, please try again."
+        else:
+            self.help_add()
+            
+
+    def complete_add(self, text, line, begidx, endidx):
+        "Complete the add command"
+
+        # Format
+        if len(self.split_arg(line[0:begidx])) == 1:
+            return self.list_completion(text, self.__add_opts)
+
+    # Export a matrix element
     def do_export(self, line):
         """Export a generated amplitude to file"""
 
@@ -584,7 +804,7 @@ class MadGraphCmd(cmd.Cmd):
             self.help_export()
             return False
 
-        if not filter(lambda amp: amp.get("diagrams"), self.__curr_amps):
+        if not self.__curr_amps:
             print "No process generated, please generate a process!"
             return False
 
@@ -594,7 +814,7 @@ class MadGraphCmd(cmd.Cmd):
         ndiags, cpu_time = generate_matrix_elements(self)
         calls = 0
         path = args[1]
-        
+
         if args[0] == 'v4standalone':
             for me in self.__curr_matrix_elements.get('matrix_elements'):
                 filename = os.path.join(path, 'matrix_' + \
@@ -615,12 +835,25 @@ class MadGraphCmd(cmd.Cmd):
                         export_v4.generate_subprocess_directory_v4_standalone(\
                             me, self.__curr_fortran_model, path)
 
+        if args[0] == 'v4madevent':
+            for me in self.__curr_matrix_elements.get('matrix_elements'):
+                calls = calls + \
+                        export_v4.generate_subprocess_directory_v4_madevent(\
+                            me, self.__curr_fortran_model, path)
+                
         print ("Generated helas calls for %d subprocesses " + \
               "(%d diagrams) in %0.3f s") % \
               (len(self.__curr_matrix_elements.get('matrix_elements')),
                ndiags, cpu_time)
-        
+
         print "Wrote %d helas calls" % calls
+
+        # Replace the amplitudes with the actual amplitudes from the
+        # matrix elements, which allows proper diagram drawing also of
+        # decay chain processes
+        self.__curr_amps = diagram_generation.AmplitudeList(\
+               [me.get('base_amplitude') for me in \
+                self.__curr_matrix_elements.get('matrix_elements')])
 
     def complete_export(self, text, line, begidx, endidx):
         "Complete the export command"
@@ -666,8 +899,10 @@ class MadGraphCmd(cmd.Cmd):
             if mypart:
                 pdg_list.append(mypart.get_pdg_code())
             else:
-                print "No particle %s in model: skipped" % part_name
-
+                print ("Error: No particle %s in model. " % part_name) + \
+                      "No multiparticle created."
+                return False
+                
         if not pdg_list:
             print """Empty or wrong format for multiparticle.
             Please try again."""
@@ -683,7 +918,7 @@ class MadGraphCmd(cmd.Cmd):
             self.help_draw()
             return False
         
-        if not filter(lambda amp: amp.get("diagrams"), self.__curr_amps):
+        if not self.__curr_amps:
             print "No process generated, please generate a process!"
             return False
 
@@ -700,9 +935,15 @@ class MadGraphCmd(cmd.Cmd):
                     print "invalid syntax: '%s'. Please try again" % data
                     self.help_draw()
                     return False
-                option.set(key,value)
+                option.set(key, value)
+
+        # Collect amplitudes
+        amplitudes = diagram_generation.AmplitudeList()
 
         for amp in self.__curr_amps:
+            amplitudes.extend(amp.get_amplitudes())            
+
+        for amp in amplitudes:
             filename = os.path.join(args[0], 'diagrams_' + \
                                     amp.get('process').shell_string() + ".eps")
             plot = draw.MultiEpsDiagramDrawer(amp['diagrams'],
@@ -745,7 +986,21 @@ class MadGraphCmd(cmd.Cmd):
 
         print "syntax: generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2"
         print "-- generate diagrams for a given process"
-        print "   Example: u d~ > w+ > m+ vm g $ a / z h QED=3 QCD=0"
+        print "   Example: u d~ > w+ > m+ vm g $ a / z h QED=3 QCD=0 @1"
+        print "Decay chain syntax:"
+        print "   core process, decay1, (decay2, (decay3, ...)), ...  etc"
+        print "   Example: g g > t~ t @2, (t~ > W- b~, W- > e- ve~), t > W+ b"
+        print "   Note that identical particles will all be decayed"
+
+    def help_add(self):
+
+        print "syntax: add process INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2"
+        print "-- generate diagrams for a process and add to existing processes"
+        print "   Syntax example: u d~ > w+ > m+ vm g $ a / z h QED=3 QCD=0 @1"
+        print "Decay chain syntax:"
+        print "   core process, decay1, (decay2, (decay3, ...)), ...  etc"
+        print "   Example: g g > t~ t @2, (t~ > W- b~, W- > e- ve~), t > W+ b"
+        print "   Note that identical particles will all be decayed"
 
     def help_define(self):
         print "syntax: define multipart_name [ part_name_list ]"
@@ -757,7 +1012,11 @@ class MadGraphCmd(cmd.Cmd):
               " FILEPATH"
         print """-- export matrix elements. For v4standalone, the resulting
         files will be FILEPATH/matrix_\"process_string\".f. For v4sa_dirs,
-        the result is a set of complete MG4 Standalone process directories."""
+        the result is a set of complete MG4 Standalone process directories.
+        For v4madevent, the path needs to be to a MadEvent SubProcesses
+        directory, and the result is the Pxxx directories (including the
+        diagram .ps and .jpg files) for the subprocesses as well as a
+        correctly generated subproc.mg file."""
 
     def help_draw(self):
         print "syntax: draw FILEPATH [option=value]"
