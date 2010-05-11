@@ -420,6 +420,7 @@ class CheckValidForCmd(object):
         if len(args) != 2:
             self.help_load()
             return False
+        return True
         
     def check_makehtml(self, args):
         """check the validity of the line"""
@@ -443,6 +444,7 @@ class CheckValidForCmd(object):
         if len(args) != 2:
             self.help_save()
             return False
+        return True
     
     def check_setup(self, args):
         """ check the validity of the line"""
@@ -455,6 +457,7 @@ class CheckValidForCmd(object):
             print 'No model found. Please import a model first and then retry'
             print '  for example do : import model_v4 sm'
             return False
+        return True
 
 #===============================================================================
 # CheckValidForCmdWeb
@@ -493,9 +496,17 @@ class CheckValidForCmdWeb(object):
         """check the validity of line
         No Path authorize for the Web"""
         
-        #if len(args) >= 2 and args[0] == 'proc_v4':
-        #    return False
+        if len(args) >= 2 and args[0] == 'proc_v4':
+            return False
+
+        if len(args) >= 1 and args[0] == 'command':
+            return False
         
+        for arg in args:
+            if '/' in arg:
+                print 'Path are not authorized on the web'
+                return False
+             
         return CheckValidForCmd.check_import(self, args)
         
     def check_makehtml(self, args):
@@ -513,8 +524,10 @@ class CheckValidForCmdWeb(object):
         
         if len(args)==2:
             if args[0] != 'model':
+                print 'only model can be load online'
                 return False
             if 'model.pkl' not in args[1]:
+                print 'not valid format'
                 return False
             if not os.path.realpath(args[1]).startswith(os.path.join(MGME_dir, \
                                                                     'Models')):
@@ -1433,17 +1446,19 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                                    'model.pkl'))
         
         elif args[0] == 'proc_v4':
+            
             if len(args) == 1 and self._export_dir:
                 proc_card = os.path.join(self._export_dir, 'Cards', \
                                                                 'proc_card.dat')
             elif len(args) == 2:
                 proc_card = args[1]
+                # Check the status of export and try to use file position is no
+                #self._export dir are define
+                self.check_for_export_dir(proc_card)
             else:
                 logging.error('No default directory are setup')
-            
-            # Check the status of export and try to use file position is no
-            #self._export dir are define
-            self.check_for_export_dir(proc_card) 
+                return
+ 
             #convert and excecute the card
             self.import_mg4_proc_card(proc_card)   
                                      
@@ -1499,7 +1514,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         return
     
     def check_for_export_dir(self, filepath):
-        """Check if the files is in a valid export directory and assing it to
+        """Check if the files is in a valid export directory and assign it to
         export path if if is"""
         
         # keep previous if a previous one is defined
@@ -1516,6 +1531,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         args = split_arg(line)
         if not self.check_load(args):
+            print 'not accepted'
             return
 
 
