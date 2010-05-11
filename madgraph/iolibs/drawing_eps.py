@@ -265,8 +265,8 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
     
     The main routine to draw a diagram is 'draw' which call
     1) initialize: setup things for the diagram (usually open a file)
-    2) convert_diagram : Udate the diagram in the correct format if needed
-    3) draw_diagram : Perform diagram dependant operation
+    2) convert_diagram : Update the diagram in the correct format if needed
+    3) draw_diagram : Perform diagram dependent operation
     4) conclude : finish the operation.
     """
 
@@ -391,5 +391,3 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.text += '/Helvetica findfont 10 scalefont setfont\n'
         self.text += ' 240         770  moveto\n'
         self.text += ' (Diagrams by MadGraph) show\n'
-
-

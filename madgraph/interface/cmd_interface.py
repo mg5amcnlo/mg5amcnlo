@@ -1455,7 +1455,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 #self._export dir are define
                 self.check_for_export_dir(args[1])
                 # Execute the card
-                self.import_mg5_proc_card(args[1])    
+                self.import_mg5_proc_card(args[1])
+        else:
+            self.help_import()
+            return False
+    
     
     def import_mg4_proc_card(self, filepath):
         """ read a V4 proc card, convert it and run it in mg5"""
