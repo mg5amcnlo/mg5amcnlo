@@ -19,16 +19,127 @@ import fractions
 import logging
 import os
 import re
+import shutil
+import subprocess
+
 
 import madgraph.core.color_algebra as color
-import madgraph.iolibs.drawing_eps as draw
 import madgraph.core.helas_objects as helas_objects
+import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
+import madgraph.iolibs.template_files as Template
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('export_v4')
 
+#===============================================================================
+# copy the Template in a new directory.
+#===============================================================================
+def copy_v4template(mgme_dir, dir_path, model_dir, clean):
+    """create the directory run_name as a copy of the Template
+       and import the model, Helas, and clean the directory 
+    """
+    
+    #First copy the full template tree if dir_path doesn't exit
+    if not os.path.isdir(dir_path):
+        print 'initialize a new directory: %s' % os.path.basename(dir_path)
+        shutil.copytree(os.path.join(mgme_dir, 'Template'), dir_path, True)
+
+    #Ensure that the Template is clean
+    if clean:
+        print 'remove old information in %s' % os.path.basename(dir_path)
+        old_pos = os.getcwd()
+        os.chdir(dir_path)
+        subprocess.call([os.path.join('bin', 'clean_template')])
+        os.chdir(old_pos)
+        
+        #Write version info
+        MG_version = misc.get_pkg_info()
+        open(os.path.join(dir_path, 'SubProcesses', 'MGVersion.txt'), 'w').write(
+                                                          MG_version['version'])
+        
+#===============================================================================
+# write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
+#===============================================================================
+def write_procdef_mg5(file_pos, modelname, process_str):
+    """ write an equivalent of the MG4 proc_card in order that all the Madevent
+    Perl script of MadEvent4 are still working properly for pure MG5 run."""
+    
+    proc_card_template = Template.mg4_proc_card.mg4_template
+    process_template = Template.mg4_proc_card.process_template
+    process_text = ''
+    coupling = ''
+    new_process_content = []
+    
+    
+    # First find the coupling and suppress the coupling from process_str
+    #But first ensure that coupling are define whithout spaces:
+    process_str = process_str.replace(' =', '=')
+    process_str = process_str.replace('= ', '=')
+    #now loop on the element and treat all the coupling
+    for info in process_str.split():
+        if '=' in info:
+            coupling += info + '\n'
+        else:
+            new_process_content.append(info)
+    # Recombine the process_str (which is the input process_str without coupling
+    #info)
+    process_str = ' '.join(new_process_content)
+    
+    #format the SubProcess
+    process_text += process_template.substitute({'process': process_str, \
+                                                        'coupling': coupling})
+    
+    text = proc_card_template.substitute({'process': process_text,
+                                        'model': modelname,
+                                        'multiparticle':''})
+    ff = open(file_pos, 'w')
+    ff.write(text)
+    ff.close()
+
+#===============================================================================
+# Create Web Page via external routines
+#===============================================================================
+def create_v4_webpage(dir_path, makejpg):
+    """call the perl script creating the web interface for MadEvent"""
+
+    old_pos = os.getcwd()
+    
+    os.chdir(os.path.join(dir_path, 'SubProcesses'))
+    P_dir_list = [proc for proc in os.listdir('.') if os.path.isdir(proc) and \
+                                                                proc[0] == 'P']
+    
+    # Convert the poscript in jpg files (if authorize)
+    if makejpg:
+        logger.info("Generate jpeg diagrams")
+        for Pdir in P_dir_list:
+            os.chdir(Pdir)
+            subprocess.call([os.path.join(dir_path, 'bin', 'gen_jpeg-pl')])
+            os.chdir(os.path.pardir)
+    
+    logger.info("Generate web pages")
+    # Create the WebPage using perl script
+    devnull = os.open(os.devnull, os.O_RDWR)
+    subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')], \
+                                                            stdout=devnull)
+    subprocess.call([os.path.join(dir_path, 'bin', 'gen_infohtml-pl')], \
+                                                            stdout=devnull)
+    os.chdir(os.path.pardir)
+    subprocess.call([os.path.join(dir_path, 'bin', 'gen_crossxhtml-pl')])
+    [mv(name, './HTML/') for name in os.listdir('.') if \
+                        (name.endswith('.html') or name.endswith('.jpg')) and \
+                        name != 'index.html']               
+    
+    subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')])
+    if os.path.exists(os.path.join('SubProcesses', 'subproc.mg')):
+        if os.path.exists('madevent.tar.gz'):
+            os.remove('madevent.tar.gz')
+        subprocess.call(['make'])
+    
+    #return to the initial dir
+    os.chdir(old_pos)               
+           
 #===============================================================================
 # write_matrix_element_v4_standalone
 #===============================================================================
@@ -645,6 +756,30 @@ def write_subproc(fsock, matrix_element, fortran_model):
     return True
 
 #===============================================================================
+# export the model
+#===============================================================================
+def export_model(model_path, process_path):
+    """Configure the files/link of the process according to the model"""
+    
+    # Import the model
+    for file in os.listdir(model_path):
+        if os.path.isfile(os.path.join(model_path, file)):
+            shutil.copy2(os.path.join(model_path, file), \
+                                 os.path.join(process_path, 'Source', 'MODEL'))    
+
+
+    #make the copy/symbolic link
+    model_path = process_path + '/Source/MODEL/'
+    ln(model_path + '/ident_card.dat', process_path + '/Cards', log=False)
+    cp(model_path + '/param_card.dat', process_path + '/Cards')
+    mv(model_path + '/param_card.dat', process_path + '/Cards/param_card_default.dat')
+    ln(model_path + '/particles.dat', process_path + '/SubProcesses')
+    ln(model_path + '/interactions.dat', process_path + '/SubProcesses')
+    ln(model_path + '/coupl.inc', process_path + '/Source')
+    ln(model_path + '/coupl.inc', process_path + '/SubProcesses')
+    ln(process_path + '/Source/run.inc', process_path + '/SubProcesses', log=False)
+
+#===============================================================================
 # generate_subprocess_directory_v4_standalone
 #===============================================================================
 def generate_subprocess_directory_v4_standalone(matrix_element,
@@ -699,11 +834,9 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
 
     linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
 
-    try:
-        for file in linkfiles:
-            os.symlink(os.path.join('..', file), file)
-    except os.error:
-        logger.warning('Could not link to ' + os.path.join('..', file))
+    
+    for file in linkfiles:
+        ln('../%s' % file)
 
     # Return to original PWD
     os.chdir(cwd)
@@ -847,8 +980,8 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
                  matrix_element.get('processes')[0].nice_string())
     plot.draw()
 
-    # Generate jpgs
-    os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
+    # Generate jpgs -> pass in make_html
+    #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
 
     linkfiles = ['addmothers.f',
                  'cluster.f',
@@ -872,10 +1005,11 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
                  'unwgt.f']
 
     for file in linkfiles:
-        try:
-            os.symlink(os.path.join('..', file), file)
-        except os.error:
-            logger.warning('Could not link to ' + os.path.join('..', file))
+        ln('../' + file , '.')
+    
+    #import nexternal/leshouch in Source
+    ln('nexternal.inc', '../../Source', log=False)
+    ln('leshouche.inc', '../../Source', log=False)
 
     # Return to SubProcesses dir
     os.chdir(pathdir)
@@ -1700,6 +1834,74 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
     return res_str + '*'
 
 
+################################################################################
+## helper function for universal file treatment
+################################################################################
+def format_path(path):
+    """Format the path in local format taking in entry a unix format"""
+    if path[0] != '/':
+        return os.path.join(*path.split('/'))
+    else:
+        return os.path.sep + os.path.join(*path.split('/'))
+def cp(path1, path2, log=True):
+    """ simple cp taking linux or mix entry"""
+    path1 = format_path(path1)
+    path2 = format_path(path2)
+    try:
+        shutil.copy2(path1, path2)
+    except IOError, why:
+        if log:
+            logger.warning(why)
+        
+    
+def mv(path1, path2):
+    """simple mv taking linux or mix format entry"""
+    path1 = format_path(path1)
+    path2 = format_path(path2)
+    try:
+        shutil.move(path1, path2)
+    except:
+        # An error can occur if the files exist at final destination
+        if os.path.isfile(path2):
+            os.remove(path2)
+            shutil.move(path1, path2)
+            return
+        elif os.path.isdir(path2) and os.path.exists(
+                                   os.path.join(path2, os.path.basename(path1))):      
+            path2 = os.path.join(path2, os.path.basename(path1))
+            os.remove(path2)
+            shutil.move(path1, path2)
+        else:
+            raise
+        
+def ln(file_pos, starting_dir='.', name='', log=True):
+    """a simple way to have a symbolic link whithout to have to change directory
+    starting_point is the directory where to write the link
+    file_pos is the file to link
+    WARNING: not the linux convention
+    """
+    file_pos = format_path(file_pos)
+    starting_dir = format_path(starting_dir)
+    if not name:
+        name = os.path.split(file_pos)[1]
+        
+    try:
+        os.symlink(os.path.relpath(file_pos, starting_dir), \
+                        os.path.join(starting_dir, name))
+    except:
+        if log:
+            logger.warning('Could not link %s at position: %s' % (file_pos, \
+                                                os.path.realpath(starting_dir)))
 
+
+
+    
+    
+    
+    
+    
+    
+    
+    
 
 

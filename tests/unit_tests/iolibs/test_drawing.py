@@ -29,7 +29,7 @@ import unittest
 import madgraph.core.base_objects as base_objects
 import madgraph.iolibs.drawing as drawing
 import madgraph.iolibs.drawing_eps as draw_eps
-import madgraph.iolibs.import_model_v4 as import_v4
+import madgraph.iolibs.import_v4 as import_v4
 import madgraph.iolibs.files as files
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
@@ -1053,6 +1053,33 @@ class TestFeynmanDiagram(unittest.TestCase):
                 nb_at_zero += 1
         self.assertEqual(nb_at_zero, 1)
 
+    def test_phi4_vertex(self):
+        """ test the phi^4 vertex """
+        
+        diagram = self.store_diagram['g g > g g'][0]
+        diagram = drawing.FeynmanDiagram(diagram, _model)
+
+        diagram.load_diagram()
+        diagram.define_level()
+        level_solution = [1, 0, 0, 2, 2]
+        for i in range(0, 5):
+            self.assertEquals(diagram.vertexList[i].level, \
+                              level_solution[i])
+        diagram.find_initial_vertex_position()
+        x_position = [1 / 2, 0, 0, 1, 1]
+        y_position = [1 / 2, 0, 1, 0, 1]
+        self.assertEquals(len(diagram.vertexList), 5)
+        for i in range(0, 5):
+            self.assertEquals(diagram.vertexList[i].level, \
+                              level_solution[i])
+            self.assertAlmostEquals(diagram.vertexList[i].pos_x, \
+                              x_position[i])
+            self.assertAlmostEquals(diagram.vertexList[i].pos_y, \
+                              y_position[i])
+        for line in diagram.lineList:
+            self.assertNotEquals(line.start, None)
+            self.assertNotEquals(line.end, None)
+        
 
     def test_one_initial_state_particle(self):
         """Test if we can create diagram for one particle in initial state."""
@@ -1571,7 +1598,7 @@ if __name__ == '__main__':
     process_diag['mu- > vm e- ve~'] = [0]
     process_diag['d > d d g d~ QED=0'] = [0]
     process_diag['u d~ > c s~'] = [0]
-    process_diag['g g > g g'] = [1, 2]
+    process_diag['g g > g g'] = [0, 1, 2, 3]
     process_diag['g g > g g g'] = [0, 1]
     process_diag['g g > g g u u~'] = [18, 100]
     process_diag['g g > g g g g'] = [0, 26, 92, 93, 192]
@@ -1585,9 +1612,9 @@ if __name__ == '__main__':
 
     from madgraph.interface.cmd_interface import MadGraphCmd
     cmd = MadGraphCmd()
-    cmd.do_import('v4 ' + os.path.join(_file_path, \
+    cmd.do_import('model_v4 ' + os.path.join(_file_path, \
                                         '../input_files/v4_sm_particles.dat'))
-    cmd.do_import('v4 ' + os.path.join(_file_path, \
+    cmd.do_import('model_v4 ' + os.path.join(_file_path, \
                                     '../input_files/v4_sm_interactions.dat'))
 
     # Create the diagrams

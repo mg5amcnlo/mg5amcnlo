@@ -31,7 +31,7 @@ root_path = path.split(path.dirname(path.realpath( __file__ )))[0]
 sys.path.append(root_path)
 
 # Write out nice usage message if called with -h or --help
-usage = "usage: %prog [options] "
+usage = "usage: %prog [options] [FILE] "
 parser = optparse.OptionParser(usage=usage)
 parser.add_option("-l", "--logging", default='INFO',
                   help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
@@ -48,4 +48,18 @@ logging.basicConfig(level=vars(logging)[options.logging])
 import madgraph.interface.cmd_interface as cmd_interface
 
 # Call the cmd interface main loop
-cmd_interface.MadGraphCmd().cmdloop()
+if options.file or args:
+    # They are an input file 
+    if args:
+        input_file = args[0]
+    else:
+        input_file = options.file
+        
+    input_file = cmd_interface.CmdFile(input_file,'rU')
+    cmd_line = cmd_interface.MadGraphCmd(stdin=input_file)
+    cmd_line.use_rawinput = False #put it in non interactive mode
+    cmd_line.cmdloop()
+else:
+    # Interactive mode
+    cmd_interface.MadGraphCmd().cmdloop()
+
