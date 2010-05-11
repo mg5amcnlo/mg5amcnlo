@@ -487,7 +487,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         """check the validity of line
         No Path authorize for the Web"""
         
-        if len(args) == 1 and args[1] not in ['.','clean']:
+        if len(args) == 2 and args[1] not in ['.','clean']:
             return False
         
         return CheckValidForCmd.check_history(self, args)
@@ -778,10 +778,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         #and if so store this position as standard output directory
         if 'Cards' in os.listdir('.'):
             #Check for ./
-            self._export_dir = os.path.split(os.path.realpath('.'))[-1]
+            self._export_dir = os.path.realpath('.')
         elif 'Cards' in os.listdir('..'):
             #Check for ../
-            self._export_dir = os.path.split(os.path.realpath('..'))[-1]
+            self._export_dir = os.path.realpath('..')
         elif self.stdin != sys.stdin:
             #Check for position defined by the input files
             input_path = os.path.realpath(self.stdin.name).split(os.path.sep)
