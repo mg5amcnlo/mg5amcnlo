@@ -233,6 +233,10 @@ class MadGraphCmd(cmd.Cmd):
             else:
                 print "Path %s is not a valid pathname" % args[1]
 
+        else:
+            self.help_import()
+            return False            
+
 
     def complete_import(self, text, line, begidx, endidx):
         "Complete the import command"
@@ -380,7 +384,7 @@ class MadGraphCmd(cmd.Cmd):
                 print part['name'],
             print ''
 
-        if args[0] == 'interactions':
+        elif args[0] == 'interactions':
             print "Current model contains %i interactions" % \
                     len(self.__curr_model['interactions'])
             for inter in self.__curr_model['interactions']:
@@ -392,13 +396,16 @@ class MadGraphCmd(cmd.Cmd):
                         print part['antiname'],
                 print
 
-        if args[0] == 'processes':
+        elif args[0] == 'processes':
             for amp in self.__curr_amps:
                 print amp.nice_string()
-        if args[0] == 'multiparticles':
+        elif args[0] == 'multiparticles':
             print 'Multiparticle labels:'
             for key in self.__multiparticles:
                 print key, " = ", self.__multiparticles[key]
+
+        else:
+            self.help_display()
 
     def complete_display(self, text, line, begidx, endidx):
         "Complete the display command"
@@ -753,7 +760,9 @@ class MadGraphCmd(cmd.Cmd):
                       (len(self.__curr_amps), ndiags)                
             else:
                 print "Empty or wrong format process, please try again."
-
+        else:
+            self.help_add()
+            
 
     def complete_add(self, text, line, begidx, endidx):
         "Complete the add command"
@@ -890,8 +899,10 @@ class MadGraphCmd(cmd.Cmd):
             if mypart:
                 pdg_list.append(mypart.get_pdg_code())
             else:
-                print "No particle %s in model: skipped" % part_name
-
+                print ("Error: No particle %s in model. " % part_name) + \
+                      "No multiparticle created."
+                return False
+                
         if not pdg_list:
             print """Empty or wrong format for multiparticle.
             Please try again."""
