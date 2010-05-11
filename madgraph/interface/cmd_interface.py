@@ -1626,7 +1626,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Check for special directory treatment
         if args[1] == '.':
             if self._export_dir:
-                args[1] = self._export_dir
+                dir_path = self._export_dir
             else:
                 print 'No possible working directory are detected'
                 self.help_setup()    
@@ -1640,10 +1640,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 if os.path.isdir(auto_path(i)):
                     continue
                 else:
-                    args[1] = name_dir(i) 
+                    dir_path = auto_path(i) 
                     break
-                
-        dir_path = os.path.join(self.writing_dir, args[1])
+        else:    
+            dir_path = os.path.join(self.writing_dir, args[1])
+        
         if not force and os.path.isdir(dir_path):
             print 'INFO: directory %s already exists.' % args[1]
             if clean:
