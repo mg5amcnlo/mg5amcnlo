@@ -462,7 +462,7 @@ class CheckValidForCmd(object):
 #===============================================================================
 # CheckValidForCmdWeb
 #===============================================================================
-class CheckValidForCmdWeb(object):
+class CheckValidForCmdWeb(CheckValidForCmd):
     """ Check the validity of input line for web entry
     (no explicit path authorized)"""
     
