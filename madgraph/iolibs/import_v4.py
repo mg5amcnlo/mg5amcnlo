@@ -575,7 +575,8 @@ class ProcessInfo(object):
         level_content = line.split('>')
         for level, data in enumerate(level_content):
             particles = self.separate_particle(data, particles_name)
-            [self.particles.append((level, name)) for name in particles]
+            if particles:
+                [self.particles.append((level, name)) for name in particles]
             
             
     def treat_decay_chain(self, line, particles_name):
