@@ -328,7 +328,7 @@ def read_proc_card_v4(fsock):
 
 
 
-class ProcCardv4Reader():
+class ProcCardv4Reader(object):
     """read a proc_card.dat in the mg4 format and creates the equivalent routine
     for mg5"""
     
@@ -495,7 +495,7 @@ class ProcCardv4Reader():
                 
         return out
     
-class ProcessInfo():
+class ProcessInfo(object):
     """This is the basic object for storing process information"""
     
     def __init__(self, line):
@@ -530,6 +530,9 @@ class ProcessInfo():
 
         # check if we have a MG5 format
         if ',' in line or '=' in line:
+            self.is_mg5_valid = True
+        elif line.startswith('/mg5/'):
+            self.line = line[5:]
             self.is_mg5_valid = True
             return
             

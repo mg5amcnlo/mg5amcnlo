@@ -822,7 +822,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     myprocdef = self.extract_process(line)
                 else:
                     myprocdef, line = self.extract_decay_chain_process(line)
-            except self.MadGraphCmdError as error:
+            except self.MadGraphCmdError, error:
                 print "Empty or wrong format process, please try again. Error:" 
                 print error
                 myprocdef = None
