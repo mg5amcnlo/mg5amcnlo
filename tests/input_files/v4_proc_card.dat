@@ -32,8 +32,9 @@
 # Process(es) requested : mg2 input                                  *
 #*********************************************************************
 # Begin PROCESS # This is TAG. Do not modify this line
+#
 
-pp>e-ve~  @1       # First Process
+pp>ve~e-  @1       # First Process
 QCD=99             # Max QCD couplings
 QED=2              # Max QED couplings
 end_coup           # End the couplings input

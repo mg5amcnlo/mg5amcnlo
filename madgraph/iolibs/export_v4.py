@@ -80,6 +80,7 @@ def write_procdef_mg5(file_pos, modelname, process_str):
     #But first ensure that coupling are define whithout spaces:
     process_str = process_str.replace(' =', '=')
     process_str = process_str.replace('= ', '=')
+    process_str = process_str.replace(',',' , ')
     #now loop on the element and treat all the coupling
     for info in process_str.split():
         if '=' in info:

@@ -343,7 +343,7 @@ class ProcCardv4Reader(object):
                 "# End  MULTIPARTICLES # This is TAG. Do not modify this line\n"
         
     # line pattern (remove comment at the end of the line)
-    pat_line = re.compile(r"""^\s*(?P<info>[^\#]*[\S)])\s*(\#|$)""", re.DOTALL)
+    pat_line = re.compile(r"""^\s*(?P<info>[^\#]*[^\s\#])\s*(\#|$)""", re.DOTALL)
     
     def __init__(self, fsock):
         """init the variable"""

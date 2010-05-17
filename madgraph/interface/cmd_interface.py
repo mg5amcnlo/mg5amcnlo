@@ -496,7 +496,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         """check the validity of line
         No Path authorize for the Web"""
         
-        if len(args) >= 2 and args[0] == 'proc_v4':
+        if len(args) >= 2 and args[0] == 'proc_v4' and args[1] != '.':
             return False
 
         if len(args) >= 1 and args[0] == 'command':
@@ -1084,7 +1084,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         space_before=re.compile(r"(?P<carac>\S)(?P<tag>[/\,\\$\\>])")
         line = space_before.sub(r'\g<carac> \g<tag>',line)       
         # Add a space after any + - ~ > , $ / 
-        space_after=re.compile(r"(?P<tag>[+-/\,\\$\\>])(?P<carac>[^\s+-])")
+        space_after=re.compile(r"(?P<tag>[+-/\,\\$\\>~])(?P<carac>[^\s+-])")
         line = space_after.sub(r'\g<tag> \g<carac>',line)
         
 
