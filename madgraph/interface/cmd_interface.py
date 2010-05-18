@@ -66,6 +66,7 @@ class CmdExtended(cmd.Cmd):
     This extensions supports linesbreak, history
     support commentary
     """
+    debug = 0
 
     class MadGraphCmdError(Exception):
         """Exception raised if an error occurs in the execution
@@ -104,12 +105,23 @@ class CmdExtended(cmd.Cmd):
             
         # execute the line command
         return line
-
+    
+    def onecmd(self, line):
+        """catch all error and stop properly command accordingly"""
+        
+        try:
+            cmd.Cmd.onecmd(self, line)
+        except Exception as error:
+            print 'command: \"%s\" stops with following error:' % line
+            print error.__class__.__name__,':', error
+            if self.debug:
+                raise
+            
     def exec_cmd(self, line):
         """for third party call, call the line with pre and postfix treatment"""
         print line
         line = self.precmd(line)
-        stop = self.onecmd(line)
+        stop = cmd.Cmd.onecmd(self, line)
         stop = self.postcmd(stop, line)
         return stop      
 
@@ -265,6 +277,9 @@ class HelpToCmd(object):
 class CheckValidForCmd(object):
     """ The Series of help routine for the MadGraphCmd"""
     
+    class InvalidCmd(Exception):
+        """a class for the invalid syntax call"""
+    
     def check_add(self, args):
         """check the validity of line
         syntax: add process PROCESS 
@@ -272,26 +287,23 @@ class CheckValidForCmd(object):
         
         if len(args) < 1:
             self.help_generate()
-            return False
+            raise self.InvalidCmd('\"add\" command requires two arguments')
         
         if len(self._curr_model['particles']) == 0:
-            print "No particle list currently active, please create one first!"
-            return False
+            raise self.InvalidCmd("No particle list currently active, " + \
+                                              "please create one first!")
 
         if len(self._curr_model['interactions']) == 0:
-            print "No interaction list currently active," + \
-            " please create one first!"
-            return False
+            raise self.InvalidCmd("No interaction list currently active," + \
+            " please create one first!")
 
         if len(args) < 2:
-            self.help_import()
-            return False
+            self.help_generate()
+            raise self.InvalidCmd('\"add\" command requires two arguments')
         
         if args[0] != 'process':
-            print "Empty or wrong format process, please try again."
-            return False
-        
-        return True
+            raise self.InvalidCmd( \
+                            "Empty or wrong format process, please try again.")
     
     def check_define(self, args):
         """check the validity of line
@@ -480,12 +492,15 @@ class CheckValidForCmdWeb(CheckValidForCmd):
     """ Check the validity of input line for web entry
     (no explicit path authorized)"""
     
+    class WebRestriction(Exception):
+        """class for WebRestriction"""
+    
+    
     def check_draw(self, args):
         """check the validity of line
         syntax: draw FILEPATH [option=value]
         """
-        # return False since they are always a path
-        return False
+        raise self.WebRestriction('direct call to draw is forbidden on the web')
       
     def check_export(self, args):
         """check the validity of line
@@ -493,7 +508,9 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         No FilePath authorized on the web
         """  
         if len(args) > 1:
-            return False
+            raise self.WebRestriction('Path can\'t be specify on the web.' + \
+                                      'use the setup command to avoid the ' + \
+                                      'need to specify a path')
         
         return CheckValidForCmd.check_export(self, args)
     
@@ -502,7 +519,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         No Path authorize for the Web"""
         
         if len(args) == 2 and args[1] not in ['.','clean']:
-            return False
+            raise self.WebRestriction('Path can\'t be specify on the web.')
         
         return CheckValidForCmd.check_history(self, args)
         
@@ -511,15 +528,15 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         No Path authorize for the Web"""
         
         if len(args) >= 2 and args[0] == 'proc_v4' and args[1] != '.':
-            return False
+            raise self.WebRestriction('Path can\'t be specify on the web.')
 
         if len(args) >= 1 and args[0] == 'command':
-            return False
+            raise self.WebRestriction('Path can\'t be specify on the web.')
+
         
         for arg in args:
             if '/' in arg:
-                print 'Path are not authorized on the web'
-                return False
+                raise self.WebRestriction('Path can\'t be specify on the web.')
              
         return CheckValidForCmd.check_import(self, args)
         
@@ -528,7 +545,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         No Path authorize for the Web"""
     
         if len(args) > 1:
-            return False
+            raise self.WebRestriction('Path can\'t be specify on the web.')
         
         return CheckValidForCmd.check_makehtml(self, args)
         
@@ -538,20 +555,16 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         
         if len(args)==2:
             if args[0] != 'model':
-                print 'only model can be load online'
-                return False
+                raise self.WebRestriction('only model can be loaded online')
             if 'model.pkl' not in args[1]:
-                print 'not valid format'
-                return False
+                raise self.WebRestriction('not valid pkl file: wrong name')
             if not os.path.realpath(args[1]).startswith(os.path.join(MGME_dir, \
                                                                     'Models')):
-                return False
-            
+                raise self.WebRestriction('Wrong path to load model')
         
     def check_save(self, args):
         """ not authorize on web"""
-        return False
-    
+        raise self.WebRestriction('\"save\" command not authorize online')
     
     def check_setup(self, args):
         """ check the validity of the line"""
@@ -560,7 +573,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
             return False
         
         if '/' in args[2]:
-            return False
+            raise self.WebRestriction('Path can\'t be specify on the web.')
         
         return True
     
@@ -832,8 +845,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         """
 
         args = split_arg(line)
-        if not self.check_add(args):
-            return
+        
+        # Check the validity of the arguments
+        self.check_add(args)
 
         if args[0] == 'process':
             # Rejoin line
@@ -1527,12 +1541,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
 
         # Now that we have the model we can split the information
-        try:
-            lines = reader.extract_command_lines(self._curr_model)
-        except import_v4.ParticleError as why:
-            print why
-            print 'stop import proc_card_v4'
-            return
+        lines = reader.extract_command_lines(self._curr_model)
+
             
         for line in lines:
             self.exec_cmd(line)
