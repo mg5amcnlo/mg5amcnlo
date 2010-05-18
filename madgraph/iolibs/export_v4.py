@@ -109,7 +109,6 @@ def create_v4_webpage(dir_path, makejpg):
     """call the perl script creating the web interface for MadEvent"""
 
     old_pos = os.getcwd()
-    
     os.chdir(os.path.join(dir_path, 'SubProcesses'))
     P_dir_list = [proc for proc in os.listdir('.') if os.path.isdir(proc) and \
                                                                 proc[0] == 'P']
@@ -119,6 +118,7 @@ def create_v4_webpage(dir_path, makejpg):
         logger.info("Generate jpeg diagrams")
         for Pdir in P_dir_list:
             os.chdir(Pdir)
+            print dir_path
             subprocess.call([os.path.join(dir_path, 'bin', 'gen_jpeg-pl')])
             os.chdir(os.path.pardir)
     

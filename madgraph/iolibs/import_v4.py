@@ -463,6 +463,10 @@ class ProcCardv4Reader(object):
     @staticmethod
     def separate_particle(line, possible_str):
         """ for a list of concatanate variable return a list of particle name"""
+        
+        class ParticleError(Exception): 
+            """ A class to carch the error"""
+            pass
 
         line = line.lower() # Particle name are not case sensitive
         out = []            # list of the particles
@@ -479,7 +483,8 @@ class ProcCardv4Reader(object):
             #Check for infinite loop
             if pos == old_pos:
                 logging.error('Invalid characters: %s' % line[pos:pos + 4])
-                return
+                raise ParticleError('Set of character %s not defined' %
+                                     line[pos:pos + 4])
             old_pos = pos
             # check for pointless character
             if line[pos] in [' ', '\n', '\t']:
@@ -529,12 +534,14 @@ class ProcessInfo(object):
             
 
         # check if we have a MG5 format
-        if ',' in line or '=' in line:
-            self.is_mg5_valid = True
         if line.startswith('/mg5/'):
             self.line = line[5:]
             self.is_mg5_valid = True
             return
+        if ',' in line or '=' in line:
+            self.is_mg5_valid = True
+            return
+
             
         # extract (S-)forbidden particle
         pos_forbid = line.find('/')

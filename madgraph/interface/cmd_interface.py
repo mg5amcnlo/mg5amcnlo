@@ -357,6 +357,20 @@ class CheckValidForCmd(object):
 
         if not os.path.isdir(path):
             print "%s is not a valid directory for export file" % path
+            if args[0] == 'madevent_v4':
+                print "to create a valid output directory you can use the command"
+                print "$> setup madevent_v4 auto"
+                print " and then run export as follow:"
+                print "$> export madevent_v4" 
+            return False
+        
+        if args[0] == 'madevent_v4' and  not os.path.isdir(
+                                        os.path.join(path,'..','SubProcesses')):
+            print "%s is not a valid directory for export file" % path
+            print "to create a valid output directory you can use the command"
+            print "$> setup madevent_v4 auto" 
+            print " and then run export as follow:"
+            print "$> export madevent_v4" 
             return False
 
         return path
@@ -389,7 +403,7 @@ class CheckValidForCmd(object):
         if len(args):
             if args[0] not in ['clean', '.']:
                 dirpath = os.path.dirname(args[0])
-                if not os.path.exists(dirpath):
+                if dirpath and not os.path.exists(dirpath):
                     print "invalid path"
                     return False
             elif args[0] == '.' and not self._export_dir:
@@ -729,6 +743,21 @@ class CompleteForCmd(CheckValidForCmd):
                 return self.list_completion(text, possible_option2)
             else:
                 return self.list_completion(text, possible_option)
+
+    def complete_shell(self, text, line, begidx, endidx):
+        """ add path for shell """
+
+        # Filename if directory is given
+        #
+        if len(split_arg(line[0:begidx])) > 1 and line[begidx-1] == os.path.sep:
+            if not text:
+                text = ''
+            output = self.path_completion(text,
+                                        base_dir=\
+                                          split_arg(line[0:begidx])[-1])
+        else:
+            output = self.path_completion(text)
+        return output
 
     def complete_import(self, text, line, begidx, endidx):
         "Complete the import command"
@@ -1456,7 +1485,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 proc_card = args[1]
                 # Check the status of export and try to use file position is no
                 #self._export dir are define
-                self.check_for_export_dir(proc_card)
+                if os.path.isdir(args[1]):
+                    proc_card = os.path.join(proc_card, 'Cards', \
+                                                                'proc_card.dat')    
+                self.check_for_export_dir(os.path.realpath(proc_card))
             else:
                 logging.error('No default directory are setup')
                 return
@@ -1524,8 +1556,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             return
         
         path_split = filepath.split(os.path.sep)
-        if path_split[-2] == 'Cards':
-            self._export_dir = os.path.sep.join(path_split[:-2])    
+        if len(path_split)>2 and path_split[-2] == 'Cards':
+            self._export_dir = os.path.sep.join(path_split[:-2])
+                
     
 
     def do_load(self, line):
@@ -1750,10 +1783,7 @@ class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
         else:
             print "running shell command:", line
             subprocess.call(line, shell=True)
-   
-    
-    
-    
+
 #===============================================================================
 # 
 #===============================================================================
