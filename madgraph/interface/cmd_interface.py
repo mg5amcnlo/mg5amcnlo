@@ -1116,8 +1116,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         space_after=re.compile(r"(?P<tag>[+-/\,\\$\\>~])(?P<carac>[^\s+-])")
         line = space_after.sub(r'\g<tag> \g<carac>',line)
         
-
-        print line
+        
         # Use regular expressions to extract s-channel propagators,
         # forbidden s-channel propagators/particles, coupling orders
         # and process number, starting from the back
@@ -1528,10 +1527,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
 
         # Now that we have the model we can split the information
-        lines = reader.extract_command_lines(self._curr_model)
+        try:
+            lines = reader.extract_command_lines(self._curr_model)
+        except import_v4.ParticleError as why:
+            print why
+            print 'stop import proc_card_v4'
+            return
+            
         for line in lines:
             self.exec_cmd(line)
-            
+    
         return 
 
     def import_mg5_proc_card(self, filepath):
@@ -1545,6 +1550,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # execute the line if this one is not empty
             if line:
                 self.exec_cmd(line)
+
         return
     
     def check_for_export_dir(self, filepath):

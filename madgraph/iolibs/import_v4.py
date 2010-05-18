@@ -326,7 +326,9 @@ def read_proc_card_v4(fsock):
     reader = ProcCardv4Reader(fsock)
     return reader
 
-
+class ParticleError(Exception): 
+    """ A class to carch the error"""
+    pass
 
 class ProcCardv4Reader(object):
     """read a proc_card.dat in the mg4 format and creates the equivalent routine
@@ -463,10 +465,6 @@ class ProcCardv4Reader(object):
     @staticmethod
     def separate_particle(line, possible_str):
         """ for a list of concatanate variable return a list of particle name"""
-        
-        class ParticleError(Exception): 
-            """ A class to carch the error"""
-            pass
 
         line = line.lower() # Particle name are not case sensitive
         out = []            # list of the particles
@@ -542,7 +540,6 @@ class ProcessInfo(object):
             self.is_mg5_valid = True
             return
 
-            
         # extract (S-)forbidden particle
         pos_forbid = line.find('/')
         pos_sforbid = line.find('$')
