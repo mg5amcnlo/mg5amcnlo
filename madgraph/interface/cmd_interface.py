@@ -107,6 +107,7 @@ class CmdExtended(cmd.Cmd):
 
     def exec_cmd(self, line):
         """for third party call, call the line with pre and postfix treatment"""
+        
         print line
         line = self.precmd(line)
         stop = self.onecmd(line)
@@ -284,7 +285,7 @@ class CheckValidForCmd(object):
             return False
 
         if len(args) < 2:
-            self.help_import()
+            self.help_add()
             return False
         
         if args[0] != 'process':
