@@ -37,6 +37,8 @@ parser.add_option("-l", "--logging", default='INFO',
                   help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
 parser.add_option("-f", "--file", default='',
 					help="use script file FILE")
+parser.add_option("","--web", action="store_true", default=False, dest='web', \
+                 help='force to be in secure mode')
 
 (options, args) = parser.parse_args()
 if len(args) == 0:
@@ -54,12 +56,19 @@ if options.file or args:
         input_file = args[0]
     else:
         input_file = options.file
-        
     input_file = cmd_interface.CmdFile(input_file,'rU')
-    cmd_line = cmd_interface.MadGraphCmd(stdin=input_file)
-    cmd_line.use_rawinput = False #put it in non interactive mode
-    cmd_line.cmdloop()
+    if options.web:
+        cmd_line = cmd_interface.MadGraphCmdWeb(stdin=input_file)
+        cmd_line.use_rawinput = False #put it in non interactive mode
+        cmd_line.cmdloop()    
+    else:
+        cmd_line = cmd_interface.MadGraphCmdShell(stdin=input_file)
+        cmd_line.use_rawinput = False #put it in non interactive mode
+        cmd_line.cmdloop()
 else:
     # Interactive mode
-    cmd_interface.MadGraphCmd().cmdloop()
+    if options.web:
+        cmd_interface.MadGraphCmdWeb().cmdloop()
+    else:
+        cmd_interface.MadGraphCmdShell().cmdloop()
 

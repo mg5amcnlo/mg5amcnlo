@@ -43,8 +43,23 @@ import unittest
 #sys.path.append(root_path)
 
 root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
-
 sys.path.append(root_path)
+
+
+#position of MG_ME
+MGME_dir = None
+MGME_dir_possibility = [os.path.join(root_path, os.path.pardir),
+                os.path.join(os.getcwd(), os.path.pardir),
+                os.getcwd()]
+
+for position in MGME_dir_possibility:
+    if os.path.exists(os.path.join(position, 'MGMEVersion.txt')) and \
+                    os.path.exists(os.path.join(position, 'UpdateNotes.txt')):
+        MGME_dir = os.path.realpath(position)
+        break
+del MGME_dir_possibility
+
+
 #===============================================================================
 # run
 #===============================================================================
@@ -122,10 +137,11 @@ class TestFinder(list):
             self.go_to_root()
 
 
-        for name in os.listdir(directory):
+        for name in os.listdir(os.path.join(root_path,directory)):
             local_check = checking
 
-            status = self.status_file(directory + '/' + name)
+            status = self.status_file(os.path.join(root_path, directory,name))
+                                      #directory + '/' + name)
             if status is None:
                 continue
 
@@ -228,11 +244,11 @@ class TestFinder(list):
     @staticmethod
     def status_file(name):
         """ check if a name is a module/a python file and return the status """
-        if os.path.isfile(name):
+        if os.path.isfile(os.path.join(root_path, name)):
             if name.endswith('.py') and '__init__' not in name:
                 return 'file'
-        elif os.path.isdir(name):
-            if os.path.isfile(name + '/__init__.py'):
+        elif os.path.isdir(os.path.join(root_path, name)):
+            if os.path.isfile(os.path.join(root_path, name , '__init__.py')):
                 return 'module'
 
     @classmethod
@@ -317,7 +333,8 @@ class TestFinder(list):
         where is launched
         """
         self.launch_pos = os.path.realpath(os.getcwd())
-        os.chdir(root_path)
+        self.root_path = root_path
+        #os.chdir(root_path)
 
     def go_to_initpos(self):
         """ 

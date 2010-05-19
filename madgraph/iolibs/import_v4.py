@@ -326,9 +326,11 @@ def read_proc_card_v4(fsock):
     reader = ProcCardv4Reader(fsock)
     return reader
 
+class ParticleError(Exception): 
+    """ A class to carch the error"""
+    pass
 
-
-class ProcCardv4Reader():
+class ProcCardv4Reader(object):
     """read a proc_card.dat in the mg4 format and creates the equivalent routine
     for mg5"""
     
@@ -343,7 +345,7 @@ class ProcCardv4Reader():
                 "# End  MULTIPARTICLES # This is TAG. Do not modify this line\n"
         
     # line pattern (remove comment at the end of the line)
-    pat_line = re.compile(r"""^\s*(?P<info>[^\#]*[\S)])\s*(\#|$)""", re.DOTALL)
+    pat_line = re.compile(r"""^\s*(?P<info>[^\#]*[^\s\#])\s*(\#|$)""", re.DOTALL)
     
     def __init__(self, fsock):
         """init the variable"""
@@ -439,8 +441,7 @@ class ProcCardv4Reader():
         lines.append('setup madevent_v4 . -f')
         lines.append('export madevent_v4')
         lines.append('makehtml madevent_v4')
-        lines.append('history %s' % os.path.relpath(
-                os.path.join(self.process_path, 'Cards', 'proc_card_mg5.dat')))
+        lines.append('history .')
         
         return lines
         
@@ -480,7 +481,8 @@ class ProcCardv4Reader():
             #Check for infinite loop
             if pos == old_pos:
                 logging.error('Invalid characters: %s' % line[pos:pos + 4])
-                return
+                raise ParticleError('Set of character %s not defined' %
+                                     line[pos:pos + 4])
             old_pos = pos
             # check for pointless character
             if line[pos] in [' ', '\n', '\t']:
@@ -496,7 +498,7 @@ class ProcCardv4Reader():
                 
         return out
     
-class ProcessInfo():
+class ProcessInfo(object):
     """This is the basic object for storing process information"""
     
     def __init__(self, line):
@@ -530,10 +532,14 @@ class ProcessInfo():
             
 
         # check if we have a MG5 format
+        if line.startswith('/mg5/'):
+            self.line = line[5:]
+            self.is_mg5_valid = True
+            return
         if ',' in line or '=' in line:
             self.is_mg5_valid = True
             return
-            
+
         # extract (S-)forbidden particle
         pos_forbid = line.find('/')
         pos_sforbid = line.find('$')
@@ -573,7 +579,8 @@ class ProcessInfo():
         level_content = line.split('>')
         for level, data in enumerate(level_content):
             particles = self.separate_particle(data, particles_name)
-            [self.particles.append((level, name)) for name in particles]
+            if particles:
+                [self.particles.append((level, name)) for name in particles]
             
             
     def treat_decay_chain(self, line, particles_name):

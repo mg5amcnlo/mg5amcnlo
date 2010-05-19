@@ -1,4 +1,4 @@
- #*********************************************************************
+#*********************************************************************
 #                        MadGraph/MadEvent                           *
 #                   http://madgraph.hep.uiuc.edu                     *
 #                                                                    *
@@ -32,44 +32,10 @@
 # Process(es) requested : mg2 input                                  *
 #*********************************************************************
 # Begin PROCESS # This is TAG. Do not modify this line
-#
 
-pp>ve~e-  @1       # First Process
+e-e+>veve~  @1       # First Process
 QCD=99             # Max QCD couplings
 QED=2              # Max QED couplings
-end_coup           # End the couplings input
-
-pp>(Z>W+(W->mu-vm)) @2       # Second Process
-QCD=2             # Max QCD couplings
-QED=4              # Max QED couplings
-end_coup           # End the couplings input
-
-pp>tt~ $a    @3       # Third Process
-QCD=99             # Max QCD couplings
-end_coup           # End the couplings input
-
-pp>tt~ /a $g @2           # Third Process
-QCD=99             # Max QCD couplings
-end_coup           # End the couplings input
-
-pp>(Z>W+(W->mu-vm)) $a /g@4      # Second Process
-QCD=99             # Max QCD couplings
-QED=4              # Max QED couplings
-end_coup           # End the couplings input
-
-pp>(Z>W+(W->mu-vm)) (Z>W+W-)$a /g@4      # Second Process
-QCD=99             # Max QCD couplings
-QED=1              # Max QED couplings
-end_coup           # End the couplings input
-
-p p > Z Z, Z > W+ W- $a /g @4      # Second Process
-QCD=99             # Max QCD couplings
-QED=1              # Max QED couplings
-end_coup           # End the couplings input
-
-p p > Z Z QCD=2 @4      # Second Process
-QCD=99             # Max QCD couplings
-QED=1              # Max QED couplings
 end_coup           # End the couplings input
 
 done               # this tells MG there are no more procs

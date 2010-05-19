@@ -51,7 +51,10 @@ def copy_v4template(mgme_dir, dir_path, model_dir, clean):
         print 'remove old information in %s' % os.path.basename(dir_path)
         old_pos = os.getcwd()
         os.chdir(dir_path)
-        subprocess.call([os.path.join('bin', 'clean_template')])
+        if os.environ.has_key('MADGRAPH_BASE'):
+            subprocess.call([os.path.join('bin', 'clean_template'), '--web'])
+        else:
+            subprocess.call([os.path.join('bin', 'clean_template')])
         os.chdir(old_pos)
         
         #Write version info
@@ -77,6 +80,7 @@ def write_procdef_mg5(file_pos, modelname, process_str):
     #But first ensure that coupling are define whithout spaces:
     process_str = process_str.replace(' =', '=')
     process_str = process_str.replace('= ', '=')
+    process_str = process_str.replace(',',' , ')
     #now loop on the element and treat all the coupling
     for info in process_str.split():
         if '=' in info:
@@ -105,7 +109,6 @@ def create_v4_webpage(dir_path, makejpg):
     """call the perl script creating the web interface for MadEvent"""
 
     old_pos = os.getcwd()
-    
     os.chdir(os.path.join(dir_path, 'SubProcesses'))
     P_dir_list = [proc for proc in os.listdir('.') if os.path.isdir(proc) and \
                                                                 proc[0] == 'P']
@@ -115,11 +118,13 @@ def create_v4_webpage(dir_path, makejpg):
         logger.info("Generate jpeg diagrams")
         for Pdir in P_dir_list:
             os.chdir(Pdir)
+            print dir_path
             subprocess.call([os.path.join(dir_path, 'bin', 'gen_jpeg-pl')])
             os.chdir(os.path.pardir)
     
     logger.info("Generate web pages")
     # Create the WebPage using perl script
+
     devnull = os.open(os.devnull, os.O_RDWR)
     subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')], \
                                                             stdout=devnull)
@@ -131,11 +136,13 @@ def create_v4_webpage(dir_path, makejpg):
                         (name.endswith('.html') or name.endswith('.jpg')) and \
                         name != 'index.html']               
     
-    subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')])
     if os.path.exists(os.path.join('SubProcesses', 'subproc.mg')):
         if os.path.exists('madevent.tar.gz'):
             os.remove('madevent.tar.gz')
-        subprocess.call(['make'])
+        subprocess.call(['make'], stdout=devnull)
+    
+    
+    subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')])
     
     #return to the initial dir
     os.chdir(old_pos)               

@@ -266,7 +266,6 @@ class ProcCardV4ReaderTest(unittest.TestCase):
         #the initialization is done in the setUp subroutine
         
         proccard = self.proccard
-        
         self.assertEqual(len(proccard.process), 8)
         self.assertEqual(proccard.model, 'sm')
         self.assertEqual(len(proccard.multipart), 6)
@@ -283,7 +282,7 @@ class ProcCardV4ReaderTest(unittest.TestCase):
                    'define l- e- mu-', 
                    'define vl ve vm', 
                    'define vl~ ve~ vm~', 
-                   'generate p p > e- ve~ @1 ', 
+                   'generate p p > ve~ e- @1 ', 
                    'add process p p > z @2 , (z > w+ w- , w- > mu- vm  ) ',
                    'add process p p > t t~ $ a QED=0 @3 ', 
                    'add process p p > t t~ $ g / a QED=0 @2 ', 
@@ -294,7 +293,8 @@ class ProcCardV4ReaderTest(unittest.TestCase):
                    'setup madevent_v4 . -f', 
                    'export madevent_v4', 
                    'makehtml madevent_v4', 
-                   'history tests/Cards/proc_card_mg5.dat']    
+                   'history .'] 
+  
         self.assertEqual(len(lines),len(solution))
         for i,command in enumerate(lines):
             self.assertEqual(command,solution[i])
