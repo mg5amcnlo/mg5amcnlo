@@ -1,0 +1,710 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>madgraph.iolibs.drawing.DiagramDrawer</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="madgraph-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+      <th class="navbar" width="100%"></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="madgraph-module.html">Package&nbsp;madgraph</a> ::
+        <a href="madgraph.iolibs-module.html">Package&nbsp;iolibs</a> ::
+        <a href="madgraph.iolibs.drawing-module.html">Module&nbsp;drawing</a> ::
+        Class&nbsp;DiagramDrawer
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+        <tr><td align="right"><span class="options"
+            >[<a href="frames.html" target="_top">frames</a
+            >]&nbsp;|&nbsp;<a href="madgraph.iolibs.drawing.DiagramDrawer-class.html"
+            target="_top">no&nbsp;frames</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS DESCRIPTION ==================== -->
+<h1 class="epydoc">Class DiagramDrawer</h1><p class="nomargin-top"><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer">source&nbsp;code</a></span></p>
+<pre class="base-tree">
+object --+
+         |
+        <strong class="uidshort">DiagramDrawer</strong>
+</pre>
+
+<dl><dt>Known Subclasses:</dt>
+<dd>
+      <ul class="subclass-list">
+<li><a href="madgraph.iolibs.drawing_eps.EpsDiagramDrawer-class.html">drawing_eps.EpsDiagramDrawer</a></li>  </ul>
+</dd></dl>
+
+<hr />
+<p>In principle ALL routines representing diagram in ANY format SHOULD 
+  derive from this class.</p>
+  <p>This is a (nearly empty) frameworks to draw a diagram in any type 
+  format</p>
+  <p>This frameworks defines in particular</p>
+  <ul>
+    <li>
+      function to convert the input diagram (create by the generation step)
+      in the correct object. [convert_diagram]
+    </li>
+    <li>
+      main loop to draw a diagram in a line-by-line method [draw - 
+      draw_diagram - draw_line]
+    </li>
+    <li>
+      name of routine (routine are empty) in order to fit with the 
+      framework [ associate_name - associate_number - draw_straight ]
+    </li>
+    <li>
+      some basic definition of routines [conclude - initialize]
+    </li>
+  </ul>
+  <p>This framework is base on the idea that we can create the diagram line
+  after line. Indeed all line object (FeynmanLine) contains the full 
+  information needed to be drawed independently of the rest of the 
+  diagram.</p>
+  <p>In order to create a class with this framework you should start to 
+  write the draw_straight, draw_curly, ... method which are called by the 
+  framework.</p>
+  <p>If you want to write a file, you can store his content in self.text 
+  variable the routine conclude will then automatically write the file.</p>
+  <p>The main routine to draw a diagram is 'draw' which call 1) initialize:
+  setup things for the diagram (usually open a file). 2) convert_diagram : 
+  Update the diagram in the correct format if needed. 3) draw_diagram : 
+  Build the diagram line after line. 4) conclude : finish the 
+  operation.</p>
+
+<!-- ==================== NESTED CLASSES ==================== -->
+<a name="section-NestedClasses"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Nested Classes</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-NestedClasses"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="madgraph.iolibs.drawing.DiagramDrawer.DrawDiagramError-class.html" class="summary-name">DrawDiagramError</a><br />
+      Standard error for error occuring to create output of a Diagram.
+    </td>
+  </tr>
+</table>
+<!-- ==================== INSTANCE METHODS ==================== -->
+<a name="section-InstanceMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Instance Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-InstanceMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.DiagramDrawer-class.html#__init__" class="summary-sig-name">__init__</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">diagram</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">filename</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">model</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">amplitude</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">opt</span>=<span class="summary-sig-default">None</span>)</span><br />
+      Define basic variables and store some global information.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer.__init__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.DiagramDrawer-class.html#draw" class="summary-sig-name">draw</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">opt</span>=<span class="summary-sig-default">None</span>)</span><br />
+      Main routine to draw a single diagram.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer.draw">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.DiagramDrawer-class.html#convert_diagram" class="summary-sig-name">convert_diagram</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">diagram</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">model</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">amplitude</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">opt</span>=<span class="summary-sig-default">None</span>)</span><br />
+      If diagram is a basic diagram (inherit from base_objects.Diagram)
+convert him to a FeynmanDiagram one.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer.convert_diagram">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.DiagramDrawer-class.html#initialize" class="summary-sig-name">initialize</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Initialization of object-file before starting in order to draw the 
+      diagram correctly.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer.initialize">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.DiagramDrawer-class.html#draw_diagram" class="summary-sig-name">draw_diagram</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">diagram</span>=<span class="summary-sig-default"><code class="variable-quote">'</code><code class="variable-string"></code><code class="variable-quote">'</code></span>,
+        <span class="summary-sig-arg">number</span>=<span class="summary-sig-default">0</span>)</span><br />
+      Building the diagram Line after Line.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer.draw_diagram">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.DiagramDrawer-class.html#conclude" class="summary-sig-name">conclude</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Final operation of the draw method.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer.conclude">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.DiagramDrawer-class.html#draw_line" class="summary-sig-name">draw_line</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">line</span>)</span><br />
+      Draw the line information.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer.draw_line">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.DiagramDrawer-class.html#draw_straight" class="summary-sig-name">draw_straight</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">line</span>)</span><br />
+      Example of routine for drawing the line 'line' in a specific format.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer.draw_straight">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.DiagramDrawer-class.html#associate_name" class="summary-sig-name">associate_name</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">line</span>,
+        <span class="summary-sig-arg">name</span>)</span><br />
+      Method to associate a name to a the given line.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer.associate_name">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.DiagramDrawer-class.html#associate_number" class="summary-sig-name">associate_number</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">line</span>,
+        <span class="summary-sig-arg">number</span>)</span><br />
+      Method to associate a number to 'line'.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer.associate_number">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code>object</code></b>:
+      <code>__delattr__</code>,
+      <code>__format__</code>,
+      <code>__getattribute__</code>,
+      <code>__hash__</code>,
+      <code>__new__</code>,
+      <code>__reduce__</code>,
+      <code>__reduce_ex__</code>,
+      <code>__repr__</code>,
+      <code>__setattr__</code>,
+      <code>__sizeof__</code>,
+      <code>__str__</code>,
+      <code>__subclasshook__</code>
+      </p>
+    </td>
+  </tr>
+</table>
+<!-- ==================== PROPERTIES ==================== -->
+<a name="section-Properties"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Properties</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-Properties"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code>object</code></b>:
+      <code>__class__</code>
+      </p>
+    </td>
+  </tr>
+</table>
+<!-- ==================== METHOD DETAILS ==================== -->
+<a name="section-MethodDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Method Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-MethodDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="__init__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__init__</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">diagram</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">filename</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">model</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">amplitude</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">opt</span>=<span class="sig-default">None</span>)</span>
+    <br /><em class="fname">(Constructor)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer.__init__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <pre class="literalblock">
+Define basic variables and store some global information.
+All argument are optional:
+diagram : is the object to  'diagram' should inherit from either 
+        base_objects.Diagram  or drawing_lib.FeynmanDiagram.
+filename: file's name of the file to write.
+model: model associate to the diagram. In principle use only if diagram
+    inherit from base_objects.Diagram (for conversion).
+amplitude: amplitude associates to the diagram. NOT USE for the moment.
+    In future you could pass the amplitude associate to the object in 
+    order to adjust fermion flow in case of Majorana fermion.
+opt: should be a valid DrawOption object.
+
+</pre>
+  <dl class="fields">
+    <dt>Overrides:
+        object.__init__
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="draw"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">draw</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">opt</span>=<span class="sig-default">None</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer.draw">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Main routine to draw a single diagram. opt is DrawOption object use 
+  for the conversion of the base_objects.Diagram in one of the Diagram 
+  object.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="convert_diagram"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">convert_diagram</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">diagram</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">model</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">amplitude</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">opt</span>=<span class="sig-default">None</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer.convert_diagram">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <pre class="literalblock">
+If diagram is a basic diagram (inherit from base_objects.Diagram)
+convert him to a FeynmanDiagram one. 'opt' keeps track of possible 
+option of drawing. 'amplitude' is not use for the moment. But, later,
+if defined will authorize to adjust the fermion-flow of Majorana 
+particles. opt is a DrawOption object containing all option on the way
+to draw the diagram (see this class for more details)
+
+
+This is the list of recognize options:
+    external [True] : authorizes external particles to finish on 
+        horizontal limit of the square
+    horizontal [True]: if on true use FeynmanDiagramHorizontal to 
+        convert the diagram. otherwise use FeynmanDiagram (Horizontal 
+        forces S-channel to be horizontal)
+    non_propagating [True] : removes the non propagating particles 
+        present in the diagram.
+
+</pre>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="initialize"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">initialize</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer.initialize">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Initialization of object-file before starting in order to draw the 
+  diagram correctly. By default, we just check if we are in writing mode. 
+  And open the output file if we are.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="draw_diagram"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">draw_diagram</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">diagram</span>=<span class="sig-default"><code class="variable-quote">'</code><code class="variable-string"></code><code class="variable-quote">'</code></span>,
+        <span class="sig-arg">number</span>=<span class="sig-default">0</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer.draw_diagram">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Building the diagram Line after Line. This is the key routine of 
+  'draw'.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="conclude"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">conclude</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer.conclude">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Final operation of the draw method. By default, this end to write 
+  the</p>
+  <p>file (if this one exist)</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="draw_line"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">draw_line</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">line</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer.draw_line">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Draw the line information. First, call the method associate the line 
+  type [draw_XXXXXX] Then finalize line representation by adding his name 
+  and, if it's an external particle, the MadGraph number associate to 
+  it.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="draw_straight"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">draw_straight</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">line</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer.draw_straight">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Example of routine for drawing the line 'line' in a specific format. 
+  straight is an example and can be replace by other type of line as 
+  dashed, wavy, curly, ...</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="associate_name"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">associate_name</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">line</span>,
+        <span class="sig-arg">name</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer.associate_name">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Method to associate a name to a the given line. The default action of 
+  this framework doesn't do anything</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="associate_number"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">associate_number</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">line</span>,
+        <span class="sig-arg">number</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#DiagramDrawer.associate_number">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Method to associate a number to 'line'. By default this method is call
+  only for external particles and the number is the MadGraph number 
+  associate to the particle. The default routine doesn't do anything</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="madgraph-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+      <th class="navbar" width="100%"></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Wed May 19 10:22:47 2010
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

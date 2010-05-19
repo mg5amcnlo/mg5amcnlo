@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>madgraph.iolibs.save_model</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="madgraph-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+      <th class="navbar" width="100%"></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="madgraph-module.html">Package&nbsp;madgraph</a> ::
+        <a href="madgraph.iolibs-module.html">Package&nbsp;iolibs</a> ::
+        Module&nbsp;save_model
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+        <tr><td align="right"><span class="options"
+            >[<a href="frames.html" target="_top">frames</a
+            >]&nbsp;|&nbsp;<a href="madgraph.iolibs.save_model-pysrc.html"
+            target="_top">no&nbsp;frames</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<h1 class="epydoc">Source Code for <a href="madgraph.iolibs.save_model-module.html">Module madgraph.iolibs.save_model</a></h1>
+<pre class="py-src">
+<a name="L1"></a><tt class="py-lineno"> 1</tt>  <tt class="py-line"><tt class="py-comment">################################################################################</tt> </tt>
+<a name="L2"></a><tt class="py-lineno"> 2</tt>  <tt class="py-line"><tt class="py-comment">#</tt> </tt>
+<a name="L3"></a><tt class="py-lineno"> 3</tt>  <tt class="py-line"><tt class="py-comment"># Copyright (c) 2009 The MadGraph Development team and Contributors</tt> </tt>
+<a name="L4"></a><tt class="py-lineno"> 4</tt>  <tt class="py-line"><tt class="py-comment">#</tt> </tt>
+<a name="L5"></a><tt class="py-lineno"> 5</tt>  <tt class="py-line"><tt class="py-comment"># This file is a part of the MadGraph 5 project, an application which </tt> </tt>
+<a name="L6"></a><tt class="py-lineno"> 6</tt>  <tt class="py-line"><tt class="py-comment"># automatically generates Feynman diagrams and matrix elements for arbitrary</tt> </tt>
+<a name="L7"></a><tt class="py-lineno"> 7</tt>  <tt class="py-line"><tt class="py-comment"># high-energy processes in the Standard Model and beyond.</tt> </tt>
+<a name="L8"></a><tt class="py-lineno"> 8</tt>  <tt class="py-line"><tt class="py-comment">#</tt> </tt>
+<a name="L9"></a><tt class="py-lineno"> 9</tt>  <tt class="py-line"><tt class="py-comment"># It is subject to the MadGraph license which should accompany this </tt> </tt>
+<a name="L10"></a><tt class="py-lineno">10</tt>  <tt class="py-line"><tt class="py-comment"># distribution.</tt> </tt>
+<a name="L11"></a><tt class="py-lineno">11</tt>  <tt class="py-line"><tt class="py-comment">#</tt> </tt>
+<a name="L12"></a><tt class="py-lineno">12</tt>  <tt class="py-line"><tt class="py-comment"># For more information, please visit: http://madgraph.phys.ucl.ac.be</tt> </tt>
+<a name="L13"></a><tt class="py-lineno">13</tt>  <tt class="py-line"><tt class="py-comment">#</tt> </tt>
+<a name="L14"></a><tt class="py-lineno">14</tt>  <tt class="py-line"><tt class="py-comment">################################################################################</tt> </tt>
+<a name="L15"></a><tt class="py-lineno">15</tt>  <tt class="py-line"> </tt>
+<a name="L16"></a><tt class="py-lineno">16</tt>  <tt class="py-line"><tt class="py-docstring">"""Function to save model files."""</tt> </tt>
+<a name="L17"></a><tt class="py-lineno">17</tt>  <tt class="py-line"> </tt>
+<a name="L18"></a><tt class="py-lineno">18</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">logging</tt> </tt>
+<a name="L19"></a><tt class="py-lineno">19</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">os</tt> </tt>
+<a name="L20"></a><tt class="py-lineno">20</tt>  <tt class="py-line"> </tt>
+<a name="L21"></a><tt class="py-lineno">21</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt id="link-0" class="py-name" targets="Package madgraph=madgraph-module.html"><a title="madgraph" class="py-name" href="#" onclick="return doclink('link-0', 'madgraph', 'link-0');">madgraph</a></tt><tt class="py-op">.</tt><tt id="link-1" class="py-name" targets="Package madgraph.iolibs=madgraph.iolibs-module.html"><a title="madgraph.iolibs" class="py-name" href="#" onclick="return doclink('link-1', 'iolibs', 'link-1');">iolibs</a></tt><tt class="py-op">.</tt><tt id="link-2" class="py-name" targets="Module madgraph.iolibs.files=madgraph.iolibs.files-module.html"><a title="madgraph.iolibs.files" class="py-name" href="#" onclick="return doclink('link-2', 'files', 'link-2');">files</a></tt> <tt class="py-keyword">as</tt> <tt id="link-3" class="py-name"><a title="madgraph.iolibs.files" class="py-name" href="#" onclick="return doclink('link-3', 'files', 'link-2');">files</a></tt> </tt>
+<a name="L22"></a><tt class="py-lineno">22</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt id="link-4" class="py-name"><a title="madgraph" class="py-name" href="#" onclick="return doclink('link-4', 'madgraph', 'link-0');">madgraph</a></tt><tt class="py-op">.</tt><tt id="link-5" class="py-name" targets="Package madgraph.core=madgraph.core-module.html"><a title="madgraph.core" class="py-name" href="#" onclick="return doclink('link-5', 'core', 'link-5');">core</a></tt><tt class="py-op">.</tt><tt id="link-6" class="py-name" targets="Module madgraph.core.base_objects=madgraph.core.base_objects-module.html"><a title="madgraph.core.base_objects" class="py-name" href="#" onclick="return doclink('link-6', 'base_objects', 'link-6');">base_objects</a></tt> <tt class="py-keyword">as</tt> <tt id="link-7" class="py-name"><a title="madgraph.core.base_objects" class="py-name" href="#" onclick="return doclink('link-7', 'base_objects', 'link-6');">base_objects</a></tt> </tt>
+<a name="L23"></a><tt class="py-lineno">23</tt>  <tt class="py-line"> </tt>
+<a name="L24"></a><tt class="py-lineno">24</tt>  <tt class="py-line"><tt id="link-8" class="py-name" targets="Variable madgraph.core.base_objects.logger=madgraph.core.base_objects-module.html#logger,Variable madgraph.core.diagram_generation.logger=madgraph.core.diagram_generation-module.html#logger,Variable madgraph.core.helas_objects.logger=madgraph.core.helas_objects-module.html#logger,Variable madgraph.iolibs.export_v4.logger=madgraph.iolibs.export_v4-module.html#logger,Variable madgraph.iolibs.files.logger=madgraph.iolibs.files-module.html#logger,Variable madgraph.iolibs.import_v4.logger=madgraph.iolibs.import_v4-module.html#logger,Variable madgraph.iolibs.save_model.logger=madgraph.iolibs.save_model-module.html#logger"><a title="madgraph.core.base_objects.logger
+madgraph.core.diagram_generation.logger
+madgraph.core.helas_objects.logger
+madgraph.iolibs.export_v4.logger
+madgraph.iolibs.files.logger
+madgraph.iolibs.import_v4.logger
+madgraph.iolibs.save_model.logger" class="py-name" href="#" onclick="return doclink('link-8', 'logger', 'link-8');">logger</a></tt> <tt class="py-op">=</tt> <tt class="py-name">logging</tt><tt class="py-op">.</tt><tt class="py-name">getLogger</tt><tt class="py-op">(</tt><tt class="py-string">'save_model'</tt><tt class="py-op">)</tt> </tt>
+<a name="L25"></a><tt class="py-lineno">25</tt>  <tt class="py-line"> </tt>
+<a name="save_particles"></a><div id="save_particles-def"><a name="L26"></a><tt class="py-lineno">26</tt> <a class="py-toggle" href="#" id="save_particles-toggle" onclick="return toggle('save_particles');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="madgraph.iolibs.save_model-module.html#save_particles">save_particles</a><tt class="py-op">(</tt><tt class="py-param">fsock</tt><tt class="py-op">,</tt> <tt class="py-param">part_list</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="save_particles-collapsed" style="display:none;" pad="++" indent="++++"></div><div id="save_particles-expanded"><a name="L27"></a><tt class="py-lineno">27</tt>  <tt class="py-line">    <tt class="py-docstring">"""Save particle objects contained in part_list in the stream fsock"""</tt> </tt>
+<a name="L28"></a><tt class="py-lineno">28</tt>  <tt class="py-line"> </tt>
+<a name="L29"></a><tt class="py-lineno">29</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-keyword">not</tt> <tt class="py-name">isinstance</tt><tt class="py-op">(</tt><tt class="py-name">part_list</tt><tt class="py-op">,</tt> <tt id="link-9" class="py-name"><a title="madgraph.core.base_objects" class="py-name" href="#" onclick="return doclink('link-9', 'base_objects', 'link-6');">base_objects</a></tt><tt class="py-op">.</tt><tt id="link-10" class="py-name" targets="Class madgraph.core.base_objects.ParticleList=madgraph.core.base_objects.ParticleList-class.html"><a title="madgraph.core.base_objects.ParticleList" class="py-name" href="#" onclick="return doclink('link-10', 'ParticleList', 'link-10');">ParticleList</a></tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L30"></a><tt class="py-lineno">30</tt>  <tt class="py-line">        <tt class="py-keyword">raise</tt> <tt class="py-name">ValueError</tt><tt class="py-op">,</tt> \ </tt>
+<a name="L31"></a><tt class="py-lineno">31</tt>  <tt class="py-line">            <tt class="py-string">"Object %s is not a valid ParticleList"</tt> <tt class="py-op">%</tt> <tt class="py-name">repr</tt><tt class="py-op">(</tt><tt class="py-name">part_list</tt><tt class="py-op">)</tt> </tt>
+<a name="L32"></a><tt class="py-lineno">32</tt>  <tt class="py-line"> </tt>
+<a name="L33"></a><tt class="py-lineno">33</tt>  <tt class="py-line">    <tt class="py-name">fsock</tt><tt class="py-op">.</tt><tt class="py-name">write</tt><tt class="py-op">(</tt><tt class="py-string">"particles = [\n"</tt><tt class="py-op">)</tt> </tt>
+<a name="L34"></a><tt class="py-lineno">34</tt>  <tt class="py-line"> </tt>
+<a name="L35"></a><tt class="py-lineno">35</tt>  <tt class="py-line">    <tt class="py-keyword">for</tt> <tt class="py-name">part</tt> <tt class="py-keyword">in</tt> <tt class="py-name">part_list</tt><tt class="py-op">:</tt> </tt>
+<a name="L36"></a><tt class="py-lineno">36</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">part_list</tt><tt class="py-op">.</tt><tt class="py-name">index</tt><tt class="py-op">(</tt><tt class="py-name">part</tt><tt class="py-op">)</tt> <tt class="py-op">!=</tt> <tt class="py-name">len</tt><tt class="py-op">(</tt><tt class="py-name">part_list</tt><tt class="py-op">)</tt> <tt class="py-op">-</tt> <tt class="py-number">1</tt><tt class="py-op">:</tt> </tt>
+<a name="L37"></a><tt class="py-lineno">37</tt>  <tt class="py-line">            <tt class="py-name">fsock</tt><tt class="py-op">.</tt><tt class="py-name">write</tt><tt class="py-op">(</tt><tt class="py-name">str</tt><tt class="py-op">(</tt><tt class="py-name">part</tt><tt class="py-op">)</tt> <tt class="py-op">+</tt> <tt class="py-string">','</tt><tt class="py-op">)</tt> </tt>
+<a name="L38"></a><tt class="py-lineno">38</tt>  <tt class="py-line">        <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L39"></a><tt class="py-lineno">39</tt>  <tt class="py-line">            <tt class="py-name">fsock</tt><tt class="py-op">.</tt><tt class="py-name">write</tt><tt class="py-op">(</tt><tt class="py-name">str</tt><tt class="py-op">(</tt><tt class="py-name">part</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+<a name="L40"></a><tt class="py-lineno">40</tt>  <tt class="py-line"> </tt>
+<a name="L41"></a><tt class="py-lineno">41</tt>  <tt class="py-line">    <tt class="py-name">fsock</tt><tt class="py-op">.</tt><tt class="py-name">write</tt><tt class="py-op">(</tt><tt class="py-string">"]"</tt><tt class="py-op">)</tt> </tt>
+</div><a name="L42"></a><tt class="py-lineno">42</tt>  <tt class="py-line"> </tt>
+<a name="save_interactions"></a><div id="save_interactions-def"><a name="L43"></a><tt class="py-lineno">43</tt> <a class="py-toggle" href="#" id="save_interactions-toggle" onclick="return toggle('save_interactions');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="madgraph.iolibs.save_model-module.html#save_interactions">save_interactions</a><tt class="py-op">(</tt><tt class="py-param">fsock</tt><tt class="py-op">,</tt> <tt class="py-param">inter_list</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="save_interactions-collapsed" style="display:none;" pad="++" indent="++++"></div><div id="save_interactions-expanded"><a name="L44"></a><tt class="py-lineno">44</tt>  <tt class="py-line">    <tt class="py-docstring">"""Save interaction objects contained in inter_list in the stream fsock"""</tt> </tt>
+<a name="L45"></a><tt class="py-lineno">45</tt>  <tt class="py-line"> </tt>
+<a name="L46"></a><tt class="py-lineno">46</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-keyword">not</tt> <tt class="py-name">isinstance</tt><tt class="py-op">(</tt><tt class="py-name">inter_list</tt><tt class="py-op">,</tt> <tt id="link-11" class="py-name"><a title="madgraph.core.base_objects" class="py-name" href="#" onclick="return doclink('link-11', 'base_objects', 'link-6');">base_objects</a></tt><tt class="py-op">.</tt><tt id="link-12" class="py-name" targets="Class madgraph.core.base_objects.InteractionList=madgraph.core.base_objects.InteractionList-class.html"><a title="madgraph.core.base_objects.InteractionList" class="py-name" href="#" onclick="return doclink('link-12', 'InteractionList', 'link-12');">InteractionList</a></tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L47"></a><tt class="py-lineno">47</tt>  <tt class="py-line">        <tt class="py-keyword">raise</tt> <tt class="py-name">ValueError</tt><tt class="py-op">,</tt> \ </tt>
+<a name="L48"></a><tt class="py-lineno">48</tt>  <tt class="py-line">            <tt class="py-string">"Object %s is not a valid InteractionList"</tt> <tt class="py-op">%</tt> <tt class="py-name">repr</tt><tt class="py-op">(</tt><tt class="py-name">inter_list</tt><tt class="py-op">)</tt> </tt>
+<a name="L49"></a><tt class="py-lineno">49</tt>  <tt class="py-line"> </tt>
+<a name="L50"></a><tt class="py-lineno">50</tt>  <tt class="py-line">    <tt class="py-name">fsock</tt><tt class="py-op">.</tt><tt class="py-name">write</tt><tt class="py-op">(</tt><tt class="py-string">"interactions = [\n"</tt><tt class="py-op">)</tt> </tt>
+<a name="L51"></a><tt class="py-lineno">51</tt>  <tt class="py-line"> </tt>
+<a name="L52"></a><tt class="py-lineno">52</tt>  <tt class="py-line">    <tt class="py-keyword">for</tt> <tt class="py-name">inter</tt> <tt class="py-keyword">in</tt> <tt class="py-name">inter_list</tt><tt class="py-op">:</tt> </tt>
+<a name="L53"></a><tt class="py-lineno">53</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">inter_list</tt><tt class="py-op">.</tt><tt class="py-name">index</tt><tt class="py-op">(</tt><tt class="py-name">inter</tt><tt class="py-op">)</tt> <tt class="py-op">!=</tt> <tt class="py-name">len</tt><tt class="py-op">(</tt><tt class="py-name">inter_list</tt><tt class="py-op">)</tt> <tt class="py-op">-</tt> <tt class="py-number">1</tt><tt class="py-op">:</tt> </tt>
+<a name="L54"></a><tt class="py-lineno">54</tt>  <tt class="py-line">            <tt class="py-name">fsock</tt><tt class="py-op">.</tt><tt class="py-name">write</tt><tt class="py-op">(</tt><tt class="py-name">str</tt><tt class="py-op">(</tt><tt class="py-name">inter</tt><tt class="py-op">)</tt> <tt class="py-op">+</tt> <tt class="py-string">','</tt><tt class="py-op">)</tt> </tt>
+<a name="L55"></a><tt class="py-lineno">55</tt>  <tt class="py-line">        <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L56"></a><tt class="py-lineno">56</tt>  <tt class="py-line">            <tt class="py-name">fsock</tt><tt class="py-op">.</tt><tt class="py-name">write</tt><tt class="py-op">(</tt><tt class="py-name">str</tt><tt class="py-op">(</tt><tt class="py-name">inter</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+<a name="L57"></a><tt class="py-lineno">57</tt>  <tt class="py-line"> </tt>
+<a name="L58"></a><tt class="py-lineno">58</tt>  <tt class="py-line">    <tt class="py-name">fsock</tt><tt class="py-op">.</tt><tt class="py-name">write</tt><tt class="py-op">(</tt><tt class="py-string">"]"</tt><tt class="py-op">)</tt> </tt>
+</div><a name="L59"></a><tt class="py-lineno">59</tt>  <tt class="py-line"> </tt>
+<a name="save_model"></a><div id="save_model-def"><a name="L60"></a><tt class="py-lineno">60</tt> <a class="py-toggle" href="#" id="save_model-toggle" onclick="return toggle('save_model');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="madgraph.iolibs.save_model-module.html#save_model">save_model</a><tt class="py-op">(</tt><tt class="py-param">path</tt><tt class="py-op">,</tt> <tt class="py-param">model</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="save_model-collapsed" style="display:none;" pad="++" indent="++++"></div><div id="save_model-expanded"><a name="L61"></a><tt class="py-lineno">61</tt>  <tt class="py-line">    <tt class="py-docstring">"""Save a full model in directory path (try to create if necessary)."""</tt> </tt>
+<a name="L62"></a><tt class="py-lineno">62</tt>  <tt class="py-line"> </tt>
+<a name="L63"></a><tt class="py-lineno">63</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-keyword">not</tt> <tt class="py-name">isinstance</tt><tt class="py-op">(</tt><tt class="py-name">model</tt><tt class="py-op">,</tt> <tt id="link-13" class="py-name"><a title="madgraph.core.base_objects" class="py-name" href="#" onclick="return doclink('link-13', 'base_objects', 'link-6');">base_objects</a></tt><tt class="py-op">.</tt><tt id="link-14" class="py-name" targets="Class madgraph.core.base_objects.Model=madgraph.core.base_objects.Model-class.html"><a title="madgraph.core.base_objects.Model" class="py-name" href="#" onclick="return doclink('link-14', 'Model', 'link-14');">Model</a></tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L64"></a><tt class="py-lineno">64</tt>  <tt class="py-line">        <tt class="py-keyword">raise</tt> <tt class="py-name">ValueError</tt><tt class="py-op">,</tt> \ </tt>
+<a name="L65"></a><tt class="py-lineno">65</tt>  <tt class="py-line">            <tt class="py-string">"Object %s is not a valid Model"</tt> <tt class="py-op">%</tt> <tt class="py-name">repr</tt><tt class="py-op">(</tt><tt class="py-name">model</tt><tt class="py-op">)</tt> </tt>
+<a name="L66"></a><tt class="py-lineno">66</tt>  <tt class="py-line"> </tt>
+<a name="L67"></a><tt class="py-lineno">67</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-keyword">not</tt> <tt class="py-name">isinstance</tt><tt class="py-op">(</tt><tt class="py-name">path</tt><tt class="py-op">,</tt> <tt class="py-name">str</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L68"></a><tt class="py-lineno">68</tt>  <tt class="py-line">        <tt class="py-keyword">raise</tt> <tt class="py-name">ValueError</tt><tt class="py-op">,</tt> \ </tt>
+<a name="L69"></a><tt class="py-lineno">69</tt>  <tt class="py-line">            <tt class="py-string">"Object %s is not a path string"</tt> <tt class="py-op">%</tt> <tt class="py-name">repr</tt><tt class="py-op">(</tt><tt class="py-name">path</tt><tt class="py-op">)</tt> </tt>
+<a name="L70"></a><tt class="py-lineno">70</tt>  <tt class="py-line"> </tt>
+<a name="L71"></a><tt class="py-lineno">71</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-keyword">not</tt> <tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">isdir</tt><tt class="py-op">(</tt><tt class="py-name">path</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L72"></a><tt class="py-lineno">72</tt>  <tt class="py-line">        <tt id="link-15" class="py-name"><a title="madgraph.core.base_objects.logger
+madgraph.core.diagram_generation.logger
+madgraph.core.helas_objects.logger
+madgraph.iolibs.export_v4.logger
+madgraph.iolibs.files.logger
+madgraph.iolibs.import_v4.logger
+madgraph.iolibs.save_model.logger" class="py-name" href="#" onclick="return doclink('link-15', 'logger', 'link-8');">logger</a></tt><tt class="py-op">.</tt><tt class="py-name">warning</tt><tt class="py-op">(</tt><tt class="py-string">"Path %s does not exist, try to make it..."</tt> <tt class="py-op">%</tt> <tt class="py-name">str</tt><tt class="py-op">(</tt><tt class="py-name">path</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+<a name="L73"></a><tt class="py-lineno">73</tt>  <tt class="py-line">        <tt class="py-keyword">try</tt><tt class="py-op">:</tt> </tt>
+<a name="L74"></a><tt class="py-lineno">74</tt>  <tt class="py-line">            <tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">mkdir</tt><tt class="py-op">(</tt><tt class="py-name">path</tt><tt class="py-op">)</tt> </tt>
+<a name="L75"></a><tt class="py-lineno">75</tt>  <tt class="py-line">        <tt class="py-keyword">except</tt> <tt class="py-name">IOError</tt><tt class="py-op">,</tt> <tt class="py-op">(</tt><tt class="py-name">errno</tt><tt class="py-op">,</tt> <tt class="py-name">strerror</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L76"></a><tt class="py-lineno">76</tt>  <tt class="py-line">            <tt id="link-16" class="py-name"><a title="madgraph.core.base_objects.logger
+madgraph.core.diagram_generation.logger
+madgraph.core.helas_objects.logger
+madgraph.iolibs.export_v4.logger
+madgraph.iolibs.files.logger
+madgraph.iolibs.import_v4.logger
+madgraph.iolibs.save_model.logger" class="py-name" href="#" onclick="return doclink('link-16', 'logger', 'link-8');">logger</a></tt><tt class="py-op">.</tt><tt class="py-name">error</tt><tt class="py-op">(</tt><tt class="py-string">"I/O error (%s): %s"</tt> <tt class="py-op">%</tt> <tt class="py-op">(</tt><tt class="py-name">errno</tt><tt class="py-op">,</tt> <tt class="py-name">strerror</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+<a name="L77"></a><tt class="py-lineno">77</tt>  <tt class="py-line">            <tt class="py-keyword">return</tt> <tt class="py-name">None</tt> </tt>
+<a name="L78"></a><tt class="py-lineno">78</tt>  <tt class="py-line"> </tt>
+<a name="L79"></a><tt class="py-lineno">79</tt>  <tt class="py-line">    <tt class="py-keyword">print</tt> <tt class="py-string">"Saving particles..."</tt><tt class="py-op">,</tt> </tt>
+<a name="L80"></a><tt class="py-lineno">80</tt>  <tt class="py-line">    <tt id="link-17" class="py-name"><a title="madgraph.iolibs.files" class="py-name" href="#" onclick="return doclink('link-17', 'files', 'link-2');">files</a></tt><tt class="py-op">.</tt><tt id="link-18" class="py-name" targets="Function madgraph.iolibs.files.write_to_file()=madgraph.iolibs.files-module.html#write_to_file"><a title="madgraph.iolibs.files.write_to_file" class="py-name" href="#" onclick="return doclink('link-18', 'write_to_file', 'link-18');">write_to_file</a></tt><tt class="py-op">(</tt><tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">join</tt><tt class="py-op">(</tt><tt class="py-name">path</tt><tt class="py-op">,</tt> <tt class="py-string">'particles.py'</tt><tt class="py-op">)</tt><tt class="py-op">,</tt> </tt>
+<a name="L81"></a><tt class="py-lineno">81</tt>  <tt class="py-line">                        <tt id="link-19" class="py-name" targets="Function madgraph.iolibs.save_model.save_particles()=madgraph.iolibs.save_model-module.html#save_particles"><a title="madgraph.iolibs.save_model.save_particles" class="py-name" href="#" onclick="return doclink('link-19', 'save_particles', 'link-19');">save_particles</a></tt><tt class="py-op">,</tt> </tt>
+<a name="L82"></a><tt class="py-lineno">82</tt>  <tt class="py-line">                        <tt class="py-name">model</tt><tt class="py-op">[</tt><tt class="py-string">'particles'</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L83"></a><tt class="py-lineno">83</tt>  <tt class="py-line">    <tt class="py-keyword">print</tt> <tt class="py-string">"%i particles saved to %s"</tt> <tt class="py-op">%</tt> <tt class="py-op">(</tt><tt class="py-name">len</tt><tt class="py-op">(</tt><tt class="py-name">model</tt><tt class="py-op">[</tt><tt class="py-string">'particles'</tt><tt class="py-op">]</tt><tt class="py-op">)</tt><tt class="py-op">,</tt> </tt>
+<a name="L84"></a><tt class="py-lineno">84</tt>  <tt class="py-line">                                      <tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">join</tt><tt class="py-op">(</tt><tt class="py-name">path</tt><tt class="py-op">,</tt> <tt class="py-string">'particles.py'</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+<a name="L85"></a><tt class="py-lineno">85</tt>  <tt class="py-line"> </tt>
+<a name="L86"></a><tt class="py-lineno">86</tt>  <tt class="py-line">    <tt class="py-keyword">print</tt> <tt class="py-string">"Saving interactions..."</tt><tt class="py-op">,</tt> </tt>
+<a name="L87"></a><tt class="py-lineno">87</tt>  <tt class="py-line">    <tt id="link-20" class="py-name"><a title="madgraph.iolibs.files" class="py-name" href="#" onclick="return doclink('link-20', 'files', 'link-2');">files</a></tt><tt class="py-op">.</tt><tt id="link-21" class="py-name"><a title="madgraph.iolibs.files.write_to_file" class="py-name" href="#" onclick="return doclink('link-21', 'write_to_file', 'link-18');">write_to_file</a></tt><tt class="py-op">(</tt><tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">join</tt><tt class="py-op">(</tt><tt class="py-name">path</tt><tt class="py-op">,</tt> <tt class="py-string">'interactions.py'</tt><tt class="py-op">)</tt><tt class="py-op">,</tt> </tt>
+<a name="L88"></a><tt class="py-lineno">88</tt>  <tt class="py-line">                        <tt id="link-22" class="py-name" targets="Function madgraph.iolibs.save_model.save_interactions()=madgraph.iolibs.save_model-module.html#save_interactions"><a title="madgraph.iolibs.save_model.save_interactions" class="py-name" href="#" onclick="return doclink('link-22', 'save_interactions', 'link-22');">save_interactions</a></tt><tt class="py-op">,</tt> </tt>
+<a name="L89"></a><tt class="py-lineno">89</tt>  <tt class="py-line">                        <tt class="py-name">model</tt><tt class="py-op">[</tt><tt class="py-string">'interactions'</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L90"></a><tt class="py-lineno">90</tt>  <tt class="py-line">    <tt class="py-keyword">print</tt> <tt class="py-string">"%i interactions saved to %s"</tt> <tt class="py-op">%</tt> <tt class="py-op">(</tt><tt class="py-name">len</tt><tt class="py-op">(</tt><tt class="py-name">model</tt><tt class="py-op">[</tt><tt class="py-string">'interactions'</tt><tt class="py-op">]</tt><tt class="py-op">)</tt><tt class="py-op">,</tt> </tt>
+<a name="L91"></a><tt class="py-lineno">91</tt>  <tt class="py-line">                                      <tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">join</tt><tt class="py-op">(</tt><tt class="py-name">path</tt><tt class="py-op">,</tt> <tt class="py-string">'interactions.py'</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+</div><a name="L92"></a><tt class="py-lineno">92</tt>  <tt class="py-line"> </tt><script type="text/javascript">
+<!--
+expandto(location.href);
+// -->
+</script>
+</pre>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="madgraph-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+      <th class="navbar" width="100%"></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Wed May 19 10:22:52 2010
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

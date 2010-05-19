@@ -1,0 +1,1319 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>madgraph.iolibs.drawing.FeynmanDiagram</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="madgraph-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+      <th class="navbar" width="100%"></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="madgraph-module.html">Package&nbsp;madgraph</a> ::
+        <a href="madgraph.iolibs-module.html">Package&nbsp;iolibs</a> ::
+        <a href="madgraph.iolibs.drawing-module.html">Module&nbsp;drawing</a> ::
+        Class&nbsp;FeynmanDiagram
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+        <tr><td align="right"><span class="options"
+            >[<a href="frames.html" target="_top">frames</a
+            >]&nbsp;|&nbsp;<a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html"
+            target="_top">no&nbsp;frames</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS DESCRIPTION ==================== -->
+<h1 class="epydoc">Class FeynmanDiagram</h1><p class="nomargin-top"><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram">source&nbsp;code</a></span></p>
+<dl><dt>Known Subclasses:</dt>
+<dd>
+      <ul class="subclass-list">
+<li><a href="madgraph.iolibs.drawing.FeynmanDiagramHorizontal-class.html">FeynmanDiagramHorizontal</a></li>  </ul>
+</dd></dl>
+
+<hr />
+<pre class="literalblock">
+Object to compute the position of the different Vertex and Line associate
+to a diagram object.
+
+This is the standard way to doing it [main]
+1) Creates the new structure needed for the diagram generation [load_diagram]
+    This defines self.vertexList and self.lineList which are the list of     
+    respectively all the vertex and all the line include in the diagram.
+    Each line is associated to two vertex, so we have added new vertex
+    compare to the diagram object (base_objects.Diagram). The two vertex are 
+    named begin/end and represent the line direction. at this stage all line
+    are going timelike. T-channel are going from particle 1 to particle 2
+2) Associate to each vertex a level. [define_level]
+    The level represents the distance between the initial vertex and the 
+    current vertex. This distance is define has the number of non T-channel 
+    particles needed to connect this particles to a initial state starting
+    point.
+3) Compute the position of each vertex [find_initial_vertex_position]
+    The x-coordinate will proportional to the level. The vertex at level=0.
+    will have x=0 coordinate (vertex associate with initial state particle)
+    The vertex with the highest level value should be at x=1.
+    
+    If an external particles cann't be place at the border at the current 
+    level. we will try to place it one level later, potentially up to last
+    level. A option can force to place all external particles at x=1.
+    
+    the y-coordinate are chosen such that 
+        - external particles try to have (y=0 or y=1) coordinates
+            (if not move those vertex to next level)
+        - other particles maximizes distances between themselves.
+4) Solve Fermion-flow and (anti)particle type [self.solve_line_direction]
+    the way to solve the fermion-flow is basic and fail in general for
+    majorana fermion. The basic idea is &quot;particles are going timelike&quot;.
+    This is sufficient in all cases but T-channel particles which are solve 
+    separately.
+
+</pre>
+
+<!-- ==================== NESTED CLASSES ==================== -->
+<a name="section-NestedClasses"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Nested Classes</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-NestedClasses"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="madgraph.iolibs.drawing.FeynmanDiagram.FeynamDiagramError-class.html" class="summary-name">FeynamDiagramError</a><br />
+      Class for internal error.
+    </td>
+  </tr>
+</table>
+<!-- ==================== INSTANCE METHODS ==================== -->
+<a name="section-InstanceMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Instance Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-InstanceMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#__init__" class="summary-sig-name">__init__</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">diagram</span>,
+        <span class="summary-sig-arg">model</span>,
+        <span class="summary-sig-arg">opt</span>=<span class="summary-sig-default">None</span>)</span><br />
+      Store the information concerning this diagram.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.__init__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="main"></a><span class="summary-sig-name">main</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      This routine will compute all the vertex position and line 
+      orientation needed to draw the diagram.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.main">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="load_diagram"></a><span class="summary-sig-name">load_diagram</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">contract</span>=<span class="summary-sig-default">True</span>)</span><br />
+      Define all the object for the Feynman Diagram Drawing (Vertex and 
+      Line) following the data include in 'self.diagram' 'contract' defines
+      if we contract to one point the non propagating line.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.load_diagram">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#find_leg_id" class="summary-sig-name">find_leg_id</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">leg</span>,
+        <span class="summary-sig-arg">equal</span>=<span class="summary-sig-default">0</span>,
+        <span class="summary-sig-arg">end</span>=<span class="summary-sig-default">0</span>)</span><br />
+      Find the position of leg in self._treated_legs</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.find_leg_id">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#find_leg_id2" class="summary-sig-name">find_leg_id2</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">leg</span>,
+        <span class="summary-sig-arg">end</span>=<span class="summary-sig-default">0</span>)</span><br />
+      Find the position of leg in self._treated_legs.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.find_leg_id2">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="find_leg_id3"></a><span class="summary-sig-name">find_leg_id3</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">gen_id</span>)</span><br />
+      Find the position of leg in self._treated_legs but only if this b 
+      belongs to an available particles</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.find_leg_id3">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#load_vertex" class="summary-sig-name">load_vertex</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">vertex</span>)</span><br />
+      1) Extend the vertex to a VertexPoint.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.load_vertex">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#_load_leg" class="summary-sig-name" onclick="show_private();">_load_leg</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">leg</span>)</span><br />
+      Extend the leg to Feynman line.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram._load_leg">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#deal_special_vertex" class="summary-sig-name">deal_special_vertex</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">last_vertex</span>)</span><br />
+      Deal with the last vertex of self.diagram if that one has id=0.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.deal_special_vertex">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#deal_last_line" class="summary-sig-name">deal_last_line</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">last_line</span>)</span><br />
+      The line of the last vertex breaks the rules that line before '&gt;' 
+      exist previously and the one after don't.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.deal_last_line">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="_fuse_non_propa_particule"></a><span class="summary-sig-name">_fuse_non_propa_particule</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      Fuse all the non propagating line step: 1) find those line 2) fuse 
+      the vertex 3) remove one vertex from self.vertexList 4) remove the 
+      line/leg from self.lineList/self._treated_leg</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram._fuse_non_propa_particule">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#define_level" class="summary-sig-name">define_level</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Assign to each vertex a level: the level correspond to the number of 
+      visible particles and S-channel needed in order to reach the initial 
+      particles vertex.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.define_level">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#def_next_level_from" class="summary-sig-name">def_next_level_from</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">vertex</span>)</span><br />
+      Define level for adjacent vertex.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.def_next_level_from">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#find_t_channel_vertex" class="summary-sig-name">find_t_channel_vertex</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Returns the vertex (T-vertex authorize) associate to level 1.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.find_t_channel_vertex">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#find_next_t_channel_vertex" class="summary-sig-name">find_next_t_channel_vertex</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">t_vertex</span>)</span><br />
+      Returns the next t_vertex.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.find_next_t_channel_vertex">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="find_vertex_at_level"></a><span class="summary-sig-name">find_vertex_at_level</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">previous_level</span>)</span><br />
+      Returns a list of vertex such that all those vertex are one level 
+      after the level of vertexlist and sorted in such way that the list 
+      start with vertex connected with the first vertex of 'vertexlist' 
+      then those connected to the second and so on.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.find_vertex_at_level">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#find_initial_vertex_position" class="summary-sig-name">find_initial_vertex_position</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Find a position to each vertex.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.find_initial_vertex_position">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="find_vertex_position_tchannel"></a><span class="summary-sig-name">find_vertex_position_tchannel</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      Finds the vertex position for level one, T channel are authorize</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.find_vertex_position_tchannel">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#find_vertex_position_at_level" class="summary-sig-name">find_vertex_position_at_level</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">vertexlist</span>,
+        <span class="summary-sig-arg">level</span>,
+        <span class="summary-sig-arg">auto</span>=<span class="summary-sig-default">True</span>)</span><br />
+      Finds the vertex position for the particle at 'level' given the 
+      ordering at previous level given by the vertexlist.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.find_vertex_position_at_level">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#assign_pos" class="summary-sig-name">assign_pos</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">vertex_at_level</span>,
+        <span class="summary-sig-arg">level</span>,
+        <span class="summary-sig-arg">min</span>=<span class="summary-sig-default">0</span>,
+        <span class="summary-sig-arg">max</span>=<span class="summary-sig-default">1</span>)</span><br />
+      Assign the position to each vertex of vertex_at_level.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.assign_pos">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#define_vertex_at_border" class="summary-sig-name">define_vertex_at_border</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">vertex</span>,
+        <span class="summary-sig-arg">level</span>,
+        <span class="summary-sig-arg">pos_y</span>)</span><br />
+      Define the position of the vertex considering the distance required 
+      in the Drawing Options.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.define_vertex_at_border">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#remove_t_channel" class="summary-sig-name">remove_t_channel</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Removes all T-channel in a diagram and convert those in S-channel.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.remove_t_channel">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#solve_line_direction" class="summary-sig-name">solve_line_direction</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Computes the directions of the lines of the diagrams.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.solve_line_direction">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#adjust_position" class="summary-sig-name">adjust_position</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Modify the position of some particles in order to improve the final
+diagram look.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.adjust_position">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#_debug_load_diagram" class="summary-sig-name" onclick="show_private();">_debug_load_diagram</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Return a string to check to conversion of format for the diagram.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram._debug_load_diagram">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#_debug_level" class="summary-sig-name" onclick="show_private();">_debug_level</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">text</span>=<span class="summary-sig-default">1</span>)</span><br />
+      Returns a string to check the level of each vertex.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram._debug_level">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#_debug_position" class="summary-sig-name" onclick="show_private();">_debug_position</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Returns a string to check the position of each vertex.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram._debug_position">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#_debug_has_intersection" class="summary-sig-name" onclick="show_private();">_debug_has_intersection</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Returns if some line cross are crossing each other.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram._debug_has_intersection">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.iolibs.drawing.FeynmanDiagram-class.html#__eq__" class="summary-sig-name">__eq__</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">other</span>)</span><br />
+      Check if two diagrams are equivalent.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.__eq__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+</table>
+<!-- ==================== METHOD DETAILS ==================== -->
+<a name="section-MethodDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Method Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-MethodDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="__init__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__init__</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">diagram</span>,
+        <span class="sig-arg">model</span>,
+        <span class="sig-arg">opt</span>=<span class="sig-default">None</span>)</span>
+    <br /><em class="fname">(Constructor)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.__init__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Store the information concerning this diagram. This routines didn't 
+  perform any action at all. diagram: The diagram object to draw model: The
+  model associate to the diagram opt: A DrawingOpt instance with all 
+  options for drawing the diagram.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="find_leg_id"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">find_leg_id</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">leg</span>,
+        <span class="sig-arg">equal</span>=<span class="sig-default">0</span>,
+        <span class="sig-arg">end</span>=<span class="sig-default">0</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.find_leg_id">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Find the position of leg in self._treated_legs</p>
+  <p>if equal=0 returns the last position of number in the list otherwise 
+  check that leg is the item in self._treated_legs</p>
+  <p>the two methods provides the same result if they provide a result. But
+  some times equal=0 mode provides result when equal=1 doesn't. To my 
+  understanding equal=1 is suppose to be sufficient in all cases but gg&gt;
+  7x( g ) fails with using equal=1 only.</p>
+  <p>'end' removes the last 'end' element of the list, before looking at 
+  the id in the list. (the list is not modify)</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="find_leg_id2"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">find_leg_id2</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">leg</span>,
+        <span class="sig-arg">end</span>=<span class="sig-default">0</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.find_leg_id2">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Find the position of leg in self._treated_legs. Use object equality to
+  find the position.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="load_vertex"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">load_vertex</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">vertex</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.load_vertex">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <pre class="literalblock">
+1) Extend the vertex to a VertexPoint. 
+2) Add this vertex in vertexList of the diagram
+3) Update vertex.line list. (first update the leg into line if needed)
+4) assign line.start[end] to this vertex. (in end if start is already
+        assigned to another vertex). the start-end will be flip later
+        if needed.
+
+</pre>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="_load_leg"></a>
+<div class="private">
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">_load_leg</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">leg</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram._load_leg">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Extend the leg to Feynman line. Associate the line to the diagram.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="deal_special_vertex"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">deal_special_vertex</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">last_vertex</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.deal_special_vertex">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Deal with the last vertex of self.diagram if that one has id=0. This 
+  simply means that the two line are identical. In consequence, we remove 
+  one line, define correctly start and end vertex for the second one and 
+  finally remove this fake vertex.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="deal_last_line"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">deal_last_line</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">last_line</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.deal_last_line">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>The line of the last vertex breaks the rules that line before '&gt;' 
+  exist previously and the one after don't. The last one can also already 
+  exist and for the one before the '&gt;' sometimes they arrive with a 
+  second object which is equivalent to another one but not the same object.
+  discover those case and treat this properly.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="define_level"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">define_level</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.define_level">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Assign to each vertex a level: the level correspond to the number of 
+  visible particles and S-channel needed in order to reach the initial 
+  particles vertex.</p>
+  <p>This is computing by search level by level starting at level 0.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="def_next_level_from"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">def_next_level_from</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">vertex</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.def_next_level_from">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Define level for adjacent vertex. If those vertex is already defined 
+  do nothing Otherwise define as level+1 (at level 1 if T-channel)</p>
+  <p>This routine defines also self.max_level.</p>
+  <p>This routine is foreseen for an auto-recursive mode. So as soon as a 
+  vertex have his level defined. We launch this routine for this 
+  vertex.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="find_t_channel_vertex"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">find_t_channel_vertex</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.find_t_channel_vertex">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns the vertex (T-vertex authorize) associate to level 1. We start
+  with the vertex associate to first entry of previous_level and then 
+  following the T-line.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="find_next_t_channel_vertex"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">find_next_t_channel_vertex</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">t_vertex</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.find_next_t_channel_vertex">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns the next t_vertex. i.e. the vertex following t_vertex. t_line 
+  indicates the 'wrong' T-direction. This routines returns also the 'good' 
+  evolution direction (which will be the wrong one at the next step).</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="find_initial_vertex_position"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">find_initial_vertex_position</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.find_initial_vertex_position">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Find a position to each vertex. All the vertex with the same level 
+  will have the same x coordinate. All external particles will be on the 
+  border of the square.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="find_vertex_position_at_level"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">find_vertex_position_at_level</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">vertexlist</span>,
+        <span class="sig-arg">level</span>,
+        <span class="sig-arg">auto</span>=<span class="sig-default">True</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.find_vertex_position_at_level">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Finds the vertex position for the particle at 'level' given the 
+  ordering at previous level given by the vertexlist. if auto equals True 
+  then  pass in auto-recursive mode.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="assign_pos"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">assign_pos</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">vertex_at_level</span>,
+        <span class="sig-arg">level</span>,
+        <span class="sig-arg">min</span>=<span class="sig-default">0</span>,
+        <span class="sig-arg">max</span>=<span class="sig-default">1</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.assign_pos">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <pre class="literalblock">
+Assign the position to each vertex of vertex_at_level.
+
+The x-coordinate will the ratio of the current level with the maximum
+level of the diagram.
+
+If the first_vertex of vertex_at_level is an outgoing particle. Put it 
+at y=0 if possible (this could be prevented by min&gt;0 or by drawing 
+option). if you put it at y=0 delete the vertex of the list to avoid 
+duplications.
+
+Do the symmetric case for the last entry of vertex_at_level.
+
+The y-value for the other point is computed such that the distance 
+between two vertex of the list are the same. the distance between min 
+(resp. max) and the first vertex is also equal but if min=0 (resp.
+max=1) then this distance counts half.
+
+the option self.opt.external is used
+if    equals 0, the external lines are authorizes to end only 
+           at the end of the diagram (in x=1 axis) so this will forbid
+           to put any vertex at y=0-1 (except if x=1)
+if bigger than 0, minimal distance in before putting a external line
+          on the border of the diagram.
+
+
+The computation of y is done in this way
+first compute the distance [dist] between two vertex and assign the point.
+begin_gap and end_gap are the ratio of the compute distance to put
+between min and first vertex.
+
+</pre>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="define_vertex_at_border"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">define_vertex_at_border</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">vertex</span>,
+        <span class="sig-arg">level</span>,
+        <span class="sig-arg">pos_y</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.define_vertex_at_border">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Define the position of the vertex considering the distance required in
+  the Drawing Options. Update the option if needed.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="remove_t_channel"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">remove_t_channel</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.remove_t_channel">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Removes all T-channel in a diagram and convert those in S-channel. 
+  This occur for 1&gt;X diagram where T-channel are wrongly define.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="solve_line_direction"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">solve_line_direction</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.solve_line_direction">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <pre class="literalblock">
+Computes the directions of the lines of the diagrams.
+first use simple rules as particles move in time directions (to right).
+- define_line_orientation -. Then flip T-channel particles to 
+correct fermion flow in T-channel. Majorana case not deal correctly 
+at this stage.
+
+</pre>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="adjust_position"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">adjust_position</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.adjust_position">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <pre class="literalblock">
+Modify the position of some particles in order to improve the final
+diagram look. This routines use one option
+1) max_size which forbids external particles to be longer than max_size.
+    This is in level unit. If a line is too long we contract it to 
+    max_size preserving the orientation.
+2) external indicating the minimal x-gap for an external line. This 
+    constraints is already take into account in previous stage. But that
+    stage cann't do non integer gap. So this routines correct this.
+
+</pre>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="_debug_load_diagram"></a>
+<div class="private">
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">_debug_load_diagram</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram._debug_load_diagram">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Return a string to check to conversion of format for the diagram.</p>
+  <p>This is a debug function.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="_debug_level"></a>
+<div class="private">
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">_debug_level</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">text</span>=<span class="sig-default">1</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram._debug_level">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns a string to check the level of each vertex.</p>
+  <p>This is a debug function.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="_debug_position"></a>
+<div class="private">
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">_debug_position</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram._debug_position">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns a string to check the position of each vertex.</p>
+  <p>This is a debug function.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="_debug_has_intersection"></a>
+<div class="private">
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">_debug_has_intersection</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram._debug_has_intersection">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns if some line cross are crossing each other.</p>
+  <p>This is a debug Function and is used for the test routine.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="__eq__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__eq__</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">other</span>)</span>
+    <br /><em class="fname">(Equality operator)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.iolibs.drawing-pysrc.html#FeynmanDiagram.__eq__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Check if two diagrams are equivalent. (same structure-same 
+  particle)</p>
+  <p>This function is not used for the moment. The initial purpose was the 
+  avoid duplication of identical diagram in the output (these could happen 
+  if we contract non propagating line). But the number of such comparaison 
+  rise as the number of diagram square such that the total time needed for 
+  this feature was consider as too (time-)expansive.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="madgraph-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+      <th class="navbar" width="100%"></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Wed May 19 10:22:48 2010
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

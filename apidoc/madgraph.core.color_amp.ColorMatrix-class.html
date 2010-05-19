@@ -1,0 +1,637 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>madgraph.core.color_amp.ColorMatrix</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="madgraph-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+      <th class="navbar" width="100%"></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="madgraph-module.html">Package&nbsp;madgraph</a> ::
+        <a href="madgraph.core-module.html">Package&nbsp;core</a> ::
+        <a href="madgraph.core.color_amp-module.html">Module&nbsp;color_amp</a> ::
+        Class&nbsp;ColorMatrix
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+        <tr><td align="right"><span class="options"
+            >[<a href="frames.html" target="_top">frames</a
+            >]&nbsp;|&nbsp;<a href="madgraph.core.color_amp.ColorMatrix-class.html"
+            target="_top">no&nbsp;frames</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS DESCRIPTION ==================== -->
+<h1 class="epydoc">Class ColorMatrix</h1><p class="nomargin-top"><span class="codelink"><a href="madgraph.core.color_amp-pysrc.html#ColorMatrix">source&nbsp;code</a></span></p>
+<pre class="base-tree">
+object --+    
+         |    
+      dict --+
+             |
+            <strong class="uidshort">ColorMatrix</strong>
+</pre>
+
+<hr />
+<p>A color matrix, i.e. a dictionary with pairs (i,j) as keys where i and
+  j refer to elements of color basis objects. Values are Color Factor 
+  objects. Also contains two additional dictionaries, one with the fixed Nc
+  representation of the matrix, and the other one with the 
+  &quot;inverted&quot; matrix, i.e. a dictionary where keys are values of 
+  the color matrix.</p>
+
+<!-- ==================== INSTANCE METHODS ==================== -->
+<a name="section-InstanceMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Instance Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-InstanceMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type"><pre class="literalblock">
+new empty dictionary
+
+</pre></span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.core.color_amp.ColorMatrix-class.html#__init__" class="summary-sig-name">__init__</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">col_basis</span>,
+        <span class="summary-sig-arg">col_basis2</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">Nc</span>=<span class="summary-sig-default">3</span>,
+        <span class="summary-sig-arg">Nc_power_min</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">Nc_power_max</span>=<span class="summary-sig-default">None</span>)</span><br />
+      Initialize a color matrix with one or two color basis objects.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.core.color_amp-pysrc.html#ColorMatrix.__init__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.core.color_amp.ColorMatrix-class.html#build_matrix" class="summary-sig-name">build_matrix</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">Nc</span>=<span class="summary-sig-default">3</span>,
+        <span class="summary-sig-arg">Nc_power_min</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">Nc_power_max</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">is_symmetric</span>=<span class="summary-sig-default">False</span>)</span><br />
+      Create the matrix using internal color basis objects.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.core.color_amp-pysrc.html#ColorMatrix.build_matrix">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.core.color_amp.ColorMatrix-class.html#create_new_entry" class="summary-sig-name">create_new_entry</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">struct1</span>,
+        <span class="summary-sig-arg">struct2</span>,
+        <span class="summary-sig-arg">Nc_power_min</span>,
+        <span class="summary-sig-arg">Nc_power_max</span>,
+        <span class="summary-sig-arg">Nc</span>)</span><br />
+      Create a new product result, and result with fixed Nc for two color 
+      basis entries.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.core.color_amp-pysrc.html#ColorMatrix.create_new_entry">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.core.color_amp.ColorMatrix-class.html#__str__" class="summary-sig-name">__str__</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Returns a nicely formatted string with the fixed Nc representation of
+      the current matrix (only the real part)</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.core.color_amp-pysrc.html#ColorMatrix.__str__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="get_line_denominators"></a><span class="summary-sig-name">get_line_denominators</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      Get a list with the denominators for the different lines in the color
+      matrix</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.core.color_amp-pysrc.html#ColorMatrix.get_line_denominators">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="get_line_numerators"></a><span class="summary-sig-name">get_line_numerators</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">line_index</span>,
+        <span class="summary-sig-arg">den</span>)</span><br />
+      Returns a list of numerator for line line_index, assuming a common 
+      denominator den.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.core.color_amp-pysrc.html#ColorMatrix.get_line_numerators">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code>dict</code></b>:
+      <code>__cmp__</code>,
+      <code>__contains__</code>,
+      <code>__delitem__</code>,
+      <code>__eq__</code>,
+      <code>__ge__</code>,
+      <code>__getattribute__</code>,
+      <code>__getitem__</code>,
+      <code>__gt__</code>,
+      <code>__iter__</code>,
+      <code>__le__</code>,
+      <code>__len__</code>,
+      <code>__lt__</code>,
+      <code>__ne__</code>,
+      <code>__new__</code>,
+      <code>__repr__</code>,
+      <code>__setitem__</code>,
+      <code>__sizeof__</code>,
+      <code>clear</code>,
+      <code>copy</code>,
+      <code>fromkeys</code>,
+      <code>get</code>,
+      <code>has_key</code>,
+      <code>items</code>,
+      <code>iteritems</code>,
+      <code>iterkeys</code>,
+      <code>itervalues</code>,
+      <code>keys</code>,
+      <code>pop</code>,
+      <code>popitem</code>,
+      <code>setdefault</code>,
+      <code>update</code>,
+      <code>values</code>
+      </p>
+    <p class="indent-wrapped-lines"><b>Inherited from <code>object</code></b>:
+      <code>__delattr__</code>,
+      <code>__format__</code>,
+      <code>__reduce__</code>,
+      <code>__reduce_ex__</code>,
+      <code>__setattr__</code>,
+      <code>__subclasshook__</code>
+      </p>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS METHODS ==================== -->
+<a name="section-ClassMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Class Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-ClassMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="madgraph.core.color_amp.ColorMatrix-class.html#fix_summed_indices" class="summary-sig-name">fix_summed_indices</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">struct1</span>,
+        <span class="summary-sig-arg">struct2</span>)</span><br />
+      Returns a copy of the immutable Color String representation struct2 
+      where summed indices are modified to avoid duplicates with those 
+      appearing in struct1.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.core.color_amp-pysrc.html#ColorMatrix.fix_summed_indices">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+</table>
+<!-- ==================== STATIC METHODS ==================== -->
+<a name="section-StaticMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Static Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-StaticMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="lcm"></a><span class="summary-sig-name">lcm</span>(<span class="summary-sig-arg">a</span>,
+        <span class="summary-sig-arg">b</span>)</span><br />
+      Return lowest common multiple.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.core.color_amp-pysrc.html#ColorMatrix.lcm">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="lcmm"></a><span class="summary-sig-name">lcmm</span>(<span class="summary-sig-arg">*args</span>)</span><br />
+      Return lcm of args.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="madgraph.core.color_amp-pysrc.html#ColorMatrix.lcmm">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS VARIABLES ==================== -->
+<a name="section-ClassVariables"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Class Variables</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-ClassVariables"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="_col_basis1"></a><span class="summary-name">_col_basis1</span> = <code title="None">None</code><br />
+      hash(x)
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="_col_basis2"></a><span class="summary-name">_col_basis2</span> = <code title="None">None</code><br />
+      hash(x)
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="col_matrix_fixed_Nc"></a><span class="summary-name">col_matrix_fixed_Nc</span> = <code title="{}"><code class="variable-group">{</code><code class="variable-group">}</code></code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="inverted_col_matrix"></a><span class="summary-name">inverted_col_matrix</span> = <code title="{}"><code class="variable-group">{</code><code class="variable-group">}</code></code>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code>dict</code></b>:
+      <code>__hash__</code>
+      </p>
+    </td>
+  </tr>
+</table>
+<!-- ==================== PROPERTIES ==================== -->
+<a name="section-Properties"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Properties</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-Properties"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code>object</code></b>:
+      <code>__class__</code>
+      </p>
+    </td>
+  </tr>
+</table>
+<!-- ==================== METHOD DETAILS ==================== -->
+<a name="section-MethodDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Method Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-MethodDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="__init__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__init__</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">col_basis</span>,
+        <span class="sig-arg">col_basis2</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">Nc</span>=<span class="sig-default">3</span>,
+        <span class="sig-arg">Nc_power_min</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">Nc_power_max</span>=<span class="sig-default">None</span>)</span>
+    <br /><em class="fname">(Constructor)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.core.color_amp-pysrc.html#ColorMatrix.__init__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Initialize a color matrix with one or two color basis objects. If only
+  one color basis is given, the other one is assumed to be equal. As 
+  options, any value of Nc and minimal/maximal power of Nc can also be 
+  provided. Note that the min/max power constraint is applied only at the 
+  end, so that it does NOT speed up the calculation.</p>
+  <dl class="fields">
+    <dt>Returns: <pre class="literalblock">
+new empty dictionary
+
+</pre></dt>
+    <dt>Overrides:
+        object.__init__
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="build_matrix"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">build_matrix</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">Nc</span>=<span class="sig-default">3</span>,
+        <span class="sig-arg">Nc_power_min</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">Nc_power_max</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">is_symmetric</span>=<span class="sig-default">False</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.core.color_amp-pysrc.html#ColorMatrix.build_matrix">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Create the matrix using internal color basis objects. Use the stored 
+  color basis objects and takes Nc and Nc_min/max parameters as __init__. 
+  If is_isymmetric is True, build only half of the matrix which is assumed 
+  to be symmetric.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="create_new_entry"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">create_new_entry</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">struct1</span>,
+        <span class="sig-arg">struct2</span>,
+        <span class="sig-arg">Nc_power_min</span>,
+        <span class="sig-arg">Nc_power_max</span>,
+        <span class="sig-arg">Nc</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.core.color_amp-pysrc.html#ColorMatrix.create_new_entry">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Create a new product result, and result with fixed Nc for two color 
+  basis entries. Implement Nc power limits.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="__str__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__str__</span>(<span class="sig-arg">self</span>)</span>
+    <br /><em class="fname">(Informal representation operator)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.core.color_amp-pysrc.html#ColorMatrix.__str__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns a nicely formatted string with the fixed Nc representation of 
+  the current matrix (only the real part)</p>
+  <dl class="fields">
+    <dt>Overrides:
+        object.__str__
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="fix_summed_indices"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">fix_summed_indices</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">struct1</span>,
+        <span class="sig-arg">struct2</span>)</span>
+    <br /><em class="fname">Class Method</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="madgraph.core.color_amp-pysrc.html#ColorMatrix.fix_summed_indices">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns a copy of the immutable Color String representation struct2 
+  where summed indices are modified to avoid duplicates with those 
+  appearing in struct1. Assumes internal summed indices are negative.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="madgraph-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+      <th class="navbar" width="100%"></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Wed May 19 10:22:47 2010
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>
