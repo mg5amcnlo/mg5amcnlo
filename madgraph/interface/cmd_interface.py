@@ -119,6 +119,7 @@ class CmdExtended(cmd.Cmd):
             
     def exec_cmd(self, line):
         """for third party call, call the line with pre and postfix treatment"""
+        
         print line
         line = self.precmd(line)
         stop = cmd.Cmd.onecmd(self, line)
@@ -148,7 +149,19 @@ class CmdExtended(cmd.Cmd):
 #=============================================================================
 def split_arg(line):
     """Split a line of arguments"""
-    return line.split()
+    
+    split = line.split()
+    out=[]
+    tmp=''
+    for data in split:
+        if data[-1] == '\\':
+            tmp += data[:-1]+' '
+        elif tmp:
+            out.append(tmp+data)
+        else:
+            out.append(data)
+    return out
+
  
 
 #===============================================================================
@@ -298,7 +311,7 @@ class CheckValidForCmd(object):
             " please create one first!")
 
         if len(args) < 2:
-            self.help_generate()
+            self.help_add()
             raise self.InvalidCmd('\"add\" command requires two arguments')
         
         if args[0] != 'process':
@@ -428,15 +441,15 @@ class CheckValidForCmd(object):
         
         if not args or  args[0] not in self._import_formats:
             self.help_import()
-            return False
+            raise self.InvalidCmd('no format indicated for the import')
         
         if args[0] != 'proc_v4' and len(args) != 2:
             self.help_import()
-            return False
+            raise self.InvalidCmd('not correct number of arguments')
         
         if args[0] == 'proc_v4' and len(args)!=2 and not self._export_dir:
             self.help_import()
-            return False            
+            raise self.InvalidCmd('No automatic path available')            
         
         return True
     
