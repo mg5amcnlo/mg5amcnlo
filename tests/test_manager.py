@@ -63,7 +63,7 @@ del MGME_dir_possibility
 #===============================================================================
 # run
 #===============================================================================
-def run(expression='', re_opt=0, package='./tests/', verbosity=1):
+def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1):
     """ running the test associated to expression. By default, this launch all 
     test inherited from TestCase. Expression can be the name of directory, 
     module, class, function or event standard regular expression (in re format)
@@ -353,7 +353,7 @@ if __name__ == "__main__":
                       help="defined the verbosity level [%default]")
     parser.add_option("-r", "--reopt", type="int", default=0,
                   help="regular expression tag [%default]")
-    parser.add_option("-p", "--path", default='./tests/',
+    parser.add_option("-p", "--path", default='./tests/unit_tests',
                   help="position to start the search (from root)  [%default]")
     parser.add_option("-l", "--logging", default='CRITICAL',
         help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
