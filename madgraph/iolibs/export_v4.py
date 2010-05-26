@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+from bsddb.test.test_thread import WindowsError
 
 """Methods and classes to export matrix elements to v4 format."""
 
@@ -54,7 +55,11 @@ def copy_v4template(mgme_dir, dir_path, model_dir, clean):
         if os.environ.has_key('MADGRAPH_BASE'):
             subprocess.call([os.path.join('bin', 'clean_template'), '--web'])
         else:
-            subprocess.call([os.path.join('bin', 'clean_template')])
+            try:
+                subprocess.call([os.path.join('bin', 'clean_template')])
+            except WindowsError, why:
+                logger.error('Impossible to clean correctly Template. ' + \
+                                     'The following error is returned:\n %s' % why)
         os.chdir(old_pos)
         
         #Write version info
