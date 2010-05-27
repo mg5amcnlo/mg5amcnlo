@@ -27,6 +27,7 @@ import me_comparator
 # Get full logging info
 #logging.basicConfig(level=logging.INFO)
 
+
 # specify the position of different codes
 mg5_path = os.sep.join(os.path.realpath(__file__).split(os.sep)[:-3])
 print 'mg5_path', mg5_path
@@ -83,6 +84,7 @@ if '__main__' == __name__:
     my_comp.run_comparison(my_proc_list,
                         model='sm', orders={'QED':99, 'QCD':99}, energy=500)
 
+
     # Do some cleanup
     my_comp.cleanup()
 
@@ -91,6 +93,5 @@ if '__main__' == __name__:
 
     # Print a list of non zero processes
     #print my_comp.get_non_zero_processes()
-
 
 
