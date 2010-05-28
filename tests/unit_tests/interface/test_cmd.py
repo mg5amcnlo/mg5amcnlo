@@ -20,8 +20,7 @@ import madgraph.interface.cmd_interface as Cmd
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
 _pickle_path =os.path.join(_file_path, os.pardir, 'input_files')
-                                    
-
+Cmd.stdout = os.open(os.devnull, os.O_RDWR)
 #===============================================================================
 # TestCmd
 #===============================================================================

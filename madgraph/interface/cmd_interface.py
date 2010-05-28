@@ -42,6 +42,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing as draw_lib
 import madgraph.iolibs.drawing_eps as draw
 
+from madgraph.interface import MadGraph5Error
 #position of MG5
 root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 root_path = os.path.split(root_path)[0]
@@ -58,20 +59,17 @@ for position in MGME_dir_possibility:
         MGME_dir = os.path.realpath(position)
         break
 del MGME_dir_possibility
+
+
 #===============================================================================
 # CmdExtended
 #===============================================================================
 class CmdExtended(cmd.Cmd):
     """Extension of the cmd.Cmd command line.
-    This extensions supports linesbreak, history
-    support commentary
-    """
-    debug = 0
+    This extensions supports line breaking, history, commentary.
+    internal call to cmdline,..."""
 
-    class MadGraphCmdError(Exception):
-        """Exception raised if an error occurs in the execution
-        of command."""
-        pass
+
 
     def __init__(self, *arg, **opt):
         """add possibility of line break/history """
@@ -111,11 +109,9 @@ class CmdExtended(cmd.Cmd):
         
         try:
             cmd.Cmd.onecmd(self, line)
-        except Exception as error:
-            print 'command: \"%s\" stops with following error:' % line
-            print error.__class__.__name__,':', error
-            if self.debug:
-                raise
+        except MadGraph5Error as error:
+            print '\ncommand \"%s\" stops with following error:' % line
+            print error.__class__.__name__,':', str(error).replace('\n','\n\t')
             
     def exec_cmd(self, line):
         """for third party call, call the line with pre and postfix treatment"""
@@ -290,7 +286,7 @@ class HelpToCmd(object):
 class CheckValidForCmd(object):
     """ The Series of help routine for the MadGraphCmd"""
     
-    class InvalidCmd(Exception):
+    class InvalidCmd(MadGraph5Error):
         """a class for the invalid syntax call"""
     
     def check_add(self, args):
@@ -323,15 +319,12 @@ class CheckValidForCmd(object):
         syntax: define multipart_name [ part_name_list ]
         """
         
-        if len(args) < 1:
+        if len(args) < 2:
             self.help_define()
-            return False
+            raise self.InvalidCmd('\"define\" command requires at least two arguments')
 
         if len(self._curr_model['particles']) == 0:
-            print "No particle list currently active, please create one first!"
-            return False
-        
-        return True
+            raise self.InvalidCmd("No particle list currently active, please create one first!")
 
     def check_display(self, args):
         """check the validity of line
@@ -340,40 +333,41 @@ class CheckValidForCmd(object):
             
         if len(args) != 1:
             self.help_display()
-            return False
-        else:
-            return True
+            raise self.InvalidCmd('\"display\" command requires one argument')
     
     def check_draw(self, args):
         """check the validity of line
-        syntax: draw FILEPATH [option=value]
+        syntax: draw DIRPATH [option=value]
         """
+        
         if len(args) < 1:
             self.help_draw()
-            return False
+            raise self.InvalidCmd('\"draw\" command requires a directory path')
         
         if not self._curr_amps:
-            print "No process generated, please generate a process!"
-            return False
+            raise self.InvalidCmd("No process generated, please generate a process!")
+            
 
         if not os.path.isdir(args[0]):
-            print "%s is not a valid directory for export file" % args[1]
-            return False
-        
-        return True
-    
+            raise self.InvalidCmd( "%s is not a valid directory for export file" % args[1])
+            
     def check_export(self, args):
         """check the validity of line
         syntax: export MODE FILEPATH
         """  
-        if len(args) == 0 or (len(args) == 1 and not self._export_dir) or \
-                                           args[0] not in self._export_formats:
+        if len(args) == 0:
             self.help_export()
-            return False
+            raise self.InvalidCmd('\"export\" require at least a format of output')
+        elif(len(args) == 1 and not self._export_dir):
+            self.help_export()
+            raise self.InvalidCmd(\
+        'No output position defined (either explicitely or via a setup command)')
+        elif(args[0] not in self._export_formats):
+            self.help_export()
+            raise self.InvalidCmd('%s is a valid export format.' % args[0])
 
         if not self._curr_amps:
-            print "No process generated, please generate a process!"
-            return False
+            raise self.InvalidCmd("No process generated, please generate a process!")
 
         if len(args) == 1:
             path = os.path.join(self._export_dir, 'SubProcesses')
@@ -381,22 +375,22 @@ class CheckValidForCmd(object):
             path = args[1]
 
         if not os.path.isdir(path):
-            print "%s is not a valid directory for export file" % path
+            text = "%s is not a valid directory for export file\n" % path
             if args[0] == 'madevent_v4':
-                print "to create a valid output directory you can use the command"
-                print "$> setup madevent_v4 auto"
-                print " and then run export as follow:"
-                print "$> export madevent_v4" 
-            return False
+                text += "to create a valid output directory you can use the command\n"
+                text += "$> setup madevent_v4 auto\n"
+                text += " and then run export as follow:\n"
+                text += "$> export madevent_v4\n" 
+            raise self.InvalidCmd(text)
         
         if args[0] == 'madevent_v4' and  not os.path.isdir(
                                         os.path.join(path,'..','SubProcesses')):
-            print "%s is not a valid directory for export file" % path
-            print "to create a valid output directory you can use the command"
-            print "$> setup madevent_v4 auto" 
-            print " and then run export as follow:"
-            print "$> export madevent_v4" 
-            return False
+            text = "%s is not a valid directory for export file" % path
+            text += "to create a valid output directory you can use the command"
+            text += "$> setup madevent_v4 auto" 
+            text += " and then run export as follow:"
+            text += "$> export madevent_v4" 
+            raise self.InvalidCmd(text)
 
         return path
     
@@ -405,99 +399,94 @@ class CheckValidForCmd(object):
         
         if len(line) < 1:
             self.help_generate()
-            return False
+            raise self.InvalidCmd('\"generate\" command requires a process')
 
         if len(self._curr_model['particles']) == 0:
-            print "No particle list currently active, please create one first!"
-            return False
+            raise self.InvalidCmd("No particle list currently active, please create one first!")
 
         if len(self._curr_model['interactions']) == 0:
-            print "No interaction list currently active," + \
-            " please create one first!"
-            return False
-    
-        return True
+            raise self.InvalidCmd("No interaction list currently active," + \
+            " please create one first!")
     
     def check_history(self, args):
         """check the validity of line"""
         
         if len(args) > 1:
             self.help_history()
-            return False
+            raise self.InvalidCmd('\"history\" command requires one argument')
         
         if len(args):
             if args[0] not in ['clean', '.']:
                 dirpath = os.path.dirname(args[0])
                 if dirpath and not os.path.exists(dirpath):
-                    print "invalid path"
-                    return False
+                    raise self.InvalidCmd("invalid path %s " % dirpath)
             elif args[0] == '.' and not self._export_dir:
-                print 'no export dir configure'
-                return False
-        return True
+                raise self.InvalidCmd('no output directory configure')
     
     def check_import(self, args):
         """check the validity of line"""
         
         if not args or  args[0] not in self._import_formats:
             self.help_import()
-            raise self.InvalidCmd('no format indicated for the import')
+            raise self.InvalidCmd('wrong \"import\" format')
         
         if args[0] != 'proc_v4' and len(args) != 2:
             self.help_import()
-            raise self.InvalidCmd('not correct number of arguments')
+            raise self.InvalidCmd(' incorrect number of arguments')
         
         if args[0] == 'proc_v4' and len(args)!=2 and not self._export_dir:
             self.help_import()
-            raise self.InvalidCmd('No automatic path available')            
+            raise self.InvalidCmd('PATH is mandatory in the current context\n' + \
+                                  'You maybe forget to run \"setup\" command')            
         
-        return True
-    
     def check_load(self, args):
         """ check the validity of the line"""
         
         if len(args) != 2:
             self.help_load()
-            return False
-        return True
+            raise self.InvalidCmd('wrong \"load\" format')
+            
         
     def check_makehtml(self, args):
         """check the validity of the line"""
     
         if len(args) < 1:
             self.help_makehtml()
-            return False
+            raise self.InvalidCmd('wrong \"makehtml\" format')
         
         if args[0] != 'madevent_v4':
             self.help_makehtml()
-            return False
+            raise self.InvalidCmd('%s is not recognized as a valid option' % args[0])
         
         if (len(args) == 1 and not self._export_dir) or \
                         (len(args) > 1 and not os.path.isdir(args[1])):
             self.help_makehtml()
-            return False
-        return True
+            raise self.InvalidCmd('no valid directory path output.')
     
     def check_save(self, args):
         """ check the validity of the line"""
         if len(args) != 2:
             self.help_save()
-            return False
-        return True
+            raise self.InvalidCmd('wrong \"save\" format')
     
     def check_setup(self, args):
         """ check the validity of the line"""
         
         if len(args) < 2:
             self.help_setup()
-            return False
+            raise self.InvalidCmd('wrong \"setup\" format')
+        
+        if args[1] == '.' and not self._export_dir:
+            self.help_setup()
+            text = "\".\" options is not available in the current situation\n" + \
+                    "Do a  \"setup\" first" 
+            raise self.InvalidCmd(text)
         
         if not self._model_dir:
-            print 'No model found. Please import a model first and then retry'
-            print '  for example do : import model_v4 sm'
-            return False
-        return True
-
+            text = 'No model found. Please import a model first and then retry\n'
+            text += 'for example do : import model_v4 sm'
+            raise self.InvalidCmd(text)
+        
 #===============================================================================
 # CheckValidForCmdWeb
 #===============================================================================
@@ -505,9 +494,8 @@ class CheckValidForCmdWeb(CheckValidForCmd):
     """ Check the validity of input line for web entry
     (no explicit path authorized)"""
     
-    class WebRestriction(Exception):
+    class WebRestriction(MadGraph5Error):
         """class for WebRestriction"""
-    
     
     def check_draw(self, args):
         """check the validity of line
@@ -520,25 +508,29 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         syntax: export MODE FILEPATH
         No FilePath authorized on the web
         """  
+
+
         if len(args) > 1:
             raise self.WebRestriction('Path can\'t be specify on the web.' + \
                                       'use the setup command to avoid the ' + \
                                       'need to specify a path')
-        
+  
         return CheckValidForCmd.check_export(self, args)
     
     def check_history(self, args):
         """check the validity of line
         No Path authorize for the Web"""
         
+        CheckValidForCmd.check_history(self, args)
+        
         if len(args) == 2 and args[1] not in ['.','clean']:
             raise self.WebRestriction('Path can\'t be specify on the web.')
-        
-        return CheckValidForCmd.check_history(self, args)
         
     def check_import(self, args):
         """check the validity of line
         No Path authorize for the Web"""
+        
+        CheckValidForCmd.check_import(self, args)
         
         if len(args) >= 2 and args[0] == 'proc_v4' and args[1] != '.':
             raise self.WebRestriction('Path can\'t be specify on the web.')
@@ -550,21 +542,23 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         for arg in args:
             if '/' in arg:
                 raise self.WebRestriction('Path can\'t be specify on the web.')
-             
-        return CheckValidForCmd.check_import(self, args)
         
     def check_makehtml(self, args):
         """check the validity of the line
         No Path authorize for the Web"""
     
+        CheckValidForCmd.check_makehtml(self, args)
+        
         if len(args) > 1:
             raise self.WebRestriction('Path can\'t be specify on the web.')
         
-        return CheckValidForCmd.check_makehtml(self, args)
+        
         
     def check_load(self, args):
         """ check the validity of the line
         No Path authorize for the Web"""
+        
+        CheckValidForCmd.check_load(self, args)
         
         if len(args)==2:
             if args[0] != 'model':
@@ -582,13 +576,10 @@ class CheckValidForCmdWeb(CheckValidForCmd):
     def check_setup(self, args):
         """ check the validity of the line"""
         
-        if not CheckValidForCmd.check_setup(self, args):
-            return False
+        CheckValidForCmd.check_setup(self, args)
         
         if '/' in args[2]:
             raise self.WebRestriction('Path can\'t be specify on the web.')
-        
-        return True
     
 #===============================================================================
 # CompleteForCmd
@@ -878,11 +869,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     myprocdef = self.extract_process(line)
                 else:
                     myprocdef, line = self.extract_decay_chain_process(line)
-            except self.MadGraphCmdError, error:
-                print "Empty or wrong format process, please try again. Error:" 
-                print error
-                myprocdef = None
-
+            except MadGraph5Error, error:
+                raise MadGraph5Error("Empty or wrong format process :\n" + \
+                                     str(error))
+                
             if myprocdef:
 
                 cpu_time1 = time.time()
@@ -915,9 +905,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Particle names always lowercase
         line = line.lower()
         args = split_arg(line)
-        if not self.check_define(args):
-            return
-
+        # check the validity of the arguments
+        self.check_define(args)
 
         label = args[0]
         pdg_list = []
@@ -929,11 +918,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if mypart:
                 pdg_list.append(mypart.get_pdg_code())
             else:
-                print "No particle %s in model: skipped" % part_name
+                raise MadGraph5Error("No particle %s in model" % \
+                                                                      part_name)
 
         if not pdg_list:
-            print """Empty or wrong format for multiparticle.
-            Please try again."""
+            raise MadGraph5Error('Empty or wrong format for multiparticle.\n' + \
+                                 "Please try again.")
 
         self._multiparticles[label] = pdg_list
     
@@ -942,8 +932,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         """Display current internal status"""
 
         args = split_arg(line)
-        if not self.check_display(args):
-            return
+        #check the validity of the arguments
+        self.check_display(args)
 
         if args[0] == 'particles':
             print "Current model contains %i particles:" % \
@@ -983,15 +973,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         """ draw the Feynman diagram for the given process """
 
         args = split_arg(line)
-        if not self.check_draw(args):
-            return
-        
+        # Check the validity of the arguments
+        self.check_draw(args)
 
         (options, args) = _draw_parser.parse_args(args)
         options = draw_lib.DrawOption(options)
         start = time.time()
         
-
         # Collect amplitudes
         amplitudes = diagram_generation.AmplitudeList()
 
@@ -1039,9 +1027,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Start of the actual routine
 
         args = split_arg(line)
-        path = self.check_export(args) #if valid return the path of the output
-        if not path:
-            return 
+        # Check the validity of the arguments and return the output path
+        path = self.check_export(args)
 
         ndiags, cpu_time = generate_matrix_elements(self)
         calls = 0
@@ -1097,8 +1084,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def do_generate(self, line):
         """Generate an amplitude for a given process"""
 
-        if not self.check_generate(line):
-            return
+        # Check line validity
+        self.check_generate(line)
 
         # Reset Helas matrix elements
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
@@ -1109,31 +1096,36 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 myprocdef = self.extract_process(line)
             else:
                 myprocdef, line = self.extract_decay_chain_process(line)
-        except self.MadGraphCmdError as error:
-            print "Empty or wrong format process, please try again. Error:\n" \
-                  + str(error)
-            myprocdef = None
-            
-        if myprocdef:
-            
-            cpu_time1 = time.time()
-            myproc = diagram_generation.MultiProcess(myprocdef)
-            self._curr_amps = myproc.get('amplitudes')
-            cpu_time2 = time.time()
+        except MadGraph5Error as error:
+            raise MadGraph5Error(\
+                    "Empty or wrong format process, please try again.\n" \
+                  + str(error))
+        
+        # Check that we have something    
+        if  not myprocdef:
+            raise MadGraph5Error("Empty or wrong format process, please try again.")
 
-            nprocs = len(self._curr_amps)
-            ndiags = sum([amp.get_number_of_diagrams() for \
+        # run the program
+        cpu_time1 = time.time()
+        myproc = diagram_generation.MultiProcess(myprocdef)
+        self._curr_amps = myproc.get('amplitudes')
+        cpu_time2 = time.time()
+
+        nprocs = len(self._curr_amps)
+        ndiags = sum([amp.get_number_of_diagrams() for \
                               amp in self._curr_amps])
-            print "%i processes with %i diagrams generated in %0.3f s" % \
+        print "%i processes with %i diagrams generated in %0.3f s" % \
                   (nprocs, ndiags, (cpu_time2 - cpu_time1))
-
-        else:
-            print "Empty or wrong format process, please try again."    
     
     
     def extract_process(self, line, proc_number = 0):
         """Extract a process definition from a string. Returns
         a ProcessDefinition."""
+
+        # Check basic validity of the line
+        if not line.count('>') in [1,2]:
+            raise self.InvalidCmd('Wrong use of \">\" special character.')
+        
 
         # Perform sanity modifications on the lines:
         # Add a space before any > , $ /
@@ -1208,8 +1200,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             if part_name == '>':
                 if not myleglist:
-                    raise self.MadGraphCmdError, \
-                          "No final state particles"
+                    raise MadGraph5Error, "No final state particles"
                 state = True
                 continue
 
@@ -1225,7 +1216,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 myleglist.append(base_objects.MultiLeg({'ids':mylegids,
                                                         'state':state}))
             else:
-                raise self.MadGraphCmdError, \
+                raise MadGraph5Error, \
                       "No particle %s in model" % part_name
 
         if filter(lambda leg: leg.get('state') == True, myleglist):
@@ -1286,8 +1277,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                 'required_s_channels': required_schannel_ids
                                  })
         #                       'is_decay_chain': decay_process\
-        else:
-            return None
 
     def extract_decay_chain_process(self, line, level_down=False):
         """Recursively extract a decay chain process definition from a
@@ -1344,7 +1333,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             if level_down:
                 if index_par == -1:
-                    raise self.MadGraphCmdError, \
+                    raise MadGraph5Error, \
                       "Missing ending parenthesis for decay process"
 
                 if index_par < index_comma:
@@ -1355,7 +1344,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if level_down:
             index_par = line.find(')')
             if index_par == -1:
-                raise self.MadGraphCmdError, \
+                raise MadGraph5Error, \
                       "Missing ending parenthesis for decay process"
             line = line[index_par + 1:]
             
@@ -1368,8 +1357,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         """write in a file the suite of command that was used"""
         
         args = split_arg(line)
-        if not self.check_history(args):
-            return
+        # Check arguments validity
+        self.check_history(args)
 
         if len(args) == 0:
             print '\n'.join(self.history)
@@ -1438,12 +1427,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                             import_v4.read_particles_v4))
                 print "%d particles imported" % \
                       len(self._curr_model['particles'])
-                return True
+                      
             elif filename.endswith('interactions.dat'):
                 if len(self._curr_model['particles']) == 0:
-                    print "No particle list currently active,",
-                    print "please create one first!"
-                    return False
+                    text =  "No particle list currently active,"
+                    text += "please create one first!"
+                    raise MadGraph5Error(text)
                 self._curr_model.set('interactions',
                                      files.read_from_file(
                                             filepath,
@@ -1451,39 +1440,36 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                             self._curr_model['particles']))
                 print "%d interactions imported" % \
                       len(self._curr_model['interactions'])
-                return True
            
             #not valid File
-            return False
+            raise MadGraph5Error("%s is not a valid v4 file name" % \
+                                        filepath)
 
         args = split_arg(line)
-        if not self.check_import(args):
-            return
+        # Check argument's validity
+        self.check_import(args)
+        
         
         if args[0] == 'model_v4':
             # Check for a file
             if os.path.isfile(args[1]):
-                suceed = import_v4file(self, args[1])
-                if not suceed:
-                    print "%s is not a valid v4 file name" % \
-                                        os.path.basename(args[1])
-                else:
-                    self._model_dir = os.path.dirname(args[1])
+                import_v4file(self, args[1])
+                self._model_dir = os.path.dirname(args[1])
                 return
             
             # Check for a valid directory
-            if os.path.isdir(args[1]):
+            elif os.path.isdir(args[1]):
                 self._model_dir = args[1]
             elif MGME_dir and os.path.isdir(os.path.join(MGME_dir, 'Models', \
                                                                       args[1])):
                 self._model_dir = os.path.join(MGME_dir, 'Models', args[1])
             elif not MGME_dir:
-                print "Path %s is not a valid pathname" % args[1]
-                print "and no MG_ME installation detected in other to search in Models"
-                return False                
+                error_text = "Path %s is not a valid pathname\n" % args[1]
+                error_text += "and no MG_ME installation detected in other to search in Models"
+                raise MadGraph5Error(error_text)
             else:
-                print "Path %s is not a valid pathname" % args[1]
-                return False
+                raise MadGraph5Error("Path %s is not a valid pathname" % args[1])
+                
             
             #Load the directory
             if os.path.exists(os.path.join(self._model_dir, 'model.pkl')):
@@ -1496,8 +1482,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     import_v4file(self, os.path.join(self._model_dir, \
                                                                       filename))
                 else:
-                    print "%s files doesn't exist in %s directory" % \
-                                        (filename, os.path.basename(args[1]))
+                    raise MadGraph5Error("%s files doesn't exist in %s directory" % \
+                                        (filename, os.path.basename(args[1])))
             #save model for next usage
             self.do_save('model %s ' % os.path.join(self._model_dir, \
                                                                    'model.pkl'))
@@ -1516,25 +1502,21 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                                 'proc_card.dat')    
                 self.check_for_export_dir(os.path.realpath(proc_card))
             else:
-                logging.error('No default directory are setup')
-                return
+                raise MadGraph5Error('No default directory are setup')
+
  
             #convert and excecute the card
             self.import_mg4_proc_card(proc_card)   
                                      
         elif args[0] == 'command':
             if not os.path.isfile(args[1]):
-                print "Path %s is not a valid pathname" % args[1]
+                raise MadGraph5Error("Path %s is not a valid pathname" % args[1])
             else:
                 # Check the status of export and try to use file position is no
                 #self._export dir are define
                 self.check_for_export_dir(args[1])
                 # Execute the card
-                self.import_mg5_proc_card(args[1])
-        else:
-            self.help_import()
-            return False
-    
+                self.import_mg5_proc_card(args[1])    
     
     def import_mg4_proc_card(self, filepath):
         """ read a V4 proc card, convert it and run it in mg5"""
@@ -1544,6 +1526,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
          
         # read the proc_card.dat
         reader = files.read_from_file(filepath, import_v4.read_proc_card_v4)
+        if not reader:
+            raise MadGraph5Error('\"%s\" is not a valid path' % filepath)
         
         if MGME_dir:
             #model_dir = os.path.join(MGME_dir, 'Models')
@@ -1594,10 +1578,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         """Load information from file"""
 
         args = split_arg(line)
-        if not self.check_load(args):
-            print 'not accepted'
-            return
-
+        # check argument validity
+        self.check_load(args)
 
         cpu_time1 = time.time()
         if args[0] == 'model':
@@ -1628,8 +1610,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         """Save information to file"""
 
         args = split_arg(line)
-        if not self.check_save(args):
-            return False
+        # Check argument validity
+        self.check_save(args)
 
         if args[0] == 'model':
             if self._curr_model:
@@ -1652,9 +1634,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         """ make the html output for a MAdevent directory """
         
         args = split_arg(line)
-        if not self.check_makehtml(args):
-            return
-                   
+        # Check argument validity
+        self.check_makehtml(args)
         
         if self._export_dir:
             dir_path = self._export_dir
@@ -1676,8 +1657,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         """Initialize a new Template or reinitialize one"""
         
         args = split_arg(line)
-        if not self.check_setup(args):
-            return False
+        # Check Argument validity
+        self.check_setup(args)
         
         clean = '-noclean' not in args
         force = '-f' in args 
@@ -1689,12 +1670,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                 
         # Check for special directory treatment
         if args[1] == '.':
-            if self._export_dir:
                 dir_path = self._export_dir
-            else:
-                print 'No possible working directory are detected'
-                self.help_setup()    
-                return False
         elif args[1] == 'auto':
             name_dir = lambda i: 'PROC_%s_%s' % \
                                         (os.path.split(self._model_dir)[-1], i)
@@ -1716,8 +1692,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             answer = raw_input('Do you want to continue? [y/n]')
             if answer != 'y':
-                print 'stop'
-                return False
+                raise MadGraph5Error('Stopped by user request')
 
         export_v4.copy_v4template(mgme_dir, dir_path, self._model_dir, clean)
         # Import the model
