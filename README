@@ -4,4 +4,7 @@ To run mg5:
 ./bin/mg5
 
 To run the test suite:
-./tests/test_manager.py (--verbose=1)
+  A) the unit_tests:
+      ./tests/test_manager.py (--verbose=1)
+  B) the parallel tests:
+      ./tests/parallel_tests/sample_script.py
