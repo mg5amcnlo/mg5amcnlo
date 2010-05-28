@@ -113,6 +113,9 @@ class CmdExtended(cmd.Cmd):
         except MadGraph5Error as error:
             print '\ncommand \"%s\" stops with following error:' % line
             print error.__class__.__name__,':', str(error).replace('\n','\n\t')
+            #stop the execution if on a non interactive mode
+            if self.use_rawinput == False:
+                sys.exit()
         except Exception as error:
             print '\ncommand \"%s\" stops with following error:' % line
             print error.__class__.__name__,':', str(error).replace('\n','\n\t')
@@ -123,10 +126,7 @@ class CmdExtended(cmd.Cmd):
             debug_file = open('./MG5_debug', 'a')
             traceback.print_exc(file=debug_file)
             
-                
-
-
-            
+                            
     def exec_cmd(self, line):
         """for third party call, call the line with pre and postfix treatment"""
         
