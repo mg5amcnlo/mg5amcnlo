@@ -44,11 +44,12 @@ import madgraph.iolibs.drawing as draw_lib
 import madgraph.iolibs.drawing_eps as draw
 
 from madgraph.interface import MadGraph5Error
-#position of MG5
+
+# position of MG5
 root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 root_path = os.path.split(root_path)[0]
 
-#position of MG_ME
+# position of MG_ME
 MGME_dir = None
 MGME_dir_possibility = [os.path.join(root_path, os.path.pardir),
                 os.path.join(os.getcwd(), os.path.pardir),
@@ -60,6 +61,9 @@ for position in MGME_dir_possibility:
         MGME_dir = os.path.realpath(position)
         break
 del MGME_dir_possibility
+
+# Special logger for the Cmd Interface
+logger = logging.getLogger('cmdprint')
 
 
 #===============================================================================
@@ -111,26 +115,32 @@ class CmdExtended(cmd.Cmd):
         try:
             cmd.Cmd.onecmd(self, line)
         except MadGraph5Error as error:
-            print '\ncommand \"%s\" stops with following error:' % line
-            print error.__class__.__name__,':', str(error).replace('\n','\n\t')
+            error_text = '\ncommand \"%s\" stops with following error:\n' % line
+            error_text += '%s : %s' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
+            logger.error(error_text)
             #stop the execution if on a non interactive mode
             if self.use_rawinput == False:
                 sys.exit()
         except Exception as error:
-            print '\ncommand \"%s\" stops with following error:' % line
-            print error.__class__.__name__,':', str(error).replace('\n','\n\t')
-            print 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
-            print 'More information are present in file \'./MG5_debug\'. '
-            print 'please associate that file to your report.'
+            # Make a beautiful error output
+            error_text ='\ncommand \"%s\" stops with following error:\n' % line
+            error_text += '%s : %s\n' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
+            error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5'
+            error_text += 'More information are present in file \'./MG5_debug\'.\n'
+            error_text += 'Please associate that file to your report.'
+            logger.critical(error_text)
+            # Create the debug files
             cmd.Cmd.onecmd(self, 'history ./MG5_debug')
             debug_file = open('./MG5_debug', 'a')
             traceback.print_exc(file=debug_file)
-            
+            #stop the execution if on a non interactive mode
+            if self.use_rawinput == False:
+                sys.exit()           
                             
     def exec_cmd(self, line):
         """for third party call, call the line with pre and postfix treatment"""
         
-        print line
+        logger.info(line)
         line = self.precmd(line)
         stop = cmd.Cmd.onecmd(self, line)
         stop = self.postcmd(stop, line)
@@ -144,8 +154,8 @@ class CmdExtended(cmd.Cmd):
         """Default action if line is not recognized"""
 
         # Faulty command
-        print "Command \"%s\" not recognized, please try again" % \
-                                                                 line.split()[0]
+        logger.warning("Command \"%s\" not recognized, please try again" % \
+                                                                line.split()[0])
     # Quit
     def do_quit(self, line):
         sys.exit(1)
@@ -898,20 +908,21 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     if amp not in self._curr_amps:
                         self._curr_amps.append(amp)
                     else:
-                        print "Warning: Already in processes:"
-                        print amp.nice_string_processes()
+                        warning = "Warning: Already in processes:\n%s" % \
+                                                    amp.nice_string_processes()
+                        logger.warning(warning)
 
                 cpu_time2 = time.time()
 
                 nprocs = len(myproc.get('amplitudes'))
                 ndiags = sum([amp.get_number_of_diagrams() for \
                                   amp in myproc.get('amplitudes')])
-                print "%i processes with %i diagrams generated in %0.3f s" % \
-                      (nprocs, ndiags, (cpu_time2 - cpu_time1))
+                logger.info("%i processes with %i diagrams generated in %0.3f s" % \
+                      (nprocs, ndiags, (cpu_time2 - cpu_time1)))
                 ndiags = sum([amp.get_number_of_diagrams() for \
                                   amp in self._curr_amps])
-                print "Total: %i processes with %i diagrams" % \
-                      (len(self._curr_amps), ndiags)                
+                logger.info("Total: %i processes with %i diagrams" % \
+                      (len(self._curr_amps), ndiags))                
   
     # Define a multiparticle label
     def do_define(self, line):
@@ -1013,10 +1024,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                          amp.get('process').nice_string())
             #plot.draw(opt=options)
             plot.draw()
-            print "Wrote file " + filename
+            logger.info("Wrote file " + filename)
 
         stop = time.time()
-        print 'time to draw', stop - start    
+        logger.info('time to draw', stop - start) 
     
     # Export a matrix element
     def do_export(self, line):
@@ -1053,9 +1064,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 filename = os.path.join(path, 'matrix_' + \
                            me.get('processes')[0].shell_string() + ".f")
                 if os.path.isfile(filename):
-                    print "Overwriting existing file %s" % filename
+                    logger.warning("Overwriting existing file %s" % filename)
                 else:
-                    print "Creating new file %s" % filename
+                    logger.info("Creating new file %s" % filename)
                 calls = calls + files.write_to_file(filename,
                                    export_v4.write_matrix_element_v4_standalone,
                                    me, self._curr_fortran_model)
@@ -1080,12 +1091,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                 os.path.split(self._model_dir)[-1],
                                 self._generate_info)
                 
-        print ("Generated helas calls for %d subprocesses " + \
+        logger.info(("Generated helas calls for %d subprocesses " + \
               "(%d diagrams) in %0.3f s") % \
               (len(self._curr_matrix_elements.get('matrix_elements')),
-               ndiags, cpu_time)
+               ndiags, cpu_time))
 
-        print "Wrote %d helas calls" % calls
+        logger.info("Wrote %d helas calls" % calls)
 
         # Replace the amplitudes with the actual amplitudes from the
         # matrix elements, which allows proper diagram drawing also of
@@ -1129,8 +1140,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         nprocs = len(self._curr_amps)
         ndiags = sum([amp.get_number_of_diagrams() for \
                               amp in self._curr_amps])
-        print "%i processes with %i diagrams generated in %0.3f s" % \
-                  (nprocs, ndiags, (cpu_time2 - cpu_time1))
+        logger.info("%i processes with %i diagrams generated in %0.3f s" % \
+                  (nprocs, ndiags, (cpu_time2 - cpu_time1)))
     
     
     def extract_process(self, line, proc_number = 0):
@@ -1305,7 +1316,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             proc_number = int(proc_number_re.group(2))
             line = proc_number_re.group(1) + \
                    proc_number_re.group(3)
-            print line
+            logger.info(line)
             
         index_comma = line.find(",")
         index_par = line.find(")")
@@ -1380,7 +1391,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             return False
         elif args[0] == 'clean':
             self.history = []
-            print 'history is cleaned'
+            logger.info('history is cleaned')
             return False
         elif args[0] == '.':
             output_file = os.path.join(self._export_dir, 'Cards', \
@@ -1440,8 +1451,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                      files.read_from_file(
                                             filepath,
                                             import_v4.read_particles_v4))
-                print "%d particles imported" % \
-                      len(self._curr_model['particles'])
+                logger.info("%d particles imported" % \
+                      len(self._curr_model['particles']))
                       
             elif filename.endswith('interactions.dat'):
                 if len(self._curr_model['particles']) == 0:
@@ -1453,8 +1464,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                             filepath,
                                             import_v4.read_interactions_v4,
                                             self._curr_model['particles']))
-                print "%d interactions imported" % \
-                      len(self._curr_model['interactions'])
+                logger.info("%d interactions imported" % \
+                      len(self._curr_model['interactions']))
            
             #not valid File
             raise MadGraph5Error("%s is not a valid v4 file name" % \
@@ -1602,22 +1613,22 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             #save_model.save_model(args[1], self._curr_model)
             if isinstance(self._curr_model, base_objects.Model):
                 cpu_time2 = time.time()
-                print "Loaded model from file in %0.3f s" % \
-                      (cpu_time2 - cpu_time1)
+                logger.info("Loaded model from file in %0.3f s" % \
+                      (cpu_time2 - cpu_time1))
             else:
                 print 'Error: Could not load model from file ', args[1]
         elif args[0] == 'processes':
             self._curr_amps = save_load_object.load_from_file(args[1])
             if isinstance(self._curr_amps, diagram_generation.AmplitudeList):
                 cpu_time2 = time.time()
-                print "Loaded processes from file in %0.3f s" % \
-                      (cpu_time2 - cpu_time1)
+                logger.info("Loaded processes from file in %0.3f s" % \
+                      (cpu_time2 - cpu_time1))
                 if self._curr_amps and not self._curr_model.get('name'):
                     self._curr_model = self._curr_amps[0].\
                                         get('process').get('model')
-                    print "Model set from process."
+                    logger.info("Model set from process.")
             else:
-                print 'Error: Could not load processes from file ', args[1]
+                raise self.InvalidCmd('Could not load processes from file %s' % args[1])
         else:
             self.help_save()
     
@@ -1632,15 +1643,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if self._curr_model:
                 #save_model.save_model(args[1], self._curr_model)
                 if save_load_object.save_to_file(args[1], self._curr_model):
-                    print 'Saved model to file ', args[1]
+                    logger.info('Saved model to file %s' % args[1])
             else:
-                print 'No model to save!'
+                raise self.InvalidCmd('No model to save!')
         elif args[0] == 'processes':
             if self._curr_amps:
                 if save_load_object.save_to_file(args[1], self._curr_amps):
-                    print 'Saved processes to file ', args[1]
+                    logger.info('Saved processes to file %s' % args[1])
             else:
-                print 'No processes to save!'
+                raise self.InvalidCmd('No processes to save!')
         else:
             self.help_save()
             
@@ -1701,18 +1712,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             dir_path = os.path.join(self.writing_dir, args[1])
         
         if not force and os.path.isdir(dir_path):
-            print 'INFO: directory %s already exists.' % args[1]
+            logger.info('INFO: directory %s already exists.' % args[1])
             if clean:
                 print 'If you continue this directory will be cleaned'
-
             answer = raw_input('Do you want to continue? [y/n]')
             if answer != 'y':
                 raise MadGraph5Error('Stopped by user request')
 
         export_v4.copy_v4template(mgme_dir, dir_path, self._model_dir, clean)
         # Import the model
-        print 'import model files %s in directory %s' % \
-                       (os.path.basename(self._model_dir), args[1])        
+        logger.info('import model files %s in directory %s' % \
+                       (os.path.basename(self._model_dir), args[1]))        
         export_v4.export_model(self._model_dir, dir_path)
         self._export_dir = dir_path
 
@@ -1800,7 +1810,7 @@ class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
         if line.strip() is '':
             self.help_shell()
         else:
-            print "running shell command:", line
+            logging.info("running shell command:", line)
             subprocess.call(line, shell=True)
 
 #===============================================================================
