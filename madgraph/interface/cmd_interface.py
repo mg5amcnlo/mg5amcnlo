@@ -25,6 +25,7 @@ import re
 import readline
 import subprocess
 import sys
+import traceback
 import time
 
 import madgraph.iolibs.misc as misc
@@ -112,6 +113,19 @@ class CmdExtended(cmd.Cmd):
         except MadGraph5Error as error:
             print '\ncommand \"%s\" stops with following error:' % line
             print error.__class__.__name__,':', str(error).replace('\n','\n\t')
+        except Exception as error:
+            print '\ncommand \"%s\" stops with following error:' % line
+            print error.__class__.__name__,':', str(error).replace('\n','\n\t')
+            print 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
+            print 'More information are present in file \'./MG5_debug\'. '
+            print 'please associate that file to your report.'
+            cmd.Cmd.onecmd(self, 'history ./MG5_debug')
+            debug_file = open('./MG5_debug', 'a')
+            traceback.print_exc(file=debug_file)
+            
+                
+
+
             
     def exec_cmd(self, line):
         """for third party call, call the line with pre and postfix treatment"""
@@ -319,6 +333,7 @@ class CheckValidForCmd(object):
         syntax: define multipart_name [ part_name_list ]
         """
         
+
         if len(args) < 2:
             self.help_define()
             raise self.InvalidCmd('\"define\" command requires at least two arguments')
