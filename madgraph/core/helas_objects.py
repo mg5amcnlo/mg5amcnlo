@@ -13,11 +13,10 @@
 #
 ################################################################################
 
+
 import array
 import copy
-import gc
 import logging
-import re
 import itertools
 import math
 
@@ -3233,7 +3232,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
         decay processes (separately)"""
 
         if not isinstance(dc_amplitude, diagram_generation.DecayChainAmplitude):
-            raise base_objects.PhysicsObjectError, \
+            raise self.PhysicsObjectError, \
                   "%s is not a valid DecayChainAmplitude" % dc_amplitude
 
         matrix_elements = self['core_processes']

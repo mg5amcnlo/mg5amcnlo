@@ -36,6 +36,7 @@ script_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.sep.join(script_path.split(os.sep)[:-2]))
 
 import madgraph.iolibs.template_files as template_files
+import madgraph.iolibs.misc as misc
 
 class MERunner(object):
     """Base class to containing default function to setup, run and access results
@@ -82,8 +83,13 @@ class MG4Runner(MERunner):
     """Runner object for the MG4 Matrix Element generator."""
 
     mg4_path = ""
-
+    
     name = 'MadGraph v4'
+    
+    compilator ='f77'
+    if misc.which('gfortran'):
+        print 'use gfortran'
+        compilator = 'gfortran'
 
     def setup(self, mg4_path, temp_dir=None):
         """Setup routine: create a temporary copy of Template and execute the
@@ -217,7 +223,7 @@ class MG4Runner(MERunner):
 
         logging.info("Working on process %s in dir %s" % (proc,
                                                           shell_name))
-
+        
         dir_name = os.path.join(self.mg4_path, self.temp_dir_name, 'SubProcesses', shell_name)
         # If directory doesn't exist, skip and return 0
         if not os.path.isdir(dir_name):
@@ -228,7 +234,7 @@ class MG4Runner(MERunner):
         # Run make
         retcode = subprocess.call('make',
                         cwd=dir_name,
-                        stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
+                        stdout=open('/dev/null', 'w'))#, stderr=subprocess.STDOUT)
         if retcode != 0:
             logging.info("Error while executing make in %s" % shell_name)
             return ((0.0, 0), [])
@@ -248,7 +254,7 @@ class MG4Runner(MERunner):
         """Parse the output string and return a pair where first value is 
         the ME value and GeV exponent and the second value is a list of 4 
         momenta for all particles involved."""
-
+        print output
         res_p = []
         value = 0.0
         gev_pow = 0
@@ -324,10 +330,10 @@ class MG5Runner(MG4Runner):
 
         # Run mg5
         logging.info("Running mg5")
-        subprocess.call([os.path.join('bin', 'mg5'),
+        devnull = os.open(os.devnull, os.O_RDWR)
+        subprocess.call([os.path.join(self.mg5_path, 'bin', 'mg5'),
                         "-f%s" % os.path.join(dir_name, 'Cards', 'proc_card_v5.dat')],
-                        cwd=self.mg5_path,
-                        stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
+                        stdout=devnull, stderr=subprocess.STDOUT)
 
         # Perform some setup (normally done by newprocess_sa)
 
@@ -350,6 +356,16 @@ class MG5Runner(MG4Runner):
                    os.path.join(dir_name, 'SubProcesses', 'coupl.inc'))
         shutil.copy(os.path.join(dir_name, 'Source', 'MODEL', 'param_card.dat'),
                    os.path.join(dir_name, 'Cards'))
+
+        #Pass to gfortran if needed.
+        if self.compilator == 'gfortran':
+            retcode = subprocess.call(['python', os.path.join('bin','Passto_gfortran.py')],
+                        cwd=os.path.join(self.mg4_path, self.temp_dir_name),
+                        stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
+            if retcode != 0:
+                print 'out gfortran'
+                logging.info("Error while passing to gfortran in %s" % shell_name)
+                return ((0.0, 0), [])
 
         # Run make
         retcode = subprocess.call(['make', '../lib/libdhelas3.a'],
@@ -524,5 +540,8 @@ def create_proc_list(part_list, initial=2, final=2):
         res_list.append(' '.join(proc))
 
     return res_list
+
+
+
 
 

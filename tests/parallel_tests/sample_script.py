@@ -20,14 +20,30 @@ inheritance of the MERunner class.
 """
 
 import logging
+import os
 import me_comparator
 
 # Get full logging info
 #logging.basicConfig(level=logging.INFO)
 
 # specify the position of different codes
-mg4_path = "MG_ME"
-mg5_path = "../../"
+#position of MG_ME
+#position of MG5
+mg5_path = os.sep.join(os.path.realpath(__file__).split(os.sep)[:-3])
+print 'mg5_path', mg5_path
+mg4_path = None
+mg4_dir_possibility = [os.path.join(mg5_path, os.path.pardir),
+                os.path.join(os.getcwd(), os.path.pardir),
+                os.getcwd()]
+
+for position in mg4_dir_possibility:
+    if os.path.exists(os.path.join(position, 'MGMEVersion.txt')) and \
+                    os.path.exists(os.path.join(position, 'UpdateNotes.txt')):
+        mg4_path = os.path.realpath(position)
+        break
+del mg4_dir_possibility
+print 'mg4_path', mg4_path
+
 
 # Create a list of processes to check automatically
 my_proc_list = me_comparator.create_proc_list(['w+', 'w-', 'a', 'h'],

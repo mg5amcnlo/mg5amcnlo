@@ -161,8 +161,8 @@ class TestFinder(list):
         """ Find the different class instance derivated of TestCase """
 
         pyname = self.passin_pyformat(filename)
-        exec('import ' + pyname + ' as obj')
-
+        __import__(pyname)
+        obj = sys.modules[pyname]
         #look at class
         for name in dir(obj):
             class_ = getattr(obj, name)

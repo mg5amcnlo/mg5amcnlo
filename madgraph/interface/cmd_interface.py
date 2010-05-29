@@ -42,6 +42,8 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing as draw_lib
 import madgraph.iolibs.drawing_eps as draw
 
+import models as ufomodels
+
 #position of MG5
 root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 root_path = os.path.split(root_path)[0]
@@ -366,7 +368,7 @@ class CheckValidForCmd(object):
             return False
         
         if args[0] == 'madevent_v4' and  not os.path.isdir(
-                                        os.path.join(path,'..','SubProcesses')):
+                                        os.path.join(path, '..', 'SubProcesses')):
             print "%s is not a valid directory for export file" % path
             print "to create a valid output directory you can use the command"
             print "$> setup madevent_v4 auto" 
@@ -423,7 +425,7 @@ class CheckValidForCmd(object):
             self.help_import()
             return False
         
-        if args[0] == 'proc_v4' and len(args)!=2 and not self._export_dir:
+        if args[0] == 'proc_v4' and len(args) != 2 and not self._export_dir:
             self.help_import()
             return False            
         
@@ -502,7 +504,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         """check the validity of line
         No Path authorize for the Web"""
         
-        if len(args) == 2 and args[1] not in ['.','clean']:
+        if len(args) == 2 and args[1] not in ['.', 'clean']:
             return False
         
         return CheckValidForCmd.check_history(self, args)
@@ -537,7 +539,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         """ check the validity of the line
         No Path authorize for the Web"""
         
-        if len(args)==2:
+        if len(args) == 2:
             if args[0] != 'model':
                 print 'only model can be load online'
                 return False
@@ -673,7 +675,7 @@ class CompleteForCmd(CheckValidForCmd):
         #option
         if len(split_arg(line[0:begidx])) >= 2:
             opt = ['horizontal', 'external=', 'max_size=', 'add_gap=',
-                                'non_propagating','--']
+                                'non_propagating', '--']
             return self.list_completion(text, opt)
 
     def complete_load(self, text, line, begidx, endidx):
@@ -718,8 +720,8 @@ class CompleteForCmd(CheckValidForCmd):
         possible_format = ['madevent_v4']
         #don't propose directory use by MG_ME
         forbidden_name = ['MadGraphII', 'Template', 'pythia-pgs', 'CVS',
-                            'Calculators', 'MadAnalysis', 'SimpleAnalysis', 
-                            'mg5', 'DECAY', 'EventConverter', 'Models', 
+                            'Calculators', 'MadAnalysis', 'SimpleAnalysis',
+                            'mg5', 'DECAY', 'EventConverter', 'Models',
                             'ExRootAnalysis', 'HELAS', 'Transfer_Fct']
         # Format
         if len(split_arg(line[0:begidx])) == 1:
@@ -750,7 +752,7 @@ class CompleteForCmd(CheckValidForCmd):
 
         # Filename if directory is given
         #
-        if len(split_arg(line[0:begidx])) > 1 and line[begidx-1] == os.path.sep:
+        if len(split_arg(line[0:begidx])) > 1 and line[begidx - 1] == os.path.sep:
             if not text:
                 text = ''
             output = self.path_completion(text,
@@ -797,7 +799,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _display_opts = ['particles', 'interactions', 'processes', 'multiparticles']
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
-    _import_formats = ['model_v4', 'proc_v4', 'command']
+    _import_formats = ['model_v4', 'model_v5', 'proc_v4', 'command']
     _export_formats = ['standalone_v4', 'sa_dirs_v4', 'madevent_v4']
         
     def __init__(self, *arg, **opt):
@@ -928,9 +930,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                              if part['self_antipart']]
             for part in part_antipart:
                 print part['name'] + '/' + part['antiname'],
+                print
+                print part
             print ''
             for part in part_self:
                 print part['name'],
+                print
+                print part
             print ''
 
         if args[0] == 'interactions':
@@ -944,6 +950,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     else:
                         print part['antiname'],
                 print
+                print inter
 
         if args[0] == 'processes':
             for amp in self._curr_amps:
@@ -1105,17 +1112,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             print "Empty or wrong format process, please try again."    
     
     
-    def extract_process(self, line, proc_number = 0):
+    def extract_process(self, line, proc_number=0):
         """Extract a process definition from a string. Returns
         a ProcessDefinition."""
 
         # Perform sanity modifications on the lines:
         # Add a space before any > , $ /
-        space_before=re.compile(r"(?P<carac>\S)(?P<tag>[/\,\\$\\>])")
-        line = space_before.sub(r'\g<carac> \g<tag>',line)       
+        space_before = re.compile(r"(?P<carac>\S)(?P<tag>[/\,\\$\\>])")
+        line = space_before.sub(r'\g<carac> \g<tag>', line)       
         # Add a space after any + - ~ > , $ / 
-        space_after=re.compile(r"(?P<tag>[+-/\,\\$\\>~])(?P<carac>[^\s+-])")
-        line = space_after.sub(r'\g<tag> \g<carac>',line)
+        space_after = re.compile(r"(?P<tag>[+-/\,\\$\\>~])(?P<carac>[^\s+-])")
+        line = space_after.sub(r'\g<tag> \g<carac>', line)
         
         
         # Use regular expressions to extract s-channel propagators,
@@ -1218,10 +1225,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 args = split_arg(forbidden_particles)
                 for part_name in args:
                     if part_name in self._multiparticles:
-                        forbidden_particle_ids.extend( \
+                        forbidden_particle_ids.extend(\
                                                self._multiparticles[part_name])
                     else:
-                        mypart = self._curr_model['particles'].find_name( \
+                        mypart = self._curr_model['particles'].find_name(\
                                                                       part_name)
                         if mypart:
                             forbidden_particle_ids.append(mypart.get_pdg_code())
@@ -1389,8 +1396,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         '#***********************************************************\n'
         
         #Avoid repetition of header
-        if self.history[0] == '#'+'*' * 59:
-            text=''
+        if self.history[0] == '#' + '*' * 59:
+            text = ''
         # Add the comand used 
         text += '\n'.join(self.history) + '\n' 
         
@@ -1434,7 +1441,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if not self.check_import(args):
             return
         
-        if args[0] == 'model_v4':
+        if args[0] == 'model_v5':
+            self._curr_model = ufomodels.import_model(args[1])
+            try:
+                self._model_dir = os.path.join(MGME_dir, 'Models', args[1])
+            except:
+                pass
+            self._curr_fortran_model = export_v4.UFOHelasFortranModel()
+                    
+        elif args[0] == 'model_v4':
             # Check for a file
             if os.path.isfile(args[1]):
                 suceed = import_v4file(self, args[1])
@@ -1563,7 +1578,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             return
         
         path_split = filepath.split(os.path.sep)
-        if len(path_split)>2 and path_split[-2] == 'Cards':
+        if len(path_split) > 2 and path_split[-2] == 'Cards':
             self._export_dir = os.path.sep.join(path_split[:-2])
                 
     
@@ -1645,7 +1660,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         else:
             makejpg = True
             
-        os.system('touch %s/done' % os.path.join(dir_path,'SubProcesses'))        
+        os.system('touch %s/done' % os.path.join(dir_path, 'SubProcesses'))        
         export_v4.create_v4_webpage(dir_path, makejpg)
 
 
@@ -1826,12 +1841,12 @@ class CmdFile(file):
 #===============================================================================
 # Draw Command Parser
 #=============================================================================== 
-_usage =  "draw FILEPATH [options]\n" + \
+_usage = "draw FILEPATH [options]\n" + \
          "-- draw the diagrams in eps format\n" + \
          "   Files will be FILEPATH/diagrams_\"process_string\".eps \n" + \
          "   Example: draw plot_dir . \n"
 _draw_parser = optparse.OptionParser(usage=_usage)
-_draw_parser.add_option("", "--horizontal", default=False, 
+_draw_parser.add_option("", "--horizontal", default=False,
                    action='store_true', help="force S-channel to be horizontal")
 _draw_parser.add_option("", "--external", default=0, type='float',
                     help="authorizes external particles to end at top or " + \
@@ -1840,10 +1855,10 @@ _draw_parser.add_option("", "--external", default=0, type='float',
 _draw_parser.add_option("", "--max_size", default=1.5, type='float',
                          help="this forbids external line bigger than max_size")
 _draw_parser.add_option("", "--non_propagating", default=True, \
-                          dest="contract_non_propagating", action='store_false', 
-                          help= "avoid contractions of non propagating lines") 
+                          dest="contract_non_propagating", action='store_false',
+                          help="avoid contractions of non propagating lines") 
 _draw_parser.add_option("", "--add_gap", default=0, type='float', \
-                          help= "set the x-distance between external particles")  
+                          help="set the x-distance between external particles")  
   
     
     

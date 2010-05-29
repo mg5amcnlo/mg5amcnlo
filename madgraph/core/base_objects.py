@@ -19,6 +19,7 @@ interaction, model, leg, vertex, process, ..."""
 import copy
 import itertools
 import logging
+import numbers
 import re
 
 import madgraph.core.color_algebra as color
@@ -210,6 +211,11 @@ class Particle(PhysicsObject):
     particle object is a particle or an antiparticle. The self_antipart flag
     tells if the particle is its own antiparticle."""
 
+    sorted_keys = ['name', 'antiname', 'spin', 'color',
+                   'charge', 'mass', 'width', 'pdg_code',
+                   'texname', 'antitexname', 'line', 'propagating',
+                   'is_part', 'self_antipart']
+
     def default_setup(self):
         """Default values for all properties"""
 
@@ -277,7 +283,7 @@ class Particle(PhysicsObject):
                    "Line type %s is unknown" % value
 
         if name is 'charge':
-            if not isinstance(value, float):
+            if not isinstance(value, numbers.Number):
                 raise self.PhysicsObjectError, \
                     "Charge %s is not a float" % repr(value)
 
@@ -296,10 +302,7 @@ class Particle(PhysicsObject):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['name', 'antiname', 'spin', 'color',
-                'charge', 'mass', 'width', 'pdg_code',
-                'texname', 'antitexname', 'line', 'propagating',
-                'is_part', 'self_antipart']
+        return self.sorted_keys
 
     # Helper functions
 
@@ -385,6 +388,7 @@ class ParticleList(PhysicsObjectList):
     def is_valid_element(self, obj):
         """Test if object obj is a valid Particle for the list."""
         return isinstance(obj, Particle)
+                    
 
     def find_name(self, name):
         """Try to find a particle with the given name. Check both name
@@ -451,6 +455,8 @@ class Interaction(PhysicsObject):
                2-tuple of integers referring to color and Lorentz structures
     orders: dictionary listing order names (as keys) with their value
     """
+
+    sorted_keys = ['id', 'particles', 'color', 'lorentz', 'couplings', 'orders']
 
     def default_setup(self):
         """Default values for all properties"""
@@ -537,15 +543,15 @@ class Interaction(PhysicsObject):
                         "%s is not a valid tuple of integer" % str(key)
                 if not isinstance(value[key], str):
                     raise self.PhysicsObjectError, \
-                        "%s is not a valid string" % str(mystr)
+                        "%s is not a valid string" % value[key]
 
         return True
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['id', 'particles', 'color', 'lorentz',
-                'couplings', 'orders']
+        return self.sorted_keys 
+                
 
     def generate_dict_entries(self, ref_dict_to0, ref_dict_to1):
         """Add entries corresponding to the current interactions to 
@@ -1007,7 +1013,9 @@ class MultiLegList(PhysicsObjectList):
 class Vertex(PhysicsObject):
     """Vertex: list of legs (ordered), id (Interaction)
     """
-
+    
+    sorted_keys = ['id', 'legs']
+    
     def default_setup(self):
         """Default values for all properties"""
 
@@ -1032,7 +1040,7 @@ class Vertex(PhysicsObject):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['id', 'legs']
+        return self.sorted_keys  #['id', 'legs']
 
     def get_s_channel_id(self, model, ninitial):
         """Returns the id for the last leg as an outgoing
