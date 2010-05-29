@@ -12,7 +12,6 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-
 """Methods and classes to import v4 format model files."""
 
 import fractions
@@ -24,6 +23,8 @@ import re
 import madgraph.core.color_algebra as color
 from madgraph.core.base_objects import Particle, ParticleList
 from madgraph.core.base_objects import Interaction, InteractionList
+from madgraph.interface import MadGraph5Error
+
 
 logger = logging.getLogger('import_v4')
 
@@ -367,13 +368,17 @@ class ProcCardv4Reader(object):
         
         # skip the introduction of the file
         for line in iter(fsock.readline, self.begin_process):
+            if line == '':
+                raise MadGraph5Error('wrong proc_card.dat format')
             pass
-        
+
         # store process information
         process_open = False
         # an 'end_coup' stop the current process, 
         #    'done' finish the list of process
         for line in iter(fsock.readline, self.end_process):
+            if line == '':
+                raise MadGraph5Error('wrong proc_card.dat format')
             analyze_line = self.pat_line.search(line)
             if analyze_line:
                 data = analyze_line.group('info') #skip the comment
@@ -387,10 +392,14 @@ class ProcCardv4Reader(object):
          
         #skip comment
         for line in iter(fsock.readline, self.begin_model):
+            if line == '':
+                raise MadGraph5Error('wrong proc_card.dat format')
             pass        
         
         #load the model name
         for line in iter(fsock.readline, self.end_model):
+            if line == '':
+                raise MadGraph5Error('wrong proc_card.dat format')
             analyze_line = self.pat_line.search(line)
             if analyze_line:
                 model = analyze_line.group('info')
@@ -398,10 +407,14 @@ class ProcCardv4Reader(object):
                 
         #skip comment
         for line in iter(fsock.readline, self.begin_multipart):
+            if line == '':
+                raise MadGraph5Error('wrong proc_card.dat format')            
             pass
         
         #store multipart information
         for line in iter(fsock.readline, self.end_multipart):
+            if line == '':
+                raise MadGraph5Error('wrong proc_card.dat format')            
             data = line.split()
             if data:
                 self.particles_name.add(data[0].lower())

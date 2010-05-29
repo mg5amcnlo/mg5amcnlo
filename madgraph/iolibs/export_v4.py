@@ -983,7 +983,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
                                       model=matrix_element.get('processes')[0].\
                                          get('model'),
                                       amplitude='')
-    logging.info("Generating Feynman diagrams for " + \
+    logger.info("Generating Feynman diagrams for " + \
                  matrix_element.get('processes')[0].nice_string())
     plot.draw()
 
