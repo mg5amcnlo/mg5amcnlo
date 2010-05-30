@@ -77,6 +77,8 @@ class convert_ufo_mg5(object):
                 nb_property +=1
                 if key in ['name', 'antiname']:
                     particle.set(key, value.lower())
+                elif key == 'charge':
+                    particle.set(key, float(value))
                 else:
                     particle.set(key, value)
             

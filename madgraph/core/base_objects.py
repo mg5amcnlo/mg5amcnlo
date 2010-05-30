@@ -283,7 +283,7 @@ class Particle(PhysicsObject):
                    "Line type %s is unknown" % value
 
         if name is 'charge':
-            if not isinstance(value, numbers.Number):
+            if not isinstance(value, float):
                 raise self.PhysicsObjectError, \
                     "Charge %s is not a float" % repr(value)
 
