@@ -241,10 +241,11 @@ class CPPWriter(Writer):
                             '^private': standard_indent,
                             '^protected': standard_indent}
     
-    spacing_patterns = [('\s*;\s*', '; '),
+    spacing_patterns = [('\s*\"\s*}', '\"'),
+                        ('\s*;\s*', '; '),
                         ('\s*,\s*', ', '),
-                        ('\s*\(\s*', '('),
-                        ('\s*\)\s*', ')'),
+                        ('\(\s*', '('),
+                        ('\s*\)', ')'),
                         ('(\s*[^!=><])=([^=]\s*)', '\g<1> = \g<2>'),
                         ('(\s*[^/])/([^/]\s*)', '\g<1> / \g<2>'),
                         ('(\s*[^=])==([^=]\s*)', '\g<1> == \g<2>'),
@@ -270,6 +271,8 @@ class CPPWriter(Writer):
     comment_pattern = re.compile(r"^(\s*#\s+|\s*//)")
     start_comment_pattern = re.compile(r"^(\s*/\*)")
     end_comment_pattern = re.compile(r"(\s*\*/)$")
+
+    quote_chars = re.compile(r"[^\\]\"")
 
     line_length = 80
     max_split = 10
@@ -563,22 +566,45 @@ class CPPWriter(Writer):
         split_characters."""
 
         # First fix spacing for line
+        line.rstrip()
         for key in self.spacing_patterns:
             line = self.spacing_re[key[0]].sub(key[1], line)
         res_lines = [" " * self.__indent + line]
 
         while len(res_lines[-1]) > self.line_length:
+            long_line = res_lines[-1]
             split_at = self.line_length
             for character in split_characters:
-                index = res_lines[-1][(self.line_length - self.max_split): \
+                index = long_line[(self.line_length - self.max_split): \
                                       self.line_length].rfind(character)
                 if index >= 0:
-                    split_at = self.line_length - self.max_split + index
+                    split_at = self.line_length - self.max_split + index + 1
                     break
-
-            res_lines.append(" " * (self.__indent + self.line_cont_indent) + \
-                             res_lines[-1][split_at:])
-            res_lines[-2] = res_lines[-2][:split_at]
-
+            
+            # Don't allow split within quotes
+            quotes = self.quote_chars.findall(long_line[:split_at])
+            if quotes and len(quotes) % 2 == 1:
+                quote_match = self.quote_chars.search(long_line[split_at:])
+                if not quote_match:
+                    raise self.CPPWriterError(\
+                        "Error: Unmatched quote in line " + long_line)
+                split_at = quote_match.end() + split_at + 1
+                split_match = re.search(self.split_characters,
+                                        long_line[split_at:])
+                if split_match:
+                    split_at = split_at + split_match.start()
+                else:
+                    split_at = len(long_line) + 1
+                print "split_string: ", long_line[:split_at]
+            # Append new line
+            if long_line[split_at:].lstrip():
+                # Replace old line
+                res_lines[-1] = long_line[:split_at].lstrip().rstrip()
+                res_lines.append(" " * \
+                                 (self.__indent + self.line_cont_indent) + \
+                                 long_line[split_at:].lstrip().rstrip())
+            else:
+                break
+            
         return res_lines
 
