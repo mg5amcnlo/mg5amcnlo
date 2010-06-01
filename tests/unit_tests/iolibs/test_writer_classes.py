@@ -17,6 +17,7 @@
 
 import StringIO
 import unittest
+import re
 
 import madgraph.iolibs.writer_classes as writers
 
@@ -66,7 +67,7 @@ C       Test
 
         writer = writers.FortranWriter()
         for line in lines:
-            writer.write_fortran_line(fsock, line)
+            writer.write_line(fsock, line)
 
         self.assertEqual(fsock.getvalue(),
                          goal_string)
@@ -81,7 +82,7 @@ C       Test
         writer = writers.FortranWriter()
         for nonstring in non_strings:
             self.assertRaises(writers.FortranWriter.FortranWriterError,
-                              writer.write_fortran_line,
+                              writer.write_line,
                               fsock, nonstring)
 
 #===============================================================================
@@ -95,15 +96,136 @@ class CPPWriterTest(unittest.TestCase):
 
         fsock = StringIO.StringIO()
 
-        lines = []
-        goal_string = """\n"""
+        lines = """
+
+#ifndef Pythia8_SigmaEW_H
+#define Pythia8_SigmaEW_H
+
+#include "PythiaComplex.h"
+#include "SigmaProcess.h"
+
+namespace Pythia8 {
+
+ 
+/*==========================================================================
+
+A derived class for q g -> q gamma (q = u, d, s, c, b).
+Use massless approximation also for Q since no alternative.*/
+
+class Sigma2qg2qgamma : public Sigma2Process {
+
+public:
+
+  // Constructor.
+  Sigma2qg2qgamma() {   }
+
+  // Calculate flavour-independent parts of cross section.
+  virtual void sigmaKin();
+
+  // Evaluate d(sigmaHat)/d(tHat). 
+  virtual double sigmaHat();
+
+  // Select flavour, colour and anticolour.
+  virtual void setIdColAcol();
+
+  // Info on the subprocess.
+  virtual string name(  )   const {return "q g -> q gamma (udscb)";}
+  virtual int    code()   const {return 201;}
+  virtual string inFlux() const {return "qg";}
+
+private:
+
+  // Values stored for later use.
+  double mNew, m2New, sigUS, sigma0;
+
+};
+
+    // Select identity, colour and anticolour.
+
+void Sigma2ff2fftgmZ::setIdColAcol() {
+
+  // Trivial flavours: out = in.
+  setId( id1, id2,    id1,id2);
+
+  // Colour flow topologies. Swap when antiquarks.
+  if (abs(id1)<9 && abs(id2)<9  &&  id1*id2>2/3.) 
+                         setColAcol(1,0,2,0,1,0,2,0);
+  else if (abs(id1)<9 &&abs(id2)< 9)
+                         setColAcol(1,0,0,2,1,0,0,2); 
+  else                   setColAcol(0,0,0,0,0,0,0,0);
+
+  if ( (abs(id1)!=9&&id1<0)||(abs(id1 )==10 &&    id2 < 0) ) 
+    swapColAcol( ) ;
+
+}
+    """.split("\n")
+
+        goal_string = """#ifndef Pythia8_SigmaEW_H
+#define Pythia8_SigmaEW_H
+#include "PythiaComplex.h"
+#include "SigmaProcess.h"
+namespace Pythia8 
+{
+// ==========================================================================
+// 
+// A derived class for q g - > q gamma(q = u, d, s, c, b).
+// Use massless approximation also for Q since no alternative.
+class Sigma2qg2qgamma : public Sigma2Process 
+{
+  public:
+    // Constructor.
+    Sigma2qg2qgamma() {}
+    // Calculate flavour - independent parts of cross section.
+    virtual void sigmaKin(); 
+    // Evaluate d(sigmaHat) / d(tHat). 
+    virtual double sigmaHat(); 
+    // Select flavour, colour and anticolour.
+    virtual void setIdColAcol(); 
+    // Info on the subprocess.
+    virtual string name()const 
+    {
+      return "q g - > q gamma(udscb)"; 
+    }
+    virtual int code()const 
+    {
+      return 201; 
+    }
+    virtual string inFlux()const 
+    {
+      return "qg"; 
+    }
+  private:
+    // Values stored for later use.
+    double mNew, m2New, sigUS, sigma0; 
+};
+// Select identity, colour and anticolour.
+void Sigma2ff2fftgmZ::setIdColAcol()
+{
+  // Trivial flavours: out = in.
+  setId(id1, id2, id1, id2); 
+  // Colour flow topologies. Swap when antiquarks.
+  if(abs(id1) < 9 && abs(id2) < 9 && id1 * id2 > 2 / 3.)
+    setColAcol(1, 0, 2, 0, 1, 0, 2, 0); 
+  else if(abs(id1) < 9 && abs(id2) < 9)
+    setColAcol(1, 0, 0, 2, 1, 0, 0, 2); 
+  else
+    setColAcol(0, 0, 0, 0, 0, 0, 0, 0); 
+  if((abs(id1) != 9 && id1 < 0) || (abs(id1) == 10 && id2 < 0))
+    swapColAcol(); 
+}
+"""
 
         writer = writers.CPPWriter()
         for line in lines:
-            writer.write_cplusplus_line(fsock, line)
+            writer.write_line(fsock, line)
 
         self.assertEqual(fsock.getvalue(),
                          goal_string)
+
+    def test_split_cplusplus_line(self):
+
+        line = "if((setColAcol(1,0,2,0,1,0,2,0)+2 )>15)  {  } ;"
+        print writers.CPPWriter().split_line(line, [' '])[0]
 
     def test_write_cplusplus_error(self):
         """Test that a non-string gives an error"""
@@ -115,6 +237,6 @@ class CPPWriterTest(unittest.TestCase):
         writer = writers.CPPWriter()
         for nonstring in non_strings:
             self.assertRaises(writers.CPPWriter.CPPWriterError,
-                              writer.write_cplusplus_line,
+                              writer.write_line,
                               fsock, nonstring)
 

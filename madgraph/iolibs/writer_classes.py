@@ -18,15 +18,38 @@ Fortran, C++, etc."""
 
 
 import re
+import collections
+
+class Writer():
+    """Generic Writer class. All writers should inherit from this class."""
+
+    class WriterError(Exception):
+        """Exception raised if an error occurs in the definition
+        or the execution of a Writer."""
+
+        pass
+
+
+    def write_line(self, fsock, line):
+        """Write a line with proper indent and splitting of long lines
+        for the language in question."""
+
+        pass
+
+    def write_comment_line(self, fsock, line):
+        """Write a comment line, with correct indent and line splits,
+        for the language in question"""
+
+        pass
 
 #===============================================================================
 # FortranWriter
 #===============================================================================
-class FortranWriter():
+class FortranWriter(Writer):
     """Routines for writing fortran lines. Keeps track of indentation
     and splitting of long lines"""
 
-    class FortranWriterError(Exception):
+    class FortranWriterError(Writer.WriterError):
         """Exception raised if an error occurs in the definition
         or the execution of a FortranWriter."""
         pass
@@ -51,30 +74,24 @@ class FortranWriter():
     __keyword_list = []
     __comment_pattern = re.compile(r"^(\s*#|c$|(c\s+([^=]|$)))", re.IGNORECASE)
 
-    def write_fortran_line(self, fsock, line):
+    def write_line(self, fsock, line):
         """Write a fortran line, with correct indent and line splits"""
 
         if not isinstance(line, str) or line.find('\n') >= 0:
             raise self.FortranWriterError, \
                   "write_fortran_line must have a single line as argument"
 
+        # Check if empty line and write it
+        if not line.lstrip():
+            fsock.write("\n")
+            return True
+
         # Check if this line is a comment
         if self.__comment_pattern.search(line):
             # This is a comment
-            myline = " " * (5 + self.__indent) + line.lstrip()[1:].lstrip()
-            if FortranWriter.downcase:
-                self.comment_char = self.comment_char.lower()
-            else:
-                self.comment_char = self.comment_char.upper()
-            myline = self.comment_char + myline
-            part = ""
-            post_comment = ""
-            # Break line in appropriate places
-            # defined (in priority order) by the characters in
-            # comment_split_characters
-            res = self.split_line(myline,
-                                  self.comment_split_characters,
-                                  self.comment_char + " " * (5 + self.__indent))
+            self.write_comment_line(fsock, line.lstrip()[1:])
+            return True
+
         else:
             # This is a regular Fortran line
 
@@ -110,8 +127,7 @@ class FortranWriter():
 
             # Check if line starts with dual keyword and adjust indent 
             if self.__keyword_list and re.search(self.keyword_pairs[\
-                self.__keyword_list[len(self.__keyword_list) - 1]][0],
-                                               myline.lower()):
+                self.__keyword_list[-1]][0], myline.lower()):
                 key = self.__keyword_list.pop()
                 self.__indent = self.__indent - self.keyword_pairs[key][1]
 
@@ -147,6 +163,32 @@ class FortranWriter():
 
         return True
 
+    def write_comment_line(self, fsock, line):
+        """Write a comment line, with correct indent and line splits"""
+
+        if not isinstance(line, str) or line.find('\n') >= 0:
+            raise self.FortranWriterError, \
+                  "write_comment_line must have a single line as argument"
+
+        # This is a comment
+        myline = " " * (5 + self.__indent) + line.lstrip()
+        if FortranWriter.downcase:
+            self.comment_char = self.comment_char.lower()
+        else:
+            self.comment_char = self.comment_char.upper()
+        myline = self.comment_char + myline
+        # Break line in appropriate places
+        # defined (in priority order) by the characters in
+        # comment_split_characters
+        res = self.split_line(myline,
+                              self.comment_split_characters,
+                              self.comment_char + " " * (5 + self.__indent))
+
+        # Write line(s) to file
+        fsock.write("\n".join(res) + "\n")
+
+        return True
+
     def split_line(self, line, split_characters, line_start):
         """Split a line if it is longer than self.line_length
         columns. Split in preferential order according to
@@ -164,6 +206,377 @@ class FortranWriter():
                     break
 
             res_lines.append(line_start + \
+                             res_lines[-1][split_at:])
+            res_lines[-2] = res_lines[-2][:split_at]
+
+        return res_lines
+
+#===============================================================================
+# CPPWriter
+#===============================================================================
+class CPPWriter(Writer):
+    """Routines for writing C++ lines. Keeps track of brackets,
+    spaces, indentation and splitting of long lines"""
+
+    class CPPWriterError(Writer.WriterError):
+        """Exception raised if an error occurs in the definition
+        or the execution of a CPPWriter."""
+        pass
+
+    # Parameters defining the output of the C++ writer
+    standard_indent = 2
+    line_cont_indent = 4
+
+    indent_par_keywords = {'^if': standard_indent,
+                           '^else if': standard_indent,
+                           '^for': standard_indent,
+                           '^while': standard_indent,
+                           '^switch': standard_indent}
+    indent_single_keywords = {'^else': standard_indent}
+    indent_content_keywords = {'^class': standard_indent,
+                              '^namespace': 0}        
+    cont_indent_keywords = {'^case': standard_indent,
+                            '^default': standard_indent,
+                            '^public': standard_indent,
+                            '^private': standard_indent,
+                            '^protected': standard_indent}
+    
+    spacing_patterns = [('\s*;\s*', '; '),
+                        ('\s*,\s*', ', '),
+                        ('\s*\(\s*', '('),
+                        ('\s*\)\s*', ')'),
+                        ('(\s*[^!=><])=([^=]\s*)', '\g<1> = \g<2>'),
+                        ('(\s*[^/])/([^/]\s*)', '\g<1> / \g<2>'),
+                        ('(\s*[^=])==([^=]\s*)', '\g<1> == \g<2>'),
+                        ('(\s*[^>])>([^>=]\s*)', '\g<1> > \g<2>'),
+                        ('(\s*[^<])<([^<=]\s*)', '\g<1> < \g<2>'),
+                        ('\s*!([^=]\s*)', ' !\g<1>'),
+                        ('\s*\+\s*', ' + '),
+                        ('\s*-\s*', ' - '),
+                        ('\s*\*\s*', ' * '),
+                        ('\s*>>\s*', ' >> '),
+                        ('\s*<<\s*', ' << '),
+                        ('\s*!=\s*', ' != '),
+                        ('\s*>=\s*', ' >= '),
+                        ('\s*<=\s*', ' <= '),
+                        ('\s*&&\s*', ' && '),
+                        ('\s*\|\|\s*', ' || '),
+                        ('\s*{\s*}', ' {}'),
+                        ('\s+',' ')]
+    spacing_re = dict([(key[0], re.compile(key[0])) for key in \
+                       spacing_patterns])
+
+    comment_char = '//'
+    comment_pattern = re.compile(r"^(\s*#\s+|\s*//)")
+    start_comment_pattern = re.compile(r"^(\s*/\*)")
+    end_comment_pattern = re.compile(r"(\s*\*/)$")
+
+    line_length = 80
+    max_split = 10
+    split_characters = " "
+    comment_split_characters = " "
+    
+    # Private variables
+    __indent = 0
+    __keyword_list = collections.deque()
+    __comment_ongoing = False
+
+    def write_line(self, fsock, line):
+        """Write a C++ line, with correct indent, spacing and line splits"""
+
+        if not isinstance(line, str) or line.find('\n') >= 0:
+            raise self.CPPWriterError, \
+                  "write_line must have a single line as argument"
+
+        # Check if this line is a comment
+        if self.comment_pattern.search(line) or \
+               self.start_comment_pattern.search(line) or \
+               self.__comment_ongoing:
+            # This is a comment
+            self.write_comment_line(fsock, line.lstrip())
+            return True
+
+        # This is a regular C++ line
+
+        # Strip leading spaces from line
+        myline = line.lstrip()
+
+        # Don't print empty lines
+        if not myline:
+            return True
+
+        # Check if line starts with "{"
+        if myline[0] == "{":
+            # Check for indent
+            indent = self.__indent
+            key = ""
+            if self.__keyword_list:
+                key = self.__keyword_list[-1]
+            if key in self.indent_par_keywords:
+                indent = indent - self.indent_par_keywords[key]
+            elif key in self.indent_single_keywords:
+                indent = indent - self.indent_single_keywords[key]
+            elif key in self.indent_content_keywords:
+                indent = indent - self.indent_content_keywords[key]
+            else:
+                # This is free-standing block, just use standard indent
+                self.__indent = self.__indent + self.standard_indent
+            # Print "{"
+            fsock.write(" " * indent + "{" + "\n")
+            # Add "{" to keyword list
+            self.__keyword_list.append("{")
+            myline = myline[1:].lstrip()
+            if myline:
+                # If anything is left of myline, write it recursively
+                self.write_line(fsock, myline)
+            return True
+
+        # Check if line starts with "}"
+        if myline[0] == "}":
+            # First: Check if no keywords in list
+            if not self.__keyword_list:
+                raise self.CPPWriterError(\
+                                'Non-matching } in C++ output: ' \
+                                + myline)                
+            # First take care of "case" and "default"
+            if self.__keyword_list[-1] in self.cont_indent_keywords.keys():
+                key = self.__keyword_list.pop()
+                self.__indent = self.__indent - self.cont_indent_keywords[key]
+            # Now check that we have matching {
+            if not self.__keyword_list.pop() == "{":
+                raise self.CPPWriterError(\
+                                'Non-matching } in C++ output: ' \
+                                + ",".join(self.__keyword_list) + myline)
+            # Check for the keyword before and close
+            key = ""
+            if self.__keyword_list:
+                key = self.__keyword_list[-1]
+            if key in self.indent_par_keywords:
+                self.__indent = self.__indent - \
+                                self.indent_par_keywords[key]
+                self.__keyword_list.pop()
+            elif key in self.indent_single_keywords:
+                self.__indent = self.__indent - \
+                                self.indent_single_keywords[key]
+                self.__keyword_list.pop()
+            elif key in self.indent_content_keywords:
+                self.__indent = self.__indent - \
+                                self.indent_content_keywords[key]
+                self.__keyword_list.pop()
+            else:
+                # This was just a { } clause, without keyword
+                self.__indent = self.__indent - self.standard_indent
+
+            # Write } or };  and then recursively write the rest
+            breakline_index = 1
+            if len(myline) > 1:
+                if myline[1] == ";":
+                    breakline_index = 2
+            fsock.write(" " * self.__indent + myline[:breakline_index] + \
+                        "\n")
+            myline = myline[breakline_index + 1:].lstrip()
+            if myline:
+                # If anything is left of myline, write it recursively
+                self.write_line(fsock, myline)
+            return True
+
+        # Check if line starts with keyword with parentesis
+        for key in self.indent_par_keywords.keys():
+            if re.search(key, myline):
+                # Step through to find end of parenthesis
+                parenstack = collections.deque()
+                for i, ch in enumerate(myline[len(key)-1:]):
+                    if ch == '(':
+                        parenstack.append(ch)
+                    elif ch == ')':
+                        try:
+                            parenstack.pop()
+                        except IndexError:
+                            # no opening parenthesis left in stack
+                            raise self.CPPWriterError(\
+                                'Non-matching parenthesis in C++ output' \
+                                + myline)
+                        if not parenstack:
+                            # We are done
+                            break
+                endparen_index = len(key) + i
+                # Print line, make linebreak, check if next character is {
+                fsock.write("\n".join(self.split_line(\
+                                      myline[:endparen_index], \
+                                      self.split_characters)) + \
+                            "\n")
+                myline = myline[endparen_index:].lstrip()
+                # Add keyword to list and add indent for next line
+                self.__keyword_list.append(key)
+                self.__indent = self.__indent + \
+                                self.indent_par_keywords[key]
+                if myline:
+                    # If anything is left of myline, write it recursively
+                    self.write_line(fsock, myline)
+
+                return True
+                    
+        # Check if line starts with single keyword
+        for key in self.indent_single_keywords.keys():
+            if re.search(key, myline):
+                end_index = len(key) - 1
+                # Print line, make linebreak, check if next character is {
+                fsock.write(" " * self.__indent + myline[:end_index] + \
+                            "\n")
+                myline = myline[end_index:].lstrip()
+                # Add keyword to list and add indent for next line
+                self.__keyword_list.append(key)
+                self.__indent = self.__indent + \
+                                self.indent_single_keywords[key]
+                if myline:
+                    # If anything is left of myline, write it recursively
+                    self.write_line(fsock, myline)
+
+                return True
+                    
+        # Check if line starts with content keyword
+        for key in self.indent_content_keywords.keys():
+            if re.search(key, myline):
+                # Print line, make linebreak, check if next character is {
+                if "{" in myline:
+                    end_index = myline.index("{")
+                fsock.write("\n".join(self.split_line(\
+                                      myline[:end_index], \
+                                      self.split_characters)) + \
+                            "\n")
+                myline = myline[end_index:].lstrip()
+                # Add keyword to list and add indent for next line
+                self.__keyword_list.append(key)
+                self.__indent = self.__indent + \
+                                self.indent_content_keywords[key]
+                if myline:
+                    # If anything is left of myline, write it recursively
+                    self.write_line(fsock, myline)
+
+                return True
+                    
+        # Check if line starts with continuous indent keyword
+        for key in self.cont_indent_keywords.keys():
+            if re.search(key, myline):
+                # Check if we have a continuous indent keyword since before
+                if self.__keyword_list[-1] in self.cont_indent_keywords.keys():
+                    self.__indent = self.__indent - \
+                                    self.cont_indent_keywords[\
+                                       self.__keyword_list.pop()]
+                # Print line, make linebreak
+                fsock.write("\n".join(self.split_line(myline, \
+                                      self.split_characters)) + \
+                            "\n")
+                # Add keyword to list and add indent for next line
+                self.__keyword_list.append(key)
+                self.__indent = self.__indent + \
+                                self.cont_indent_keywords[key]
+
+                return True
+                    
+        # Check if there is a "{}" in the line.
+        # In that case just print the line
+        if re.search("{\s*}", myline):
+            fsock.write("\n".join(self.split_line(\
+                                      myline, \
+                                      self.split_characters)) + \
+                        "\n")
+            return True
+
+        # Check if there is a "{" somewhere in the line
+        if "{" in myline:
+            end_index = myline.index("{")
+            fsock.write("\n".join(self.split_line(\
+                                      myline[:end_index], \
+                                      self.split_characters)) + \
+                        "\n")
+            myline = myline[end_index:].lstrip()
+            if myline:
+                # If anything is left of myline, write it recursively
+                self.write_line(fsock, myline)
+            return True
+
+        # Check if there is a "}" somewhere in the line
+        if "}" in myline:
+            end_index = myline.index("}")
+            fsock.write("\n".join(self.split_line(\
+                                      myline[:end_index], \
+                                      self.split_characters)) + \
+                        "\n")
+            myline = myline[end_index:].lstrip()
+            if myline:
+                # If anything is left of myline, write it recursively
+                self.write_line(fsock, myline)
+            return True
+
+        # Write line(s) to file
+        fsock.write("\n".join(self.split_line(myline, \
+                                              self.split_characters)) + "\n")
+
+        # Check if this is a single indented line
+        if self.__keyword_list:
+            if self.__keyword_list[-1] in self.indent_par_keywords:
+                self.__indent = self.__indent - \
+                            self.indent_par_keywords[self.__keyword_list.pop()]
+            elif self.__keyword_list[-1] in self.indent_single_keywords:
+                self.__indent = self.__indent - \
+                         self.indent_single_keywords[self.__keyword_list.pop()]
+            elif self.__keyword_list[-1] in self.indent_content_keywords:
+                self.__indent = self.__indent - \
+                         self.indent_content_keywords[self.__keyword_list.pop()]
+
+        return True
+
+    def write_comment_line(self, fsock, line):
+        """Write a comment line, with correct indent and line splits"""
+
+        if not isinstance(line, str) or line.find('\n') >= 0:
+            raise self.FortranWriterError, \
+                  "write_comment_line must have a single line as argument"
+
+        # This is a comment
+
+        if self.start_comment_pattern.search(line):
+            self.__comment_ongoing = True
+            line = self.start_comment_pattern.sub("", line)
+
+        if self.end_comment_pattern.search(line):
+            self.__comment_ongoing = False
+            line = self.end_comment_pattern.sub("", line)
+
+        line = self.comment_pattern.sub("", line)
+        myline = line.lstrip()
+        myline = self.comment_char + " " + myline
+        # Break line in appropriate places defined (in priority order)
+        # by the characters in comment_split_characters
+        res = self.split_line(myline, \
+                              self.comment_split_characters)
+
+        # Write line(s) to file
+        fsock.write("\n".join(res) + "\n")
+
+        return True
+
+    def split_line(self, line, split_characters):
+        """Split a line if it is longer than self.line_length
+        columns. Split in preferential order according to
+        split_characters."""
+
+        # First fix spacing for line
+        for key in self.spacing_patterns:
+            line = self.spacing_re[key[0]].sub(key[1], line)
+        res_lines = [" " * self.__indent + line]
+
+        while len(res_lines[-1]) > self.line_length:
+            split_at = self.line_length
+            for character in split_characters:
+                index = res_lines[-1][(self.line_length - self.max_split): \
+                                      self.line_length].rfind(character)
+                if index >= 0:
+                    split_at = self.line_length - self.max_split + index
+                    break
+
+            res_lines.append(" " * (self.__indent + self.line_cont_indent) + \
                              res_lines[-1][split_at:])
             res_lines[-2] = res_lines[-2][:split_at]
 
