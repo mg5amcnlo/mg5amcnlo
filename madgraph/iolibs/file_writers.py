@@ -20,36 +20,54 @@ Fortran, C++, etc."""
 import re
 import collections
 
-class Writer():
+class FileWriter():
     """Generic Writer class. All writers should inherit from this class."""
 
-    class WriterError(Exception):
+    class FileWriterError(IOError):
         """Exception raised if an error occurs in the definition
         or the execution of a Writer."""
 
         pass
 
 
-    def write_line(self, fsock, line):
+    def write_line(self, line):
         """Write a line with proper indent and splitting of long lines
         for the language in question."""
 
         pass
 
-    def write_comment_line(self, fsock, line):
+    def write_comment_line(self, line):
         """Write a comment line, with correct indent and line splits,
         for the language in question"""
 
         pass
 
+    def writelines(self, fsock, lines):
+        """Extends the regular file.writeline() function to write out
+        nicely formatted code"""
+
+        splitlines = []
+        if isinstance(lines, list):
+            for line in lines:
+                if not isinstance(line, str):
+                    raise self.FileWriterError("%s not string" % repr(line))
+                splitlines.extend(line.split('\n'))
+        elif isinstance(lines, str):
+            splitlines.extend(line.split('\n'))
+        else:
+            raise self.FileWriterError("%s not string" % repr(line))
+
+        for line in splitlines:
+            self.write_line(fsock, line)
+
 #===============================================================================
 # FortranWriter
 #===============================================================================
-class FortranWriter(Writer):
+class FortranWriter(FileWriter):
     """Routines for writing fortran lines. Keeps track of indentation
     and splitting of long lines"""
 
-    class FortranWriterError(Writer.WriterError):
+    class FortranWriterError(FileWriter.FileWriterError):
         """Exception raised if an error occurs in the definition
         or the execution of a FortranWriter."""
         pass
@@ -214,11 +232,11 @@ class FortranWriter(Writer):
 #===============================================================================
 # CPPWriter
 #===============================================================================
-class CPPWriter(Writer):
+class CPPWriter(FileWriter):
     """Routines for writing C++ lines. Keeps track of brackets,
     spaces, indentation and splitting of long lines"""
 
-    class CPPWriterError(Writer.WriterError):
+    class CPPWriterError(FileWriter.FileWriterError):
         """Exception raised if an error occurs in the definition
         or the execution of a CPPWriter."""
         pass
@@ -534,7 +552,7 @@ class CPPWriter(Writer):
         """Write a comment line, with correct indent and line splits"""
 
         if not isinstance(line, str) or line.find('\n') >= 0:
-            raise self.FortranWriterError, \
+            raise self.CPPWriterError, \
                   "write_comment_line must have a single line as argument"
 
         # This is a comment
@@ -595,7 +613,6 @@ class CPPWriter(Writer):
                     split_at = split_at + split_match.start()
                 else:
                     split_at = len(long_line) + 1
-                print "split_string: ", long_line[:split_at]
             # Append new line
             if long_line[split_at:].lstrip():
                 # Replace old line

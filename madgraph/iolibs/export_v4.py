@@ -28,7 +28,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
-import madgraph.iolibs.writer_classes as writers
+import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.template_files as Template
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'

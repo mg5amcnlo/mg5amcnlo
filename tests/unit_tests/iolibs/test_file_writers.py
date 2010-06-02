@@ -19,7 +19,7 @@ import StringIO
 import unittest
 import re
 
-import madgraph.iolibs.writer_classes as writers
+import madgraph.iolibs.file_writers as writers
 
 #===============================================================================
 # FortranWriterTest
@@ -66,8 +66,7 @@ C       Test
       TEST\n"""
 
         writer = writers.FortranWriter()
-        for line in lines:
-            writer.write_line(fsock, line)
+        writer.writelines(fsock, lines)
 
         self.assertEqual(fsock.getvalue(),
                          goal_string)
@@ -217,17 +216,11 @@ void Sigma2ff2fftgmZ::setIdColAcol()
 """
 
         writer = writers.CPPWriter()
-        for line in lines:
-            writer.write_line(fsock, line)
+        writer.writelines(fsock, lines)
         #print fsock.getvalue()
 
         self.assertEqual(fsock.getvalue(),
                          goal_string)
-
-    def test_split_cplusplus_line(self):
-
-        line = "if((setColAcol(1,0,2,0,1,0,2,0)+2 )>15)  {  } ;"
-        print writers.CPPWriter().split_line(line, [' '])[0]
 
     def test_write_cplusplus_error(self):
         """Test that a non-string gives an error"""
