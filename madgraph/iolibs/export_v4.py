@@ -1416,6 +1416,26 @@ class FortranWriter():
         return res_lines
 
 #===============================================================================
+# FortranFile
+#===============================================================================
+class FortranFile(file, FortranWriter):
+    
+    def writelines(self,lines):
+        """ format the line to the fortran format"""
+        if lines[-1] == '\n':
+            lines = lines[:-1]
+        for line in lines.split('\n'):
+            self.write_fortran_line(self, line)
+        
+    def write_comments(self, lines, comment='c', spaces=6):
+        """ write those lines as comment by adding at the beginning of each 
+        lines 'c      '."""
+        
+        comment_tag = comment + ' ' * spaces
+        lines = comment_tag + lines.replace('\n','\n' + comment_tag)
+        file.write(self,lines + '\n')
+        
+#===============================================================================
 # HelasFortranModel
 #===============================================================================
 class HelasFortranModel(helas_objects.HelasModel):
