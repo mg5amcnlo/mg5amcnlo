@@ -12,6 +12,8 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+import subprocess
+import shutil
 import unittest
 import os
 
@@ -47,7 +49,7 @@ class TestPythonToFrotran(unittest.TestCase):
         expr = '(ee**2*IMAG/(2.*sw**2) * (cmath.sin(sqrt(2)*ee)/3.'
         converted = ufo2mg4.python_to_fortran(expr)
         self.assertEqual(converted, 
-        '(ee**2*imag/(2.000000d+00*sw**2) * (dsin(dsqrt(2.000000d+00)*ee)/3.000000d+00')
+        '(ee**2*imag/(2.000000d+00*sw**2) * (sin(dsqrt(2.000000d+00)*ee)/3.000000d+00')
     
     def test_convert_number(self):
         """ test it can convert number in fortran string"""
@@ -104,7 +106,6 @@ class CheckFileCreate():
         """ suppress all the files linked to this test """
         
         for filename in self.created_files:
-            print filename
             try:
                 os.remove(self.give_pos(filename))
             except OSError:
@@ -113,36 +114,102 @@ class CheckFileCreate():
 
 class TestModelCreation(unittest.TestCase, CheckFileCreate):
 
-    created_files = ['couplings.f', 'couplings1.f', 'intparam_definition.inc', 
-                    ]
+    created_files = ['couplings.f', 'couplings1.f', 'couplings2.f', 'couplings3.f', 
+                     'couplings4.f', 'coupl.inc', 'intparam_definition.inc',
+                     'input.inc', 'param_read.f', 'makefile', 'tesprog.f', 
+                     'testprog', 'rw_para.f', 'lha_read.f', 'printout.f', 
+                     'formats.inc', 'makeinc.inc', 'ident_card.dat', 'libmodel.a',
+                     'param_write.inc','coupl_write.inc','param_read.inc',
+                     'testprog.f','param_card.dat']
 
     # clean all the tested files before and after any test
-    setUP = CheckFileCreate.clean_files
+    def setUp(self):
+        """ creating the full model from scratch """
+        CheckFileCreate.clean_files(self)
+        
+        sm_model_path = os.path.join(root_path, 'models', 'sm')
+        conv = ufo2mg4.convert_model_to_mg4(sm_model_path, self.output_path)
+        conv.write_all()
+        shutil.copy(os.path.join(sm_model_path,'param_card.dat'), \
+                                                               self.output_path)
+        os.system('cp %s/* %s' % (os.path.join(sm_model_path, os.path.pardir, 
+                                               'Template', 'fortran'),
+                                               self.output_path))
+        
     tearDown = CheckFileCreate.clean_files
 
-    def test_intparam_definition_creation(self):
-        """ test the creation of a valid intparam_definition"""
-        solution = """ BLABLA"""
+    def test_all(self):
+        """ test all the files"""
+        self.check_intparam_definition_creation()
+        self.check_compilation()
+        
+        
+    def check_compilation(self):
+        """check that the model compile return correct output"""
+        #Check the cleaning
+        self.assertFalse(os.path.exists(self.give_pos('testprog')))
+        subprocess.call(['make', 'testprog'], cwd=self.output_path,
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.assertTrue(os.path.exists(self.give_pos('testprog')))
+        
+        os.chmod(os.path.join(self.output_path, 'testprog'), 0777)
+        testprog = subprocess.Popen("./testprog", stdout=subprocess.PIPE,
+                            cwd=self.output_path,
+                            stderr=subprocess.STDOUT, shell=True)
+        
+                
+        solutions ={'GC_32 ': [-0.0, -0.0072199999999999999], 'ymtau ': [1.7769999999999999], 'GC_5 ': [1.2177199999999999, 0.0], 'GC_7 ': [-0.0, -0.56760999999999995], 'GC_11 ': [0.0, 0.21021999999999999], 'GC_3 ': [-0.0, -0.31345000000000001], 'gw__EXP__2 ': [0.4204345654976559], 'aEW ': [0.0078186082877247844], 'ee__EXP__2 ': [0.098251529432049817], 'GC_35 ': [0.0, -0.10352], 'MC ': [1.4199999999999999], 'MZ ': [91.188000000000002], 'WW ': [2.04759951], 'cw__EXP__2 ': [0.76630958181149467], 'GC_1 ': [-0.0, -0.10448], 'GC_9 ': [0.0, 0.32218000000000002], 'GC_25 ': [0.0, 0.27432000000000001], 'GC_10 ': [-0.0, -0.71258999999999995], 'aEWM1 ': [127.90000000000001], 'GC_29 ': [-0.0, -0.019089999999999999], 'CKM11 ': (0.97418004031982097, 0.0), 'ytau ': [0.010206617000654717], 'GC_8 ': [-0.0, -0.42043000000000003], 'GC_16 ': [0.0, 0.44666], 'SQRT__2 ': [1.4142135623730951], 'MTA ': [1.7769999999999999], 'GC_23 ': [0.0, 0.098250000000000004], 'MH ': [120.0], 'GC_27 ': [0.0, 51.75938], 'GC_31 ': [-0.0, -0.70791000000000004], 'GC_13 ': [0.0, 0.44666], 'aS ': [0.11799999999999999], 'ymb ': [4.7000000000000002], 'GC_17 ': [-0.0, -0.28381000000000001], 'COMPLEXI ': (0.0, 1.0), 'G ': [1.2177157847767195], 'yb ': [0.026995554250465494], 'GC_14 ': [0.0, 0.10352], 'Gf ': [1.16639e-05], 'GC_33 ': [0.0, 0.44666], 'GC_21 ': [-0.0, -0.31345000000000001], 'ee ': [0.31345100004952897], 'WZ ': [2.4414035100000002], 'v ': [246.21845810181634], 'CONJG__CKM22 ': (0.97418004031982097, -0.0), 'WH ': [0.0057530884799999998], 'GC_6 ': [0.0, 1.4828300000000001], 'CKM22 ': (0.97418004031982097, 0.0), 'sw2 ': [0.23369041818850544], 'GC_2 ': [0.0, 0.20896999999999999], 'GC_24 ': [0.0, 0.37035000000000001], 'MB ': [4.7000000000000002], 'CONJG__CKM21 ': (-0.2257725604285693, -0.0), 'WT ': [1.50833649], 'GC_18 ': [0.0, 0.28381000000000001], 'GC_19 ': [-0.0, -0.028850000000000001], 'GC_28 ': [0.0, 67.543689999999998], 'GC_4 ': [0.0, 1.2177199999999999], 'muH ': [84.852813742385706], 'ymt ': [174.30000000000001], 'GC_15 ': [-0.0, -0.10352], 'MT ': [174.30000000000001], 'gw ': [0.64840925772050473], 'CKM12 ': (0.2257725604285693, 0.0), 'lam ': [0.1187657681051775], 'GC_20 ': [0.0, 0.086550000000000002], 'GC_12 ': [0.0, 0.45849000000000001], 'sw__EXP__2 ': [0.23369041818850547], 'GC_36 ': [0.0, 0.44666], 'sw ': [0.48341536817575986], 'CONJG__CKM12 ': (0.2257725604285693, -0.0), 'GC_26 ': [-0.0, -175.45394999999999], 'GC_34 ': [0.0, 0.10352], 'g1 ': [0.35806966653151989], 'cabi ': [0.22773599999999999], 'GC_22 ': [-0.0, -0.35583999999999999], 'GC_30 ': [-0.0, -0.00577], 'MW ': [79.825163827442964], 'CKM21 ': (-0.2257725604285693, 0.0), 'ymc ': [1.4199999999999999], 'cw ': [0.87539110220032201], 'yc ': [0.008156103624608722], 'G__EXP__2 ': [1.4828317324943818], 'yt ': [1.0011330012459863], 'CONJG__CKM11 ': (0.97418004031982097, -0.0)}
+        
+        nb_value = 0
+        for line in testprog.stdout:
+            self.assertTrue('Warning' not in line)
+            if '=' not in line:
+                continue
+            split = line.split('=')
+            variable = split[0].lstrip()
+            if ',' in line:
+                value = eval(split[1])
+            else:
+                value=[float(numb) for numb in split[1].split()]
+            nb_value +=1
+            self.assertEqual(value, solutions[variable])
+        
+        self.assertEqual(nb_value, 85)
+            
+            
+            
+            
+            
+        
+        
+        subprocess.STDOUT
+        
+        
 
-        # Create the intparam_definition.inc
-        sm_model_path = os.path.join(root_path, 'models', 'sm') 
-        converter =  ufo2mg4.convert_model_to_mg4(sm_model_path, self.output_path)
-        converter.create_intparam_def()
+    def check_intparam_definition_creation(self):
+        """ test the creation of a valid intparam_definition"""
 
         # Check that any definition appears only once:
         alreadydefine = []
         for line in self.ReturnFile('intparam_definition.inc'):
+            if 'ENDIF' in line:
+                self.assertEqual(len(alreadydefine),30)
             if '=' not in line:
                 continue
-            new_definition = line.split('=')[0]
+            new_def = line.split('=')[0].lstrip()
             # Check that is the firsttime that this definition is done
-            self.assertFalse(new_definition in alreadydefine)
+            self.assertFalse(new_def in alreadydefine)
+            alreadydefine.append(new_def)
+            
+        self.assertEqual(alreadydefine, \
+        ['AEW ', 'G ', 'CKM11 ', 'CKM12 ', 'CKM21 ', 'CKM22 ', 'MW ', 'EE ', 
+         'SW2 ', 'CW ', 'SW ', 'G1 ', 'GW ', 'V ', 'LAM ', 'YB ', 'YC ', 'YT ', 
+         'YTAU ', 'MUH ', 'COMPLEXI ', 'GW__EXP__2 ', 'CW__EXP__2 ', 
+         'EE__EXP__2 ', 'SW__EXP__2 ', 'SQRT__2 ', 'CONJG__CKM11 ', 
+         'CONJG__CKM12 ', 'CONJG__CKM21 ', 'CONJG__CKM22 ', 'G__EXP__2 ', 
+         'GAL(1) ', 'GAL(2) ', 'DUM0 ', 'DUM1 '])
 
-        # Check that the output stays the same
-        self.assertFileContains('intparam_definition.inc',
-                                 solution)
-
-    def test_couplings_creation(self):
+    def check_couplings_creation(self):
         """ test the creation of a valid couplings.f"""
         
         # Check that the output stays the same
