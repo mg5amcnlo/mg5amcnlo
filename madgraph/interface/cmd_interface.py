@@ -976,16 +976,18 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             print ''
 
         if args[0] == 'interactions':
-            print "Current model contains %i interactions" % \
+            text = "Current model contains %i interactions\n" % \
                     len(self._curr_model['interactions'])
             for inter in self._curr_model['interactions']:
-                print str(inter['id']) + ':',
+                text += str(inter['id']) + ':'
                 for part in inter['particles']:
                     if part['is_part']:
-                        print part['name'],
+                        text += part['name']
                     else:
-                        print part['antiname'],
-                print
+                        text += part['antiname']
+                text += '\n'
+            import pydoc
+            pydoc.pager(text)
 
         if args[0] == 'processes':
             for amp in self._curr_amps:
