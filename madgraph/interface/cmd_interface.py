@@ -835,7 +835,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _curr_fortran_model = export_v4.HelasFortranModel()
     _multiparticles = {}
 
-    _display_opts = ['particles', 'interactions', 'processes', 'multiparticles']
+    _display_opts = ['particles', 'interactions', 'processes', 'multiparticles',
+                     'couplings']
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _import_formats = ['model_v4', 'proc_v4', 'command']
@@ -975,7 +976,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 print part['name'],
             print ''
 
-        if args[0] == 'interactions':
+        elif args[0] == 'interactions':
             text = "Current model contains %i interactions\n" % \
                     len(self._curr_model['interactions'])
             for inter in self._curr_model['interactions']:
@@ -989,13 +990,20 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             import pydoc
             pydoc.pager(text)
 
-        if args[0] == 'processes':
+        elif args[0] == 'processes':
             for amp in self._curr_amps:
                 print amp.nice_string()
-        if args[0] == 'multiparticles':
+        elif args[0] == 'multiparticles':
             print 'Multiparticle labels:'
             for key in self._multiparticles:
                 print key, " = ", self._multiparticles[key]
+        
+        elif args[0] == 'couplings':
+            couplings = set()
+            for interaction in self._curr_model['interactions']:
+                for order in interaction['orders'].keys():
+                    couplings.add(order)
+            print ' / '.join(couplings)
     
     def do_draw(self, line):
         """ draw the Feynman diagram for the given process """
