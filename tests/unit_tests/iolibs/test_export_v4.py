@@ -22,24 +22,30 @@ import fractions
 
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.export_v4 as export_v4
+import madgraph.iolibs.file_writers as writers
 import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_algebra as color
 import tests.unit_tests.core.test_helas_objects as test_helas_objects
+import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 
 #===============================================================================
 # IOImportV4Test
 #===============================================================================
-class IOExportV4Test(unittest.TestCase):
+class IOExportV4Test(unittest.TestCase,
+                     test_file_writers.CheckFileCreate):
     """Test class for the export v4 module"""
 
     mymodel = base_objects.Model()
     mymatrixelement = helas_objects.HelasMatrixElement()
     myfortranmodel = export_v4.HelasFortranModel()
+    created_files = ['test'
+                    ]
 
     def setUp(self):
 
+        test_file_writers.CheckFileCreate.clean_files
         # Set up model
 
         mypartlist = base_objects.ParticleList()
@@ -117,13 +123,10 @@ class IOExportV4Test(unittest.TestCase):
         self.mymatrixelement = helas_objects.HelasMatrixElement(myamplitude)
         self.myfortranmodel.downcase = False
 
-    def tearDown(self):
-        pass
+    tearDown = test_file_writers.CheckFileCreate.clean_files
 
     def test_export_matrix_element_v4_standalone(self):
         """Test the result of exporting a matrix element to file"""
-
-        fsock = StringIO.StringIO()
 
         goal_matrix_f = \
 """      SUBROUTINE SMATRIX(P,ANS)
@@ -301,11 +304,12 @@ C     Amplitude(s) for diagram number 6
       END
 """ % misc.get_pkg_info()
 
-        export_v4.write_matrix_element_v4_standalone(fsock,
-                                                     self.mymatrixelement,
-                                                     self.myfortranmodel)
+        export_v4.write_matrix_element_v4_standalone(\
+            writers.FortranWriter(self.give_pos('test')),
+            self.mymatrixelement,
+            self.myfortranmodel)
 
-        self.assertEqual(fsock.getvalue(), goal_matrix_f)
+        self.assertFileContains('test', goal_matrix_f)
 
     def test_coeff_string(self):
         """Test the coeff string for JAMP lines"""
@@ -329,8 +333,14 @@ C     Amplitude(s) for diagram number 6
 #===============================================================================
 # HelasFortranModelTest
 #===============================================================================
-class HelasFortranModelTest(test_helas_objects.HelasModelTest):
+class HelasFortranModelTest(test_helas_objects.HelasModelTest,
+                            test_file_writers.CheckFileCreate):
     """Test class for the HelasFortranModel object"""
+
+    created_files = ['leshouche'
+                    ]
+
+    tearDown = test_file_writers.CheckFileCreate.clean_files
 
     def test_generate_wavefunctions_and_amplitudes(self):
         """Test automatic generation of wavefunction and amplitude calls"""
@@ -893,10 +903,11 @@ JAMP(6)=+1./4.*(-1./3.*AMP(1)-1./3.*AMP(2)-AMP(5)-AMP(6)-AMP(8)-AMP(11)-AMP(13)-
                          ['logical icolamp(42,6)', 'DATA icolamp/.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.false.,.false.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.false.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.false.,.true.,.true.,.false.,.false.,.true.,.true.,.false.,.false.,.false.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.false.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.true.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.false.,.true.,.true.,.true.,.false.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.false.,.true.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.true.,.true.,.true.,.false.,.false.,.false.,.true.,.false.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.true.,.false.,.false.,.false.,.false.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.false.,.true.,.true.,.false.,.true.,.false.,.false.,.true.,.false.,.true.,.true.,.true.,.false.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.false.,.false.,.true.,.true.,.true.,.true.,.true.,.true.,.true.,.false.,.true./'])
 
         # Test leshouche.inc output
-        fsock = StringIO.StringIO()
-        export_v4.write_leshouche_file(fsock, matrix_element, fortran_model)
+        writer = writers.FortranWriter(self.give_pos('leshouche'))
+        export_v4.write_leshouche_file(writer, matrix_element, fortran_model)
+        writer.close()
 
-        self.assertEqual(fsock.getvalue(),
+        self.assertFileContains('leshouche',
                          """      DATA (IDUP(I,1),I=1,6)/2,-2,2,-2,2,-2/
       DATA (MOTHUP(1,I,  1),I=1, 6)/  0,  0,  1,  1,  1,  1/
       DATA (MOTHUP(2,I,  1),I=1, 6)/  0,  0,  2,  2,  2,  2/
@@ -931,9 +942,11 @@ IPROC=IPROC+1 ! u u~ > u u~ u u~
 PD(IPROC)=PD(IPROC-1) + u1*ub2""")
 
         # Test mg.sym
-        fsock = StringIO.StringIO()
-        export_v4.write_mg_sym_file(fsock, matrix_element, fortran_model)
-        self.assertEqual(fsock.getvalue(),
+        writer = writers.FortranWriter(self.give_pos('test'))
+        export_v4.write_mg_sym_file(writer, matrix_element, fortran_model)
+        writer.close()
+        
+        self.assertFileContains('test',
                          """      2
       2
       3
@@ -2169,7 +2182,7 @@ CALL VVVL1X(W(1,2),W(1,3),W(1,10),G1,AMP(12))""")
     def test_export_matrix_element_v4_standalone(self):
         """Test the result of exporting a matrix element to file"""
 
-        fsock = StringIO.StringIO()
+        writer = writers.FortranWriter(self.give_pos('test'))
 
         goal_matrix_f = \
 """      SUBROUTINE SMATRIX(P,ANS)
@@ -2352,7 +2365,6 @@ C     Amplitude(s) for diagram number 6
         """
 
         myfortranmodel = export_v4.HelasFortranModel()
-        fsock = StringIO.StringIO()
 
         # Set up local model
 
@@ -2570,9 +2582,10 @@ CALL IOVXXX(W(1,25),W(1,23),W(1,2),GAL,AMP(7))
 # Amplitude(s) for diagram number 8
 CALL IOVXXX(W(1,26),W(1,23),W(1,2),GAL,AMP(8))""")
 
-        export_v4.write_pmass_file(fsock, me, myfortranmodel)
-
-        self.assertEqual(fsock.getvalue(), """      PMASS(1)=ZERO
+        writer = writers.FortranWriter(self.give_pos('test'))
+        export_v4.write_pmass_file(writer, me, myfortranmodel)
+        writer.close()
+        self.assertFileContains('test',"""      PMASS(1)=ZERO
       PMASS(2)=ZERO
       PMASS(3)=ZERO
       PMASS(4)=ZERO
@@ -2589,7 +2602,6 @@ CALL IOVXXX(W(1,26),W(1,23),W(1,2),GAL,AMP(8))""")
         """
 
         myfortranmodel = export_v4.HelasFortranModel()
-        fsock = StringIO.StringIO()
 
         # Set up local model
 
@@ -3055,9 +3067,11 @@ CALL VVVXXX(W(1,2),W(1,26),W(1,37),GG,AMP(214))
 CALL VVVXXX(W(1,2),W(1,26),W(1,38),GG,AMP(215))
 CALL VVVXXX(W(1,2),W(1,26),W(1,39),GG,AMP(216))""")
 
-        export_v4.write_pmass_file(fsock, me, myfortranmodel)
+        writer = writers.FortranWriter(self.give_pos('test'))
+        export_v4.write_pmass_file(writer, me, myfortranmodel)
+        writer.close()
 
-        self.assertEqual(fsock.getvalue(), """      PMASS(1)=ZERO
+        self.assertFileContains('test',"""      PMASS(1)=ZERO
       PMASS(2)=ZERO
       PMASS(3)=ZERO
       PMASS(4)=ZERO
@@ -3395,14 +3409,15 @@ CALL IOSXXX(W(1,28),W(1,2),W(1,27),MGVX350,AMP(8))""")
         self.assertEqual(export_v4.get_JAMP_lines(me)[0],
                          "JAMP(1)=+AMP(1)+AMP(2)+AMP(3)+AMP(4)-AMP(5)-AMP(6)-AMP(7)-AMP(8)")
 
-        fsock = StringIO.StringIO()
+        writer = writers.FortranWriter(self.give_pos('test'))
 
         # Test configs file
-        nconfig, s_and_t_channels = export_v4.write_configs_file(fsock,
+        nconfig, s_and_t_channels = export_v4.write_configs_file(writer,
                                      me,
                                      myfortranmodel)
-
-        self.assertEqual(fsock.getvalue(),
+        writer.close()
+        
+        self.assertFileContains('test',
                          """C     Diagram 1, Amplitude 1
       DATA MAPCONFIG(1)/1/
       DATA (IFOREST(I,-1,1),I=1,2)/8,6/
@@ -3511,15 +3526,16 @@ C     Number of configs
       DATA MAPCONFIG(0)/8/
 """)
 
-        fsock = StringIO.StringIO()
+        writer = writers.FortranWriter(self.give_pos('test'))
 
         # Test decayBW file
-        export_v4.write_decayBW_file(fsock,
+        export_v4.write_decayBW_file(writer,
                                      me,
                                      myfortranmodel,
                                      s_and_t_channels)
 
-        self.assertEqual(fsock.getvalue(),
+        writer.close()
+        self.assertFileContains('test',
                          """      DATA GFORCEBW(-1,1)/.FALSE./
       DATA GFORCEBW(-2,1)/.TRUE./
       DATA GFORCEBW(-3,1)/.FALSE./
@@ -3557,22 +3573,26 @@ C     Number of configs
         fortran_model = export_v4.HelasFortranModel()
 
         # Test dname.mg
-        fsock = StringIO.StringIO()
-        export_v4.write_dname_file(fsock, me, fortran_model)
-        self.assertEqual(fsock.getvalue(), "DIRNAME=P0_e-e+_e-sl2+ae-sl2+a\n")
+        writer = writers.FortranWriter(self.give_pos('test'))
+        export_v4.write_dname_file(writer, me, fortran_model)
+        writer.close()
+        self.assertFileContains('test', "DIRNAME=P0_e-e+_e-sl2+ae-sl2+a\n")
         # Test iproc.inc
-        fsock = StringIO.StringIO()
-        export_v4.write_iproc_file(fsock, me, fortran_model)
-        self.assertEqual(fsock.getvalue(), "      0\n")
+        writer = writers.FortranWriter(self.give_pos('test'))
+        export_v4.write_iproc_file(writer, me, fortran_model)
+        writer.close()
+        self.assertFileContains('test', "      0\n")
         # Test maxamps.inc
-        fsock = StringIO.StringIO()
-        export_v4.write_maxamps_file(fsock, me, fortran_model)
-        self.assertEqual(fsock.getvalue(),
+        writer = writers.FortranWriter(self.give_pos('test'))
+        export_v4.write_maxamps_file(writer, me, fortran_model)
+        writer.close()
+        self.assertFileContains('test',
                       "      INTEGER    MAXAMPS\n      PARAMETER (MAXAMPS=8)\n")
         # Test mg.sym
-        fsock = StringIO.StringIO()
-        export_v4.write_mg_sym_file(fsock, me, fortran_model)
-        self.assertEqual(fsock.getvalue(), """      3
+        writer = writers.FortranWriter(self.give_pos('test'))
+        export_v4.write_mg_sym_file(writer, me, fortran_model)
+        writer.close()
+        self.assertFileContains('test', """      3
       2
       3
       6
@@ -3583,29 +3603,33 @@ C     Number of configs
       5
       8\n""")
         # Test ncombs.inc
-        fsock = StringIO.StringIO()
-        export_v4.write_ncombs_file(fsock, me, fortran_model)
-        self.assertEqual(fsock.getvalue(),
+        writer = writers.FortranWriter(self.give_pos('test'))
+        export_v4.write_ncombs_file(writer, me, fortran_model)
+        writer.close()
+        self.assertFileContains('test',
                          """      INTEGER    N_MAX_CL
       PARAMETER (N_MAX_CL=512)\n""")
         # Test nexternal.inc
-        fsock = StringIO.StringIO()
-        export_v4.write_nexternal_file(fsock, me, fortran_model)
-        self.assertEqual(fsock.getvalue(),
+        writer = writers.FortranWriter(self.give_pos('test'))
+        export_v4.write_nexternal_file(writer, me, fortran_model)
+        writer.close()
+        self.assertFileContains('test',
                          """      INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=8)
       INTEGER    NINCOMING
       PARAMETER (NINCOMING=2)\n""")
         # Test ngraphs.inc
-        fsock = StringIO.StringIO()
-        export_v4.write_ngraphs_file(fsock, me, fortran_model, nconfig)
-        self.assertEqual(fsock.getvalue(),
+        writer = writers.FortranWriter(self.give_pos('test'))
+        export_v4.write_ngraphs_file(writer, me, fortran_model, nconfig)
+        writer.close()
+        self.assertFileContains('test',
                          """      INTEGER    N_MAX_CG
       PARAMETER (N_MAX_CG=8)\n""")
         # Test props.inc
-        fsock = StringIO.StringIO()
-        export_v4.write_props_file(fsock, me, fortran_model, s_and_t_channels)
-        self.assertEqual(fsock.getvalue(),
+        writer = writers.FortranWriter(self.give_pos('test'))
+        export_v4.write_props_file(writer, me, fortran_model, s_and_t_channels)
+        writer.close()
+        self.assertFileContains('test',
                          """      PMASS(-1,1)  = ZERO
       PWIDTH(-1,1) = ZERO
       POW(-1,1) = 1

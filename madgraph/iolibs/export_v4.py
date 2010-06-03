@@ -151,14 +151,17 @@ def create_v4_webpage(dir_path, makejpg):
 #===============================================================================
 # write_matrix_element_v4_standalone
 #===============================================================================
-def write_matrix_element_v4_standalone(fsock, matrix_element, fortran_model):
+def write_matrix_element_v4_standalone(writer, matrix_element, fortran_model):
     """Export a matrix element to a matrix.f file in MG4 standalone format"""
 
     if not matrix_element.get('processes') or \
            not matrix_element.get('diagrams'):
         return 0
 
-    writer = writers.FortranWriter()
+    if not isinstance(writer, writers.FortranWriter):
+        raise writers.FortranWriter.FortranWriterError(\
+            "writer not FortranWriter")
+
     # Set lowercase/uppercase Fortran code
     writers.FortranWriter.downcase = False
 
@@ -219,22 +222,24 @@ def write_matrix_element_v4_standalone(fsock, matrix_element, fortran_model):
     file = file % replace_dict
 
     # Write the file
-    for line in file.split('\n'):
-        writer.write_line(fsock, line)
+    writer.writelines(file)
 
     return len(filter(lambda call: call.find('#') != 0, helas_calls))
 
 #===============================================================================
 # write_matrix_element_v4_madevent
 #===============================================================================
-def write_matrix_element_v4_madevent(fsock, matrix_element, fortran_model):
+def write_matrix_element_v4_madevent(writer, matrix_element, fortran_model):
     """Export a matrix element to a matrix.f file in MG4 madevent format"""
 
     if not matrix_element.get('processes') or \
            not matrix_element.get('diagrams'):
         return 0
 
-    writer = writers.FortranWriter()
+    if not isinstance(writer, writers.FortranWriter):
+        raise writers.FortranWriter.FortranWriterError(\
+            "writer not FortranWriter")
+
     # Set lowercase/uppercase Fortran code
     writers.FortranWriter.downcase = False
 
@@ -295,15 +300,14 @@ def write_matrix_element_v4_madevent(fsock, matrix_element, fortran_model):
     file = file % replace_dict
     
     # Write the file
-    for line in file.split('\n'):
-        writer.write_line(fsock, line)
+    writer.writelines(file)
 
     return len(filter(lambda call: call.find('#') != 0, helas_calls))
 
 #===============================================================================
 # write_auto_dsig_file
 #===============================================================================
-def write_auto_dsig_file(fsock, matrix_element, fortran_model):
+def write_auto_dsig_file(writer, matrix_element, fortran_model):
     """Write the auto_dsig.f file for the differential cross section
     calculation, includes pdf call information"""
 
@@ -316,8 +320,6 @@ def write_auto_dsig_file(fsock, matrix_element, fortran_model):
     if ninitial < 1 or ninitial > 2:
         raise writers.FortranWriter.FortranWriterError, \
               """Need ninitial = 1 or 2 to write auto_dsig file"""
-
-    writer = writers.FortranWriter()
 
     replace_dict = {}
 
@@ -346,32 +348,26 @@ def write_auto_dsig_file(fsock, matrix_element, fortran_model):
     file = file % replace_dict
 
     # Write the file
-    for line in file.split('\n'):
-        writer.write_line(fsock, line)
+    writer.writelines(file)
 
 #===============================================================================
 # write_coloramps_file
 #===============================================================================
-def write_coloramps_file(fsock, matrix_element, fortran_model):
+def write_coloramps_file(writer, matrix_element, fortran_model):
     """Write the coloramps.inc file for MadEvent"""
-
-    writer = writers.FortranWriter()
 
     lines = get_icolamp_lines(matrix_element)
 
     # Write the file
-    for line in lines:
-        writer.write_line(fsock, line)
+    writer.writelines(lines)
 
     return True
 
 #===============================================================================
 # write_configs_file
 #===============================================================================
-def write_configs_file(fsock, matrix_element, fortran_model):
+def write_configs_file(writer, matrix_element, fortran_model):
     """Write the configs.inc file for MadEvent"""
-
-    writer = writers.FortranWriter()
 
     # Extract number of external particles
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
@@ -429,19 +425,16 @@ def write_configs_file(fsock, matrix_element, fortran_model):
     lines.append("data mapconfig(0)/%d/" % iconfig)
 
     # Write the file
-    for line in lines:
-        writer.write_line(fsock, line)
+    writer.writelines(lines)
 
     return iconfig, s_and_t_channels
 
 #===============================================================================
 # write_decayBW_file
 #===============================================================================
-def write_decayBW_file(fsock, matrix_element, fortran_model,
+def write_decayBW_file(writer, matrix_element, fortran_model,
                        s_and_t_channels):
     """Write the decayBW.inc file for MadEvent"""
-
-    writer = writers.FortranWriter()
 
     lines = []
 
@@ -458,48 +451,43 @@ def write_decayBW_file(fsock, matrix_element, fortran_model,
                           booldict[leg.get('from_group')]))
 
     # Write the file
-    for line in lines:
-        writer.write_line(fsock, line)
+    writer.writelines(lines)
 
     return True
 
 #===============================================================================
 # write_dname_file
 #===============================================================================
-def write_dname_file(fsock, matrix_element, fortran_model):
+def write_dname_file(writer, matrix_element, fortran_model):
     """Write the dname.mg file for MG4"""
 
     line = "DIRNAME=P%s" % \
            matrix_element.get('processes')[0].shell_string_v4()
 
     # Write the file
-    fsock.write(line + "\n")
+    writer.write(line + "\n")
 
     return True
 
 #===============================================================================
 # write_iproc_file
 #===============================================================================
-def write_iproc_file(fsock, matrix_element, fortran_model):
+def write_iproc_file(writer, matrix_element, fortran_model):
     """Write the iproc.inc file for MG4"""
-
-    writer = writers.FortranWriter()
 
     line = "%d" % \
            matrix_element.get('processes')[0].get('id')
 
     # Write the file
-    writer.write_line(fsock, line)
-
+    for line_to_write in writer.write_line(line):
+        writer.write(line_to_write)
     return True
 
 #===============================================================================
 # write_leshouche_file
 #===============================================================================
-def write_leshouche_file(fsock, matrix_element, fortran_model):
+def write_leshouche_file(writer, matrix_element, fortran_model):
     """Write the leshouche.inc file for MG4"""
-
-    writer = writers.FortranWriter()
 
     # Extract number of external particles
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
@@ -545,36 +533,30 @@ def write_leshouche_file(fsock, matrix_element, fortran_model):
                                         for l in legs])))
 
     # Write the file
-    for line in lines:
-        writer.write_line(fsock, line)
+    writer.writelines(lines)
 
     return True
 
 #===============================================================================
 # write_maxamps_file
 #===============================================================================
-def write_maxamps_file(fsock, matrix_element, fortran_model):
+def write_maxamps_file(writer, matrix_element, fortran_model):
     """Write the maxamps.inc file for MG4."""
-
-    writer = writers.FortranWriter()
 
     file = "       integer    maxamps\n"
     file = file + "parameter (maxamps=%d)" % \
            len(matrix_element.get_all_amplitudes())
 
     # Write the file
-    for line in file.split('\n'):
-        writer.write_line(fsock, line)
+    writer.writelines(file)
 
     return True
 
 #===============================================================================
 # write_mg_sym_file
 #===============================================================================
-def write_mg_sym_file(fsock, matrix_element, fortran_model):
+def write_mg_sym_file(writer, matrix_element, fortran_model):
     """Write the mg.sym file for MadEvent."""
-
-    writer = writers.FortranWriter()
 
     lines = []
 
@@ -608,18 +590,15 @@ def write_mg_sym_file(fsock, matrix_element, fortran_model):
             lines.append(str(number))
 
     # Write the file
-    for line in lines:
-        writer.write_line(fsock, line)
+    writer.writelines(lines)
 
     return True
 
 #===============================================================================
 # write_ncombs_file
 #===============================================================================
-def write_ncombs_file(fsock, matrix_element, fortran_model):
+def write_ncombs_file(writer, matrix_element, fortran_model):
     """Write the ncombs.inc file for MadEvent."""
-
-    writer = writers.FortranWriter()
 
     # Extract number of external particles
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
@@ -629,19 +608,15 @@ def write_ncombs_file(fsock, matrix_element, fortran_model):
     file = file + "parameter (n_max_cl=%d)" % (2 ** (nexternal + 1))
 
     # Write the file
-
-    for line in file.split('\n'):
-        writer.write_line(fsock, line)
+    writer.writelines(file)
 
     return True
 
 #===============================================================================
 # write_nexternal_file
 #===============================================================================
-def write_nexternal_file(fsock, matrix_element, fortran_model):
+def write_nexternal_file(writer, matrix_element, fortran_model):
     """Write the nexternal.inc file for MG4"""
-
-    writer = writers.FortranWriter()
 
     replace_dict = {}
 
@@ -657,36 +632,30 @@ def write_nexternal_file(fsock, matrix_element, fortran_model):
       parameter (nincoming=%(ninitial)d)""" % replace_dict
 
     # Write the file
-    for line in file.split('\n'):
-        writer.write_line(fsock, line)
+    writer.writelines(file)
 
     return True
 
 #===============================================================================
 # write_ngraphs_file
 #===============================================================================
-def write_ngraphs_file(fsock, matrix_element, fortran_model, nconfigs):
+def write_ngraphs_file(writer, matrix_element, fortran_model, nconfigs):
     """Write the ngraphs.inc file for MG4. Needs input from
     write_configs_file."""
-
-    writer = writers.FortranWriter()
 
     file = "       integer    n_max_cg\n"
     file = file + "parameter (n_max_cg=%d)" % nconfigs
 
     # Write the file
-    for line in file.split('\n'):
-        writer.write_line(fsock, line)
+    writer.writelines(file)
 
     return True
 
 #===============================================================================
 # write_pmass_file
 #===============================================================================
-def write_pmass_file(fsock, matrix_element, fortran_model):
+def write_pmass_file(writer, matrix_element, fortran_model):
     """Write the pmass.inc file for MG4"""
-
-    writer = writers.FortranWriter()
 
     model = matrix_element.get('processes')[0].get('model')
 
@@ -700,19 +669,16 @@ def write_pmass_file(fsock, matrix_element, fortran_model):
                      (wf.get('number_external'), mass))
 
     # Write the file
-    for line in lines:
-        writer.write_line(fsock, line)
+    writer.writelines(lines)
 
     return True
 
 #===============================================================================
 # write_props_file
 #===============================================================================
-def write_props_file(fsock, matrix_element, fortran_model, s_and_t_channels):
+def write_props_file(writer, matrix_element, fortran_model, s_and_t_channels):
     """Write the props.inc file for MadEvent. Needs input from
     write_configs_file."""
-
-    writer = writers.FortranWriter()
 
     lines = []
 
@@ -744,22 +710,21 @@ def write_props_file(fsock, matrix_element, fortran_model, s_and_t_channels):
                          (leg.get('number'), iconf + 1, pow_part))
 
     # Write the file
-    for line in lines:
-        writer.write_line(fsock, line)
+    writer.writelines(lines)
 
     return True
 
 #===============================================================================
 # write_subproc
 #===============================================================================
-def write_subproc(fsock, matrix_element, fortran_model):
+def write_subproc(writer, matrix_element, fortran_model):
     """Append this subprocess to the subproc.mg file for MG4"""
 
     line = "P%s" % \
            matrix_element.get('processes')[0].shell_string_v4()
 
     # Write line to file
-    fsock.write(line + "\n")
+    writer.write(line + "\n")
 
     return True
 
@@ -799,8 +764,8 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
     cwd = os.getcwd()
 
     # Create the directory PN_xx_xxxxx in the specified path
-    dirpath = os.path.join(path, \
-                   "P%s" % matrix_element.get('processes')[0].shell_string_v4())
+    dirpath = os.path.join(path, "P%s" % \
+                         matrix_element.get('processes')[0].shell_string_v4())
     try:
         os.mkdir(dirpath)
     except os.error as error:
@@ -816,28 +781,25 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
 
     # Create the matrix.f file and the nexternal.inc file
     filename = 'matrix.f'
-    calls = files.write_to_file(filename,
-                                write_matrix_element_v4_standalone,
-                                matrix_element,
-                                fortran_model)
+    calls = write_matrix_element_v4_standalone(\
+        writers.FortranWriter(filename),
+        matrix_element,
+        fortran_model)
 
     filename = 'nexternal.inc'
-    files.write_to_file(filename,
-                        write_nexternal_file,
-                        matrix_element,
-                        fortran_model)
+    write_nexternal_file(writers.FortranWriter(filename),
+                         matrix_element,
+                         fortran_model)
 
     filename = 'pmass.inc'
-    files.write_to_file(filename,
-                        write_pmass_file,
-                        matrix_element,
-                        fortran_model)
+    write_pmass_file(writers.FortranWriter(filename),
+                     matrix_element,
+                     fortran_model)
 
     filename = 'ngraphs.inc'
-    files.write_to_file(filename,
-                        write_ngraphs_file,
-                        matrix_element,
-                        fortran_model,
+    write_ngraphs_file(writers.FortranWriter(filename),
+                       matrix_element,
+                       fortran_model,
                         len(matrix_element.get_all_amplitudes()))
 
     linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
@@ -884,96 +846,82 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 
     # Create the matrix.f file, auto_dsig.f file and all inc files
     filename = 'matrix.f'
-    calls = files.write_to_file(filename,
-                                write_matrix_element_v4_madevent,
-                                matrix_element,
-                                fortran_model)
+    calls = write_matrix_element_v4_madevent(writers.FortranWriter(filename),
+                                             matrix_element,
+                                             fortran_model)
 
     filename = 'auto_dsig.f'
-    files.write_to_file(filename,
-                                write_auto_dsig_file,
-                                matrix_element,
-                                fortran_model)
+    write_auto_dsig_file(writers.FortranWriter(filename),
+                         matrix_element,
+                         fortran_model)
 
     filename = 'coloramps.inc'
-    files.write_to_file(filename,
-                        write_coloramps_file,
-                        matrix_element,
-                        fortran_model)
+    write_coloramps_file(writers.FortranWriter(filename),
+                         matrix_element,
+                         fortran_model)
 
     filename = 'configs.inc'
-    nconfigs, s_and_t_channels = files.write_to_file(filename,
-                        write_configs_file,
-                        matrix_element,
-                        fortran_model)
+    nconfigs, s_and_t_channels = write_configs_file(\
+        writers.FortranWriter(filename),
+        matrix_element,
+        fortran_model)
 
     filename = 'decayBW.inc'
-    files.write_to_file(filename,
-                        write_decayBW_file,
-                        matrix_element,
-                        fortran_model,
+    write_decayBW_file(writers.FortranWriter(filename),
+                       matrix_element,
+                       fortran_model,
                         s_and_t_channels)
 
     filename = 'dname.mg'
-    files.write_to_file(filename,
-                        write_dname_file,
-                        matrix_element,
-                        fortran_model)
+    write_dname_file(writers.FortranWriter(filename),
+                     matrix_element,
+                     fortran_model)
 
     filename = 'iproc.dat'
-    files.write_to_file(filename,
-                        write_iproc_file,
-                        matrix_element,
-                        fortran_model)
+    write_iproc_file(writers.FortranWriter(filename),
+                     matrix_element,
+                     fortran_model)
 
     filename = 'leshouche.inc'
-    files.write_to_file(filename,
-                        write_leshouche_file,
-                        matrix_element,
-                        fortran_model)
+    write_leshouche_file(writers.FortranWriter(filename),
+                         matrix_element,
+                         fortran_model)
 
     filename = 'maxamps.inc'
-    files.write_to_file(filename,
-                        write_maxamps_file,
-                        matrix_element,
-                        fortran_model)
+    write_maxamps_file(writers.FortranWriter(filename),
+                       matrix_element,
+                       fortran_model)
 
     filename = 'mg.sym'
-    files.write_to_file(filename,
-                        write_mg_sym_file,
-                        matrix_element,
-                        fortran_model)
+    write_mg_sym_file(writers.FortranWriter(filename),
+                      matrix_element,
+                      fortran_model)
 
     filename = 'ncombs.inc'
-    files.write_to_file(filename,
-                        write_ncombs_file,
-                        matrix_element,
-                        fortran_model)
+    write_ncombs_file(writers.FortranWriter(filename),
+                      matrix_element,
+                      fortran_model)
 
     filename = 'nexternal.inc'
-    files.write_to_file(filename,
-                        write_nexternal_file,
-                        matrix_element,
-                        fortran_model)
+    write_nexternal_file(writers.FortranWriter(filename),
+                         matrix_element,
+                         fortran_model)
 
     filename = 'ngraphs.inc'
-    files.write_to_file(filename,
-                        write_ngraphs_file,
-                        matrix_element,
-                        fortran_model,
+    write_ngraphs_file(writers.FortranWriter(filename),
+                       matrix_element,
+                       fortran_model,
                         nconfigs)
 
     filename = 'pmass.inc'
-    files.write_to_file(filename,
-                        write_pmass_file,
-                        matrix_element,
-                        fortran_model)
+    write_pmass_file(writers.FortranWriter(filename),
+                     matrix_element,
+                     fortran_model)
 
     filename = 'props.inc'
-    files.write_to_file(filename,
-                        write_props_file,
-                        matrix_element,
-                        fortran_model,
+    write_props_file(writers.FortranWriter(filename),
+                     matrix_element,
+                     fortran_model,
                         s_and_t_channels)
 
     # Generate diagrams

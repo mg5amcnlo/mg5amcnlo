@@ -18,19 +18,52 @@
 import StringIO
 import unittest
 import re
+import os
 
 import madgraph.iolibs.file_writers as writers
 
 #===============================================================================
 # FortranWriterTest
 #===============================================================================
-class FortranWriterTest(unittest.TestCase):
+class CheckFileCreate():
+    """Check that the files are correctly created"""
+
+    output_path = '/tmp/' # work only on LINUX but that's ok for the test routine
+    created_files =[]
+
+    def assertFileContains(self, filename, solution):
+        """ Check the content of a file """
+
+        current_value = open(self.give_pos(filename)).read()
+        self.assertEqual(current_value, solution)
+
+    def give_pos(self, filename):
+        """ take a name and a change it in order to have a valid path in the output directory """
+        
+        return os.path.join(self.output_path, filename)
+
+    def clean_files(self):
+        """ suppress all the files linked to this test """
+        
+        for filename in self.created_files:
+            try:
+                os.remove(self.give_pos(filename))
+            except OSError:
+                pass
+    
+
+class FortranWriterTest(unittest.TestCase, CheckFileCreate):
     """Test class for the Fortran writer object"""
+
+    created_files = ['fortran_test'
+                    ]
+
+    # clean all the tested files before and after any test
+    setUP = CheckFileCreate.clean_files
+    tearDown = CheckFileCreate.clean_files
 
     def test_write_fortran_line(self):
         """Test writing a fortran line"""
-
-        fsock = StringIO.StringIO()
 
         lines = []
         lines.append(" call aaaaaa(bbb, ccc, ddd, eee, fff, ggg, hhhhhhhhhhhhhh+asdasd, wspedfteispd)")
@@ -65,11 +98,12 @@ C       Test
       ENDIF
       TEST\n"""
 
-        writer = writers.FortranWriter()
-        writer.writelines(fsock, lines)
+        writer = writers.FortranWriter(self.give_pos('fortran_test')).\
+                 writelines(lines)
 
-        self.assertEqual(fsock.getvalue(),
-                         goal_string)
+        # Check that the output stays the same
+        self.assertFileContains('fortran_test',
+                                 goal_string)
 
     def test_write_fortran_error(self):
         """Test that a non-string gives an error"""
@@ -78,17 +112,24 @@ C       Test
 
         non_strings = [1.2, ["hej"]]
 
-        writer = writers.FortranWriter()
+        writer = writers.FortranWriter(os.devnull)
         for nonstring in non_strings:
             self.assertRaises(writers.FortranWriter.FortranWriterError,
                               writer.write_line,
-                              fsock, nonstring)
+                              nonstring)
 
 #===============================================================================
 # CPPWriterTest
 #===============================================================================
-class CPPWriterTest(unittest.TestCase):
+class CPPWriterTest(unittest.TestCase, CheckFileCreate):
     """Test class for the C++ writer object"""
+
+    created_files = ['cpp_test'
+                    ]
+
+    # clean all the tested files before and after any test
+    setUP = CheckFileCreate.clean_files
+    tearDown = CheckFileCreate.clean_files
 
     def test_write_cplusplus_line(self):
         """Test writing a cplusplus line"""
@@ -215,12 +256,12 @@ void Sigma2ff2fftgmZ::setIdColAcol()
 }
 """
 
-        writer = writers.CPPWriter()
-        writer.writelines(fsock, lines)
-        #print fsock.getvalue()
+        writer = writers.CPPWriter(self.give_pos('cpp_test')).\
+                 writelines(lines)
 
-        self.assertEqual(fsock.getvalue(),
-                         goal_string)
+        # Check that the output stays the same
+        self.assertFileContains('cpp_test',
+                                 goal_string)
 
     def test_write_cplusplus_error(self):
         """Test that a non-string gives an error"""
@@ -229,9 +270,9 @@ void Sigma2ff2fftgmZ::setIdColAcol()
 
         non_strings = [1.2, ["hej"]]
 
-        writer = writers.CPPWriter()
+        writer = writers.CPPWriter(os.devnull)
         for nonstring in non_strings:
             self.assertRaises(writers.CPPWriter.CPPWriterError,
                               writer.write_line,
-                              fsock, nonstring)
+                              nonstring)
 

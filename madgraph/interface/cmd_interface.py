@@ -34,6 +34,7 @@ import madgraph.iolibs.import_v4 as import_v4
 #import madgraph.iolibs.save_model as save_model
 import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.iolibs.export_v4 as export_v4
+import madgraph.iolibs.file_writers as writers
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -1028,10 +1029,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     print "Overwriting existing file %s" % filename
                 else:
                     print "Creating new file %s" % filename
-                calls = calls + files.write_to_file(filename,
-                                   export_v4.write_matrix_element_v4_standalone,
-                                   me, self._curr_fortran_model)
-
+                calls = calls + export_v4.write_matrix_element_v4_standalone(\
+                    writers.FortranWriter(filename),\
+                    me, self._curr_fortran_model)
+                
 
         if args[0] == 'sa_dirs_v4':
             for me in self._curr_matrix_elements.get('matrix_elements'):

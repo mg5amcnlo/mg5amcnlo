@@ -20,7 +20,7 @@ Fortran, C++, etc."""
 import re
 import collections
 
-class FileWriter():
+class FileWriter(file):
     """Generic Writer class. All writers should inherit from this class."""
 
     class FileWriterError(IOError):
@@ -29,6 +29,11 @@ class FileWriter():
 
         pass
 
+
+    def __init__(self, name, opt = 'w'):
+        """Initialize file to write to"""
+
+        return file.__init__(self, name, opt)
 
     def write_line(self, line):
         """Write a line with proper indent and splitting of long lines
@@ -42,7 +47,7 @@ class FileWriter():
 
         pass
 
-    def writelines(self, fsock, lines):
+    def writelines(self, lines):
         """Extends the regular file.writeline() function to write out
         nicely formatted code"""
 
@@ -53,12 +58,14 @@ class FileWriter():
                     raise self.FileWriterError("%s not string" % repr(line))
                 splitlines.extend(line.split('\n'))
         elif isinstance(lines, str):
-            splitlines.extend(line.split('\n'))
+            splitlines.extend(lines.split('\n'))
         else:
-            raise self.FileWriterError("%s not string" % repr(line))
+            raise self.FileWriterError("%s not string" % repr(lines))
 
         for line in splitlines:
-            self.write_line(fsock, line)
+            res_lines = self.write_line(line)
+            for line_to_write in res_lines:
+                self.write(line_to_write)
 
 #===============================================================================
 # FortranWriter
@@ -92,23 +99,25 @@ class FortranWriter(FileWriter):
     __keyword_list = []
     __comment_pattern = re.compile(r"^(\s*#|c$|(c\s+([^=]|$)))", re.IGNORECASE)
 
-    def write_line(self, fsock, line):
+    def write_line(self, line):
         """Write a fortran line, with correct indent and line splits"""
 
         if not isinstance(line, str) or line.find('\n') >= 0:
             raise self.FortranWriterError, \
                   "write_fortran_line must have a single line as argument"
 
+        res_lines = []
+
         # Check if empty line and write it
         if not line.lstrip():
-            fsock.write("\n")
-            return True
+            res_lines.append("\n")
+            return res_lines
 
         # Check if this line is a comment
         if self.__comment_pattern.search(line):
             # This is a comment
-            self.write_comment_line(fsock, line.lstrip()[1:])
-            return True
+            res_lines = self.write_comment_line(line.lstrip()[1:])
+            return res_lines
 
         else:
             # This is a regular Fortran line
@@ -177,16 +186,18 @@ class FortranWriter(FileWriter):
                 single_indent = None
 
         # Write line(s) to file
-        fsock.write("\n".join(res) + part + post_comment + "\n")
+        res_lines.append("\n".join(res) + part + post_comment + "\n")
 
-        return True
+        return res_lines
 
-    def write_comment_line(self, fsock, line):
+    def write_comment_line(self, line):
         """Write a comment line, with correct indent and line splits"""
 
         if not isinstance(line, str) or line.find('\n') >= 0:
             raise self.FortranWriterError, \
                   "write_comment_line must have a single line as argument"
+
+        res_lines = []
 
         # This is a comment
         myline = " " * (5 + self.__indent) + line.lstrip()
@@ -203,9 +214,9 @@ class FortranWriter(FileWriter):
                               self.comment_char + " " * (5 + self.__indent))
 
         # Write line(s) to file
-        fsock.write("\n".join(res) + "\n")
+        res_lines.append("\n".join(res) + "\n")
 
-        return True
+        return res_lines
 
     def split_line(self, line, split_characters, line_start):
         """Split a line if it is longer than self.line_length
@@ -302,20 +313,22 @@ class CPPWriter(FileWriter):
     __keyword_list = collections.deque()
     __comment_ongoing = False
 
-    def write_line(self, fsock, line):
+    def write_line(self, line):
         """Write a C++ line, with correct indent, spacing and line splits"""
 
         if not isinstance(line, str) or line.find('\n') >= 0:
             raise self.CPPWriterError, \
                   "write_line must have a single line as argument"
 
+        res_lines = []
+
         # Check if this line is a comment
         if self.comment_pattern.search(line) or \
                self.start_comment_pattern.search(line) or \
                self.__comment_ongoing:
             # This is a comment
-            self.write_comment_line(fsock, line.lstrip())
-            return True
+            res_lines = self.write_comment_line(line.lstrip())
+            return res_lines
 
         # This is a regular C++ line
 
@@ -324,7 +337,7 @@ class CPPWriter(FileWriter):
 
         # Don't print empty lines
         if not myline:
-            return True
+            return res_lines
 
         # Check if line starts with "{"
         if myline[0] == "{":
@@ -343,14 +356,14 @@ class CPPWriter(FileWriter):
                 # This is free-standing block, just use standard indent
                 self.__indent = self.__indent + self.standard_indent
             # Print "{"
-            fsock.write(" " * indent + "{" + "\n")
+            res_lines.append(" " * indent + "{" + "\n")
             # Add "{" to keyword list
             self.__keyword_list.append("{")
             myline = myline[1:].lstrip()
             if myline:
                 # If anything is left of myline, write it recursively
-                self.write_line(fsock, myline)
-            return True
+                res_lines.extend(self.write_line(myline))
+            return res_lines
 
         # Check if line starts with "}"
         if myline[0] == "}":
@@ -393,13 +406,13 @@ class CPPWriter(FileWriter):
             if len(myline) > 1:
                 if myline[1] == ";":
                     breakline_index = 2
-            fsock.write(" " * self.__indent + myline[:breakline_index] + \
+            res_lines.append(" " * self.__indent + myline[:breakline_index] + \
                         "\n")
             myline = myline[breakline_index + 1:].lstrip()
             if myline:
                 # If anything is left of myline, write it recursively
-                self.write_line(fsock, myline)
-            return True
+                res_lines.extend(self.write_line(myline))
+            return res_lines
 
         # Check if line starts with keyword with parentesis
         for key in self.indent_par_keywords.keys():
@@ -422,7 +435,7 @@ class CPPWriter(FileWriter):
                             break
                 endparen_index = len(key) + i
                 # Print line, make linebreak, check if next character is {
-                fsock.write("\n".join(self.split_line(\
+                res_lines.append("\n".join(self.split_line(\
                                       myline[:endparen_index], \
                                       self.split_characters)) + \
                             "\n")
@@ -433,16 +446,16 @@ class CPPWriter(FileWriter):
                                 self.indent_par_keywords[key]
                 if myline:
                     # If anything is left of myline, write it recursively
-                    self.write_line(fsock, myline)
+                    res_lines.extend(self.write_line(myline))
 
-                return True
+                return res_lines
                     
         # Check if line starts with single keyword
         for key in self.indent_single_keywords.keys():
             if re.search(key, myline):
                 end_index = len(key) - 1
                 # Print line, make linebreak, check if next character is {
-                fsock.write(" " * self.__indent + myline[:end_index] + \
+                res_lines.append(" " * self.__indent + myline[:end_index] + \
                             "\n")
                 myline = myline[end_index:].lstrip()
                 # Add keyword to list and add indent for next line
@@ -451,9 +464,9 @@ class CPPWriter(FileWriter):
                                 self.indent_single_keywords[key]
                 if myline:
                     # If anything is left of myline, write it recursively
-                    self.write_line(fsock, myline)
+                    res_lines.extend(self.write_line(myline))
 
-                return True
+                return res_lines
                     
         # Check if line starts with content keyword
         for key in self.indent_content_keywords.keys():
@@ -461,7 +474,7 @@ class CPPWriter(FileWriter):
                 # Print line, make linebreak, check if next character is {
                 if "{" in myline:
                     end_index = myline.index("{")
-                fsock.write("\n".join(self.split_line(\
+                res_lines.append("\n".join(self.split_line(\
                                       myline[:end_index], \
                                       self.split_characters)) + \
                             "\n")
@@ -472,9 +485,9 @@ class CPPWriter(FileWriter):
                                 self.indent_content_keywords[key]
                 if myline:
                     # If anything is left of myline, write it recursively
-                    self.write_line(fsock, myline)
+                    res_lines.extend(self.write_line(myline))
 
-                return True
+                return res_lines
                     
         # Check if line starts with continuous indent keyword
         for key in self.cont_indent_keywords.keys():
@@ -485,7 +498,7 @@ class CPPWriter(FileWriter):
                                     self.cont_indent_keywords[\
                                        self.__keyword_list.pop()]
                 # Print line, make linebreak
-                fsock.write("\n".join(self.split_line(myline, \
+                res_lines.append("\n".join(self.split_line(myline, \
                                       self.split_characters)) + \
                             "\n")
                 # Add keyword to list and add indent for next line
@@ -493,45 +506,45 @@ class CPPWriter(FileWriter):
                 self.__indent = self.__indent + \
                                 self.cont_indent_keywords[key]
 
-                return True
+                return res_lines
                     
         # Check if there is a "{}" in the line.
         # In that case just print the line
         if re.search("{\s*}", myline):
-            fsock.write("\n".join(self.split_line(\
+            res_lines.append("\n".join(self.split_line(\
                                       myline, \
                                       self.split_characters)) + \
                         "\n")
-            return True
+            return res_lines
 
         # Check if there is a "{" somewhere in the line
         if "{" in myline:
             end_index = myline.index("{")
-            fsock.write("\n".join(self.split_line(\
+            res_lines.append("\n".join(self.split_line(\
                                       myline[:end_index], \
                                       self.split_characters)) + \
                         "\n")
             myline = myline[end_index:].lstrip()
             if myline:
                 # If anything is left of myline, write it recursively
-                self.write_line(fsock, myline)
-            return True
+                res_lines.extend(self.write_line(myline))
+            return res_lines
 
         # Check if there is a "}" somewhere in the line
         if "}" in myline:
             end_index = myline.index("}")
-            fsock.write("\n".join(self.split_line(\
+            res_lines.append("\n".join(self.split_line(\
                                       myline[:end_index], \
                                       self.split_characters)) + \
                         "\n")
             myline = myline[end_index:].lstrip()
             if myline:
                 # If anything is left of myline, write it recursively
-                self.write_line(fsock, myline)
-            return True
+                res_lines.extend(self.write_line(myline))
+            return res_lines
 
         # Write line(s) to file
-        fsock.write("\n".join(self.split_line(myline, \
+        res_lines.append("\n".join(self.split_line(myline, \
                                               self.split_characters)) + "\n")
 
         # Check if this is a single indented line
@@ -546,14 +559,16 @@ class CPPWriter(FileWriter):
                 self.__indent = self.__indent - \
                          self.indent_content_keywords[self.__keyword_list.pop()]
 
-        return True
+        return res_lines
 
-    def write_comment_line(self, fsock, line):
+    def write_comment_line(self, line):
         """Write a comment line, with correct indent and line splits"""
 
         if not isinstance(line, str) or line.find('\n') >= 0:
             raise self.CPPWriterError, \
                   "write_comment_line must have a single line as argument"
+
+        res_lines = []
 
         # This is a comment
 
@@ -574,9 +589,9 @@ class CPPWriter(FileWriter):
                               self.comment_split_characters)
 
         # Write line(s) to file
-        fsock.write("\n".join(res) + "\n")
+        res_lines.append("\n".join(res) + "\n")
 
-        return True
+        return res_lines
 
     def split_line(self, line, split_characters):
         """Split a line if it is longer than self.line_length
