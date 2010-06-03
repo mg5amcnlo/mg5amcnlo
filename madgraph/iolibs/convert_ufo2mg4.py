@@ -209,8 +209,9 @@ class convert_model_to_mg4(CompactifyExpression):
         # the makefile
         self.create_makeinc()
         self.create_param_write()
-        #        
-        #self.load_basic_parameter()
+        
+        # The param_card.dat        
+        self.create_param_card()
  
     def analyze_parameters(self):
         """ separate the parameters needed to be recomputed events by events and
@@ -498,6 +499,14 @@ class convert_model_to_mg4(CompactifyExpression):
                                               if param.nature == 'external']
         fsock.writelines('\n'.join(external_param))
 
+    def create_param_card(self):
+        """ create the param_card.dat """
+        
+        self.model.write_param_card.ParamCardWriter(os.path.join(self.dir_path, 
+                                                              'param_card.dat'))
+
+
+
     def search_type(self, expr):
         """return the type associate to the expression"""
         
@@ -512,8 +521,16 @@ class convert_model_to_mg4(CompactifyExpression):
 def export_to_mg4(model_path, dir_path):
     """ all the call for the creation of the output """
     export_obj = convert_model_to_mg4(model_path, dir_path)
-    export_obj.write_all()      
-        
+    export_obj.write_all()
+    
+    #copy the library files
+    file_to_link = ['formats.inc', 'lha_read.f', 'makefile','printout.f', \
+                    'rw_param.f', 'testprog.f', 'rw_para.f']
+
+    for filename in file_to_link:
+        export_v4.cp(model_path + '/../Template/fortran/' + filename, dir_path)
+    
+    
 class python_to_fortran(str):
     
     python_split = re.compile(r'''(\*\*|\*|\s|\+|\-|/|\(|\))''')
@@ -581,6 +598,6 @@ if '__main__' == __name__:
     root_path = os.path.join(file_dir_path, os.pardir, os.pardir)
     model_path = os.path.join(root_path,'models', 'sm')
     out_path = os.path.join( model_path, 'fortran')
-    
-    export_to_mg4(model_path, out_path) 
+    import cProfile
+    cProfile.run('export_to_mg4(model_path, out_path)')
     print 'done'

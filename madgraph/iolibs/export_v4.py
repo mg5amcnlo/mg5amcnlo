@@ -2110,7 +2110,7 @@ def ln(file_pos, starting_dir='.', name='', log=True):
     file_pos = format_path(file_pos)
     starting_dir = format_path(starting_dir)
     if not name:
-        name = os.path.split(file_pos)[1]
+        name = os.path.split(file_pos)[1]    
         
     try:
         os.symlink(os.path.relpath(file_pos, starting_dir), \
