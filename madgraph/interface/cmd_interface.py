@@ -179,8 +179,12 @@ class HelpToCmd(object):
         print "-- display a the status of various internal state variables"
 
     def help_setup(self):
-        print "syntax madevent_v4 name|.|auto [options]"
-        print "-- Create a copy of the V4 Template in the MG_ME directory."
+        print "syntax " + "|".join(self._setup_opts) + \
+              " name|.|auto [options]"
+        print "-- Create a copy of the V4 Template in the MG_ME directory"
+        print "   with the model and Helas set up appropriately."
+        print "   If standalone_v4 is chosen, the directory will be in"
+        print "   Standalone format."
         print "   name will be the name of the copy the madevent Template that"
         print "     will be use by default in following steps"
         print "   If you put '.' instead of a name, the code will try to locate"
@@ -222,20 +226,25 @@ class HelpToCmd(object):
     def help_export(self):
         print "syntax: export " + "|".join(self._export_formats) + \
               " FILEPATH"
-        print """-- export matrix elements. For standalone_v4, the resulting
-        files will be FILEPATH/matrix_\"process_string\".f. For sa_dirs_v4,
-        the result is a set of complete MG4 Standalone process directories.
-        For madevent_v4, the path needs to be to a MadEvent SubProcesses
+        print """-- export matrix elements.
+        *Note* that if you have run the 'setup', FILEPATH is optional.
+        - For madevent_v4, the path needs to be to a MadEvent SubProcesses
         directory, and the result is the Pxxx directories (including the
         diagram .ps and .jpg files) for the subprocesses as well as a
-        correctly generated subproc.mg file. Note that if you have run the 
-        'setup', FILEPATH is optional."""
+        correctly generated subproc.mg file.
+        - For standalone_v4, the result is a set of complete MG4 Standalone
+        process directories.
+        - For matrix_v4, the resulting files will be
+        FILEPATH/matrix_\"process_string\".f"""
 
     def help_history(self):
-        print "syntax: history [FILEPATH] [-clean] "
-        print "-- write in the specified files all the call to MG5 that you have"""
-        print "   perform since that you have open this command line applet."""
-        print "   -clean option will remove all the entry of the history"""
+        print "syntax: history [FILEPATH | clean] "
+        print "-- write in the specified files all the call to MG5 that you have"
+        print "   perform since that you have open this command line applet."
+        print "   If FILEPATH is \'.\' and \'setup\' is done,"
+        print "   Cards/proc_card_mg5.dat will be used."
+        print "   If FILEPATH is omitted, the history will be output to stdout."
+        print "   clean option will remove all entries from the history."
 
     def help_makehtml(self):
         print "syntax: makehtlm madevent_v4 [PATH]"
@@ -402,14 +411,13 @@ class CheckValidForCmd(object):
             return False
         
         if len(args):
-            if args[0] not in ['clean', '.']:
+            if args[0] != 'clean':
                 dirpath = os.path.dirname(args[0])
-                if dirpath and not os.path.exists(dirpath):
-                    print "invalid path"
+                if args[0] == '.' and not self._export_dir or \
+                       dirpath and not os.path.isfile(dirpath):
+                    print "Invalid path for history file"
+                    self.help_history()
                     return False
-            elif args[0] == '.' and not self._export_dir:
-                print 'no export dir configure'
-                return False
         return True
     
     def check_import(self, args):
@@ -432,7 +440,7 @@ class CheckValidForCmd(object):
     def check_load(self, args):
         """ check the validity of the line"""
         
-        if len(args) != 2:
+        if len(args) != 2 or args[0] not in self._save_opts:
             self.help_load()
             return False
         return True
@@ -456,7 +464,7 @@ class CheckValidForCmd(object):
     
     def check_save(self, args):
         """ check the validity of the line"""
-        if len(args) != 2:
+        if len(args) != 2 or args[0] not in self._save_opts:
             self.help_save()
             return False
         return True
@@ -464,7 +472,7 @@ class CheckValidForCmd(object):
     def check_setup(self, args):
         """ check the validity of the line"""
         
-        if len(args) < 2:
+        if len(args) < 2 or args[0] not in self._setup_opts:
             self.help_setup()
             return False
         
@@ -715,7 +723,7 @@ class CompleteForCmd(CheckValidForCmd):
 
         possible_option = ['-d ', '-f', '-noclean']
         possible_option2 = ['d ', 'f', 'noclean']
-        possible_format = ['madevent_v4']
+        possible_format = self._setup_opts
         #don't propose directory use by MG_ME
         forbidden_name = ['MadGraphII', 'Template', 'pythia-pgs', 'CVS',
                             'Calculators', 'MadAnalysis', 'SimpleAnalysis', 
@@ -797,8 +805,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _display_opts = ['particles', 'interactions', 'processes', 'multiparticles']
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
+    _setup_opts = ['madevent_v4', 'standalone_v4']
     _import_formats = ['model_v4', 'proc_v4', 'command']
-    _export_formats = ['standalone_v4', 'sa_dirs_v4', 'madevent_v4']
+    _export_formats = ['madevent_v4', 'standalone_v4', 'matrix_v4']
         
     def __init__(self, *arg, **opt):
         """ add a tracker of the history """
@@ -808,10 +817,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         # Detect If this script is launched from a valid copy of the Template
         #and if so store this position as standard output directory
-        if 'Cards' in os.listdir('.'):
+        if 'TemplateVersion.txt' in os.listdir('.'):
             #Check for ./
             self._export_dir = os.path.realpath('.')
-        elif 'Cards' in os.listdir('..'):
+        elif 'TemplateVersion.txt' in os.listdir('..'):
             #Check for ../
             self._export_dir = os.path.realpath('..')
         elif self.stdin != sys.stdin:
@@ -1020,7 +1029,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         ndiags, cpu_time = generate_matrix_elements(self)
         calls = 0
 
-        if args[0] == 'standalone_v4':
+        if args[0] == 'matrix_v4':
             for me in self._curr_matrix_elements.get('matrix_elements'):
                 filename = os.path.join(path, 'matrix_' + \
                            me.get('processes')[0].shell_string() + ".f")
@@ -1033,12 +1042,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                    me, self._curr_fortran_model)
 
 
-        if args[0] == 'sa_dirs_v4':
-            for me in self._curr_matrix_elements.get('matrix_elements'):
-                calls = calls + \
-                        export_v4.generate_subprocess_directory_v4_standalone(\
-                            me, self._curr_fortran_model, path)
-
         if args[0] == 'madevent_v4':
             for me in self._curr_matrix_elements.get('matrix_elements'):
                 calls = calls + \
@@ -1046,12 +1049,18 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                             me, self._curr_fortran_model, path)
             
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
-                                                              'procdef_mg5.dat')
+                                     'procdef_mg5.dat')
             if self._generate_info:
                 export_v4.write_procdef_mg5(card_path,
                                 os.path.split(self._model_dir)[-1],
                                 self._generate_info)
                 
+        if args[0] == 'standalone_v4':
+            for me in self._curr_matrix_elements.get('matrix_elements'):
+                calls = calls + \
+                        export_v4.generate_subprocess_directory_v4_standalone(\
+                            me, self._curr_fortran_model, path)
+            
         print ("Generated helas calls for %d subprocesses " + \
               "(%d diagrams) in %0.3f s") % \
               (len(self._curr_matrix_elements.get('matrix_elements')),
@@ -1350,11 +1359,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             return False
         elif args[0] == 'clean':
             self.history = []
-            print 'history is cleaned'
+            print 'History is cleaned'
             return False
         elif args[0] == '.':
             output_file = os.path.join(self._export_dir, 'Cards', \
-                                                            'proc_card_mg5.dat')
+                                       'proc_card_mg5.dat')
             output_file = open(output_file, 'w')
         else:
             output_file = open(args[0], 'w')
@@ -1397,6 +1406,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         #write this information in a file
         output_file.write(text)
         output_file.close()
+
+        print "History written to " + output_file.name
     
     # Import files
     def do_import(self, line):
@@ -1622,9 +1633,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     print 'Saved processes to file ', args[1]
             else:
                 print 'No processes to save!'
-        else:
-            self.help_save()
-            
             
     def do_makehtml(self, line):
         """ make the html output for a MAdevent directory """
@@ -1674,10 +1682,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self.help_setup()    
                 return False
         elif args[1] == 'auto':
-            name_dir = lambda i: 'PROC_%s_%s' % \
+            if args[0] == 'madevent_v4':
+                name_dir = lambda i: 'PROC_%s_%s' % \
                                         (os.path.split(self._model_dir)[-1], i)
-            auto_path = lambda i: os.path.join(self.writing_dir, name_dir(i))     
-            
+                auto_path = lambda i: os.path.join(self.writing_dir,
+                                                   name_dir(i))
+            elif args[0] == 'standalone_v4':
+                name_dir = lambda i: 'PROC_SA_%s_%s' % \
+                                        (os.path.split(self._model_dir)[-1], i)
+                auto_path = lambda i: os.path.join(self.writing_dir,
+                                                   name_dir(i))                
             for i in range(500):
                 if os.path.isdir(auto_path(i)):
                     continue
@@ -1694,14 +1708,23 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             answer = raw_input('Do you want to continue? [y/n]')
             if answer != 'y':
-                print 'stop'
+                print 'Interrupted setup of directory'
                 return False
+        else:
+            clean = True 
 
-        export_v4.copy_v4template(mgme_dir, dir_path, self._model_dir, clean)
+        if args[0] == 'madevent_v4':
+            export_v4.copy_v4template(mgme_dir, dir_path,
+                                      self._model_dir, clean)
+        if args[0] == 'standalone_v4':
+            export_v4.copy_v4standalone(mgme_dir, dir_path,
+                                        self._model_dir, clean)
         # Import the model
         print 'import model files %s in directory %s' % \
                        (os.path.basename(self._model_dir), args[1])        
         export_v4.export_model(self._model_dir, dir_path)
+        if args[0] == 'standalone_v4':
+            export_v4.make_v4standalone(dir_path)
         self._export_dir = dir_path
 
 #===============================================================================

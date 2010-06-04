@@ -16,6 +16,7 @@
 """Methods and classes to export matrix elements to v4 format."""
 
 import fractions
+import glob
 import logging
 import os
 import re
@@ -54,13 +55,82 @@ def copy_v4template(mgme_dir, dir_path, model_dir, clean):
         if os.environ.has_key('MADGRAPH_BASE'):
             subprocess.call([os.path.join('bin', 'clean_template'), '--web'])
         else:
-            subprocess.call([os.path.join('bin', 'clean_template')])
+            try:
+                subprocess.call([os.path.join('bin', 'clean_template')])
+            except:
+                logger.error('Call to bin/clean_template failed, ' +\
+                             'not valid MadEvent v. 4 Template directory')
         os.chdir(old_pos)
         
         #Write version info
         MG_version = misc.get_pkg_info()
         open(os.path.join(dir_path, 'SubProcesses', 'MGVersion.txt'), 'w').write(
                                                           MG_version['version'])
+        
+#===============================================================================
+# copy the Template in a new directory and set up Standalone MG
+#===============================================================================
+def copy_v4standalone(mgme_dir, dir_path, model_dir, clean):
+    """create the directory run_name as a copy of the Template,
+       run standalone, import the model and Helas, and clean the directory 
+    """
+    
+    #First copy the full template tree if dir_path doesn't exit
+    if not os.path.isdir(dir_path):
+        print 'initialize a new directory: %s' % os.path.basename(dir_path)
+        shutil.copytree(os.path.join(mgme_dir, 'Template'), dir_path, True)
+
+    # Run standalone
+    print 'Setup directory %s for standalone' % os.path.basename(dir_path)
+    old_pos = os.getcwd()
+    os.chdir(dir_path)
+    try:
+        subprocess.call([os.path.join('bin', 'standalone')])
+    except OSError:
+        # Probably standalone already called
+        pass
+    os.chdir(old_pos)
+
+    #Ensure that the Template is clean
+    if clean:
+        print 'remove old information in %s' % os.path.basename(dir_path)
+        old_pos = os.getcwd()
+        os.chdir(dir_path)
+        for pdir in glob.glob(os.path.join("SubProcesses","P*")):
+            shutil.rmtree(pdir)
+        #Write version info
+        MG_version = misc.get_pkg_info()
+        open(os.path.join('SubProcesses', 'MGVersion.txt'), 'w').write(
+                                                          MG_version['version'])
+
+        # Copy the HELAS directory
+        
+        for file in glob.glob(os.path.join("..", "HELAS", "*")):
+            if os.path.isfile(file):
+                shutil.copy2(file,
+                            os.path.join('Source', 'DHELAS'))
+        shutil.move(os.path.join('Source', 'DHELAS', 'Makefile.template'),
+                    os.path.join('Source', 'DHELAS', 'Makefile'))
+        os.chdir(old_pos)
+        
+#===============================================================================
+# Make the Helas and Model directories for Standalone directory
+#===============================================================================
+def make_v4standalone(dir_path):
+    """Run make in the DHELAS and MODEL directories, to set up
+    everything for running standalone
+    """
+    
+    # Run standalone
+    old_pos = os.getcwd()
+    os.chdir(os.path.join(dir_path, "Source"))
+    print "Running make for Helas"
+    subprocess.call(['make', '../lib/libdhelas3.a'],
+                    stdout = open(os.devnull, 'w'))
+    print "Running make for Model"
+    subprocess.call(['make', '../lib/libmodel.a'],
+                    stdout = open(os.devnull, 'w'))
+    os.chdir(old_pos)
         
 #===============================================================================
 # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
@@ -118,7 +188,6 @@ def create_v4_webpage(dir_path, makejpg):
         logger.info("Generate jpeg diagrams")
         for Pdir in P_dir_list:
             os.chdir(Pdir)
-            print dir_path
             subprocess.call([os.path.join(dir_path, 'bin', 'gen_jpeg-pl')])
             os.chdir(os.path.pardir)
     
@@ -855,8 +924,8 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
 # generate_subprocess_directory_v4_madevent
 #===============================================================================
 def generate_subprocess_directory_v4_madevent(matrix_element,
-                                                fortran_model,
-                                                path=os.getcwd()):
+                                              fortran_model,
+                                              path=os.getcwd()):
     """Generate the Pxxxxx directory for a subprocess in MG4 madevent,
     including the necessary matrix.f and various helper files"""
 
