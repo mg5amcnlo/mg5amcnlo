@@ -24,19 +24,19 @@ L_4 = Lorentz(name = 'L_4',
 
 L_5 = Lorentz(name = 'L_5',
               spins = [ 3, 2, 2 ],
-              structure = 'Gamma(1,2,s1)*ProjM(s1,3)')
+              structure = 'Gamma(1,2,\'s1\')*ProjM(\'s1\',3)')
 
 L_6 = Lorentz(name = 'L_6',
               spins = [ 3, 2, 2 ],
-              structure = 'Gamma(1,2,s1)*ProjM(s1,3) - 2*Gamma(1,2,s1)*ProjP(s1,3)')
+              structure = 'Gamma(1,2,\'s1\')*ProjM(\'s1\',3) - 2*Gamma(1,2,\'s1\')*ProjP(\'s1\',3)')
 
 L_7 = Lorentz(name = 'L_7',
               spins = [ 3, 2, 2 ],
-              structure = 'Gamma(1,2,s1)*ProjM(s1,3) + 2*Gamma(1,2,s1)*ProjP(s1,3)')
+              structure = 'Gamma(1,2,\'s1\')*ProjM(\'s1\',3) + 2*Gamma(1,2,\'s1\')*ProjP(\'s1\',3)')
 
 L_8 = Lorentz(name = 'L_8',
               spins = [ 3, 2, 2 ],
-              structure = 'Gamma(1,2,s1)*ProjM(s1,3) + 4*Gamma(1,2,s1)*ProjP(s1,3)')
+              structure = 'Gamma(1,2,\'s1\')*ProjM(\'s1\',3) + 4*Gamma(1,2,\'s1\')*ProjP(\'s1\',3)')
 
 L_9 = Lorentz(name = 'L_9',
               spins = [ 3, 3, 3 ],

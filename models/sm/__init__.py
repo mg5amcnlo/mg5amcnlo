@@ -9,3 +9,4 @@ all_particles = particles.all_particles
 all_vertices = vertices.all_vertices
 all_couplings = couplings.all_couplings
 all_parameters = parameters.all_parameters
+all_lorentz = lorentz.all_lorentz
