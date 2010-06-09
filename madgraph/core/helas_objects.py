@@ -3110,15 +3110,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         return True
 
-    # This gives the order in which the different spin states will be
-    # written in all Helas calls. Note that this is 
-    sort_spin_dict = {1: 1, -2: 4, 2: 3, 3: 2, 5: 0}
-
     @staticmethod
     def sorted_mothers(arg):
         """Gives a list of mother wavefunctions sorted according to
-        1. the spin order needed in the Fortran Helas calls and
-        2. the order of the particles in the interaction (cyclic)"""
+        1. The order of the particles in the interaction
+        2. Cyclic reordering of particles in same spin group (if boson)
+        3. Fermions ordered IOIOIO... according to the pairs in
+           the interaction."""
 
         if not isinstance(arg, HelasWavefunction) and \
                not isinstance(arg, HelasAmplitude):
@@ -3129,40 +3127,95 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         if not arg.get('interaction_id'):
             return arg.get('mothers')
 
-        sorted_mothers1 = copy.copy(arg.get('mothers'))
+        pdg_codes = copy.copy(arg.get('pdg_codes'))
 
-        # Next sort according to interaction pdg codes
+        # Remove the argument wavefunction code from pdg_codes
+
+        if isinstance(arg, HelasWavefunction):
+            my_spin = arg.get_spin_state_number()
+            my_index = pdg_codes.index(arg.get_anti_pdg_code())
+            pdg_codes.pop(my_index)
+        
+        mothers = copy.copy(arg.get('mothers'))
+
+        # First sort according to interaction pdg codes
 
         mother_codes = [ wf.get_pdg_code() for wf \
-                         in sorted_mothers1 ]
-        pdg_codes = copy.copy(arg.get('pdg_codes'))
-        if isinstance(arg, HelasWavefunction):
-            my_code = arg.get_anti_pdg_code()
-            # We need to create the cyclic pdg_codes
-            missing_index = pdg_codes.index(my_code)
-            pdg_codes_cycl = pdg_codes[missing_index + 1:] + \
-                             pdg_codes[:missing_index]
-        else:
-            pdg_codes_cycl = pdg_codes
+                         in mothers ]
 
-        sorted_mothers2 = HelasWavefunctionList()
-        for code in pdg_codes_cycl:
+        sorted_mothers = []
+        same_spin_mothers = []
+        same_spin_index = -1
+        for i, code in enumerate(pdg_codes):
             index = mother_codes.index(code)
             mother_codes.pop(index)
-            sorted_mothers2.append(sorted_mothers1.pop(index))
+            mother = mothers.pop(index)
+            if isinstance(arg, HelasWavefunction) and \
+               my_spin % 2 == 1 and \
+               mother.get_spin_state_number() == my_spin:
+                # For bosons with same spin as this wf, need special treatment
+                if same_spin_index < 0:
+                    # Remember starting index for same spin states
+                    same_spin_index = i
+                same_spin_mothers.append(mother)
+            else:
+                sorted_mothers.append(mother)
 
-        if sorted_mothers1:
+        if mothers:
             raise base_objects.PhysicsObject.PhysicsObjectError, \
                   "Mismatch of pdg codes, %s != %s" % \
                   (repr(mother_codes), repr(pdg_codes_cycl))
 
+        # Make cyclic reordering of mothers with same spin as this wf
+        if same_spin_mothers:
+            same_spin_mothers = same_spin_mothers[my_index - same_spin_index:] \
+                                + same_spin_mothers[:my_index - same_spin_index]
+
+            # Insert same_spin_mothers in sorted_mothers
+            sorted_mothers = sorted_mothers[:same_spin_index] + \
+                              same_spin_mothers + sorted_mothers[same_spin_index:]
+        # If fermion, partner is the corresponding fermion flow partner
+        partner = None
+        if isinstance(arg, HelasWavefunction) and my_spin % 2 == 0:
+            # Fermion case, just pick out the fermion flow partner
+            if my_index % 2 == 0:
+                # partner is after arg
+                partner_index = my_index
+            else:
+                # partner is before arg
+                partner_index = my_index - 1
+            partner = sorted_mothers.pop(partner_index)
+
+        # Reorder fermions pairwise according to incoming/outgoing
+        for i in range(0, len(sorted_mothers), 2):
+            if sorted_mothers[i].get_spin_state_number() % 2 == 0:
+                # This is a fermion, order between this fermion and its brother
+                if sorted_mothers[i].get_spin_state_number() > 0 and \
+                   sorted_mothers[i + 1].get_spin_state_number() < 0:
+                    # Switch places between outgoing and incoming
+                    sorted_mothers = sorted_mothers[:i] + \
+                                      [sorted_mothers[i+1], sorted_mothers[i]] + \
+                                      sorted_mothers[i+2:]
+                elif sorted_mothers[i].get_spin_state_number() < 0 and \
+                   sorted_mothers[i + 1].get_spin_state_number() > 0:
+                    # This is the right order
+                    pass
+                else:
+                    # Two incoming or two outgoing in a row - not good!
+                    raise self.PhysicsObjectError, \
+                    "Two incoming or outgoing fermions in a row: %i, %i" % \
+                    (sorted_mothers[i].get_spin_state_number(),
+                     sorted_mothers[i+1].get_spin_state_number())
+            else:
+                # No more fermions in sorted_mothers
+                break
+            
+        # Put back partner into sorted_mothers
+        if partner:
+            sorted_mothers.insert(partner_index, partner)
+        
         # Next sort according to spin_state_number
-        return HelasWavefunctionList(\
-                  sorted(sorted_mothers2, lambda wf1, wf2: \
-                         HelasMatrixElement.sort_spin_dict[\
-                                          wf2.get_spin_state_number()]\
-                         - HelasMatrixElement.sort_spin_dict[\
-                                          wf1.get_spin_state_number()]))
+        return HelasWavefunctionList(sorted_mothers)
 
 
 #===============================================================================
