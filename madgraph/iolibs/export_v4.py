@@ -87,7 +87,8 @@ def copy_v4standalone(mgme_dir, dir_path, model_dir, clean):
     old_pos = os.getcwd()
     os.chdir(dir_path)
     try:
-        subprocess.call([os.path.join('bin', 'standalone')])
+        subprocess.call([os.path.join('bin', 'standalone')],
+                        stdout = os.open(os.devnull, os.O_RDWR))
     except OSError:
         # Probably standalone already called
         pass
@@ -192,19 +193,19 @@ def finalize_madevent_v4_directory(dir_path, makejpg, history):
         logger.info("Generate jpeg diagrams")
         for Pdir in P_dir_list:
             os.chdir(Pdir)
-            subprocess.call([os.path.join(dir_path, 'bin', 'gen_jpeg-pl')],
+            subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_jpeg-pl')],
                             stdout = devnull)
             os.chdir(os.path.pardir)
-    
+
     logger.info("Generate web pages")
     # Create the WebPage using perl script
 
-    subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')], \
+    subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_cardhtml-pl')], \
                                                             stdout = devnull)
-    subprocess.call([os.path.join(dir_path, 'bin', 'gen_infohtml-pl')], \
+    subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_infohtml-pl')], \
                                                             stdout = devnull)
     os.chdir(os.path.pardir)
-    subprocess.call([os.path.join(dir_path, 'bin', 'gen_crossxhtml-pl')],
+    subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_crossxhtml-pl')],
                     stdout = devnull)
     [mv(name, './HTML/') for name in os.listdir('.') if \
                         (name.endswith('.html') or name.endswith('.jpg')) and \
@@ -218,7 +219,7 @@ def finalize_madevent_v4_directory(dir_path, makejpg, history):
         output_file.write(text)
         output_file.close()
 
-    subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')],
+    subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_cardhtml-pl')],
                     stdout = devnull)
     
     # Run "make" to generate madevent.tar.gz file
@@ -228,7 +229,7 @@ def finalize_madevent_v4_directory(dir_path, makejpg, history):
         subprocess.call(['make'], stdout = devnull)
     
     
-    subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')],
+    subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_cardhtml-pl')],
                     stdout = devnull)
     
     #return to the initial dir

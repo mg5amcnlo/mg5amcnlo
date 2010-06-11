@@ -94,7 +94,7 @@ class TestCmdShell2(unittest.TestCase):
         self.cmd.exec_cmd(line)
     
     
-    def test_standard_chain(self):
+    def test_setup_madevent_directory(self):
         """ command 'setup' works with path"""
         
         self.do('load processes %s' % os.path.join(_pickle_path,'e+e-_e+e-.pkl'))
@@ -103,11 +103,18 @@ class TestCmdShell2(unittest.TestCase):
         self.do('export')
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'SubProcesses', 'P0_e+e-_e+e-')))
-        self.do('finalize')
+        self.do('finalize --nojpeg')
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                  'Cards', 'proc_card_mg5.dat')))
-                
-    def test_chain2(self):
+        self.assertFalse(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P0_e+e-_e+e-',
+                                                    'matrix1.jpg')))
+
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'madevent.tar.gz')))        
+
+    def test_read_madgraph4_proc_card(self):
         """ command 'setup' works with '.' """
         os.system('cp -rf %s %s' % (os.path.join(Cmd.MGME_dir,'Template'),
                                     self.out_dir))
@@ -122,9 +129,16 @@ class TestCmdShell2(unittest.TestCase):
                                               'SubProcesses', 'P1_e-e+_vevex')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                  'Cards', 'proc_card_mg5.dat')))
+        self.assertFalse(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P0_e+e-_e+e-',
+                                                    'matrix1.jpg')))
+
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'madevent.tar.gz')))
 
 
-    def test_chain3(self):
+    def test_read_madgraph4_proc_card_with_setup(self):
         """ command 'setup' works with '.' """
 
         self.do('setup madevent_v4 %s' % self.out_dir)
@@ -135,3 +149,15 @@ class TestCmdShell2(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                  'Cards', 'proc_card_mg5.dat')))
 
+
+    def test_setup_standalone_directory(self):
+        """ command 'setup' works with path"""
+        
+        self.do('load processes %s' % os.path.join(_pickle_path,'e+e-_e+e-.pkl'))
+        self.do('setup standalone_v4 %s' % self.out_dir)
+        self.assertTrue(os.path.exists(self.out_dir))
+        self.assertTrue(os.path.isfile(os.path.join(self.out_dir, 'lib', 'libdhelas3.a')))
+        self.assertTrue(os.path.isfile(os.path.join(self.out_dir, 'lib', 'libmodel.a')))
+        self.do('export')
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'SubProcesses', 'P0_e+e-_e+e-')))

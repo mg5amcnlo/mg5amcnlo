@@ -137,10 +137,6 @@ class CmdExtended(cmd.Cmd):
                not line[0] == '#':
             self.history.append(line)
         
-        # Print the calling line in the non interactive mode, unless comment
-        if not self.use_rawinput and not line[0] == '#':
-            logger.info(line)
-        
         # Check if we are continuing a line:
         if self.save_line:
             line = self.save_line + line 
@@ -541,6 +537,7 @@ class CheckValidForCmd(object):
         """check the validity of the line"""
 
         nojpeg = ""
+
         if '--nojpeg' in args:
             nojpeg = '--nojpeg'
             args = filter(lambda arg: arg != nojpeg, args)
