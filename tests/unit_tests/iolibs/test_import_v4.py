@@ -292,8 +292,7 @@ class ProcCardV4ReaderTest(unittest.TestCase):
                    'add process p p > Z Z QCD=2 @4',
                    'setup madevent_v4 . -f', 
                    'export', 
-                   'makehtml', 
-                   'history .'] 
+                   'finalize'] 
   
         self.assertEqual(len(lines),len(solution))
         for i,command in enumerate(lines):

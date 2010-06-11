@@ -57,9 +57,9 @@ def copy_v4template(mgme_dir, dir_path, model_dir, clean):
         else:
             try:
                 subprocess.call([os.path.join('bin', 'clean_template')])
-            except:
-                logger.error('Call to bin/clean_template failed, ' +\
-                             'not valid MadEvent v. 4 Template directory')
+            except Exception, why:
+                logger.error('Failed to clean correctly Template. ' + \
+                                     'The following error is returned:\n %s' % why)
         os.chdir(old_pos)
         
         #Write version info

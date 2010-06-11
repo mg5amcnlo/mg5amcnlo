@@ -23,11 +23,19 @@ import optparse
 import os
 import pydoc
 import re
-import readline
 import subprocess
 import sys
 import traceback
 import time
+
+# Optional Library (not present on all platform)
+try:
+    import readline
+except:
+    readline = None
+    
+
+
 
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.files as files
@@ -297,6 +305,7 @@ class HelpToCmd(object):
         print "   core process, decay1, (decay2, (decay3, ...)), ...  etc"
         print "   Example: g g > t~ t @2, (t~ > W- b~, W- > e- ve~), t > W+ b"
         print "   Note that identical particles will all be decayed"
+        print "To generate a second process use \"add process\" command"
 
     def help_add(self):
 
@@ -329,9 +338,7 @@ class HelpToCmd(object):
         FILEPATH/matrix_\"process_string\".f"""
 
     def help_history(self):
-        print "syntax: history [FILEPATH | clean] "
-        print "-- write in the specified files all the call to MG5 that you have"
-        print "   perform since that you have open this command line applet."
+        print "syntax: history [FILEPATH|clean|.] "
         print "   If FILEPATH is \'.\' and \'setup\' is done,"
         print "   Cards/proc_card_mg5.dat will be used."
         print "   If FILEPATH is omitted, the history will be output to stdout."
@@ -1171,6 +1178,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 export_v4.write_procdef_mg5(card_path,
                                 os.path.split(self._model_dir)[-1],
                                 self._generate_info)
+                self.onecmd('history .')
                 
         if args[0] == 'standalone_v4':
             for me in self._curr_matrix_elements.get('matrix_elements'):
@@ -1827,16 +1835,18 @@ class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
         """Initializing before starting the main loop"""
 
         self.prompt = 'mg5>'
+        
+        if readline:
+            readline.parse_and_bind("tab: complete")
 
-        readline.parse_and_bind("tab: complete")
-
-        # initialize command history
-        history_file = os.path.join(os.environ['HOME'], '.mg5history')
-        try:
-            readline.read_history_file(history_file)
-        except IOError:
-            pass
-        atexit.register(readline.write_history_file, history_file)
+        # initialize command history if HOME exists
+        if os.environ.has_key('HOME') and readline:
+            history_file = os.path.join(os.environ['HOME'], '.mg5history')
+            try:
+                readline.read_history_file(history_file)
+            except IOError:
+                pass
+            atexit.register(readline.write_history_file, history_file)
 
         # If possible, build an info line with current version number 
         # and date, from the VERSION text file
