@@ -1882,7 +1882,7 @@ class UFOHelasFortranModel(helas_objects.HelasModel):
         
         # If function not already existing, try to generate it.
         self.generate_helas_call(amplitude)
-        return super(HelasFortranModel, self).get_amplitude_call(amplitude)
+        return super(UFOHelasFortranModel, self).get_amplitude_call(amplitude)
 
     def generate_helas_call(self, argument):
         """Routine for automatic generation of Fortran Helas calls
@@ -1890,8 +1890,8 @@ class UFOHelasFortranModel(helas_objects.HelasModel):
 
         First the call string is generated, using a dictionary to go
         from the spin state of the calling wavefunction and its
-        mothers, or the mothers of the amplitude, to letters.
-        -> need update?
+        mothers, or the mothers of the amplitude, to difenrentiate wich call is
+        done.
 
         Then the call function is generated, as a lambda which fills
         the call string with the information of the calling
@@ -1964,9 +1964,8 @@ class UFOHelasFortranModel(helas_objects.HelasModel):
             
             if isinstance(argument, helas_objects.HelasWavefunction):
                 outgoing = self.find_outgoing_number(argument)
-                print type(outgoing)
                 outgoing = '1' * outgoing + '0' + \
-                            '1' * (len(argument.get('mothers')) - outgoing - 1)
+                            '1' * (len(argument.get('mothers')) - outgoing)
                 call = 'CALL %s_%s' % (argument.get('lorentz'), outgoing) 
             else:
                 outgoing = '1' * len(argument.get('mothers'))
@@ -1982,44 +1981,26 @@ class UFOHelasFortranModel(helas_objects.HelasModel):
             call = call + "W(1,%d)," * len(argument.get('mothers'))
             # Couplings
             call = call + "%s,"
-            print call
 
             if isinstance(argument, helas_objects.HelasWavefunction):
                 # Create call for wavefunction
-                print call
+                call = call + "%s, %s, W(1,%d))"
+                #CALL L_4_011(W(1,%d),W(1,%d),%s,%s, %s, W(1,%d))
                 call_function = lambda wf: call % \
-                    tuple([mother.get('number') for mother in wf.get('mothers')]) + \
+                    (tuple([mother.get('number') for mother in wf.get('mothers')]) + \
                     (wf.get_with_flow('coupling'),
                                      wf.get('mass'),
                                      wf.get('width'),
-                                     wf.get('number'))
-                
+                                     wf.get('number')))
             else:
-                # Create call for amplitude
-                if len(argument.get('mothers')) == 3:
-                    call_function = lambda amp: call % \
-                                    (amp.get('mothers')[0].\
-                                     get('number'),
-                                     amp.get('mothers')[1].\
-                                     get('number'),
-                                     amp.get('mothers')[2].\
-                                     get('number'),
-
-                                     amp.get('coupling'),
-                                     amp.get('number'))
-                else:
-                    call_function = lambda amp: call % \
-                                    (amp.get('mothers')[0].\
-                                     get('number'),
-                                     amp.get('mothers')[1].\
-                                     get('number'),
-                                     amp.get('mothers')[2].\
-                                     get('number'),
-                                     amp.get('mothers')[3].\
-                                     get('number'),
-                                     amp.get('coupling'),
-                                     amp.get('number'))
-
+                # Amplitude
+                call = call + "AMP(%d))"
+                call_function = lambda amp: call % \
+                                (tuple([mother.get('number') 
+                                          for mother in amp.get('mothers')]) + \
+                                (amp.get('coupling'),
+                                amp.get('number')))     
+                     
         # Add the constructed function to wavefunction or amplitude dictionary
         if isinstance(argument, helas_objects.HelasWavefunction):
             self.add_wavefunction(argument.get_call_key(), call_function)

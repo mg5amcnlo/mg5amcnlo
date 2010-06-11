@@ -84,7 +84,8 @@ class CmdExtended(cmd.Cmd):
         self.history = []
         self.save_line = ''
         cmd.Cmd.__init__(self, *arg, **opt)
-
+        self.__initpos = os.path.abspath(os.getcwd())
+        
     def precmd(self, line):
         """ force the printing of the line if this is executed with an stdin """
         # Update the history of this suite of command
@@ -131,9 +132,11 @@ class CmdExtended(cmd.Cmd):
             error_text += 'More information are present in file \'./MG5_debug\'.\n'
             error_text += 'Please associate that file to your report.'
             logger.critical(error_text)
+            # Make sure that we are at the initial position
+            os.chdir(self.__initpos)
             # Create the debug files
-            cmd.Cmd.onecmd(self, 'history ./MG5_debug')
-            debug_file = open('./MG5_debug', 'a')
+            cmd.Cmd.onecmd(self, 'history MG5_debug')
+            debug_file = open('MG5_debug', 'a')
             traceback.print_exc(file=debug_file)
             #stop the execution if on a non interactive mode
             if self.use_rawinput == False:
@@ -838,7 +841,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _curr_fortran_model = export_v4.HelasFortranModel()
     _multiparticles = {}
 
-    _display_opts = ['particles', 'interactions', 'processes', 'multiparticles']
+    _display_opts = ['particles', 'interactions', 'processes', 'multiparticles',
+                     'couplings']
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _import_formats = ['model_v4', 'model_v5', 'proc_v4', 'command']
@@ -982,26 +986,34 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 print part
             print ''
 
-        if args[0] == 'interactions':
-            print "Current model contains %i interactions" % \
+        elif args[0] == 'interactions':
+            text = "Current model contains %i interactions\n" % \
                     len(self._curr_model['interactions'])
             for inter in self._curr_model['interactions']:
-                print str(inter['id']) + ':',
+                text += str(inter['id']) + ':'
                 for part in inter['particles']:
                     if part['is_part']:
-                        print part['name'],
+                        text += part['name']
                     else:
-                        print part['antiname'],
-                print
-                print inter
+                        text += part['antiname']
+                text += '\n'
+            import pydoc
+            pydoc.pager(text)
 
-        if args[0] == 'processes':
+        elif args[0] == 'processes':
             for amp in self._curr_amps:
                 print amp.nice_string()
-        if args[0] == 'multiparticles':
+        elif args[0] == 'multiparticles':
             print 'Multiparticle labels:'
             for key in self._multiparticles:
                 print key, " = ", self._multiparticles[key]
+        
+        elif args[0] == 'couplings':
+            couplings = set()
+            for interaction in self._curr_model['interactions']:
+                for order in interaction['orders'].keys():
+                    couplings.add(order)
+            print ' / '.join(couplings)
     
     def do_draw(self, line):
         """ draw the Feynman diagram for the given process """
