@@ -23,7 +23,6 @@ import re
 import shutil
 import subprocess
 
-
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing_eps as draw
@@ -44,12 +43,13 @@ def copy_v4template(mgme_dir, dir_path, model_dir, clean):
     
     #First copy the full template tree if dir_path doesn't exit
     if not os.path.isdir(dir_path):
-        print 'initialize a new directory: %s' % os.path.basename(dir_path)
+        logger.info('initialize a new directory: %s' % \
+                    os.path.basename(dir_path))
         shutil.copytree(os.path.join(mgme_dir, 'Template'), dir_path, True)
 
     #Ensure that the Template is clean
     if clean:
-        print 'remove old information in %s' % os.path.basename(dir_path)
+        logger.info('remove old information in %s' % os.path.basename(dir_path))
         old_pos = os.getcwd()
         os.chdir(dir_path)
         if os.environ.has_key('MADGRAPH_BASE'):
@@ -77,11 +77,13 @@ def copy_v4standalone(mgme_dir, dir_path, model_dir, clean):
     
     #First copy the full template tree if dir_path doesn't exit
     if not os.path.isdir(dir_path):
-        print 'initialize a new directory: %s' % os.path.basename(dir_path)
+        logger.info('initialize a new directory: %s' % \
+                    os.path.basename(dir_path))
         shutil.copytree(os.path.join(mgme_dir, 'Template'), dir_path, True)
 
     # Run standalone
-    print 'Setup directory %s for standalone' % os.path.basename(dir_path)
+    logger.info('Setup directory %s for standalone' % \
+                os.path.basename(dir_path))
     old_pos = os.getcwd()
     os.chdir(dir_path)
     try:
@@ -93,7 +95,8 @@ def copy_v4standalone(mgme_dir, dir_path, model_dir, clean):
 
     #Ensure that the Template is clean
     if clean:
-        print 'remove old information in %s' % os.path.basename(dir_path)
+        logger.info('remove old information in %s' % \
+                    os.path.basename(dir_path))
         old_pos = os.getcwd()
         os.chdir(dir_path)
         for pdir in glob.glob(os.path.join("SubProcesses","P*")):
@@ -124,10 +127,10 @@ def make_v4standalone(dir_path):
     # Run standalone
     old_pos = os.getcwd()
     os.chdir(os.path.join(dir_path, "Source"))
-    print "Running make for Helas"
+    logger.info("Running make for Helas")
     subprocess.call(['make', '../lib/libdhelas3.a'],
                     stdout = open(os.devnull, 'w'))
-    print "Running make for Model"
+    logger.info("Running make for Model")
     subprocess.call(['make', '../lib/libmodel.a'],
                     stdout = open(os.devnull, 'w'))
     os.chdir(old_pos)
@@ -175,7 +178,7 @@ def write_procdef_mg5(file_pos, modelname, process_str):
 #===============================================================================
 # Create Web Page via external routines
 #===============================================================================
-def create_v4_webpage(dir_path, makejpg):
+def finalize_madevent_v4_directory(dir_path, makejpg, history):
     """call the perl script creating the web interface for MadEvent"""
 
     old_pos = os.getcwd()
@@ -183,35 +186,50 @@ def create_v4_webpage(dir_path, makejpg):
     P_dir_list = [proc for proc in os.listdir('.') if os.path.isdir(proc) and \
                                                                 proc[0] == 'P']
     
+    devnull = os.open(os.devnull, os.O_RDWR)
     # Convert the poscript in jpg files (if authorize)
     if makejpg:
         logger.info("Generate jpeg diagrams")
         for Pdir in P_dir_list:
             os.chdir(Pdir)
-            subprocess.call([os.path.join(dir_path, 'bin', 'gen_jpeg-pl')])
+            subprocess.call([os.path.join(dir_path, 'bin', 'gen_jpeg-pl')],
+                            stdout = devnull)
             os.chdir(os.path.pardir)
     
     logger.info("Generate web pages")
     # Create the WebPage using perl script
 
-    devnull = os.open(os.devnull, os.O_RDWR)
     subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')], \
-                                                            stdout=devnull)
+                                                            stdout = devnull)
     subprocess.call([os.path.join(dir_path, 'bin', 'gen_infohtml-pl')], \
-                                                            stdout=devnull)
+                                                            stdout = devnull)
     os.chdir(os.path.pardir)
-    subprocess.call([os.path.join(dir_path, 'bin', 'gen_crossxhtml-pl')])
+    subprocess.call([os.path.join(dir_path, 'bin', 'gen_crossxhtml-pl')],
+                    stdout = devnull)
     [mv(name, './HTML/') for name in os.listdir('.') if \
                         (name.endswith('.html') or name.endswith('.jpg')) and \
                         name != 'index.html']               
     
+    # Write command history as proc_card_mg5
+    if os.path.isdir('Cards'):
+        output_file = os.path.join('Cards', 'proc_card_mg5.dat')
+        output_file = open(output_file, 'w')
+        text = ('\n'.join(history) + '\n') % misc.get_time_info()
+        output_file.write(text)
+        output_file.close()
+
+    subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')],
+                    stdout = devnull)
+    
+    # Run "make" to generate madevent.tar.gz file
     if os.path.exists(os.path.join('SubProcesses', 'subproc.mg')):
         if os.path.exists('madevent.tar.gz'):
             os.remove('madevent.tar.gz')
-        subprocess.call(['make'], stdout=devnull)
+        subprocess.call(['make'], stdout = devnull)
     
     
-    subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')])
+    subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')],
+                    stdout = devnull)
     
     #return to the initial dir
     os.chdir(old_pos)               
@@ -1052,7 +1070,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
                                       model=matrix_element.get('processes')[0].\
                                          get('model'),
                                       amplitude='')
-    logging.info("Generating Feynman diagrams for " + \
+    logger.info("Generating Feynman diagrams for " + \
                  matrix_element.get('processes')[0].nice_string())
     plot.draw()
 

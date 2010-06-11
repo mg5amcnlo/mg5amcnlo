@@ -18,6 +18,7 @@
 import os
 import re
 import StringIO
+import time
 
 import madgraph
 import madgraph.iolibs.files as files
@@ -63,3 +64,15 @@ def get_pkg_info(info_str=None):
 
     return info_dict
 
+#===============================================================================
+# get_time_info
+#===============================================================================
+def get_time_info():
+    """Returns the present time info for use in MG5 command history header.
+    """
+
+    creation_time = time.asctime() 
+    time_info = {'time': creation_time,
+                 'fill': ' ' * (26 - len(creation_time))}
+
+    return time_info

@@ -98,7 +98,7 @@ class TestFinder(list):
         """Error associated to the TestFinder class."""
         pass
 
-    def __init__(self, package='./tests/', expression='', re_opt=0):
+    def __init__(self, package='tests/', expression='', re_opt=0):
         """ initialize global variable for the test """
 
         list.__init__(self)
@@ -353,7 +353,7 @@ if __name__ == "__main__":
                       help="defined the verbosity level [%default]")
     parser.add_option("-r", "--reopt", type="int", default=0,
                   help="regular expression tag [%default]")
-    parser.add_option("-p", "--path", default='./tests/unit_tests',
+    parser.add_option("-p", "--path", default='tests/unit_tests',
                   help="position to start the search (from root)  [%default]")
     parser.add_option("-l", "--logging", default='CRITICAL',
         help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
