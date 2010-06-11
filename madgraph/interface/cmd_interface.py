@@ -82,7 +82,8 @@ class CmdExtended(cmd.Cmd):
         self.history = []
         self.save_line = ''
         cmd.Cmd.__init__(self, *arg, **opt)
-
+        self.__initpos = os.path.abspath(os.getcwd())
+        
     def precmd(self, line):
         """ force the printing of the line if this is executed with an stdin """
         # Update the history of this suite of command
@@ -125,13 +126,15 @@ class CmdExtended(cmd.Cmd):
             # Make a beautiful error output
             error_text ='\ncommand \"%s\" stops with following error:\n' % line
             error_text += '%s : %s\n' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
-            error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5'
+            error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
             error_text += 'More information are present in file \'./MG5_debug\'.\n'
             error_text += 'Please associate that file to your report.'
             logger.critical(error_text)
+            # Make sure that we are at the initial position
+            os.chdir(self.__initpos)
             # Create the debug files
-            cmd.Cmd.onecmd(self, 'history ./MG5_debug')
-            debug_file = open('./MG5_debug', 'a')
+            cmd.Cmd.onecmd(self, 'history MG5_debug')
+            debug_file = open('MG5_debug', 'a')
             traceback.print_exc(file=debug_file)
             #stop the execution if on a non interactive mode
             if self.use_rawinput == False:
