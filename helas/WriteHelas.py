@@ -1,4 +1,4 @@
-#import helas.FortranWritter as FortranWriter 
+import madgraph.iolibs.export_v4 as FortranWriter 
 import helas.helasamp_object as Helas
 import helas.helasamp_lib as Helas_Lib
 import re 
@@ -150,7 +150,13 @@ class HelasWriterForFortran(WriteHelas):
             else: 
                 MomentumConserve.append('+F%d' % (index + 1))
                 Counter += 1
-                
+            # Reorder calllist cyclically. 
+ 	if not OnShell:
+	    PermList = []
+            for i in range(len(CallList)):
+                PermList.append(i-OffShellParticle) 
+            CallList = [CallList[i] for i in PermList] 
+
         return {'CallList':CallList, 'OnShell':OnShell, 'DeclareList':DeclareList, \
                      'OffShell':OffShellParticle, 'Momentum':MomentumConserve}
     
@@ -257,8 +263,8 @@ class HelasWriterForFortran(WriteHelas):
         for elem in OverM:
             index = int(elem[-1])
             string = string + 'om%d = 0d0\n' % (index)
-            #string = string + 'if (m%d .ne. 0d0) om%d' % (index, index) + '=1d0/dcmplx(m%d**2,-w%d*m%d)\n' % (index, index, index) 
-            string = string + 'if (m%d .ne. 0d0) om%d' % (index, index) + '=1d0/m%d**2\n' % (index) 
+            string = string + 'if (m%d .ne. 0d0) om%d' % (index, index) + '=1d0/dcmplx(m%d**2,-w%d*m%d)\n' % (index, index, index) 
+        
         # Returning result
         return string
         

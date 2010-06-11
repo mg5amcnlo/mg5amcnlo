@@ -127,7 +127,7 @@ class CmdExtended(cmd.Cmd):
             # Make a beautiful error output
             error_text ='\ncommand \"%s\" stops with following error:\n' % line
             error_text += '%s : %s\n' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
-            error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5'
+            error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
             error_text += 'More information are present in file \'./MG5_debug\'.\n'
             error_text += 'Please associate that file to your report.'
             logger.critical(error_text)

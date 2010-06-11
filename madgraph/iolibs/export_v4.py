@@ -1840,6 +1840,22 @@ class UFOHelasFortranModel(helas_objects.HelasModel):
     generates the Fortran Helas call based on the Lorentz structure of
     the interaction."""
 
+    def find_outgoing_number(self, wf):
+        "Return the position of the resulting particles in the interactions"
+        # First shot: just the index in the interaction
+        wf_index = wf.get('pdg_codes').index(wf.get_anti_pdg_code())
+        # If fermion, then we need to correct for I/O status
+        spin_state = wf.get_spin_state_number()
+        if spin_state % 2 == 0:
+            if wf_index % 2 == 0 and spin_state < 0:
+                # Outgoing particle at even slot -> increase by 1
+                wf_index += 1
+            elif wf_index % 2 == 1 and spin_state > 0:
+                # Incoming particle at odd slot -> decrease by 1
+                wf_index -= 1
+        
+        return wf_index
+
     def get_wavefunction_call(self, wavefunction):
         """Return the function for writing the wavefunction
         corresponding to the key. If the function doesn't exist,
@@ -1944,16 +1960,21 @@ class UFOHelasFortranModel(helas_objects.HelasModel):
                                  wf.get('number_external'),
                                  wf.get('number'))
         else:
-            # String is FOVXXX, FIVXXX, JIOXXX etc.
-
-            addition = argument.get('lorentz')
-            mother_state = UFOHelasFortranModel.sorted_letters(argument)
-
-            call += '%s_%s'% (addition, mother_state)
+            # String is LOR1_1110, FIVXXX, JIOXXX etc.
+            
+            if isinstance(argument, helas_objects.HelasWavefunction):
+                outgoing = self.find_outgoing_number(argument)
+                print type(outgoing)
+                outgoing = '1' * outgoing + '0' + \
+                            '1' * (len(argument.get('mothers')) - outgoing - 1)
+                call = 'CALL %s_%s' % (argument.get('lorentz'), outgoing) 
+            else:
+                outgoing = '1' * len(argument.get('mothers'))
+                call += 'CALL %s_%s' % (argument.get('lorentz'), outgoing)
 
             # Check if we need to append a charge conjugation flag
             if argument.needs_hermitian_conjugate():
-                call = call + 'C'
+                call = call + '_C'
 
             # Add the wave function
             call = call + '('
