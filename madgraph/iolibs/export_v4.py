@@ -16,12 +16,12 @@
 """Methods and classes to export matrix elements to v4 format."""
 
 import fractions
+import glob
 import logging
 import os
 import re
 import shutil
 import subprocess
-
 
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
@@ -43,24 +43,98 @@ def copy_v4template(mgme_dir, dir_path, model_dir, clean):
     
     #First copy the full template tree if dir_path doesn't exit
     if not os.path.isdir(dir_path):
-        print 'initialize a new directory: %s' % os.path.basename(dir_path)
+        logger.info('initialize a new directory: %s' % \
+                    os.path.basename(dir_path))
         shutil.copytree(os.path.join(mgme_dir, 'Template'), dir_path, True)
 
     #Ensure that the Template is clean
     if clean:
-        print 'remove old information in %s' % os.path.basename(dir_path)
+        logger.info('remove old information in %s' % os.path.basename(dir_path))
         old_pos = os.getcwd()
         os.chdir(dir_path)
         if os.environ.has_key('MADGRAPH_BASE'):
             subprocess.call([os.path.join('bin', 'clean_template'), '--web'])
         else:
-            subprocess.call([os.path.join('bin', 'clean_template')])
+            try:
+                subprocess.call([os.path.join('bin', 'clean_template')])
+            except Exception, why:
+                logger.error('Failed to clean correctly Template. ' + \
+                                     'The following error is returned:\n %s' % why)
         os.chdir(old_pos)
         
         #Write version info
         MG_version = misc.get_pkg_info()
         open(os.path.join(dir_path, 'SubProcesses', 'MGVersion.txt'), 'w').write(
                                                           MG_version['version'])
+        
+#===============================================================================
+# copy the Template in a new directory and set up Standalone MG
+#===============================================================================
+def copy_v4standalone(mgme_dir, dir_path, model_dir, clean):
+    """create the directory run_name as a copy of the Template,
+       run standalone, import the model and Helas, and clean the directory 
+    """
+    
+    #First copy the full template tree if dir_path doesn't exit
+    if not os.path.isdir(dir_path):
+        logger.info('initialize a new directory: %s' % \
+                    os.path.basename(dir_path))
+        shutil.copytree(os.path.join(mgme_dir, 'Template'), dir_path, True)
+
+    # Run standalone
+    logger.info('Setup directory %s for standalone' % \
+                os.path.basename(dir_path))
+    old_pos = os.getcwd()
+    os.chdir(dir_path)
+    try:
+        subprocess.call([os.path.join('bin', 'standalone')],
+                        stdout = os.open(os.devnull, os.O_RDWR))
+    except OSError:
+        # Probably standalone already called
+        pass
+    os.chdir(old_pos)
+
+    #Ensure that the Template is clean
+    if clean:
+        logger.info('remove old information in %s' % \
+                    os.path.basename(dir_path))
+        old_pos = os.getcwd()
+        os.chdir(dir_path)
+        for pdir in glob.glob(os.path.join("SubProcesses","P*")):
+            shutil.rmtree(pdir)
+        #Write version info
+        MG_version = misc.get_pkg_info()
+        open(os.path.join('SubProcesses', 'MGVersion.txt'), 'w').write(
+                                                          MG_version['version'])
+
+        # Copy the HELAS directory
+        
+        for file in glob.glob(os.path.join("..", "HELAS", "*")):
+            if os.path.isfile(file):
+                shutil.copy2(file,
+                            os.path.join('Source', 'DHELAS'))
+        shutil.move(os.path.join('Source', 'DHELAS', 'Makefile.template'),
+                    os.path.join('Source', 'DHELAS', 'Makefile'))
+        os.chdir(old_pos)
+        
+#===============================================================================
+# Make the Helas and Model directories for Standalone directory
+#===============================================================================
+def make_v4standalone(dir_path):
+    """Run make in the DHELAS and MODEL directories, to set up
+    everything for running standalone
+    """
+    
+    # Run standalone
+    old_pos = os.getcwd()
+    os.chdir(os.path.join(dir_path, "Source"))
+    logger.info("Running make for Helas")
+    subprocess.call(['make', '../lib/libdhelas3.a'],
+                    stdout = open(os.devnull, 'w'))
+    logger.info("Running make for Model")
+    subprocess.call(['make', '../lib/libmodel.a'],
+                    stdout = open(os.devnull, 'w'))
+    os.chdir(old_pos)
         
 #===============================================================================
 # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
@@ -105,7 +179,7 @@ def write_procdef_mg5(file_pos, modelname, process_str):
 #===============================================================================
 # Create Web Page via external routines
 #===============================================================================
-def create_v4_webpage(dir_path, makejpg):
+def finalize_madevent_v4_directory(dir_path, makejpg, history):
     """call the perl script creating the web interface for MadEvent"""
 
     old_pos = os.getcwd()
@@ -113,36 +187,50 @@ def create_v4_webpage(dir_path, makejpg):
     P_dir_list = [proc for proc in os.listdir('.') if os.path.isdir(proc) and \
                                                                 proc[0] == 'P']
     
+    devnull = os.open(os.devnull, os.O_RDWR)
     # Convert the poscript in jpg files (if authorize)
     if makejpg:
         logger.info("Generate jpeg diagrams")
         for Pdir in P_dir_list:
             os.chdir(Pdir)
-            print dir_path
-            subprocess.call([os.path.join(dir_path, 'bin', 'gen_jpeg-pl')])
+            subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_jpeg-pl')],
+                            stdout = devnull)
             os.chdir(os.path.pardir)
-    
+
     logger.info("Generate web pages")
     # Create the WebPage using perl script
 
-    devnull = os.open(os.devnull, os.O_RDWR)
-    subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')], \
-                                                            stdout=devnull)
-    subprocess.call([os.path.join(dir_path, 'bin', 'gen_infohtml-pl')], \
-                                                            stdout=devnull)
+    subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_cardhtml-pl')], \
+                                                            stdout = devnull)
+    subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_infohtml-pl')], \
+                                                            stdout = devnull)
     os.chdir(os.path.pardir)
-    subprocess.call([os.path.join(dir_path, 'bin', 'gen_crossxhtml-pl')])
+    subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_crossxhtml-pl')],
+                    stdout = devnull)
     [mv(name, './HTML/') for name in os.listdir('.') if \
                         (name.endswith('.html') or name.endswith('.jpg')) and \
                         name != 'index.html']               
     
+    # Write command history as proc_card_mg5
+    if os.path.isdir('Cards'):
+        output_file = os.path.join('Cards', 'proc_card_mg5.dat')
+        output_file = open(output_file, 'w')
+        text = ('\n'.join(history) + '\n') % misc.get_time_info()
+        output_file.write(text)
+        output_file.close()
+
+    subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_cardhtml-pl')],
+                    stdout = devnull)
+    
+    # Run "make" to generate madevent.tar.gz file
     if os.path.exists(os.path.join('SubProcesses', 'subproc.mg')):
         if os.path.exists('madevent.tar.gz'):
             os.remove('madevent.tar.gz')
-        subprocess.call(['make'], stdout=devnull)
+        subprocess.call(['make'], stdout = devnull)
     
     
-    subprocess.call([os.path.join(dir_path, 'bin', 'gen_cardhtml-pl')])
+    subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_cardhtml-pl')],
+                    stdout = devnull)
     
     #return to the initial dir
     os.chdir(old_pos)               
@@ -855,8 +943,8 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
 # generate_subprocess_directory_v4_madevent
 #===============================================================================
 def generate_subprocess_directory_v4_madevent(matrix_element,
-                                                fortran_model,
-                                                path=os.getcwd()):
+                                              fortran_model,
+                                              path=os.getcwd()):
     """Generate the Pxxxxx directory for a subprocess in MG4 madevent,
     including the necessary matrix.f and various helper files"""
 

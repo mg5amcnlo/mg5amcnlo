@@ -452,9 +452,8 @@ class ProcCardv4Reader(object):
         
         #finally export the madevent output
         lines.append('setup madevent_v4 . -f')
-        lines.append('export madevent_v4')
-        lines.append('makehtml madevent_v4')
-        lines.append('history .')
+        lines.append('export')
+        lines.append('finalize')
         
         return lines
         
@@ -493,9 +492,10 @@ class ProcCardv4Reader(object):
         while pos < len(line) - 4:
             #Check for infinite loop
             if pos == old_pos:
-                logging.error('Invalid characters: %s' % line[pos:pos + 4])
-                raise ParticleError('Set of character %s not defined' %
-                                     line[pos:pos + 4])
+                logging.error('Invalid particle name: %s' % \
+                              line[pos:pos + 4].rstrip())
+                raise ParticleError('Invalid particle name %s' %
+                                     line[pos:pos + 4].rstrip())
             old_pos = pos
             # check for pointless character
             if line[pos] in [' ', '\n', '\t']:
@@ -672,11 +672,11 @@ class ProcessInfo(object):
         for decay in self.decays:
             decay_text = decay.mg5_process_line(model_coupling)
             if ',' in decay_text:
-                text += ', (%s) ' % decay_text
+                text = text.rstrip() + ', (%s) ' % decay_text.strip()
             else:
-                text += ', %s ' % decay_text
+                text = text.rstrip() + ', %s ' % decay_text.strip()
         
-        return text
+        return text.rstrip()
     
     def mg5_couplings_line(self, model_coupling, nb_part):
         """Return the assignment of coupling for this process"""
