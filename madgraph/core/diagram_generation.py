@@ -23,7 +23,7 @@ import madgraph.core.base_objects as base_objects
 generation algorithm.
 """
 
-logger = logging.getLogger('diagram_generation')
+logger = logging.getLogger('madgraph.diagram_generation')
 
 #===============================================================================
 # Amplitude

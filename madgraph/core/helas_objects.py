@@ -38,7 +38,7 @@ classes for writing Helas calls, found in the iolibs directory"""
 # 
 #===============================================================================
 
-logger = logging.getLogger('helas_objects')
+logger = logging.getLogger('madgraph.helas_objects')
 
 #===============================================================================
 # HelasWavefunction

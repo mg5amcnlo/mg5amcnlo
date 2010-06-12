@@ -31,7 +31,7 @@ import madgraph.iolibs.misc as misc
 import madgraph.iolibs.template_files as Template
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
-logger = logging.getLogger('export_v4')
+logger = logging.getLogger('madgraph.export_v4')
 
 #===============================================================================
 # copy the Template in a new directory.

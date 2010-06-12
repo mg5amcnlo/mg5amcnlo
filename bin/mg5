@@ -49,7 +49,9 @@ if len(args) == 0:
 # Set logging level according to the logging level given by options
 #logging.basicConfig(level=vars(logging)[options.logging])
 logging.config.fileConfig(path.join(root_path, 'madgraph', 'interface', '.mg5_logging.conf'))
-logging.root.setLevel(options.logging)
+logging.root.setLevel(eval('logging.' + options.logging))
+logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
+
 
 import madgraph.interface.cmd_interface as cmd_interface
 
@@ -63,12 +65,12 @@ if options.file or args:
     if options.web:
         cmd_line = cmd_interface.MadGraphCmdWeb()
         cmd_line.use_rawinput = False #put it in non interactive mode
-        cmd_line.do_import('command ' + input_file)
+        cmd_line.onecmd('import command ' + input_file)
         sys.exit()
     else:
         cmd_line = cmd_interface.MadGraphCmdShell()
         cmd_line.use_rawinput = False #put it in non interactive mode
-        cmd_line.do_import('command ' + input_file)
+        cmd_line.onecmd('import command ' + input_file)
         sys.exit()
 else:
     # Interactive mode

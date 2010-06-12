@@ -510,10 +510,15 @@ class CheckValidForCmd(object):
         
         if len(args) > 1:
             self.help_history()
-            raise self.InvalidCmd('\"history\" command requires one argument')
+            raise self.InvalidCmd('\"history\" command requires at most one argument')
         
-        if len(args):
-            if args[0] != 'clean':
+        if not len(args):
+            return
+        
+        if args[0] =='.':
+            if not self._export_dir:
+                raise self.InvalidCmd("No default directory are yet define for \'.\' option")
+        elif args[0] != 'clean':
                 dirpath = os.path.dirname(args[0])
                 if dirpath and not os.path.exists(dirpath) or \
                        os.path.isdir(args[0]):
@@ -1181,7 +1186,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 export_v4.write_procdef_mg5(card_path,
                                 os.path.split(self._model_dir)[-1],
                                 self._generate_info)
-                self.onecmd('history .')
+                cmd.Cmd.onecmd(self, 'history .')
                 
         if args[0] == 'standalone_v4':
             for me in self._curr_matrix_elements.get('matrix_elements'):
@@ -1494,6 +1499,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self.history = [self.history[0]]
             logger.info('History is cleaned')
             return
+        elif args[0] == '.':
+            output_file = os.path.join(self._export_dir, 'Cards', \
+                                                            'proc_card_mg5.dat')
+            output_file = open(output_file, 'w')
         else:
             output_file = open(args[0], 'w')
             

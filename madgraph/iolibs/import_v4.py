@@ -26,7 +26,7 @@ from madgraph.core.base_objects import Interaction, InteractionList
 from madgraph.interface import MadGraph5Error
 
 
-logger = logging.getLogger('import_v4')
+logger = logging.getLogger('madgraph.import_v4')
 
 #===============================================================================
 # read_particles_v4
