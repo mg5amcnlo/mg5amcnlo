@@ -34,7 +34,12 @@ class TestCmdShell1(unittest.TestCase):
         """ basic building of the class to test """
         
         self.cmd = Cmd.MadGraphCmdShell()
-           
+    
+    @staticmethod
+    def join_path(*path):
+        """join path and treat spaces"""     
+        combine = os.path.join(*path)
+        return combine.replace(' ','\ ')        
     
     def do(self, line):
         """ exec a line in the cmd under test """        
@@ -43,7 +48,7 @@ class TestCmdShell1(unittest.TestCase):
     def test_generate(self):
         """command 'generate' works"""
     
-        self.do('load model %s' % os.path.join(_pickle_path, 'sm.pkl'))
+        self.do('load model %s' % self.join_path(_pickle_path, 'sm.pkl'))
         self.do('generate e+ e- > e+ e-')
         self.assertTrue(self.cmd._curr_amps)
         self.do('define P Z u')
@@ -55,9 +60,9 @@ class TestCmdShell1(unittest.TestCase):
     def test_draw(self):
         """ command 'draw' works """
         
-        self.do('load model %s' % os.path.join(_pickle_path, \
+        self.do('load model %s' % self.join_path(_pickle_path, \
                                                           'sm.pkl'))
-        self.do('load processes %s' % os.path.join(_pickle_path,'e+e-_e+e-.pkl'))
+        self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('draw .')
         self.assertTrue(os.path.exists('diagrams_0_e+e-_e+e-.eps'))
         os.remove('diagrams_0_e+e-_e+e-.eps')
@@ -88,6 +93,8 @@ class TestCmdShell2(unittest.TestCase):
         """ basic destruction after have run """
         if os.path.exists(self.out_dir):
             shutil.rmtree(self.out_dir)
+    
+    join_path = TestCmdShell1.join_path
 
     def do(self, line):
         """ exec a line in the cmd under test """        
@@ -97,7 +104,7 @@ class TestCmdShell2(unittest.TestCase):
     def test_setup_madevent_directory(self):
         """ command 'setup' works with path"""
         
-        self.do('load processes %s' % os.path.join(_pickle_path,'e+e-_e+e-.pkl'))
+        self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('setup madevent_v4 %s' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
         self.do('export')
@@ -119,7 +126,7 @@ class TestCmdShell2(unittest.TestCase):
         os.system('cp -rf %s %s' % (os.path.join(Cmd.MGME_dir,'Template'),
                                     self.out_dir))
         os.system('cp -rf %s %s' % (
-                            os.path.join(_pickle_path,'simple_v4_proc_card.dat'),
+                            self.join_path(_pickle_path,'simple_v4_proc_card.dat'),
                             os.path.join(self.out_dir,'Cards','proc_card.dat')))
         
         self.do('import proc_v4 %s' % os.path.join(self.out_dir,
@@ -142,7 +149,7 @@ class TestCmdShell2(unittest.TestCase):
         """ command 'setup' works with '.' """
 
         self.do('setup madevent_v4 %s' % self.out_dir)
-        self.do('import proc_v4 %s' % os.path.join(_pickle_path, \
+        self.do('import proc_v4 %s' % self.join_path(_pickle_path, \
                                                      'simple_v4_proc_card.dat'))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                               'SubProcesses', 'P1_e-e+_vevex')))        
@@ -153,7 +160,7 @@ class TestCmdShell2(unittest.TestCase):
     def test_setup_standalone_directory(self):
         """ command 'setup' works with path"""
         
-        self.do('load processes %s' % os.path.join(_pickle_path,'e+e-_e+e-.pkl'))
+        self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('setup standalone_v4 %s' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
         self.assertTrue(os.path.isfile(os.path.join(self.out_dir, 'lib', 'libdhelas3.a')))
