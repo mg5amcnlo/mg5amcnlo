@@ -1227,12 +1227,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             else:
                 myprocdef, line = self.extract_decay_chain_process(line)
         except MadGraph5Error as error:
-            raise MadGraph5Error(\
-                    "Empty or wrong format process, please try again.\n" \
-                  + str(error))
+            raise MadGraph5Error(str(error))
         
         # Check that we have something    
-        if  not myprocdef:
+        if not myprocdef:
             raise MadGraph5Error("Empty or wrong format process, please try again.")
 
         # run the program
