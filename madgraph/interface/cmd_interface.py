@@ -73,8 +73,8 @@ for position in MGME_dir_possibility:
 del MGME_dir_possibility
 
 # Special logger for the Cmd Interface
-logger = logging.getLogger('cmdprint')
-
+logger = logging.getLogger('cmdprint') # -> stdout
+logger_stderr = logging.getLogger('fatalerror') # ->stderr
 #===============================================================================
 # CmdExtended
 #===============================================================================
@@ -82,7 +82,6 @@ class CmdExtended(cmd.Cmd):
     """Extension of the cmd.Cmd command line.
     This extensions supports line breaking, history, comments,
     internal call to cmdline,..."""
-
 
     def __init__(self, *arg, **opt):
         """Init history and line continuation"""
@@ -172,7 +171,7 @@ class CmdExtended(cmd.Cmd):
             if str(error):
                 error_text = 'Command \"%s\" interrupted with error:\n' % line
                 error_text += '%s : %s' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
-                logger.error(error_text)
+                logger_stderr.error(error_text)
                 #stop the execution if on a non interactive mode
                 if self.use_rawinput == False:
                     sys.exit()
@@ -183,7 +182,7 @@ class CmdExtended(cmd.Cmd):
             error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5'
             error_text += 'More information is found in \'./MG5_debug\'.\n'
             error_text += 'Please attach this file to your report.'
-            logger.critical(error_text)
+            logger_stderr.critical(error_text)
             # Make sure that we are at the initial position
             os.chdir(self.__initpos)
             # Create the debug files
@@ -1821,7 +1820,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 # MadGraphCmd
 #===============================================================================
 class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
-    """The command line processor of MadGraph"""         
+    """The command line processor of MadGraph"""
  
     def __init__(self, *arg, **opt):
     
