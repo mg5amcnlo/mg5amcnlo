@@ -13,6 +13,10 @@
 #
 ################################################################################
 
+"""Classes, methods and functions required to write QCD color information 
+for a diagram and build a color basis, and to square a QCD color string for
+squared diagrams and interference terms."""
+
 import copy
 import fractions
 import operator
@@ -20,10 +24,6 @@ import re
 
 import madgraph.core.color_algebra as color_algebra
 import madgraph.core.diagram_generation as diagram_generation
-
-"""Classes, methods and functions required to write QCD color information 
-for a diagram and build a color basis, and to square a QCD color string for
-squared diagrams and interference terms."""
 
 #===============================================================================
 # ColorBasis
@@ -451,7 +451,7 @@ class ColorBasis(dict):
 # ColorMatrix
 #===============================================================================
 class ColorMatrix(dict):
-    """A color matrix, i.e. a dictionary with pairs (i,j) as keys where i
+    """A color matrix, meaning a dictionary with pairs (i,j) as keys where i
     and j refer to elements of color basis objects. Values are Color Factor
     objects. Also contains two additional dictionaries, one with the fixed Nc
     representation of the matrix, and the other one with the "inverted" matrix,
