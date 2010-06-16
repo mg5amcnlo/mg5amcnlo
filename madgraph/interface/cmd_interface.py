@@ -35,6 +35,7 @@ import madgraph.iolibs.import_v4 as import_v4
 #import madgraph.iolibs.save_model as save_model
 import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.iolibs.export_v4 as export_v4
+import madgraph.iolibs.convert_ufo2mg4 as ufo2mg4
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -836,6 +837,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     
     _curr_model = base_objects.Model()
     _model_dir = None
+    _model_format = None
     _curr_amps = diagram_generation.AmplitudeList()
     _curr_matrix_elements = helas_objects.HelasMultiProcess()
     _curr_fortran_model = export_v4.HelasFortranModel()
@@ -977,13 +979,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                              if part['self_antipart']]
             for part in part_antipart:
                 print part['name'] + '/' + part['antiname'],
-                print
-                print part
             print ''
             for part in part_self:
                 print part['name'],
-                print
-                print part
             print ''
 
         elif args[0] == 'interactions':
@@ -1498,13 +1496,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         if args[0] == 'model_v5':
             self._curr_model = ufomodels.import_model(args[1])
-            try:
-                self._model_dir = os.path.join(MGME_dir, 'Models', args[1])
-            except:
-                pass
+            self._model_type = 'v5'
+            self._model_dir = os.path.join(root_path, 'models', args[1])
             self._curr_fortran_model = export_v4.UFOHelasFortranModel()
                     
         elif args[0] == 'model_v4':
+            self._model_type = 'v4'
             # Check for a file
             if os.path.isfile(args[1]):
                 import_v4file(self, args[1])
@@ -1748,10 +1745,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 raise MadGraph5Error('Stopped by user request')
 
         export_v4.copy_v4template(mgme_dir, dir_path, self._model_dir, clean)
+
         # Import the model
-        logger.info('import model files %s in directory %s' % \
+        if self._model_type == 'v4':
+            logger.info('import v4model files %s in directory %s' % \
                        (os.path.basename(self._model_dir), args[1]))        
-        export_v4.export_model(self._model_dir, dir_path)
+            export_v4.export_model(self._model_dir, dir_path)
+        else:
+            logger.info('convert UFO model to MG4 format')
+            ufo2mg4.export_to_mg4(self._model_dir, dir_path)
+            
+        
         self._export_dir = dir_path
 
 #===============================================================================

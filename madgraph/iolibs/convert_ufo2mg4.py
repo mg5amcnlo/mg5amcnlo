@@ -1,12 +1,13 @@
 """ export the UFO model to a valid MG4 fortran model """
 
 import os
+import logging
 import re
 import sys
 
 
 import madgraph.iolibs.export_v4 as export_v4
-
+logger = logging.getLogger('madgraph.ufo2mg4')
 
 class CompactifyExpression:
     

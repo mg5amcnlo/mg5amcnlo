@@ -37,7 +37,7 @@ class AbstractHelas(object):
     class AbstractHelasError(Exception):
         """ An error class for the AbstractHelas class"""
     
-    def __init__(self, lorentz, mode, auto_run=True, **opt):
+    def __init__(self, lorentz, mode, auto_run=True):
         """ initialize the run
         lorentz: the lorentz information analyzed (UFO format)
         language: define in which language we write the output
@@ -52,12 +52,12 @@ class AbstractHelas(object):
         self.helas_kernel = None
         
         if auto_run:
-            self.expr = self.compute_helas(mode)
+            self.compute_helas(mode)
     
     def compute_helas(self, mode):
         """ """
-        self.compute_helas_high_kernel(mode)
-    
+        self.expr = self.compute_helas_high_kernel(mode)
+
     def compute_helas_high_kernel(self, mode):
         """compute the abstract routine associate to this mode """
         
@@ -73,9 +73,10 @@ class AbstractHelas(object):
                 raise
             else:
                 self.helas_kernel = lorentz
+                
         else:
             lorentz = self.helas_kernel
-            
+
         for (i, spin ) in enumerate(self.spins):
             id = i + 1
             
@@ -86,11 +87,11 @@ class AbstractHelas(object):
                 elif spin == 2:
                     nb_spinor += 1
                     if nb_spinor %2:
-                        lorentz *= SpinorPropagator(i, 'I2', i)
+                        lorentz *= SpinorPropagator(id, 'I2', id)
                     else:
-                        lorentz *= SpinorPropagator('I2', i, i) 
+                        lorentz *= SpinorPropagator('I2', id, id) 
                 elif spin == 3 :
-                    lorentz *= VectorPropagator(i, 'I2', i)
+                    lorentz *= VectorPropagator(id, 'I2', id)
                 elif spin == 5 :
                     lorentz *= 1 # delayed evaluation (fastenize the code)
                 else:
@@ -120,17 +121,18 @@ class AbstractHelas(object):
         else:
             lorentz *= complex(0,-1)
 
-
-            
+          
         lorentz = lorentz.simplify()
         lorentz = lorentz.expand()
-        lorentz = lorentz.simplify()
+
         if self.spins[self.outgoing-1] == 5:
             if not self.helas_lib:
                 AbstractHelas.load_library()
             lorentz *= self.helas_lib[('Spin2Prop', id)]
-        lorentz = lorentz.factorize()
 
+        
+        lorentz = lorentz.simplify()
+        lorentz = lorentz.factorize()
         return lorentz         
         
     def compute_helas_low_kernel(self, mode):
@@ -185,7 +187,7 @@ class AbstractHelas(object):
             lorentz.tag.add('W%s' % self.outgoing)  
         else:
             lorentz *= complex(0,-1)
-                        
+            
         lorentz = lorentz.simplify()
         lorentz = lorentz.factorize()
         return lorentz 
@@ -193,7 +195,7 @@ class AbstractHelas(object):
     def define_helas(self, lorentz_expr):
         """Define the expression"""
         
-        self.lorentz_expr = lorentz_expr
+        self.expr = lorentz_expr
     
     def define_helas_kernel(self, lorentz=None):
         """Define the kernel at low level"""
@@ -218,15 +220,15 @@ class AbstractHelas(object):
         self.helas_kernel = lorentz
         return lorentz
 
-        
- 
-   
-    def gethelasname(self):
+    
+    @staticmethod
+    def gethelasname(name, outgoing, nb_part):
         """return the name of the """
         
-        helasname = self.name + '_'
-        for i in len(self.spins):
-            if i + 1 == self.outgoing:
+        helasname = name + '_'
+        
+        for i in range(len(nb_part)):
+            if i + 1 == outgoing:
                 helasname += '0'
             else:
                 helasname += '1'
@@ -236,7 +238,8 @@ class AbstractHelas(object):
     def write(self, output_dir, language):
         """write the lorentz structure in the Helas Routine file filepos"""
 
-        name = os.path.join(output_dir, self.gethelasname())
+        name = os.path.join(output_dir, 
+                self.gethelasname(self.name, self.outgoing, len(self.spins)))
         infostr = str(self.expr)
         isoutgoing = lambda i: i + 1 == self.outgoing
         info = [( self.spin_to_tag[spin], isoutgoing(i) ) \
@@ -273,8 +276,8 @@ class AbstractHelasModel(dict):
     def save(self, filepos=None):
         """ save the current model in a pkl file """
         
-        ff = open(os.path.join(self.model_pos,'helas.pkl'), 'w')
-        cPickle.dump(dict(self), ff)
+        #ff = open(os.path.join(self.model_pos,'helas.pkl'), 'w')
+        #cPickle.dump(dict(self), ff)
         
     def get(self, lorentzname, outgoing):
         """ return the AbstractHelas with a given lorentz name, and for a given
@@ -298,7 +301,7 @@ class AbstractHelasModel(dict):
 
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
-        #self.look_for_symmetries()
+        self.look_for_symmetries()
         
         for lorentz in self.model.all_lorentz:
             self.compute_for_lorentz(lorentz)
@@ -309,7 +312,7 @@ class AbstractHelasModel(dict):
         """ """
         self.compute_lorentz_with_kernel(lorentz)
         
-    def compute_lorentz_whithout_kernel(self, lorentz):
+    def compute_lorentz_without_kernel(self, lorentz):
         """define all the AbstractHelas"""
         
         name = lorentz.name
@@ -334,9 +337,9 @@ class AbstractHelasModel(dict):
             # Make the computation
             wavefunctions = AbstractHelas(lorentz, outgoing, auto_run=False)
             if self.symmetries.has_key(lorentz.name) and \
-                                   outgoing -1 in self.symmetries[lorentz.name]:
+                                  outgoing -1 in self.symmetries[lorentz.name]:
                 equiv_out = self.symmetries[lorentz.name][outgoing-1]
-                lorentz_expr = self.get(lorentz.name, equiv_out).lorentz_expr
+                lorentz_expr = self.get(lorentz.name, equiv_out).expr
                 wavefunctions.define_helas( lorentz_expr )
             else:
                 wavefunctions.define_helas_kernel(kernel)
@@ -351,12 +354,13 @@ class AbstractHelasModel(dict):
         for abstract_helas in self.values():
             abstract_helas.write(output_dir, language)
         
+        self.write_makefile_inc(output_dir)
+        
 
     def look_for_symmetries(self):
         """Search some symmetries in the vertices.
         We search if some identical particles are in a vertices in order
         to avoid to compute symmetrical contributions"""
-        
         for vertex in self.model.all_vertices:
             for i, part1 in enumerate(vertex.particles):
                 for j in range(i):
@@ -364,10 +368,24 @@ class AbstractHelasModel(dict):
                     if part1.name == part2.name:
                         for lorentz in vertex.lorentz:
                             if self.symmetries.has_key(lorentz.name):
-                                self.symmetries[lorentz.name][i] = j
+                                self.symmetries[lorentz.name][i+1] = j+1
                             else:
-                                self.symmetries[lorentz.name] = {i:j}
+                                self.symmetries[lorentz.name] = {i+1:j+1}
                         break
+
+    def write_makefile_inc(self, output_dir):
+        """Create the helas_makefile.inc which is can be use for the makefile"""
+        
+        
+        text="HelasRoutine = "
+        old_name = ''
+        for (name, outgoing), abstract in self.items():
+            if old_name != name:
+                text += '\\\n\t\t'
+            text += AbstractHelas.gethelasname(name, outgoing, 
+                                                            len(abstract.spins))
+        text +='\n'
+        file(os.path.join(output_dir,'helas_file.inc'), 'w').write(text)
 
 def create_library():
     
@@ -404,10 +422,18 @@ def create_library():
 if '__main__' == __name__:
     logging.basicConfig(level=0)
     #create_library()
-    import cProfile
-    start = time.time()
+    import profile
+    
+    #model
     helasgenerator = AbstractHelasModel('sm')
-    helasgenerator.compute_all()
+    start = time.time()
+    def main(helasgenerator):
+        helasgenerator.compute_all()
+    #profile.run('main(helasgenerator)')
+    main(helasgenerator)
+    stop = time.time()
+    logger.info('done in %s s' % (stop-start))
+    helasgenerator.write('../models/sm/fortran', 'Fortran')
     logger.info('done')
     stop = time.time()
     logger.info('done in %s s' % (stop-start))

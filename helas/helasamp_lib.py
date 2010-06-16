@@ -101,6 +101,7 @@ class FracVariable(object):
         if hasattr(self.numerator, 'vartype'):
             self.numerator = self.numerator.factorize()
         self.denominator = self.denominator.factorize()
+        return self
         
     
     def expand(self):

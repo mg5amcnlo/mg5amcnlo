@@ -787,6 +787,21 @@ def export_model(model_path, process_path):
     ln(process_path + '/Source/run.inc', process_path + '/SubProcesses', log=False)
 
 #===============================================================================
+# export the helas routine
+#===============================================================================
+def export_helas(helas_path, process_path):
+    """Configure the files/link of the process according to the model"""
+    
+    # Import helas routine
+    for filename in os.listdir(helas_path):
+        filepos = os.path.join(helas_path, filename)
+        if os.path.isfile(filepos):
+            if filepos.endswith('Makefile.template'):
+                ln(filepos, process_path+'/Source/DHELAS','Makefile')
+            else:
+                ln(filepos, process_path+'/Source/DHELAS')
+                
+#===============================================================================
 # generate_subprocess_directory_v4_standalone
 #===============================================================================
 def generate_subprocess_directory_v4_standalone(matrix_element,
