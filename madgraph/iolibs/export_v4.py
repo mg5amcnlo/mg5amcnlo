@@ -29,7 +29,7 @@ import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.template_files as Template
-from madgraph.interface import MadGraph5Error 
+from madgraph import MadGraph5Error 
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_v4')

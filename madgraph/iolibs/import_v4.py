@@ -23,7 +23,7 @@ import re
 import madgraph.core.color_algebra as color
 from madgraph.core.base_objects import Particle, ParticleList
 from madgraph.core.base_objects import Interaction, InteractionList
-from madgraph.interface import MadGraph5Error
+from madgraph import MadGraph5Error
 
 
 logger = logging.getLogger('madgraph.import_v4')

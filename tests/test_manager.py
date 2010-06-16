@@ -36,29 +36,18 @@ import re
 import sys
 import unittest
 
-#Add the ROOT dir to the current PYTHONPATH
 
+#Add the ROOT dir to the current PYTHONPATH
 # Only for profiling with -m cProfile!
 #root_path = os.path.split(os.path.dirname(os.path.realpath(sys.argv[0])))[0]
 #sys.path.append(root_path)
-
 root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 sys.path.append(root_path)
 
+from madgraph import MG4DIR
 
 #position of MG_ME
-MGME_dir = None
-MGME_dir_possibility = [os.path.join(root_path, os.path.pardir),
-                os.path.join(os.getcwd(), os.path.pardir),
-                os.getcwd()]
-
-for position in MGME_dir_possibility:
-    if os.path.exists(os.path.join(position, 'MGMEVersion.txt')) and \
-                    os.path.exists(os.path.join(position, 'UpdateNotes.txt')):
-        MGME_dir = os.path.realpath(position)
-        break
-del MGME_dir_possibility
-
+MGME_dir = MG4DIR
 
 #===============================================================================
 # run

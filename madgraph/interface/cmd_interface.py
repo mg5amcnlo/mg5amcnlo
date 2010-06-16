@@ -52,25 +52,13 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing as draw_lib
 import madgraph.iolibs.drawing_eps as draw
 
-from madgraph.interface import MadGraph5Error
+from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
 # position of MG5
-root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
-root_path = os.path.split(root_path)[0]
+root_path = MG5DIR
 
 # position of MG_ME
-MGME_dir = None
-MGME_dir_possibility = [os.path.join(root_path, os.path.pardir),
-                os.getcwd(),
-                os.path.join(os.getcwd(), os.path.pardir),
-                os.path.join(os.getcwd(), os.path.pardir, os.path.pardir)]
-
-for position in MGME_dir_possibility:
-    if os.path.exists(os.path.join(position, 'MGMEVersion.txt')) and \
-                    os.path.exists(os.path.join(position, 'UpdateNotes.txt')):
-        MGME_dir = os.path.realpath(position)
-        break
-del MGME_dir_possibility
+MGME_dir = MG4DIR
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout

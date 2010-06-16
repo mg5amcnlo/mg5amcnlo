@@ -21,13 +21,20 @@ inheritance of the MERunner class.
 
 import logging
 import me_comparator
+import os
+import sys
 
 # Get full logging info
 logging.basicConfig(level=logging.INFO)
 
-# specify the position of different codes
-mg4_path = "."
-mg5_path = "./madgraph5"
+#Look for MG5/MG4 path
+mg5_path = os.sep.join(os.path.realpath(__file__).split(os.sep)[:-3])
+sys.path.append(mg5_path)
+from madgraph import MG4DIR
+mg4_path = MG4DIR
+
+
+
 
 # Create a list of processes to check automatically
 #my_proc_list = me_comparator.create_proc_list(['w+', 'w-'],
