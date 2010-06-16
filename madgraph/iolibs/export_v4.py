@@ -125,16 +125,21 @@ def make_v4standalone(dir_path):
     everything for running standalone
     """
     
+
+    source_dir = os.path.join(dir_path, "Source")
     # Run standalone
-    old_pos = os.getcwd()
-    os.chdir(os.path.join(dir_path, "Source"))
     logger.info("Running make for Helas")
+    if misc.which('gfortran'):
+        logger.info('use gfortran')
+        subprocess.call(['python','./bin/Passto_gfortran.py'], cwd=dir_path, \
+                        stdout = open(os.devnull, 'w')) 
+    
     subprocess.call(['make', '../lib/libdhelas3.a'],
-                    stdout = open(os.devnull, 'w'))
+                    stdout = open(os.devnull, 'w'), cwd=source_dir)
     logger.info("Running make for Model")
     subprocess.call(['make', '../lib/libmodel.a'],
-                    stdout = open(os.devnull, 'w'))
-    os.chdir(old_pos)
+                    stdout = open(os.devnull, 'w'), cwd=source_dir)
+
         
 #===============================================================================
 # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
