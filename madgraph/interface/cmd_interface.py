@@ -21,12 +21,21 @@ import cmd
 import logging
 import optparse
 import os
+import pydoc
 import re
-import readline
 import subprocess
 import sys
 import traceback
 import time
+
+# Optional Library (not present on all platform)
+try:
+    import readline
+except:
+    readline = None
+    
+
+
 
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.files as files
@@ -55,8 +64,9 @@ root_path = os.path.split(root_path)[0]
 # position of MG_ME
 MGME_dir = None
 MGME_dir_possibility = [os.path.join(root_path, os.path.pardir),
+                os.getcwd(),
                 os.path.join(os.getcwd(), os.path.pardir),
-                os.getcwd()]
+                os.path.join(os.getcwd(), os.path.pardir, os.path.pardir)]
 
 for position in MGME_dir_possibility:
     if os.path.exists(os.path.join(position, 'MGMEVersion.txt')) and \
@@ -66,50 +76,92 @@ for position in MGME_dir_possibility:
 del MGME_dir_possibility
 
 # Special logger for the Cmd Interface
-logger = logging.getLogger('cmdprint')
-
-
+logger = logging.getLogger('cmdprint') # -> stdout
+logger_stderr = logging.getLogger('fatalerror') # ->stderr
 #===============================================================================
 # CmdExtended
 #===============================================================================
 class CmdExtended(cmd.Cmd):
     """Extension of the cmd.Cmd command line.
-    This extensions supports line breaking, history, commentary.
+    This extensions supports line breaking, history, comments,
     internal call to cmdline,..."""
 
-
-
     def __init__(self, *arg, **opt):
-        """add possibility of line break/history """
+        """Init history and line continuation"""
         
-        self.history = []
+        # If possible, build an info line with current version number 
+        # and date, from the VERSION text file
+
+        info = misc.get_pkg_info()
+        info_line = ""
+
+        if info.has_key('version') and  info.has_key('date'):
+            len_version = len(info['version'])
+            len_date = len(info['date'])
+            if len_version + len_date < 30:
+                info_line = "#         VERSION %s %s %s         *\n" % \
+                            (info['version'],
+                            (30 - len_version - len_date) * ' ',
+                            info['date'])
+
+        # Create a header for the history file.
+        # Remember to fill in time at writeout time!
+        header = \
+        '#***********************************************************\n' + \
+        '#                         MadGraph 5                       *\n' + \
+        '#                                                          *\n' + \
+        "#                 *                       *                *\n" + \
+        "#                   *        * *        *                  *\n" + \
+        "#                     * * * * 5 * * * *                    *\n" + \
+        "#                   *        * *        *                  *\n" + \
+        "#                 *                       *                *\n" + \
+        "#                                                          *\n" + \
+        "#                                                          *\n" + \
+        info_line + \
+        "#                                                          *\n" + \
+        "#    The MadGraph Development Team - Please visit us at    *\n" + \
+        "#    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        '#                                                          *\n' + \
+        '#***********************************************************\n' + \
+        '#                                                          *\n' + \
+        '#               Command File for MadGraph 5                *\n' + \
+        '#                                                          *\n' + \
+        '#     run as ./bin/mg5  filename                           *\n' + \
+        '#                                                          *\n' + \
+        '#     automaticaly generated the %(time)s%(fill)s*\n' + \
+        '#                                                          *\n' + \
+        '#***********************************************************\n'
+        
+        self.history = [header]
         self.save_line = ''
         cmd.Cmd.__init__(self, *arg, **opt)
         self.__initpos = os.path.abspath(os.getcwd())
         
     def precmd(self, line):
         """ force the printing of the line if this is executed with an stdin """
-        # Update the history of this suite of command
-        self.history.append(line)
+        if not line:
+            return line
+
+        # Update the history of this suite of command,
+        # except for useless commands (empty history and help calls)
+        if line != "history" and not re.match("help ", line) and \
+               not line[0] == '#':
+            self.history.append(line)
         
-        # Print the calling line in the non interactive mode    
-        if not self.use_rawinput:
-            print line
-        
-        #Check if they are a save line:
+        # Check if we are continuing a line:
         if self.save_line:
             line = self.save_line + line 
             self.save_line = ''
         
-        #Check that the line is complete
+        # Check if the line is complete
         if line.endswith('\\'):
             self.save_line = line[:-1]
             return '' # do nothing   
         
-        #remove comment
+        # Remove comment
         if '#' in line:
             line = line.split('#')[0]
-            
+
         # execute the line command
         return line
     
@@ -119,20 +171,21 @@ class CmdExtended(cmd.Cmd):
         try:
             cmd.Cmd.onecmd(self, line)
         except MadGraph5Error as error:
-            error_text = '\ncommand \"%s\" stops with following error:\n' % line
-            error_text += '%s : %s' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
-            logger.error(error_text)
-            #stop the execution if on a non interactive mode
-            if self.use_rawinput == False:
-                sys.exit()
+            if str(error):
+                error_text = 'Command \"%s\" interrupted with error:\n' % line
+                error_text += '%s : %s' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
+                logger_stderr.error(error_text)
+                #stop the execution if on a non interactive mode
+                if self.use_rawinput == False:
+                    sys.exit()
         except Exception as error:
-            # Make a beautiful error output
-            error_text ='\ncommand \"%s\" stops with following error:\n' % line
+            # Create a nice error output
+            error_text ='Command \"%s\" was interrupted with error:\n' % line
             error_text += '%s : %s\n' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
-            error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
-            error_text += 'More information are present in file \'./MG5_debug\'.\n'
-            error_text += 'Please associate that file to your report.'
-            logger.critical(error_text)
+            error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5'
+            error_text += 'More information is found in \'./MG5_debug\'.\n'
+            error_text += 'Please attach this file to your report.'
+            logger_stderr.critical(error_text)
             # Make sure that we are at the initial position
             os.chdir(self.__initpos)
             # Create the debug files
@@ -141,8 +194,8 @@ class CmdExtended(cmd.Cmd):
             traceback.print_exc(file=debug_file)
             #stop the execution if on a non interactive mode
             if self.use_rawinput == False:
-                sys.exit()           
-                            
+                sys.exit()
+
     def exec_cmd(self, line):
         """for third party call, call the line with pre and postfix treatment"""
         
@@ -229,8 +282,12 @@ class HelpToCmd(object):
         print "-- display a the status of various internal state variables"
 
     def help_setup(self):
-        print "syntax madevent_v4 name|.|auto [options]"
-        print "-- Create a copy of the V4 Template in the MG_ME directory."
+        print "syntax " + "|".join(self._setup_opts) + \
+              " name|.|auto [options]"
+        print "-- Create a copy of the V4 Template in the MG_ME directory"
+        print "   with the model and Helas set up appropriately."
+        print "   If standalone_v4 is chosen, the directory will be in"
+        print "   Standalone format."
         print "   name will be the name of the copy the madevent Template that"
         print "     will be use by default in following steps"
         print "   If you put '.' instead of a name, the code will try to locate"
@@ -253,6 +310,7 @@ class HelpToCmd(object):
         print "   core process, decay1, (decay2, (decay3, ...)), ...  etc"
         print "   Example: g g > t~ t @2, (t~ > W- b~, W- > e- ve~), t > W+ b"
         print "   Note that identical particles will all be decayed"
+        print "To generate a second process use \"add process\" command"
 
     def help_add(self):
 
@@ -270,27 +328,34 @@ class HelpToCmd(object):
         print "   Example: define p u u~ c c~ d d~ s s~"
 
     def help_export(self):
-        print "syntax: export " + "|".join(self._export_formats) + \
-              " FILEPATH"
-        print """-- export matrix elements. For standalone_v4, the resulting
-        files will be FILEPATH/matrix_\"process_string\".f. For sa_dirs_v4,
-        the result is a set of complete MG4 Standalone process directories.
-        For madevent_v4, the path needs to be to a MadEvent SubProcesses
+        print "syntax: export [" + "|".join(self._export_formats) + \
+              " FILEPATH]"
+        print """-- export matrix elements.
+        *Note* that if you have run the 'setup', export format and FILEPATH
+        is optional.
+        - For madevent_v4, the path needs to be to a MadEvent SubProcesses
         directory, and the result is the Pxxx directories (including the
         diagram .ps and .jpg files) for the subprocesses as well as a
-        correctly generated subproc.mg file. Note that if you have run the 
-        'setup', FILEPATH is optional."""
+        correctly generated subproc.mg file.
+        - For standalone_v4, the result is a set of complete MG4 Standalone
+        process directories.
+        - For matrix_v4, the resulting files will be
+        FILEPATH/matrix_\"process_string\".f"""
 
     def help_history(self):
-        print "syntax: history [FILEPATH] [-clean] "
-        print "-- write in the specified files all the call to MG5 that you have"""
-        print "   perform since that you have open this command line applet."""
-        print "   -clean option will remove all the entry of the history"""
+        print "syntax: history [FILEPATH|clean|.] "
+        print "   If FILEPATH is \'.\' and \'setup\' is done,"
+        print "   Cards/proc_card_mg5.dat will be used."
+        print "   If FILEPATH is omitted, the history will be output to stdout."
+        print "   clean option will remove all entries from the history."
 
-    def help_makehtml(self):
-        print "syntax: makehtlm madevent_v4 [PATH]"
-        print "-- create the web page related to the directory PATH"
-        print "   by default PATH is the directory defined with the setup command"
+    def help_finalize(self):
+        print "syntax: makehtlm [madevent_v4 PATH] [--nojpeg]"
+        print "-- create web pages, jpeg diagrams, proc_card_mg5 and "
+        print "   madevent.tar.gz files in the directory PATH."
+        print "   By default, PATH is the directory defined with the "
+        print "   setup command."
+        print "   Add option --nojpeg to suppress jpeg diagrams."
         
 
     def help_draw(self):
@@ -319,14 +384,13 @@ class CheckValidForCmd(object):
     class InvalidCmd(MadGraph5Error):
         """a class for the invalid syntax call"""
     
+    class RWError(MadGraph5Error):
+        """a class for the invalid syntax call"""
+    
     def check_add(self, args):
         """check the validity of line
         syntax: add process PROCESS 
         """
-        
-        if len(args) < 1:
-            self.help_generate()
-            raise self.InvalidCmd('\"add\" command requires two arguments')
         
         if len(self._curr_model['particles']) == 0:
             raise self.InvalidCmd("No particle list currently active, " + \
@@ -338,17 +402,15 @@ class CheckValidForCmd(object):
 
         if len(args) < 2:
             self.help_add()
-            raise self.InvalidCmd('\"add\" command requires two arguments')
+            raise self.InvalidCmd('\"add\" requires two arguments')
         
         if args[0] != 'process':
-            raise self.InvalidCmd( \
-                            "Empty or wrong format process, please try again.")
+            raise self.InvalidCmd('\"add\" requires the argument \"process\"')
     
     def check_define(self, args):
         """check the validity of line
         syntax: define multipart_name [ part_name_list ]
-        """
-        
+        """        
 
         if len(args) < 2:
             self.help_define()
@@ -362,10 +424,16 @@ class CheckValidForCmd(object):
         syntax: display XXXXX
         """
             
-        if len(args) != 1:
+        if len(args) != 1 or args[0] not in self._display_opts:
             self.help_display()
-            raise self.InvalidCmd('\"display\" command requires one argument')
-    
+            raise self.InvalidCmd()
+
+        if not self._curr_model['particles'] or not self._curr_model['interactions']:
+            raise self.InvalidCmd("No model currently active, please import a model!")
+
+        if args[0] == 'processes' and not self._curr_amps:
+            raise self.InvalidCmd("No process generated, please generate a process!")
+
     def check_draw(self, args):
         """check the validity of line
         syntax: draw DIRPATH [option=value]
@@ -387,8 +455,9 @@ class CheckValidForCmd(object):
         syntax: export MODE FILEPATH
         """  
         if len(args) == 0:
-            self.help_export()
-            raise self.InvalidCmd('\"export\" require at least a format of output')
+            if not self._export_format:
+                self.help_export()
+                raise self.InvalidCmd('\"export\" require at least a format of output')
         elif(len(args) == 1 and not self._export_dir):
             self.help_export()
             raise self.InvalidCmd(\
@@ -400,7 +469,7 @@ class CheckValidForCmd(object):
         if not self._curr_amps:
             raise self.InvalidCmd("No process generated, please generate a process!")
 
-        if len(args) == 1:
+        if len(args) <= 1:
             path = os.path.join(self._export_dir, 'SubProcesses')
         else:
             path = args[1]
@@ -409,13 +478,14 @@ class CheckValidForCmd(object):
             text = "%s is not a valid directory for export file\n" % path
             if args[0] == 'madevent_v4':
                 text += "to create a valid output directory you can use the command\n"
-                text += "$> setup madevent_v4 auto\n"
+                text += "$> setup madevent_v4 name|.|auto\n"
                 text += " and then run export as follow:\n"
                 text += "$> export madevent_v4\n" 
             raise self.InvalidCmd(text)
         
-        if args[0] == 'madevent_v4' and  not os.path.isdir(
-                                        os.path.join(path, '..', 'SubProcesses')):
+
+        if args and args[0] == ('madevent_v4' or 'standalone_v4') and \
+               not os.path.isdir(os.path.join(path,'..','SubProcesses')):
             text = "%s is not a valid directory for export file" % path
             text += "to create a valid output directory you can use the command"
             text += "$> setup madevent_v4 auto" 
@@ -430,29 +500,32 @@ class CheckValidForCmd(object):
         
         if len(line) < 1:
             self.help_generate()
-            raise self.InvalidCmd('\"generate\" command requires a process')
+            raise self.InvalidCmd("\"generate\" requires an argument.")
+            
 
-        if len(self._curr_model['particles']) == 0:
-            raise self.InvalidCmd("No particle list currently active, please create one first!")
+        if not self._curr_model['particles'] or not self._curr_model['interactions']:
+            raise self.InvalidCmd("No model currently active, please import a model!")
 
-        if len(self._curr_model['interactions']) == 0:
-            raise self.InvalidCmd("No interaction list currently active," + \
-            " please create one first!")
+        return True
     
     def check_history(self, args):
         """check the validity of line"""
         
         if len(args) > 1:
             self.help_history()
-            raise self.InvalidCmd('\"history\" command requires one argument')
+            raise self.InvalidCmd('\"history\" command requires at most one argument')
         
-        if len(args):
-            if args[0] not in ['clean', '.']:
+        if not len(args):
+            return
+        
+        if args[0] =='.':
+            if not self._export_dir:
+                raise self.InvalidCmd("No default directory are yet define for \'.\' option")
+        elif args[0] != 'clean':
                 dirpath = os.path.dirname(args[0])
-                if dirpath and not os.path.exists(dirpath):
+                if dirpath and not os.path.exists(dirpath) or \
+                       os.path.isdir(args[0]):
                     raise self.InvalidCmd("invalid path %s " % dirpath)
-            elif args[0] == '.' and not self._export_dir:
-                raise self.InvalidCmd('no output directory configure')
     
     def check_import(self, args):
         """check the validity of line"""
@@ -473,37 +546,46 @@ class CheckValidForCmd(object):
     def check_load(self, args):
         """ check the validity of the line"""
         
-        if len(args) != 2:
+        if len(args) != 2 or args[0] not in self._save_opts:
             self.help_load()
             raise self.InvalidCmd('wrong \"load\" format')
             
         
-    def check_makehtml(self, args):
+    def check_finalize(self, args):
         """check the validity of the line"""
+
+        nojpeg = ""
+
+        if '--nojpeg' in args:
+            nojpeg = '--nojpeg'
+            args = filter(lambda arg: arg != nojpeg, args)
     
-        if len(args) < 1:
-            self.help_makehtml()
-            raise self.InvalidCmd('wrong \"makehtml\" format')
+        if len(args) < 1 and not self._export_format == 'madevent_v4':
+            self.help_finalize()
+            raise self.InvalidCmd('wrong \"finalize\" format')
         
-        if args[0] != 'madevent_v4':
-            self.help_makehtml()
+        elif args and args[0] != 'madevent_v4':
+            self.help_finalize()
             raise self.InvalidCmd('%s is not recognized as a valid option' % args[0])
         
-        if (len(args) == 1 and not self._export_dir) or \
+        if (len(args) <= 1 and not self._export_dir) or \
                         (len(args) > 1 and not os.path.isdir(args[1])):
-            self.help_makehtml()
+            self.help_finalize()
             raise self.InvalidCmd('no valid directory path output.')
+
+        if nojpeg:
+            args.append(nojpeg)
     
     def check_save(self, args):
         """ check the validity of the line"""
-        if len(args) != 2:
+        if len(args) != 2 or args[0] not in self._save_opts:
             self.help_save()
             raise self.InvalidCmd('wrong \"save\" format')
     
     def check_setup(self, args):
         """ check the validity of the line"""
         
-        if len(args) < 2:
+        if len(args) < 2 or args[0] not in self._setup_opts:
             self.help_setup()
             raise self.InvalidCmd('wrong \"setup\" format')
         
@@ -541,7 +623,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         """  
 
 
-        if len(args) > 1:
+        if len(args) > 0:
             raise self.WebRestriction('Path can\'t be specify on the web.' + \
                                       'use the setup command to avoid the ' + \
                                       'need to specify a path')
@@ -575,11 +657,11 @@ class CheckValidForCmdWeb(CheckValidForCmd):
             if '/' in arg:
                 raise self.WebRestriction('Path can\'t be specify on the web.')
         
-    def check_makehtml(self, args):
+    def check_finalize(self, args):
         """check the validity of the line
         No Path authorize for the Web"""
     
-        CheckValidForCmd.check_makehtml(self, args)
+        CheckValidForCmd.check_finalize(self, args)
         
         if len(args) > 1:
             raise self.WebRestriction('Path can\'t be specify on the web.')
@@ -652,16 +734,16 @@ class CompleteForCmd(CheckValidForCmd):
         return completion      
     
             
-    def complete_makehtml(self, text, line, begidx, endidx):
-        """ format: makehtlm madevent_v4 [PATH] [--nojpeg]"""
+    def complete_finalize(self, text, line, begidx, endidx):
+        """ format: finalize madevent_v4 [PATH] [--nojpeg]"""
         
         # Format
-        if len(split_arg(line[0:begidx])) == 1:
-            return self.list_completion(text, ['madevent_v4'])
-        
         if text.startswith('-'):
             return self.list_completion(text, ['--nojpeg'])
 
+        if len(split_arg(line[0:begidx])) == 1:
+            return self.list_completion(text, ['madevent_v4'])
+        
         # Filename if directory is not given
         if len(split_arg(line[0:begidx])) == 2:
             return self.path_completion(text)
@@ -688,7 +770,7 @@ class CompleteForCmd(CheckValidForCmd):
             return self.path_completion(text,
                                         base_dir=\
                                           split_arg(line[0:begidx])[2])
-    
+
     def complete_history(self, text, line, begidx, endidx):
         "Complete the add command"
 
@@ -763,7 +845,7 @@ class CompleteForCmd(CheckValidForCmd):
 
         possible_option = ['-d ', '-f', '-noclean']
         possible_option2 = ['d ', 'f', 'noclean']
-        possible_format = ['madevent_v4']
+        possible_format = self._setup_opts
         #don't propose directory use by MG_ME
         forbidden_name = ['MadGraphII', 'Template', 'pythia-pgs', 'CVS',
                             'Calculators', 'MadAnalysis', 'SimpleAnalysis',
@@ -847,8 +929,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                      'couplings']
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
-    _import_formats = ['model_v4', 'model_v5', 'proc_v4', 'command']
-    _export_formats = ['standalone_v4', 'sa_dirs_v4', 'madevent_v4']
+    _setup_opts = ['madevent_v4', 'standalone_v4']
+    _import_formats = ['model_v4', 'proc_v4', 'command']
+    _export_formats = ['madevent_v4', 'standalone_v4', 'matrix_v4']
         
     def __init__(self, *arg, **opt):
         """ add a tracker of the history """
@@ -858,10 +941,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         # Detect If this script is launched from a valid copy of the Template
         #and if so store this position as standard output directory
-        if 'Cards' in os.listdir('.'):
+        if 'TemplateVersion.txt' in os.listdir('.'):
             #Check for ./
             self._export_dir = os.path.realpath('.')
-        elif 'Cards' in os.listdir('..'):
+        elif 'TemplateVersion.txt' in os.listdir('..'):
             #Check for ../
             self._export_dir = os.path.realpath('..')
         elif self.stdin != sys.stdin:
@@ -873,6 +956,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self._export_dir = None
         else:
             self._export_dir = None
+        self._export_format = None
             
     # Add a process to the existing multiprocess definition
     # Generate a new amplitude
@@ -994,8 +1078,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         text += part['name']
                     else:
                         text += part['antiname']
+                    text += " "
+                text += " ".join(order + '=' + str(inter['orders'][order]) \
+                                 for order in inter['orders'])
                 text += '\n'
-            import pydoc
             pydoc.pager(text)
 
         elif args[0] == 'processes':
@@ -1077,7 +1163,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         ndiags, cpu_time = generate_matrix_elements(self)
         calls = 0
 
-        if args[0] == 'standalone_v4':
+        if not args:
+            args = [self._export_format]
+
+        if args[0] == 'matrix_v4':
             for me in self._curr_matrix_elements.get('matrix_elements'):
                 filename = os.path.join(path, 'matrix_' + \
                            me.get('processes')[0].shell_string() + ".f")
@@ -1090,12 +1179,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                    me, self._curr_fortran_model)
 
 
-        if args[0] == 'sa_dirs_v4':
-            for me in self._curr_matrix_elements.get('matrix_elements'):
-                calls = calls + \
-                        export_v4.generate_subprocess_directory_v4_standalone(\
-                            me, self._curr_fortran_model, path)
-
         if args[0] == 'madevent_v4':
             for me in self._curr_matrix_elements.get('matrix_elements'):
                 calls = calls + \
@@ -1103,12 +1186,21 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                             me, self._curr_fortran_model, path)
             
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
-                                                              'procdef_mg5.dat')
+                                     'procdef_mg5.dat')
             if self._generate_info:
                 export_v4.write_procdef_mg5(card_path,
                                 os.path.split(self._model_dir)[-1],
                                 self._generate_info)
+                cmd.Cmd.onecmd(self, 'history .')
                 
+        if args[0] == 'standalone_v4':
+            for me in self._curr_matrix_elements.get('matrix_elements'):
+                calls = calls + \
+                        export_v4.generate_subprocess_directory_v4_standalone(\
+                            me, self._curr_fortran_model, path)
+            
+        self._export_format = args[0]
+
         logger.info(("Generated helas calls for %d subprocesses " + \
               "(%d diagrams) in %0.3f s") % \
               (len(self._curr_matrix_elements.get('matrix_elements')),
@@ -1141,12 +1233,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             else:
                 myprocdef, line = self.extract_decay_chain_process(line)
         except MadGraph5Error as error:
-            raise MadGraph5Error(\
-                    "Empty or wrong format process, please try again.\n" \
-                  + str(error))
+            raise MadGraph5Error(str(error))
         
         # Check that we have something    
-        if  not myprocdef:
+        if not myprocdef:
             raise MadGraph5Error("Empty or wrong format process, please try again.")
 
         # run the program
@@ -1405,12 +1495,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self.check_history(args)
 
         if len(args) == 0:
-            print '\n'.join(self.history)
-            return False
+            if len(self.history) > 1:
+                print '\n'.join(self.history[1:])
+            return
         elif args[0] == 'clean':
-            self.history = []
-            logger.info('history is cleaned')
-            return False
+            self.history = [self.history[0]]
+            logger.info('History is cleaned')
+            return
         elif args[0] == '.':
             output_file = os.path.join(self._export_dir, 'Cards', \
                                                             'proc_card_mg5.dat')
@@ -1418,44 +1509,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         else:
             output_file = open(args[0], 'w')
             
-        
-        # Define a simple header for the file
-        creation_time = time.asctime() 
-        time_info = \
-        '#     automaticaly generated the %s%s*\n' % (creation_time, ' ' * \
-                                                      (26 - len(creation_time)))
-        text = \
-        '#***********************************************************\n' + \
-        '#                         MadGraph 5                       *\n' + \
-        '#                                                          *\n' + \
-        "#                 *                       *                *\n" + \
-        "#                   *        * *        *                  *\n" + \
-        "#                     * * * * 5 * * * *                    *\n" + \
-        "#                   *        * *        *                  *\n" + \
-        "#                 *                       *                *\n" + \
-        "#                                                          *\n" + \
-        "#                                                          *\n" + \
-        "#    The MadGraph Development Team - Please visit us at    *\n" + \
-        "#    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
-        '#                                                          *\n' + \
-        '#***********************************************************\n' + \
-        '#                                                          *\n' + \
-        '#               Command File for MadGraph 5                *\n' + \
-        '#                                                          *\n' + \
-        '#     run as ./bin/mg5  filename                           *\n' + \
-        time_info + \
-        '#                                                          *\n' + \
-        '#***********************************************************\n'
-        
-        #Avoid repetition of header
-        if self.history[0] == '#' + '*' * 59:
-            text = ''
-        # Add the comand used 
-        text += '\n'.join(self.history) + '\n' 
+        # Create the command file
+        text = ('\n'.join(self.history) + '\n') % misc.get_time_info()
         
         #write this information in a file
         output_file.write(text)
         output_file.close()
+
+        logger.info("History written to " + output_file.name)
     
     # Import files
     def do_import(self, line):
@@ -1591,7 +1652,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Now that we have the model we can split the information
         lines = reader.extract_command_lines(self._curr_model)
 
-            
         for line in lines:
             self.exec_cmd(line)
     
@@ -1605,8 +1665,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         for line in CmdFile(filepath):
             #remove pointless spaces and \n
             line = line.replace('\n', '').strip()
-            # execute the line if this one is not empty
-            if line:
+            # execute the line if this one is not empty or comment
+            if line and not line[0] == '#':
                 self.exec_cmd(line)
 
         return
@@ -1641,7 +1701,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 logger.info("Loaded model from file in %0.3f s" % \
                       (cpu_time2 - cpu_time1))
             else:
-                print 'Error: Could not load model from file ', args[1]
+                raise self.RWError('Could not load model from file %s' \
+                                      % args[1])
         elif args[0] == 'processes':
             self._curr_amps = save_load_object.load_from_file(args[1])
             if isinstance(self._curr_amps, diagram_generation.AmplitudeList):
@@ -1653,9 +1714,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                         get('process').get('model')
                     logger.info("Model set from process.")
             else:
-                raise self.InvalidCmd('Could not load processes from file %s' % args[1])
-        else:
-            self.help_save()
+                raise self.RWError('Could not load processes from file %s' % args[1])
     
     def do_save(self, line):
         """Save information to file"""
@@ -1677,16 +1736,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     logger.info('Saved processes to file %s' % args[1])
             else:
                 raise self.InvalidCmd('No processes to save!')
-        else:
-            self.help_save()
             
-            
-    def do_makehtml(self, line):
-        """ make the html output for a MAdevent directory """
+    def do_finalize(self, line):
+        """Make the html output, write proc_card_mg5.dat and create
+        madevent.tar.gz for a MadEvent directory"""
         
         args = split_arg(line)
         # Check argument validity
-        self.check_makehtml(args)
+        self.check_finalize(args)
         
         if self._export_dir:
             dir_path = self._export_dir
@@ -1699,10 +1756,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         else:
             makejpg = True
             
-        os.system('touch %s/done' % os.path.join(dir_path, 'SubProcesses'))        
-        export_v4.create_v4_webpage(dir_path, makejpg)
 
+     
+        export_v4.finalize_madevent_v4_directory(dir_path, makejpg,
+                                                 self.history)
 
+        logger.info('Directory ' + dir_path + ' finalized')
 
     def do_setup(self, line):
         """Initialize a new Template or reinitialize one"""
@@ -1723,10 +1782,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if args[1] == '.':
                 dir_path = self._export_dir
         elif args[1] == 'auto':
-            name_dir = lambda i: 'PROC_%s_%s' % \
+            if args[0] == 'madevent_v4':
+                name_dir = lambda i: 'PROC_%s_%s' % \
                                         (os.path.split(self._model_dir)[-1], i)
-            auto_path = lambda i: os.path.join(self.writing_dir, name_dir(i))     
-            
+                auto_path = lambda i: os.path.join(self.writing_dir,
+                                                   name_dir(i))
+            elif args[0] == 'standalone_v4':
+                name_dir = lambda i: 'PROC_SA_%s_%s' % \
+                                        (os.path.split(self._model_dir)[-1], i)
+                auto_path = lambda i: os.path.join(self.writing_dir,
+                                                   name_dir(i))                
             for i in range(500):
                 if os.path.isdir(auto_path(i)):
                     continue
@@ -1739,14 +1804,24 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if not force and os.path.isdir(dir_path):
             logger.info('INFO: directory %s already exists.' % args[1])
             if clean:
-                print 'If you continue this directory will be cleaned'
+                logger.info('If you continue this directory will be cleaned')
             answer = raw_input('Do you want to continue? [y/n]')
             if answer != 'y':
                 raise MadGraph5Error('Stopped by user request')
+        else:
+            clean = True 
 
-        export_v4.copy_v4template(mgme_dir, dir_path, self._model_dir, clean)
+        if args[0] == 'madevent_v4':
+            export_v4.copy_v4template(mgme_dir, dir_path,
+                                      self._model_dir, clean)
+            self._export_format = 'madevent_v4'
+        if args[0] == 'standalone_v4':
+            export_v4.copy_v4standalone(mgme_dir, dir_path,
+                                        self._model_dir, clean)
+            self._export_format = 'standalone_v4'
 
-        # Import the model
+
+        # Import the model/
         if self._model_type == 'v4':
             logger.info('import v4model files %s in directory %s' % \
                        (os.path.basename(self._model_dir), args[1]))        
@@ -1754,15 +1829,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         else:
             logger.info('convert UFO model to MG4 format')
             ufo2mg4.export_to_mg4(self._model_dir, dir_path)
-            
-        
+
         self._export_dir = dir_path
 
 #===============================================================================
 # MadGraphCmd
 #===============================================================================
 class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
-    """The command line processor of MadGraph"""         
+    """The command line processor of MadGraph"""
  
     def __init__(self, *arg, **opt):
     
@@ -1788,16 +1862,18 @@ class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
         """Initializing before starting the main loop"""
 
         self.prompt = 'mg5>'
+        
+        if readline:
+            readline.parse_and_bind("tab: complete")
 
-        readline.parse_and_bind("tab: complete")
-
-        # initialize command history
-        history_file = os.path.join(os.environ['HOME'], '.mg5history')
-        try:
-            readline.read_history_file(history_file)
-        except IOError:
-            pass
-        atexit.register(readline.write_history_file, history_file)
+        # initialize command history if HOME exists
+        if os.environ.has_key('HOME') and readline:
+            history_file = os.path.join(os.environ['HOME'], '.mg5history')
+            try:
+                readline.read_history_file(history_file)
+            except IOError:
+                pass
+            atexit.register(readline.write_history_file, history_file)
 
         # If possible, build an info line with current version number 
         # and date, from the VERSION text file

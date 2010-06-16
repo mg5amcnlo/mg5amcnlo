@@ -21,7 +21,7 @@ import os
 import madgraph.iolibs.files as files
 import madgraph.core.base_objects as base_objects
 
-logger = logging.getLogger('save_model')
+logger = logging.getLogger('madgraph.save_model')
 
 def save_particles(fsock, part_list):
     """Save particle objects contained in part_list in the stream fsock"""

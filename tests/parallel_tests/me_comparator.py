@@ -180,6 +180,20 @@ class MG4Runner(MERunner):
                             cwd=dir_name,
                             stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
 
+            #Pass to gfortran if needed.
+            if self.compilator == 'gfortran':
+                subprocess.call(['python', os.path.join('bin','Passto_gfortran.py')],
+                        cwd=dir_name,
+                        stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
+                # Run make
+                subprocess.call(['make', '../lib/libdhelas3.a'],
+                        cwd=os.path.join(dir_name, 'Source'),
+                        stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
+                # Run make
+                subprocess.call(['make', '../lib/libmodel.a'],
+                        cwd=os.path.join(dir_name, 'Source'),
+                        stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
+
             # Get the ME value
             for i, proc in enumerate(temp_proc_list):
                 self.res_list.append(self.get_me_value(proc, i))
@@ -254,7 +268,7 @@ class MG4Runner(MERunner):
         """Parse the output string and return a pair where first value is 
         the ME value and GeV exponent and the second value is a list of 4 
         momenta for all particles involved."""
-        print output
+        
         res_p = []
         value = 0.0
         gev_pow = 0
@@ -265,7 +279,7 @@ class MG4Runner(MERunner):
                                                 re.IGNORECASE | re.VERBOSE)
 
         me_value_pattern = re.compile(r"""\sMatrix\selement\s=\s*(?P<value>-?
-                                          \d*\.\d*(E[+-]?\d*)?)\sGeV\^\s*(?P<pow>-?\d+)""",
+                                          \d*\.\d*(E[+-]?\d*)?)\s*GeV\^\s*(?P<pow>-?\d+)""",
                                       re.IGNORECASE | re.VERBOSE)
         for line in output.split('\n'):
 
@@ -277,7 +291,6 @@ class MG4Runner(MERunner):
             if match_value:
                 value = float(match_value.group('value'))
                 gev_pow = int(match_value.group('pow'))
-
         return ((value, gev_pow), res_p)
 
     def fix_energy_in_check(self, dir_name, energy):
@@ -363,8 +376,9 @@ class MG5Runner(MG4Runner):
                         cwd=os.path.join(self.mg4_path, self.temp_dir_name),
                         stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
             if retcode != 0:
-                print 'out gfortran'
-                logging.info("Error while passing to gfortran in %s" % shell_name)
+
+                logging.warning("Error while passing to gfortran ")
+
                 return ((0.0, 0), [])
 
         # Run make
