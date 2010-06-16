@@ -1540,9 +1540,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 logger.info("%d interactions imported" % \
                       len(self._curr_model['interactions']))
            
-            #not valid File
-            raise MadGraph5Error("%s is not a valid v4 file name" % \
-                                        filepath)
+            else:
+                #not valid File
+                raise MadGraph5Error("%s is not a valid v4 file name" % \
+                                     filepath)
 
         args = split_arg(line)
         # Check argument's validity
