@@ -1827,10 +1827,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                        (os.path.basename(self._model_dir), dir_path))        
         export_v4.export_model(self._model_dir, dir_path)
         
-        # Import the Helas routine
-        logger.info('create and import helas routines in directory %s' % \
-                    (dir_path))
-        print 'todo'
+
         if args[0] == 'standalone_v4':
             export_v4.make_v4standalone(dir_path)
         self._export_dir = dir_path
