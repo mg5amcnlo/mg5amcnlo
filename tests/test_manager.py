@@ -1,5 +1,4 @@
 #!/usr/bin/env python 
-
 ################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
@@ -30,6 +29,7 @@
 
 import inspect
 import logging
+import logging.config
 import optparse
 import os
 import re
@@ -361,7 +361,13 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
     if len(args) == 0:
         args = ''
-    logging.basicConfig(level=vars(logging)[options.logging])
+
+    logging.config.fileConfig(os.path.join(root_path,'tests','.mg5_logging.conf'))
+    logging.root.setLevel(eval('logging.' + options.logging))
+    logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
+    logging.getLogger('cmdprint').setLevel(eval('logging.' + options.logging))
+
+    #logging.basicConfig(level=vars(logging)[options.logging])
     run(args, re_opt=options.reopt, verbosity=options.verbose, \
             package=options.path)
 

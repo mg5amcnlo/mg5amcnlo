@@ -136,7 +136,10 @@ class CmdExtended(cmd.Cmd):
         self.__initpos = os.path.abspath(os.getcwd())
         
     def precmd(self, line):
-        """ force the printing of the line if this is executed with an stdin """
+        """ A suite of additional function needed for in the cmd
+        this implement history, line breaking, comment treatment,...
+        """
+        
         if not line:
             return line
 
@@ -145,7 +148,7 @@ class CmdExtended(cmd.Cmd):
         if line != "history" and not re.match("help ", line) and \
                not line.startswith('#*'):
             self.history.append(line)
-        print line
+
         # Check if we are continuing a line:
         if self.save_line:
             line = self.save_line + line 
@@ -1130,14 +1133,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                               model=self._curr_model,
                                               amplitude='')
 
-            logging.info("Drawing " + \
+            logger.info("Drawing " + \
                          amp.get('process').nice_string())
             #plot.draw(opt=options)
             plot.draw()
             logger.info("Wrote file " + filename)
 
         stop = time.time()
-        logger.info('time to draw', stop - start) 
+        logger.info('time to draw %s' % (stop - start)) 
     
     # Export a matrix element
     def do_export(self, line):
@@ -1553,9 +1556,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 logger.info("%d interactions imported" % \
                       len(self._curr_model['interactions']))
            
-            #not valid File
-            raise MadGraph5Error("%s is not a valid v4 file name" % \
-                                        filepath)
+            else:
+                #not valid File
+                raise MadGraph5Error("%s is not a valid v4 file name" % \
+                                     filepath)
 
         args = split_arg(line)
         # Check argument's validity
