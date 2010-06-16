@@ -29,6 +29,7 @@ import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.template_files as Template
+from madgraph import MadGraph5Error 
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_v4')
@@ -50,17 +51,16 @@ def copy_v4template(mgme_dir, dir_path, model_dir, clean):
     #Ensure that the Template is clean
     if clean:
         logger.info('remove old information in %s' % os.path.basename(dir_path))
-        old_pos = os.getcwd()
-        os.chdir(dir_path)
         if os.environ.has_key('MADGRAPH_BASE'):
-            subprocess.call([os.path.join('bin', 'clean_template'), '--web'])
+            subprocess.call([os.path.join('bin', 'clean_template'), '--web'], \
+                                                                   cwd=dir_path)
         else:
             try:
-                subprocess.call([os.path.join('bin', 'clean_template')])
+                subprocess.call([os.path.join('bin', 'clean_template')], \
+                                                                   cwd=dir_path)
             except Exception, why:
-                logger.error('Failed to clean correctly Template. ' + \
-                                     'The following error is returned:\n %s' % why)
-        os.chdir(old_pos)
+                raise MadGraph5Error('Failed to clean correctly Template: \n %s' \
+                                                                          % why)
         
         #Write version info
         MG_version = misc.get_pkg_info()
@@ -84,38 +84,38 @@ def copy_v4standalone(mgme_dir, dir_path, model_dir, clean):
     # Run standalone
     logger.info('Setup directory %s for standalone' % \
                 os.path.basename(dir_path))
-    old_pos = os.getcwd()
-    os.chdir(dir_path)
+
     try:
         subprocess.call([os.path.join('bin', 'standalone')],
-                        stdout = os.open(os.devnull, os.O_RDWR))
+                        stdout = os.open(os.devnull, os.O_RDWR), cwd=dir_path)
     except OSError:
         # Probably standalone already called
         pass
-    os.chdir(old_pos)
 
     #Ensure that the Template is clean
     if clean:
         logger.info('remove old information in %s' % \
                     os.path.basename(dir_path))
-        old_pos = os.getcwd()
-        os.chdir(dir_path)
-        for pdir in glob.glob(os.path.join("SubProcesses","P*")):
-            shutil.rmtree(pdir)
+        
+        for pdir in glob.glob(os.path.join(dir_path, "SubProcesses", "P*")):
+            shutil.rmtree(os.path.join(dir_path, pdir))
+            
         #Write version info
         MG_version = misc.get_pkg_info()
-        open(os.path.join('SubProcesses', 'MGVersion.txt'), 'w').write(
+        open(os.path.join(dir_path, 'SubProcesses', 'MGVersion.txt'), 'w').write(
                                                           MG_version['version'])
+        export_helas(mgme_dir, dir_path)
+
+def export_helas(mgme_dir, dir_path):
 
         # Copy the HELAS directory
-        
-        for file in glob.glob(os.path.join("..", "HELAS", "*")):
-            if os.path.isfile(file):
-                shutil.copy2(file,
-                            os.path.join('Source', 'DHELAS'))
-        shutil.move(os.path.join('Source', 'DHELAS', 'Makefile.template'),
-                    os.path.join('Source', 'DHELAS', 'Makefile'))
-        os.chdir(old_pos)
+        helas_dir = os.path.join(mgme_dir, 'HELAS')
+        for filename in os.listdir(helas_dir): 
+            if os.path.isfile(os.path.join(helas_dir, filename)):
+                shutil.copy2(os.path.join(helas_dir, filename),
+                            os.path.join(dir_path, 'Source', 'DHELAS'))
+        shutil.move(os.path.join(dir_path, 'Source', 'DHELAS', 'Makefile.template'),
+                    os.path.join(dir_path, 'Source', 'DHELAS', 'Makefile'))
         
 #===============================================================================
 # Make the Helas and Model directories for Standalone directory
@@ -125,16 +125,21 @@ def make_v4standalone(dir_path):
     everything for running standalone
     """
     
+
+    source_dir = os.path.join(dir_path, "Source")
     # Run standalone
-    old_pos = os.getcwd()
-    os.chdir(os.path.join(dir_path, "Source"))
     logger.info("Running make for Helas")
+    if misc.which('gfortran'):
+        logger.info('use gfortran')
+        subprocess.call(['python','./bin/Passto_gfortran.py'], cwd=dir_path, \
+                        stdout = open(os.devnull, 'w')) 
+    
     subprocess.call(['make', '../lib/libdhelas3.a'],
-                    stdout = open(os.devnull, 'w'))
+                    stdout = open(os.devnull, 'w'), cwd=source_dir)
     logger.info("Running make for Model")
     subprocess.call(['make', '../lib/libmodel.a'],
-                    stdout = open(os.devnull, 'w'))
-    os.chdir(old_pos)
+                    stdout = open(os.devnull, 'w'), cwd=source_dir)
+
         
 #===============================================================================
 # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)

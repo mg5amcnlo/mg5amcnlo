@@ -52,25 +52,13 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing as draw_lib
 import madgraph.iolibs.drawing_eps as draw
 
-from madgraph.interface import MadGraph5Error
+from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
 # position of MG5
-root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
-root_path = os.path.split(root_path)[0]
+root_path = MG5DIR
 
 # position of MG_ME
-MGME_dir = None
-MGME_dir_possibility = [os.path.join(root_path, os.path.pardir),
-                os.getcwd(),
-                os.path.join(os.getcwd(), os.path.pardir),
-                os.path.join(os.getcwd(), os.path.pardir, os.path.pardir)]
-
-for position in MGME_dir_possibility:
-    if os.path.exists(os.path.join(position, 'MGMEVersion.txt')) and \
-                    os.path.exists(os.path.join(position, 'UpdateNotes.txt')):
-        MGME_dir = os.path.realpath(position)
-        break
-del MGME_dir_possibility
+MGME_dir = MG4DIR
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
@@ -96,55 +84,59 @@ class CmdExtended(cmd.Cmd):
             len_version = len(info['version'])
             len_date = len(info['date'])
             if len_version + len_date < 30:
-                info_line = "#         VERSION %s %s %s         *\n" % \
+                info_line = "#*         VERSION %s %s %s         *\n" % \
                             (info['version'],
                             (30 - len_version - len_date) * ' ',
                             info['date'])
 
         # Create a header for the history file.
         # Remember to fill in time at writeout time!
-        header = \
-        '#***********************************************************\n' + \
-        '#                         MadGraph 5                       *\n' + \
-        '#                                                          *\n' + \
-        "#                 *                       *                *\n" + \
-        "#                   *        * *        *                  *\n" + \
-        "#                     * * * * 5 * * * *                    *\n" + \
-        "#                   *        * *        *                  *\n" + \
-        "#                 *                       *                *\n" + \
-        "#                                                          *\n" + \
-        "#                                                          *\n" + \
+        self.history_header = \
+        '#************************************************************\n' + \
+        '#*                        MadGraph 5                        *\n' + \
+        '#*                                                          *\n' + \
+        "#*                *                       *                 *\n" + \
+        "#*                  *        * *        *                   *\n" + \
+        "#*                    * * * * 5 * * * *                     *\n" + \
+        "#*                  *        * *        *                   *\n" + \
+        "#*                *                       *                 *\n" + \
+        "#*                                                          *\n" + \
+        "#*                                                          *\n" + \
         info_line + \
-        "#                                                          *\n" + \
-        "#    The MadGraph Development Team - Please visit us at    *\n" + \
-        "#    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
-        '#                                                          *\n' + \
-        '#***********************************************************\n' + \
-        '#                                                          *\n' + \
-        '#               Command File for MadGraph 5                *\n' + \
-        '#                                                          *\n' + \
-        '#     run as ./bin/mg5  filename                           *\n' + \
-        '#                                                          *\n' + \
-        '#     automaticaly generated the %(time)s%(fill)s*\n' + \
-        '#                                                          *\n' + \
-        '#***********************************************************\n'
+        "#*                                                          *\n" + \
+        "#*    The MadGraph Development Team - Please visit us at    *\n" + \
+        "#*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        '#*                                                          *\n' + \
+        '#************************************************************\n' + \
+        '#*                                                          *\n' + \
+        '#*               Command File for MadGraph 5                *\n' + \
+        '#*                                                          *\n' + \
+        '#*     run as ./bin/mg5  filename                           *\n' + \
+        '#*                                                          *\n' + \
+        '#*     automaticaly generated the %(time)s%(fill)s*\n' + \
+        '#*                                                          *\n' + \
+        '#************************************************************\n'
         
-        self.history = [header]
+        self.log = True
+        self.history = []
         self.save_line = ''
         cmd.Cmd.__init__(self, *arg, **opt)
         self.__initpos = os.path.abspath(os.getcwd())
         
     def precmd(self, line):
-        """ force the printing of the line if this is executed with an stdin """
+        """ A suite of additional function needed for in the cmd
+        this implement history, line breaking, comment treatment,...
+        """
+        
         if not line:
             return line
 
         # Update the history of this suite of command,
         # except for useless commands (empty history and help calls)
         if line != "history" and not re.match("help ", line) and \
-               not line[0] == '#':
+               not line.startswith('#*'):
             self.history.append(line)
-        
+
         # Check if we are continuing a line:
         if self.save_line:
             line = self.save_line + line 
@@ -186,6 +178,7 @@ class CmdExtended(cmd.Cmd):
             # Make sure that we are at the initial position
             os.chdir(self.__initpos)
             # Create the debug files
+            self.log = False
             cmd.Cmd.onecmd(self, 'history MG5_debug')
             debug_file = open('MG5_debug', 'a')
             traceback.print_exc(file=debug_file)
@@ -201,6 +194,16 @@ class CmdExtended(cmd.Cmd):
         stop = cmd.Cmd.onecmd(self, line)
         stop = self.postcmd(stop, line)
         return stop      
+
+    def run_cmd(self, line):
+        """for third party call, call the line with pre and postfix treatment"""
+        
+        logger.info(line)
+        line = self.precmd(line)
+        stop = self.onecmd(line)
+        stop = self.postcmd(stop, line)
+        return stop  
+
 
     def emptyline(self):
         """If empty line, do nothing. Default is repeat previous command."""
@@ -1118,14 +1121,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                               model=self._curr_model,
                                               amplitude='')
 
-            logging.info("Drawing " + \
+            logger.info("Drawing " + \
                          amp.get('process').nice_string())
             #plot.draw(opt=options)
             plot.draw()
             logger.info("Wrote file " + filename)
 
         stop = time.time()
-        logger.info('time to draw', stop - start) 
+        logger.info('time to draw %s' % (stop - start)) 
     
     # Export a matrix element
     def do_export(self, line):
@@ -1489,11 +1492,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self.check_history(args)
 
         if len(args) == 0:
-            if len(self.history) > 1:
-                print '\n'.join(self.history[1:])
+            print '\n'.join(self.history)
             return
         elif args[0] == 'clean':
-            self.history = [self.history[0]]
+            self.history = []
             logger.info('History is cleaned')
             return
         elif args[0] == '.':
@@ -1504,13 +1506,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             output_file = open(args[0], 'w')
             
         # Create the command file
-        text = ('\n'.join(self.history) + '\n') % misc.get_time_info()
+        text = self.history_header % misc.get_time_info()
+        text += ('\n'.join(self.history) + '\n') 
         
         #write this information in a file
         output_file.write(text)
         output_file.close()
 
-        logger.info("History written to " + output_file.name)
+        if self.log:
+            logger.info("History written to " + output_file.name)
     
     # Import files
     def do_import(self, line):
@@ -1647,14 +1651,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
     def import_mg5_proc_card(self, filepath):
         # change the status of this line in the history -> pass in comment
-        self.history[-1] = '#%s' % self.history[-1]
- 
+        self.history[-1] = '\n#*        %s%s*\n' % (self.history[-1],
+                                                ' '*(50 -len(self.history[-1])))
+                                                     
+        
         # Read the lines of the file and execute them
         for line in CmdFile(filepath):
             #remove pointless spaces and \n
             line = line.replace('\n', '').strip()
             # execute the line if this one is not empty or comment
-            if line and not line[0] == '#':
+            if line and not line.startswith('#*'):
                 self.exec_cmd(line)
 
         return
@@ -1790,7 +1796,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             dir_path = os.path.join(self.writing_dir, args[1])
         
         if not force and os.path.isdir(dir_path):
-            logger.info('INFO: directory %s already exists.' % args[1])
+            logger.info('INFO: directory %s already exists.' % dir_path)
             if clean:
                 logger.info('If you continue this directory will be cleaned')
             answer = raw_input('Do you want to continue? [y/n]')
@@ -1807,10 +1813,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             export_v4.copy_v4standalone(mgme_dir, dir_path,
                                         self._model_dir, clean)
             self._export_format = 'standalone_v4'
+            
         # Import the model
         logger.info('import model files %s in directory %s' % \
-                       (os.path.basename(self._model_dir), args[1]))        
+                       (os.path.basename(self._model_dir), dir_path))        
         export_v4.export_model(self._model_dir, dir_path)
+        
+
         if args[0] == 'standalone_v4':
             export_v4.make_v4standalone(dir_path)
         self._export_dir = dir_path

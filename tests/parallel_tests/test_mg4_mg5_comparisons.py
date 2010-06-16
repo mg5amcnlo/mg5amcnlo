@@ -27,14 +27,16 @@ logging.basicConfig(level=logging.INFO)
 _file_path = os.path.dirname(os.path.realpath(__file__))
 _pickle_path =os.path.join(_file_path, 'input_files')
 
+from madgraph import MG4DIR, MG5DIR
+
 class TestParallelMG4MG5(unittest.TestCase):
 
 
     def setUp(self):
         """Set up paths"""
         # specify the position of different codes
-        self.mg4_path = "."
-        self.mg5_path = "./madgraph5"
+        self.mg4_path = MG4DIR
+        self.mg5_path = MG5DIR
         
     def test_mg4_mg5_sm_22(self):
         """Test a semi-complete list of sm 2->2 processes"""

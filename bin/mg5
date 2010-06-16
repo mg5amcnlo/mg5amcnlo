@@ -65,12 +65,12 @@ if options.file or args:
     if options.web:
         cmd_line = cmd_interface.MadGraphCmdWeb()
         cmd_line.use_rawinput = False #put it in non interactive mode
-        cmd_line.onecmd('import command ' + input_file)
+        cmd_line.run_cmd('import command ' + input_file)
         sys.exit()
     else:
         cmd_line = cmd_interface.MadGraphCmdShell()
         cmd_line.use_rawinput = False #put it in non interactive mode
-        cmd_line.onecmd('import command ' + input_file)
+        cmd_line.run_cmd('import command ' + input_file)
         sys.exit()
 else:
     # Interactive mode

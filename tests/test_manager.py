@@ -1,5 +1,4 @@
 #!/usr/bin/env python 
-
 ################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
@@ -30,35 +29,25 @@
 
 import inspect
 import logging
+import logging.config
 import optparse
 import os
 import re
 import sys
 import unittest
 
-#Add the ROOT dir to the current PYTHONPATH
 
+#Add the ROOT dir to the current PYTHONPATH
 # Only for profiling with -m cProfile!
 #root_path = os.path.split(os.path.dirname(os.path.realpath(sys.argv[0])))[0]
 #sys.path.append(root_path)
-
 root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 sys.path.append(root_path)
 
+from madgraph import MG4DIR
 
 #position of MG_ME
-MGME_dir = None
-MGME_dir_possibility = [os.path.join(root_path, os.path.pardir),
-                os.path.join(os.getcwd(), os.path.pardir),
-                os.getcwd()]
-
-for position in MGME_dir_possibility:
-    if os.path.exists(os.path.join(position, 'MGMEVersion.txt')) and \
-                    os.path.exists(os.path.join(position, 'UpdateNotes.txt')):
-        MGME_dir = os.path.realpath(position)
-        break
-del MGME_dir_possibility
-
+MGME_dir = MG4DIR
 
 #===============================================================================
 # run
@@ -361,7 +350,13 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
     if len(args) == 0:
         args = ''
-    logging.basicConfig(level=vars(logging)[options.logging])
+
+    logging.config.fileConfig(os.path.join(root_path,'tests','.mg5_logging.conf'))
+    logging.root.setLevel(eval('logging.' + options.logging))
+    logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
+    logging.getLogger('cmdprint').setLevel(eval('logging.' + options.logging))
+
+    #logging.basicConfig(level=vars(logging)[options.logging])
     run(args, re_opt=options.reopt, verbosity=options.verbose, \
             package=options.path)
 
