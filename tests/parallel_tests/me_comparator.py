@@ -38,6 +38,8 @@ _file_path = os.path.dirname(os.path.realpath(__file__))
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.save_load_object as save_load_object
 
+import madgraph.interface.cmd_interface as cmd_interface
+
 class MERunner(object):
     """Base class to containing default function to setup, run and access results
     produced with a specific ME generator. 
@@ -334,12 +336,9 @@ class MG5Runner(MG4Runner):
 
         # Run mg5
         logging.info("Running mg5")
-        subprocess.call([os.path.join('bin', 'mg5'),
-                        "-f%s" % os.path.join(dir_name, 'Cards',
-                                              'proc_card_v5.dat')],
-                        cwd=self.mg5_path,
-                        stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
-
+        cmd_interface.MadGraphCmdShell().run_cmd('import command ' + \
+                            os.path.join(dir_name, 'Cards', 'proc_card_v5.dat'))
+               
         # Get the ME value
         for i, proc in enumerate(proc_list):
             self.res_list.append(self.get_me_value(proc, i))

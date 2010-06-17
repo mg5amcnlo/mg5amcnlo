@@ -21,8 +21,9 @@ logger = logging.getLogger('test_cmd')
 
 import madgraph.interface.cmd_interface as Cmd
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
-
 _pickle_path =os.path.join(_file_path, 'input_files')
+
+from madgraph import MG4DIR
 
 #===============================================================================
 # TestCmd
@@ -81,10 +82,10 @@ class TestCmdShell2(unittest.TestCase):
         
         
         self.cmd = Cmd.MadGraphCmdShell()
-        try:
-            logger.info("MG_ME dir: " + Cmd.MGME_dir)
-            self.out_dir = os.path.join(Cmd.MGME_dir, 'AUTO_TEST_MG5')
-        except:
+        if  MG4DIR:
+            logger.debug("MG_ME dir: " + MG4DIR)
+            self.out_dir = os.path.join(MG4DIR, 'AUTO_TEST_MG5')
+        else:
             raise Exception, 'NO MG_ME dir for this test'   
         self.do('import model_v4 sm')
         
@@ -123,7 +124,7 @@ class TestCmdShell2(unittest.TestCase):
 
     def test_read_madgraph4_proc_card(self):
         """ command 'setup' works with '.' """
-        os.system('cp -rf %s %s' % (os.path.join(Cmd.MGME_dir,'Template'),
+        os.system('cp -rf %s %s' % (os.path.join(MG4DIR,'Template'),
                                     self.out_dir))
         os.system('cp -rf %s %s' % (
                             self.join_path(_pickle_path,'simple_v4_proc_card.dat'),

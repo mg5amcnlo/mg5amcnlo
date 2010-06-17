@@ -74,7 +74,7 @@ def copy_v4standalone(mgme_dir, dir_path, model_dir, clean):
     """create the directory run_name as a copy of the Template,
        run standalone, import the model and Helas, and clean the directory 
     """
-    
+
     #First copy the full template tree if dir_path doesn't exit
     if not os.path.isdir(dir_path):
         logger.info('initialize a new directory: %s' % \

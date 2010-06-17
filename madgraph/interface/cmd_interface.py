@@ -52,13 +52,9 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing as draw_lib
 import madgraph.iolibs.drawing_eps as draw
 
-from madgraph import MG4DIR, MG5DIR, MadGraph5Error
+from madgraph import MG4DIR, MadGraph5Error
 
-# position of MG5
-root_path = MG5DIR
 
-# position of MG_ME
-MGME_dir = MG4DIR
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
@@ -160,6 +156,8 @@ class CmdExtended(cmd.Cmd):
         try:
             cmd.Cmd.onecmd(self, line)
         except MadGraph5Error as error:
+            # Make sure that we are at the initial position
+            os.chdir(self.__initpos)
             if str(error):
                 error_text = 'Command \"%s\" interrupted with error:\n' % line
                 error_text += '%s : %s' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
@@ -678,7 +676,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
                 raise self.WebRestriction('only model can be loaded online')
             if 'model.pkl' not in args[1]:
                 raise self.WebRestriction('not valid pkl file: wrong name')
-            if not os.path.realpath(args[1]).startswith(os.path.join(MGME_dir, \
+            if not os.path.realpath(args[1]).startswith(os.path.join(MG4DIR, \
                                                                     'Models')):
                 raise self.WebRestriction('Wrong path to load model')
         
@@ -856,9 +854,9 @@ class CompleteForCmd(CheckValidForCmd):
         
         #name of the run =>proposes old run name
         if len(split_arg(line[0:begidx])) == 2: 
-            content = [name for name in os.listdir(MGME_dir) if \
+            content = [name for name in os.listdir(MG4DIR) if \
                                     name not in forbidden_name and \
-                                    os.path.isdir(os.path.join(MGME_dir, name))]
+                                    os.path.isdir(os.path.join(MG4DIR, name))]
             content += ['.', 'auto']
             return self.list_completion(text, content)
 
@@ -1565,10 +1563,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # Check for a valid directory
             elif os.path.isdir(args[1]):
                 self._model_dir = args[1]
-            elif MGME_dir and os.path.isdir(os.path.join(MGME_dir, 'Models', \
+            elif MG4DIR and os.path.isdir(os.path.join(MG4DIR, 'Models', \
                                                                       args[1])):
-                self._model_dir = os.path.join(MGME_dir, 'Models', args[1])
-            elif not MGME_dir:
+                self._model_dir = os.path.join(MG4DIR, 'Models', args[1])
+            elif not MG4DIR:
                 error_text = "Path %s is not a valid pathname\n" % args[1]
                 error_text += "and no MG_ME installation detected in other to search in Models"
                 raise MadGraph5Error(error_text)
@@ -1587,7 +1585,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     import_v4file(self, os.path.join(self._model_dir, \
                                                                       filename))
                 else:
-                    raise MadGraph5Error("%s files doesn't exist in %s directory" % \
+                    raise self.RWError("%s file doesn't exist in %s directory" % \
                                         (filename, os.path.basename(args[1])))
             #save model for next usage
             self.do_save('model %s ' % os.path.join(self._model_dir, \
@@ -1634,8 +1632,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if not reader:
             raise MadGraph5Error('\"%s\" is not a valid path' % filepath)
         
-        if MGME_dir:
-            #model_dir = os.path.join(MGME_dir, 'Models')
+        if MG4DIR:
+            #model_dir = os.path.join(MG4DIR, 'Models')
             line = self.exec_cmd('import model_v4 %s' % (reader.model))
         else:
             logging.error('No MG_ME installation detected')
@@ -1770,8 +1768,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         dir = '-d' in args
         if dir:
             mgme_dir = args[args.find('-d') + 1]
+        elif MG4DIR:
+            mgme_dir = MG4DIR
         else:
-            mgme_dir = MGME_dir
+            raise MadGraph5Error('No installation of  MG_ME (version 4) detected')
                                 
         # Check for special directory treatment
         if args[1] == '.':
@@ -1849,7 +1849,7 @@ class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
 class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
     """The command line processor of MadGraph""" 
     
-    writing_dir = MGME_dir
+    writing_dir = MG4DIR
     
     def preloop(self):
         """Initializing before starting the main loop"""
