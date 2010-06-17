@@ -21,6 +21,7 @@ import os
 
 import me_comparator
 import unittest
+from madgraph import MG4DIR, MG5DIR
 
 # Get full logging info
 logging.basicConfig(level=logging.INFO)
@@ -33,8 +34,8 @@ class TestParallelPickle(unittest.TestCase):
     def setUp(self):
         """Set up paths and load comparisons"""
         # specify the position of different codes
-        self.mg4_path = "."
-        self.mg5_path = "./madgraph5"
+        self.mg4_path = MG4DIR
+        self.mg5_path = MG5DIR
         
     def test_all_stored_comparisons(self):
         """Test MG5 against all stored comparisons, one after the other."""
