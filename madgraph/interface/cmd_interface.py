@@ -385,7 +385,7 @@ class CheckValidForCmd(object):
         """a class for the invalid syntax call"""
     
     class RWError(MadGraph5Error):
-        """a class for the invalid syntax call"""
+        """a class for read/write errors"""
     
     def check_add(self, args):
         """check the validity of line
