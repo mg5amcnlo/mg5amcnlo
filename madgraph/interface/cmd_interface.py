@@ -168,13 +168,6 @@ class CmdExtended(cmd.Cmd):
                 if self.use_rawinput == False:
                     sys.exit()
         except Exception as error:
-            # Create a nice error output
-            error_text ='Command \"%s\" was interrupted with error:\n' % line
-            error_text += '%s : %s\n' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
-            error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5'
-            error_text += 'More information is found in \'./MG5_debug\'.\n'
-            error_text += 'Please attach this file to your report.'
-            logger_stderr.critical(error_text)
             # Make sure that we are at the initial position
             os.chdir(self.__initpos)
             # Create the debug files
@@ -182,6 +175,14 @@ class CmdExtended(cmd.Cmd):
             cmd.Cmd.onecmd(self, 'history MG5_debug')
             debug_file = open('MG5_debug', 'a')
             traceback.print_exc(file=debug_file)
+            # Create a nice error output
+            error_text ='Command \"%s\" was interrupted with error:\n' % line
+            error_text += '%s : %s\n' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
+            error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5'
+            error_text += 'More information is found in \'%s\'.\n' % \
+                          os.path.realpath("MG5_debug")
+            error_text += 'Please attach this file to your report.'
+            logger_stderr.critical(error_text)
             #stop the execution if on a non interactive mode
             if self.use_rawinput == False:
                 sys.exit()

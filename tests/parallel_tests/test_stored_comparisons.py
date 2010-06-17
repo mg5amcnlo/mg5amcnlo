@@ -63,3 +63,29 @@ class TestParallelPickle(unittest.TestCase):
             # Do some cleanup
             my_comp.cleanup()
 
+    def test_stored_mini_comparison(self):
+        """Test MG5 against a minimal comparison."""
+
+        comparisons = me_comparator.PickleRunner.find_comparisons(\
+            os.path.join(_pickle_path, "mg4_sm_minitest.pkl"))
+        for stored_runner in comparisons:
+
+            # Create a MERunner object for MG5
+            my_mg5 = me_comparator.MG5Runner()
+            my_mg5.setup(self.mg5_path, self.mg4_path)
+
+            # Create and setup a comparator
+            my_comp = me_comparator.MEComparator()
+            my_comp.set_me_runners(stored_runner, my_mg5)
+
+            # Run the actual comparison
+            my_comp.run_comparison(stored_runner.proc_list,
+                                   stored_runner.model,
+                                   stored_runner.orders,
+                                   stored_runner.energy)
+
+            my_comp.assert_processes(self)
+
+            # Do some cleanup
+            my_comp.cleanup()
+

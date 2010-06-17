@@ -38,6 +38,20 @@ class TestParallelMG4MG5(unittest.TestCase):
         self.mg4_path = MG4DIR
         self.mg5_path = MG5DIR
         
+    def test_mg4_mg5_minitest(self):
+        """Test a minimal list of sm 2->2 processes, mainly to test the test"""
+        # Create a list of processes to check automatically
+        my_proc_list = me_comparator.create_proc_list(\
+            ['u'],
+            initial=2, final=2)
+
+        # Store list of non-zero processes and results in file
+        pickle_file = "mg4_sm_minitest.pkl"
+        self.compare_MG4_MG5(my_proc_list,
+                             orders = {'QED':2, 'QCD':2},
+                             filename = "sm_mini.log",
+                             pickle_file = pickle_file)
+
     def test_mg4_mg5_sm_22(self):
         """Test a semi-complete list of sm 2->2 processes"""
         # Create a list of processes to check automatically

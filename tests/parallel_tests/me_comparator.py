@@ -387,9 +387,11 @@ class PickleRunner(MERunner):
 
         if os.path.isfile(pickle_path):
             # File given. Simply return pickle object from file
-            pickle_runner = PickleRunner()
-            save_load_object.load_from_file(pickle_path, pickle_runner)
-            return [pickle_runner]
+            pickle_runner = save_load_object.load_from_file(pickle_path)
+            if isinstance(pickle_runner, PickleRunner):
+                return [pickle_runner]
+            else:
+                return []
 
         if os.path.isdir(pickle_path):
             # Directory given. Return list of comparisons which
