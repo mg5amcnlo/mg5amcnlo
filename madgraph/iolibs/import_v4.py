@@ -327,7 +327,7 @@ def read_proc_card_v4(fsock):
     reader = ProcCardv4Reader(fsock)
     return reader
 
-class ParticleError(Exception): 
+class ParticleError(MadGraph5Error):
     """ A class to carch the error"""
     pass
 
