@@ -105,11 +105,11 @@ class CheckFileCreate():
     def clean_files(self):
         """ suppress all the files linked to this test """
         
-        for filename in self.created_files:
-            try:
-                os.remove(self.give_pos(filename))
-            except OSError:
-                pass
+        #for filename in self.created_files:
+        #    try:
+        #        os.remove(self.give_pos(filename))
+        #    except OSError:
+        #        pass
     
 
 class TestModelCreation(unittest.TestCase, CheckFileCreate):
@@ -127,8 +127,8 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
         """ creating the full model from scratch """
         CheckFileCreate.clean_files(self)
         
-        sm_model_path = os.path.join(root_path, 'models', 'sm')
-        ufo2mg4.export_to_mg4(sm_model_path, self.output_path)
+        import models.sm as model
+        ufo2mg4.export_to_mg4(model, self.output_path)
         
         
     tearDown = CheckFileCreate.clean_files

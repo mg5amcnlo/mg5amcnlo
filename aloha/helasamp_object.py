@@ -30,7 +30,7 @@
 ##
 ################################################################################
 from __future__ import division
-import helas.helasamp_lib as HelasLib
+import aloha.helasamp_lib as HelasLib
 
 #===============================================================================
 # P (Impulsion)

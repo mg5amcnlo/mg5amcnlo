@@ -14,4 +14,10 @@
 ################################################################################
 """All the UFO MODEL"""
 
-from madgraph.iolibs.import_ufo import import_model
+import sys
+
+def load_model(name):
+
+    model_pos = 'models.%s' % name
+    __import__(model_pos)
+    return sys.modules[model_pos]

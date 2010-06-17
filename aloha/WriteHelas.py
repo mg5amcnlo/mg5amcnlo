@@ -1,6 +1,9 @@
-import madgraph.iolibs.export_v4 as FortranWriter 
-import helas.helasamp_object as Helas
-import helas.helasamp_lib as Helas_Lib
+try:
+    import madgraph.iolibs.export_v4 as FortranWriter 
+except:
+    import aloha.Writter as FortranWriter
+import aloha.helasamp_object as Helas
+import aloha.helasamp_lib as Helas_Lib
 import re 
 from numbers import Number
 class WriteHelas: 
@@ -120,10 +123,10 @@ class HelasWriterForFortran(WriteHelas):
         MomentumConserve = []
         DeclareDict = {'F':'double complex f', 'V':'double complex V', \
                                 'S':'double complex s', 'T':'double complex T'}
-	FermionNumber = 0
-	VectorNumber =0
-	ScalarNumber = 0
-	TensorNumber = 0
+        FermionNumber = 0
+        VectorNumber =0
+        ScalarNumber = 0
+        TensorNumber = 0
         OnShell = 1 
         Counter = 0
         OffShellParticle = 999
@@ -145,11 +148,11 @@ class HelasWriterForFortran(WriteHelas):
             elif elem[0] == 'V':
                 DeclareList.append('%s%d(6)' % (DeclareDict[elem[0]], index + 1))  
                 VectorList.append('%s%d' % ('V', index + 1))
-		VectorNumber +=1 
+                VectorNumber +=1 
             elif elem[0] == 'F':
                 DeclareList.append('%s%d(6)' % (DeclareDict[elem[0]], index + 1))  
                 FermiList.append('%s%d' % ('F', index + 1))  
-		FermionNumber +=1 
+                FermionNumber +=1 
             # Define the Calllist
             if elem[1]:
                 CallList.append('%s%d' % (elem[0], index + 1))
@@ -166,14 +169,14 @@ class HelasWriterForFortran(WriteHelas):
             else: 
                 MomentumConserve.append('+F%d' % (index + 1))
                 Counter += 1
-            # Reorder calllist cyclically. 
- 	if not OnShell:
-	    PermList = []
+        # Reorder calllist cyclically. 
+        if not OnShell:
+            PermList = []
             if OffShellParticle< FermionNumber:
                 for i in range(FermionNumber):
                     PermList.append(OffShellParticle+i-FermionNumber+1) 
                 FermiList = [FermiList[i] for i in PermList] 
-		FermiList.pop()
+                FermiList.pop()
             elif OffShellParticle< (FermionNumber+VectorNumber):
                 for i in range(len(VectorList)):
                     Shift = FermionNumber+VectorNumber-1-OffShellParticle
@@ -186,7 +189,7 @@ class HelasWriterForFortran(WriteHelas):
                     PermList.append(i-Shift) 
                 ScalarList = [ScalarList[i] for i in PermList] 
                 ScalarList.pop()
-            elif OffShellParticle< (FermiNumber+VectorNumber+ScalarNumber):
+            elif OffShellParticle< (FermionNumber+VectorNumber+ScalarNumber):
                 for i in range(len(VectorList)):
                     Shift = len(self.particles)-1-OffShellParticle
                     PermList.append(i-Shift) 

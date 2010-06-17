@@ -20,7 +20,8 @@ class MadGraph5Error(Exception):
 import os
 
 #Look for basic file position MG5DIR and MG4DIR
-MG5DIR = os.path.dirname(os.path.realpath(__file__))
+MG5DIR = os.path.realpath(os.path.join(
+                        os.path.dirname(os.path.realpath(__file__)), os.pardir))
 MG4DIR = None
 
 mg4_possibility = [os.path.join(MG5DIR, os.path.pardir),

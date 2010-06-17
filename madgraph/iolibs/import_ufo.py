@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+import madgraph
 """ How to import a UFO model to the MG5 format """
 
 import sys
@@ -19,17 +20,24 @@ import sys
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 
-def import_model(name):
+def import_model(model=None, model_name=None):
     """ a practical and efficient way to import one of those models """
 
-    model = convert_ufo_mg5(name)
-    return model.load_model()
+    if model_name:
+        model_pos = 'models.%s' % model_name
+        __import__(model_pos)   
+        model = sys.modules[model_pos]
+    elif not model:
+        raise madgraph.MadGraph5Error( \
+                    'import_ufo.import_model should have at least one argument')
+    ufo2mg5_converter = converter_ufo_mg5(model)
+    return ufo2mg5_converter.load_model()
     
 
-class convert_ufo_mg5(object):
+class converter_ufo_mg5(object):
     """Convert a UFO model to the MG5 format"""
 
-    def __init__(self, model_name):
+    def __init__(self, model, auto=True):
         """ initialize empty list for particles/interactions """
         
         self.particles = base_objects.ParticleList()
@@ -38,9 +46,10 @@ class convert_ufo_mg5(object):
         self.model.set('particles', self.particles)
         self.model.set('interactions', self.interactions)
         
-        model_pos = 'models.%s' % model_name
-        __import__(model_pos)
-        self.ufomodel = sys.modules[model_pos]    
+        self.ufomodel = model
+        
+        if auto:
+            self.load_model()
 
     def load_model(self):
         """load the different of the model first particles then interactions"""

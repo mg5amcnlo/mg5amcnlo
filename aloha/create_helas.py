@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+from Carbon.Aliases import true
 import os
 import logging
 import sys
@@ -20,8 +21,8 @@ import numbers
 import time
 
 
-from helas.helasamp_object import *
-import helas.WriteHelas as WriteHelas
+from aloha.helasamp_object import *
+import aloha.WriteHelas as WriteHelas
 
 
 helas_path = os.path.dirname(os.path.realpath(__file__))
@@ -258,7 +259,7 @@ class AbstractHelas(object):
 class AbstractHelasModel(dict):
     """ A class to buid and store the full set of Abstract Helas Routine"""
 
-    def __init__(self, model_name):
+    def __init__(self, model_name, write_dir=None):
         """ load the UFO model and init the dictionary """
         
         # load the UFO model
@@ -273,11 +274,39 @@ class AbstractHelasModel(dict):
         dict.__init__(self)
         self.symmetries = {}
         
+        if write_dir:
+            self.main(write_dir)
+            
+    def main(self, output_dir):
+        """ """
+        
+        # Check if a pickle file exists
+        if not self.load():
+            self.compute_all()
+        print len(self), 'helas routine'
+            
+        
+        
+        
     def save(self, filepos=None):
         """ save the current model in a pkl file """
         
-        #ff = open(os.path.join(self.model_pos,'helas.pkl'), 'w')
-        #cPickle.dump(dict(self), ff)
+        if not filepos:
+            filepos = os.path.join(self.model_pos,'helas.pkl') 
+        
+        fsock = open(filepos, 'w')
+        cPickle.dump(dict(self), fsock)
+        
+    def load(self, filepos=None):
+        """ reload the pickle file """
+        if not filepos:
+            filepos = os.path.join(self.model_pos,'helas.pkl') 
+        if os.path.exists(filepos):
+            fsock = open(filepos, 'r')
+            self.update(cPickle.load(fsock))        
+            return True
+        else:
+            return False
         
     def get(self, lorentzname, outgoing):
         """ return the AbstractHelas with a given lorentz name, and for a given

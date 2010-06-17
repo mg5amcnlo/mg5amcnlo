@@ -41,6 +41,7 @@ import madgraph.iolibs.misc as misc
 import madgraph.iolibs.files as files
 
 import madgraph.iolibs.import_v4 as import_v4
+import madgraph.iolibs.import_ufo as import_ufo
 #import madgraph.iolibs.save_model as save_model
 import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.iolibs.export_v4 as export_v4
@@ -55,6 +56,7 @@ import madgraph.iolibs.drawing_eps as draw
 
 
 import models as ufomodels
+import aloha.create_helas as create_helas
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
@@ -923,19 +925,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     """The command line processor of MadGraph"""    
     
     _curr_model = base_objects.Model()
-    _model_dir = None
-    _model_format = None
     _curr_amps = diagram_generation.AmplitudeList()
     _curr_matrix_elements = helas_objects.HelasMultiProcess()
     _curr_fortran_model = export_v4.HelasFortranModel()
-    _multiparticles = {}
 
     _display_opts = ['particles', 'interactions', 'processes', 'multiparticles',
                      'couplings']
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _setup_opts = ['madevent_v4', 'standalone_v4']
-    _import_formats = ['model_v4', 'proc_v4', 'command']
+    _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
     _export_formats = ['madevent_v4', 'standalone_v4', 'matrix_v4']
         
     def __init__(self, *arg, **opt):
@@ -943,6 +942,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         CmdExtended.__init__(self, *arg, **opt)
         self._generate_info = "" # store the first generated process
+        self._model_dir = None
+        self._model_format = None
+        self._multiparticles = {}
+        self._ufo_model = None
         
         # Detect If this script is launched from a valid copy of the Template
         #and if so store this position as standard output directory
@@ -1562,14 +1565,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self.check_import(args)
         
         
-        if args[0] == 'model_v5':
-            self._curr_model = ufomodels.import_model(args[1])
-            self._model_type = 'v5'
+        if args[0] == 'model':
+            self._ufo_model = ufomodels.load_model(args[1])
+            ufo2mg5_converter = import_ufo.converter_ufo_mg5(self._ufo_model)
+            self._curr_model = ufo2mg5_converter.load_model()
             self._model_dir = os.path.join(root_path, 'models', args[1])
             self._curr_fortran_model = export_v4.UFOHelasFortranModel()
                     
         elif args[0] == 'model_v4':
-            self._model_type = 'v4'
             # Check for a file
             if os.path.isfile(args[1]):
                 import_v4file(self, args[1])
@@ -1830,14 +1833,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self._export_format = 'standalone_v4'
 
         # Import the model/HELAS
-        if self._model_type == 'v4':
+        if not self._ufo_model:
             logger.info('import v4model files %s in directory %s' % \
                        (os.path.basename(self._model_dir), args[1]))        
             export_v4.export_model(self._model_dir, dir_path)
             export_v4.export_helas(os.path.join(mgme_dir,'HELAS'), dir_path)
         else:
             logger.info('convert UFO model to MG4 format')
-            ufo2mg4.export_to_mg4(self._model_dir, dir_path)
+            ufo2mg4.export_to_mg4(self._ufo_model, 
+                                        os.path.join(dir_path,'Source','MODEL'))
+            create_helas.AbstractHelasModel(os.path.basename(self._model_dir),
+                            write_dir=os.path.join(dir_path,'Source','DHELAS'))
         
         if args[0] == 'standalone_v4':
             export_v4.make_v4standalone(dir_path)

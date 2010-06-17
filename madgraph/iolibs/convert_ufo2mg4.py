@@ -150,17 +150,11 @@ class CompactifyExpression:
 class convert_model_to_mg4(CompactifyExpression):
     """ A converter of the UFO to the MG4 format """
     
-    def __init__(self, model_path, output_path):
+    def __init__(self, model, output_path):
         """ initialization of the objects """
         
-        model_updir, model_name = os.path.split(model_path)
-        sys.path.append(model_updir)
-        __import__(model_name)
-        model = sys.modules[model_name]
-
-
         self.model = model
-        self.model_name = model_name
+        self.model_name = os.path.basename(model.__path__[0])
         
         self.dir_path = output_path
         
@@ -519,17 +513,18 @@ class convert_model_to_mg4(CompactifyExpression):
 
 
 
-def export_to_mg4(model_path, dir_path):
+def export_to_mg4(model, dir_path):
     """ all the call for the creation of the output """
-    export_obj = convert_model_to_mg4(model_path, dir_path)
+    export_obj = convert_model_to_mg4(model, dir_path)
     export_obj.write_all()
     
     #copy the library files
     file_to_link = ['formats.inc', 'lha_read.f', 'makefile','printout.f', \
-                    'rw_param.f', 'testprog.f', 'rw_para.f']
+                    'rw_para.f', 'testprog.f', 'rw_para.f']
 
+    model_path = model.__path__[0]
     for filename in file_to_link:
-        export_v4.cp(model_path + '/../Template/fortran/' + filename, dir_path)
+        export_v4.cp(model_path + '/../Template/fortran/' + filename, dir_path )
     
     
 class python_to_fortran(str):
