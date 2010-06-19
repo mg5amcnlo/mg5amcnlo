@@ -182,10 +182,11 @@ def write_procdef_mg5(file_pos, modelname, process_str):
     ff.close()
 
 #===============================================================================
-# Create Web Page via external routines
+# Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
 #===============================================================================
 def finalize_madevent_v4_directory(dir_path, makejpg, history):
-    """call the perl script creating the web interface for MadEvent"""
+    """Finalize ME v4 directory by creating jpeg diagrams, html
+    pages,proc_card_mg5.dat and madevent.tar.gz."""
 
     old_pos = os.getcwd()
     os.chdir(os.path.join(dir_path, 'SubProcesses'))
@@ -240,6 +241,20 @@ def finalize_madevent_v4_directory(dir_path, makejpg, history):
     #return to the initial dir
     os.chdir(old_pos)               
            
+#===============================================================================
+# Create proc_card_mg5.dat for Standalone directory
+#===============================================================================
+def finalize_standalone_v4_directory(dir_path, history):
+    """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
+
+    # Write command history as proc_card_mg5
+    if os.path.isdir(os.path.join(dir_path, 'Cards')):
+        output_file = os.path.join(dir_path, 'Cards', 'proc_card_mg5.dat')
+        output_file = open(output_file, 'w')
+        text = ('\n'.join(history) + '\n') % misc.get_time_info()
+        output_file.write(text)
+        output_file.close()
+
 #===============================================================================
 # write_matrix_element_v4_standalone
 #===============================================================================

@@ -169,3 +169,6 @@ class TestCmdShell2(unittest.TestCase):
         self.do('export')
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'SubProcesses', 'P0_e+e-_e+e-')))
+        self.do('finalize')
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'Cards', 'proc_card_mg5.dat')))

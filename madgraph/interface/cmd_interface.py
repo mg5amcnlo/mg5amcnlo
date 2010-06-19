@@ -349,13 +349,15 @@ class HelpToCmd(object):
         print "   clean option will remove all entries from the history."
 
     def help_finalize(self):
-        print "syntax: makehtlm [madevent_v4 PATH] [--nojpeg]"
-        print "-- create web pages, jpeg diagrams, proc_card_mg5 and "
-        print "   madevent.tar.gz files in the directory PATH."
-        print "   By default, PATH is the directory defined with the "
-        print "   setup command."
-        print "   Add option --nojpeg to suppress jpeg diagrams."
-        
+        print "syntax: finalize [" + "|".join(self._setup_opts) + \
+              " PATH] [--nojpeg]"
+        print "-- finalize MadEvent or Standalone directory in PATH. "
+        print "   For MadEvent, create web pages, jpeg diagrams,"
+        print "   proc_card_mg5 and madevent.tar.gz files."
+        print "   For Standalone, just generate proc_card_mg5."
+        print "   By default, PATH and madevent_v4/standalone_v4 are "
+        print "   defined by the setup command."
+        print "   Add option --nojpeg to suppress jpeg diagrams."        
 
     def help_draw(self):
         _draw_parser.print_help()
@@ -558,11 +560,11 @@ class CheckValidForCmd(object):
             nojpeg = '--nojpeg'
             args = filter(lambda arg: arg != nojpeg, args)
     
-        if len(args) < 1 and not self._export_format == 'madevent_v4':
+        if len(args) < 1 and not self._export_format in self._setup_opts:
             self.help_finalize()
             raise self.InvalidCmd('wrong \"finalize\" format')
         
-        elif args and args[0] != 'madevent_v4':
+        elif args and args not in self._setup_opts:
             self.help_finalize()
             raise self.InvalidCmd('%s is not recognized as a valid option' % args[0])
         
@@ -732,7 +734,7 @@ class CompleteForCmd(CheckValidForCmd):
     
             
     def complete_finalize(self, text, line, begidx, endidx):
-        """ format: finalize madevent_v4 [PATH] [--nojpeg]"""
+        """ format: finalize madevent_v4|standalone_v4 [PATH] [--nojpeg]"""
         
         # Format
         if text.startswith('-'):
@@ -1743,16 +1745,24 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         else: 
             dir_path = args[1]
             
-        #look if the user ask to bypass the jpeg creation
-        if '--nojpeg' in args:
-            makejpg = False
-        else:
-            makejpg = True
-            
-        os.system('touch %s/done' % os.path.join(dir_path,'SubProcesses'))        
-        export_v4.finalize_madevent_v4_directory(dir_path, makejpg,
-                                                 [self.history_header] + \
-                                                 self.history)
+        if self._export_format and self._export_format == 'madevent_v4' or \
+               not self._export_format and args[0] == 'madevent_v4':
+            #look if the user ask to bypass the jpeg creation
+            if '--nojpeg' in args:
+                makejpg = False
+            else:
+                makejpg = True
+
+            os.system('touch %s/done' % os.path.join(dir_path,'SubProcesses'))        
+            export_v4.finalize_madevent_v4_directory(dir_path, makejpg,
+                                                     [self.history_header] + \
+                                                     self.history)
+        elif self._export_format and self._export_format == 'standalone_v4' \
+                 or not self._export_format and args[0] == 'standalone_v4':
+
+            export_v4.finalize_standalone_v4_directory(dir_path,
+                                                     [self.history_header] + \
+                                                     self.history)
 
         logger.info('Directory ' + dir_path + ' finalized')
         
