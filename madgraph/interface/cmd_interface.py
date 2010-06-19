@@ -111,7 +111,7 @@ class CmdExtended(cmd.Cmd):
         '#*                                                          *\n' + \
         '#*     automaticaly generated the %(time)s%(fill)s*\n' + \
         '#*                                                          *\n' + \
-        '#************************************************************\n'
+        '#************************************************************'
         
         self.log = True
         self.history = []
@@ -1633,6 +1633,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             raise MadGraph5Error('\"%s\" is not a valid path' % filepath)
         
         if MG4DIR:
+            # Add comment to history
+            self.exec_cmd("# Import the model %s" % reader.model)
             #model_dir = os.path.join(MG4DIR, 'Models')
             line = self.exec_cmd('import model_v4 %s' % (reader.model))
         else:
@@ -1649,17 +1651,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         return 
 
     def import_mg5_proc_card(self, filepath):
-        # change the status of this line in the history -> pass in comment
-        self.history[-1] = '\n#*        %s%s*\n' % (self.history[-1],
-                                                ' '*(50 -len(self.history[-1])))
-                                                     
+        # remove this call from history
+        self.history.pop()
         
         # Read the lines of the file and execute them
         for line in CmdFile(filepath):
             #remove pointless spaces and \n
             line = line.replace('\n', '').strip()
-            # execute the line if this one is not empty or comment
-            if line and not line.startswith('#*'):
+            # execute the line
+            if line:
                 self.exec_cmd(line)
 
         return
@@ -1751,6 +1751,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             
         os.system('touch %s/done' % os.path.join(dir_path,'SubProcesses'))        
         export_v4.finalize_madevent_v4_directory(dir_path, makejpg,
+                                                 [self.history_header] + \
                                                  self.history)
 
         logger.info('Directory ' + dir_path + ' finalized')
@@ -1911,7 +1912,7 @@ class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
         if line.strip() is '':
             self.help_shell()
         else:
-            logging.info("running shell command:", line)
+            logging.info("running shell command: " + line)
             subprocess.call(line, shell=True)
 
 #===============================================================================

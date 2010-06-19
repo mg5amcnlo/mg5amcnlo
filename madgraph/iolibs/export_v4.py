@@ -38,7 +38,7 @@ logger = logging.getLogger('madgraph.export_v4')
 # copy the Template in a new directory.
 #===============================================================================
 def copy_v4template(mgme_dir, dir_path, model_dir, clean):
-    """create the directory run_name as a copy of the Template
+    """create the directory run_name as a copy of the MadEvent Template
        and import the model, Helas, and clean the directory 
     """
     
