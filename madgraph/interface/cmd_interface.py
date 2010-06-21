@@ -652,13 +652,13 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         if len(args) >= 2 and args[0] == 'proc_v4' and args[1] != '.':
             raise self.WebRestriction('Path can\'t be specify on the web.')
 
-        if len(args) >= 1 and args[0] == 'command':
-            raise self.WebRestriction('Path can\'t be specify on the web.')
-
-        
-        for arg in args:
-            if '/' in arg:
+        if len(args) >= 2 and args[0] == 'command':
+            if args[1] != './Cards/proc_card_mg5.dat': 
                 raise self.WebRestriction('Path can\'t be specify on the web.')
+        else:
+            for arg in args:
+                if '/' in arg:
+                    raise self.WebRestriction('Path can\'t be specify on the web.')
         
     def check_finalize(self, args):
         """check the validity of the line
