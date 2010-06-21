@@ -159,7 +159,11 @@ class CmdExtended(cmd.Cmd):
             # Make sure that we are at the initial position
             os.chdir(self.__initpos)
             if str(error):
-                error_text = 'Command \"%s\" interrupted with error:\n' % line
+                if line == self.history[-1]:
+                    error_text = 'Command \"%s\" interrupted with error:\n' % line
+                else:
+                    error_text = 'Command \"%s\" interrupted in sub-command:\n' %line
+                    error_text += '\"%s\" with error:\n' % self.history[-1] 
                 error_text += '%s : %s' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
                 logger_stderr.error(error_text)
                 #stop the execution if on a non interactive mode
@@ -183,7 +187,7 @@ class CmdExtended(cmd.Cmd):
             logger_stderr.critical(error_text)
             #stop the execution if on a non interactive mode
             if self.use_rawinput == False:
-                sys.exit()
+                sys.exit('Exit on erro')
 
     def exec_cmd(self, line):
         """for third party call, call the line with pre and postfix treatment"""
