@@ -327,7 +327,7 @@ def read_proc_card_v4(fsock):
     reader = ProcCardv4Reader(fsock)
     return reader
 
-class ParticleError(Exception): 
+class ParticleError(MadGraph5Error):
     """ A class to carch the error"""
     pass
 
@@ -437,11 +437,15 @@ class ProcCardv4Reader(object):
         #Now we are in position to write the lines call
         lines = []    
         #first write the lines associate to the multiparticls definition
+        if self.multipart:
+            lines.append('# Define multiparticle labels')
         for multipart in self.multipart:
             data = self.separate_particle(multipart, self.particles_name)
             lines.append('define ' + ' '.join(data))
         
         # secondly define the lines associate with diagram
+        if self.process:
+            lines.append('# Specify process(es) to run')
         for i, process in enumerate(self.process):
             if i == 0:
                 lines.append('generate %s' % \
@@ -451,8 +455,11 @@ class ProcCardv4Reader(object):
                                   process.mg5_process_line(self.couplings_name))
         
         #finally export the madevent output
+        lines.append('# Set up MadEvent directory')
         lines.append('setup madevent_v4 . -f')
+        lines.append('# Export processes to subprocess directories')
         lines.append('export')
+        lines.append('# Finalize MadEvent directory setup')
         lines.append('finalize')
         
         return lines

@@ -276,12 +276,14 @@ class ProcCardV4ReaderTest(unittest.TestCase):
         
     def test_line_creation(self):
         lines = self.proccard.extract_command_lines(self.model)
-        solution =['define p u u~ c c~ d d~ s s~ g',
+        solution =['# Define multiparticle labels',
+                   'define p u u~ c c~ d d~ s s~ g',
                    'define j u u~ c c~ d d~ s s~ g', 
                    'define l+ e+ mu+', 
                    'define l- e- mu-', 
                    'define vl ve vm', 
                    'define vl~ ve~ vm~', 
+                   '# Specify process(es) to run',
                    'generate p p > ve~ e- @1', 
                    'add process p p > z @2, (z > w+ w-, w- > mu- vm)',
                    'add process p p > t t~ $ a QED=0 @3', 
@@ -290,10 +292,12 @@ class ProcCardV4ReaderTest(unittest.TestCase):
                    'add process p p > z z $ a / g QED=1 @4, (z > w+ w- $ a / g, w- > mu- vm $ a / g), z > w+ w- $ a / g',
                    'add process p p > Z Z, Z > W+ W- $a /g @4',
                    'add process p p > Z Z QCD=2 @4',
+                   '# Set up MadEvent directory',
                    'setup madevent_v4 . -f', 
+                   '# Export processes to subprocess directories',
                    'export', 
+                   '# Finalize MadEvent directory setup',
                    'finalize'] 
-  
         self.assertEqual(len(lines),len(solution))
         for i,command in enumerate(lines):
             self.assertEqual(command,solution[i])

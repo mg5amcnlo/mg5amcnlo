@@ -39,6 +39,8 @@ import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 
+import madgraph.interface.cmd_interface as cmd_interface
+
 class MERunner(object):
     """Base class to containing default function to setup, run and access results
     produced with a specific ME generator. 
@@ -339,13 +341,9 @@ class MG5Runner(MG4Runner):
 
         # Run mg5
         logging.info("Running mg5")
-        devnull = os.open(os.devnull, os.O_RDWR)
-        subprocess.call([os.path.join(self.mg5_path, 'bin', 'mg5'),
-                        "-f%s" % os.path.join(dir_name, 'Cards', 'proc_card_v5.dat')],
-                        stdout=devnull, stderr=subprocess.STDOUT)
-
-
-
+        cmd_interface.MadGraphCmdShell().run_cmd('import command ' + \
+                            os.path.join(dir_name, 'Cards', 'proc_card_v5.dat'))
+               
         # Get the ME value
         for i, proc in enumerate(proc_list):
             self.res_list.append(self.get_me_value(proc, i))
@@ -393,9 +391,11 @@ class PickleRunner(MERunner):
 
         if os.path.isfile(pickle_path):
             # File given. Simply return pickle object from file
-            pickle_runner = PickleRunner()
-            save_load_object.load_from_file(pickle_path, pickle_runner)
-            return [pickle_runner]
+            pickle_runner = save_load_object.load_from_file(pickle_path)
+            if isinstance(pickle_runner, PickleRunner):
+                return [pickle_runner]
+            else:
+                return []
 
         if os.path.isdir(pickle_path):
             # Directory given. Return list of comparisons which

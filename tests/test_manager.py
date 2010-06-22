@@ -321,8 +321,8 @@ class TestFinder(list):
         This ensures that the script works correctly whatever the position
         where is launched
         """
-        self.launch_pos = os.path.realpath(os.getcwd())
-        self.root_path = root_path
+        #self.launch_pos = os.path.realpath(os.getcwd())
+        #self.root_path = root_path
         #os.chdir(root_path)
 
     def go_to_initpos(self):
@@ -331,8 +331,8 @@ class TestFinder(list):
         This ensures that the script works correctly whatever the position
         where is launched
         """
-        os.chdir(self.launch_pos)
-        self.launch_pos = ''
+        #os.chdir(self.launch_pos)
+        #self.launch_pos = ''
 
 if __name__ == "__main__":
 

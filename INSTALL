@@ -17,7 +17,7 @@
 Dependencies :
 ===============
 
-- Python 2.6 (or higher but it's not compatible with 3.X)
+- Python 2.6 (or higher, but not compatible with 3.X)
 
 If you need to provide output for MadEvent (not available under windows)
 you will face the following dependencies:
@@ -37,5 +37,3 @@ On Windows:
 In order to run MG5 you should
 1) add Python directory to the PATH
 2) run $> python ./bin/mg5
-
-

@@ -54,18 +54,11 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing as draw_lib
 import madgraph.iolibs.drawing_eps as draw
 
-
 import models as ufomodels
 import aloha.create_helas as create_helas
 
-from madgraph import MG4DIR, MG5DIR, MadGraph5Error
+from madgraph import MG4DIR, MadGraph5Error
 
-
-# position of MG5
-root_path = MG5DIR
-
-# position of MG_ME
-MGME_dir = MG4DIR
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
@@ -122,7 +115,7 @@ class CmdExtended(cmd.Cmd):
         '#*                                                          *\n' + \
         '#*     automaticaly generated the %(time)s%(fill)s*\n' + \
         '#*                                                          *\n' + \
-        '#************************************************************\n'
+        '#************************************************************'
         
         self.log = True
         self.history = []
@@ -167,21 +160,20 @@ class CmdExtended(cmd.Cmd):
         try:
             cmd.Cmd.onecmd(self, line)
         except MadGraph5Error as error:
+            # Make sure that we are at the initial position
+            os.chdir(self.__initpos)
             if str(error):
-                error_text = 'Command \"%s\" interrupted with error:\n' % line
+                if line == self.history[-1]:
+                    error_text = 'Command \"%s\" interrupted with error:\n' % line
+                else:
+                    error_text = 'Command \"%s\" interrupted in sub-command:\n' %line
+                    error_text += '\"%s\" with error:\n' % self.history[-1] 
                 error_text += '%s : %s' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
                 logger_stderr.error(error_text)
                 #stop the execution if on a non interactive mode
                 if self.use_rawinput == False:
                     sys.exit()
         except Exception as error:
-            # Create a nice error output
-            error_text ='Command \"%s\" was interrupted with error:\n' % line
-            error_text += '%s : %s\n' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
-            error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5'
-            error_text += 'More information is found in \'./MG5_debug\'.\n'
-            error_text += 'Please attach this file to your report.'
-            logger_stderr.critical(error_text)
             # Make sure that we are at the initial position
             os.chdir(self.__initpos)
             # Create the debug files
@@ -189,9 +181,17 @@ class CmdExtended(cmd.Cmd):
             cmd.Cmd.onecmd(self, 'history MG5_debug')
             debug_file = open('MG5_debug', 'a')
             traceback.print_exc(file=debug_file)
+            # Create a nice error output
+            error_text ='Command \"%s\" was interrupted with error:\n' % line
+            error_text += '%s : %s\n' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
+            error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5'
+            error_text += 'More information is found in \'%s\'.\n' % \
+                          os.path.realpath("MG5_debug")
+            error_text += 'Please attach this file to your report.'
+            logger_stderr.critical(error_text)
             #stop the execution if on a non interactive mode
             if self.use_rawinput == False:
-                sys.exit()
+                sys.exit('Exit on erro')
 
     def exec_cmd(self, line):
         """for third party call, call the line with pre and postfix treatment"""
@@ -357,13 +357,15 @@ class HelpToCmd(object):
         print "   clean option will remove all entries from the history."
 
     def help_finalize(self):
-        print "syntax: makehtlm [madevent_v4 PATH] [--nojpeg]"
-        print "-- create web pages, jpeg diagrams, proc_card_mg5 and "
-        print "   madevent.tar.gz files in the directory PATH."
-        print "   By default, PATH is the directory defined with the "
-        print "   setup command."
-        print "   Add option --nojpeg to suppress jpeg diagrams."
-        
+        print "syntax: finalize [" + "|".join(self._setup_opts) + \
+              " PATH] [--nojpeg]"
+        print "-- finalize MadEvent or Standalone directory in PATH. "
+        print "   For MadEvent, create web pages, jpeg diagrams,"
+        print "   proc_card_mg5 and madevent.tar.gz files."
+        print "   For Standalone, just generate proc_card_mg5."
+        print "   By default, PATH and madevent_v4/standalone_v4 are "
+        print "   defined by the setup command."
+        print "   Add option --nojpeg to suppress jpeg diagrams."        
 
     def help_draw(self):
         _draw_parser.print_help()
@@ -567,11 +569,11 @@ class CheckValidForCmd(object):
             nojpeg = '--nojpeg'
             args = filter(lambda arg: arg != nojpeg, args)
     
-        if len(args) < 1 and not self._export_format == 'madevent_v4':
+        if len(args) < 1 and not self._export_format in self._setup_opts:
             self.help_finalize()
             raise self.InvalidCmd('wrong \"finalize\" format')
         
-        elif args and args[0] != 'madevent_v4':
+        elif args and args not in self._setup_opts:
             self.help_finalize()
             raise self.InvalidCmd('%s is not recognized as a valid option' % args[0])
         
@@ -656,13 +658,13 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         if len(args) >= 2 and args[0] == 'proc_v4' and args[1] != '.':
             raise self.WebRestriction('Path can\'t be specify on the web.')
 
-        if len(args) >= 1 and args[0] == 'command':
-            raise self.WebRestriction('Path can\'t be specify on the web.')
-
-        
-        for arg in args:
-            if '/' in arg:
+        if len(args) >= 2 and args[0] == 'command':
+            if args[1] != './Cards/proc_card_mg5.dat': 
                 raise self.WebRestriction('Path can\'t be specify on the web.')
+        else:
+            for arg in args:
+                if '/' in arg:
+                    raise self.WebRestriction('Path can\'t be specify on the web.')
         
     def check_finalize(self, args):
         """check the validity of the line
@@ -686,7 +688,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
                 raise self.WebRestriction('only model can be loaded online')
             if 'model.pkl' not in args[1]:
                 raise self.WebRestriction('not valid pkl file: wrong name')
-            if not os.path.realpath(args[1]).startswith(os.path.join(MGME_dir, \
+            if not os.path.realpath(args[1]).startswith(os.path.join(MG4DIR, \
                                                                     'Models')):
                 raise self.WebRestriction('Wrong path to load model')
         
@@ -742,7 +744,7 @@ class CompleteForCmd(CheckValidForCmd):
     
             
     def complete_finalize(self, text, line, begidx, endidx):
-        """ format: finalize madevent_v4 [PATH] [--nojpeg]"""
+        """ format: finalize madevent_v4|standalone_v4 [PATH] [--nojpeg]"""
         
         # Format
         if text.startswith('-'):
@@ -864,9 +866,9 @@ class CompleteForCmd(CheckValidForCmd):
         
         #name of the run =>proposes old run name
         if len(split_arg(line[0:begidx])) == 2: 
-            content = [name for name in os.listdir(MGME_dir) if \
+            content = [name for name in os.listdir(MG4DIR) if \
                                     name not in forbidden_name and \
-                                    os.path.isdir(os.path.join(MGME_dir, name))]
+                                    os.path.isdir(os.path.join(MG4DIR, name))]
             content += ['.', 'auto']
             return self.list_completion(text, content)
 
@@ -1569,7 +1571,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self._ufo_model = ufomodels.load_model(args[1])
             ufo2mg5_converter = import_ufo.converter_ufo_mg5(self._ufo_model)
             self._curr_model = ufo2mg5_converter.load_model()
-            self._model_dir = os.path.join(root_path, 'models', args[1])
+            self._model_dir = os.path.join(MG4DIR, 'models', args[1])
             self._curr_fortran_model = export_v4.UFOHelasFortranModel()
                     
         elif args[0] == 'model_v4':
@@ -1582,10 +1584,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # Check for a valid directory
             elif os.path.isdir(args[1]):
                 self._model_dir = args[1]
-            elif MGME_dir and os.path.isdir(os.path.join(MGME_dir, 'Models', \
+            elif MG4DIR and os.path.isdir(os.path.join(MG4DIR, 'Models', \
                                                                       args[1])):
-                self._model_dir = os.path.join(MGME_dir, 'Models', args[1])
-            elif not MGME_dir:
+                self._model_dir = os.path.join(MG4DIR, 'Models', args[1])
+            elif not MG4DIR:
                 error_text = "Path %s is not a valid pathname\n" % args[1]
                 error_text += "and no MG_ME installation detected in other to search in Models"
                 raise MadGraph5Error(error_text)
@@ -1604,7 +1606,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     import_v4file(self, os.path.join(self._model_dir, \
                                                                       filename))
                 else:
-                    raise MadGraph5Error("%s files doesn't exist in %s directory" % \
+                    raise self.RWError("%s file doesn't exist in %s directory" % \
                                         (filename, os.path.basename(args[1])))
             #save model for next usage
             self.do_save('model %s ' % os.path.join(self._model_dir, \
@@ -1651,8 +1653,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if not reader:
             raise MadGraph5Error('\"%s\" is not a valid path' % filepath)
         
-        if MGME_dir:
-            #model_dir = os.path.join(MGME_dir, 'Models')
+        if MG4DIR:
+            # Add comment to history
+            self.exec_cmd("# Import the model %s" % reader.model)
+            #model_dir = os.path.join(MG4DIR, 'Models')
             line = self.exec_cmd('import model_v4 %s' % (reader.model))
         else:
             logging.error('No MG_ME installation detected')
@@ -1668,17 +1672,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         return 
 
     def import_mg5_proc_card(self, filepath):
-        # change the status of this line in the history -> pass in comment
-        self.history[-1] = '\n#*        %s%s*\n' % (self.history[-1],
-                                                ' '*(50 -len(self.history[-1])))
-                                                     
+        # remove this call from history
+        self.history.pop()
         
         # Read the lines of the file and execute them
         for line in CmdFile(filepath):
             #remove pointless spaces and \n
             line = line.replace('\n', '').strip()
-            # execute the line if this one is not empty or comment
-            if line and not line.startswith('#*'):
+            # execute the line
+            if line:
                 self.exec_cmd(line)
 
         return
@@ -1762,16 +1764,24 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         else: 
             dir_path = args[1]
             
-        #look if the user ask to bypass the jpeg creation
-        if '--nojpeg' in args:
-            makejpg = False
-        else:
-            makejpg = True
-            
+        if self._export_format and self._export_format == 'madevent_v4' or \
+               not self._export_format and args[0] == 'madevent_v4':
+            #look if the user ask to bypass the jpeg creation
+            if '--nojpeg' in args:
+                makejpg = False
+            else:
+                makejpg = True
 
-     
-        export_v4.finalize_madevent_v4_directory(dir_path, makejpg,
-                                                 self.history)
+            os.system('touch %s/done' % os.path.join(dir_path,'SubProcesses'))        
+            export_v4.finalize_madevent_v4_directory(dir_path, makejpg,
+                                                     [self.history_header] + \
+                                                     self.history)
+        elif self._export_format and self._export_format == 'standalone_v4' \
+                 or not self._export_format and args[0] == 'standalone_v4':
+
+            export_v4.finalize_standalone_v4_directory(dir_path,
+                                                     [self.history_header] + \
+                                                     self.history)
 
         logger.info('Directory ' + dir_path + ' finalized')
 
@@ -1787,8 +1797,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         dir = '-d' in args
         if dir:
             mgme_dir = args[args.find('-d') + 1]
+        elif MG4DIR:
+            mgme_dir = MG4DIR
         else:
-            mgme_dir = MGME_dir
+            raise MadGraph5Error('No installation of  MG_ME (version 4) detected')
                                 
         # Check for special directory treatment
         if args[1] == '.':
@@ -1874,7 +1886,7 @@ class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
 class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
     """The command line processor of MadGraph""" 
     
-    writing_dir = MGME_dir
+    writing_dir = MG4DIR
     
     def preloop(self):
         """Initializing before starting the main loop"""
@@ -1936,7 +1948,7 @@ class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
         if line.strip() is '':
             self.help_shell()
         else:
-            logging.info("running shell command:", line)
+            logging.info("running shell command: " + line)
             subprocess.call(line, shell=True)
 
 #===============================================================================

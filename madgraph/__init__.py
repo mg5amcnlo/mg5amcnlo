@@ -12,7 +12,6 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-
 class MadGraph5Error(Exception):
     """Exception raised if an exception is find 
     Those Types of error will stop nicely in the cmd interface"""
@@ -20,8 +19,8 @@ class MadGraph5Error(Exception):
 import os
 
 #Look for basic file position MG5DIR and MG4DIR
-MG5DIR = os.path.realpath(os.path.join(
-                        os.path.dirname(os.path.realpath(__file__)), os.pardir))
+MG5DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),
+                                                                os.path.pardir))
 MG4DIR = None
 
 mg4_possibility = [os.path.join(MG5DIR, os.path.pardir),
@@ -30,7 +29,7 @@ mg4_possibility = [os.path.join(MG5DIR, os.path.pardir),
 
 for position in mg4_possibility:
     if os.path.exists(os.path.join(position, 'MGMEVersion.txt')) and \
-                    os.path.exists(os.path.join(position, 'UpdateNotes.txt')):
+                   os.path.exists(os.path.join(position, 'UpdateNotes.txt')):
         MG4DIR = os.path.realpath(position)
         break
 del mg4_possibility
