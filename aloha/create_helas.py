@@ -12,13 +12,13 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-from Carbon.Aliases import true
 import os
 import logging
 import sys
 import cPickle
 import numbers
 import time
+import shutil
 
 
 from aloha.helasamp_object import *
@@ -227,8 +227,10 @@ class AbstractHelas(object):
         """return the name of the """
         
         helasname = name + '_'
-        
-        for i in range(len(nb_part)):
+        if not isinstance(nb_part, int):
+            nb_part = len(nb_part)
+            
+        for i in range(nb_part):
             if i + 1 == outgoing:
                 helasname += '0'
             else:
@@ -241,7 +243,7 @@ class AbstractHelas(object):
 
         name = os.path.join(output_dir, 
                 self.gethelasname(self.name, self.outgoing, len(self.spins)))
-        infostr = str(self.expr)
+        infostr = str(self.lorentz_expr)
         isoutgoing = lambda i: i + 1 == self.outgoing
         info = [( self.spin_to_tag[spin], isoutgoing(i) ) \
                                            for i, spin in enumerate(self.spins)]
@@ -280,7 +282,7 @@ class AbstractHelasModel(dict):
         if write_dir:
             self.main(write_dir)
             
-    def main(self, output_dir, format='fortran'):
+    def main(self, output_dir, format='Fortran'):
         """ Compute if not already compute. 
             Write file in models/MY_MODEL/MY_FORMAT.
             copy the file to output_dir
@@ -291,19 +293,25 @@ class AbstractHelasModel(dict):
             self.compute_all()
         print len(self), 'helas routine'
             
+        # Check that output directory exists
+        aloha_dir = os.path.join(self.model_pos, format.lower())
+        if not os.path.exists(aloha_dir):
+            os.mkdir(aloha_dir)
+            
         # Check that all routine are generated at default places:
-        output_dir = os.path.join(self.model_pos, format)
         for (name, outgoing), abstract in self.items():
             routine_name = AbstractHelas.gethelasname(name, outgoing, 
                                                             len(abstract.spins))
-            if  not os.path.exists(os.path.join(output_dir, routine_name)):
+            if  not os.path.exists(os.path.join(aloha_dir, routine_name)):
                 abstract.write(output_dir, format)
         
         # Check that makefile and default file are up-to-date
+        self.insertTemplate(output_dir, format)
+        # Check helas_file.inc
+        self.write_helas_file_inc(output_dir)
         
-        # Check makefile.inc
+        # Copy model_routine in PROC
         
-        #
         
         
         
@@ -421,11 +429,11 @@ class AbstractHelasModel(dict):
                                 self.symmetries[lorentz.name] = {i+1:j+1}
                         break
 
-    def write_makefile_inc(self, output_dir):
+    def write_helas_file_inc(self, output_dir):
         """Create the helas_makefile.inc which is can be use for the makefile"""
         
         
-        text="HelasRoutine = "
+        text="HELASRoutine = "
         old_name = ''
         for (name, outgoing), abstract in self.items():
             if old_name != name:
@@ -435,6 +443,20 @@ class AbstractHelasModel(dict):
         text +='\n'
         file(os.path.join(output_dir,'helas_file.inc'), 'w').write(text)
 
+    def insertTemplate(self, outputdir, format):
+        """ copy the file from ALOHA/Template to output dir """
+        
+        if format == 'Fortran':
+            #copy Makefile
+            shutil.copy2(os.path.join(helas_path,'Template','Makefile_F'),
+                         os.path.join(outputdir, 'makefile') )
+            #copy fortran file
+            for filename in os.listdir(os.path.join(helas_path,'Template')):
+                if not filename.lower().endswith('.f'):
+                    continue
+                shutil.copy2(os.path.join(helas_path,'Template',filename), 
+                                                                      outputdir)
+            
 def create_library():
     
     def create(obj):

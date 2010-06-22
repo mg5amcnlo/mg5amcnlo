@@ -4,6 +4,7 @@ except:
     import aloha.Writter as FortranWriter
 import aloha.helasamp_object as Helas
 import aloha.helasamp_lib as Helas_Lib
+import os
 import re 
 from numbers import Number
 class WriteHelas: 
@@ -17,7 +18,7 @@ class WriteHelas:
         self.obj = object
         self.out = open(out_path + '.f', 'w')
         self.particles = particlelist 
-        self.namestring = out_path
+        self.namestring = os.path.basename(out_path)
         self.comment = comment
         
     def collect_variables(self):

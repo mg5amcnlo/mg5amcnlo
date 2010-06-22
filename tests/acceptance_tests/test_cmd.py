@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+import subprocess
 import unittest
 import os
 import shutil
@@ -75,11 +76,10 @@ class TestCmdShell1(unittest.TestCase):
 
 
 class TestCmdShell2(unittest.TestCase):
-    """The TestCase class for the test the FeynmanLine"""
+    """Test all command line related to MG_ME"""
 
     def setUp(self):
         """ basic building of the class to test """
-        
         
         self.cmd = Cmd.MadGraphCmdShell()
         if  MG4DIR:
@@ -87,13 +87,16 @@ class TestCmdShell2(unittest.TestCase):
             self.out_dir = os.path.join(MG4DIR, 'AUTO_TEST_MG5')
         else:
             raise Exception, 'NO MG_ME dir for this test'   
-        self.do('import model_v4 sm')
+        if os.path.exists(self.out_dir):
+            shutil.rmtree(self.out_dir)
+
+
         
         
     def tearDown(self):
         """ basic destruction after have run """
-        if os.path.exists(self.out_dir):
-            shutil.rmtree(self.out_dir)
+        #if os.path.exists(self.out_dir):
+        #    shutil.rmtree(self.out_dir)
     
     join_path = TestCmdShell1.join_path
 
@@ -104,7 +107,8 @@ class TestCmdShell2(unittest.TestCase):
     
     def test_setup_madevent_directory(self):
         """ command 'setup' works with path"""
-        
+
+        self.do('import model_v4 sm')        
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('setup madevent_v4 %s' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
@@ -129,7 +133,8 @@ class TestCmdShell2(unittest.TestCase):
         os.system('cp -rf %s %s' % (
                             self.join_path(_pickle_path,'simple_v4_proc_card.dat'),
                             os.path.join(self.out_dir,'Cards','proc_card.dat')))
-        
+    
+        self.do('import model_v4 sm')
         self.do('import proc_v4 %s' % os.path.join(self.out_dir,
                                                        'Cards','proc_card.dat'))
 
@@ -149,6 +154,7 @@ class TestCmdShell2(unittest.TestCase):
     def test_read_madgraph4_proc_card_with_setup(self):
         """ command 'setup' works with '.' """
 
+        self.do('import model_v4 sm')
         self.do('setup madevent_v4 %s' % self.out_dir)
         self.do('import proc_v4 %s' % self.join_path(_pickle_path, \
                                                      'simple_v4_proc_card.dat'))
@@ -161,6 +167,7 @@ class TestCmdShell2(unittest.TestCase):
     def test_setup_standalone_directory(self):
         """ command 'setup' works with path"""
         
+        self.do('import model_v4 sm')
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('setup standalone_v4 %s' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
@@ -172,3 +179,21 @@ class TestCmdShell2(unittest.TestCase):
         self.do('finalize')
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'Cards', 'proc_card_mg5.dat')))
+        
+    def test_ufo_aloha(self):
+        """ test the import of models and the export of Helas Routine """
+        
+        self.do('import model sm2')
+        self.do('generate e+e->e+e-')
+        self.do('setup madevent_v4 %s ' % self.out_dir)
+        self.do('export')
+        devnull = open(os.devnull,'w')
+        subprocess.call(['make'], stdout=devnull, stderr=devnull, 
+                                    cwd=os.path.join(self.out_dir, 'Source'))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libdhelas3.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libmodel.a')))        
+        
+        
+        

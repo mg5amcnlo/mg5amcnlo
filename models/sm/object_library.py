@@ -6,7 +6,6 @@
 ##
 ##
 ##
-import numbers
 
 class FRBaseClass(object):
     """The class from which all FeynRules classes are derived."""
@@ -32,49 +31,68 @@ class FRBaseClass(object):
         """Return a dictionary containing all the information of the object"""
         return self.__dict__
 
+    def __str__(self):
+        return self.name
+
+
+    def __repr__(self):
+        replacements = [
+            ('+','__plus__'),
+            ('-','__minus__'),
+            ('@','__at__'),
+            ('!','__exclam__'),
+            ('?','__quest__'),
+            ('*','__star__'),
+            ('~','__tilde__')
+            ]
+        text = self.name
+        for orig,sub in replacements:
+            text = text.replace(orig,sub)
+        return text
+
 
 
 all_particles = []
 
+    
+
 class Particle(FRBaseClass):
     """A standard Particle"""
 
-    require_args=['pdg_code', 'name', 'antiname', 'spin', 'color', 'mass', 'width', 'texname',
-                 'antitexname', 'line', 'charge']
+    require_args=['pdg_code', 'name', 'antiname', 'spin', 'color', 'mass', 'width', 'texname', 'antitexname', 'line', 'charge']
+
+    require_args_all = ['pdg_code', 'name', 'antiname', 'spin', 'color', 'mass', 'width', 'texname', 'antitexname', 'line', 'charge', 'propagating', 'goldstoneboson']
 
     def __init__(self, pdg_code, name, antiname, spin, color, mass, width, texname,
-                 antitexname, line, charge , propagating=True, GoldstoneBoson=False, **options):
-        
+                 antitexname, line, charge , propagating=True, goldstoneboson=False, **options):
+
         args= (pdg_code, name, antiname, spin, color, mass, width, texname,
-                 antitexname, line, charge)
+                 antitexname, line, float(charge))
 
         FRBaseClass.__init__(self, *args,  **options)
 
         global all_particles
         all_particles.append(self)
-        
+
         self.propagating = propagating
-        self.goldstone = GoldstoneBoson
+        self.goldstoneboson= goldstoneboson
 
         self.selfconjugate = (name == antiname)
 
-    def __str__(self):
-        return self.name
-    __repr__ = __str__
-
     def anti(self):
         if self.selfconjugate:
-           raise Exception('%s has no anti particle.' % self.name) 
+            raise Exception('%s has no anti particle.' % self.name) 
         outdic = {}
         for k,v in self.__dict__.iteritems():
-            if k not in self.require_args:                
-		if isinstance(v, bool):
-		    outdic[k] = v
-                else:
-                    outdic[k] = -v
-
-        return Particle(-self.pdg_code, self.antiname, self.name, self.spin, -self.color, self.mass, self.width, self.antitexname,
-                  self.texname, self.line, -self.charge, **outdic)
+            if k not in self.require_args_all:                
+                outdic[k] = -v
+        if self.color in [1,8]:
+            newcolor = self.color
+        else:
+            newcolor = -self.color
+                
+        return Particle(-self.pdg_code, self.antiname, self.name, self.spin, newcolor, self.mass, self.width,
+                        self.antitexname, self.texname, self.line, -self.charge, self.propagating, self.goldstoneboson, **outdic)
 
 
 
@@ -86,7 +104,7 @@ class Parameter(FRBaseClass):
 
     def __init__(self, name, nature, type, value, texname, lhablock=None, lhacode=None):
 
-	args = (name,nature,type,value,texname)
+        args = (name,nature,type,value,texname)
 
         FRBaseClass.__init__(self, *args)
 
@@ -100,22 +118,16 @@ class Parameter(FRBaseClass):
         self.lhablock = lhablock
         self.lhacode = lhacode
 
-    def __str__(self):
-        return self.name
-    __repr__ = __str__
-
-
-
 all_vertices = []
 
 class Vertex(FRBaseClass):
 
-    require_args=['particles', 'color', 'lorentz', 'couplings']
+    require_args=['name', 'particles', 'color', 'lorentz', 'couplings']
 
-    def __init__(self, particles, color, lorentz, couplings, **opt):
+    def __init__(self, name, particles, color, lorentz, couplings, **opt):
  
-	args = (particles, color, lorentz, couplings)
-	
+        args = (name, particles, color, lorentz, couplings)
+
         FRBaseClass.__init__(self, *args, **opt)
 
         args=(particles,color,lorentz,couplings)
@@ -130,14 +142,12 @@ class Coupling(FRBaseClass):
     require_args=['name', 'value', 'order']
 
     def __init__(self, name, value, order, **opt):
-	
-	args =(name, value, order)	
+
+        args =(name, value, order)	
         FRBaseClass.__init__(self, *args, **opt)
-	
         global all_couplings
         all_couplings.append(self)
-
-    
+  
 
 
 all_lorentz = []
@@ -152,7 +162,3 @@ class Lorentz(FRBaseClass):
 
         global all_lorentz
         all_lorentz.append(self)
-
-    def __str__(self):
-        return self.name
-    __repr__ = __str__

@@ -115,7 +115,7 @@ class CmdExtended(cmd.Cmd):
         '#*                                                          *\n' + \
         '#*     automaticaly generated the %(time)s%(fill)s*\n' + \
         '#*                                                          *\n' + \
-        '#************************************************************'
+        '#************************************************************\n'
         
         self.log = True
         self.history = []
@@ -182,7 +182,11 @@ class CmdExtended(cmd.Cmd):
             debug_file = open('MG5_debug', 'a')
             traceback.print_exc(file=debug_file)
             # Create a nice error output
-            error_text ='Command \"%s\" was interrupted with error:\n' % line
+            if line == self.history[-1]:
+                error_text = 'Command \"%s\" interrupted with error:\n' % line
+            else:
+                error_text = 'Command \"%s\" interrupted in sub-command:\n' %line
+                error_text += '\"%s\" with error:\n' % self.history[-1]
             error_text += '%s : %s\n' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
             error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5'
             error_text += 'More information is found in \'%s\'.\n' % \
@@ -191,7 +195,7 @@ class CmdExtended(cmd.Cmd):
             logger_stderr.critical(error_text)
             #stop the execution if on a non interactive mode
             if self.use_rawinput == False:
-                sys.exit('Exit on erro')
+                sys.exit()
 
     def exec_cmd(self, line):
         """for third party call, call the line with pre and postfix treatment"""

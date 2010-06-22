@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 161 $
-# Mathematica version: 7.0 for Mac OS X x86 (64-bit) (February 19, 2009)
-# Date: Thu 20 May 2010 23:00:41
+# This file was automatically created by FeynRules $Revision: 189 $
+# Mathematica version: 7.0 for Linux x86 (32-bit) (November 11, 2008)
+# Date: Wed 16 Jun 2010 15:21:32
 
 
 # 
@@ -37,9 +37,9 @@
 
 
 # Vertices
-   * Calling FeynmanRules for 4 Lagrangians.
-   * Number of classes vertices: 30
-   * Number of flavored vertices: 61
+   * Calling FeynmanRules for 5 Lagrangians.
+   * Number of classes vertices: 93
+   * Number of flavored vertices: 163
    * Checked QNumber conservation.
    * particles.py written.
    * parameters.py written.
@@ -47,17 +47,17 @@
 # Vertex definitions
 #
 
-   * 61 vertices written.
+   * 163 vertices written.
    * vertices.py written.
 #
 # Lorentz structure definitions
 #
 
-   * 16 lorentz structures written.
+   * 28 lorentz structures written.
    * lorentz.py written.
 #
 # Coupling definitions
 #
 
-   * 36 couplings written.
+   * 136 couplings written.
    * couplings.py written.

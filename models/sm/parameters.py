@@ -1,10 +1,13 @@
-# This file was automatically created by FeynRules $Revision: 161 $
-# Mathematica version: 7.0 for Mac OS X x86 (64-bit) (February 19, 2009)
-# Date: Thu 20 May 2010 23:00:45
+# This file was automatically created by FeynRules $Revision: 189 $
+# Mathematica version: 7.0 for Linux x86 (32-bit) (November 11, 2008)
+# Date: Wed 16 Jun 2010 15:21:39
 
 
 
 from object_library import all_parameters, Parameter
+
+
+from function_library import complexconjugate
 
 cabi = Parameter(name = 'cabi',
                  nature = 'external',
@@ -70,6 +73,22 @@ ymtau = Parameter(name = 'ymtau',
                   lhablock = 'YUKAWA',
                   lhacode = [ 15 ])
 
+Me = Parameter(name = 'Me',
+               nature = 'external',
+               type = 'real',
+               value = 0.000511,
+               texname = '\\text{Me}',
+               lhablock = 'MASS',
+               lhacode = [ 11 ])
+
+MM = Parameter(name = 'MM',
+               nature = 'external',
+               type = 'real',
+               value = 0.10566,
+               texname = '\\text{MM}',
+               lhablock = 'MASS',
+               lhacode = [ 13 ])
+
 MTA = Parameter(name = 'MTA',
                 nature = 'external',
                 type = 'real',
@@ -77,6 +96,14 @@ MTA = Parameter(name = 'MTA',
                 texname = '\\text{MTA}',
                 lhablock = 'MASS',
                 lhacode = [ 15 ])
+
+MU = Parameter(name = 'MU',
+               nature = 'external',
+               type = 'real',
+               value = 0.00255,
+               texname = 'M',
+               lhablock = 'MASS',
+               lhacode = [ 2 ])
 
 MC = Parameter(name = 'MC',
                nature = 'external',
@@ -93,6 +120,22 @@ MT = Parameter(name = 'MT',
                texname = '\\text{MT}',
                lhablock = 'MASS',
                lhacode = [ 6 ])
+
+MD = Parameter(name = 'MD',
+               nature = 'external',
+               type = 'real',
+               value = 0.00504,
+               texname = '\\text{MD}',
+               lhablock = 'MASS',
+               lhacode = [ 1 ])
+
+MS = Parameter(name = 'MS',
+               nature = 'external',
+               type = 'real',
+               value = 0.104,
+               texname = '\\text{MS}',
+               lhablock = 'MASS',
+               lhacode = [ 3 ])
 
 MB = Parameter(name = 'MB',
                nature = 'external',
@@ -162,6 +205,36 @@ G = Parameter(name = 'G',
               value = '2*cmath.sqrt(aS)*cmath.sqrt(cmath.pi)',
               texname = 'G')
 
+ye = Parameter(name = 'ye',
+               nature = 'internal',
+               type = 'real',
+               value = '0',
+               texname = '\\text{ye}')
+
+ym = Parameter(name = 'ym',
+               nature = 'internal',
+               type = 'real',
+               value = '0',
+               texname = '\\text{ym}')
+
+yu = Parameter(name = 'yu',
+               nature = 'internal',
+               type = 'real',
+               value = '0',
+               texname = '\\text{yu}')
+
+yd = Parameter(name = 'yd',
+               nature = 'internal',
+               type = 'real',
+               value = '0',
+               texname = '\\text{yd}')
+
+ys = Parameter(name = 'ys',
+               nature = 'internal',
+               type = 'real',
+               value = '0',
+               texname = '\\text{ys}')
+
 CKM11 = Parameter(name = 'CKM11',
                   nature = 'internal',
                   type = 'complex',
@@ -174,6 +247,12 @@ CKM12 = Parameter(name = 'CKM12',
                   value = 'cmath.sin(cabi)',
                   texname = '\\text{CKM12}')
 
+CKM13 = Parameter(name = 'CKM13',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '0',
+                  texname = '\\text{CKM13}')
+
 CKM21 = Parameter(name = 'CKM21',
                   nature = 'internal',
                   type = 'complex',
@@ -185,6 +264,30 @@ CKM22 = Parameter(name = 'CKM22',
                   type = 'complex',
                   value = 'cmath.cos(cabi)',
                   texname = '\\text{CKM22}')
+
+CKM23 = Parameter(name = 'CKM23',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '0',
+                  texname = '\\text{CKM23}')
+
+CKM31 = Parameter(name = 'CKM31',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '0',
+                  texname = '\\text{CKM31}')
+
+CKM32 = Parameter(name = 'CKM32',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '0',
+                  texname = '\\text{CKM32}')
+
+CKM33 = Parameter(name = 'CKM33',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '1',
+                  texname = '\\text{CKM33}')
 
 MW = Parameter(name = 'MW',
                nature = 'internal',

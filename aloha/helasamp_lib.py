@@ -918,8 +918,8 @@ class MultLorentz(MultVariable):
         """check if i and j are compatible up to sum up indices"""
         
         # Fail if not the same class
-        #if self[i].__class__ != obj[j].__class__:
-        #    return False
+        if self[i].__class__ != obj[j].__class__:
+            return False
         
         # Check if an assignement already exist for any of the factor consider
         if map.has_key(i):

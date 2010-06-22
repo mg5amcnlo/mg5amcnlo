@@ -30,14 +30,14 @@ def import_model(model=None, model_name=None):
     elif not model:
         raise madgraph.MadGraph5Error( \
                     'import_ufo.import_model should have at least one argument')
-    ufo2mg5_converter = converter_ufo_mg5(model)
+    ufo2mg5_converter = converter_ufo_mg5(model, auto=False)
     return ufo2mg5_converter.load_model()
     
 
 class converter_ufo_mg5(object):
     """Convert a UFO model to the MG5 format"""
 
-    def __init__(self, model, auto=True):
+    def __init__(self, model, auto=False):
         """ initialize empty list for particles/interactions """
         
         self.particles = base_objects.ParticleList()
@@ -54,7 +54,8 @@ class converter_ufo_mg5(object):
     def load_model(self):
         """load the different of the model first particles then interactions"""
 
-        for particle_info in self.ufomodel.all_particles:
+        print 'load particle'
+        for particle_info in self.ufomodel.all_particles:            
             self.add_particle(particle_info)
             
         for interaction_info in self.ufomodel.all_vertices:
@@ -68,13 +69,17 @@ class converter_ufo_mg5(object):
         
         # MG5 have only one entry for particle and anti particles.
         #UFO has two. use the color to avoid duplictions
-        if particle_info.color < 0:
+        if particle_info.pdg_code < 0:
             return
         
-        # MG5 doesn't ghost (use unitary gauges)
+        # MG5 doesn't use ghost (use unitary gauges)
         if particle_info.spin < 0:
-            return        
-        
+            return 
+        # MG5 doesn't use goldstone boson 
+        if hasattr(particle_info, 'GoldstoneBoson'):
+            if particle_info.GoldstoneBoson:
+                return
+               
         # Initialize a particles
         particle = base_objects.Particle()
 
@@ -111,7 +116,13 @@ class converter_ufo_mg5(object):
         # Import particles content:
         particles = [self.model.get_particle(particle.pdg_code) \
                                     for particle in interaction_info.particles]
+
+        if None in particles:
+            # Interaction with a ghost/goldstone
+            return 
+            
         particles = base_objects.ParticleList(particles)
+        
         interaction.set('particles', particles)       
         
         # Import Lorentz content:
