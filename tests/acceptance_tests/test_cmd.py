@@ -183,7 +183,7 @@ class TestCmdShell2(unittest.TestCase):
     def test_ufo_aloha(self):
         """ test the import of models and the export of Helas Routine """
         
-        self.do('import model sm2')
+        self.do('import model sm')
         self.do('generate e+e->e+e-')
         self.do('setup madevent_v4 %s ' % self.out_dir)
         self.do('export')
