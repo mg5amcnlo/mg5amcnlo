@@ -82,6 +82,14 @@ class FracVariable(object):
             self.tag = self.denominator.tag
         else:
             self.tag = self.numerator.tag.union(self.denominator.tag)
+    
+    def copy(self):
+        """return a copy of the frac variable"""
+        num = self.numerator.copy()
+        den = self.denominator.copy()
+        return FracVariable(num,den)
+    
+        
         
     def simplify(self):
         """apply rule of simplification"""
@@ -186,6 +194,10 @@ class AddVariable(list):
         self.prefactor = prefactor
         self.tag = set()
         list.__init__(self, old_data)
+        
+    def copy(self):
+        """ return a deep copy of the object"""
+        return self.__class__(self, self.prefactor)
  
     def simplify(self, short=False):
         """ apply rule of simplification """
@@ -229,8 +241,8 @@ class AddVariable(list):
         if not self:
             return self
         
-        new = ConstantObject()
-        for item in self:
+        new = self[0].expand()
+        for item in self[1:]:
             new += item.expand()       
         return new
         
@@ -296,7 +308,10 @@ class AddVariable(list):
             factor = 1 / obj 
             return factor * self
         else:
-            return FracVariable(self, obj)
+            new_num = AddVariable(self, self.prefactor)
+            new_denom = obj.copy()
+            
+            return FracVariable(new_num, new_denom)
  
     def __rdiv__(self, obj):
         """Deal division in a inverse way"""
@@ -453,6 +468,10 @@ class MultVariable(list):
         self.prefactor = prefactor
         self.tag = set()
         list.__init__(self, old_data)
+        
+    def copy(self):
+        """ return a copy """
+        return self.__class__(self, self.prefactor)
         
     def simplify(self):
         """ simplify the product"""
@@ -899,8 +918,8 @@ class MultLorentz(MultVariable):
         """check if i and j are compatible up to sum up indices"""
         
         # Fail if not the same class
-        if self[i].__class__ != obj[j].__class__:
-            return False
+        #if self[i].__class__ != obj[j].__class__:
+        #    return False
         
         # Check if an assignement already exist for any of the factor consider
         if map.has_key(i):
@@ -1025,7 +1044,7 @@ class MultLorentz(MultVariable):
         #check basic consitency
         if len(lorentz_contract_self) != len(lorentz_contract_obj):
             return False
-        
+
         # Try to achieve to have a mapping between the two representations
         mapping = {}
         a = self.find_equivalence(obj, 0, lorentz_contract_self, \
@@ -1192,6 +1211,9 @@ class LorentzObjectRepresentation(dict):
             dict.__init__(self, representation) 
         else:
             self[(0,)] = representation
+            
+    def copy(self):
+        return self
 
     def __add__(self, obj, fact=1):
         assert(obj.vartype == 4 == self.vartype) # are LorentzObjectRepresentation
@@ -1220,7 +1242,7 @@ class LorentzObjectRepresentation(dict):
         else:
             # no mapping needed (define switch as identity)
             switch = lambda ind : (ind)
-        
+            
         # define an empty representation
         new = LorentzObjectRepresentation({}, self.lorentz_ind, self.spin_ind , \
                                                             self.tag.union(obj.tag))
@@ -1228,7 +1250,6 @@ class LorentzObjectRepresentation(dict):
         # loop over all indices and fullfill the new object           
         if fact == 1:
             for ind in self.listindices():
-                #permute index for the second object
                 value = self.get_rep(ind) + obj.get_rep(switch(ind))
                 new.set_rep(ind, value)
         else:
@@ -1282,7 +1303,6 @@ class LorentzObjectRepresentation(dict):
         # create an empty representation but with correct indices
         new_object = LorentzObjectRepresentation({}, l_ind, s_ind, \
                                                        self.tag.union(obj.tag))
-        
         #loop and fullfill the representation
         for indices in new_object.listindices():
             #made a dictionary (pos -> index_value) for how call the object
@@ -1292,6 +1312,7 @@ class LorentzObjectRepresentation(dict):
             new_object.set_rep(indices, \
                                self.contraction(obj, sum_l_ind, sum_s_ind, \
                                                  dict_l_ind, dict_s_ind))
+
         return new_object
 
     @staticmethod
@@ -1331,7 +1352,7 @@ class LorentzObjectRepresentation(dict):
         l_sum/s_sum are the position of the sum indices
         l_dict/s_dict are dict given the value of the fix indices (indices->value)
         """
-         
+        
         out = 0 # initial value for the output
         len_l = len(l_sum) #store len for optimization
         len_s = len(s_sum) # same
@@ -1354,9 +1375,8 @@ class LorentzObjectRepresentation(dict):
                 
                 if factor:
                     #compute the prefactor due to the lorentz contraction
-                    factor *= (-1) ** (len(l_value) - l_value.count(0)) 
-                    out += factor
-                    
+                    factor *= (-1) ** (len(l_value) - l_value.count(0))
+                    out += factor                         
         return out
 
     def combine_indices(self, l_dict, s_dict):
@@ -1455,9 +1475,7 @@ class LorentzObjectRepresentation(dict):
     def listindices(self):
         """Return an iterator in order to be able to loop easily on all the 
         indices of the object."""
-        
         return IndicesIterator(self.nb_ind)
-        
         
     def get_rep(self, indices):
         """return the value/Variable associate to the indices"""
@@ -1474,9 +1492,9 @@ class LorentzObjectRepresentation(dict):
         
         if self.__class__ != obj.__class__:
             return False
-        if self.lorentz_ind != obj.lorentz_ind:
+        if len(self.lorentz_ind) != len(obj.lorentz_ind):
             return False
-        if self.spin_ind != obj.spin_ind:
+        if len(self.spin_ind) != len(obj.spin_ind):
             return False
         
         for ind in self.listindices():
@@ -1527,6 +1545,10 @@ class ConstantObject(LorentzObjectRepresentation):
         if var:
             self.variable = str(var)
 #            self.vartype = 0 #act as a Variable
+
+    def copy(self):
+        """ return a copy of the object """
+        return ConstantObject(self.value)
        
     def __add__(self, obj):
         """Addition with a constant"""

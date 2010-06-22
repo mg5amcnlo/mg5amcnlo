@@ -259,6 +259,9 @@ class AbstractHelas(object):
 class AbstractHelasModel(dict):
     """ A class to buid and store the full set of Abstract Helas Routine"""
 
+    files_from_template = ['makefile', 'sxxxxx.f','ixxxxx.f', 'oxxxxx.f',
+                           'vxxxxx.f', 'txxxxx.f', 'pxxxxx.f']
+
     def __init__(self, model_name, write_dir=None):
         """ load the UFO model and init the dictionary """
         
@@ -277,14 +280,30 @@ class AbstractHelasModel(dict):
         if write_dir:
             self.main(write_dir)
             
-    def main(self, output_dir):
-        """ """
+    def main(self, output_dir, format='fortran'):
+        """ Compute if not already compute. 
+            Write file in models/MY_MODEL/MY_FORMAT.
+            copy the file to output_dir
+        """
         
         # Check if a pickle file exists
         if not self.load():
             self.compute_all()
         print len(self), 'helas routine'
             
+        # Check that all routine are generated at default places:
+        output_dir = os.path.join(self.model_pos, format)
+        for (name, outgoing), abstract in self.items():
+            routine_name = AbstractHelas.gethelasname(name, outgoing, 
+                                                            len(abstract.spins))
+            if  not os.path.exists(os.path.join(output_dir, routine_name)):
+                abstract.write(output_dir, format)
+        
+        # Check that makefile and default file are up-to-date
+        
+        # Check makefile.inc
+        
+        #
         
         
         

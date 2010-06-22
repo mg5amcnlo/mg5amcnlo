@@ -105,11 +105,11 @@ class CheckFileCreate():
     def clean_files(self):
         """ suppress all the files linked to this test """
         
-        #for filename in self.created_files:
-        #    try:
-        #        os.remove(self.give_pos(filename))
-        #    except OSError:
-        #        pass
+        for filename in self.created_files:
+            try:
+                os.remove(self.give_pos(filename))
+            except OSError:
+                pass
     
 
 class TestModelCreation(unittest.TestCase, CheckFileCreate):

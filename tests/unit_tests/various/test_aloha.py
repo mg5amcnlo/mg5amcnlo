@@ -101,8 +101,7 @@ class TestVariable(unittest.TestCase):
             if data == self.var3:
                 self.assertFalse(data is self.var3)
             else:
-                self.assertFalse(data is self.var1)
-                self.assertFalse(data is self.var2)
+                self.assertTrue(data is self.var1 or data is self.var2)
                     
                 
         #test prefactor- constant_term
@@ -336,7 +335,7 @@ class TestAddVariable(unittest.TestCase):
         var1 = HelasObject.P(1,2)
         var2 = HelasObject.P(2,2)
         prod = var1 * var2
-        assert(prod.__class__, HelasLib.MultLorentz)
+        #assert(prod.__class__, HelasLib.MultLorentz)
         var3 = HelasObject.Metric(1,2)
         
         sum = (var3 + var1 * var2)    
@@ -458,7 +457,6 @@ class TestAddVariable(unittest.TestCase):
         
         sum = p1 * p2 + p1 * p3 + 2 * p1 + 2 *p1 * p2 * p4
         sum = sum.factorize()
-        print sum
         #Should return p1*(p2(2*p4 + 1) + p3 + 2)
     
         self.assertEqual(sum.__class__,HelasLib.MultVariable)
@@ -488,7 +486,6 @@ class TestAddVariable(unittest.TestCase):
                                     if term2 == p4:
                                         self.assertEqual(term2.prefactor,2)
                                     else:
-                                        print term2, term2.__class__
                                         self.assertEqual(term2, \
                                                     HelasLib.ConstantObject(1))
  
@@ -499,15 +496,8 @@ class TestAddVariable(unittest.TestCase):
         om1 = HelasLib.ScalarVariable('om1',[])
         sum = 2/3 * s3 * s2 - 4/3 * p1 * p1 * s3 * s2 * om1 + \
               2/3 * p1 * p1 * p1 * p1 * om1 *om1
-        print sum  
         sum = sum.factorize()
-        print sum
-        
-        
 
-             
-            
-            
             
             
 class TestMultVariable(unittest.TestCase):
@@ -668,7 +658,18 @@ class TestMultVariable(unittest.TestCase):
     def testsummultint(self):
         """Test the sum of a MultVariable object with a number"""
         
-        self.assertRaises(AttributeError, HelasLib.MultVariable.__add__, self.mult1, 2)
+        add = self.mult1 + 2
+        self.assertEqual(add.__class__, HelasLib.AddVariable)
+        self.assertEqual(len(add), 2)
+        for term in add:
+            if term.__class__ == HelasLib.MultVariable:
+                self.assertEqual(term.prefactor, 6)
+                self.assertEqual(len(term), 2)
+                self.assertFalse(term is self.mult1)
+            else:
+                self.assertEqual(term.__class__, HelasLib.ConstantObject)
+                self.assertEqual(term.value, 2)
+        
         return
         
     def testsummultadd(self):
@@ -1517,8 +1518,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         self.assertEqual(new.get_rep([3]).prefactor, 1)       
       
       
-      
-    def testsumofLorentzObj(self):
+    def test_sumofLorentzObj(self):
         """ Check the sumation of LorentzObject"""
         
         sum = self.p1nu + self.p2nu
@@ -1718,8 +1718,71 @@ class TestSomeObjectProperty(unittest.TestCase):
                 mapind = lambda ind : [ind[0],ind[2],ind[1]]            
             self.assertEqual(obj1.get_rep(ind),obj2.get_rep(mapind(ind)))
         #self.assertEqual(obj1, obj2)         
+
+
+    def testgammaproperty(self):
+        """ Check constitutive properties of Gamma """
+        Gamma = HelasObject.Gamma
+        Gamma5 = HelasObject.Gamma5
+        Sigma = HelasObject.Sigma
+        ProjM = HelasObject.ProjM
+        ProjP = HelasObject.ProjP
+        Identity = HelasObject.Identity
+        Metric = HelasObject.Metric        
+
+        # Gamma_mu* Gamma_mu = 4 * Id
+        fact1 = HelasObject.Gamma('mu', 'a', 'b')
+        fact2 = HelasObject.Gamma('mu', 'b', 'c')
+        fact1 = fact1.expand()
+        fact2 = fact2.expand()
         
-    def testGammaAlgebra(self):
+        result = 4 * HelasObject.Identity('a','c')
+        result = result.expand().simplify()
+        prod = fact1 * fact2  
+        self.assertEqual(prod, result)
+
+        # gamma_product Gamma_mu * Gamma_nu = - Gamma_nu * Gamma_mu
+        prod_gam = Gamma(1,1,2) * Gamma(2,2,3)
+        prod_gam = prod_gam.simplify().expand().simplify()
+        for ind in prod_gam.listindices():
+            if ind[0] != ind[1]:
+                self.assertEqual(prod_gam.get_rep(ind), 
+                    -1 * prod_gam.get_rep((ind[1],ind[0],ind[2],ind[3])),ind)
+        
+        prod_gam2 = Gamma(2,1,2) * Gamma(1,2,3)
+        self.assertNotEqual(prod_gam, prod_gam2)
+    
+        # Sigma_mu_nu * Sigma_mu_nu = 12* Id
+        sigma_cont  = Sigma(1,2,1,2) * Sigma(1,2,2,1) 
+        sigma_cont = sigma_cont.expand().simplify()
+        self.assertEqual(sigma_cont.get_rep((0,)), 48)
+
+        # Sigma_mu_nu * Gamma_nu = 3i * Gamma_nu # Trace
+        prod = Sigma(1,2,'a','b') * Gamma(2,'b','a')
+        prod = prod.expand().simplify()
+        self.assertEqual(prod.get_rep((0,)), 0)
+
+        # Sigma_mu_nu * Gamma_nu = 3i * Gamma_nu # Full
+        zero = Sigma(1,2,'a','b') * Gamma(2,'b','c') - complex(0,3) * Gamma(1,'a','c')
+        zero = zero.expand().simplify()
+        for ind in zero.listindices():
+            self.assertEqual(zero.get_rep(ind), 0, '%s != 0.0for %s' % \
+                             (zero.get_rep(ind), ind))  
+
+
+    def test_other(self):        
+        Gamma = HelasObject.Gamma
+        Gamma5 = HelasObject.Gamma5
+        Sigma = HelasObject.Sigma
+        ProjM = HelasObject.ProjM
+        ProjP = HelasObject.ProjP
+        Identity = HelasObject.Identity
+        Metric = HelasObject.Metric  
+        
+
+    
+        
+    def testGammaAlgebraDefinition(self):
         """Test the coherence between gamma/gamma5/sigma/projector"""
         Gamma = HelasObject.Gamma
         Gamma5 = HelasObject.Gamma5
@@ -1781,22 +1844,50 @@ class TestSomeObjectProperty(unittest.TestCase):
         identity2 = identity2.simplify().expand().simplify()
         
         self.assertEqual(identity,identity2)
-        
+          
         #metric_mu_nu = 1/2 {Gamma_nu, Gamma_mu} 
         metric = 1/2 * (Gamma(1,1,2)*Gamma(2,2,3) + Gamma(2,1,2)*Gamma(1,2,3))
         metric = metric.simplify().expand().simplify() 
         
         metric2 = Metric(1,2) * Identity(1,3)
-        metric2 = metric2.simplify().expand().simplify()        
+        metric2 = metric2.simplify().expand().simplify()
+        for ind in metric.listindices(): 
+            self.assertEqual(metric.get_rep(ind), metric2.get_rep(ind))
         self.assertEqual(metric, metric2)
-        
-        #Sigma_mu_nu = 1/(2i) * [Gamma_mu, Gamma_nu]
+
+       
+        #Sigma_mu_nu = i/2 * [Gamma_mu, Gamma_nu]
         sigma = complex(0, 1/2) * (Gamma(1,1,2)*Gamma(2,2,3) - Gamma(2,1,2)*Gamma(1,2,3))
-        sigma = sigma.simplify().expand().simplify()        
+
+        #handly build
+        sigma_2 = HelasLib.LorentzObjectRepresentation({},[2,1],[3,1],[])
+        prod_gam = Gamma(1,1,2) * Gamma(2,2,3)
+        prod_gam = prod_gam.expand().simplify()
+        for ind in prod_gam.listindices():
+            if ind[0] == ind[1]:
+                sigma_2.set_rep(ind, 0)
+            else:
+                value = complex(0, 1)* (prod_gam.get_rep(ind))
+                sigma_2.set_rep(ind, value)
+     
+        sigma_3 = Sigma(1,2,1,3)
+        diff1 = sigma - sigma_3
+        diff1 = diff1.simplify()
+        diff1 = diff1.expand()
+        diff1 = diff1.simplify()
         
-        sigma2 = Sigma(1,2,1,3)
-        sigma2 = sigma2.simplify().expand().simplify()        
-        self.assertEqual(sigma, sigma2) 
+        for ind in diff1.listindices():
+            self.assertEqual(diff1.get_rep(ind), 0)
+        
+        diff1 = sigma.expand() + -1 * sigma_2
+        diff1 = diff1.simplify()
+        for ind in diff1.listindices():
+            self.assertEqual(diff1.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (diff1.get_rep(ind),ind ))       
+
+        
+
+ 
     
     def testemptyisFalse(self):
 
