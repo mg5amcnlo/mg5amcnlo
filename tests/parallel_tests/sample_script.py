@@ -21,40 +21,46 @@ inheritance of the MERunner class.
 
 import logging
 import me_comparator
+import os
+import sys
 
 # Get full logging info
-#logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO)
 
-# specify the position of different codes
-mg4_path = "MG_ME"
-mg5_path = "../../"
+#Look for MG5/MG4 path
+mg5_path = os.sep.join(os.path.realpath(__file__).split(os.sep)[:-3])
+sys.path.append(mg5_path)
+from madgraph import MG4DIR
+mg4_path = MG4DIR
+
+
+
 
 # Create a list of processes to check automatically
-my_proc_list = me_comparator.create_proc_list(['w+', 'w-', 'a', 'h'],
-                                      initial=2, final=2)
-
+#my_proc_list = me_comparator.create_proc_list(['w+', 'w-'],
+#                                      initial=2, final=2)
 
 # Create a MERunner object for MG4
-my_mg4 = me_comparator.MG4Runner()
-my_mg4.setup(mg4_path)
+#my_mg4 = me_comparator.MG4Runner()
+#my_mg4.setup(mg4_path)
 
 # Create a MERunner object for MG5
-my_mg5 = me_comparator.MG5Runner()
-my_mg5.setup(mg5_path, mg4_path)
+#my_mg5 = me_comparator.MG5Runner()
+#my_mg5.setup(mg5_path, mg4_path)
 
 # Create and setup a comparator
-my_comp = me_comparator.MEComparator()
-my_comp.set_me_runners(my_mg4, my_mg5)
+#my_comp = me_comparator.MEComparator()
+#my_comp.set_me_runners(my_mg4, my_mg5)
 
 # Run the actual comparison
-my_comp.run_comparison(my_proc_list,
-                        model='sm', orders={'QED':2, 'QCD':2}, energy=500)
+#my_comp.run_comparison(my_proc_list,
+#                        model='sm', orders={'QED':2, 'QCD':2}, energy=500)
 
 # Do some cleanup
 #my_comp.cleanup()
 
 # Print the output
-my_comp.output_result(filename='sm_result.log')
+#my_comp.output_result(filename='sm_result.log')
 
 # Print a list of non zero processes
 #print my_comp.get_non_zero_processes()

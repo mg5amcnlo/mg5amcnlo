@@ -23,7 +23,7 @@ import re
 
 import madgraph.core.color_algebra as color
 
-logger = logging.getLogger('base_objects')
+logger = logging.getLogger('madgraph.base_objects')
 
 #===============================================================================
 # PhysicsObject

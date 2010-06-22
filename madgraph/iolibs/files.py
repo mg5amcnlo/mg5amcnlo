@@ -17,7 +17,7 @@
 
 import logging
 
-logger = logging.getLogger('files')
+logger = logging.getLogger('madgraph.files')
 
 #===============================================================================
 # read_from_file

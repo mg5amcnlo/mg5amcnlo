@@ -13,17 +13,19 @@
 #
 ################################################################################
  
+"""Classes for diagram generation. Amplitude performs the diagram
+generation, DecayChainAmplitude keeps track of processes with decay
+chains, and MultiProcess allows generation of processes with
+multiparticle definitions.
+"""
+
 import copy
 import itertools
 import logging
 
 import madgraph.core.base_objects as base_objects
 
-"""Amplitude object, which is what does the job for the diagram
-generation algorithm.
-"""
-
-logger = logging.getLogger('diagram_generation')
+logger = logging.getLogger('madgraph.diagram_generation')
 
 #===============================================================================
 # Amplitude
