@@ -298,7 +298,6 @@ class ProcCardV4ReaderTest(unittest.TestCase):
                    'export', 
                    '# Finalize MadEvent directory setup',
                    'finalize'] 
-        print '\n'.join(lines)
         self.assertEqual(len(lines),len(solution))
         for i,command in enumerate(lines):
             self.assertEqual(command,solution[i])
