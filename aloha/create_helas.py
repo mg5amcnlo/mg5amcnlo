@@ -360,6 +360,9 @@ class AbstractHelasModel(dict):
         self.look_for_symmetries()
         
         for lorentz in self.model.all_lorentz:
+            if -1 in lorentz.spins:
+                # No Ghost for HELAS
+                continue
             self.compute_for_lorentz(lorentz)
         
         self.save()

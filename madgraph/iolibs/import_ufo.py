@@ -157,9 +157,11 @@ class converter_ufo_mg5(object):
         data_string = data_string.replace('T(','color.T(')
         # Change identity in color.TC
         data_string = data_string.replace('Identity(','color.T(')
-        # Change convetion for summed indices
+        # Change convention for summed indices
         data_string = data_string.replace(',a',',-')
         data_string = data_string.replace('(a','(-')
+        data_string = data_string.replace(',\'a',',-')
+        data_string = data_string.replace('(\'a','(-')
             
         output = data_string.split('*')
         output = color.ColorString([eval(data) for data in output if data !='1'])
