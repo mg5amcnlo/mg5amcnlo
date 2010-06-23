@@ -193,7 +193,12 @@ class TestCmdShell2(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'lib', 'libdhelas3.a')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                               'lib', 'libmodel.a')))        
+                                               'lib', 'libmodel.a')))
+        
+    def test_ufo_standard_sm(self):
+        """ check that we can use standard MG4 name """
+        self.do('import model sm')
+        self.do('generate mu+mu->ta+ta-')       
         
         
         

@@ -1575,6 +1575,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self._ufo_model = ufomodels.load_model(args[1])
             ufo2mg5_converter = import_ufo.converter_ufo_mg5(self._ufo_model)
             self._curr_model = ufo2mg5_converter.load_model()
+            logger.info('define standard name for SM particles')
+            compatibility_def = ufo2mg5_converter.check_standard_name()
+            self._multiparticles.update(compatibility_def)
             self._model_dir = os.path.join(MG4DIR, 'models', args[1])
             self._curr_fortran_model = export_v4.UFOHelasFortranModel()
                     

@@ -12,13 +12,19 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-import madgraph
 """ How to import a UFO model to the MG5 format """
 
 import sys
+import logging
 
+import madgraph
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
+
+
+logger = logging.getLogger('madgraph.import_ufo')
+
+
 
 def import_model(model=None, model_name=None):
     """ a practical and efficient way to import one of those models """
@@ -54,13 +60,14 @@ class converter_ufo_mg5(object):
     def load_model(self):
         """load the different of the model first particles then interactions"""
 
-        print 'load particle'
+        logger.info('load particle')
         for particle_info in self.ufomodel.all_particles:            
             self.add_particle(particle_info)
             
+        logger.info('load vertex')
         for interaction_info in self.ufomodel.all_vertices:
             self.add_interaction(interaction_info)
-            
+        
         return self.model
         
     
@@ -166,3 +173,38 @@ class converter_ufo_mg5(object):
         output = data_string.split('*')
         output = color.ColorString([eval(data) for data in output if data !='1'])
         return output
+    
+    def check_standard_name(self):
+        """check that all SM particles have The same name as MG4 version"""
+        
+        sm_data = {
+                # quark
+                1: ['d', 'd~'], 2: ['u', 'u~'], 3: ['s', 's~'], 4: ['c', 'c~'],
+                5: ['b', 'b~'], 6: ['t', 't~'],
+                # lepton
+                11: ['e-','e+'], 12: ['ve','ve~'], 13: ['mu-','mu+'],
+                14: ['vm','vm~'], 15: ['ta-','ta+'],16: ['vt','vt~'], 
+                # boson
+                21: ['g'], 22: ['a'], 23: ['z'], 24: ['w+','w-'], 25: ['h']
+                }
+        to_add ={}
+        
+        for particle in self.particles:
+            pdg = particle.get_pdg_code()
+            names = [particle.get_name()]
+            if particle.get('antiname') != particle.get_name():
+                names.append(particle.get('antiname'))
+                
+            if sm_data.has_key(pdg):
+                if names == sm_data[pdg]:
+                    continue
+                for i in range(len(names)):
+                    to_add[sm_data[pdg][i]] = [(-1) ** i * pdg] 
+                    
+        return to_add
+                    
+                    
+            
+        
+        
+    
