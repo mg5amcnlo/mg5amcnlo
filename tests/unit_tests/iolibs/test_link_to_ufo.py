@@ -179,7 +179,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
         alreadydefine = []
         for line in self.ReturnFile('intparam_definition.inc'):
             if 'ENDIF' in line:
-                self.assertEqual(len(alreadydefine), 38)
+                self.assertEqual(len(alreadydefine), 53)
                 
             if '=' not in line:
                 continue
@@ -189,4 +189,5 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
             self.assertFalse(new_def in alreadydefine)
             alreadydefine.append(new_def)
             
-        self.assertEqual(alreadydefine, ['AEW ', 'SQRT__AS ', 'G ', 'CKM11 ', 'CKM12 ', 'CKM21 ', 'CKM22 ', 'MZ__EXP__2 ', 'MZ__EXP__4 ', 'SQRT__2 ', 'MW ', 'SQRT__AEW ', 'EE ', 'MW__EXP__2 ', 'SW2 ', 'CW ', 'SQRT__SW2 ', 'SW ', 'G1 ', 'GW ', 'V ', 'MH__EXP__2 ', 'V__EXP__2 ', 'LAM ', 'YB ', 'YC ', 'YT ', 'YTAU ', 'MUH ', 'COMPLEXI ', 'GW__EXP__2 ', 'CW__EXP__2 ', 'EE__EXP__2 ', 'SW__EXP__2 ', 'CONJG__CKM11 ', 'CONJG__CKM12 ', 'CONJG__CKM21 ', 'CONJG__CKM22 ', 'G__EXP__2 ', 'GAL(1) ', 'GAL(2) ', 'DUM0 ', 'DUM1 '])
+        self.assertEqual(alreadydefine, ['AEW ', 'SQRT__AS ', 'G ', 'YE ', 'YM ', 'YU ', 'YD ', 'YS ', 'CKM11 ', 'CKM12 ', 'CKM13 ', 'CKM21 ', 'CKM22 ', 'CKM23 ', 'CKM31 ', 'CKM32 ', 'CKM33 ', 'MZ__EXP__2 ', 'MZ__EXP__4 ', 'SQRT__2 ', 'MW ', 'SQRT__AEW ', 'EE ', 'MW__EXP__2 ', 'SW2 ', 'CW ', 'SQRT__SW2 ', 'SW ', 'G1 ', 'GW ', 'V ', 'MH__EXP__2 ', 'V__EXP__2 ', 'LAM ', 'YB ', 'YC ', 'YT ', 'YTAU ', 'MUH ', 'COMPLEXI ', 'EE__EXP__2 ', 'GW__EXP__2 ', 'CW__EXP__2 ', 'SW__EXP__2 ', 'CONJG__CKM11 ', 'CONJG__CKM12 ', 'CONJG__CKM13 ', 'CONJG__CKM21 ', 'CONJG__CKM22 ', 'CONJG__CKM23 ', 'CONJG__CKM31 ', 'CONJG__CKM32 ', 'CONJG__CKM33 ', 'G__EXP__2 ', 'GAL(1) ', 'GAL(2) ', 'DUM0 ', 'DUM1 '])
+
