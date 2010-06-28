@@ -169,6 +169,7 @@ class converter_ufo_mg5(object):
         data_string = data_string.replace('(a','(-')
         data_string = data_string.replace(',\'a',',-')
         data_string = data_string.replace('(\'a','(-')
+        data_string = data_string.replace('\'','')
             
         output = data_string.split('*')
         output = color.ColorString([eval(data) for data in output if data !='1'])

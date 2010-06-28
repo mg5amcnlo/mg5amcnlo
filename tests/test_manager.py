@@ -286,7 +286,6 @@ class TestFinder(list):
                 possibility.append(val)
         #end local def
 
-        #print name
         #sanity
         if name.startswith('./'): 
             name = name[2:]

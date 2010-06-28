@@ -55,7 +55,6 @@ def copy_v4template(mgme_dir, dir_path, model_dir, clean):
             subprocess.call([os.path.join('bin', 'clean_template'), '--web'], \
                                                                    cwd=dir_path)
         else:
-            print dir_path
             try:
                 subprocess.call([os.path.join('bin', 'clean_template')], \
                                                                    cwd=dir_path)

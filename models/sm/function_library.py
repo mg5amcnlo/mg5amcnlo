@@ -23,32 +23,31 @@ def complexconjugate(z):
 
 
 def re(z):
-        """Returns z.re()"""
-        return z.real
+	"""Returns z.re()"""
+	return z.real
 
 def im(z):
-        """Returns z.imag"""
-        return z.imag
+	"""Returns z.imag"""
+	return z.imag
 
 
 # New functions (trigonometric)
 
 def sec(z):
-        "Returns the secant of the complex number z."""
-        return 1/cos(z)
+	"Returns the secant of the complex number z."""
+	return 1. / cos(z)
 
 def asec(z):
-        "Returns the arcsecant of the complex number z."""
-        return acos(1/z)
+	"Returns the arcsecant of the complex number z."""
+	return acos(1. / z)
 
 def csc(z):
-        "Returns the cosecant of the complex number z."""
-        return 1/sin(z)
+	"Returns the cosecant of the complex number z."""
+	return 1. / sin(z)
 
 def acsc(z):
-        "Returns the arccosecant of the complex number z."""
-        return asin(1/z)
-
+	"Returns the arccosecant of the complex number z."""
+	return asin(1. / z)
 
 
 

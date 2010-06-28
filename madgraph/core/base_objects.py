@@ -23,6 +23,7 @@ import numbers
 import re
 
 import madgraph.core.color_algebra as color
+from madgraph import MadGraph5Error
 
 logger = logging.getLogger('madgraph.base_objects')
 
@@ -946,8 +947,7 @@ class LegList(PhysicsObjectList):
         res = []
 
         if not isinstance(model, Model):
-            print "Error! model not model"
-            return res
+            raise MadGraph5Error("Error! model not model")
 
         for leg in self:
             if leg.get('state') == False:

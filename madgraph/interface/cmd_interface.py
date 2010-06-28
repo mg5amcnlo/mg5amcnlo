@@ -188,7 +188,7 @@ class CmdExtended(cmd.Cmd):
                 error_text = 'Command \"%s\" interrupted in sub-command:\n' %line
                 error_text += '\"%s\" with error:\n' % self.history[-1]
             error_text += '%s : %s\n' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
-            error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5'
+            error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
             error_text += 'More information is found in \'%s\'.\n' % \
                           os.path.realpath("MG5_debug")
             error_text += 'Please attach this file to your report.'

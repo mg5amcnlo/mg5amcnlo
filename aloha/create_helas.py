@@ -291,7 +291,7 @@ class AbstractHelasModel(dict):
         # Check if a pickle file exists
         if not self.load():
             self.compute_all()
-        print len(self), 'helas routine'
+        logger.info(len(self), 'helas routine')
             
         # Check that output directory exists
         aloha_dir = os.path.join(self.model_pos, format.lower())
@@ -342,7 +342,6 @@ class AbstractHelasModel(dict):
         try:
             return self[(lorentzname, outgoing)]
         except:
-            print self.keys()
             logger.warning('(%s, %s) is not a valid key' % 
                                                        (lorentzname, outgoing) )
             return None
@@ -443,6 +442,7 @@ class AbstractHelasModel(dict):
                 text += '\\\n\t\t'
             text += AbstractHelas.gethelasname(name, outgoing, 
                                                             len(abstract.spins))
+            text += '.o'
         text +='\n'
         file(os.path.join(output_dir,'helas_file.inc'), 'w').write(text)
 

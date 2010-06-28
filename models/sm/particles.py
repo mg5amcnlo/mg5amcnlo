@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 189 $
-# Mathematica version: 7.0 for Linux x86 (32-bit) (November 11, 2008)
-# Date: Wed 16 Jun 2010 15:21:38
+# This file was automatically created by FeynRules $Revision: 216 $
+# Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
+# Date: Sat 26 Jun 2010 18:16:42
 
 
 from __future__ import division

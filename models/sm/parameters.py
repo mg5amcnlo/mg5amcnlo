@@ -1,13 +1,13 @@
-# This file was automatically created by FeynRules $Revision: 189 $
-# Mathematica version: 7.0 for Linux x86 (32-bit) (November 11, 2008)
-# Date: Wed 16 Jun 2010 15:21:39
+# This file was automatically created by FeynRules $Revision: 216 $
+# Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
+# Date: Sat 26 Jun 2010 18:16:42
 
 
 
 from object_library import all_parameters, Parameter
 
 
-from function_library import complexconjugate
+from function_library import complexconjugate, re, im, csc, sec, acsc, asec
 
 cabi = Parameter(name = 'cabi',
                  nature = 'external',
