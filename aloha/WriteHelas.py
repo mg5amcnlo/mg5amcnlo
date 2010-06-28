@@ -155,7 +155,7 @@ class HelasWriterForFortran(WriteHelas):
                 FermiList.append('%s%d' % ('F', index + 1))  
                 FermionNumber +=1 
             # Define the Calllist
-            if elem[1]:
+            if not elem[1]:
                 CallList.append('%s%d' % (elem[0], index + 1))
             else: 
                 OnShell = 0
@@ -290,7 +290,7 @@ class HelasWriterForFortran(WriteHelas):
             type = self.particles[index-1][0]
             energy_pos=type_to_pos[type]
             sign = ''
-            if OffShellParticle == index -1 and type !='S':
+            if OffShellParticle == index -1 and (type =='V' or type == 'S'):
                 sign='-'
                 
             string += '%s(0) = %s dble(%s%d(%d))\n' %  (mom, sign, type, index, energy_pos)
