@@ -66,10 +66,11 @@ class AbstractHelas(object):
         nb_spinor = 0
         if not self.helas_kernel:
             AbstractHelas.counter +=1
+            print 'create 69'
             logger.info('new kernel %s' % self.counter)
             try:       
                 lorentz = eval(self.lorentz_expr)
-            except NameError, why:
+            except NameError:
                 print 'unknow type in Lorentz Evaluation'
                 raise
             else:
@@ -202,6 +203,7 @@ class AbstractHelas(object):
         """Define the kernel at low level"""
         
         if not lorentz:
+            print 'create 206'
             logger.info('compute kernel %s' % self.counter)
             AbstractHelas.counter += 1  
             try:        
@@ -291,7 +293,8 @@ class AbstractHelasModel(dict):
         # Check if a pickle file exists
         if not self.load():
             self.compute_all()
-        logger.info(len(self), 'helas routine')
+        print 'create 294'
+        logger.info(' %s helas routine' % len(self))
             
         # Check that output directory exists
         aloha_dir = os.path.join(self.model_pos, format.lower())
@@ -489,27 +492,6 @@ def create_library():
     cPickle.dump(lib, fsock, -1)
     logger.info('done')
     
-
-
-       
-if '__main__' == __name__:
-    logging.basicConfig(level=0)
-    #create_library()
-    import profile
-    
-    #model
-    helasgenerator = AbstractHelasModel('sm')
-    start = time.time()
-    def main(helasgenerator):
-        helasgenerator.compute_all()
-    #profile.run('main(helasgenerator)')
-    main(helasgenerator)
-    stop = time.time()
-    logger.info('done in %s s' % (stop-start))
-    helasgenerator.write('../models/sm/fortran', 'Fortran')
-    logger.info('done')
-    stop = time.time()
-    logger.info('done in %s s' % (stop-start))
 
 
 

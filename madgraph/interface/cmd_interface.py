@@ -57,7 +57,7 @@ import madgraph.iolibs.drawing_eps as draw
 import models as ufomodels
 import aloha.create_helas as create_helas
 
-from madgraph import MG4DIR, MadGraph5Error
+from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
 
 # Special logger for the Cmd Interface
@@ -1578,7 +1578,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             logger.info('define standard name for SM particles')
             compatibility_def = ufo2mg5_converter.check_standard_name()
             self._multiparticles.update(compatibility_def)
-            self._model_dir = os.path.join(MG4DIR, 'models', args[1])
+            if os.path.isdir(args[1]):
+                self._model_dir = args[1]
+            elif os.path.isdir(os.path.join(MG5DIR, 'models', args[1])):
+                self._model_dir = os.path.join(MG5DIR, 'models', args[1])
+            else:
+                raise self.InvalidCmd('Invalid model path/name')
             self._curr_fortran_model = export_v4.UFOHelasFortranModel()
                     
         elif args[0] == 'model_v4':
@@ -1855,7 +1860,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if not self._ufo_model:
             logger.info('import v4model files %s in directory %s' % \
                        (os.path.basename(self._model_dir), args[1]))        
-            export_v4.export_model(self._model_dir, dir_path)
+            export_v4.export_model_files(self._model_dir, dir_path)
             export_v4.export_helas(os.path.join(mgme_dir,'HELAS'), dir_path)
         else:
             logger.info('convert UFO model to MG4 format')
@@ -1863,6 +1868,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                         os.path.join(dir_path,'Source','MODEL'))
             create_helas.AbstractHelasModel(os.path.basename(self._model_dir),
                             write_dir=os.path.join(dir_path,'Source','DHELAS'))
+            export_v4.make_model_symbolic_link(self._model_dir, dir_path)
         
         if args[0] == 'standalone_v4':
             export_v4.make_v4standalone(dir_path)

@@ -863,7 +863,7 @@ def write_subproc(fsock, matrix_element, fortran_model):
 #===============================================================================
 # export the model
 #===============================================================================
-def export_model(model_path, process_path):
+def export_model_files(model_path, process_path):
     """Configure the files/link of the process according to the model"""
     
     # Import the model
@@ -871,8 +871,9 @@ def export_model(model_path, process_path):
         if os.path.isfile(os.path.join(model_path, file)):
             shutil.copy2(os.path.join(model_path, file), \
                                  os.path.join(process_path, 'Source', 'MODEL'))    
-
-
+    make_model_symbolic_link(model_path, process_path)
+    
+def make_model_symbolic_link(model_path,process_path):
     #make the copy/symbolic link
     model_path = process_path + '/Source/MODEL/'
     ln(model_path + '/ident_card.dat', process_path + '/Cards', log=False)
@@ -2095,7 +2096,7 @@ class UFOHelasFortranModel(helas_objects.HelasModel):
                 call = 'CALL %s_%s' % (argument.get('lorentz'), outgoing) 
             else:
                 outgoing = '1' * len(argument.get('mothers'))
-                call += 'CALL %s_%s' % (argument.get('lorentz'), outgoing)
+                call = 'CALL %s_%s' % (argument.get('lorentz'), outgoing)
 
             # Check if we need to append a charge conjugation flag
             if argument.needs_hermitian_conjugate():
@@ -2120,7 +2121,7 @@ class UFOHelasFortranModel(helas_objects.HelasModel):
                                      wf.get('number')))
             else:
                 # Amplitude
-                call = call + "AMP(%d))"
+                call += "AMP(%d))"
                 call_function = lambda amp: call % \
                                 (tuple([mother.get('number') 
                                           for mother in amp.get('mothers')]) + \

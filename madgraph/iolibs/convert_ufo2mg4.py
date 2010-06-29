@@ -207,6 +207,7 @@ class convert_model_to_mg4(CompactifyExpression):
         
         # The param_card.dat        
         self.create_param_card()
+        
  
     def analyze_parameters(self):
         """ separate the parameters needed to be recomputed events by events and
