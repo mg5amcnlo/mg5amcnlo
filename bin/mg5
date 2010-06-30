@@ -21,8 +21,10 @@ and call immediately the command line interface scripts"""
 import sys
 import optparse
 import logging
+import logging.config
 
 import os.path as path
+
 
 # Get the parent directory (mg root) of the script real path (bin)
 # and add it to the current PYTHONPATH
@@ -45,7 +47,11 @@ if len(args) == 0:
     args = ''
 
 # Set logging level according to the logging level given by options
-logging.basicConfig(level=vars(logging)[options.logging])
+#logging.basicConfig(level=vars(logging)[options.logging])
+logging.config.fileConfig(path.join(root_path, 'madgraph', 'interface', '.mg5_logging.conf'))
+logging.root.setLevel(eval('logging.' + options.logging))
+logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
+
 
 import madgraph.interface.cmd_interface as cmd_interface
 
@@ -56,15 +62,16 @@ if options.file or args:
         input_file = args[0]
     else:
         input_file = options.file
-    input_file = cmd_interface.CmdFile(input_file,'rU')
     if options.web:
-        cmd_line = cmd_interface.MadGraphCmdWeb(stdin=input_file)
+        cmd_line = cmd_interface.MadGraphCmdWeb()
         cmd_line.use_rawinput = False #put it in non interactive mode
-        cmd_line.cmdloop()    
+        cmd_line.run_cmd('import command ' + input_file)
+        sys.exit()
     else:
-        cmd_line = cmd_interface.MadGraphCmdShell(stdin=input_file)
+        cmd_line = cmd_interface.MadGraphCmdShell()
         cmd_line.use_rawinput = False #put it in non interactive mode
-        cmd_line.cmdloop()
+        cmd_line.run_cmd('import command ' + input_file)
+        sys.exit()
 else:
     # Interactive mode
     if options.web:

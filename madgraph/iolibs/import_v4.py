@@ -12,7 +12,6 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-
 """Methods and classes to import v4 format model files."""
 
 import fractions
@@ -24,8 +23,10 @@ import re
 import madgraph.core.color_algebra as color
 from madgraph.core.base_objects import Particle, ParticleList
 from madgraph.core.base_objects import Interaction, InteractionList
+from madgraph import MadGraph5Error
 
-logger = logging.getLogger('import_v4')
+
+logger = logging.getLogger('madgraph.import_v4')
 
 #===============================================================================
 # read_particles_v4
@@ -326,7 +327,7 @@ def read_proc_card_v4(fsock):
     reader = ProcCardv4Reader(fsock)
     return reader
 
-class ParticleError(Exception): 
+class ParticleError(MadGraph5Error):
     """ A class to carch the error"""
     pass
 
@@ -367,13 +368,17 @@ class ProcCardv4Reader(object):
         
         # skip the introduction of the file
         for line in iter(fsock.readline, self.begin_process):
+            if line == '':
+                raise MadGraph5Error('wrong proc_card.dat format')
             pass
-        
+
         # store process information
         process_open = False
         # an 'end_coup' stop the current process, 
         #    'done' finish the list of process
         for line in iter(fsock.readline, self.end_process):
+            if line == '':
+                raise MadGraph5Error('wrong proc_card.dat format')
             analyze_line = self.pat_line.search(line)
             if analyze_line:
                 data = analyze_line.group('info') #skip the comment
@@ -387,10 +392,14 @@ class ProcCardv4Reader(object):
          
         #skip comment
         for line in iter(fsock.readline, self.begin_model):
+            if line == '':
+                raise MadGraph5Error('wrong proc_card.dat format')
             pass        
         
         #load the model name
         for line in iter(fsock.readline, self.end_model):
+            if line == '':
+                raise MadGraph5Error('wrong proc_card.dat format')
             analyze_line = self.pat_line.search(line)
             if analyze_line:
                 model = analyze_line.group('info')
@@ -398,10 +407,14 @@ class ProcCardv4Reader(object):
                 
         #skip comment
         for line in iter(fsock.readline, self.begin_multipart):
+            if line == '':
+                raise MadGraph5Error('wrong proc_card.dat format')            
             pass
         
         #store multipart information
         for line in iter(fsock.readline, self.end_multipart):
+            if line == '':
+                raise MadGraph5Error('wrong proc_card.dat format')            
             data = line.split()
             if data:
                 self.particles_name.add(data[0].lower())
@@ -424,11 +437,15 @@ class ProcCardv4Reader(object):
         #Now we are in position to write the lines call
         lines = []    
         #first write the lines associate to the multiparticls definition
+        if self.multipart:
+            lines.append('# Define multiparticle labels')
         for multipart in self.multipart:
             data = self.separate_particle(multipart, self.particles_name)
             lines.append('define ' + ' '.join(data))
         
         # secondly define the lines associate with diagram
+        if self.process:
+            lines.append('# Specify process(es) to run')
         for i, process in enumerate(self.process):
             if i == 0:
                 lines.append('generate %s' % \
@@ -438,10 +455,12 @@ class ProcCardv4Reader(object):
                                   process.mg5_process_line(self.couplings_name))
         
         #finally export the madevent output
+        lines.append('# Set up MadEvent directory')
         lines.append('setup madevent_v4 . -f')
-        lines.append('export madevent_v4')
-        lines.append('makehtml madevent_v4')
-        lines.append('history .')
+        lines.append('# Export processes to subprocess directories')
+        lines.append('export')
+        lines.append('# Finalize MadEvent directory setup')
+        lines.append('finalize')
         
         return lines
         
@@ -480,9 +499,10 @@ class ProcCardv4Reader(object):
         while pos < len(line) - 4:
             #Check for infinite loop
             if pos == old_pos:
-                logging.error('Invalid characters: %s' % line[pos:pos + 4])
-                raise ParticleError('Set of character %s not defined' %
-                                     line[pos:pos + 4])
+                logging.error('Invalid particle name: %s' % \
+                              line[pos:pos + 4].rstrip())
+                raise ParticleError('Invalid particle name %s' %
+                                     line[pos:pos + 4].rstrip())
             old_pos = pos
             # check for pointless character
             if line[pos] in [' ', '\n', '\t']:
@@ -659,11 +679,11 @@ class ProcessInfo(object):
         for decay in self.decays:
             decay_text = decay.mg5_process_line(model_coupling)
             if ',' in decay_text:
-                text += ', (%s) ' % decay_text
+                text = text.rstrip() + ', (%s) ' % decay_text.strip()
             else:
-                text += ', %s ' % decay_text
+                text = text.rstrip() + ', %s ' % decay_text.strip()
         
-        return text
+        return text.rstrip()
     
     def mg5_couplings_line(self, model_coupling, nb_part):
         """Return the assignment of coupling for this process"""

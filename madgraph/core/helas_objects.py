@@ -13,6 +13,14 @@
 #
 ################################################################################
 
+"""Definitions of objects used to generate language-independent Helas
+calls: HelasWavefunction, HelasAmplitude, HelasDiagram for the
+generation of wavefunctions and amplitudes, HelasMatrixElement and
+HelasMultiProcess for generation of complete matrix elements for
+single and multiple processes; and HelasModel, which is the
+language-independent base class for the language-specific classes for
+writing Helas calls, found in the iolibs directory"""
+
 import array
 import copy
 import gc
@@ -26,19 +34,11 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color
 
-"""Definitions of objects used to generate Helas calls
-(language-independent): HelasWavefunction, HelasAmplitude,
-HelasDiagram for the generation of wavefunctions and amplitudes,
-HelasMatrixElement and HelasMultiProcess for generation of complete
-matrix elements for single and multiple processes; and HelasModel,
-which is the language-independent base class for the language-specific
-classes for writing Helas calls, found in the iolibs directory"""
-
 #===============================================================================
 # 
 #===============================================================================
 
-logger = logging.getLogger('helas_objects')
+logger = logging.getLogger('madgraph.helas_objects')
 
 #===============================================================================
 # HelasWavefunction

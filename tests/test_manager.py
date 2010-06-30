@@ -1,5 +1,4 @@
 #!/usr/bin/env python 
-
 ################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
@@ -30,35 +29,25 @@
 
 import inspect
 import logging
+import logging.config
 import optparse
 import os
 import re
 import sys
 import unittest
 
-#Add the ROOT dir to the current PYTHONPATH
 
+#Add the ROOT dir to the current PYTHONPATH
 # Only for profiling with -m cProfile!
 #root_path = os.path.split(os.path.dirname(os.path.realpath(sys.argv[0])))[0]
 #sys.path.append(root_path)
-
 root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 sys.path.append(root_path)
 
+from madgraph import MG4DIR
 
 #position of MG_ME
-MGME_dir = None
-MGME_dir_possibility = [os.path.join(root_path, os.path.pardir),
-                os.path.join(os.getcwd(), os.path.pardir),
-                os.getcwd()]
-
-for position in MGME_dir_possibility:
-    if os.path.exists(os.path.join(position, 'MGMEVersion.txt')) and \
-                    os.path.exists(os.path.join(position, 'UpdateNotes.txt')):
-        MGME_dir = os.path.realpath(position)
-        break
-del MGME_dir_possibility
-
+MGME_dir = MG4DIR
 
 #===============================================================================
 # run
@@ -98,7 +87,7 @@ class TestFinder(list):
         """Error associated to the TestFinder class."""
         pass
 
-    def __init__(self, package='./tests/', expression='', re_opt=0):
+    def __init__(self, package='tests/', expression='', re_opt=0):
         """ initialize global variable for the test """
 
         list.__init__(self)
@@ -162,7 +151,6 @@ class TestFinder(list):
 
         pyname = self.passin_pyformat(filename)
         exec('import ' + pyname + ' as obj')
-
         #look at class
         for name in dir(obj):
             class_ = getattr(obj, name)
@@ -332,8 +320,8 @@ class TestFinder(list):
         This ensures that the script works correctly whatever the position
         where is launched
         """
-        self.launch_pos = os.path.realpath(os.getcwd())
-        self.root_path = root_path
+        #self.launch_pos = os.path.realpath(os.getcwd())
+        #self.root_path = root_path
         #os.chdir(root_path)
 
     def go_to_initpos(self):
@@ -342,8 +330,8 @@ class TestFinder(list):
         This ensures that the script works correctly whatever the position
         where is launched
         """
-        os.chdir(self.launch_pos)
-        self.launch_pos = ''
+        #os.chdir(self.launch_pos)
+        #self.launch_pos = ''
 
 if __name__ == "__main__":
 
@@ -353,7 +341,7 @@ if __name__ == "__main__":
                       help="defined the verbosity level [%default]")
     parser.add_option("-r", "--reopt", type="int", default=0,
                   help="regular expression tag [%default]")
-    parser.add_option("-p", "--path", default='./tests/unit_tests',
+    parser.add_option("-p", "--path", default='tests/unit_tests',
                   help="position to start the search (from root)  [%default]")
     parser.add_option("-l", "--logging", default='CRITICAL',
         help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
@@ -361,7 +349,13 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
     if len(args) == 0:
         args = ''
-    logging.basicConfig(level=vars(logging)[options.logging])
+
+    logging.config.fileConfig(os.path.join(root_path,'tests','.mg5_logging.conf'))
+    logging.root.setLevel(eval('logging.' + options.logging))
+    logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
+    logging.getLogger('cmdprint').setLevel(eval('logging.' + options.logging))
+
+    #logging.basicConfig(level=vars(logging)[options.logging])
     run(args, re_opt=options.reopt, verbosity=options.verbose, \
             package=options.path)
 
