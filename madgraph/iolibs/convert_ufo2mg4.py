@@ -6,6 +6,7 @@ import re
 import sys
 
 
+import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.export_v4 as export_v4
 logger = logging.getLogger('madgraph.ufo2mg4')
 
@@ -170,7 +171,7 @@ class convert_model_to_mg4(CompactifyExpression):
         file_path = os.path.join(self.dir_path, name)
         
         if format == 'fortran':
-            fsock = export_v4.FortranFile(file_path, 'w')
+            fsock = writers.FortranWriter(file_path, 'w')
         else:
             fsock = open(file_path, 'w')
             
