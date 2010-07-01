@@ -317,6 +317,7 @@ class ColorString(list):
     coeff = fractions.Fraction(1, 1)
     is_imaginary = False
     Nc_power = 0
+    canonical = None
 
     def __init__(self, init_list=[],
                  coeff=fractions.Fraction(1, 1),
@@ -495,6 +496,9 @@ class ColorString(list):
         if not immutable:
             immutable = self.to_immutable()
 
+        if self.canonical:
+            return self.canonical
+
         replaced_indices = {}
         curr_ind = 1
         return_list = []
@@ -513,7 +517,8 @@ class ColorString(list):
 
         return_list.sort()
 
-        return (tuple(return_list), replaced_indices)
+        self.canonical = (tuple(return_list), replaced_indices)
+        return self.canonical
 
     def __eq__(self, col_str):
         """Check if two color strings are equivalent by checking if their

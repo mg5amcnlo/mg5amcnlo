@@ -48,10 +48,12 @@ if len(args) == 0:
 
 # Set logging level according to the logging level given by options
 #logging.basicConfig(level=vars(logging)[options.logging])
-logging.config.fileConfig(path.join(root_path, 'madgraph', 'interface', '.mg5_logging.conf'))
-logging.root.setLevel(eval('logging.' + options.logging))
-logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
-
+try:
+    logging.config.fileConfig(path.join(root_path, 'madgraph', 'interface', '.mg5_logging.conf'))
+    logging.root.setLevel(eval('logging.' + options.logging))
+    logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
+except:
+    pass
 
 import madgraph.interface.cmd_interface as cmd_interface
 

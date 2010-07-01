@@ -28,7 +28,7 @@ On All Platform :
 =================
 
 If you need full functionality with MadEvent, you should install the
-MG5 directory in the MG_ME directory (version 4.4.38 or later) with
+MG5 directory in the MG_ME directory (version 4.4.44 or later) with
 the name \"madgraph5\".
 
 On Windows:

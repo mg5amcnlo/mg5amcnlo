@@ -25,7 +25,7 @@ Make a copy of the Template. From there, run:
 ./bin/newprocess_mg5
 After completed process generation, you will find the sequence of
 commands used by MG5 in the file Cards/proc_card_mg5.dat.
-Note: You need MG/ME v. 4.4.38 or later.
+Note: You need MG/ME v. 4.4.44 or later.
 
 To run the test suite:
   A) the unit_tests:
