@@ -293,7 +293,6 @@ class AbstractHelasModel(dict):
         # Check if a pickle file exists
         if not self.load():
             self.compute_all()
-        print 'create 294'
         logger.info(' %s helas routine' % len(self))
             
         # Check that output directory exists
