@@ -1594,8 +1594,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     raise self.RWError("%s file doesn't exist in %s directory" % \
                                         (filename, os.path.basename(args[1])))
             #save model for next usage
-            self.do_save('model %s ' % os.path.join(self._model_dir, \
-                                                                   'model.pkl'))
+            save_load_object.save_to_file(
+                                      os.path.join(self._model_dir, 'model.pkl')
+                                    , self._curr_model)
         
         elif args[0] == 'proc_v4':
             
