@@ -368,6 +368,26 @@ class MG5Runner(MG4Runner):
 
         return v5_string
 
+class MG5_UFO_Runner(MG5Runner):
+    
+
+    def format_mg5_proc_card(self, proc_list, model, orders):
+        """Create a proc_card.dat string following v5 conventions."""
+
+        v5_string = "import model %s\n" % model
+
+        v5_string += "setup standalone_v4 %s -f\n" % \
+                     os.path.join(self.mg4_path, self.temp_dir_name)
+
+        couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
+
+        for i, proc in enumerate(proc_list):
+            v5_string += 'add process ' + proc + ' ' + couplings + \
+                         '@%i' % i + '\n'
+        v5_string += 'export\n'
+
+        return v5_string
+
 class PickleRunner(MERunner):
     """Runner object for the stored comparison results."""
 

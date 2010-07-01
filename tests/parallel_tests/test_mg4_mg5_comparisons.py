@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+from tests.parallel_tests import me_comparator
 
 """Parallel tests comparing processes between MG4 and MG5.
 """
@@ -31,6 +32,8 @@ from madgraph import MG4DIR, MG5DIR
 
 class TestParallelMG4MG5(unittest.TestCase):
 
+    mg4runner = me_comparator.MG4Runner
+    mg5runner = me_comparator.MG5Runner
 
     def setUp(self):
         """Set up paths"""
@@ -156,11 +159,11 @@ class TestParallelMG4MG5(unittest.TestCase):
         """Run comparison between MG4 and MG5 for the list of processes"""
 
         # Create a MERunner object for MG4
-        my_mg4 = me_comparator.MG4Runner()
+        my_mg4 = self.mg4runner()
         my_mg4.setup(self.mg4_path)
 
         # Create a MERunner object for MG5
-        my_mg5 = me_comparator.MG5Runner()
+        my_mg5 = self.mg5runner()
         my_mg5.setup(self.mg5_path, self.mg4_path)
 
         # Create and setup a comparator
@@ -191,3 +194,20 @@ class TestParallelMG4MG5(unittest.TestCase):
         # Do some cleanup
         my_comp.cleanup()
 
+class TestParallelMG4MG5_UFO(TestParallelMG4MG5):
+    
+    mg5runner = me_comparator.MG5_UFO_Runner
+    
+    def test_mg4_mg5_minitest(self):
+        """Test a minimal list of sm 2->2 processes, mainly to test the test"""
+        # Create a list of processes to check automatically
+        my_proc_list = me_comparator.create_proc_list(\
+            ['a'],
+            initial=2, final=2)
+
+        # Store list of non-zero processes and results in file
+        pickle_file = "mg4_sm_minitest.pkl"
+        self.compare_MG4_MG5(my_proc_list,
+                             orders = {'QED':2, 'QCD':2},
+                             filename = "sm_mini.log",
+                             pickle_file = pickle_file)
