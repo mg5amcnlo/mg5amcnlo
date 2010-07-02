@@ -1344,11 +1344,13 @@ class Process(PhysicsObject):
         return mystr[:-1]
 
     def shell_string(self):
-        """Returns process as string with '~' -> 'x' and '>' -> '_',
-        including process number, intermediate s-channels and forbidden
-        particles"""
+        """Returns process as string with '~' -> 'x', '>' -> '_',
+        '+' -> 'p' and '-' -> 'm', including process number,
+        intermediate s-channels and forbidden particles"""
 
-        mystr = "%d_" % self['id']
+        mystr = ""
+        if self['id']:
+            mystr += "%d_" % self['id']
         prevleg = None
         for leg in self['legs']:
             mypart = self['model'].get('particle_dict')[leg['id']]
@@ -1370,13 +1372,17 @@ class Process(PhysicsObject):
 
         # Check for forbidden particles
         if self['forbidden_particles']:
-            mystr = mystr + '-'
+            mystr = mystr + '_no_'
             for forb_id in self['forbidden_particles']:
                 forbpart = self['model'].get('particle_dict')[forb_id]
                 mystr = mystr + forbpart.get_name()
 
         # Replace '~' with 'x'
         mystr = mystr.replace('~', 'x')
+        # Replace '+' with 'p'
+        mystr = mystr.replace('+', 'p')
+        # Replace '-' with 'm'
+        mystr = mystr.replace('-', 'm')
         # Just to be safe, remove all spaces
         mystr = mystr.replace(' ', '')
 

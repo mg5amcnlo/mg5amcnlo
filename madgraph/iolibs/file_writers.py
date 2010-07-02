@@ -297,20 +297,26 @@ class CPPWriter(FileWriter):
                         ('\s*,\s*', ', '),
                         ('\(\s*', '('),
                         ('\s*\)', ')'),
-                        ('(\s*[^!=><])=([^=]\s*)', '\g<1> = \g<2>'),
-                        ('(\s*[^/])/([^/]\s*)', '\g<1> / \g<2>'),
-                        ('(\s*[^=])==([^=]\s*)', '\g<1> == \g<2>'),
-                        ('(\s*[^>])>([^>=]\s*)', '\g<1> > \g<2>'),
-                        ('(\s*[^<])<([^<=]\s*)', '\g<1> < \g<2>'),
-                        ('\s*!([^=]\s*)', ' !\g<1>'),
+                        ('\s*=\s*', ' = '),
+                        ('\s*>\s*', ' > '),
+                        ('\s*<\s*', ' < '),
+                        ('\s*!\s*', ' !'),
                         ('\s*\+\s*', ' + '),
                         ('\s*-\s*', ' - '),
+                        ('\s*/\s*', ' / '),
                         ('\s*\*\s*', ' * '),
-                        ('\s*>>\s*', ' >> '),
-                        ('\s*<<\s*', ' << '),
-                        ('\s*!=\s*', ' != '),
-                        ('\s*>=\s*', ' >= '),
-                        ('\s*<=\s*', ' <= '),
+                        ('\s*-\s+-\s*', '-- '),
+                        ('\s*\+\s+\+\s*', '++ '),
+                        ('\s*-\s+=\s*', ' -= '),
+                        ('\s*\+\s+=\s*', ' += '),
+                        ('\s*\*\s+=\s*', ' *= '),
+                        ('\s*/\s+=\s*', ' /= '),
+                        ('\s*>\s+>\s*', ' >> '),
+                        ('\s*<\s+<\s*', ' << '),
+                        ('\s*=\s+=\s*', ' == '),
+                        ('\s*!\s+=\s*', ' != '),
+                        ('\s*>\s+=\s*', ' >= '),
+                        ('\s*<\s+=\s*', ' <= '),
                         ('\s*&&\s*', ' && '),
                         ('\s*\|\|\s*', ' || '),
                         ('\s*{\s*}', ' {}'),
@@ -323,8 +329,8 @@ class CPPWriter(FileWriter):
     start_comment_pattern = re.compile(r"^(\s*/\*)")
     end_comment_pattern = re.compile(r"(\s*\*/)$")
 
-    quote_chars = re.compile(r"[^\\]\"")
-
+    quote_chars = re.compile(r"[^\\][\"\']")
+    no_space_comment_patterns = re.compile(r"--|\*\*|==|\+\+")
     line_length = 80
     max_split = 10
     split_characters = " "
@@ -357,9 +363,9 @@ class CPPWriter(FileWriter):
         # Strip leading spaces from line
         myline = line.lstrip()
 
-        # Don't print empty lines
+        # Return if empty line
         if not myline:
-            return res_lines
+            return ["\n"]
 
         # Check if line starts with "{"
         if myline[0] == "{":
@@ -428,8 +434,11 @@ class CPPWriter(FileWriter):
             if len(myline) > 1:
                 if myline[1] == ";":
                     breakline_index = 2
-            res_lines.append(" " * self.__indent + myline[:breakline_index] + \
-                        "\n")
+                elif myline[1:].lstrip()[:2] == "//":
+                    breakline_index = len(myline) - 1
+            res_lines.append("\n".join(self.split_line(\
+                                       myline[:breakline_index],
+                                       self.split_characters)) + "\n")
             myline = myline[breakline_index + 1:].lstrip()
             if myline:
                 # If anything is left of myline, write it recursively
@@ -496,6 +505,8 @@ class CPPWriter(FileWriter):
                 # Print line, make linebreak, check if next character is {
                 if "{" in myline:
                     end_index = myline.index("{")
+                else:
+                    end_index = -1
                 res_lines.append("\n".join(self.split_line(\
                                       myline[:end_index], \
                                       self.split_characters)) + \
@@ -601,14 +612,16 @@ class CPPWriter(FileWriter):
         if self.end_comment_pattern.search(line):
             self.__comment_ongoing = False
             line = self.end_comment_pattern.sub("", line)
-
-        line = self.comment_pattern.sub("", line)
-        myline = line.lstrip()
-        myline = self.comment_char + " " + myline
+            
+        line = self.comment_pattern.sub("", line).strip()
+        # Avoid extra space for lines starting with certain multiple patterns
+        if self.no_space_comment_patterns.match(line):
+            myline = self.comment_char + line
+        else:
+            myline = self.comment_char + " " + line
         # Break line in appropriate places defined (in priority order)
         # by the characters in comment_split_characters
-        res = self.split_line(myline, \
-                              self.comment_split_characters)
+        res = self.split_comment_line(myline)
 
         # Write line(s) to file
         res_lines.append("\n".join(res) + "\n")
@@ -618,12 +631,46 @@ class CPPWriter(FileWriter):
     def split_line(self, line, split_characters):
         """Split a line if it is longer than self.line_length
         columns. Split in preferential order according to
-        split_characters."""
+        split_characters. Also fix spacing for line."""
 
-        # First fix spacing for line
+        # First split up line if there are comments
+        comment = ""
+        if line.find(self.comment_char) > -1:
+            line, dum, comment = line.partition(self.comment_char)
+
+        # Then split up line if there are quotes
+        quotes = self.quote_chars.finditer(line)
+
+        start_pos = 0
+        line_quotes = []
+        line_no_quotes = []
+        for i, quote in enumerate(quotes):
+            if i % 2 == 0:
+                # Add text before quote to line_no_quotes
+                line_no_quotes.append(line[start_pos:quote.start()])
+                start_pos = quote.start()
+            else:
+                # Add quote to line_quotes
+                line_quotes.append(line[start_pos:quote.end()])
+                start_pos = quote.end()
+
+        line_no_quotes.append(line[start_pos:])
+        
+        # Fix spacing for line, but only outside of quotes
         line.rstrip()
-        for key in self.spacing_patterns:
-            line = self.spacing_re[key[0]].sub(key[1], line)
+        for i, no_quote in enumerate(line_no_quotes):
+            for key in self.spacing_patterns:
+                no_quote = self.spacing_re[key[0]].sub(key[1], no_quote)
+            line_no_quotes[i] = no_quote
+
+        # Glue together quotes and non-quotes:
+        line = line_no_quotes[0]
+        for i in range(len(line_quotes)):
+            line += line_quotes[i]
+            if len(line_no_quotes) > i + 1:
+                 line += line_no_quotes[i+1]
+
+        # Add indent
         res_lines = [" " * self.__indent + line]
 
         while len(res_lines[-1]) > self.line_length:
@@ -650,6 +697,39 @@ class CPPWriter(FileWriter):
                     split_at = split_at + split_match.start()
                 else:
                     split_at = len(long_line) + 1
+
+            # Append new line
+            if long_line[split_at:].lstrip():
+                # Replace old line
+                res_lines[-1] = long_line[:split_at].lstrip().rstrip()
+                res_lines.append(" " * \
+                                 (self.__indent + self.line_cont_indent) + \
+                                 long_line[split_at:].strip())
+            else:
+                break
+
+        if comment:
+            res_lines[-1] += " " + self.comment_char + comment
+            
+        return res_lines
+
+    def split_comment_line(self, line):
+        """Split a line if it is longer than self.line_length
+        columns. Split in preferential order according to
+        split_characters."""
+
+        # First fix spacing for line
+        line.rstrip()
+        res_lines = [" " * self.__indent + line]
+
+        while len(res_lines[-1]) > self.line_length:
+            long_line = res_lines[-1]
+            split_at = self.line_length
+            index = long_line[(self.line_length - self.max_split): \
+                                  self.line_length].rfind(' ')
+            if index >= 0:
+                split_at = self.line_length - self.max_split + index + 1
+            
             # Append new line
             if long_line[split_at:].lstrip():
                 # Replace old line

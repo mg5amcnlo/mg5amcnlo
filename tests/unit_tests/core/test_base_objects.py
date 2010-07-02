@@ -1227,7 +1227,8 @@ class ProcessTest(unittest.TestCase):
         """Test Process shell_string representation"""
 
         self.myprocess.get('legs')[2].set('id', -3)
-        goal_str = "1_cc_cxcc"
+        self.myprocess.set('id', 2)
+        goal_str = "2_cc_cxcc"
 
         self.assertEqual(goal_str, self.myprocess.shell_string())
 
