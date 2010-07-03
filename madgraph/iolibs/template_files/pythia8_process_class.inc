@@ -32,10 +32,7 @@ public:
 
   virtual string inFlux()  const {return "%(inFlux)s";}
 
-  virtual int    id3Mass() const {return %(id3Mass)d;}
-
-  virtual int    id4Mass() const {return %(id4Mass)d;}
-
+  %(id_masses)s
   // Tell Pythia that sigmaHat returns the ME^2
   virtual bool   convertME() const {return true;}
 

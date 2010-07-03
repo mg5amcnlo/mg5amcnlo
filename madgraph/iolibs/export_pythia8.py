@@ -17,6 +17,7 @@
 
 import fractions
 import glob
+import itertools
 import logging
 import os
 import re
@@ -166,11 +167,15 @@ def get_process_class_definitions(matrix_element):
     process_definition = get_process_definition(matrix_element)
     replace_dict['process_definition'] = process_definition
 
-    replace_dict['process_code'] = 100000
-    replace_dict['inFlux'] = "_inFlux_"
-    replace_dict['id3Mass'] = 200000
-    replace_dict['id4Mass'] = 300000
-    replace_dict['process_variables'] = '_process_variables_'
+    process = matrix_element.get('processes')[0]
+    replace_dict['process_code'] = 10000 + \
+                                   process.get('id')
+    
+    replace_dict['inFlux'] = get_process_influx(matrix_element)
+
+    replace_dict['id_masses'] = get_id_masses(process)
+
+    replace_dict['process_variables'] = ''
     
     file = open(os.path.join(_file_path, \
                              'iolibs', 'template_files',
@@ -243,6 +248,69 @@ def get_process_definition(matrix_element):
            (matrix_element.get('processes')[0].nice_string().\
             replace("Process: ", ""),
             matrix_element.get('processes')[0].get('model').get('name'))
+
+def get_process_influx(matrix_element):
+    """Return process file name for the process in matrix_element"""
+
+    if not matrix_element.get('processes'):
+        raise MadGraph5Error('Matrix element has no processes')
+    
+    # Create a set with the pairs of incoming partons in definite order,
+    # e.g.,  g g >... u d > ... d~ u > ... gives ([21,21], [1,2], [-2,1])
+    beams = set([tuple([process.get('legs')[0].get('id'),
+                             process.get('legs')[1].get('id')]) \
+                      for process in matrix_element.get('processes')])
+
+    # Define a number of useful sets
+    antiquarks = range(-1, -6, -1)
+    quarks = range(1,6)
+    antileptons = range(-11, -17, -1)
+    leptons = range(11, 17, 1)
+    allquarks = antiquarks + quarks
+    antifermions = antiquarks + antileptons
+    fermions = quarks + leptons
+    allfermions = allquarks + antileptons + leptons
+    downfermions = range(-2, -5, -2) + range(-1, -5, -2) + \
+                   range(-12, -17, -2) + range(-11, -17, -2) 
+    upfermions = range(1, 5, 2) + range(2, 5, 2) + \
+                 range(11, 17, 2) + range(12, 17, 2)
+    
+    # The following gives a list from flavor combinations to "inFlux" values
+    # allowed by Pythia8, see Pythia 8 document SemiInternalProcesses.html
+    set_tuples = [(set([(21, 21)]), "gg"),
+                  (set(list(itertools.product(allquarks, [21]))), "qg"),
+                  (set(zip(antiquarks, quarks)), "qqbarSame"),
+                  (set(list(itertools.product(allquarks,
+                                                   allquarks))), "qq"),
+                  (set(zip(antifermions, fermions)),"ffbarSame"),
+                  (set(zip(downfermions, upfermions)),"ffbarChg"),
+                  (set(list(itertools.product(allfermions,
+                                                   allfermions))), "ff"),
+                  (set(list(itertools.product(allfermions, [22]))), "fgm"),
+                  (set([(21, 22)]), "ggm"),
+                  (set([(22, 22)]), "gmgm")]
+    
+    for set_tuple in set_tuples:
+        if beams.issubset(set_tuple[0]):
+            return set_tuple[1]
+
+    raise MadGraph5Error('Pythia 8 cannot handle incoming flavors %s' %\
+                         repr(beams))
+
+    return 
+
+def get_id_masses(process):
+    """Return the lines which define the ids for the final state particles,
+    to allow Pythia to know the masses"""
+
+    mass_string = ""
+    
+    for i in range(2, len(process.get('legs'))):
+        mass_string += "virtual int id%dMass() const {return %d;}\n" % \
+                       (i + 1, process.get('legs')[i].get('id'))
+
+    return mass_string
+
 
 #===============================================================================
 # UFOHelasCPPModel

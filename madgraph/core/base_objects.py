@@ -880,6 +880,10 @@ class Leg(PhysicsObject):
                (self.get('state') == True and part.get('is_part') or \
                 self.get('state') == False and not part.get('is_part'))
 
+    # Make sure sort() sorts lists of legs according to 'number'
+    def __lt__(self, other):
+        return self['number'] < other['number']
+
 #===============================================================================
 # LegList
 #===============================================================================
@@ -956,6 +960,7 @@ class LegList(PhysicsObjectList):
                 res.append(leg.get('id'))
 
         return res
+
 
 #===============================================================================
 # MultiLeg
@@ -1349,8 +1354,6 @@ class Process(PhysicsObject):
         intermediate s-channels and forbidden particles"""
 
         mystr = ""
-        if self['id']:
-            mystr += "%d_" % self['id']
         prevleg = None
         for leg in self['legs']:
             mypart = self['model'].get('particle_dict')[leg['id']]
@@ -1387,8 +1390,11 @@ class Process(PhysicsObject):
         mystr = mystr.replace(' ', '')
 
         for decay in self.get('decay_chains'):
-            mystr = mystr + decay.shell_string().replace("%d_" % decay.get('id'),
-                                                        "_", 1)
+            mystr = mystr + "_" + decay.shell_string()
+
+        if self['id']:
+            mystr += "_%d" % self['id']
+
         return mystr
 
     def shell_string_v4(self):

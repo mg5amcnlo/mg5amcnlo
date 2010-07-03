@@ -276,6 +276,9 @@ class Amplitude(base_objects.PhysicsObject):
         if res:
             logger.info("Process has %d diagrams" % len(res))
 
+        # Sort process legs according to leg number
+        self.get('process').get('legs').sort()
+        
         return not failed_crossing
 
     def reduce_leglist(self, curr_leglist, max_multi_to1, ref_dict_to0,
