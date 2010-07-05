@@ -318,7 +318,8 @@ class ColorString(list):
     is_imaginary = False
     Nc_power = 0
     canonical = None
-
+    immutable = None
+    
     def __init__(self, init_list=[],
                  coeff=fractions.Fraction(1, 1),
                  is_imaginary=False, Nc_power=0):
@@ -361,6 +362,10 @@ class ColorString(list):
         elif self.is_imaginary or other.is_imaginary:
             self.is_imaginary = True
 
+        # Reset "canonical", so don't get wrong result from comparison
+        self.canonical = None
+        self.immutable = None
+        
         self.extend(other)
 
     def simplify(self):
@@ -422,7 +427,7 @@ class ColorString(list):
             compl_conj_str.coeff = -compl_conj_str.coeff
 
         return compl_conj_str
-
+    
     def to_immutable(self):
         """Returns an immutable object summarizing the color structure of the
         current color string. Format is ((name1,indices1),...) where name is the
@@ -430,11 +435,16 @@ class ColorString(list):
         indices. An immutable object, in Python, is built on tuples, strings and
         numbers, i.e. objects which cannot be modified. Their crucial property
         is that they can be used as dictionary keys!"""
+        
+        if self.immutable:
+            return self.immutable
 
         ret_list = [(col_obj.__class__.__name__, tuple(col_obj)) \
                         for col_obj in self]
         ret_list.sort()
-        return tuple(ret_list)
+        self.immutable = tuple(ret_list)
+
+        return self.immutable
 
     def from_immutable(self, immutable_rep):
         """Fill the current object with Color Objects created using an immutable
@@ -574,6 +584,10 @@ class ColorFactor(list):
     def extend_str(self, new_col_fact):
         """Special extend taking care of adding new strings to strings already
         existing with the same structure."""
+
+        # Reset "canonical", so don't get wrong result from comparison
+        self.canonical = None
+        self.immutable = None
 
         for col_str in new_col_fact:
             self.append_str(col_str)
