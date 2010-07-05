@@ -291,15 +291,17 @@ class HelpToCmd(object):
         print "   with the model and Helas set up appropriately."
         print "   If standalone_v4 is chosen, the directory will be in"
         print "   Standalone format."
-        print "   name will be the name of the copy the madevent Template that"
-        print "     will be use by default in following steps"
+        print "   name is the name of the copy of Template."
         print "   If you put '.' instead of a name, the code will try to locate"
-        print "     a valid copy of the Template under focus"
-        print "   If you put 'auto' instead an automatic name will be created"  
+        print "     a valid copy of the Template under focus."
+        print "   If you put 'auto' instead an automatic name will be created."
+        print "   If you have generated a process, the process will "
+        print "     automatically be exported to the directory."
         print "   options:"
         print "      -f: force the cleaning of the directory if this one exist"
         print "      -d PATH: specify the directory where to create name"
         print "      -noclean: no cleaning perform in name"
+        print "      -nojpeg: no jpeg diagrams will be generated"
         print "   Example:"
         print "       setup madevent_v4 MYRUN"
         print "       setup madevent_v4 MYRUN -d ../MG_ME -f"
@@ -332,7 +334,7 @@ class HelpToCmd(object):
 
     def help_export(self):
         print "syntax: export [" + "|".join(self._export_formats) + \
-              " FILEPATH]"
+              " FILEPATH] [options]"
         print """-- export matrix elements.
         *Note* that if you have run the 'setup', export format and FILEPATH
         is optional.
@@ -343,7 +345,9 @@ class HelpToCmd(object):
         - For standalone_v4, the result is a set of complete MG4 Standalone
         process directories.
         - For matrix_v4, the resulting files will be
-        FILEPATH/matrix_\"process_string\".f"""
+        FILEPATH/matrix_\"process_string\".f.
+        - options available are \"-nojpeg\", to suppress generation of
+        jpeg diagrams in MadEvent 4 subprocess directories."""
 
     def help_history(self):
         print "syntax: history [FILEPATH|clean|.] "
@@ -354,14 +358,15 @@ class HelpToCmd(object):
 
     def help_finalize(self):
         print "syntax: finalize [" + "|".join(self._setup_opts) + \
-              " PATH] [--nojpeg]"
+              " PATH] [-nojpeg]"
         print "-- finalize MadEvent or Standalone directory in PATH. "
         print "   For MadEvent, create web pages, jpeg diagrams,"
         print "   proc_card_mg5 and madevent.tar.gz files."
         print "   For Standalone, just generate proc_card_mg5."
         print "   By default, PATH and madevent_v4/standalone_v4 are "
         print "   defined by the setup command."
-        print "   Add option --nojpeg to suppress jpeg diagrams."        
+        print "   Add option -nojpeg to suppress jpeg diagrams."
+        print "   This command is automatically run by \"export\"."
 
     def help_draw(self):
         _draw_parser.print_help()
@@ -459,6 +464,12 @@ class CheckValidForCmd(object):
         """check the validity of line
         syntax: export MODE FILEPATH
         """  
+
+        nojpeg = ""
+        if '-nojpeg' in args:
+            nojpeg = '-nojpeg'
+            args = filter(lambda arg: arg != nojpeg, args)
+    
         if len(args) == 0:
             if not self._export_format:
                 self.help_export()
@@ -475,21 +486,21 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd("No process generated, please generate a process!")
 
         if len(args) <= 1:
-            path = os.path.join(self._export_dir, 'SubProcesses')
+            path = self._export_dir
         else:
             path = args[1]
 
         if not os.path.isdir(path):
             text = "%s is not a valid directory for export file\n" % path
             if args[0] == 'madevent_v4':
-                text += "to create a valid output directory you can use the command\n"
-                text += "$> setup madevent_v4 name|.|auto\n"
+                text += " to create a valid output directory you can use the command\n"
+                text += " $> setup madevent_v4 name|.|auto\n"
                 text += " and then run export as follow:\n"
-                text += "$> export madevent_v4\n" 
+                text += " $> export madevent_v4\n" 
             raise self.InvalidCmd(text)
         
         if args and args[0] == ('madevent_v4' or 'standalone_v4') and \
-               not os.path.isdir(os.path.join(path,'..','SubProcesses')):
+               not os.path.isdir(os.path.join(path,'SubProcesses')):
             text = "%s is not a valid directory for export file" % path
             text += "to create a valid output directory you can use the command"
             text += "$> setup madevent_v4 auto" 
@@ -497,6 +508,9 @@ class CheckValidForCmd(object):
             text += "$> export madevent_v4" 
             raise self.InvalidCmd(text)
 
+        if nojpeg:
+            args.append(nojpeg)
+    
         return path
     
     def check_generate(self, line):
@@ -560,11 +574,12 @@ class CheckValidForCmd(object):
 
         nojpeg = ""
 
-        if '--nojpeg' in args:
-            nojpeg = '--nojpeg'
+        if '-nojpeg' in args:
+            nojpeg = '-nojpeg'
             args = filter(lambda arg: arg != nojpeg, args)
     
         if len(args) < 1 and not self._export_format in self._setup_opts:
+            print len(args), self._export_format, self._setup_opts
             self.help_finalize()
             raise self.InvalidCmd('wrong \"finalize\" format')
         
@@ -589,6 +604,11 @@ class CheckValidForCmd(object):
     def check_setup(self, args):
         """ check the validity of the line"""
         
+        nojpeg = ""
+        if '-nojpeg' in args:
+            nojpeg = '-nojpeg'
+            args = filter(lambda arg: arg != nojpeg, args)
+    
         if len(args) < 2 or args[0] not in self._setup_opts:
             self.help_setup()
             raise self.InvalidCmd('wrong \"setup\" format')
@@ -603,7 +623,10 @@ class CheckValidForCmd(object):
             text = 'No model found. Please import a model first and then retry\n'
             text += 'for example do : import model_v4 sm'
             raise self.InvalidCmd(text)
-        
+
+        if nojpeg:
+            args.append(nojpeg)
+
 #===============================================================================
 # CheckValidForCmdWeb
 #===============================================================================
@@ -738,11 +761,11 @@ class CompleteForCmd(CheckValidForCmd):
     
             
     def complete_finalize(self, text, line, begidx, endidx):
-        """ format: finalize madevent_v4|standalone_v4 [PATH] [--nojpeg]"""
+        """ format: finalize madevent_v4|standalone_v4 [PATH] [-nojpeg]"""
         
         # Format
         if text.startswith('-'):
-            return self.list_completion(text, ['--nojpeg'])
+            return self.list_completion(text, ['-nojpeg'])
 
         if len(split_arg(line[0:begidx])) == 1:
             return self.list_completion(text, ['madevent_v4'])
@@ -934,6 +957,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _setup_opts = ['madevent_v4', 'standalone_v4']
     _import_formats = ['model_v4', 'proc_v4', 'command']
     _export_formats = ['madevent_v4', 'standalone_v4', 'matrix_v4']
+    _done_export = False
+    _done_finalize = False
         
     def __init__(self, *arg, **opt):
         """ add a tracker of the history """
@@ -959,7 +984,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         else:
             self._export_dir = None
         self._export_format = None
-            
+        
     # Add a process to the existing multiprocess definition
     # Generate a new amplitude
     def do_add(self, line):
@@ -1006,6 +1031,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         warning = "Warning: Already in processes:\n%s" % \
                                                     amp.nice_string_processes()
                         logger.warning(warning)
+
+                # Reset _done_export and _done_finalize, since we have
+                # new process
+                self._done_export = False
+                self._done_finalize = False
 
                 cpu_time2 = time.time()
 
@@ -1089,6 +1119,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         elif args[0] == 'processes':
             for amp in self._curr_amps:
                 print amp.nice_string()
+
         elif args[0] == 'multiparticles':
             print 'Multiparticle labels:'
             for key in self._multiparticles:
@@ -1162,11 +1193,24 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Check the validity of the arguments and return the output path
         path = self.check_export(args)
 
+        if self._done_export == path:
+            # We have already done export in this path
+            logger.info("Matrix elements already exported")
+            return        
+
         ndiags, cpu_time = generate_matrix_elements(self)
         calls = 0
 
+        nojpeg = '-nojpeg' in args
+        args = filter(lambda arg: arg != '-nojpeg', args)
+
         if not args:
             args = [self._export_format]
+
+        if args[0] in ['standalone_v4', 'madevent_v4']:
+            self._export_format = args[0]
+            self._export_dir = path
+            path = os.path.join(path, 'SubProcesses')
 
         if args[0] == 'matrix_v4':
             for me in self._curr_matrix_elements.get('matrix_elements'):
@@ -1193,7 +1237,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 export_v4.write_procdef_mg5(card_path,
                                 os.path.split(self._model_dir)[-1],
                                 self._generate_info)
-                cmd.Cmd.onecmd(self, 'history .')
+                try:
+                    cmd.Cmd.onecmd(self, 'history .')
+                except:
+                    pass
                 
         if args[0] == 'standalone_v4':
             for me in self._curr_matrix_elements.get('matrix_elements'):
@@ -1201,8 +1248,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         export_v4.generate_subprocess_directory_v4_standalone(\
                             me, self._curr_fortran_model, path)
             
-        self._export_format = args[0]
-
         logger.info(("Generated helas calls for %d subprocesses " + \
               "(%d diagrams) in %0.3f s") % \
               (len(self._curr_matrix_elements.get('matrix_elements')),
@@ -1216,7 +1261,19 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self._curr_amps = diagram_generation.AmplitudeList(\
                [me.get('base_amplitude') for me in \
                 self._curr_matrix_elements.get('matrix_elements')])
-    
+
+        # Remember that we have done export
+        self._done_export = self._export_dir
+        # Reset _done_finalize, since we now have new subprocesses
+        self._done_finalize = False
+
+        if self._export_format:
+            # Automatically run finalize
+            options = ''
+            if nojpeg:
+                options = '-nojpeg'
+                
+            self.do_finalize(options)
     
     # Generate a new amplitude
     def do_generate(self, line):
@@ -1246,6 +1303,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         myproc = diagram_generation.MultiProcess(myprocdef)
         self._curr_amps = myproc.get('amplitudes')
         cpu_time2 = time.time()
+
+        # Reset _done_export and _done_finalize, since we have new process
+        self._done_export = False
+        self._done_finalize = False
 
         nprocs = len(self._curr_amps)
         ndiags = sum([amp.get_number_of_diagrams() for \
@@ -1743,19 +1804,25 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         args = split_arg(line)
         # Check argument validity
         self.check_finalize(args)
-        
+
         if self._export_dir:
             dir_path = self._export_dir
         else: 
             dir_path = args[1]
             
+        #look if the user ask to bypass the jpeg creation
+        if '-nojpeg' in args:
+            makejpg = False
+        else:
+            makejpg = True
+
+        if self._done_finalize == (dir_path, makejpg):
+            # We have already done export in this path
+            logger.info("Process directory already finalized")
+            return        
+
         if self._export_format and self._export_format == 'madevent_v4' or \
                not self._export_format and args[0] == 'madevent_v4':
-            #look if the user ask to bypass the jpeg creation
-            if '--nojpeg' in args:
-                makejpg = False
-            else:
-                makejpg = True
 
             os.system('touch %s/done' % os.path.join(dir_path,'SubProcesses'))        
             export_v4.finalize_madevent_v4_directory(dir_path, makejpg,
@@ -1769,6 +1836,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                      self.history)
 
         logger.info('Directory ' + dir_path + ' finalized')
+        self._done_finalize = (dir_path, makejpg)
         
 
     def do_setup(self, line):
@@ -1780,6 +1848,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         clean = '-noclean' not in args
         force = '-f' in args 
+        nojpeg = '-nojpeg' in args
+    
         dir = '-d' in args
         if dir:
             mgme_dir = args[args.find('-d') + 1]
@@ -1839,6 +1909,18 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if args[0] == 'standalone_v4':
             export_v4.make_v4standalone(dir_path)
         self._export_dir = dir_path
+
+        # Reset _done_export and _done_finalize, since we have new directory
+        self._done_export = False
+        self._done_finalize = False        
+
+        if self._curr_amps:
+            # Perform export and finalize right away
+            options = ''
+            if nojpeg:
+                options = '-nojpeg'
+
+            self.do_export(options)
 
 #===============================================================================
 # MadGraphCmd

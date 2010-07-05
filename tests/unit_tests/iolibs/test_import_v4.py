@@ -293,11 +293,7 @@ class ProcCardV4ReaderTest(unittest.TestCase):
                    'add process p p > Z Z, Z > W+ W- $a /g @4',
                    'add process p p > Z Z QCD=2 @4',
                    '# Set up MadEvent directory',
-                   'setup madevent_v4 . -f', 
-                   '# Export processes to subprocess directories',
-                   'export', 
-                   '# Finalize MadEvent directory setup',
-                   'finalize'] 
+                   'setup madevent_v4 . -f'] 
         self.assertEqual(len(lines),len(solution))
         for i,command in enumerate(lines):
             self.assertEqual(command,solution[i])

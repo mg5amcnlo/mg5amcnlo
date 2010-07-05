@@ -106,15 +106,18 @@ class TestCmdShell2(unittest.TestCase):
         """ command 'setup' works with path"""
         
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
-        self.do('setup madevent_v4 %s' % self.out_dir)
+        self.do('setup madevent_v4 %s -nojpeg' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
-        self.do('export')
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'SubProcesses', 'P0_e+e-_e+e-')))
-        self.do('finalize --nojpeg')
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                  'Cards', 'proc_card_mg5.dat')))
         self.assertFalse(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P0_e+e-_e+e-',
+                                                    'matrix1.jpg')))
+        self.do('finalize')
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_e+e-_e+e-',
                                                     'matrix1.jpg')))
