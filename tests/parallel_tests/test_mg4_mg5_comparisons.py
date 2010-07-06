@@ -34,6 +34,7 @@ class TestParallelMG4MG5(unittest.TestCase):
 
     mg4runner = me_comparator.MG4Runner
     mg5runner = me_comparator.MG5Runner
+    suffix_name = ''
 
     def setUp(self):
         """Set up paths"""
@@ -45,11 +46,11 @@ class TestParallelMG4MG5(unittest.TestCase):
         """Test a minimal list of sm 2->2 processes, mainly to test the test"""
         # Create a list of processes to check automatically
         my_proc_list = me_comparator.create_proc_list(\
-            ['u'],
+            ['g'],
             initial=2, final=2)
 
         # Store list of non-zero processes and results in file
-        pickle_file = "mg4_sm_minitest.pkl"
+        pickle_file = "mg4_sm_%sminitest.pkl" % self.suffix_name
         self.compare_MG4_MG5(my_proc_list,
                              orders = {'QED':2, 'QCD':2},
                              filename = "sm_mini.log",
@@ -197,17 +198,4 @@ class TestParallelMG4MG5(unittest.TestCase):
 class TestParallelMG4MG5_UFO(TestParallelMG4MG5):
     
     mg5runner = me_comparator.MG5_UFO_Runner
-    
-    def test_mg4_mg5_minitest_ufo(self):
-        """Test a minimal list of sm 2->2 processes, mainly to test the test"""
-        # Create a list of processes to check automatically
-        my_proc_list = me_comparator.create_proc_list(\
-            ['a'],
-            initial=2, final=2)
-
-        # Store list of non-zero processes and results in file
-        pickle_file = "mg4_sm_ufo_minitest.pkl"
-        self.compare_MG4_MG5(my_proc_list,
-                             orders = {'QED':2, 'QCD':2},
-                             filename = "sm_ufo_mini.log",
-                             pickle_file = pickle_file)
+    suffix_name = 'ufo_'

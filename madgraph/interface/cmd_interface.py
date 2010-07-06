@@ -233,7 +233,7 @@ class CmdExtended(cmd.Cmd):
 
     # Aliases
     do_EOF = do_quit
-   
+    do_exit = do_quit
 
 #===============================================================================
 # Helper function

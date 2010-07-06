@@ -71,6 +71,13 @@ class ColorObject(array.array):
                 self[i] = repl_dict[index]
             except KeyError:
                 continue
+    
+    def shift_indices(self, gap=-1):
+        """change the set of indices by the value of gap"""
+        
+        for i in range(len(self)):
+            self[i] += gap
+        return self
 
     def create_copy(self):
         """Return a real copy of the current object."""

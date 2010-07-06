@@ -30,6 +30,7 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color
+import madgraph.iolibs.file_writers as file_writers
 
 #===============================================================================
 # 
@@ -1956,7 +1957,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     # Need one amplitude for each Lorentz/color structure,
                     # i.e. for each coupling
                     for coupl_key in inter.get('couplings').keys():
-
                         wf = HelasWavefunction(last_leg, vertex.get('id'), model)
                         wf.set('coupling', inter.get('couplings')[coupl_key])
                         # Special feature: For HVS vertices with the two
@@ -2069,6 +2069,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     new_color_list = copy.copy(color_list)
                     if inter:
                         new_color_list.append(coupl_key[0])
+                        
                     amp.set('color_indices', new_color_list)
 
                     # Generate HelasDiagram
@@ -2956,7 +2957,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                           tuple(amp.get('color_indices')) == diag_tuple[1],
                           self.get('diagrams')[diag_tuple[0]].get('amplitudes'))
                 if not res_amp:
-                    raise FortranWriter.FortranWriterError, \
+                    raise file_writers.FortranWriter.FortranWriterError, \
                           """No amplitude found for color structure
                             %s and color index chain (%s) (diagram %i)""" % \
                             (col_basis_elem,
@@ -2964,7 +2965,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                              diag_tuple[0])
 
                 if len(res_amp) > 1:
-                    raise FortranWriter.FortranWriterError, \
+                    raise file_writers.FortranWriter.FortranWriterError, \
                         """More than one amplitude found for color structure
                         %s and color index chain (%s) (diagram %i)""" % \
                         (col_basis_elem,
@@ -3160,9 +3161,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 sorted_mothers.append(mother)
 
         if mothers:
-            raise base_objects.PhysicsObject.PhysicsObjectError, \
-                  "Mismatch of pdg codes, %s != %s" % \
-                  (repr(mother_codes), repr(pdg_codes_cycl))
+            raise base_objects.PhysicsObject.PhysicsObjectError
 
         # Make cyclic reordering of mothers with same spin as this wf
         if same_spin_mothers:
@@ -3200,7 +3199,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     pass
                 else:
                     # Two incoming or two outgoing in a row - not good!
-                    raise self.PhysicsObjectError, \
+                    raise base_objects.PhysicsObject.PhysicsObjectError, \
                     "Two incoming or outgoing fermions in a row: %i, %i" % \
                     (sorted_mothers[i].get_spin_state_number(),
                      sorted_mothers[i+1].get_spin_state_number())

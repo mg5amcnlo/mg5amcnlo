@@ -18,6 +18,7 @@ from __future__ import division
 import unittest
 import aloha.helasamp_object as HelasObject
 import aloha.helasamp_lib as HelasLib
+import aloha.create_helas as Create_Helas
 
 
 class TestVariable(unittest.TestCase):
@@ -1972,6 +1973,61 @@ class TestSimplify(unittest.TestCase):
         simp = prod.simplify()
         
         self.assertEqual(simp.__class__, HelasLib.FracVariable)
-        self.assertEqual(simp.denominator.__class__, HelasLib.AddVariable)        
+        self.assertEqual(simp.denominator.__class__, HelasLib.AddVariable)
+        
+        
+class test_aloha_creation(unittest.TestCase):
+    """ test the creation of one aloha routine from the create_helas routine """
+    
+    def test_aloha_VVS(self):
+        """ Test the VVS creation of vertex """
+        from models.sm.object_library import Lorentz
+        
+        VVS_15 = Lorentz(name = 'VVS_15',
+                 spins = [ 3, 3, 1 ],
+                 structure = 'Metric(1,2)')
+
+        abstract = Create_Helas.AbstractHelas(VVS_15, 3)
+        
+        self.assertEqual(abstract.expr.numerator.nb_lor, 0)
+        self.assertEqual(abstract.expr.numerator.nb_spin, 0)
+        
+    def test_aloha_symmetries(self):
+        """ test that the symmetries of particles works """
+        
+        helas_suite = Create_Helas.AbstractHelasModel('sm')
+        helas_suite.look_for_symmetries()
+        solution ={'VVVV_22': {2: 1, 3: 1, 4: 1}, 'VVVV_20': {2: 1, 4: 3}, 'VVVV_21': {2: 1, 3: 1, 4: 1}, 'VVSS_18': {2: 1, 4: 3}, 'VVV_16': {2: 1, 3: 1}, 'VVVV_19': {2: 1, 3: 1, 4: 1}, 'SSSS_17': {2: 1, 3: 1, 4: 3}, 'SSS_4': {2: 1, 3: 2}, 'VVS_15': {2: 1}}
+        self.assertEqual(solution, helas_suite.symmetries)
+        
+    def test_full_sm_aloha(self):
+        """test that the full SM seems to work"""
+        helas_suite = Create_Helas.AbstractHelasModel('sm')
+        helas_suite.compute_all()
+        lorentz_index = {1:0, 2:0,3:1}
+        spin_index = {1:0, 2:1, 3:0}
+        for (name, output_part), abstract in helas_suite.items():
+            if not output_part:
+                self.assertEqual(abstract.expr.nb_lor, 0)
+                self.assertEqual(abstract.expr.nb_spin, 0)
+                continue
+            helas = self.find_helas(name, helas_suite.model)
+            lorentz_solution = lorentz_index[helas.spins[output_part -1]]
+            self.assertEqual(abstract.expr.numerator.nb_lor, lorentz_solution)
+            spin_solution = spin_index[helas.spins[output_part -1]]
+            self.assertEqual(abstract.expr.numerator.nb_spin, spin_solution)
+            
+    def find_helas(self, name, model):
+        for lorentz in model.all_lorentz:
+            if lorentz.name == name:
+                return lorentz
+            
+        raise Exception('the test is confuse by name %s' % name)
+        
+        
+        
+
+
+        
 
     

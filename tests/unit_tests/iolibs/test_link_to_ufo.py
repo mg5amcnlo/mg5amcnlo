@@ -12,16 +12,106 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+from madgraph import MG5DIR
 import subprocess
 import shutil
 import unittest
 import os
 
+import madgraph.core.base_objects as base_objects
 import madgraph.iolibs.convert_ufo2mg4 as ufo2mg4
+import madgraph.iolibs.import_ufo as import_ufo
+import madgraph.iolibs.files as files
+import madgraph.iolibs.import_v4 as import_v4
+
 
 file_dir_path = os.path.dirname(os.path.realpath( __file__ ))
 root_path = os.path.join(file_dir_path, os.pardir, os.pardir, os.pardir)
 
+
+class CompareMG4WithUFOModel(unittest.TestCase):
+    """checking if the MG4 model and the UFO model are coherent when they should"""
+    
+    
+    def test_model_equivalence(self):
+        """ test the UFO and MG4 model correspond to the same model """
+        
+        # import UFO model
+        import models.sm as model
+        converter = import_ufo.converter_ufo_mg5(model)
+        ufo_model = converter.load_model()
+        
+        # import MG4 model
+        model = base_objects.Model()
+        model.set('particles', files.read_from_file(
+               os.path.join(MG5DIR,'tests','input_files','v4_sm_particles.dat'),
+               import_v4.read_particles_v4))
+        model.set('interactions', files.read_from_file(
+            os.path.join(MG5DIR,'tests','input_files','v4_sm_interactions.dat'),
+            import_v4.read_interactions_v4,
+            model['particles']))
+        
+        # Checking the particles
+        for particle in model['particles']:
+            ufo_particle = ufo_model["particle_dict"][particle['pdg_code']]
+            self.check_particles(particle, ufo_particle)
+        
+        # Checking the interactions
+        nb_vertex = 0
+        for ufo_vertex in ufo_model['interactions']:
+            pdg_code_ufo = [abs(part['pdg_code']) for part in ufo_vertex['particles']]
+            int_name = [part['name'] for part in ufo_vertex['particles']]
+            rep = (pdg_code_ufo, int_name)
+            pdg_code_ufo.sort()
+            for vertex in model['interactions']:
+                pdg_code_mg4 = [abs(part['pdg_code']) for part in vertex['particles']]
+                pdg_code_mg4.sort()
+                
+                if pdg_code_mg4 == pdg_code_ufo:
+                    nb_vertex += 1
+                    self.check_interactions(vertex, ufo_vertex, rep )
+            
+        self.assertEqual(nb_vertex, 67)
+            
+    
+    def check_particles(self, mg4_part, ufo_part):
+        """ check that the internal definition for a particle comming from mg4 or
+        comming from the UFO are the same """
+        
+        not_equiv = ['charge', 'mass','width','name','antiname',
+                        'texname','antitexname']
+        
+        if abs(mg4_part['pdg_code']) != abs(ufo_part['pdg_code']):
+            print '%s non equivalent particle' % mg4_part['name']
+            return
+        elif mg4_part['pdg_code'] != ufo_part['pdg_code']:
+            self.assertFalse(mg4_part.get('is_part') == ufo_part.get('is_part'))
+            not_equiv.append('is_part')
+            not_equiv.append('pdg_code')
+            
+        
+        for name in mg4_part.sorted_keys:
+            if name in not_equiv:
+                continue
+            self.assertEqual(mg4_part.get(name), ufo_part.get(name), 
+                    'fail for particle %s different property for %s, %s != %s' %
+                    (mg4_part['name'], name, mg4_part.get(name), \
+                                                            ufo_part.get(name)))
+        
+        
+    def check_interactions(self, mg4_vertex, ufo_vertex, vname):
+        """ check that the internal definition for a particle comming from mg4 or
+        comming from the UFO are the same """
+        
+        # don't check this for the moment. Too difficult to compare
+        return
+        
+        # Checking only the color
+        name = 'color'
+        self.assertEqual(mg4_vertex.get(name), ufo_vertex.get(name), 
+            'fail for interactions %s different property for %s, %s != %s' % \
+            (vname, name, mg4_vertex.get(name), ufo_vertex.get(name) ) )
+        
 class TestPythonToFrotran(unittest.TestCase):
     
     def test_convert_str(self):

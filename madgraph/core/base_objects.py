@@ -650,7 +650,7 @@ class InteractionList(PhysicsObjectList):
 #===============================================================================
 class Model(PhysicsObject):
     """A class to store all the model information."""
-
+    
     def default_setup(self):
 
         self['name'] = ""
@@ -762,7 +762,7 @@ class Model(PhysicsObject):
 
     def get_particle(self, id):
         """Return the particle corresponding to the id"""
-
+        
         if id in self.get("particle_dict").keys():
             return self["particle_dict"][id]
         else:

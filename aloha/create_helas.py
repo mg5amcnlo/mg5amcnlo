@@ -65,8 +65,7 @@ class AbstractHelas(object):
         #multiply by the wave functions
         nb_spinor = 0
         if not self.helas_kernel:
-            AbstractHelas.counter +=1
-            print 'create 69'
+            AbstractHelas.counter += 1
             logger.info('new kernel %s' % self.counter)
             try:       
                 lorentz = eval(self.lorentz_expr)
@@ -397,8 +396,9 @@ class AbstractHelasModel(dict):
             # Make the computation
             wavefunctions = AbstractHelas(lorentz, outgoing, auto_run=False)
             if self.symmetries.has_key(lorentz.name) and \
-                                  outgoing -1 in self.symmetries[lorentz.name]:
-                equiv_out = self.symmetries[lorentz.name][outgoing-1]
+                                  outgoing in self.symmetries[lorentz.name]:
+
+                equiv_out = self.symmetries[lorentz.name][outgoing]
                 lorentz_expr = self.get(lorentz.name, equiv_out).expr
                 wavefunctions.define_helas( lorentz_expr )
             else:

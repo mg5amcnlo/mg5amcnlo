@@ -21,6 +21,8 @@ import madgraph
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 
+from madgraph.core.color_algebra import *
+
 
 logger = logging.getLogger('madgraph.import_ufo')
 
@@ -118,7 +120,7 @@ class converter_ufo_mg5(object):
         UFO vertices information."""
         
         # Initialize a new interaction with a new id tag
-        interaction = base_objects.Interaction({'id':len(self.interactions)})
+        interaction = base_objects.Interaction({'id':len(self.interactions)+1})
         
         # Import particles content:
         particles = [self.model.get_particle(particle.pdg_code) \
@@ -148,6 +150,7 @@ class converter_ufo_mg5(object):
         # Import color information:
         colors = [self.treat_color(color_obj) for color_obj in \
                                     interaction_info.color]
+        
         interaction.set('color', colors)
 
         # add to the interactions
@@ -156,12 +159,8 @@ class converter_ufo_mg5(object):
     @staticmethod
     def treat_color(data_string):
         """ convert the string to ColorStirng"""
+        
         # Convert the string in order to be able to evaluate it
-        # add module information
-        data_string = data_string.replace('f(','color.f(')
-        data_string = data_string.replace('d(','color.d(')
-        data_string = data_string.replace('Tr(','color.Tr(')
-        data_string = data_string.replace('T(','color.T(')
         # Change identity in color.TC
         data_string = data_string.replace('Identity(','color.T(')
         # Change convention for summed indices
@@ -172,7 +171,10 @@ class converter_ufo_mg5(object):
         data_string = data_string.replace('\'','')
             
         output = data_string.split('*')
-        output = color.ColorString([eval(data) for data in output if data !='1'])
+        output = color.ColorString([eval(data).shift_indices() for data in output if data !='1'])
+        for i in range(len(output)):
+            if isinstance(output[i], color.T):
+                output[i][-1], output[i][-2] = output[i][-2], output[i][-1] 
         return output
     
     def check_standard_name(self):
