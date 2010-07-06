@@ -1846,7 +1846,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Check Argument validity
         self.check_setup(args)
         
-        clean = '-noclean' not in args
+        noclean = '-noclean' in args
         force = '-f' in args 
         nojpeg = '-nojpeg' in args
     
@@ -1881,23 +1881,21 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         else:    
             dir_path = os.path.join(self.writing_dir, args[1])
         
-        if not force and os.path.isdir(dir_path):
+        if not force and not noclean and os.path.isdir(dir_path):
+            # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % dir_path)
-            if clean:
-                logger.info('If you continue this directory will be cleaned')
+            logger.info('If you continue this directory will be cleaned')
             answer = raw_input('Do you want to continue? [y/n]')
             if answer != 'y':
                 raise MadGraph5Error('Stopped by user request')
-        else:
-            clean = True 
 
         if args[0] == 'madevent_v4':
             export_v4.copy_v4template(mgme_dir, dir_path,
-                                      self._model_dir, clean)
+                                      self._model_dir, not noclean)
             self._export_format = 'madevent_v4'
         if args[0] == 'standalone_v4':
             export_v4.copy_v4standalone(mgme_dir, dir_path,
-                                        self._model_dir, clean)
+                                        self._model_dir, not noclean)
             self._export_format = 'standalone_v4'
             
         # Import the model
