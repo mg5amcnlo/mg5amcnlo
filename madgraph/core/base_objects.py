@@ -1354,6 +1354,10 @@ class Process(PhysicsObject):
         intermediate s-channels and forbidden particles"""
 
         mystr = ""
+
+        if self['id']:
+            mystr += "%d_" % self['id']
+
         prevleg = None
         for leg in self['legs']:
             mypart = self['model'].get('particle_dict')[leg['id']]
@@ -1391,9 +1395,6 @@ class Process(PhysicsObject):
 
         for decay in self.get('decay_chains'):
             mystr = mystr + "_" + decay.shell_string()
-
-        if self['id']:
-            mystr += "_%d" % self['id']
 
         return mystr
 
