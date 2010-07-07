@@ -52,6 +52,8 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing as draw_lib
 import madgraph.iolibs.drawing_eps as draw
 
+import madgraph.interface.demo_text as demo_text
+
 from madgraph import MG4DIR, MadGraph5Error
 
 
@@ -59,6 +61,9 @@ from madgraph import MG4DIR, MadGraph5Error
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
 logger_stderr = logging.getLogger('fatalerror') # ->stderr
+logger_demo = logging.getLogger('demo') # -> stdout include instruction in order 
+                                        #to learn MG5
+
 #===============================================================================
 # CmdExtended
 #===============================================================================
@@ -169,6 +174,7 @@ class CmdExtended(cmd.Cmd):
                 #stop the execution if on a non interactive mode
                 if self.use_rawinput == False:
                     sys.exit()
+            return False
         except Exception as error:
             # Make sure that we are at the initial position
             os.chdir(self.__initpos)
@@ -180,14 +186,15 @@ class CmdExtended(cmd.Cmd):
             # Create a nice error output
             error_text ='Command \"%s\" was interrupted with error:\n' % line
             error_text += '%s : %s\n' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
-            error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5'
+            error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
             error_text += 'More information is found in \'%s\'.\n' % \
                           os.path.realpath("MG5_debug")
             error_text += 'Please attach this file to your report.'
             logger_stderr.critical(error_text)
             #stop the execution if on a non interactive mode
             if self.use_rawinput == False:
-                sys.exit('Exit on erro')
+                sys.exit('Exit on error')
+            return False
 
     def exec_cmd(self, line):
         """for third party call, call the line with pre and postfix treatment"""
@@ -205,7 +212,32 @@ class CmdExtended(cmd.Cmd):
         line = self.precmd(line)
         stop = self.onecmd(line)
         stop = self.postcmd(stop, line)
-        return stop  
+        return stop 
+    
+    def postcmd(self,stop, line):
+        """ finishing a line """
+        
+        # check normal end for the command
+        if stop == False:
+            logger_demo.info(demo_text.error.replace('\n','\n\t'))
+            return False
+        
+        args=line.split()
+        if len(args)==0:
+            return stop
+        if len(args)==1:
+            command=args[0]
+        else:
+            command = args[0]+'_'+args[1]
+    
+        try:
+            logger_demo.info(getattr(demo_text, command).replace('\n','\n\t'))
+        except:
+            try:
+                logger_demo.info(getattr(demo_text, args[0]).replace('\n','\n\t'))
+            except:
+                pass
+            
 
 
     def emptyline(self):
@@ -221,6 +253,8 @@ class CmdExtended(cmd.Cmd):
     # Quit
     def do_quit(self, line):
         sys.exit(1)
+        
+    do_exit = do_quit
 
     # Aliases
     do_EOF = do_quit
@@ -436,7 +470,7 @@ class CheckValidForCmd(object):
             
         if len(args) != 1 or args[0] not in self._display_opts:
             self.help_display()
-            raise self.InvalidCmd()
+            raise self.InvalidCmd
 
         if not self._curr_model['particles'] or not self._curr_model['interactions']:
             raise self.InvalidCmd("No model currently active, please import a model!")
@@ -1131,6 +1165,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 for order in interaction['orders'].keys():
                     couplings.add(order)
             print ' / '.join(couplings)
+            
+    def do_demo(self, line):
+        """ activate/desactivate the demo """
+
+        args = split_arg(line)
+        if len(args) == 0:
+            logging.getLogger('demo').setLevel(logging.INFO)
+        else:
+            logging.getLogger('demo').setLevel(logging.ERROR)
     
     def do_draw(self, line):
         """ draw the Feynman diagram for the given process """
@@ -1639,7 +1682,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 raise MadGraph5Error(error_text)
             else:
                 raise MadGraph5Error("Path %s is not a valid pathname" % args[1])
-                
             
             #Load the directory
             if os.path.exists(os.path.join(self._model_dir, 'model.pkl')):
@@ -1996,6 +2038,7 @@ class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
         "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
         "*                                                          *\n" + \
         "*               Type 'help' for in-line help.              *\n" + \
+        "*               Type 'demo' to learn how MG5 works         *\n" + \
         "*                                                          *\n" + \
         "************************************************************"
 
