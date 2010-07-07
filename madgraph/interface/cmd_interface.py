@@ -318,6 +318,10 @@ class HelpToCmd(object):
         print "syntax: display " + "|".join(self._display_opts)
         print "-- display a the status of various internal state variables"
 
+    def help_demo(self):
+        print "syntax: demo [" + "|".join(self._demo_opts) + "]"
+        print "-- start/stop demo mode"
+
     def help_setup(self):
         print "syntax " + "|".join(self._setup_opts) + \
               " name|.|auto [options]"
@@ -475,7 +479,7 @@ class CheckValidForCmd(object):
         if not self._curr_model['particles'] or not self._curr_model['interactions']:
             raise self.InvalidCmd("No model currently active, please import a model!")
 
-        if args[0] == 'processes' and not self._curr_amps:
+        if args[0] in ['processes', 'diagrams'] and not self._curr_amps:
             raise self.InvalidCmd("No process generated, please generate a process!")
 
     def check_draw(self, args):
@@ -845,6 +849,13 @@ class CompleteForCmd(CheckValidForCmd):
         if len(split_arg(line[0:begidx])) == 1:
             return self.list_completion(text, self._add_opts)
         
+    def complete_demo(self, text, line, begidx, endidx):
+        "Complete the demo command"
+
+        # Format
+        if len(split_arg(line[0:begidx])) == 1:
+            return self.list_completion(text, self._demo_opts)
+
     def complete_display(self, text, line, begidx, endidx):
         "Complete the display command"
 
@@ -984,11 +995,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _curr_fortran_model = export_v4.HelasFortranModel()
     _multiparticles = {}
 
-    _display_opts = ['particles', 'interactions', 'processes', 'multiparticles',
-                     'couplings']
+    _display_opts = ['particles', 'interactions', 'processes', 'diagrams', 
+                     'multiparticles', 'couplings']
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _setup_opts = ['madevent_v4', 'standalone_v4']
+    _demo_opts = ['start', 'stop']
     _import_formats = ['model_v4', 'proc_v4', 'command']
     _export_formats = ['madevent_v4', 'standalone_v4', 'matrix_v4']
     _done_export = False
@@ -1152,6 +1164,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         elif args[0] == 'processes':
             for amp in self._curr_amps:
+                print amp.nice_string_processes()
+
+        elif args[0] == 'diagrams':
+            for amp in self._curr_amps:
                 print amp.nice_string()
 
         elif args[0] == 'multiparticles':
@@ -1167,13 +1183,20 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             print ' / '.join(couplings)
             
     def do_demo(self, line):
-        """ activate/desactivate the demo """
+        """Activate/deactivate demo mode."""
 
         args = split_arg(line)
-        if len(args) == 0:
-            logging.getLogger('demo').setLevel(logging.INFO)
+        if len(args) > 0 and args[0] == "stop":
+            logger_demo.setLevel(logging.ERROR)
         else:
-            logging.getLogger('demo').setLevel(logging.ERROR)
+            logger_demo.setLevel(logging.INFO)
+
+        if not MG4DIR:
+            logger_demo.info(\
+        "  Warning: This demo should preferably be run " + \
+        "from a valid MG_ME directory.")
+
+        
     
     def do_draw(self, line):
         """ draw the Feynman diagram for the given process """
