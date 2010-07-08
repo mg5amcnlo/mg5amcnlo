@@ -37,6 +37,20 @@ public:
   virtual bool   convertME() const {return true;}
 
 private:
-  // Store flavour-specific process information and standard prefactor.
+
+  // Private function to calculate the matrix element for given helicities
+  double matrix(int helicities[]);
+
+  // Constants for array limits
+  const int nexternal = %(nexternal)d;
+  const int ncolor = %(ncolor)d;
+
+  // Store the matrix element value from sigmaKin
+  double matrix_element;
+
+  // Color flows, used when selecting color
+  double jamp2[ncolor];
+
+  // Other process-specific information, e.g. couplings
 %(process_variables)s
 };
