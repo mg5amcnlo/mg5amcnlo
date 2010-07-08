@@ -1,4 +1,4 @@
-################################################################################
+###############################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
 #
@@ -61,8 +61,8 @@ from madgraph import MG4DIR, MadGraph5Error
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
 logger_stderr = logging.getLogger('fatalerror') # ->stderr
-logger_demo = logging.getLogger('demo') # -> stdout include instruction in order 
-                                        #to learn MG5
+logger_demo = logging.getLogger('demo') # -> stdout include instruction in order
+                                        #    to learn MG5
 
 #===============================================================================
 # CmdExtended
@@ -1108,21 +1108,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         label = args[0]
         pdg_list = []
 
-        for part_name in args[1:]:
-
-            mypart = self._curr_model['particles'].find_name(part_name)
-
-            if mypart:
-                pdg_list.append(mypart.get_pdg_code())
-            else:
-                raise MadGraph5Error("No particle %s in model" % \
-                                                                      part_name)
+        pdg_list = self.extract_particle_ids(" ".join(args[1:]))
 
         if not pdg_list:
             raise MadGraph5Error('Empty or wrong format for multiparticle.\n' + \
                                  "Please try again.")
 
         self._multiparticles[label] = pdg_list
+        logger.info("Defined multiparticle %s" % \
+                    self.multiparticle_string(label))
     
     # Display
     def do_display(self, line):
@@ -1173,7 +1167,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         elif args[0] == 'multiparticles':
             print 'Multiparticle labels:'
             for key in self._multiparticles:
-                print key, " = ", self._multiparticles[key]
+                print self.multiparticle_string(key)
         
         elif args[0] == 'couplings':
             couplings = set()
@@ -1182,6 +1176,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     couplings.add(order)
             print ' / '.join(couplings)
             
+    def multiparticle_string(self, key):
+        """Returns a nicely formatted string for the multiparticle"""
+
+        return "%s = %s" % (key, " ".join( \
+                    [ self._curr_model.get('particle_dict')[part_id].\
+                      get_name() for part_id in self._multiparticles[key]]))
+
     def do_demo(self, line):
         """Activate/deactivate demo mode."""
 
@@ -1486,49 +1487,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # We have a valid process
 
             # Now extract restrictions
-            forbidden_particle_ids = []
-            forbidden_schannel_ids = []
-            required_schannel_ids = []
+            forbidden_particle_ids = \
+                               self.extract_particle_ids(forbidden_particles)
+            forbidden_schannel_ids = \
+                               self.extract_particle_ids(forbidden_schannels)
+            required_schannel_ids = \
+                               self.extract_particle_ids(required_schannels)
 
             #decay_process = len(filter(lambda leg: \
             #                           leg.get('state') == False,
             #                           myleglist)) == 1
-
-            if forbidden_particles:
-                args = split_arg(forbidden_particles)
-                for part_name in args:
-                    if part_name in self._multiparticles:
-                        forbidden_particle_ids.extend( \
-                                               self._multiparticles[part_name])
-                    else:
-                        mypart = self._curr_model['particles'].find_name( \
-                                                                      part_name)
-                        if mypart:
-                            forbidden_particle_ids.append(mypart.get_pdg_code())
-
-            if forbidden_schannels:
-                args = split_arg(forbidden_schannels)
-                for part_name in args:
-                    if part_name in self._multiparticles:
-                        forbidden_schannel_ids.extend(\
-                                               self._multiparticles[part_name])
-                    else:
-                        mypart = self._curr_model['particles'].find_name(\
-                                                                      part_name)
-                        if mypart:
-                            forbidden_schannel_ids.append(mypart.get_pdg_code())
-
-            if required_schannels:
-                args = split_arg(required_schannels)
-                for part_name in args:
-                    if part_name in self._multiparticles:
-                        required_schannel_ids.extend(\
-                                               self._multiparticles[part_name])
-                    else:
-                        mypart = self._curr_model['particles'].find_name(\
-                                                                      part_name)
-                        if mypart:
-                            required_schannel_ids.append(mypart.get_pdg_code())
 
             return \
                 base_objects.ProcessDefinition({'legs': myleglist,
@@ -1540,6 +1508,26 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                 'required_s_channels': required_schannel_ids
                                  })
         #                       'is_decay_chain': decay_process\
+
+    def extract_particle_ids(self, line):
+        """Extract particle ids from a line with particle names"""
+
+        ids = []
+        if line:
+            args = split_arg(line)
+            for part_name in args:
+                if part_name in self._multiparticles:
+                    ids.extend(self._multiparticles[part_name])
+                else:
+                    mypart = self._curr_model['particles'].find_name(part_name)
+                    if mypart:
+                        ids.append(mypart.get_pdg_code())
+                    else:
+                        raise MadGraph5Error("No particle %s in model" % \
+                                             part_name)
+
+                        
+        return ids
 
     def extract_decay_chain_process(self, line, level_down=False):
         """Recursively extract a decay chain process definition from a
