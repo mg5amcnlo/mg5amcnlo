@@ -215,21 +215,27 @@ class CmdExtended(cmd.Cmd):
         return stop 
     
     def postcmd(self,stop, line):
-        """ finishing a line """
+        """ finishing a command
+        This looks if we have to write an additional text for the demo."""
         
-        # check normal end for the command
+        # Print additional information in case of routines fails
         if stop == False:
-            logger_demo.info(demo_text.error.replace('\n','\n\t'))
+            #logger_demo.info(demo_text.error.replace('\n','\n\t'))
             return False
         
         args=line.split()
+        # Return for empty line
         if len(args)==0:
             return stop
+        
+        # try to print linked to the first word in command 
+        #as import_model,... if you don't find then try print with only
+        #the first word.
         if len(args)==1:
             command=args[0]
         else:
             command = args[0]+'_'+args[1]
-    
+        
         try:
             logger_demo.info(getattr(demo_text, command).replace('\n','\n\t'))
         except:
@@ -466,6 +472,10 @@ class CheckValidForCmd(object):
 
         if len(self._curr_model['particles']) == 0:
             raise self.InvalidCmd("No particle list currently active, please create one first!")
+
+        if self._curr_model['particles'].find_name(args[0]):
+            raise MadGraph5Error("label %s is already define for a particle in this model\n\
+            Please retry with another name." % args[0])
 
     def check_display(self, args):
         """check the validity of line
@@ -1106,14 +1116,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self.check_define(args)
 
         label = args[0]
-        pdg_list = []
-
-        pdg_list = self.extract_particle_ids(" ".join(args[1:]))
-
-        if not pdg_list:
-            raise MadGraph5Error('Empty or wrong format for multiparticle.\n' + \
-                                 "Please try again.")
-
+        
+        pdg_list = self.extract_particle_ids(args[1:])
         self._multiparticles[label] = pdg_list
         logger.info("Defined multiparticle %s" % \
                     self.multiparticle_string(label))
@@ -1461,7 +1465,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         # Extract process
         for part_name in args:
-
             if part_name == '>':
                 if not myleglist:
                     raise MadGraph5Error, "No final state particles"
@@ -1509,25 +1512,22 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                  })
         #                       'is_decay_chain': decay_process\
 
-    def extract_particle_ids(self, line):
-        """Extract particle ids from a line with particle names"""
+    def extract_particle_ids(self, args):
+        """Extract particle ids from a list of particle names"""
 
-        ids = []
-        if line:
-            args = split_arg(line)
-            for part_name in args:
-                if part_name in self._multiparticles:
-                    ids.extend(self._multiparticles[part_name])
-                else:
-                    mypart = self._curr_model['particles'].find_name(part_name)
-                    if mypart:
-                        ids.append(mypart.get_pdg_code())
-                    else:
-                        raise MadGraph5Error("No particle %s in model" % \
-                                             part_name)
-
-                        
-        return ids
+        if isinstance(args, basestring):
+            args = split_arg(args)
+        ids=[]
+        for part_name in args:
+            mypart = self._curr_model['particles'].find_name(part_name)
+            if mypart:
+                ids.append(mypart.get_pdg_code())
+            elif part_name in self._multiparticles:
+                ids += self._multiparticles[part_name]
+            else:
+                raise MadGraph5Error("No particle %s in model" % part_name)
+                    
+        return list(set(ids)) # avoid duplication
 
     def extract_decay_chain_process(self, line, level_down=False):
         """Recursively extract a decay chain process definition from a

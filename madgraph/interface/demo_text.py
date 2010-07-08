@@ -33,7 +33,6 @@ Let's start with the first point: How to load a model:
 mg5>import model_v4 sm
 """
 
-error = ""
 
 import_model_v4 ="""
 You have successfully imported a model. If you follow the demo this is the 
@@ -119,15 +118,14 @@ If you want to exit MG5 please enter
 mg5>exit
 
 But if you want, you can continue the demo with some additional example of 
-some other useful commands.
-Let's see for example how MG5 allows you to write the list of commands
-you have entered in a session in a file. This is easisly done by entering
+some other useful commands. MG5 authorizes you to write in a file the list of
+command that you write in a interactive session:
 mg5>history my_mg5_cmd.dat
 """
 
 history = """
-You have written a history file. In order to use a file containing valid MG5 
-instructions, you can simply run
+You have written a history file. If you follow the demo exactly this should be 
+./my_mg5_cmd.dat. In order to execute a file of instruction you can do:
 mg5>import command my_mg5_cmd.dat
 or from the shell:
 ./madgraph5/bin/mg5 my_mg5_cmd.dat
