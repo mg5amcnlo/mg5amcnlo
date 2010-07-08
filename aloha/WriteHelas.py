@@ -13,7 +13,7 @@ class WriteHelas:
     
     power_symbol = '**'
     change_var_format = str
-    change_number_format =str
+    change_number_format = str
     
     def __init__(self, object, particlelist, out_path, comment):
         self.obj = object
@@ -77,7 +77,7 @@ class WriteHelas:
         elif obj.vartype == 5: #ConstantObject
             return self.change_number_format(obj.value)
         else: 
-            print 'Warning unknow object',obj.vartype
+            print 'Warning unknow object', obj.vartype
             return str(obj)
 
     def write_obj_Mult(self, obj):
@@ -121,12 +121,12 @@ class HelasWriterForFortran(WriteHelas):
         """ """
         
         CallList = []
-        DeclareList = ['double precision C']
+        DeclareList = ['double complex C']
         MomentumConserve = []
         DeclareDict = {'F':'double complex f', 'V':'double complex V', \
                                 'S':'double complex s', 'T':'double complex T'}
         FermionNumber = 0
-        VectorNumber =0
+        VectorNumber = 0
         ScalarNumber = 0
         TensorNumber = 0
         OnShell = 1 
@@ -135,7 +135,7 @@ class HelasWriterForFortran(WriteHelas):
         FermiList = []
         VectorList = []
         ScalarList = []
-        TensorList =[] 
+        TensorList = [] 
         for index, elem in enumerate(self.particles):
             
             # First define the size of the associate Object 
@@ -150,11 +150,11 @@ class HelasWriterForFortran(WriteHelas):
             elif elem[0] == 'V':
                 DeclareList.append('%s%d(6)' % (DeclareDict[elem[0]], index + 1))  
                 VectorList.append('%s%d' % ('V', index + 1))
-                VectorNumber +=1 
+                VectorNumber += 1 
             elif elem[0] == 'F':
                 DeclareList.append('%s%d(6)' % (DeclareDict[elem[0]], index + 1))  
                 FermiList.append('%s%d' % ('F', index + 1))  
-                FermionNumber +=1 
+                FermionNumber += 1 
             # Define the Calllist
             if not elem[1]:
                 CallList.append('%s%d' % (elem[0], index + 1))
@@ -165,7 +165,7 @@ class HelasWriterForFortran(WriteHelas):
             # Define Momentum Conservation
             if elem[0] in ['V', 'S', 'T']:
                 MomentumConserve.append('-%s%d' % (elem[0], index + 1))
-            elif elem[0] == 'F' and Counter %2 == 0:
+            elif elem[0] == 'F' and Counter % 2 == 0:
                 MomentumConserve.append('-F%d' % (index + 1))
                 Counter += 1 
             else: 
@@ -174,30 +174,30 @@ class HelasWriterForFortran(WriteHelas):
         # Reorder calllist cyclically. 
         if not OnShell:
             PermList = []
-            if OffShellParticle< FermionNumber:
+            if OffShellParticle < FermionNumber:
                 for i in range(FermionNumber):
-                    PermList.append(OffShellParticle+i-FermionNumber+1) 
+                    PermList.append(OffShellParticle + i - FermionNumber + 1) 
                 FermiList = [FermiList[i] for i in PermList] 
                 FermiList.pop()
-            elif OffShellParticle< (FermionNumber+VectorNumber):
+            elif OffShellParticle < (FermionNumber + VectorNumber):
                 for i in range(len(VectorList)):
-                    Shift = FermionNumber+VectorNumber-1-OffShellParticle
-                    PermList.append(i-Shift) 
+                    Shift = FermionNumber + VectorNumber - 1 - OffShellParticle
+                    PermList.append(i - Shift) 
                 VectorList = [VectorList[i] for i in PermList] 
                 VectorList.pop()
-            elif OffShellParticle< (FermionNumber+VectorNumber+ScalarNumber):
+            elif OffShellParticle < (FermionNumber + VectorNumber + ScalarNumber):
                 for i in range(len(ScalarList)):
-                    Shift = FermionNumber+VectorNumber+ScalarNumber-1-OffShellParticle
-                    PermList.append(i-Shift) 
+                    Shift = FermionNumber + VectorNumber + ScalarNumber - 1 - OffShellParticle
+                    PermList.append(i - Shift) 
                 ScalarList = [ScalarList[i] for i in PermList] 
                 ScalarList.pop()
-            elif OffShellParticle< (FermionNumber+VectorNumber+ScalarNumber):
+            elif OffShellParticle < (FermionNumber + VectorNumber + ScalarNumber):
                 for i in range(len(VectorList)):
-                    Shift = len(self.particles)-1-OffShellParticle
-                    PermList.append(i-Shift) 
+                    Shift = len(self.particles) - 1 - OffShellParticle
+                    PermList.append(i - Shift) 
                 TensorList = [TensorList[i] for i in PermList] 
                 TensorList.pop()
-            CallList = FermiList+VectorList+ScalarList+TensorList
+            CallList = FermiList + VectorList + ScalarList + TensorList
         return {'CallList':CallList, 'OnShell':OnShell, 'DeclareList':DeclareList, \
                      'OffShell':OffShellParticle, 'Momentum':MomentumConserve}
     
@@ -223,13 +223,19 @@ class HelasWriterForFortran(WriteHelas):
         
         # define the type of function and argument
         if OnShell:
-            string = 'subroutine ' + self.namestring + '(C,' + ','.join(CallList + Mass + Width) + ',vertex)\n'
+            string = 'subroutine %(name)s(%(args)s,vertex)\n' % \
+               {'name': self.namestring,
+                'args': ','.join(CallList+ ['C'] + Mass + Width) } 
             DeclareList.append('double complex vertex') 
         else: 
             DeclareList.append('double complex denom')
-            string = 'subroutine ' + self.namestring + '(C,' + ','.join(CallList + Mass + Width) \
-                    + ',' + self.particles[OffShellParticle][0] + '%d)\n' % (OffShellParticle + 1)
-        
+            string = 'subroutine %(name)s(%(args)s, %(out)s%(number)d)\n' % \
+               {'name': self.namestring,
+                'args': ','.join(CallList+ ['C'] + Mass + Width), 
+                'out': self.particles[OffShellParticle][0],
+                'number': OffShellParticle + 1 
+                }
+                                 
         # Forcing implicit None
         string += 'implicit none \n'
         
@@ -283,20 +289,20 @@ class HelasWriterForFortran(WriteHelas):
             string += MomString
             
         # Definition of the Momenta
-        type_to_pos={'S':2,'T':17,'V':5,'F':5}
+        type_to_pos = {'S':2, 'T':17, 'V':5, 'F':5}
         for mom in Momenta:
              
             index = int(mom[-1])
             
-            type = self.particles[index-1][0]
-            energy_pos=type_to_pos[type]
+            type = self.particles[index - 1][0]
+            energy_pos = type_to_pos[type]
             sign = ''
-            if OffShellParticle == index -1 and (type =='V' or type == 'S'):
-                sign='-'
+            if OffShellParticle == index - 1 and (type == 'V' or type == 'S'):
+                sign = '-'
                 
-            string += '%s(0) = %s dble(%s%d(%d))\n' %  (mom, sign, type, index, energy_pos)
-            string += '%s(1) = %s dble(%s%d(%d))\n' % (mom, sign, type, index, energy_pos+1)
-            string += '%s(2) = %s dimag(%s%d(%d))\n' % (mom, sign, type, index, energy_pos+1)
+            string += '%s(0) = %s dble(%s%d(%d))\n' % (mom, sign, type, index, energy_pos)
+            string += '%s(1) = %s dble(%s%d(%d))\n' % (mom, sign, type, index, energy_pos + 1)
+            string += '%s(2) = %s dimag(%s%d(%d))\n' % (mom, sign, type, index, energy_pos + 1)
             string += '%s(3) = %s dimag(%s%d(%d))\n' % (mom, sign, type, index, energy_pos)            
             
                    
@@ -314,7 +320,7 @@ class HelasWriterForFortran(WriteHelas):
         """Formatting the variable name to Fortran format"""
         
         if '_' in name:
-            name = name.replace('_','(',1) +')'
+            name = name.replace('_', '(', 1) + ')'
         #name = re.sub('\_(?P<num>\d+)$', '(\g<num>)', name)
         return name
     
@@ -323,7 +329,7 @@ class HelasWriterForFortran(WriteHelas):
         if isinstance(number, complex):
             out = '(%.9fd0, %.9fd0)' % (number.real, number.imag)
         else:
-            out= '%.9f' % number
+            out = '%.9f' % number
         return out
     
     

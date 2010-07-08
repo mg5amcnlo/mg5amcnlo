@@ -14,8 +14,10 @@
 ################################################################################
 """ How to import a UFO model to the MG5 format """
 
-import sys
+
 import logging
+import os
+import sys
 
 import madgraph
 import madgraph.core.base_objects as base_objects
@@ -65,6 +67,9 @@ class converter_ufo_mg5(object):
         logger.info('load particle')
         for particle_info in self.ufomodel.all_particles:            
             self.add_particle(particle_info)
+
+        logger.info('pass the particles name in MG convention')
+        self.pass_in_standard_name()
             
         logger.info('load vertex')
         for interaction_info in self.ufomodel.all_vertices:
@@ -177,36 +182,55 @@ class converter_ufo_mg5(object):
                 output[i][-1], output[i][-2] = output[i][-2], output[i][-1] 
         return output
     
-    def check_standard_name(self):
+    def pass_in_standard_name(self):
         """check that all SM particles have The same name as MG4 version"""
         
-        sm_data = {
-                # quark
-                1: ['d', 'd~'], 2: ['u', 'u~'], 3: ['s', 's~'], 4: ['c', 'c~'],
-                5: ['b', 'b~'], 6: ['t', 't~'],
-                # lepton
-                11: ['e-','e+'], 12: ['ve','ve~'], 13: ['mu-','mu+'],
-                14: ['vm','vm~'], 15: ['ta-','ta+'],16: ['vt','vt~'], 
-                # boson
-                21: ['g'], 22: ['a'], 23: ['z'], 24: ['w+','w-'], 25: ['h']
-                }
-        to_add ={}
+        default = self.load_default_name()
         
         for particle in self.particles:
             pdg = particle.get_pdg_code()
-            names = [particle.get_name()]
-            if particle.get('antiname') != particle.get_name():
-                names.append(particle.get('antiname'))
+            if pdg not in default.keys():
+                continue
+            name = particle.get_name()
+            antiname = particle.get('antiname')
+            if name != default[pdg]:
+                old_part = self.particles.find_name(default[pdg]) 
+                if old_part:
+                    raise madgraph.MadGraph5Error(
+    '%s particles with pdg code %s is in conflict with MG convention name for \
+     particle %s' % (old_part.get_name(), old_part.get_pdg_code(), pdg  ))
                 
-            if sm_data.has_key(pdg):
-                if names == sm_data[pdg]:
-                    continue
-                for i in range(len(names)):
-                    to_add[sm_data[pdg][i]] = [(-1) ** i * pdg] 
-                    
-        return to_add
-                    
-                    
+                particle.set('name', default[pdg])
+            
+            
+            if name != antiname and antiname != default[-1 *pdg]:
+                old_part = self.particles.find_name(default[-1 * pdg]) 
+                if old_part:
+                    raise madgraph.MadGraph5Error(
+    '%s particles with pdg code %s is in conflict with MG convention name for \
+     particle %s' % (old_part.get_name(), old_part.get_pdg_code(), -1 * pdg  ))
+                
+                particle.set('antiname', default[-1 *pdg])
+    
+    def load_default_name(self):
+        """ load the default for name convention """
+        
+        default = {}
+        for line in open(os.path.join(madgraph.MG5DIR, 'madgraph', 'interface',
+                                      'default_name')):
+            line = line.lstrip()
+            if line.startswith('#'):
+                continue
+            
+            args = line.split()
+            if len(args) != 2:
+                logger.warning('Invalid syntax in interface/default_name:\n %s' % line)
+                continue
+            default[int(args[0])] = args[1].lower()
+        
+        return default
+            
+                
             
         
         

@@ -46,14 +46,15 @@ class TestParallelMG4MG5(unittest.TestCase):
         """Test a minimal list of sm 2->2 processes, mainly to test the test"""
         # Create a list of processes to check automatically
         my_proc_list = me_comparator.create_proc_list(\
-            ['g'],
+            ['u'],
             initial=2, final=2)
-
+        my_proc_list = ['e+ e- > e+ e- / h', 'u u~ > u u~', 'e+ e- > mu+ mu-']
         # Store list of non-zero processes and results in file
         pickle_file = "mg4_sm_%sminitest.pkl" % self.suffix_name
         self.compare_MG4_MG5(my_proc_list,
                              orders = {'QED':2, 'QCD':2},
                              filename = "sm_mini.log",
+                             energy = 1000,
                              pickle_file = pickle_file)
 
     def test_mg4_mg5_sm_22(self):
@@ -153,7 +154,7 @@ class TestParallelMG4MG5(unittest.TestCase):
                              filename = "heft_23.log",
                              pickle_file = pickle_file)
 
-
+        
     def compare_MG4_MG5(self, my_proc_list = [], orders = {}, model = 'sm',
                         energy = 500, filename = "", pickle_file = "",
                         tolerance = 1e-06):
@@ -199,3 +200,10 @@ class TestParallelMG4MG5_UFO(TestParallelMG4MG5):
     
     mg5runner = me_comparator.MG5_UFO_Runner
     suffix_name = 'ufo_'
+    
+    
+    def test_ufo(self):
+        self.test_mg4_mg5_minitest()
+        
+    def test_ufo_sm(self):
+        self.test_mg4_mg5_sm_22()

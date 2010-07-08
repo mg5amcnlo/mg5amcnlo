@@ -1,6 +1,6 @@
 # This file was automatically created by FeynRules $Revision: 216 $
 # Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
-# Date: Sat 26 Jun 2010 18:16:42
+# Date: Wed 7 Jul 2010 09:55:56
 
 
 
@@ -73,22 +73,6 @@ ymtau = Parameter(name = 'ymtau',
                   lhablock = 'YUKAWA',
                   lhacode = [ 15 ])
 
-Me = Parameter(name = 'Me',
-               nature = 'external',
-               type = 'real',
-               value = 0.000511,
-               texname = '\\text{Me}',
-               lhablock = 'MASS',
-               lhacode = [ 11 ])
-
-MM = Parameter(name = 'MM',
-               nature = 'external',
-               type = 'real',
-               value = 0.10566,
-               texname = '\\text{MM}',
-               lhablock = 'MASS',
-               lhacode = [ 13 ])
-
 MTA = Parameter(name = 'MTA',
                 nature = 'external',
                 type = 'real',
@@ -96,14 +80,6 @@ MTA = Parameter(name = 'MTA',
                 texname = '\\text{MTA}',
                 lhablock = 'MASS',
                 lhacode = [ 15 ])
-
-MU = Parameter(name = 'MU',
-               nature = 'external',
-               type = 'real',
-               value = 0.00255,
-               texname = 'M',
-               lhablock = 'MASS',
-               lhacode = [ 2 ])
 
 MC = Parameter(name = 'MC',
                nature = 'external',
@@ -120,22 +96,6 @@ MT = Parameter(name = 'MT',
                texname = '\\text{MT}',
                lhablock = 'MASS',
                lhacode = [ 6 ])
-
-MD = Parameter(name = 'MD',
-               nature = 'external',
-               type = 'real',
-               value = 0.00504,
-               texname = '\\text{MD}',
-               lhablock = 'MASS',
-               lhacode = [ 1 ])
-
-MS = Parameter(name = 'MS',
-               nature = 'external',
-               type = 'real',
-               value = 0.104,
-               texname = '\\text{MS}',
-               lhablock = 'MASS',
-               lhacode = [ 3 ])
 
 MB = Parameter(name = 'MB',
                nature = 'external',

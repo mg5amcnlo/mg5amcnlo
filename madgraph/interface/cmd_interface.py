@@ -372,6 +372,13 @@ class HelpToCmd(object):
         print "   defined by the setup command."
         print "   Add option --nojpeg to suppress jpeg diagrams."        
 
+    def help_demo(self):
+        """ demo help"""
+        
+        print "this command starts a simple demonstration on how use MG5"
+        print " In order to stop this demonstration you can enter "
+        print " mg5> demo stop"
+
     def help_draw(self):
         _draw_parser.print_help()
 
@@ -1575,9 +1582,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self._ufo_model = ufomodels.load_model(args[1])
             ufo2mg5_converter = import_ufo.converter_ufo_mg5(self._ufo_model)
             self._curr_model = ufo2mg5_converter.load_model()
-            logger.info('define standard name for SM particles')
-            compatibility_def = ufo2mg5_converter.check_standard_name()
-            self._multiparticles.update(compatibility_def)
             if os.path.isdir(args[1]):
                 self._model_dir = args[1]
             elif os.path.isdir(os.path.join(MG5DIR, 'models', args[1])):
@@ -1601,7 +1605,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self._model_dir = os.path.join(MG4DIR, 'Models', args[1])
             elif not MG4DIR:
                 error_text = "Path %s is not a valid pathname\n" % args[1]
-                error_text += "and no MG_ME installation detected in other to search in Models"
+                error_text += "and no MG_ME installation detected in order to search in Models"
                 raise MadGraph5Error(error_text)
             else:
                 raise MadGraph5Error("Path %s is not a valid pathname" % args[1])
