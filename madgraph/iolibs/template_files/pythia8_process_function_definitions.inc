@@ -37,9 +37,15 @@ void %(process_class_name)s::setIdColAcol() {
 //--------------------------------------------------------------------------
 // Evaluate weight for angles of decay products in process 
 
-double %(process_class_name)s::weightDecay( Event& process, int iResBeg, 
-  int iResEnd) {
+double %(process_class_name)s::weightDecay(Event& process, int iResBeg, int iResEnd) {
 
     %(weightDecay_lines)s
 }
 
+//--------------------------------------------------------------------------
+// Evaluate d(sigmaHat)/d(tHat), part independent of incoming flavour. 
+
+double %(process_class_name)s::matrix(int nhel[]) { 
+
+    %(matrix_lines)s
+}

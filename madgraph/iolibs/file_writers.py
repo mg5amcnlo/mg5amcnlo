@@ -293,24 +293,27 @@ class CPPWriter(FileWriter):
                             '^protected': standard_indent}
     
     spacing_patterns = [('\s*\"\s*}', '\"'),
-                        ('\s*;\s*', '; '),
                         ('\s*,\s*', ', '),
+                        ('\s*-\s*', ' - '),
+                        ('([\{\(,=])\s*-\s*', '\g<1> -'),
+                        ('\s*\+\s*', ' + '),
+                        ('([\{\(,=])\s*\+\s*', '\g<1> +'),
                         ('\(\s*', '('),
                         ('\s*\)', ')'),
+                        ('\{\s*', '{'),
+                        ('\s*\}', '}'),
                         ('\s*=\s*', ' = '),
                         ('\s*>\s*', ' > '),
                         ('\s*<\s*', ' < '),
                         ('\s*!\s*', ' !'),
-                        ('\s*\+\s*', ' + '),
-                        ('\s*-\s*', ' - '),
-                        ('\s*/\s*', ' / '),
+                        ('\s*/\s*', '/'),
                         ('\s*\*\s*', ' * '),
                         ('\s*-\s+-\s*', '-- '),
                         ('\s*\+\s+\+\s*', '++ '),
                         ('\s*-\s+=\s*', ' -= '),
                         ('\s*\+\s+=\s*', ' += '),
                         ('\s*\*\s+=\s*', ' *= '),
-                        ('\s*/\s+=\s*', ' /= '),
+                        ('\s*/=\s*', ' /= '),
                         ('\s*>\s+>\s*', ' >> '),
                         ('\s*<\s+<\s*', ' << '),
                         ('\s*=\s+=\s*', ' == '),
@@ -320,9 +323,12 @@ class CPPWriter(FileWriter):
                         ('\s*&&\s*', ' && '),
                         ('\s*\|\|\s*', ' || '),
                         ('\s*{\s*}', ' {}'),
+                        ('\s*;\s*', '; '),
                         ('\s+',' ')]
     spacing_re = dict([(key[0], re.compile(key[0])) for key in \
                        spacing_patterns])
+
+    init_array_pattern = re.compile(r"=\s*\{.*\}")
 
     comment_char = '//'
     comment_pattern = re.compile(r"^(\s*#\s+|\s*//)")
@@ -550,6 +556,14 @@ class CPPWriter(FileWriter):
                         "\n")
             return res_lines
 
+        # Check if this line is an array initialization a ={b,c,d};
+        if self.init_array_pattern.search(myline):
+            res_lines.append("\n".join(self.split_line(\
+                                      myline,
+                                      self.split_characters)) + \
+                        "\n")
+            return res_lines
+
         # Check if there is a "{" somewhere in the line
         if "{" in myline:
             end_index = myline.index("{")
@@ -701,7 +715,7 @@ class CPPWriter(FileWriter):
             # Append new line
             if long_line[split_at:].lstrip():
                 # Replace old line
-                res_lines[-1] = long_line[:split_at].lstrip().rstrip()
+                res_lines[-1] = long_line[:split_at].rstrip()
                 res_lines.append(" " * \
                                  (self.__indent + self.line_cont_indent) + \
                                  long_line[split_at:].strip())
