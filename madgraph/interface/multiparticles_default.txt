@@ -1,0 +1,20 @@
+#
+# Copyright (c) 2010 The MadGraph Development team and Contributors
+#
+# This file is a part of the MadGraph 5 project, an application which 
+# automatically generates Feynman diagrams and matrix elements for arbitrary
+# high-energy processes in the Standard Model and beyond.
+#
+# It is subject to the MadGraph license which should accompany this 
+# distribution.
+#
+# For more information, please visit: http://madgraph.phys.ucl.ac.be
+#
+################################################################################
+# label PART
+P u u~ c c~ d d~ s s~ g
+J u u~ c c~ d d~ s s~ g
+L+ e+ mu+
+L- e- mu-
+vl ve vm
+vl~ ve~ vm~

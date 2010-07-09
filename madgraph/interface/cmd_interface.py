@@ -54,7 +54,7 @@ import madgraph.iolibs.drawing_eps as draw
 
 import madgraph.interface.tutorial_text as tutorial_text
 
-from madgraph import MG4DIR, MadGraph5Error
+from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
 
 
@@ -472,7 +472,7 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd('\"define\" command requires at least two arguments')
 
         if len(self._curr_model['particles']) == 0:
-            raise self.InvalidCmd("No particle list currently active, please create one first!")
+            raise self.InvalidCmd("No particle list currently active, please import a model first")
 
         if self._curr_model['particles'].find_name(args[0]):
             raise MadGraph5Error("label %s is already define for a particle in this model\n\
@@ -1107,7 +1107,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                       (len(self._curr_amps), ndiags))                
   
     # Define a multiparticle label
-    def do_define(self, line):
+    def do_define(self, line, log=True):
         """Define a multiparticle"""
 
         # Particle names always lowercase
@@ -1120,8 +1120,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         pdg_list = self.extract_particle_ids(args[1:])
         self._multiparticles[label] = pdg_list
-        logger.info("Defined multiparticle %s" % \
-                    self.multiparticle_string(label))
+        if log:
+            logger.info("Defined multiparticle %s" % \
+                                             self.multiparticle_string(label))
     
     # Display
     def do_display(self, line):
@@ -1699,6 +1700,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if os.path.exists(os.path.join(self._model_dir, 'model.pkl')):
                 self.do_load('model %s' % os.path.join(self._model_dir, \
                                                                    'model.pkl'))
+                self.add_default_multiparticles()
                 return
             files_to_import = ('particles.dat', 'interactions.dat')
             for filename in files_to_import:
@@ -1711,6 +1713,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             #save model for next usage
             self.do_save('model %s ' % os.path.join(self._model_dir, \
                                                                    'model.pkl'))
+            self.add_default_multiparticles()
         
         elif args[0] == 'proc_v4':
             
@@ -1785,6 +1788,20 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         return
     
+    def add_default_multiparticles(self):
+        """ add default particle from file interface.multiparticles_default.txt
+        """
+        
+        for line in open(os.path.join(MG5DIR, 'madgraph', 'interface', \
+                                                 'multiparticles_default.txt')):
+            if line.startswith('#'):
+                continue
+            try:
+                self.do_define(line, log=False)
+            except MadGraph5Error, why:
+                logger_stderr.warning('impossible to set default multiparticles %s because %s' %
+                                        (line.split()[0],why))
+            
     def check_for_export_dir(self, filepath):
         """Check if the files is in a valid export directory and assign it to
         export path if if is"""

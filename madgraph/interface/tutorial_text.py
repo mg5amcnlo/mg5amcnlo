@@ -42,12 +42,13 @@ If you want to know more information about this model you can use the
 following commands:
 mg5>display particles
 mg5>display interactions
+mg5>display multiparticles
 which show information on the particles and the vertices of the model.
 
 Now you can define a multiparticle label, i.e a label corresponding 
 to a set of particles:
-mg5>define p u u~ c c~ d d~ s s~ g
-defines the symbol \"p\" to correspond to any parton.
+mg5>define v w+ w- z a
+defines the symbol \"v\" to correspond to any vector.
 """
 
 display_model = """
@@ -74,7 +75,11 @@ mg5>setup madevent_v4 MY_FIRST_MG5_RUN
 
 define = """
 You have just defined a multiparticle label.
-If you follow the tutorial, the label is \"p\"
+If you follow the tutorial, the label is \"v\"
+
+Note that some multiparticles as p, j, l+, l- are predefined. Type
+mg5>display multiparticles
+to know more about their definition
 
 To generate a process using the multiparticle label, please run
 mg5>generate p p > t t~ QED=0
