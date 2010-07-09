@@ -52,7 +52,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing as draw_lib
 import madgraph.iolibs.drawing_eps as draw
 
-import madgraph.interface.demo_text as demo_text
+import madgraph.interface.tutorial_text as tutorial_text
 
 from madgraph import MG4DIR, MadGraph5Error
 
@@ -61,7 +61,7 @@ from madgraph import MG4DIR, MadGraph5Error
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
 logger_stderr = logging.getLogger('fatalerror') # ->stderr
-logger_demo = logging.getLogger('demo') # -> stdout include instruction in order
+logger_tuto = logging.getLogger('tutorial') # -> stdout include instruction in order
                                         #    to learn MG5
 
 #===============================================================================
@@ -218,11 +218,10 @@ class CmdExtended(cmd.Cmd):
     
     def postcmd(self,stop, line):
         """ finishing a command
-        This looks if we have to write an additional text for the demo."""
+        This looks if we have to write an additional text for the tutorial."""
         
         # Print additional information in case of routines fails
         if stop == False:
-            #logger_demo.info(demo_text.error.replace('\n','\n\t'))
             return False
         
         args=line.split()
@@ -239,10 +238,10 @@ class CmdExtended(cmd.Cmd):
             command = args[0]+'_'+args[1]
         
         try:
-            logger_demo.info(getattr(demo_text, command).replace('\n','\n\t'))
+            logger_tuto.info(getattr(tutorial_text, command).replace('\n','\n\t'))
         except:
             try:
-                logger_demo.info(getattr(demo_text, args[0]).replace('\n','\n\t'))
+                logger_tuto.info(getattr(tutorial_text, args[0]).replace('\n','\n\t'))
             except:
                 pass
             
@@ -326,9 +325,9 @@ class HelpToCmd(object):
         print "syntax: display " + "|".join(self._display_opts)
         print "-- display a the status of various internal state variables"
 
-    def help_demo(self):
-        print "syntax: demo [" + "|".join(self._demo_opts) + "]"
-        print "-- start/stop demo mode"
+    def help_tutorial(self):
+        print "syntax: tutorial [" + "|".join(self._tutorial_opts) + "]"
+        print "-- start/stop the tutorial mode"
 
     def help_setup(self):
         print "syntax " + "|".join(self._setup_opts) + \
@@ -861,12 +860,12 @@ class CompleteForCmd(CheckValidForCmd):
         if len(split_arg(line[0:begidx])) == 1:
             return self.list_completion(text, self._add_opts)
         
-    def complete_demo(self, text, line, begidx, endidx):
-        "Complete the demo command"
+    def complete_tutorial(self, text, line, begidx, endidx):
+        "Complete the tutorial command"
 
         # Format
         if len(split_arg(line[0:begidx])) == 1:
-            return self.list_completion(text, self._demo_opts)
+            return self.list_completion(text, self._tutorial_opts)
 
     def complete_display(self, text, line, begidx, endidx):
         "Complete the display command"
@@ -1012,7 +1011,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _setup_opts = ['madevent_v4', 'standalone_v4']
-    _demo_opts = ['start', 'stop']
+    _tutorial_opts = ['start', 'stop']
     _import_formats = ['model_v4', 'proc_v4', 'command']
     _export_formats = ['madevent_v4', 'standalone_v4', 'matrix_v4']
     _done_export = False
@@ -1189,18 +1188,18 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     [ self._curr_model.get('particle_dict')[part_id].\
                       get_name() for part_id in self._multiparticles[key]]))
 
-    def do_demo(self, line):
-        """Activate/deactivate demo mode."""
+    def do_tutorial(self, line):
+        """Activate/deactivate the tutorial mode."""
 
         args = split_arg(line)
         if len(args) > 0 and args[0] == "stop":
-            logger_demo.setLevel(logging.ERROR)
+            logger_tuto.setLevel(logging.ERROR)
         else:
-            logger_demo.setLevel(logging.INFO)
+            logger_tuto.setLevel(logging.INFO)
 
         if not MG4DIR:
-            logger_demo.info(\
-        "  Warning: This demo should preferably be run " + \
+            logger_tuto.info(\
+        "  Warning: This tutorial should preferably be run " + \
         "from a valid MG_ME directory.")
 
         
@@ -1997,7 +1996,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         possibility = {
         'mg5_start': ['import model_v4 PATH', 'import command PATH', 
-                                                 'import proc_v4 PATH', 'demo'],
+                                                 'import proc_v4 PATH', 'tutorial'],
         'import model_v4': ['generate PROCESS','define MULTIPART PART1 PART2 ...', 
                                    'display particles', 'display interactions'],
         'import model' : ['generate PROCESS','define MULTIPART PART1 PART2 ...', 
@@ -2011,7 +2010,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         'draw': ['shell CMD'],
         'export':['finalize'],
         'finalize': ['history PATH', 'exit'],
-        'import proc_v4' : ['exit']
+        'import proc_v4' : ['exit'],
+        'tutorial': ['import model_v4 sm','help']
         }
         
         print 'Contextual Help'
@@ -2112,7 +2112,7 @@ class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
         "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
         "*                                                          *\n" + \
         "*               Type 'help' for in-line help.              *\n" + \
-        "*               Type 'demo' to learn how MG5 works         *\n" + \
+        "*           Type 'tutorial' to learn how MG5 works         *\n" + \
         "*                                                          *\n" + \
         "************************************************************"
 

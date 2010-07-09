@@ -13,8 +13,8 @@
 #
 ################################################################################
 
-demo = """
-You have just entered the demonstration mode. This will introduce you the main
+tutorial = """
+You have just entered in the tutorial mode. This will introduce you the main
 syntax options of MadGraph5.
 
 To learn more about the different options on a given command, you can use  
@@ -22,7 +22,7 @@ mg5>help A_CMD
 To see a list of all commands, use
 mg5>help 
 
-The goal of this interactive demonstration is to learn how to generate
+The goal of this tutorial is to learn how to generate
 a process and to produce the output for MadEvent. In this part we will learn 
 a) How to load a model
 b) How to define multi-particles 
@@ -35,7 +35,7 @@ mg5>import model_v4 sm
 
 
 import_model_v4 ="""
-You have successfully imported a model. If you follow the demo this is the 
+You have successfully imported a model. If you follow the tutorial this is the 
 Standard Model. 
 
 If you want to know more information about this model you can use the
@@ -66,7 +66,7 @@ display_processes = """
 You have seen a list of the already defined processes.
 
 At this stage you can export your processes to a given format. In this
-demonstration, we will explain how to create a valid output for
+tutorial, we will explain how to create a valid output for
 MadEvent.
 This is done by typing:
 mg5>setup madevent_v4 MY_FIRST_MG5_RUN
@@ -74,7 +74,7 @@ mg5>setup madevent_v4 MY_FIRST_MG5_RUN
 
 define = """
 You have just defined a multiparticle label.
-If you follow the demo, the label is \"p\"
+If you follow the tutorial, the label is \"p\"
 
 To generate a process using the multiparticle label, please run
 mg5>generate p p > t t~ QED=0
@@ -94,38 +94,38 @@ To add a second process, please use the add process command:
 mg5>add process p p > W+ > e+ ve
 
 At this stage you can export your process to a given format. In this
-demonstration, we will explain how to create a valid output for
+tutorial, we will explain how to create a valid output for
 MadEvent.
 This is done by typing:
 mg5>setup madevent_v4 MY_FIRST_MG5_RUN
 """
 
 setup_madevent_v4 = """
-If you are following the demo, a directory MY_FIRST_MG5_RUN has been
+If you are following the tutorial, a directory MY_FIRST_MG5_RUN has been
 created which can be use in order to run MadEvent, exactly as if it
 was coming from MG4.
 
-This step ends the demonstration of the basic commands of MG5.  Don\'t
+This step ends the tutorial of the basic commands of MG5.  Don\'t
 forget that you can always use the help to learn the different options
 of the different command. For example, if you want to know all the
 valid output format, you can enter
 mg5>help setup
 
-In order to close this demonstration please enter
-mg5>demo stop
+In order to close this tutorial please enter
+mg5>tutorial stop
 
 If you want to exit MG5 please enter
 mg5>exit
 
-But if you want, you can continue the demo with some additional example of 
+But if you want, you can continue the tutorial with some additional example of 
 some other useful commands. MG5 authorizes you to write in a file the list of
 command that you write in a interactive session:
 mg5>history my_mg5_cmd.dat
 """
 
 history = """
-You have written a history file. If you follow the demo exactly this should be 
-./my_mg5_cmd.dat. In order to execute a file of instruction you can do:
+You have written a history file. If you follow the tutorial exactly this should 
+be ./my_mg5_cmd.dat. In order to execute a file of instruction you can do:
 mg5>import command my_mg5_cmd.dat
 or from the shell:
 ./madgraph5/bin/mg5 my_mg5_cmd.dat
@@ -141,7 +141,7 @@ starting the line by an exclamation mark (!).
 
 The final command is draw. This allows you to draw the diagrams for
 your processes (in eps format) before creating an output for a given
-format. This can be usefull for fast check of your process.  In order
+format. This can be useful for fast check of your process.  In order
 to draw diagrams, you need to specify a directory where the eps files
 will be written:
 mg5>draw .
@@ -153,9 +153,9 @@ mg5>! gv ./diagrams_0_gg_ttx.eps
 or on MacOS X
 mg5>! open ./diagrams_0_gg_ttx.eps
 
-This command was the last step of the demonstration. 
+This command was the last step of the tutorial. 
 Quit the demo by typing:
-mg5>demo stop
+mg5>tutorial stop
 
 Thanks for using MG5.
 """
@@ -163,7 +163,7 @@ Thanks for using MG5.
 add_process = """
 You have added a process to your process list.
 At this stage your are able to export your processes to a given
-format. In this demonstration, we will explain how to create a valid
+format. In this tutorial, we will explain how to create a valid
 output for MadEvent.  This is easily done by typing:
 
 mg5>setup madevent_v4 MY_FIRST_MG5_RUN
