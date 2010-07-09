@@ -134,8 +134,10 @@ class CmdExtended(cmd.Cmd):
 
         # Update the history of this suite of command,
         # except for useless commands (empty history and help calls)
-        if line != "history" and not re.match("help ", line) and \
-               not line.startswith('#*'):
+        if line != "history" and \
+            not line.startswith('help') and \
+            not line.startswith('#*') and \
+            not line.startswith('now'):
             self.history.append(line)
 
         # Check if we are continuing a line:
@@ -1972,6 +1974,67 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 options = '-nojpeg'
 
             self.do_export(options)
+
+
+    def do_help(self, line):
+        """ propose some usefull possible action """
+        
+        super(MadGraphCmd,self).do_help(line)
+        
+        if line:
+            return
+        
+        if len(self.history) == 0:
+            last_action_2 = 'mg5_start'
+            last_action = 'mg5_start'
+        else:
+            args = self.history[-1].split()
+            last_action = args[0]
+            if len(args)>1: 
+                last_action_2 = '%s %s' % (last_action, args[1])
+            else: 
+                last_action_2 = 'none'
+        
+        possibility = {
+        'mg5_start': ['import model_v4 PATH', 'import command PATH', 
+                                                 'import proc_v4 PATH', 'demo'],
+        'import model_v4': ['generate PROCESS','define MULTIPART PART1 PART2 ...', 
+                                   'display particles', 'display interactions'],
+        'import model' : ['generate PROCESS','define MULTIPART PART1 PART2 ...', 
+                                   'display particles', 'display interactions'],
+        'define': ['define MULTIPART PART1 PART2 ...', 'generate PROCESS', 
+                                                    'display multiparticles'],
+        'generate': ['add process PROCESS','setup OUTPUT_TYPE PATH','draw .'],
+        'add process':['setup OUTPUT_TYPE PATH', 'display processes'],
+        'setup':['history PATH', 'exit'],
+        'display': ['generate PROCESS', 'add process PROCESS', 'setup OUTPUT_TYPE PATH'],
+        'draw': ['shell CMD'],
+        'export':['finalize'],
+        'finalize': ['history PATH', 'exit'],
+        'import proc_v4' : ['exit']
+        }
+        
+        print 'Contextual Help'
+        print '==============='
+        if last_action_2 in possibility.keys():
+            options = possibility[last_action_2]
+        elif last_action in possibility.keys():
+            options = possibility[last_action]
+        else:
+            print 'No suggestion available for your last command'
+            return
+        
+        text = 'The following command maybe usefull in order to continue.\n'
+        for option in options:
+            text+='\t %s \n' % option
+        #text+='you can use help to have more information on those command'
+        
+        print text
+        
+
+
+
+
 
 #===============================================================================
 # MadGraphCmd
