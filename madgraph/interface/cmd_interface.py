@@ -622,13 +622,11 @@ class CheckValidForCmd(object):
         """check the validity of the line"""
 
         nojpeg = ""
-
         if '-nojpeg' in args:
             nojpeg = '-nojpeg'
             args = filter(lambda arg: arg != nojpeg, args)
     
         if len(args) < 1 and not self._export_format in self._setup_opts:
-            print len(args), self._export_format, self._setup_opts
             self.help_finalize()
             raise self.InvalidCmd('wrong \"finalize\" format')
         
