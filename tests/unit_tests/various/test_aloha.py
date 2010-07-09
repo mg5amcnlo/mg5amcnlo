@@ -2003,7 +2003,7 @@ class test_aloha_creation(unittest.TestCase):
                  spins = [ 3, 3, 1 ],
                  structure = 'Metric(1,2)')
 
-        abstract = Create_Helas.AbstractHelas(VVS_15, 3)
+        abstract = Create_Helas.AbstractHelasBuilder(VVS_15).compute_helas(3)
         
         self.assertEqual(abstract.expr.numerator.nb_lor, 0)
         self.assertEqual(abstract.expr.numerator.nb_spin, 0)
@@ -2024,10 +2024,9 @@ class test_aloha_creation(unittest.TestCase):
                  structure = 'Gamma(3,1,2)')
         
         
-         
-        abstract_M = Create_Helas.AbstractHelas(FFV_M, 3)       
-        abstract_P = Create_Helas.AbstractHelas(FFV_P, 3)       
-        abstract = Create_Helas.AbstractHelas(FFV, 3)
+        abstract_M = Create_Helas.AbstractHelasBuilder(FFV_M).compute_helas(3)       
+        abstract_P = Create_Helas.AbstractHelasBuilder(FFV_P).compute_helas(3)       
+        abstract = Create_Helas.AbstractHelasBuilder(FFV).compute_helas(3)
         
         zero = abstract_M.expr.numerator + abstract_P.expr.numerator - \
                             abstract.expr.numerator
@@ -2051,19 +2050,11 @@ class test_aloha_creation(unittest.TestCase):
         self.assertEqual(s3, eval(str(abstract_M.expr.numerator.get_rep([2]))))    
         self.assertEqual(s4, eval(str(abstract_M.expr.numerator.get_rep([3]))))                                   
 
-
-
-
-
-
-
-
-
         FFV_6 = Lorentz(name = 'FFV_6',
                 spins = [ 2, 2, 3 ],
                 structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2) + 2*Gamma(3,1,\'s1\')*ProjP(\'s1\',2)')
 
-        abstract_6 = Create_Helas.AbstractHelas(FFV_6, 3)
+        abstract_6 = Create_Helas.AbstractHelasBuilder(FFV_6).compute_helas(3)
          
         zero = abstract_6.expr.numerator - abstract_M.expr.numerator - \
                                                     2* abstract_P.expr.numerator   

@@ -24,7 +24,7 @@ import madgraph.interface.cmd_interface as Cmd
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
 
-from madgraph import MG4DIR
+from madgraph import MG4DIR, MG5DIR
 
 #===============================================================================
 # TestCmd
@@ -182,6 +182,10 @@ class TestCmdShell2(unittest.TestCase):
         
     def test_ufo_aloha(self):
         """ test the import of models and the export of Helas Routine """
+        try:
+            os.remove(os.path.join(MG5DIR, 'models','sm', 'helas.pkl'))
+        except:
+            pass
         
         self.do('import model sm')
         self.do('generate e+e->e+e-')
@@ -194,6 +198,8 @@ class TestCmdShell2(unittest.TestCase):
                                                'lib', 'libdhelas3.a')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'lib', 'libmodel.a')))
+        self.assertTrue(os.path.exists(os.path.join(\
+                                           MG5DIR, 'models','sm', 'helas.pkl')))
         
     def test_ufo_standard_sm(self):
         """ check that we can use standard MG4 name """
