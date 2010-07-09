@@ -202,7 +202,6 @@ class AbstractHelas(object):
         """Define the kernel at low level"""
         
         if not lorentz:
-            print 'create 206'
             logger.info('compute kernel %s' % self.counter)
             AbstractHelas.counter += 1  
             try:        

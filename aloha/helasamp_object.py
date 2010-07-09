@@ -591,48 +591,6 @@ Spin2Propagator =  lambda l1, l2, l3, l4, part: Spin2masslessPropagator(l1, l2, 
                                 Metric(l3, l2) * P(l1, part) * P(l4 , part) )+ \
                 1/6 * (Metric(l1,l3) + 2 * OverMass2(part) * P(l1, part) * P(l3, part)) * \
                       (Metric(l2,l4) + 2 * OverMass2(part) * P(l2, part) * P(l4, part))
-
-
-
-if __name__ == '__main__':
-    root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
-    sys.path.append(root_path)
-    # Input as coming from FR!!!
-    obj = DenominatorPropagator(1)
-    print obj
-    obj.change_particle_info({1:2})
-    print obj
-    #Gamma(2,1,2)*Gamma(4,4,6)# * VectorPropagator(2,3,2) #/DenominatorPropagator(3)
-    print type(obj)
-    print obj
-    # Analysis
-    print obj
-    obj = obj.simplify() # -> Simplify sum
-    print obj
-
-    # expand
-    
-
-    low_level = obj.expand()
-    print type(low_level)
-    low_level = low_level.simplify()
-    
-    print 'all is done'
-    print low_level
-    low_level = low_level.factorize()
-    print low_level
-    for term in low_level[0]:
-        print term.__class__
-        for data in term:
-            print '>', data.__class__
-    
-    import WriteHelas        
-    WriteHelas.HelasWriterForFortran(low_level, [('S',1)], 'temp', 'denom').write()
-    #writing the object in a file
-    #low_level.create_output('Fortran','test.f')
-
-    
-    
     
     
 

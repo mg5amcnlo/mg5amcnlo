@@ -429,7 +429,7 @@ class AddVariable(list):
                 try:
                     newadd = newadd.factorize()
                 except:
-                    sys.exit()
+                    raise Exception('')
             else:
                 #take away the useless AddVariable to going back to a Variable class
                 newadd = newadd[0]
@@ -834,7 +834,7 @@ class MultLorentz(MultVariable):
         return out
         
     def find_spincontraction(self):
-        """return of (pos_object1, indice1) ->(pos_object2,indices2) definng
+        """return of (pos_object1, indice1) ->(pos_object2,indices2) defining
         the contraction in this Multiplication."""
 
         out = {}
@@ -845,13 +845,15 @@ class MultLorentz(MultVariable):
             for j in range(len(fact.spin_ind)):
                 # in order to compare with the other element of the multiplication
                 for k in range(i+1, len_mult):
+                    fact2 = self[k]
                     try:
                         l = fact2.spin_ind.index(fact.spin_ind[j])
-                    except:
+                    except:                
                         pass
                     else:
                         out[(i, j)] = (k, l)  
                         out[(k, l)] = (i, j)
+        
         return out  
 
     def expand(self):
@@ -1556,7 +1558,7 @@ class ConstantObject(LorentzObjectRepresentation):
         if not self.value:
             return obj
 
-        if not hasattr(obj, vartype):
+        if not hasattr(obj, 'vartype'):
             return ConstantObject(self.value + obj)
         elif obj.vartype == 0:
             new = obj.add_class()

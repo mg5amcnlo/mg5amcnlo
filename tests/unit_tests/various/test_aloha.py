@@ -1837,6 +1837,7 @@ class TestSomeObjectProperty(unittest.TestCase):
 
         self.assertEqual(projm,projm2)
         
+        
         # Identity = ProjP + ProjM
         identity= ProjM(1,2) + ProjP(1,2)
         identity = identity.simplify().expand().simplify()
@@ -1845,6 +1846,21 @@ class TestSomeObjectProperty(unittest.TestCase):
         identity2 = identity2.simplify().expand().simplify()
         
         self.assertEqual(identity,identity2)
+
+        # Gamma* ProjP + Gamma* ProjM =Gamma
+        part1 = Gamma(1,1,2) * ProjP(2,3)  + Gamma(1,1,2) * ProjM(2,3)
+        part2 = Gamma(1,1,3)
+        
+        
+        part1 = part1.simplify().expand().simplify()
+        part2 = part2.simplify().expand().simplify()
+        
+        zero = part1 - part2
+        for ind in zero.listindices():
+            self.assertEqual(zero.get_rep(ind), 0, '%s != 0.0for %s' % \
+                             (zero.get_rep(ind), ind)) 
+
+
           
         #metric_mu_nu = 1/2 {Gamma_nu, Gamma_mu} 
         metric = 1/2 * (Gamma(1,1,2)*Gamma(2,2,3) + Gamma(2,1,2)*Gamma(1,2,3))
@@ -1991,6 +2007,69 @@ class test_aloha_creation(unittest.TestCase):
         
         self.assertEqual(abstract.expr.numerator.nb_lor, 0)
         self.assertEqual(abstract.expr.numerator.nb_spin, 0)
+        
+    def test_aloha_FFV(self):
+        """ test the FFV creation of vertex """
+        from models.sm.object_library import Lorentz
+        FFV_M = Lorentz(name = 'FFV_4',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2)')        
+        
+        FFV_P = Lorentz(name = 'FFV_5',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,1,\'s1\')*ProjP(\'s1\',2)')
+        
+        FFV = Lorentz(name = 'FFV',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,1,2)')
+        
+        
+         
+        abstract_M = Create_Helas.AbstractHelas(FFV_M, 3)       
+        abstract_P = Create_Helas.AbstractHelas(FFV_P, 3)       
+        abstract = Create_Helas.AbstractHelas(FFV, 3)
+        
+        zero = abstract_M.expr.numerator + abstract_P.expr.numerator - \
+                            abstract.expr.numerator
+        F2_1, F2_2, F2_3, F2_4  = 1, 2, 3, 4
+        F1_1, F1_2, F1_3, F1_4  = 5, 6, 7, 8
+        OM3 = 9
+        j = complex(0,1)
+        P3_0,P3_1,P3_2,P3_3 = 10, 11, 12, 13
+            
+        for ind in zero.listindices():
+            self.assertEqual(eval(str(zero.get_rep(ind))),0)
+            
+        #tested solution again MG4
+        s1 = -j*((OM3*(P3_0*((F2_1*((F1_3*(-P3_0-P3_3))+(F1_4*(-P3_1-1*j*P3_2))))+(F2_2*((F1_3*(-P3_1+1*j*P3_2))+(F1_4*(-P3_0+P3_3)))))))+((F1_3*F2_1)+(F1_4*F2_2)))        
+        s2 = -j*((OM3*(P3_1*((F2_1*((F1_3*(-P3_0-P3_3))+(F1_4*(-P3_1-1*j*P3_2))))+(F2_2*((F1_3*(-P3_1+1*j*P3_2))+(F1_4*(-P3_0+P3_3)))))))+(-(F1_4*F2_1)-(F1_3*F2_2)))
+        s3 = -j*((OM3*(P3_2*((F2_1*((F1_3*(-P3_0-P3_3))+(F1_4*(-P3_1-1*j*P3_2))))+(F2_2*((F1_3*(-P3_1+1*j*P3_2))+(F1_4*(-P3_0+P3_3)))))))+(-1*j*(F1_4*F2_1)+1*j*(F1_3*F2_2)))
+        s4 = -j*((OM3*(P3_3*((F2_1*((F1_3*(-P3_0-P3_3))+(F1_4*(-P3_1-1*j*P3_2))))+(F2_2*((F1_3*(-P3_1+1*j*P3_2))+(F1_4*(-P3_0+P3_3)))))))+(-(F1_3*F2_1)+(F1_4*F2_2)))
+        
+        self.assertEqual(s1, eval(str(abstract_M.expr.numerator.get_rep([0]))))
+        self.assertEqual(s2, eval(str(abstract_M.expr.numerator.get_rep([1]))))    
+        self.assertEqual(s3, eval(str(abstract_M.expr.numerator.get_rep([2]))))    
+        self.assertEqual(s4, eval(str(abstract_M.expr.numerator.get_rep([3]))))                                   
+
+
+
+
+
+
+
+
+
+        FFV_6 = Lorentz(name = 'FFV_6',
+                spins = [ 2, 2, 3 ],
+                structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2) + 2*Gamma(3,1,\'s1\')*ProjP(\'s1\',2)')
+
+        abstract_6 = Create_Helas.AbstractHelas(FFV_6, 3)
+         
+        zero = abstract_6.expr.numerator - abstract_M.expr.numerator - \
+                                                    2* abstract_P.expr.numerator   
+        
+        for ind in zero.listindices():
+            self.assertEqual(eval(str(zero.get_rep(ind))),0)
         
     def test_aloha_symmetries(self):
         """ test that the symmetries of particles works """

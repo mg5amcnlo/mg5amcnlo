@@ -48,7 +48,8 @@ class TestParallelMG4MG5(unittest.TestCase):
         my_proc_list = me_comparator.create_proc_list(\
             ['u'],
             initial=2, final=2)
-        my_proc_list = ['e+ e- > e+ e- / h', 'u u~ > u u~', 'e+ e- > mu+ mu-']
+        my_proc_list = ['e+ e- > e+ e-', 'u u~ > u u~', 'e+ e- > mu+ mu-', 
+                        'z z > w+ w-', 'h h > h h']
         # Store list of non-zero processes and results in file
         pickle_file = "mg4_sm_%sminitest.pkl" % self.suffix_name
         self.compare_MG4_MG5(my_proc_list,
