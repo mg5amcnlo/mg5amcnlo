@@ -43,7 +43,8 @@ following commands:
 mg5>display particles
 mg5>display interactions
 mg5>display multiparticles
-which show information on the particles and the vertices of the model.
+which show information on the particles and the vertices of the model
+or presently defined multiparticle labels
 
 Now you can define a multiparticle label, i.e a label corresponding 
 to a set of particles:
@@ -57,8 +58,8 @@ you in order to generate a process.
 
 Now you can define a multiparticle label, i.e a label corresponding 
 to a set of particles:
-mg5>define p u u~ c c~ d d~ s s~ g
-defines the symbol \"p\" to correspond to any parton.
+mg5>define v w+ w- z a
+defines the symbol \"v\" to correspond to any vector.
 """
 display_particles = display_model
 display_interactions = display_model
@@ -96,9 +97,9 @@ To list all defined processes, type
 mg5>display processes
 
 To add a second process, please use the add process command:
-mg5>add process p p > W+ > e+ ve
+mg5>add process p p > v j
 
-At this stage you can export your process to a given format. In this
+At this stage you can export your processes to a given format. In this
 tutorial, we will explain how to create a valid output for
 MadEvent.
 This is done by typing:

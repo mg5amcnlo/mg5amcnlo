@@ -11,9 +11,9 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-# label PART
-P u u~ c c~ d d~ s s~ g
-J u u~ c c~ d d~ s s~ g
+# Syntax: label particle list (separated by spaces)
+P g u u~ c c~ d d~ s s~
+J g u u~ c c~ d d~ s s~
 L+ e+ mu+
 L- e- mu-
 vl ve vm

@@ -1526,8 +1526,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 ids += self._multiparticles[part_name]
             else:
                 raise MadGraph5Error("No particle %s in model" % part_name)
-                    
-        return list(set(ids)) # avoid duplication
+        # Trick to avoid duplication
+        set_dict = {}
+        return [set_dict.setdefault(i,i) for i in ids if i not in set_dict]
 
     def extract_decay_chain_process(self, line, level_down=False):
         """Recursively extract a decay chain process definition from a
@@ -1796,7 +1797,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if line.startswith('#'):
                 continue
             try:
-                self.do_define(line, log=False)
+                if line.lower().split()[0] not in self._multiparticles:
+                    self.do_define(line)
             except MadGraph5Error, why:
                 logger_stderr.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
