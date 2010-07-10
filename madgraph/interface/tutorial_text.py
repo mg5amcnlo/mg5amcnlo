@@ -160,7 +160,7 @@ or on MacOS X
 mg5>! open ./diagrams_0_gg_ttx.eps
 
 This command was the last step of the tutorial. 
-Quit the demo by typing:
+Quit the tutorial by typing:
 mg5>tutorial stop
 
 Thanks for using MG5.
