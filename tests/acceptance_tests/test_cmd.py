@@ -186,6 +186,10 @@ class TestCmdShell2(unittest.TestCase):
             os.remove(os.path.join(MG5DIR, 'models','sm', 'helas.pkl'))
         except:
             pass
+        fortran_pos = os.path.join(MG5DIR,'models','sm','fotran')
+        if os.path.exists(fortran_pos):
+            for filename in os.listdir(fortran_pos):
+                os.remove(os.path.join(fortran_pos, filename))                  
         
         self.do('import model sm')
         self.do('generate e+e->e+e-')

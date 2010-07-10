@@ -1872,12 +1872,10 @@ class UFOHelasFortranModel(helas_objects.HelasModel):
             # String is LOR1_1110, FIVXXX, JIOXXX etc.
             
             if isinstance(argument, helas_objects.HelasWavefunction):
-                outgoing = self.find_outgoing_number(argument)
-                outgoing = '1' * outgoing + '0' + \
-                            '1' * (len(argument.get('mothers')) - outgoing)
+                outgoing = self.find_outgoing_number(argument) + 1
                 call = 'CALL %s_%s' % (argument.get('lorentz'), outgoing) 
             else:
-                outgoing = '1' * len(argument.get('mothers'))
+                outgoing = 0
                 call = 'CALL %s_%s' % (argument.get('lorentz'), outgoing)
 
             # Check if we need to append a charge conjugation flag
@@ -1917,12 +1915,11 @@ class UFOHelasFortranModel(helas_objects.HelasModel):
             self.add_amplitude(argument.get_call_key(), call_function)
 
     # Static helper functions
-
     @staticmethod
     def sorted_letters(arg):
         """Gives a list of letters sorted according to
         the order of letters in the Fortran Helas calls"""
-
+        raise DeprecationWarning('sorted_letters not used anymore')
         def convert_bool(logical):
                 if logical: 
                     return '1'

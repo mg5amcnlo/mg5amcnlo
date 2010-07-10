@@ -8,20 +8,25 @@ import aloha.helasamp_lib as Helas_Lib
 import os
 import re 
 from numbers import Number
+
 class WriteHelas: 
     """ Generic writing functions """ 
     
     power_symbol = '**'
     change_var_format = str
     change_number_format = str
+    extension = ''
     
-    def __init__(self, object, particlelist, out_path, comment):
-        self.obj = object
-        self.out_path = out_path + '.f'
-        self.particles = particlelist 
-        self.namestring = os.path.basename(out_path)
-        self.comment = comment
-        
+    def __init__(self, abstracthelas, dirpath):
+
+        self.obj = abstracthelas.expr
+        helasname = get_helas_name(abstracthelas.name, abstracthelas.outgoing)
+        self.out_path = os.path.join(dirpath, helasname + self.extension)
+        self.particles = abstracthelas.spins
+        self.namestring = helasname
+        self.comment = abstracthelas.infostr
+
+    
     def collect_variables(self):
         """Collects Momenta,Mass,Width into lists"""
          
@@ -116,6 +121,8 @@ class WriteHelas:
         
 class HelasWriterForFortran(WriteHelas): 
     """routines for writing out Fortran"""
+
+    extension = '.f'
 
     def make_call_lists(self):
         """ """
@@ -384,3 +391,9 @@ class HelasWriterForFortran(WriteHelas):
         writer.writelines(self.define_header())
         writer.writelines(self.define_expression())
         writer.writelines(self.define_foot())
+        
+        
+def get_helas_name(name,outgoing):
+    """ build the name of the helas function """
+    
+    return '%s_%s' % (name, outgoing) 

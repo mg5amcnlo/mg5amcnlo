@@ -316,7 +316,6 @@ class AbstractHelasModel(dict):
             
         # Check that all routine are generated at default places:
         for (name, outgoing), abstract in self.items():
-            print dir(abstract)
             routine_name = AbstractHelasBuilder.gethelasname(name, outgoing)
             if not glob.glob(os.path.join(aloha_dir, routine_name) + '.*'):
                 abstract.write(output_dir, format)
