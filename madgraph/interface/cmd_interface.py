@@ -465,12 +465,23 @@ class CheckValidForCmd(object):
     def check_define(self, args):
         """check the validity of line
         syntax: define multipart_name [ part_name_list ]
-        """        
+        """  
 
+        
         if len(args) < 2:
             self.help_define()
             raise self.InvalidCmd('\"define\" command requires at least two arguments')
 
+        if args[1] == '=':
+            del args[1]
+            if len(args) < 2:
+                self.help_define()
+                raise self.InvalidCmd('\"define\" command requires at least one particles name after \"=\"')
+        
+        if '=' in args:
+            self.help_define()
+            
+            raise self.InvalidCmd('\"define\" command requires symbols \"=\" at the second position')
         if len(self._curr_model['particles']) == 0:
             raise self.InvalidCmd("No particle list currently active, please import a model first")
 
@@ -1519,8 +1530,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             args = split_arg(args)
         ids=[]
         for part_name in args:
-            if part_name == '=':
-                continue
             mypart = self._curr_model['particles'].find_name(part_name)
             if mypart:
                 ids.append(mypart.get_pdg_code())
