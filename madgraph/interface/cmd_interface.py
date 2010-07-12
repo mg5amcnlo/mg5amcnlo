@@ -480,13 +480,13 @@ class CheckValidForCmd(object):
         
         if '=' in args:
             self.help_define()
-            
             raise self.InvalidCmd('\"define\" command requires symbols \"=\" at the second position')
+        
         if len(self._curr_model['particles']) == 0:
             raise self.InvalidCmd("No particle list currently active, please import a model first")
 
         if self._curr_model['particles'].find_name(args[0]):
-            raise MadGraph5Error("label %s is already define for a particle in this model\n\
+            raise MadGraph5Error("label %s is a particle name in this model\n\
             Please retry with another name." % args[0])
 
     def check_display(self, args):
