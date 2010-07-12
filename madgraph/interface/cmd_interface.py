@@ -355,22 +355,22 @@ class HelpToCmd(object):
 
         print "syntax: generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2"
         print "-- generate diagrams for a given process"
-        print "   Example: u d~ > w+ > m+ vm g $ a / z h QED=3 QCD=0 @1"
+        print "   Syntax example: l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1"
         print "Decay chain syntax:"
-        print "   core process, decay1, (decay2, (decay3, ...)), ...  etc"
-        print "   Example: g g > t~ t @2, (t~ > W- b~, W- > e- ve~), t > W+ b"
-        print "   Note that identical particles will all be decayed"
-        print "To generate a second process use \"add process\" command"
+        print "   core process, decay1, (decay2, (decay2', ...)), ...  etc"
+        print "   Example: p p > t~ t QED=0 @2, (t~ > W- b~, W- > l- vl~), t > j j b"
+        print "   Note that identical particles will all be decayed."
+        print "To generate a second process use the \"add process\" command"
 
     def help_add(self):
 
         print "syntax: add process INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2"
         print "-- generate diagrams for a process and add to existing processes"
-        print "   Syntax example: u d~ > w+ > m+ vm g $ a / z h QED=3 QCD=0 @1"
+        print "   Syntax example: l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1"
         print "Decay chain syntax:"
-        print "   core process, decay1, (decay2, (decay3, ...)), ...  etc"
-        print "   Example: g g > t~ t @2, (t~ > W- b~, W- > e- ve~), t > W+ b"
-        print "   Note that identical particles will all be decayed"
+        print "   core process, decay1, (decay2, (decay2', ...)), ...  etc"
+        print "   Example: p p > t~ t QED=0 @2, (t~ > W- b~, W- > l- vl~), t > j j b"
+        print "   Note that identical particles will all be decayed."
 
     def help_define(self):
         print "syntax: define multipart_name [ part_name_list ]"
@@ -1792,16 +1792,24 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         """ add default particle from file interface.multiparticles_default.txt
         """
         
+        duplicate_multiparticles = []
         for line in open(os.path.join(MG5DIR, 'madgraph', 'interface', \
                                                  'multiparticles_default.txt')):
             if line.startswith('#'):
                 continue
             try:
-                if line.lower().split()[0] not in self._multiparticles:
+                multipart_name = line.lower().split()[0]
+                if multipart_name in self._multiparticles:
+                    duplicate_multiparticles.append(multipart_name)
+                else:
                     self.do_define(line)
+                    
             except MadGraph5Error, why:
                 logger_stderr.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
+        if duplicate_multiparticles:
+            logger.info("Kept definitions of multiparticles %s unchanged" % \
+                                         " / ".join(duplicate_multiparticles))
             
     def check_for_export_dir(self, filepath):
         """Check if the files is in a valid export directory and assign it to

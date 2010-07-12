@@ -16,5 +16,5 @@ P g u u~ c c~ d d~ s s~
 J g u u~ c c~ d d~ s s~
 L+ e+ mu+
 L- e- mu-
-vl ve vm
-vl~ ve~ vm~
+vl ve vm vt
+vl~ ve~ vm~ vt~
