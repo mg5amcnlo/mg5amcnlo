@@ -295,9 +295,10 @@ class CPPWriter(FileWriter):
     spacing_patterns = [('\s*\"\s*}', '\"'),
                         ('\s*,\s*', ', '),
                         ('\s*-\s*', ' - '),
-                        ('([\{\(,=])\s*-\s*', '\g<1> -'),
+                        ('([{(,=])\s*-\s*', '\g<1> -'),
+                        ('(return)\s*-\s*', '\g<1> -'),
                         ('\s*\+\s*', ' + '),
-                        ('([\{\(,=])\s*\+\s*', '\g<1> +'),
+                        ('([{(,=])\s*\+\s*', '\g<1> +'),
                         ('\(\s*', '('),
                         ('\s*\)', ')'),
                         ('\{\s*', '{'),
@@ -324,11 +325,16 @@ class CPPWriter(FileWriter):
                         ('\s*\|\|\s*', ' || '),
                         ('\s*{\s*}', ' {}'),
                         ('\s*;\s*', '; '),
+                        (';\s*\}', ';}'),
+                        (';\s*$}', ';'),
+                        ('^#include\s*<\s*(.*?)\s*>', '#include <\g<1>>'),
+                        ('\s*<\s*([a-zA-Z0-9]+?)\s*>', '<\g<1>>'),
                         ('\s+',' ')]
     spacing_re = dict([(key[0], re.compile(key[0])) for key in \
                        spacing_patterns])
 
     init_array_pattern = re.compile(r"=\s*\{.*\}")
+    short_clause_pattern = re.compile(r"\{.*\}")
 
     comment_char = '//'
     comment_pattern = re.compile(r"^(\s*#\s+|\s*//)")
@@ -547,15 +553,6 @@ class CPPWriter(FileWriter):
 
                 return res_lines
                     
-        # Check if there is a "{}" in the line.
-        # In that case just print the line
-        if re.search("{\s*}", myline):
-            res_lines.append("\n".join(self.split_line(\
-                                      myline, \
-                                      self.split_characters)) + \
-                        "\n")
-            return res_lines
-
         # Check if this line is an array initialization a ={b,c,d};
         if self.init_array_pattern.search(myline):
             res_lines.append("\n".join(self.split_line(\
@@ -563,6 +560,14 @@ class CPPWriter(FileWriter):
                                       self.split_characters)) + \
                         "\n")
             return res_lines
+
+        # Check if this is a short xxx {yyy} type line;
+        if self.short_clause_pattern.search(myline):
+            lines = self.split_line(myline,
+                                        self.split_characters)
+            if len(lines) == 1:
+                res_lines.append("\n".join(lines) + "\n")
+                return res_lines
 
         # Check if there is a "{" somewhere in the line
         if "{" in myline:
@@ -747,10 +752,10 @@ class CPPWriter(FileWriter):
             # Append new line
             if long_line[split_at:].lstrip():
                 # Replace old line
-                res_lines[-1] = long_line[:split_at].lstrip().rstrip()
+                res_lines[-1] = long_line[:split_at].rstrip()
                 res_lines.append(" " * \
-                                 (self.__indent + self.line_cont_indent) + \
-                                 long_line[split_at:].lstrip().rstrip())
+                                 self.__indent + self.comment_char + " " + \
+                                 long_line[split_at:].strip())
             else:
                 break
             

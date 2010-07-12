@@ -235,14 +235,8 @@ class Sigma2qg2qgamma : public Sigma2Process
     {
       return "q g -> q gamma(udscb) test test test test test asasd as asd a dada djkl;sdf lkja sdfjkla;sdf l;kja+sdfkldf"; 
     }
-    virtual int code() const 
-    {
-      return 201; 
-    }
-    virtual string inFlux() const 
-    {
-      return "qg"; 
-    }
+    virtual int code() const {return 201;}
+    virtual string inFlux() const {return "qg";}
 
   private:
 
@@ -260,7 +254,7 @@ void Sigma2ff2fftgmZ::setIdColAcol()
   setId(id1, id2, id1, id2); 
 
   // Colour flow topologies. Swap when antiquarks.
-  if (abs(id1) < 9 && abs(id2) < 9 && id1 * id2 > 2 / 3.)
+  if (abs(id1) < 9 && abs(id2) < 9 && id1 * id2 > 2/3.)
     setColAcol(1, 0, 2, 0, 1, 0, 2, 0); 
   else if (abs(id1) < 9 && abs(id2) < 9)
     setColAcol(1, 0, 0, 2, 1, 0, 0, 2); 

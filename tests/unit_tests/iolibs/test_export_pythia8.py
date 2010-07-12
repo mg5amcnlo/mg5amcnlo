@@ -51,12 +51,12 @@ class IOExportPythia8Test(unittest.TestCase,
         mypartlist = base_objects.ParticleList()
         myinterlist = base_objects.InteractionList()
 
-        # A quark U and its antiparticle
+        # u and c quarkd and their antiparticles
         mypartlist.append(base_objects.Particle({'name':'u',
                       'antiname':'u~',
                       'spin':2,
                       'color':3,
-                      'mass':'zero',
+                      'mass':'mu',
                       'width':'zero',
                       'texname':'u',
                       'antitexname':'\bar u',
@@ -69,6 +69,24 @@ class IOExportPythia8Test(unittest.TestCase,
         u = mypartlist[len(mypartlist) - 1]
         antiu = copy.copy(u)
         antiu.set('is_part', False)
+
+        mypartlist.append(base_objects.Particle({'name':'c',
+                      'antiname':'c~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'mu',
+                      'width':'zero',
+                      'texname':'c',
+                      'antitexname':'\bar c',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':4,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        c = mypartlist[len(mypartlist) - 1]
+        antic = copy.copy(c)
+        antic.set('is_part', False)
 
         # A gluon
         mypartlist.append(base_objects.Particle({'name':'g',
@@ -89,21 +107,21 @@ class IOExportPythia8Test(unittest.TestCase,
         g = mypartlist[len(mypartlist) - 1]
 
         # A photon
-        mypartlist.append(base_objects.Particle({'name':'a',
-                      'antiname':'a',
+        mypartlist.append(base_objects.Particle({'name':'Z',
+                      'antiname':'Z',
                       'spin':3,
                       'color':1,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'mass':'MZ',
+                      'width':'WZ',
+                      'texname':'Z',
+                      'antitexname':'Z',
                       'line':'wavy',
                       'charge':0.,
-                      'pdg_code':22,
+                      'pdg_code':23,
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
-        a = mypartlist[len(mypartlist) - 1]
+        z = mypartlist[len(mypartlist) - 1]
 
         # Gluon couplings to quarks
         myinterlist.append(base_objects.Interaction({
@@ -123,7 +141,7 @@ class IOExportPythia8Test(unittest.TestCase,
                       'particles': base_objects.ParticleList(\
                                             [antiu, \
                                              u, \
-                                             a]),
+                                             z]),
                       'color': [color.ColorString([color.T(1, 0)])],
                       'lorentz':['FFV'],
                       'couplings':{(0, 0):'QQA'},
@@ -151,6 +169,26 @@ class IOExportPythia8Test(unittest.TestCase,
 
         self.mymatrixelement = helas_objects.HelasMatrixElement(myamplitude)
 
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':4,
+                                           'state':False,
+                                           'number' : 1}))
+        myleglist.append(base_objects.Leg({'id':-4,
+                                         'state':False,
+                                           'number' : 2}))
+        myleglist.append(base_objects.Leg({'id':4,
+                                         'state':True,
+                                           'number' : 3}))
+        myleglist.append(base_objects.Leg({'id':-4,
+                                         'state':True,
+                                           'number' : 4}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        self.mymatrixelement.get('processes').append(myproc)
+        
     tearDown = test_file_writers.CheckFileCreate.clean_files
 
     def test_write_process_h_file(self):
@@ -174,6 +212,7 @@ namespace Pythia8
 //==========================================================================
 // A class for calculating the matrix elements for
 // Process: u u~ > u u~
+// Process: c c~ > c c~
 //--------------------------------------------------------------------------
 
 class Sigma_uux_uux : public Sigma2Process
@@ -199,40 +238,27 @@ class Sigma_uux_uux : public Sigma2Process
     virtual double weightDecay(Event& process, int iResBeg, int iResEnd); 
 
     // Info on the subprocess.
-    virtual string name() const 
-    {
-      return "u u~ > u u~ (SM)"; 
-    }
+    virtual string name() const {return "u u~ > u u~ (SM)";}
 
-    virtual int code() const 
-    {
-      return 10000; 
-    }
+    virtual int code() const {return 10000;}
 
-    virtual string inFlux() const 
-    {
-      return "qqbarSame"; 
-    }
+    virtual string inFlux() const {return "qqbarSame";}
 
-    virtual int id3Mass() const 
-    {
-      return 2; 
-    }
-    virtual int id4Mass() const 
-    {
-      return - 2; 
-    }
+    int id3Mass() const {return 2;}
+    int id4Mass() const {return 2;}
 
     // Tell Pythia that sigmaHat returns the ME^2
-    virtual bool convertME() const 
-    {
-      return true; 
-    }
+    virtual bool convertME() const {return true;}
 
   private:
 
     // Private function to calculate the matrix element for given helicities
     double matrix(int helicities[]); 
+
+    // Private functions to set the couplings and parameters used in this
+    // process
+    void set_fixed_parameters(); 
+    void set_variable_parameters(); 
 
     // Constants for array limits
     const int nexternal = 4; 
@@ -244,8 +270,13 @@ class Sigma_uux_uux : public Sigma2Process
     // Color flows, used when selecting color
     double jamp2[ncolor]; 
 
-    // Other process-specific information, e.g. couplings
-
+    // Other process-specific information, e.g. masses and couplings
+    // Propagator masses
+    double MZ; 
+    // Propagator widths
+    double WZ; 
+    // Couplings
+    complex QQG, QQA; 
 }; 
 
 }  // end namespace Pythia
@@ -270,7 +301,7 @@ class Sigma_uux_uux : public Sigma2Process
 // Please visit us at https://launchpad.net/madgraph5
 //==========================================================================
 
-#include < complex.h > 
+#include <complex.h> 
 
 #include "Sigma_uux_uux.h"
 
@@ -280,50 +311,58 @@ namespace Pythia8
 //==========================================================================
 // Class member functions for calculating the matrix elements for
 // Process: u u~ > u u~
+// Process: c c~ > c c~
 
 //--------------------------------------------------------------------------
 // Initialize process.
 
 void Sigma_uux_uux::initProc() 
 {
-
-
+  // Set all parameters that are fixed once and for all
+  set_fixed_parameters(); 
 }
 
 //--------------------------------------------------------------------------
-// Evaluate d(sigmaHat)/d(tHat), part independent of incoming flavour.
+// Evaluate |M|^2, part independent of incoming flavour.
 
 void Sigma_uux_uux::sigmaKin() 
 {
-
   const int _ncomb = 16; 
   static bool goodhel[ncomb] = {ncomb * false}; 
   static int ntry = 0, sum_hel = 0, ngood = 0; 
   static int igood[ncomb]; 
   static int jhel; 
   // Helicities for the process
-  static const int helicity[ncomb][nexternal] = {-1, -1, -1, -1, -1, -1, -1, 1,
-      -1, -1, 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, 1, -1, 1, -1, 1, 1, -1,
-      -1, 1, 1, 1, 1, -1, -1, -1, 1, -1, -1, 1, 1, -1, 1, -1, 1, -1, 1, 1, 1,
-      1, -1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1, 1, 1, 1};
+  static const int helicities[ncomb][nexternal] = {-1, -1, -1, -1, -1, -1, -1,
+      1, -1, -1, 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, 1, -1, 1, -1, 1, 1,
+      -1, -1, 1, 1, 1, 1, -1, -1, -1, 1, -1, -1, 1, 1, -1, 1, -1, 1, -1, 1, 1,
+      1, 1, -1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1, 1, 1, 1};
   // Denominator: spins, colors and identical particles
   const int denominator = 36; 
 
   ntry = ntry + 1; 
 
+  // Set the parameters which change event by event
+  set_variable_parameters(); 
+
+  // Reset color flows
   for(int i = 0; i < ngraphs; i++ )
     jamp2(i) = 0.; 
 
+  // Calculate the matrix element
   matrix_element = 0.; 
+
   if (sum_hel == 0 || ntry < 10)
   {
+    // Calculate the matrix element for all helicities
     for(int ihel = 0; ihel < ncomb; ihel++ )
     {
       if (goodhel[ihel] || ntry < 2)
       {
-        double t = matrix(nhel[ihel]); 
+        double t = matrix(helicities[ihel]); 
         matrix_element += t; 
-        if (t .ne. != 0. && !goodhel[ihel])
+        // Store which helicities give non-zero result
+        if (t != 0. && !goodhel[ihel])
         {
           goodhel[ihel] = true; 
           ngood++; 
@@ -335,8 +374,8 @@ void Sigma_uux_uux::sigmaKin()
     sum_hel = min(sum_hel, ngood); 
   }
   else
-    // random helicity
   {
+    // Only use the "good" helicities
     for(int j = 0; j < sum_hel; j++ )
     {
       jhel++; 
@@ -344,7 +383,7 @@ void Sigma_uux_uux::sigmaKin()
         jhel = 1; 
       double hwgt = double(ngood)/double(sum_hel); 
       int ihel = igood(jhel); 
-      t = matrix(nhel[ihel]); 
+      t = matrix(helicities[ihel]); 
       matrix_element += t * hwgt; 
     }
     matrix_element /= denominator; 
@@ -353,12 +392,12 @@ void Sigma_uux_uux::sigmaKin()
 }
 
 //--------------------------------------------------------------------------
-// Evaluate d(sigmaHat)/d(tHat), including incoming flavour dependence.
+// Evaluate |M|^2, including incoming flavour dependence.
 
 double Sigma_uux_uux::sigmaHat() 
 {
-
-
+  // Already calculated matrix_element in sigmaKin
+  return matrix_element; 
 }
 
 //--------------------------------------------------------------------------
@@ -366,8 +405,33 @@ double Sigma_uux_uux::sigmaHat()
 
 void Sigma_uux_uux::setIdColAcol() 
 {
-
-
+  if(id1 == 4 && id2 == -4)
+  {
+    // Pick one of the flavor combinations [[4, -4]]
+    int flavors[1][2] = {4, -4}; 
+    vector<double> probs(1, 1./1.); 
+    int choice = Rndm::pick(probs); 
+    id3 = flavors[choice][0]; 
+    id4 = flavors[choice][1]; 
+  }
+  else if(id1 == 2 && id2 == -2)
+  {
+    // Pick one of the flavor combinations [[2, -2]]
+    int flavors[1][2] = {2, -2}; 
+    vector<double> probs(1, 1./1.); 
+    int choice = Rndm::pick(probs); 
+    id3 = flavors[choice][0]; 
+    id4 = flavors[choice][1]; 
+  }
+  setId(id1, id2, id3, id4); 
+  vector<double> probs; 
+  double sum = jamp2[0] + jamp2[1]; 
+  for(int i = 0; i < ncolor; i++ )
+    probs.push_back(jamp2[i]/sum); 
+  int ic = Rndm::pick(probs); 
+  static int col[2][8] = {1, 0, 0, 1, 2, 0, 0, 2, 2, 0, 0, 1, 2, 0, 0, 1}; 
+  setColAcol(col[ic][0], col[ic][1], col[ic][2], col[ic][3], col[ic][4],
+      col[ic][5], col[ic][6], col[ic][7]);
 }
 
 //--------------------------------------------------------------------------
@@ -375,20 +439,21 @@ void Sigma_uux_uux::setIdColAcol()
 
 double Sigma_uux_uux::weightDecay(Event& process, int iResBeg, int iResEnd) 
 {
-
+  // Just use isotropic decay (default)
   return 1.; 
 }
 
+//==========================================================================
+// Private class member functions
+
 //--------------------------------------------------------------------------
-// Evaluate d(sigmaHat)/d(tHat), part independent of incoming flavour.
+// Evaluate |M|^2 for a given helicity
 
-double Sigma_uux_uux::matrix(int nhel[]) 
+double Sigma_uux_uux::matrix(int hel[]) 
 {
-
   // Local variables
   const int nwavefuncs = 8, ngraphs = 4; 
   double zero = 0.; 
-  double p[nexternal][4]; 
   int i, j; 
   complex ztemp; 
   complex amp[ngraphs], jamp[ncolor]; 
@@ -398,20 +463,20 @@ double Sigma_uux_uux::matrix(int nhel[])
   static const double cf[ncolor][ncolor] = {9, 3, 3, 9}; 
 
   // Calculate all amplitudes
-  ixxxxx(p[0], zero, nhel[0], +1, w[0])); 
-  oxxxxx(p[1], zero, nhel[1], -1, w[1])); 
-  oxxxxx(p[2], zero, nhel[2], +1, w[2])); 
-  ixxxxx(p[3], zero, nhel[3], -1, w[3])); 
+  ixxxxx(pME[0], mME[0], hel[0], +1, w[0])); 
+  oxxxxx(pME[1], mME[1], hel[1], -1, w[1])); 
+  oxxxxx(pME[2], mME[2], hel[2], +1, w[2])); 
+  ixxxxx(pME[3], mME[3], hel[3], -1, w[3])); 
   FFV_110(w[0], w[1], QQG, zero, zero, w[4]); 
   // Amplitude(s) for diagram number 1
   FFV_111(w[3], w[2], w[4], QQG, amp[0]); 
-  FFV_110(w[0], w[1], QQA, zero, zero, w[5]); 
+  FFV_110(w[0], w[1], QQA, MZ, WZ, w[5]); 
   // Amplitude(s) for diagram number 2
   FFV_111(w[3], w[2], w[5], QQA, amp[1]); 
   FFV_110(w[0], w[2], QQG, zero, zero, w[6]); 
   // Amplitude(s) for diagram number 3
   FFV_111(w[3], w[1], w[6], QQG, amp[2]); 
-  FFV_110(w[0], w[2], QQA, zero, zero, w[7]); 
+  FFV_110(w[0], w[2], QQA, MZ, WZ, w[7]); 
   // Amplitude(s) for diagram number 4
   FFV_111(w[3], w[1], w[7], QQA, amp[3]); 
 
@@ -436,6 +501,27 @@ double Sigma_uux_uux::matrix(int nhel[])
   return matrix; 
 
 }
+
+//--------------------------------------------------------------------------
+// Set couplings and other parameters that are fixed during the run
+
+void Sigma_uux_uux::set_fixed_parameters() 
+{
+  // Propagator masses and widths
+  MZ = ParticleData::m0(23); 
+  WZ = ParticleData::mWidth(23); 
+}
+
+//--------------------------------------------------------------------------
+// Set couplings and other parameters that vary event by event
+
+void Sigma_uux_uux::set_variable_parameters() 
+{
+  // Couplings
+  QQG = expression; 
+  QQA = expression; 
+}
+
 
 }  // end namespace Pythia
 

@@ -182,7 +182,7 @@ def get_process_class_definitions(matrix_element):
     color_amplitudes = matrix_element.get_color_amplitudes()
     replace_dict['ncolor'] = len(color_amplitudes)
 
-    replace_dict['process_variables'] = ''
+    replace_dict['process_variables'] = get_process_variables(matrix_element)
     
     file = read_template_file('pythia8_process_class.inc') % replace_dict
 
@@ -222,6 +222,12 @@ def get_process_function_definitions(matrix_element, cpp_model,
                                    get_matrix_lines(matrix_element,
                                                     cpp_model,
                                                     color_amplitudes)
+    
+    replace_dict['fixed_parameter_lines'] = \
+                                   get_fixed_parameter_lines(matrix_element)
+    
+    replace_dict['variable_parameter_lines'] = \
+                                   get_variable_parameter_lines(matrix_element)
     
     file = read_template_file('pythia8_process_function_definitions.inc') % \
            replace_dict
@@ -330,14 +336,16 @@ def get_id_masses(process):
     mass_string = ""
     
     for i in range(2, len(process.get('legs'))):
-        mass_string += "virtual int id%dMass() const {return %d;}\n" % \
-                       (i + 1, process.get('legs')[i].get('id'))
+        mass_string += "int id%dMass() const {return %d;}\n" % \
+                       (i + 1, abs(process.get('legs')[i].get('id')))
 
     return mass_string
 
 def get_initProc_lines(matrix_element):
     """Get initProc_lines for function definition for Pythia 8 .cc file"""
-    initProc_lines = ""
+
+    initProc_lines = "// Set all parameters that are fixed once and for all\n"
+    initProc_lines += "set_fixed_parameters();"
 
     return initProc_lines
 
@@ -373,7 +381,7 @@ def get_matrix_lines(matrix_element, cpp_model, color_amplitudes):
 
     # Extract color matrix
     replace_dict['color_matrix_lines'] = \
-                               "\n".join(get_color_matrix_lines(matrix_element))
+                               get_color_matrix_lines(matrix_element)
 
     # The Helicity amplitude calls
     replace_dict['amplitude_calls'] = "\n".join(\
@@ -389,36 +397,122 @@ def get_matrix_lines(matrix_element, cpp_model, color_amplitudes):
 
 def get_sigmaHat_lines(matrix_element):
     """Get sigmaHat_lines for function definition for Pythia 8 .cc file"""
-    sigmaHat_lines = ""
+
+    sigmaHat_lines = "// Already calculated matrix_element in sigmaKin\n"
+    sigmaHat_lines += "return matrix_element;"
 
     return sigmaHat_lines
 
 
 def get_setIdColAcol_lines(matrix_element):
-    """Get setIdColAcol_lines for function definition for Pythia 8 .cc file"""
-    setIdColAcol_lines = ""
+    """Generate lines to set final-state id and color info for process"""
 
-    return setIdColAcol_lines
+    res_lines = []
+    
+    (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+    nfinal = nexternal - ninitial
+
+    # Create a set with the pairs of incoming partons
+    beams = set([(process.get('legs')[0].get('id'),
+                  process.get('legs')[1].get('id')) \
+                 for process in matrix_element.get('processes')])
+    id_dict = {}
+    for beam_parts in beams:
+        # Pick out final state id:s for all processes that have these
+        # initial state particles
+        id_dict[beam_parts] = \
+                 [[leg.get('id') for leg in process.get('legs')[2:]] \
+                  for process in filter(lambda process: beam_parts == \
+                                        (process.get('legs')[0].get('id'),
+                                         process.get('legs')[1].get('id')),
+                                        matrix_element.get('processes'))]
+
+    # Now write a selection routine for final state ids
+    for ibeam, beam_parts in enumerate(beams):
+        if ibeam == 0:
+            res_lines.append("if(id1 == %d && id2 == %d){" % beam_parts)
+        else:
+            res_lines.append("} else if(id1 == %d && id2 == %d){" % beam_parts)            
+        final_id_list = id_dict[beam_parts]
+        ncombs = len(final_id_list)
+        res_lines.append("// Pick one of the flavor combinations %s" % \
+                         repr(final_id_list))
+        res_lines.append("int flavors[%d][%d] = {%s};" % \
+                         (ncombs, nfinal,
+                          ",".join(str(id) for id in sum(final_id_list, []))))
+        res_lines.append("vector<double> probs(%d, 1./%d.);" % \
+                         (ncombs, ncombs))
+        res_lines.append("int choice = Rndm::pick(probs);")
+        for i in range(nfinal):
+            res_lines.append("id%d = flavors[choice][%d];" % (i+3, i))
+    res_lines.append("}")
+    res_lines.append("setId(%s);" % ",".join(["id%d" % i for i in \
+                                              range(1,nexternal + 1)]))
+
+    # Now write a selection routine for color flows
+
+    # Here goes the color connections corresponding to the JAMPs
+    # Only one output, for the first subproc!
+    proc = matrix_element.get('processes')[0]
+    if not matrix_element.get('color_basis'):
+        # If no color basis, just output trivial color flow
+        res_lines.append("setColAcol(%s);" % ",".join(["0"] * 2 * nfinal))
+    else:
+        # Else, build a color representation dictionnary
+        repr_dict = {}
+        legs = proc.get_legs_with_decays()
+        for l in legs:
+            repr_dict[l.get('number')] = \
+                proc.get('model').get_particle(l.get('id')).get_color()
+        # Get the list of color flows
+        color_flow_list = \
+            matrix_element.get('color_basis').color_flow_decomposition(\
+                                              repr_dict, ninitial)
+        # Select a color flow
+        ncolor = len(matrix_element.get('color_basis'))
+        res_lines.append("""vector<double> probs;
+          double sum = %s;
+          for(int i=0;i<ncolor;i++)
+          probs.push_back(jamp2[i]/sum);
+          int ic = Rndm::pick(probs);""" % \
+                         "+".join(["jamp2[%d]" % i for i in range(ncolor)]))
+
+        color_flows = []
+        for color_flow_dict in color_flow_list:
+            color_flows.append([color_flow_dict[l.get('number')][i] % 500 \
+                                for (l,i) in itertools.product(legs, [0,1])])
+
+        # Write out colors for the selected color flow
+        res_lines.append("static int col[2][%d] = {%s};" % \
+                         (2*nexternal,
+                          ",".join(str(i) for i in sum(color_flows, []))))
+
+        res_lines.append("setColAcol(%s);" % \
+                         ",".join(["col[ic][%d]" % i for i in \
+                                  range(2*nexternal)]))
+        
+    return "\n".join(res_lines)
 
 
 def get_weightDecay_lines(matrix_element)    :
     """Get weightDecay_lines for function definition for Pythia 8 .cc file"""
 
-    weightDecay_lines = "return 1.;"
+    weightDecay_lines = "// Just use isotropic decay (default)\n"
+    weightDecay_lines += "return 1.;"
 
     return weightDecay_lines
 
 def get_helicity_matrix(matrix_element):
     """Return the Helicity matrix definition lines for this matrix element"""
 
-    helicity_line = "static const int helicity[ncomb][nexternal] = {";
+    helicity_line = "static const int helicities[ncomb][nexternal] = {";
     helicity_line_list = []
     
     for helicities in matrix_element.get_helicity_matrix():
-        helicity_line_list.append(','.join(['%d'] * len(helicities)) % \
+        helicity_line_list.append(",".join(['%d'] * len(helicities)) % \
                                   tuple(helicities))
 
-    return helicity_line + ','.join(helicity_line_list) + "};"
+    return helicity_line + ",".join(helicity_line_list) + "};"
 
 def get_den_factor_line(matrix_element):
     """Return the denominator factor line for this matrix element"""
@@ -446,10 +540,10 @@ def get_color_matrix_lines(matrix_element):
                                         get_line_numerators(index, denominator)
 
             matrix_strings.append("%s" % \
-                                 ','.join(["%d" % i for i in num_list]))
+                                 ",".join(["%d" % i for i in num_list]))
         matrix_string = "static const double cf[ncolor][ncolor] = {" + \
-                        ','.join(matrix_strings) + "};"
-        return [denom_string, matrix_string]
+                        ",".join(matrix_strings) + "};"
+        return "\n".join([denom_string, matrix_string])
 
 def get_jamp_lines(matrix_element, color_amplitudes):
     """Return the jamp = sum(fermionfactor * amp[i]) lines"""
@@ -492,6 +586,81 @@ def get_jamp_lines(matrix_element, color_amplitudes):
         res_list.append(res)
 
     return res_list
+
+def get_process_variables(matrix_element):
+    """Returns a string with all variables (masses, widths and
+    couplings) used by the process"""
+
+    variable_lines = []
+
+    nexternal, ninitial = matrix_element.get_nexternal_ninitial()
+    masses = set([wf.get('mass') for wf in \
+                  matrix_element.get_all_wavefunctions()[nexternal:]])
+    masses -= set(['zero'])
+    if masses:
+        variable_lines.append("// Propagator masses")
+        variable_lines.append("double %s;" % ", ".join(masses))
+
+    widths = set([wf.get('width') for wf in \
+                  matrix_element.get_all_wavefunctions()[nexternal:]])
+    widths -= set(['zero'])
+    if widths:
+        variable_lines.append("// Propagator widths")
+        variable_lines.append("double %s;" % ", ".join(widths))
+
+    couplings = set([wf.get('coupling') for wf in \
+                     matrix_element.get_all_wavefunctions()[nexternal:] + \
+                     matrix_element.get_all_amplitudes()])
+    if couplings:
+        variable_lines.append("// Couplings")
+        variable_lines.append("complex %s;" % ", ".join(couplings))
+
+    return "\n".join(variable_lines)
+
+def get_fixed_parameter_lines(matrix_element):
+    """Returns a string setting all fixed parameters (masses, widths
+    and couplings)"""
+
+    variable_lines = []
+
+    nexternal, ninitial = matrix_element.get_nexternal_ninitial()
+    mass_parts = set([(wf.get('pdg_code'), wf.get('mass'), wf.get('width')) \
+                      for wf in filter(lambda wf: wf.get('mass') != 'zero',
+                         matrix_element.get_all_wavefunctions()[nexternal:])])
+
+    if mass_parts:
+        variable_lines.append("// Propagator masses and widths")
+        for part in mass_parts:
+            variable_lines.append("%s = ParticleData::m0(%d);" % \
+                                  (part[1], part[0]))
+            if part[2] != 'zero':
+                variable_lines.append("%s = ParticleData::mWidth(%d);" % \
+                                  (part[2], part[0]))
+
+    couplings = set([wf.get('coupling') for wf in \
+                     matrix_element.get_all_wavefunctions()[nexternal:] + \
+                     matrix_element.get_all_amplitudes()])
+    #if couplings:
+    #    variable_lines.append("// Couplings")
+    #    variable_lines.append("complex %s;" % ", ".join(couplings))
+
+    return "\n".join(variable_lines)
+
+def get_variable_parameter_lines(matrix_element):
+    """Returns a string setting all parameters (couplings) that vary
+    from event to event."""
+
+    variable_lines = []
+    nexternal, ninitial = matrix_element.get_nexternal_ninitial()
+    couplings = set([wf.get('coupling') for wf in \
+                     matrix_element.get_all_wavefunctions()[nexternal:] + \
+                     matrix_element.get_all_amplitudes()])
+    if couplings:
+        variable_lines.append("// Couplings")
+        for coupling in couplings:
+            variable_lines.append("%s = %s;" % (coupling, "expression"))
+
+    return "\n".join(variable_lines)
 
 #===============================================================================
 # Global helper methods
@@ -635,10 +804,10 @@ class UFOHelasCPPModel(helas_objects.HelasModel):
                 argument.get_spin_state_number()]
             # Fill out with X up to 6 positions
             call = call + 'x' * (6 - len(call))
-            call = call + "(p[%d],"
+            call = call + "(pME[%d],"
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity
-                call = call + "%s,nhel[%d],"
+                call = call + "mME[%d],hel[%d],"
             call = call + "%+d,w[%d]));"
             if argument.get('spin') == 1:
                 call_function = lambda wf: call % \
@@ -649,7 +818,7 @@ class UFOHelasCPPModel(helas_objects.HelasModel):
             elif argument.is_boson():
                 call_function = lambda wf: call % \
                                 (wf.get('number_external')-1,
-                                 wf.get('mass'),
+                                 wf.get('number_external')-1,
                                  wf.get('number_external')-1,
                                  # For boson, need initial/final here
                                  (-1) ** (wf.get('state') == 'initial'),
@@ -657,7 +826,7 @@ class UFOHelasCPPModel(helas_objects.HelasModel):
             else:
                 call_function = lambda wf: call % \
                                 (wf.get('number_external')-1,
-                                 wf.get('mass'),
+                                 wf.get('number_external')-1,
                                  wf.get('number_external')-1,
                                  # For fermions, need particle/antiparticle
                                  - (-1) ** wf.get_with_flow('is_part'),
