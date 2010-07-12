@@ -43,7 +43,7 @@ double %(process_class_name)s::weightDecay(Event& process, int iResBeg, int iRes
 //--------------------------------------------------------------------------
 // Evaluate |M|^2 for a given helicity
 
-double %(process_class_name)s::matrix(int hel[]) { 
+double %(process_class_name)s::matrix(const int hel[]) { 
     %(matrix_lines)s
 }
 

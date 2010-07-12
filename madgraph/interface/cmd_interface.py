@@ -45,6 +45,7 @@ import madgraph.iolibs.import_ufo as import_ufo
 #import madgraph.iolibs.save_model as save_model
 import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.iolibs.export_v4 as export_v4
+import madgraph.iolibs.export_pythia8 as export_pythia8
 import madgraph.iolibs.convert_ufo2mg4 as ufo2mg4
 import madgraph.iolibs.file_writers as writers
 
@@ -352,7 +353,10 @@ class HelpToCmd(object):
         - For standalone_v4, the result is a set of complete MG4 Standalone
         process directories.
         - For matrix_v4, the resulting files will be
-        FILEPATH/matrix_\"process_string\".f"""
+        FILEPATH/matrix_\"process_string\".f
+        - For pythia8, the resulting files will be
+        FILEPATH/Sigma_\"process_string\".h and
+        FILEPATH/Sigma_\"process_string\".cc"""
 
     def help_history(self):
         print "syntax: history [FILEPATH|clean|.] "
@@ -942,6 +946,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _curr_amps = diagram_generation.AmplitudeList()
     _curr_matrix_elements = helas_objects.HelasMultiProcess()
     _curr_fortran_model = export_v4.HelasFortranModel()
+    _curr_cpp_model = export_pythia8.UFOHelasCPPModel()
 
     _display_opts = ['particles', 'interactions', 'processes', 'multiparticles',
                      'couplings']
@@ -949,7 +954,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _save_opts = ['model', 'processes']
     _setup_opts = ['madevent_v4', 'standalone_v4']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
-    _export_formats = ['madevent_v4', 'standalone_v4', 'matrix_v4']
+    _export_formats = ['madevent_v4', 'standalone_v4', 'matrix_v4', 'pythia8']
         
     def __init__(self, *arg, **opt):
         """ add a tracker of the history """
@@ -1220,6 +1225,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         export_v4.generate_subprocess_directory_v4_standalone(\
                             me, self._curr_fortran_model, path)
             
+        if args[0] == 'pythia8':
+            for me in self._curr_matrix_elements.get('matrix_elements'):
+                export_pythia8.generate_process_files_pythia8(\
+                            me, self._curr_cpp_model, path)
+                
         self._export_format = args[0]
 
         logger.info(("Generated helas calls for %d subprocesses " + \
@@ -1227,7 +1237,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
               (len(self._curr_matrix_elements.get('matrix_elements')),
                ndiags, cpu_time))
 
-        logger.info("Wrote %d helas calls" % calls)
+        if calls:
+            logger.info("Wrote %d helas calls" % calls)
 
         # Replace the amplitudes with the actual amplitudes from the
         # matrix elements, which allows proper diagram drawing also of

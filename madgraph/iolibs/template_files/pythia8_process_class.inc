@@ -39,15 +39,15 @@ public:
 private:
 
   // Private function to calculate the matrix element for given helicities
-  double matrix(int helicities[]);
+  double matrix(const int helicities[]);
 
   // Private functions to set the couplings and parameters used in this process
   void set_fixed_parameters();
   void set_variable_parameters();
 
   // Constants for array limits
-  const int nexternal = %(nexternal)d;
-  const int ncolor = %(ncolor)d;
+  static const int nexternal = %(nexternal)d;
+  static const int ncolor = %(ncolor)d;
 
   // Store the matrix element value from sigmaKin
   double matrix_element;

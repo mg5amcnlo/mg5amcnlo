@@ -8,6 +8,8 @@
 
 #include "SigmaProcess.h"
 
+using namespace std;
+
 namespace Pythia8 {
 %(process_class_definitions)s
 } // end namespace Pythia8

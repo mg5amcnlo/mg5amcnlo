@@ -3,8 +3,6 @@
 %(info_lines)s
 //==========================================================================
 
-#include <complex.h>
-
 #include "%(process_file_name)s.h"
 
 namespace Pythia8 {

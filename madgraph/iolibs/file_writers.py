@@ -317,6 +317,7 @@ class CPPWriter(FileWriter):
                         ('\s*/=\s*', ' /= '),
                         ('\s*>\s+>\s*', ' >> '),
                         ('\s*<\s+<\s*', ' << '),
+                        ('\s*-\s+>\s*', '->'),
                         ('\s*=\s+=\s*', ' == '),
                         ('\s*!\s+=\s*', ' != '),
                         ('\s*>\s+=\s*', ' >= '),
@@ -327,8 +328,8 @@ class CPPWriter(FileWriter):
                         ('\s*;\s*', '; '),
                         (';\s*\}', ';}'),
                         (';\s*$}', ';'),
-                        ('^#include\s*<\s*(.*?)\s*>', '#include <\g<1>>'),
                         ('\s*<\s*([a-zA-Z0-9]+?)\s*>', '<\g<1>>'),
+                        ('^#include\s*<\s*(.*?)\s*>', '#include <\g<1>>'),
                         ('\s+',' ')]
     spacing_re = dict([(key[0], re.compile(key[0])) for key in \
                        spacing_patterns])

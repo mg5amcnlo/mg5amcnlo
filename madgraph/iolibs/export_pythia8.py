@@ -55,7 +55,7 @@ def generate_process_files_pythia8(matrix_element,
     process_file_name = get_process_file_name(matrix_element)
 
     logger.info('Creating files %s.h and %s.cc in directory %s' % \
-                (process_file_name, process_file_name, subprocdir))
+                (process_file_name, process_file_name, path))
 
     # Create the files
     filename = '%s.h' % process_file_name
@@ -69,6 +69,7 @@ def generate_process_files_pythia8(matrix_element,
                                   cpp_model,
                                   color_amplitudes)
 
+    os.chdir(cwd)
 
 #===============================================================================
 # write_pythia8_process_h_file
@@ -442,7 +443,7 @@ def get_setIdColAcol_lines(matrix_element):
                           ",".join(str(id) for id in sum(final_id_list, []))))
         res_lines.append("vector<double> probs(%d, 1./%d.);" % \
                          (ncombs, ncombs))
-        res_lines.append("int choice = Rndm::pick(probs);")
+        res_lines.append("int choice = rndmPtr->pick(probs);")
         for i in range(nfinal):
             res_lines.append("id%d = flavors[choice][%d];" % (i+3, i))
     res_lines.append("}")
@@ -474,7 +475,7 @@ def get_setIdColAcol_lines(matrix_element):
           double sum = %s;
           for(int i=0;i<ncolor;i++)
           probs.push_back(jamp2[i]/sum);
-          int ic = Rndm::pick(probs);""" % \
+          int ic = rndmPtr->pick(probs);""" % \
                          "+".join(["jamp2[%d]" % i for i in range(ncolor)]))
 
         color_flows = []
@@ -596,14 +597,14 @@ def get_process_variables(matrix_element):
     nexternal, ninitial = matrix_element.get_nexternal_ninitial()
     masses = set([wf.get('mass') for wf in \
                   matrix_element.get_all_wavefunctions()[nexternal:]])
-    masses -= set(['zero'])
+    masses -= set(['zero', 'ZERO'])
     if masses:
         variable_lines.append("// Propagator masses")
         variable_lines.append("double %s;" % ", ".join(masses))
 
     widths = set([wf.get('width') for wf in \
                   matrix_element.get_all_wavefunctions()[nexternal:]])
-    widths -= set(['zero'])
+    widths -= set(['zero', 'ZERO'])
     if widths:
         variable_lines.append("// Propagator widths")
         variable_lines.append("double %s;" % ", ".join(widths))
@@ -625,7 +626,8 @@ def get_fixed_parameter_lines(matrix_element):
 
     nexternal, ninitial = matrix_element.get_nexternal_ninitial()
     mass_parts = set([(wf.get('pdg_code'), wf.get('mass'), wf.get('width')) \
-                      for wf in filter(lambda wf: wf.get('mass') != 'zero',
+                      for wf in filter(lambda wf: \
+                                       wf.get('mass').lower() != 'zero',
                          matrix_element.get_all_wavefunctions()[nexternal:])])
 
     if mass_parts:
@@ -633,7 +635,7 @@ def get_fixed_parameter_lines(matrix_element):
         for part in mass_parts:
             variable_lines.append("%s = ParticleData::m0(%d);" % \
                                   (part[1], part[0]))
-            if part[2] != 'zero':
+            if part[2].lower() != 'zero':
                 variable_lines.append("%s = ParticleData::mWidth(%d);" % \
                                   (part[2], part[0]))
 
@@ -808,7 +810,7 @@ class UFOHelasCPPModel(helas_objects.HelasModel):
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity
                 call = call + "mME[%d],hel[%d],"
-            call = call + "%+d,w[%d]));"
+            call = call + "%+d,w[%d]);"
             if argument.get('spin') == 1:
                 call_function = lambda wf: call % \
                                 (wf.get('number_external')-1,
