@@ -1519,6 +1519,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             args = split_arg(args)
         ids=[]
         for part_name in args:
+            if part_name == '=':
+                continue
             mypart = self._curr_model['particles'].find_name(part_name)
             if mypart:
                 ids.append(mypart.get_pdg_code())
@@ -1792,24 +1794,43 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         """ add default particle from file interface.multiparticles_default.txt
         """
         
-        duplicate_multiparticles = []
+        defined_multiparticles = self._multiparticles.keys()
+        removed_multiparticles = []
+        # First check if the defined multiparticles are allowed in the
+        # new model
+        for key in self._multiparticles.keys():
+            try:
+                for part in self._multiparticles[key]:
+                    self._curr_model.get('particle_dict')[part]
+            except:
+                del self._multiparticles[key]
+                defined_multiparticles.remove(key)
+                removed_multiparticles.append(key)
+        
+        # Now add default multiparticles
         for line in open(os.path.join(MG5DIR, 'madgraph', 'interface', \
-                                                 'multiparticles_default.txt')):
+                                      'multiparticles_default.txt')):
             if line.startswith('#'):
                 continue
             try:
                 multipart_name = line.lower().split()[0]
-                if multipart_name in self._multiparticles:
-                    duplicate_multiparticles.append(multipart_name)
-                else:
+                if multipart_name not in self._multiparticles:
                     self.do_define(line)
                     
             except MadGraph5Error, why:
                 logger_stderr.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
-        if duplicate_multiparticles:
+        if defined_multiparticles:
             logger.info("Kept definitions of multiparticles %s unchanged" % \
-                                         " / ".join(duplicate_multiparticles))
+                                         " / ".join(defined_multiparticles))
+
+        for removed_part in removed_multiparticles:
+            if removed_part in self._multiparticles:
+                removed_multiparticles.remove(removed_part)
+
+        if removed_multiparticles:
+            logger.info("Removed obsolete multiparticles %s" % \
+                                         " / ".join(removed_multiparticles))
             
     def check_for_export_dir(self, filepath):
         """Check if the files is in a valid export directory and assign it to
