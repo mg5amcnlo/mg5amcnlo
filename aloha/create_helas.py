@@ -58,7 +58,6 @@ class AbstractHelas(object):
 class AbstractHelasBuilder(object):
     """ Launch the creation of the Helas Routine"""
     
-    spin_to_tag = {1:'S', 2:'F', 3:'V', 5:'T'}
     helas_lib = None
     counter = 0
     
@@ -89,12 +88,9 @@ class AbstractHelasBuilder(object):
     def define_simple_output(self):
         """ define a simple output for this AbstractHelas """
         
-        isoutgoing = lambda i: i + 1 == self.outgoing
-        info = [( self.spin_to_tag[spin], isoutgoing(i) ) \
-                                           for i, spin in enumerate(self.spins)]
-        infostr = str(self.lorentz_expr)
-        
-        return AbstractHelas(self.expr, self.outgoing, info, self.name, infostr)
+        infostr = str(self.lorentz_expr)        
+        return AbstractHelas(self.expr, self.outgoing, self.spins, self.name, \
+                                                                        infostr)
         
         
     def compute_helas_high_kernel(self, mode):
