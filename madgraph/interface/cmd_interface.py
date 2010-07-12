@@ -1808,7 +1808,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 removed_multiparticles.append(key)
         
         # Now add default multiparticles
-        for line in open(os.path.join(MG5DIR, 'madgraph', 'interface', \
+        for line in open(os.path.join(MG5DIR, 'input', \
                                       'multiparticles_default.txt')):
             if line.startswith('#'):
                 continue
