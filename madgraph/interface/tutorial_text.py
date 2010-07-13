@@ -35,8 +35,8 @@ mg5>import model_v4 sm
 
 
 import_model_v4 ="""
-You have successfully imported a model. If you follow the tutorial this is the 
-Standard Model. 
+You have successfully imported a model. If you followed the tutorial
+this is the Standard Model.
 
 If you want to know more information about this model you can use the
 following commands:
@@ -76,9 +76,9 @@ mg5>setup madevent_v4 MY_FIRST_MG5_RUN
 
 define = """
 You have just defined a multiparticle label.
-If you follow the tutorial, the label is \"v\"
+If you followed the tutorial, the label is \"v\"
 
-Note that some multiparticles as p, j, l+, l- are predefined. Type
+Note that some multiparticles such as as p, j, l+, l- are predefined. Type
 mg5>display multiparticles
 to know more about their definition
 
@@ -123,21 +123,22 @@ mg5>tutorial stop
 If you want to exit MG5 please enter
 mg5>exit
 
-But if you want, you can continue the tutorial with some additional example of 
-some other useful commands. MG5 authorizes you to write in a file the list of
-command that you write in a interactive session:
+But if you want, you can continue the tutorial with some additional
+example of some other useful commands. MG5 authorizes you to write in
+a file the list of command that you write in a interactive session:
 mg5>history my_mg5_cmd.dat
 """
 
 history = """
-You have written a history file. If you follow the tutorial exactly this should 
-be ./my_mg5_cmd.dat. In order to execute a file of instruction you can do:
+You have written a history file. If you followed the tutorial
+this should be ./my_mg5_cmd.dat. In order to execute a file of
+instruction you can do:
 mg5>import command my_mg5_cmd.dat
 or from the shell:
 ./madgraph5/bin/mg5 my_mg5_cmd.dat
 
-It is also possible to look at this files from MG5. Simply by
-launching a shell command from MG5. For example:
+It is also possible to look at this files from MG5 by launching
+a shell command. For example:
 mg5>shell less my_mg5_cmd.dat
 """
 
