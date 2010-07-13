@@ -53,7 +53,8 @@ class TestCmdShell1(unittest.TestCase):
         self.do('generate e+ e- > e+ e-')
         self.assertTrue(self.cmd._curr_amps)
         self.do('define P Z u')
-        self.do('add process e+ e- > P')
+        self.do('define J P g')
+        self.do('add process e+ e- > J')
         self.assertEqual(len(self.cmd._curr_amps), 2)
         self.do('add process mu+ mu- > P, Z>mu+mu-')
         self.assertEqual(len(self.cmd._curr_amps), 3)
@@ -106,15 +107,18 @@ class TestCmdShell2(unittest.TestCase):
         """ command 'setup' works with path"""
         
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
-        self.do('setup madevent_v4 %s' % self.out_dir)
+        self.do('setup madevent_v4 %s -nojpeg' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
-        self.do('export')
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'SubProcesses', 'P0_e+e-_e+e-')))
-        self.do('finalize --nojpeg')
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                  'Cards', 'proc_card_mg5.dat')))
         self.assertFalse(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P0_e+e-_e+e-',
+                                                    'matrix1.jpg')))
+        self.do('finalize')
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_e+e-_e+e-',
                                                     'matrix1.jpg')))
@@ -166,9 +170,7 @@ class TestCmdShell2(unittest.TestCase):
         self.assertTrue(os.path.exists(self.out_dir))
         self.assertTrue(os.path.isfile(os.path.join(self.out_dir, 'lib', 'libdhelas3.a')))
         self.assertTrue(os.path.isfile(os.path.join(self.out_dir, 'lib', 'libmodel.a')))
-        self.do('export')
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'SubProcesses', 'P0_e+e-_e+e-')))
-        self.do('finalize')
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'Cards', 'proc_card_mg5.dat')))

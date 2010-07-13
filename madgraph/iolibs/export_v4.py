@@ -1248,20 +1248,19 @@ def get_icolamp_lines(matrix_element):
     ret_list.append("logical icolamp(%d,%d)" % \
                     (len(amplitudes), len(color_amplitudes)))
 
-    bool_list = []
-
-    for coeff_list in color_amplitudes:
+    for icolor, coeff_list in enumerate(color_amplitudes):
 
         # List of amplitude numbers used in this JAMP
         amp_list = [amp_number for (dummy, amp_number) in coeff_list]
 
         # List of True or False 
-        bool_list.extend([(i + 1 in amp_list) for i in \
-                          range(len(amplitudes))])
-    # Add line
-    ret_list.append("DATA icolamp/%s/" % \
-                         ','.join(["%s" % booldict[i] for i in \
-                                   bool_list]))
+        bool_list = [(i + 1 in amp_list) for i in \
+                          range(len(amplitudes))]
+        # Add line
+        ret_list.append("DATA(icolamp(i,%d),i=1,%d)/%s/" % \
+                            (icolor + 1, len(bool_list),
+                             ','.join(["%s" % booldict[i] for i in \
+                                       bool_list])))
 
     return ret_list
 

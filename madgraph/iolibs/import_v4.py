@@ -457,10 +457,6 @@ class ProcCardv4Reader(object):
         #finally export the madevent output
         lines.append('# Set up MadEvent directory')
         lines.append('setup madevent_v4 . -f')
-        lines.append('# Export processes to subprocess directories')
-        lines.append('export')
-        lines.append('# Finalize MadEvent directory setup')
-        lines.append('finalize')
         
         return lines
         
