@@ -216,8 +216,8 @@ class converter_ufo_mg5(object):
         """ load the default for name convention """
         
         default = {}
-        for line in open(os.path.join(madgraph.MG5DIR, 'madgraph', 'interface',
-                                      'default_name')):
+        for line in open(os.path.join(madgraph.MG5DIR, 'input', \
+                                                 'particles_name_default.txt')):
             line = line.lstrip()
             if line.startswith('#'):
                 continue

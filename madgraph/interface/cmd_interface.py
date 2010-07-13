@@ -1685,39 +1685,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def do_import(self, line):
         """Import files with external formats"""
 
-        def import_v4file(self, filepath):
-            """Helper function to load a v4 file from file path filepath"""
-            filename = os.path.basename(filepath)
-            if filename.endswith('particles.dat'):
-                self._curr_model.set('particles',
-                                     files.read_from_file(
-                                            filepath,
-                                            import_v4.read_particles_v4))
-                logger.info("%d particles imported" % \
-                      len(self._curr_model['particles']))
-                      
-            elif filename.endswith('interactions.dat'):
-                if len(self._curr_model['particles']) == 0:
-                    text =  "No particle list currently active,"
-                    text += "please create one first!"
-                    raise MadGraph5Error(text)
-                self._curr_model.set('interactions',
-                                     files.read_from_file(
-                                            filepath,
-                                            import_v4.read_interactions_v4,
-                                            self._curr_model['particles']))
-                logger.info("%d interactions imported" % \
-                      len(self._curr_model['interactions']))
-           
-            else:
-                #not valid File
-                raise MadGraph5Error("%s is not a valid v4 file name" % \
-                                     filepath)
-
         args = split_arg(line)
         # Check argument's validity
         self.check_import(args)
-        
         
         if args[0] == 'model':
             self._ufo_model = ufomodels.load_model(args[1])
@@ -1730,47 +1700,22 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             else:
                 raise self.InvalidCmd('Invalid model path/name')
             self._curr_fortran_model = export_v4.UFOHelasFortranModel()
-                    
-        elif args[0] == 'model_v4':
-            # Check for a file
-            if os.path.isfile(args[1]):
-                import_v4file(self, args[1])
-                self._model_dir = os.path.dirname(args[1])
-                return
-            
-            # Check for a valid directory
-            elif os.path.isdir(args[1]):
-                self._model_dir = args[1]
-            elif MG4DIR and os.path.isdir(os.path.join(MG4DIR, 'Models', \
-                                                                      args[1])):
-                self._model_dir = os.path.join(MG4DIR, 'Models', args[1])
-            elif not MG4DIR:
-                error_text = "Path %s is not a valid pathname\n" % args[1]
-                error_text += "and no MG_ME installation detected in order to search in Models"
-                raise MadGraph5Error(error_text)
-            else:
-                raise MadGraph5Error("Path %s is not a valid pathname" % args[1])
-            
-            #Load the directory
-            if os.path.exists(os.path.join(self._model_dir, 'model.pkl')):
-                self.do_load('model %s' % os.path.join(self._model_dir, \
-                                                                   'model.pkl'))
-                self.add_default_multiparticles()
-                return
-            files_to_import = ('particles.dat', 'interactions.dat')
-            for filename in files_to_import:
-                if os.path.isfile(os.path.join(self._model_dir, filename)):
-                    import_v4file(self, os.path.join(self._model_dir, \
-                                                                      filename))
-                else:
-                    raise self.RWError("%s file doesn't exist in %s directory" % \
-                                        (filename, os.path.basename(args[1])))
-            #save model for next usage
-            save_load_object.save_to_file(
-                                      os.path.join(self._model_dir, 'model.pkl')
-                                    , self._curr_model)
             self.add_default_multiparticles()
         
+        elif args[0] == 'command':
+            if not os.path.isfile(args[1]):
+                raise MadGraph5Error("Path %s is not a valid pathname" % args[1])
+            else:
+                # Check the status of export and try to use file position is no
+                #self._export dir are define
+                self.check_for_export_dir(args[1])
+                # Execute the card
+                self.import_mg5_proc_card(args[1])    
+        
+        elif args[0] == 'model_v4':
+            self.import_mg4_model(args[1:])
+            self.add_default_multiparticles()
+ 
         elif args[0] == 'proc_v4':
             
             if len(args) == 1 and self._export_dir:
@@ -1791,15 +1736,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             #convert and excecute the card
             self.import_mg4_proc_card(proc_card)   
                                      
-        elif args[0] == 'command':
-            if not os.path.isfile(args[1]):
-                raise MadGraph5Error("Path %s is not a valid pathname" % args[1])
-            else:
-                # Check the status of export and try to use file position is no
-                #self._export dir are define
-                self.check_for_export_dir(args[1])
-                # Execute the card
-                self.import_mg5_proc_card(args[1])    
+
     
     def import_mg4_proc_card(self, filepath):
         """ read a V4 proc card, convert it and run it in mg5"""
@@ -1829,7 +1766,75 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self.exec_cmd(line)
     
         return 
-
+    
+    def import_mg4_model(self, args):
+        """Import the model from mg4"""
+        
+        def import_v4file(self, filepath):
+            """Helper function to load a v4 file from file path filepath"""
+            filename = os.path.basename(filepath)
+            if filename.endswith('particles.dat'):
+                self._curr_model.set('particles',
+                                     files.read_from_file(
+                                            filepath,
+                                            import_v4.read_particles_v4))
+                logger.info("%d particles imported" % \
+                      len(self._curr_model['particles']))
+                      
+            elif filename.endswith('interactions.dat'):
+                if len(self._curr_model['particles']) == 0:
+                    text =  "No particle list currently active,"
+                    text += "please create one first!"
+                    raise MadGraph5Error(text)
+                self._curr_model.set('interactions',
+                                     files.read_from_file(
+                                            filepath,
+                                            import_v4.read_interactions_v4,
+                                            self._curr_model['particles']))
+                logger.info("%d interactions imported" % \
+                      len(self._curr_model['interactions']))
+           
+            else:
+                #not valid File
+                raise MadGraph5Error("%s is not a valid v4 file name" % \
+                                     filepath)
+                
+                        
+        # Check for a file
+        if os.path.isfile(args[0]):
+            import_v4file(self, args[0])
+            self._model_dir = os.path.dirname(args[0])
+            return
+            
+        # Check for a valid directory
+        elif os.path.isdir(args[0]):
+            self._model_dir = args[0]
+        elif MG4DIR and os.path.isdir(os.path.join(MG4DIR, 'Models', \
+                                                                      args[0])):
+            self._model_dir = os.path.join(MG4DIR, 'Models', args[0])
+        elif not MG4DIR:
+            error_text = "Path %s is not a valid pathname\n" % args[0]
+            error_text += "and no MG_ME installation detected in order to search in Models"
+            raise MadGraph5Error(error_text)
+        else:
+            raise MadGraph5Error("Path %s is not a valid pathname" % args[0])
+            
+        #Load the directory
+        if os.path.exists(os.path.join(self._model_dir, 'model.pkl')):
+            self.do_load('model %s' % os.path.join(self._model_dir, 'model.pkl'))
+            return
+        files_to_import = ('particles.dat', 'interactions.dat')
+        for filename in files_to_import:
+            if os.path.isfile(os.path.join(self._model_dir, filename)):
+                import_v4file(self, os.path.join(self._model_dir, filename))
+            else:
+                raise self.RWError("%s file doesn't exist in %s directory" % \
+                                        (filename, os.path.basename(args[1])))
+        #save model for next usage
+        save_load_object.save_to_file(os.path.join(self._model_dir, 'model.pkl')
+                                    , self._curr_model)
+            
+        
     def import_mg5_proc_card(self, filepath):
         # remove this call from history
         self.history.pop()

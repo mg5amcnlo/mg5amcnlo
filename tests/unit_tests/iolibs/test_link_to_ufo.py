@@ -78,7 +78,7 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         """ check that the internal definition for a particle comming from mg4 or
         comming from the UFO are the same """
         
-        not_equiv = ['charge', 'mass','width','name','antiname',
+        not_equiv = ['charge', 'mass','width',
                         'texname','antitexname']
         
         if abs(mg4_part['pdg_code']) != abs(ufo_part['pdg_code']):
@@ -88,6 +88,10 @@ class CompareMG4WithUFOModel(unittest.TestCase):
             self.assertFalse(mg4_part.get('is_part') == ufo_part.get('is_part'))
             not_equiv.append('is_part')
             not_equiv.append('pdg_code')
+            not_equiv.append('name')
+            not_equiv.append('antiname')
+            self.assertTrue(mg4_part.get('name') == ufo_part.get('antiname'))
+            
             
         
         for name in mg4_part.sorted_keys:
