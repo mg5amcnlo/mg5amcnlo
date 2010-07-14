@@ -37,9 +37,14 @@ class UFOExpressionParser:
 
     def __init__(self, **kw):
         """Ininitialize the lex and yacc"""
-        lex.lex(module=self)
-        yacc.yacc(module=self)        
 
+        modname = self.__class__.__name__
+        self.debugfile = os.path.devnull
+        self.tabmodule = os.path.join(root_path, "iolibs",  modname + "_" + "parsetab")
+        lex.lex(module=self, debug=0)
+        yacc.yacc(module=self, debug=0, debugfile=self.debugfile,
+                  tabmodule=self.tabmodule)
+        
     def parse(self, buf):
         """Parse the string buf"""
         yacc.parse(buf)
