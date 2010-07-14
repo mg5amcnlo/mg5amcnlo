@@ -26,7 +26,7 @@ sys.path.append(os.path.join(root_path, os.path.pardir))
 
 import vendor.ply.lex as lex
 import vendor.ply.yacc as yacc
-logger = logging.getLogger('ufo_parsers')
+logger = logging.getLogger('madgraph.ufo_parsers')
 
 # PLY lexer class
 
@@ -216,8 +216,8 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         if p[1] == 'cmath.sin': p[0] = 'sin' + p[2]
         elif p[1] == 'cmath.cos': p[0] = 'cos' + p[2]
         elif p[1] == 'cmath.tan': p[0] = 'tan' + p[2]
-        elif p[1] == 'cmath.csc': p[0] = '1./cos' + p[2]
-        elif p[1] == 'cmath.sec': p[0] = '1./sin' + p[2]
+        elif p[1] == 'cmath.csc': p[0] = '1d0/cos' + p[2]
+        elif p[1] == 'cmath.sec': p[0] = '1d0/sin' + p[2]
         elif p[1] == 'cmath.acsc': p[0] = 'acsc' + p[2]
         elif p[1] == 'cmath.asec': p[0] = 'asec' + p[2]
         elif p[1] == 're': p[0] = 'dble' + p[2]
