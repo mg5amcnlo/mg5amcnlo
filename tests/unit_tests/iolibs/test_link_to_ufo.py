@@ -127,23 +127,19 @@ class TestPythonToFrotran(unittest.TestCase):
         self.assertTrue(isinstance(converted, str))
         self.assertEqual(converted, 'dsqrt(2.000000d+00)')
         
-        expr = 'sqrt(2)' 
+        expr = 'cmath.sqrt(2.)'
         converted = ufo2mg4.python_to_fortran(expr)
         self.assertEqual(converted, 'dsqrt(2.000000d+00)')
         
-        expr = 'sqrt(2.)'
-        converted = ufo2mg4.python_to_fortran(expr)
-        self.assertEqual(converted, 'dsqrt(2.000000d+00)')
-        
-        expr = 'sqrt(2.5)'
+        expr = 'cmath.sqrt(2.5)'
         converted = ufo2mg4.python_to_fortran(expr)
         self.assertEqual(converted, 'dsqrt(2.500000d+00)')
 
         
-        expr = '(ee**2*IMAG/(2.*sw**2) * (cmath.sin(sqrt(2)*ee)/3.'
+        expr = '(ee**2*IMAG/(2.*sw**2) * (cmath.sin(cmath.sqrt(2)*ee)/3.))'
         converted = ufo2mg4.python_to_fortran(expr)
         self.assertEqual(converted, 
-        '(ee**2*imag/(2.000000d+00*sw**2) * (sin(dsqrt(2.000000d+00)*ee)/3.000000d+00')
+        '(ee**2*imag/(2.000000d+00*sw**2)*(sin(dsqrt(2.000000d+00)*ee)/3.000000d+00))')
     
     def test_convert_number(self):
         """ test it can convert number in fortran string"""
@@ -225,7 +221,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
         ufo2mg4.export_to_mg4(model, self.output_path)
         
         
-    tearDown = CheckFileCreate.clean_files
+#    tearDown = CheckFileCreate.clean_files
 
     def test_all(self):
         """ test all the files"""

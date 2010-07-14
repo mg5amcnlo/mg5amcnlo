@@ -17,19 +17,23 @@
 different languages/frameworks (Fortran and Pythia8). Uses the PLY 3.3
 Lex + Yacc framework"""
 
-import sys
+import logging
 import os
+import sys
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir))
 
 import vendor.ply.lex as lex
 import vendor.ply.yacc as yacc
+logger = logging.getLogger('ufo_parsers')
 
 # PLY lexer class
 
 class UFOExpressionParser:
     """A base class for parsers for algebraic expressions coming from UFO."""
+
+    parsed_string = ""
 
     def __init__(self, **kw):
         """Ininitialize the lex and yacc"""
@@ -39,13 +43,14 @@ class UFOExpressionParser:
     def parse(self, buf):
         """Parse the string buf"""
         yacc.parse(buf)
+        return self.parsed_string
 
     # List of tokens and literals
     tokens = (
-        'POWER', 'SIN', 'COS', 'TAN', 'SQRT', 'CONJ', 'PI',
-        'VARIABLE', 'NUMBER'
+        'POWER', 'SIN', 'COS', 'TAN', 'CSC', 'SEC', 'ACSC', 'ASEC',
+        'SQRT', 'CONJ', 'RE', 'IM', 'PI', 'COMPLEX', 'VARIABLE', 'NUMBER'
         )
-    literals = "=+-*/()"
+    literals = "=+-*/(),"
 
     # Definition of tokens
 
@@ -58,8 +63,20 @@ class UFOExpressionParser:
     def t_TAN(self, t):
         r'cmath\.tan'
         return t
+    def t_CSC(self, t):
+        r'cmath\.csc'
+        return t
+    def t_SEC(self, t):
+        r'cmath\.sec'
+        return t
+    def t_ACSC(self, t):
+        r'cmath\.acsc'
+        return t
+    def t_ASEC(self, t):
+        r'cmath\.asec'
+        return t
     def t_SQRT(self, t):
-        r'cmath\.sqrt|sqrt'
+        r'cmath\.sqrt'
         return t
     def t_PI(self, t):
         r'cmath\.pi'
@@ -67,10 +84,19 @@ class UFOExpressionParser:
     def t_CONJ(self, t):
         r'complexconjugate'
         return t
+    def t_IM(self, t):
+        r'(?<!\w)im(?=\()'
+        return t
+    def t_RE(self, t):
+        r'(?<!\w)re(?=\()'
+        return t
+    def t_COMPLEX(self, t):
+        r'(?<!\w)complex(?=\()'
+        return t
     def t_VARIABLE(self, t):
         r'[a-zA-Z_][0-9a-zA-Z_]*'
         return t
-
+    
     t_NUMBER = r'([0-9]+\.[0-9]*|\.[0-9]+|[0-9]+)([eE][+-]{0,1}[0-9]+){0,1}'
     t_POWER  = r'\*\*'
 
@@ -81,7 +107,7 @@ class UFOExpressionParser:
         t.lexer.lineno += t.value.count("\n")
 
     def t_error(self, t):
-        print("Illegal character '%s'" % t.value[0])
+        logger.error("Illegal character '%s'" % t.value[0])
         t.lexer.skip(1)
 
     # Build the lexer
@@ -100,14 +126,21 @@ class UFOExpressionParser:
         ('right','SIN'),
         ('right','COS'),
         ('right','TAN'),
+        ('right','CSC'),
+        ('right','SEC'),
+        ('right','ACSC'),
+        ('right','ASEC'),
         ('right','SQRT'),
-        ('right','CONJ')
+        ('right','CONJ'),
+        ('right','RE'),
+        ('right','IM'),
+        ('right','COMPLEX')
         )
 
     # Dictionary of parser expressions
     def p_statement_expr(self, p):
         'statement : expression'
-        print(p[1])
+        self.parsed_string = p[1]
 
     def p_expression_binop(self, p):
         '''expression : expression '=' expression
@@ -129,19 +162,12 @@ class UFOExpressionParser:
         "expression : group"
         p[0] = p[1]
 
-    def p_expression_variable(self, p):
-        "expression : VARIABLE"
-        p[0] = p[1]
-
-    def p_expression_number(self, p):
-        "expression : NUMBER"
-        p[0] = p[1]
-
     def p_error(self, p):
         if p:
-            print("Syntax error at '%s'" % p.value)
+            logger.error("Syntax error at '%s'" % p.value)
         else:
-            print("Syntax error at EOF")
+            logger.error("Syntax error at EOF")
+        self.parsed_string = "Error"
 
 class UFOExpressionParserFortran(UFOExpressionParser):
     """A parser for UFO algebraic expressions, outputting
@@ -150,19 +176,52 @@ class UFOExpressionParserFortran(UFOExpressionParser):
     # The following parser expressions need to be defined for each
     # output language/framework
 
+    def p_expression_number(self, p):
+        "expression : NUMBER"
+        p[0] = ('%e' % float(p[1])).replace('e', 'd')
+
+    def p_expression_variable(self, p):
+        "expression : VARIABLE"
+        p[0] = p[1].lower()
+
     def p_expression_power(self, p):
         'expression : expression POWER expression'
-        p[0] = p[1] + "**" + p[3]
+        try:
+            p3 = float(p[3].replace('d','e'))
+            # Check if exponent is an integer
+            if p3 == int(p3):
+                p3 = str(int(p3))
+                p[0] = p[1] + "**" + p3
+            else:
+                p[0] = p[1] + "**" + p[3]
+        except:
+            p[0] = p[1] + "**" + p[3]
+
+    def p_expression_complex(self, p):
+        "expression : COMPLEX '(' expression ',' expression ')'"
+        p[0] = '(' + p[3] + ',' + p[5] + ')'
 
     def p_expression_func(self, p):
         '''expression : SIN group
                       | COS group
                       | TAN group
+                      | CSC group
+                      | SEC group
+                      | ACSC group
+                      | ASEC group
+                      | RE group
+                      | IM group
                       | SQRT group
                       | CONJ group'''
         if p[1] == 'cmath.sin': p[0] = 'sin' + p[2]
         elif p[1] == 'cmath.cos': p[0] = 'cos' + p[2]
         elif p[1] == 'cmath.tan': p[0] = 'tan' + p[2]
+        elif p[1] == 'cmath.csc': p[0] = '1./cos' + p[2]
+        elif p[1] == 'cmath.sec': p[0] = '1./sin' + p[2]
+        elif p[1] == 'cmath.acsc': p[0] = 'acsc' + p[2]
+        elif p[1] == 'cmath.asec': p[0] = 'asec' + p[2]
+        elif p[1] == 're': p[0] = 'dble' + p[2]
+        elif p[1] == 'im': p[0] = 'dimag' + p[2]
         elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'dsqrt' + p[2]
         elif p[1] == 'complexconjugate': p[0] = 'conjg' + p[2]
 
@@ -177,6 +236,14 @@ class UFOExpressionParserPythia8(UFOExpressionParser):
     # The following parser expressions need to be defined for each
     # output language/framework
 
+    def p_expression_number(self, p):
+        "expression : NUMBER"
+        p[0] = p[1]
+
+    def p_expression_variable(self, p):
+        "expression : VARIABLE"
+        p[0] = p[1]
+
     def p_expression_power(self, p):
         'expression : expression POWER expression'
         p1=p[1]
@@ -187,15 +254,31 @@ class UFOExpressionParserPythia8(UFOExpressionParser):
             p3 = p[3][1:-1]
         p[0] = 'pow(' + p1 + ',' + p3 + ')'        
 
+    def p_expression_complex(self, p):
+        "expression : COMPLEX '(' expression ',' expression ')'"
+        p[0] = 'complex(' + p[3] + ',' + p[5] + ')'
+
     def p_expression_func(self, p):
         '''expression : SIN group
                       | COS group
                       | TAN group
+                      | CSC group
+                      | SEC group
+                      | ACSC group
+                      | ASEC group
+                      | RE group
+                      | IM group
                       | SQRT group
                       | CONJ group'''
         if p[1] == 'cmath.sin': p[0] = 'sin' + p[2]
         elif p[1] == 'cmath.cos': p[0] = 'cos' + p[2]
         elif p[1] == 'cmath.tan': p[0] = 'tan' + p[2]
+        elif p[1] == 'cmath.csc': p[0] = '1./cos' + p[2]
+        elif p[1] == 'cmath.sec': p[0] = '1./sin' + p[2]
+        elif p[1] == 'cmath.acsc': p[0] = 'acsc' + p[2]
+        elif p[1] == 'cmath.asec': p[0] = 'asec' + p[2]
+        elif p[1] == 're': p[0] = 'real' + p[2]
+        elif p[1] == 'im': p[0] = 'imag' + p[2]
         elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
         elif p[1] == 'complexconjugate': p[0] = 'conj' + p[2]
 
@@ -203,6 +286,8 @@ class UFOExpressionParserPythia8(UFOExpressionParser):
         '''expression : PI'''
         p[0] = 'pi'
 
+
+# Main program, allows to interactively test the parser
 if __name__ == '__main__':
 
     if len(sys.argv) == 1:
@@ -215,7 +300,7 @@ if __name__ == '__main__':
     else:
         print "Please specify a parser: tex, fortran or pythia8"
         print "You gave", sys.argv
-        exit()        
+        exit()
 
     while 1:
         try:
@@ -223,4 +308,4 @@ if __name__ == '__main__':
         except EOFError:
             break
         if not s: continue
-        calc.parse(s)
+        print calc.parse(s)

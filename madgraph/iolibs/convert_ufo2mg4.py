@@ -6,8 +6,9 @@ import re
 import sys
 
 
-import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.export_v4 as export_v4
+import madgraph.iolibs.file_writers as writers
+import madgraph.iolibs.ufo_expression_parsers as parsers
 logger = logging.getLogger('madgraph.ufo2mg4')
 
 class CompactifyExpression:
@@ -50,12 +51,12 @@ class CompactifyExpression:
         real = float(matchobj.group('real'))
         imag = float(matchobj.group('imag'))
         if real == 0 and imag ==1:
-            self.add_indep( ('COMPLEXI', '(0d0, 1d0)', 'complex') )
+            self.add_indep( ('COMPLEXI', 'complex(0,1)', 'complex') )
             return 'COMPLEXI'
         else:
             self.add_indep( 
                 ('R%sI%s__' % (real, imag), \
-                 '(%s,%s )' % (python_to_fortran(real), python_to_fortran(imag)),
+                 'complex(%s,%s)' % (python_to_fortran(real), python_to_fortran(imag)),
                  'complex'
                  )
             )
@@ -90,10 +91,10 @@ class CompactifyExpression:
             self.add_indep( ( output, ' cmath.sqrt(%s) ' %  float(expr), 'real' ))
         elif self.is_event_dependent(expr) and expr !='aS':
             type = self.search_type(expr)
-            self.add_dep( (output, ' sqrt(%s) ' % expr, type) )
+            self.add_dep( (output, ' cmath.sqrt(%s) ' % expr, type) )
         else:
             type = self.search_type(expr)
-            self.add_indep( (output, ' sqrt(%s) ' % expr, type) )
+            self.add_indep( (output, ' cmath.sqrt(%s) ' % expr, type) )
         
         return output        
         
@@ -103,9 +104,9 @@ class CompactifyExpression:
         expr = matchobj.group('expr')
         output = 'CONJG__%s' % (expr)
         if self.is_event_dependent(expr) and expr !='aS':
-            self.add_dep( (output, ' conjg(%s) ' % expr, 'complex') )
+            self.add_dep( (output, ' complexconjugate(%s) ' % expr, 'complex') )
         else:
-            self.add_indep( (output, ' conjg(%s) ' % expr, 'complex') )
+            self.add_indep( (output, ' complexconjugate(%s) ' % expr, 'complex') )
                     
         return output            
     
@@ -531,64 +532,17 @@ def export_to_mg4(model, dir_path):
     
 class python_to_fortran(str):
     
-    python_split = re.compile(r'''(\*\*|\*|\s|\+|\-|/|\(|\))''')
+    fortran_parser = parsers.UFOExpressionParserFortran()
 
-    operator = {'+': '+', '-': '-', '*': '*', '/' : '/', '**': '**',
-                'cmath.sin' :'sin', 'cmath.cos': 'cos', 'cmath.tan': 'tan',
-                'cmath.sqrt':'dsqrt', 'sqrt': 'dsqrt', 
-                'cmath.pi':'pi',
-                'complexconjugate':'conjg',
-                ')': ')', '(':'('
-                }
-    
-    operator_key = operator.keys()
-    
     def __new__(cls, input):
         """ test"""
         
         if isinstance(input, str):
-            converted = cls.convert_string(input)
+            converted = cls.fortran_parser.parse(input)
         else:
-            converted = cls.convert_number(input)
-        return super(python_to_fortran, cls).__new__(cls, converted)
-    
-    @classmethod
-    def convert_string(cls, expr):
-        """look element by element how to convert the string"""
-        
-        last_element = ""
-        this_element = ""
-        converted = ""
-        for data in cls.python_split.split(expr):
-            if data  == '':
-                continue
-            data = data.lower()
+            converted = cls.fortran_parser.parse(str(input))
 
-            last_element, this_element = this_element, data
-            
-            if data in cls.operator_key:
-                converted += cls.operator[data]
-                continue
-            elif data.isdigit() and last_element == '**':
-                converted += data 
-                continue
-            
-            #check if this is a number
-            test_data = data.replace('d','e')
-            try:
-                test_data = float(test_data)    
-            except ValueError:
-                converted += data
-                continue
-            else:
-                converted += ('%e' % test_data).replace('e', 'd')
-        return converted
-    
-    @classmethod
-    def convert_number(cls, value):
-        """look element by element how to convert a number"""
-        
-        return ('%e' % value).replace('e', 'd')
+        return super(python_to_fortran, cls).__new__(cls, converted)
 
 if '__main__' == __name__:
     
