@@ -207,6 +207,8 @@ class IOExportPythia8Test(unittest.TestCase,
 
 #include "SigmaProcess.h"
 
+using namespace std; 
+
 namespace Pythia8 
 {
 //==========================================================================
@@ -253,7 +255,7 @@ class Sigma_uux_uux : public Sigma2Process
   private:
 
     // Private function to calculate the matrix element for given helicities
-    double matrix(int helicities[]); 
+    double matrix(const int helicities[]); 
 
     // Private functions to set the couplings and parameters used in this
     // process
@@ -261,8 +263,8 @@ class Sigma_uux_uux : public Sigma2Process
     void set_variable_parameters(); 
 
     // Constants for array limits
-    const int nexternal = 4; 
-    const int ncolor = 2; 
+    static const int nexternal = 4; 
+    static const int ncolor = 2; 
 
     // Store the matrix element value from sigmaKin
     double matrix_element; 
@@ -301,8 +303,6 @@ class Sigma_uux_uux : public Sigma2Process
 // Please visit us at https://launchpad.net/madgraph5
 //==========================================================================
 
-#include <complex.h> 
-
 #include "Sigma_uux_uux.h"
 
 namespace Pythia8 
@@ -327,11 +327,13 @@ void Sigma_uux_uux::initProc()
 
 void Sigma_uux_uux::sigmaKin() 
 {
-  const int _ncomb = 16; 
+  // Local variables and constants
+  const int ncomb = 16; 
   static bool goodhel[ncomb] = {ncomb * false}; 
   static int ntry = 0, sum_hel = 0, ngood = 0; 
   static int igood[ncomb]; 
   static int jhel; 
+  double t; 
   // Helicities for the process
   static const int helicities[ncomb][nexternal] = {-1, -1, -1, -1, -1, -1, -1,
       1, -1, -1, 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, 1, -1, 1, -1, 1, 1,
@@ -346,8 +348,8 @@ void Sigma_uux_uux::sigmaKin()
   set_variable_parameters(); 
 
   // Reset color flows
-  for(int i = 0; i < ngraphs; i++ )
-    jamp2(i) = 0.; 
+  for(int i = 0; i < ncolor; i++ )
+    jamp2[i] = 0.; 
 
   // Calculate the matrix element
   matrix_element = 0.; 
@@ -359,7 +361,7 @@ void Sigma_uux_uux::sigmaKin()
     {
       if (goodhel[ihel] || ntry < 2)
       {
-        double t = matrix(helicities[ihel]); 
+        t = matrix(helicities[ihel]); 
         matrix_element += t; 
         // Store which helicities give non-zero result
         if (t != 0. && !goodhel[ihel])
@@ -370,7 +372,7 @@ void Sigma_uux_uux::sigmaKin()
         }
       }
     }
-    jhel = 1; 
+    jhel = 0; 
     sum_hel = min(sum_hel, ngood); 
   }
   else
@@ -379,10 +381,10 @@ void Sigma_uux_uux::sigmaKin()
     for(int j = 0; j < sum_hel; j++ )
     {
       jhel++; 
-      if (jhel > ngood)
-        jhel = 1; 
+      if (jhel >= ngood)
+        jhel = 0; 
       double hwgt = double(ngood)/double(sum_hel); 
-      int ihel = igood(jhel); 
+      int ihel = igood[jhel]; 
       t = matrix(helicities[ihel]); 
       matrix_element += t * hwgt; 
     }
@@ -410,7 +412,7 @@ void Sigma_uux_uux::setIdColAcol()
     // Pick one of the flavor combinations [[4, -4]]
     int flavors[1][2] = {4, -4}; 
     vector<double> probs(1, 1./1.); 
-    int choice = Rndm::pick(probs); 
+    int choice = rndmPtr->pick(probs); 
     id3 = flavors[choice][0]; 
     id4 = flavors[choice][1]; 
   }
@@ -419,7 +421,7 @@ void Sigma_uux_uux::setIdColAcol()
     // Pick one of the flavor combinations [[2, -2]]
     int flavors[1][2] = {2, -2}; 
     vector<double> probs(1, 1./1.); 
-    int choice = Rndm::pick(probs); 
+    int choice = rndmPtr->pick(probs); 
     id3 = flavors[choice][0]; 
     id4 = flavors[choice][1]; 
   }
@@ -428,7 +430,7 @@ void Sigma_uux_uux::setIdColAcol()
   double sum = jamp2[0] + jamp2[1]; 
   for(int i = 0; i < ncolor; i++ )
     probs.push_back(jamp2[i]/sum); 
-  int ic = Rndm::pick(probs); 
+  int ic = rndmPtr->pick(probs); 
   static int col[2][8] = {1, 0, 0, 1, 2, 0, 0, 2, 2, 0, 0, 1, 2, 0, 0, 1}; 
   setColAcol(col[ic][0], col[ic][1], col[ic][2], col[ic][3], col[ic][4],
       col[ic][5], col[ic][6], col[ic][7]);
@@ -449,11 +451,11 @@ double Sigma_uux_uux::weightDecay(Event& process, int iResBeg, int iResEnd)
 //--------------------------------------------------------------------------
 // Evaluate |M|^2 for a given helicity
 
-double Sigma_uux_uux::matrix(int hel[]) 
+double Sigma_uux_uux::matrix(const int hel[]) 
 {
   // Local variables
   const int nwavefuncs = 8, ngraphs = 4; 
-  double zero = 0.; 
+  const double zero = 0., ZERO = 0.; 
   int i, j; 
   complex ztemp; 
   complex amp[ngraphs], jamp[ncolor]; 
@@ -463,10 +465,10 @@ double Sigma_uux_uux::matrix(int hel[])
   static const double cf[ncolor][ncolor] = {9, 3, 3, 9}; 
 
   // Calculate all amplitudes
-  ixxxxx(pME[0], mME[0], hel[0], +1, w[0])); 
-  oxxxxx(pME[1], mME[1], hel[1], -1, w[1])); 
-  oxxxxx(pME[2], mME[2], hel[2], +1, w[2])); 
-  ixxxxx(pME[3], mME[3], hel[3], -1, w[3])); 
+  ixxxxx(pME[0], mME[0], hel[0], +1, w[0]); 
+  oxxxxx(pME[1], mME[1], hel[1], -1, w[1]); 
+  oxxxxx(pME[2], mME[2], hel[2], +1, w[2]); 
+  ixxxxx(pME[3], mME[3], hel[3], -1, w[3]); 
   FFV_110(w[0], w[1], QQG, zero, zero, w[4]); 
   // Amplitude(s) for diagram number 1
   FFV_111(w[3], w[2], w[4], QQG, amp[0]); 
@@ -496,7 +498,7 @@ double Sigma_uux_uux::matrix(int hel[])
 
   // Store the leading color flows for choice of color
   for(i = 0; i < ncolor; i++ )
-    jamp2[i] += jamp[i] * conj(jamp[i]); 
+    jamp2[i] += real(jamp[i] * conj(jamp[i])); 
 
   return matrix; 
 
