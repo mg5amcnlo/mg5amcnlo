@@ -1,4 +1,4 @@
-###############################################################################
+##############################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
 #
@@ -1176,8 +1176,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 print amp.nice_string_processes()
 
         elif args[0] == 'diagrams':
-            for amp in self._curr_amps:
-                print amp.nice_string()
+            text = "\n".join([amp.nice_string() for amp in self._curr_amps])
+            pydoc.pager(text)
 
         elif args[0] == 'multiparticles':
             print 'Multiparticle labels:'
@@ -1397,7 +1397,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                   (nprocs, ndiags, (cpu_time2 - cpu_time1)))
     
     
-    def extract_process(self, line, proc_number = 0):
+    def extract_process(self, line, proc_number = 0, overall_orders = {}):
         """Extract a process definition from a string. Returns
         a ProcessDefinition."""
 
@@ -1519,7 +1519,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                 'orders': orders,
                                 'forbidden_particles': forbidden_particle_ids,
                                 'forbidden_s_channels': forbidden_schannel_ids,
-                                'required_s_channels': required_schannel_ids
+                                'required_s_channels': required_schannel_ids,
+                                'overall_orders': overall_orders
                                  })
         #                       'is_decay_chain': decay_process\
 
@@ -1545,15 +1546,23 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         """Recursively extract a decay chain process definition from a
         string. Returns a ProcessDefinition."""
 
-        # Start with process number (identified by "@")
-        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*(.*)$")
+        # Start with process number (identified by "@") and overall orders
+        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*((\w+\s*=\s*\d+\s*)*)$")
         proc_number_re = proc_number_pattern.match(line)
         proc_number = 0
+        overall_orders = {}
         if proc_number_re:
             proc_number = int(proc_number_re.group(2))
-            line = proc_number_re.group(1) + \
-                   proc_number_re.group(3)
-            logger.info(line)
+            line = proc_number_re.group(1)
+            if proc_number_re.group(3):
+                order_pattern = re.compile("^(.*?)\s*(\w+)\s*=\s*(\d+)\s*$")
+                order_line = proc_number_re.group(3)
+                order_re = order_pattern.match(order_line)
+                while order_re:
+                    overall_orders[order_re.group(2)] = int(order_re.group(3))
+                    order_line = order_re.group(1)
+                    order_re = order_pattern.match(order_line)
+            logger.info(line)            
             
         index_comma = line.find(",")
         index_par = line.find(")")
@@ -1562,9 +1571,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             min_index = index_par
         
         if min_index > -1:
-            core_process = self.extract_process(line[:min_index], proc_number)
+            core_process = self.extract_process(line[:min_index], proc_number,
+                                                overall_orders)
         else:
-            core_process = self.extract_process(line, proc_number)
+            core_process = self.extract_process(line, proc_number,
+                                                overall_orders)
 
         #level_down = False
 

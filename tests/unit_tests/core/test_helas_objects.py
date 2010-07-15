@@ -926,8 +926,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "1  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4))\n"
-        goal = goal + "2  ((2(2),3(21)>2(2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4))"
+        goal = goal + "1  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QED=2,QCD=1)\n"
+        goal = goal + "2  ((2(2),3(21)>2(2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QED=2,QCD=1)"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -1034,8 +1034,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "1  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4))\n"
-        goal = goal + "2  ((2(2),3(21)>2(2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4))"
+        goal = goal + "1  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QED=2,QCD=1)\n"
+        goal = goal + "2  ((2(2),3(21)>2(2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QED=2,QCD=1)"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -1160,8 +1160,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "1  ((1(22),2(-11)>1(-11),id:7),(3(22),4(11)>3(11),id:7),(1(-11),3(11),id:0))\n"
-        goal = goal + "2  ((1(22),4(11)>1(11),id:7),(2(-11),3(22)>2(-11),id:7),(1(11),2(-11),id:0))"
+        goal = goal + "1  ((1(22),2(-11)>1(-11),id:7),(3(22),4(11)>3(11),id:7),(1(-11),3(11),id:0)) (QED=2)\n"
+        goal = goal + "2  ((1(22),4(11)>1(11),id:7),(2(-11),3(22)>2(-11),id:7),(1(11),2(-11),id:0)) (QED=2)"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -1255,8 +1255,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "1  ((1(-11),2(22)>1(-11),id:7),(3(22),4(11)>3(11),id:7),(1(-11),3(11),id:0))\n"
-        goal = goal + "2  ((1(-11),3(22)>1(-11),id:7),(2(22),4(11)>2(11),id:7),(1(-11),2(11),id:0))"
+        goal = goal + "1  ((1(-11),2(22)>1(-11),id:7),(3(22),4(11)>3(11),id:7),(1(-11),3(11),id:0)) (QED=2)\n"
+        goal = goal + "2  ((1(-11),3(22)>1(-11),id:7),(2(22),4(11)>2(11),id:7),(1(-11),2(11),id:0)) (QED=2)"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -2147,20 +2147,23 @@ class HelasMultiProcessTest(unittest.TestCase):
                                      goal_number_matrix_elements[nfs - 2])
 
     def test_complete_decay_chain_process(self):
-        """Test a complete decay chain process pp > jj, j > jj
+        """Test a complete decay chain process gp>jg,j>jj,j>jj
         """
 
         p = [1, -1, 2, -2, 21]
 
         my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': True});
+        my_gluon_leg = base_objects.MultiLeg({'ids': [21], 'state': True});
 
         # Define the multiprocess
-        my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * 4])
+        my_multi_leglist = base_objects.MultiLegList([copy.copy(my_gluon_leg),
+                                                      copy.copy(my_multi_leg),
+                                                      copy.copy(my_multi_leg),
+                                                      copy.copy(my_gluon_leg)])
+                                                      
         
         my_multi_leglist[0].set('state', False)
         my_multi_leglist[1].set('state', False)
-        my_multi_leglist[0].set('ids', [21])
-        my_multi_leglist[1].set('ids', [21])
         
         my_process_definition = base_objects.ProcessDefinition({\
                                      'legs':my_multi_leglist,
@@ -2168,11 +2171,11 @@ class HelasMultiProcessTest(unittest.TestCase):
         #my_multi_leg = base_objects.MultiLeg({'ids': [1, -1, 21],
         #                                              'state': True});
         my_decay_leglist = base_objects.MultiLegList([copy.copy(leg) \
-                                          for leg in [my_multi_leg] * 4])
+                                          for leg in [my_multi_leg] * 3])
         my_decay_leglist[0].set('state', False)
-        my_multi_leg2 = base_objects.MultiLeg({'ids': [21], 'state': True});
         my_decay_leglist2 = base_objects.MultiLegList([copy.copy(leg) \
-                                          for leg in [my_multi_leg2] * 4])
+                                          for leg in [my_multi_leg] * 3] + \
+                                                     [copy.copy(my_gluon_leg)])
         my_decay_leglist2[0].set('state', False)
         my_decay_processes = base_objects.ProcessDefinitionList(\
             [base_objects.ProcessDefinition({\
@@ -2193,12 +2196,12 @@ class HelasMultiProcessTest(unittest.TestCase):
 
         matrix_elements = my_dc_process.combine_decay_chain_processes()
 
-        self.assertEqual(len(matrix_elements), 16)
+        self.assertEqual(len(matrix_elements), 8)
 
-        num_processes = [2, 1, 2, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1]
-        num_wfs = [21, 18, 24, 18, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27]
-        num_amps = [12, 6, 18, 6, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27]
-        iden_factors = [4, 2, 4, 2, 1, 2, 4, 2, 4, 1, 2, 2, 2, 2, 6, 72]
+        num_processes = [4, 2, 4, 2, 4, 2, 2, 1]
+        num_amps = [9, 9, 9, 9, 9, 9, 9, 9]
+        num_wfs = [19, 19, 19, 19, 19, 19, 19, 19]
+        iden_factors = [1, 6, 1, 6, 1, 6, 2, 12]
 
         for i, me in enumerate(matrix_elements):
             self.assertEqual(len(me.get('processes')), num_processes[i])

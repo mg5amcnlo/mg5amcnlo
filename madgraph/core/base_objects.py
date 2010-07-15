@@ -1112,6 +1112,7 @@ class Diagram(PhysicsObject):
         """Default values for all properties"""
 
         self['vertices'] = VertexList()
+        self['orders'] = {}
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
@@ -1121,12 +1122,15 @@ class Diagram(PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid VertexList object" % str(value)
 
+        if name == 'orders':
+            Interaction.filter(Interaction(), 'orders', value)
+
         return True
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['vertices']
+        return ['vertices', 'orders']
 
     def nice_string(self):
         """Returns a nicely formatted string of the diagram content."""
@@ -1144,9 +1148,27 @@ class Diagram(PhysicsObject):
                 mystr = mystr + str(vert['legs'][-1]['number']) + '(%s)' % str(vert['legs'][-1]['id']) + ','
                 mystr = mystr + 'id:' + str(vert['id']) + '),'
             mystr = mystr[:-1] + ')'
+            mystr += " (%s)" % ",".join(["%s=%d" % (key, self['orders'][key]) \
+                                        for key in self['orders'].keys()])
             return mystr
         else:
             return '()'
+
+    def calculate_orders(self, model):
+        """Calculate the actual coupling orders of this diagram"""
+
+        coupling_orders = {}
+        for vertex in self['vertices']:
+            if vertex.get('id') == 0: continue
+            couplings = model.get('interaction_dict')[vertex.get('id')].\
+                        get('orders')
+            for coupling in couplings.keys():
+                try:
+                    coupling_orders[coupling] += couplings[coupling]
+                except:
+                    coupling_orders[coupling] = couplings[coupling]
+
+        self.set('orders', coupling_orders)
 
 #===============================================================================
 # DiagramList
@@ -1193,6 +1215,7 @@ class Process(PhysicsObject):
         self['is_decay_chain'] = False
         # Decay chain processes associated with this process
         self['decay_chains'] = ProcessList()
+        self['overall_orders'] = {}
 
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -1201,7 +1224,8 @@ class Process(PhysicsObject):
             if not isinstance(value, LegList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid LegList object" % str(value)
-        if name == 'orders':
+
+        if name in ['orders', 'overall_orders']:
             Interaction.filter(Interaction(), 'orders', value)
 
         if name == 'model':
@@ -1254,14 +1278,17 @@ class Process(PhysicsObject):
         """Special set for forbidden particles - set to abs value."""
 
         if name == 'forbidden_particles':
-            value = [abs(i) for i in value]
+            try:
+                value = [abs(i) for i in value]
+            except:
+                pass
 
         return super(Process, self).set(name, value) # call the mother routine
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return ['legs', 'orders', 'model', 'id',
+        return ['legs', 'orders', 'overall_orders', 'model', 'id',
                 'required_s_channels', 'forbidden_s_channels',
                 'forbidden_particles', 'is_decay_chain', 'decay_chains']
 
@@ -1309,6 +1336,12 @@ class Process(PhysicsObject):
         # Remove last space
         mystr = mystr[:-1]
 
+        if self.get('id') or self.get('overall_orders'):
+            mystr += " @%d" % self.get('id')
+            if self.get('overall_orders'):
+                mystr += " " + " ".join([key + '=' + repr(self['orders'][key]) \
+                       for key in self['orders']]) + ' '
+        
         if not self.get('decay_chains'):
             return mystr
 
@@ -1450,6 +1483,55 @@ class Process(PhysicsObject):
             
         return LegList(legs)
 
+    def compare_for_sort(self, other):
+        """Sorting routine which allows to sort processes for
+        comparison. Compare only process id and legs."""
+
+        if self['id'] != other['id']:
+            return self['id'] - other['id']
+
+        initlegs = sorted([l.get('id') for l in \
+                           filter(lambda leg: not leg.get('state'),
+                                  self['legs'])])
+        otherinitlegs = sorted([l.get('id') for l in \
+                           filter(lambda leg: not leg.get('state'),
+                                  self['legs'])])
+
+        if len(initlegs) != len(otherinitlegs):
+            return len(initlegs) - len(otherinitlegs)
+                
+        for leg, otherleg in zip(initlegs, otherinitlegs):
+            if leg != otherleg:
+                return leg - otherleg
+        
+        legs = sorted([l.get('id') for l in \
+                       filter(lambda leg: leg.get('state'),
+                              self.get_legs_with_decays())])
+        otherlegs = sorted([l.get('id') for l in \
+                       filter(lambda leg: leg.get('state'),
+                              other.get_legs_with_decays())])
+
+        if len(legs) != len(otherlegs):
+            return len(legs) - len(otherlegs)
+                
+        for leg, otherleg in zip(legs, otherlegs):
+            if leg != otherleg:
+                return leg - otherleg
+        
+        return 0
+        
+    def __eq__(self, other):
+        """Overloading the equality operator, so that only comparison
+        of process id and legs is being done, using compare_for_sort."""
+
+        if not isinstance(other, Process):
+            return False
+
+        return self.compare_for_sort(other) == 0
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 #===============================================================================
 # ProcessList
 #===============================================================================
@@ -1502,6 +1584,12 @@ class ProcessDefinition(Process):
         """Return process property names as a nicely sorted list."""
 
         return super(ProcessDefinition, self).get_sorted_keys()
+
+    def __eq__(self, other):
+        """Overloading the equality operator, so that only comparison
+        of process id and legs is being done, using compare_for_sort."""
+
+        return super(Process, self).__eq__(other)
 
 #===============================================================================
 # ProcessDefinitionList
