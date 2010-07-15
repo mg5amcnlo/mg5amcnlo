@@ -425,13 +425,6 @@ class HelpToCmd(object):
         print "   Add option -nojpeg to suppress jpeg diagrams."
         print "   This command is automatically run by \"export\"."
 
-    def help_demo(self):
-        """ demo help"""
-        
-        print "this command starts a simple demonstration on how use MG5"
-        print " In order to stop this demonstration you can enter "
-        print " mg5> demo stop"
-
     def help_draw(self):
         _draw_parser.print_help()
 
