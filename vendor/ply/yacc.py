@@ -6,6 +6,9 @@
 # David M. Beazley (Dabeaz LLC)
 # All rights reserved.
 #
+# Slightly modify by O. Mattelaer 
+#           restricting validation of the parser only in debug mode 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
 # met:
@@ -2785,11 +2788,14 @@ class ParserReflect(object):
         
     # Validate all of the information
     def validate_all(self):
+        #Modification by O. Mattelaer validate only in debug mode
+        self.validate_precedence()
+        self.validate_pfunctions()
+        if yaccdebug == 0:
+            return self.error
         self.validate_start()
         self.validate_error_func()
         self.validate_tokens()
-        self.validate_precedence()
-        self.validate_pfunctions()
         self.validate_files()
         return self.error
 

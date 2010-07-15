@@ -1009,9 +1009,16 @@ class CompleteForCmd(CheckValidForCmd):
         if len(split_arg(line[0:begidx])) == 1:
             return self.list_completion(text, self._import_formats)
 
+        splitline= line.split()
         # Filename if directory is not given
         if len(split_arg(line[0:begidx])) == 2:
-            return self.path_completion(text)
+            if splitline[1] == 'model':
+                out = self.path_completion(text, os.path.join(MG5DIR,'models'))
+            elif MG4DIR:
+                out = self.path_completion(text, os.path.join(MG4DIR,'Models'))
+            else:
+                out = []
+            return out + self.path_completion(text)
 
         # Filename if directory is given
         if len(split_arg(line[0:begidx])) == 3:

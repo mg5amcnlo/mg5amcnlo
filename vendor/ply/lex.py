@@ -34,6 +34,7 @@
 
 __version__    = "3.3"
 __tabversion__ = "3.2"       # Version of table file used
+lexdebug = 0
 
 import re, sys, types, copy, os
 
@@ -566,6 +567,8 @@ class LexerReflect(object):
         
     # Validate all of the information
     def validate_all(self):
+        if lexdebug == 0:
+            return self.error
         self.validate_tokens()
         self.validate_literals()
         self.validate_rules()
