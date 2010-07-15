@@ -2116,9 +2116,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 last_action_2 = 'none'
         
         possibility = {
-        'mg5_start': ['import model_v4 PATH', 'import command PATH', 
-                                                 'import proc_v4 PATH', 'tutorial'],
-        'import model_v4': ['generate PROCESS','define MULTIPART PART1 PART2 ...', 
+        'mg5_start': ['import model ModelName', 'import command PATH',
+                      'import model_v4 PATH','import proc_v4 PATH', 'tutorial'],
+        'import model_v4': ['generate PROCESS','define MULTIPART = PART1 PART2 ...', 
                                    'display particles', 'display interactions'],
         'import model' : ['generate PROCESS','define MULTIPART PART1 PART2 ...', 
                                    'display particles', 'display interactions'],

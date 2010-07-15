@@ -30,7 +30,7 @@ c) How to generate a process
 d) How to create an output
 
 Let's start with the first point: How to load a model:
-mg5>import model_v4 sm
+mg5>import model sm
 """
 
 
