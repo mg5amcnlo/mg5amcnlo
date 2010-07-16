@@ -46,7 +46,7 @@ which show information on the particles and the vertices of the model
 or presently defined multiparticle labels.
 
 You can now generate a process, by running
-mg5>generate p p > t t~ QED=0
+mg5>generate p p > t t~ QED=0 @1
 Note that a space is mandatory between the particle names.
 """
 
@@ -55,7 +55,7 @@ You have just seen some information about the model, which can help
 you in order to generate a process.
 
 You can now generate a process, by running
-mg5>generate p p > t t~ QED=0
+mg5>generate p p > t t~ QED=0 @1
 Note that a space is mandatory between the particle names.
 """
 display_particles = display_model
@@ -70,7 +70,7 @@ To list all defined processes, type
 mg5>display processes
 
 To add a second process, please use the add process command:
-mg5>add process p p > W+ j QED=1, W+ > l+ vl
+mg5>add process p p > W+ j QED=1, W+ > l+ vl @2
 This adds a decay chain process, with the W+ decaying
 leptonically.
 
@@ -173,9 +173,9 @@ directory, just like with MadGraph 4.
 
 draw = """
 You can look at the diagrams for example by running
-mg5>!gv ./diagrams_0_gg_ttx.eps
+mg5>!gv ./diagrams_1_gg_ttx.eps
 or on MacOS X
-mg5>!open ./diagrams_0_gg_ttx.eps
+mg5>!open ./diagrams_1_gg_ttx.eps
 
 This command was the last step of the tutorial. 
 Quit the tutorial by typing:

@@ -534,7 +534,8 @@ class CheckValidForCmd(object):
             if not self._export_format:
                 self.help_export()
                 raise self.InvalidCmd('\"export\" require at least a format of output')
-        elif(len(args) == 1 and not self._export_dir):
+        elif len(args) == 1 and (not self._export_dir or args[0] not in \
+                                 self._setup_opts):
             self.help_export()
             raise self.InvalidCmd(\
         'No output position defined (either explicitely or via a setup command)')
@@ -1296,6 +1297,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             path = os.path.join(path, 'SubProcesses')
 
         if args[0] == 'matrix_v4':
+            self._export_format = None
             for me in self._curr_matrix_elements.get('matrix_elements'):
                 filename = os.path.join(path, 'matrix_' + \
                            me.get('processes')[0].shell_string() + ".f")
