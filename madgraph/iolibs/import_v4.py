@@ -663,14 +663,6 @@ class ProcessInfo(object):
         if self.forbid:
             text += '/ ' + ' '.join(self.forbid) + ' '
 
-        if self.couplings:
-            #write the rules associate to the couplings
-            text += self.mg5_couplings_line(model_coupling, len(self.particles))
-        
-        # write the tag
-        if self.tag:
-            text += '@%s ' % self.tag
-
         #treat decay_chains
         for decay in self.decays:
             decay_text = decay.mg5_process_line(model_coupling)
@@ -678,6 +670,16 @@ class ProcessInfo(object):
                 text = text.rstrip() + ', (%s) ' % decay_text.strip()
             else:
                 text = text.rstrip() + ', %s ' % decay_text.strip()
+        
+        # write the tag
+        if self.tag:
+            text += '@%s ' % self.tag
+
+        if self.couplings:
+            if not self.tag:
+                text += '@0 '
+            #write the rules associate to the couplings
+            text += self.mg5_couplings_line(model_coupling, len(self.particles))
         
         return text.rstrip()
     

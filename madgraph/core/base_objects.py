@@ -1213,9 +1213,9 @@ class Process(PhysicsObject):
         self['forbidden_s_channels'] = []
         self['forbidden_particles'] = []
         self['is_decay_chain'] = False
+        self['overall_orders'] = {}
         # Decay chain processes associated with this process
         self['decay_chains'] = ProcessList()
-        self['overall_orders'] = {}
 
     def filter(self, name, value):
         """Filter for valid process property values."""
