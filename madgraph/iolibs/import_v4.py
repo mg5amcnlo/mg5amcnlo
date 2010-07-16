@@ -689,9 +689,8 @@ class ProcessInfo(object):
         out = ''
         for coupling in model_coupling:
             if self.couplings.has_key(coupling):
-                # if coupling is define check that he is not pointless
-                if self.couplings[coupling] < nb_part - 2:
-                    out += '%s=%s ' % (coupling, self.couplings[coupling])
+                # Need coupling for all cases, since might be decay chain
+                out += '%s=%s ' % (coupling, self.couplings[coupling])
             else:
                 # if not define put to zero (mg4 default)
                 out += '%s=0 ' % coupling
