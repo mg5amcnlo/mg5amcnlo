@@ -461,6 +461,8 @@ class CheckValidForCmd(object):
         
         if args[0] != 'process':
             raise self.InvalidCmd('\"add\" requires the argument \"process\"')
+        
+        self.check_process_format(' '.join(args[1:]))
     
     def check_define(self, args):
         """check the validity of line
@@ -585,8 +587,50 @@ class CheckValidForCmd(object):
         if not self._curr_model['particles'] or not self._curr_model['interactions']:
             raise self.InvalidCmd("No model currently active, please import a model!")
 
+        print line
+        self.check_process_format(line)
         return True
     
+    def check_process_format(self, process):
+        """ check the validity of the string given to describe a format """
+        
+        #check balance of paranthesis
+        if process.count('(') != process.count(')'):
+            raise self.InvalidCmd('Invalid Format, no balance between open and close parenthesis')
+        #remove parenthesis for fututre introspection
+        process = process.replace('(',' ').replace(')',' ')
+        
+        # split following , (for decay chains)
+        subprocesses = process.split(',')
+        if len(subprocesses) > 1:
+            for subprocess in subprocesses:
+                self.check_process_format(subprocess)
+            return
+        
+        # request that we have one or two > in the process
+        if process.count('>') not in [1,2]:
+            raise self.InvalidCmd(
+               'wrong format for \"%s\" this part requires one or two symbols \'>\', %s found' 
+               % (process, process.count('>')))
+        
+        # we need at least one particles in each pieces
+        particles_parts = process.split('>')
+        for particles in particles_parts:
+            if re.match(r'^\s*$', particles):
+                raise self.InvalidCmd(
+                '\"%s\" is a wrong process format. Please try again' % process)  
+        
+        # '/' and '$' sould be used only after the process definition
+        for particles in particles_parts[:-1]:
+            if re.search('\D/', particles):
+                raise self.InvalidCmd(
+                'wrong process format: restriction should be place after the final states')
+            if re.search('\D\$', particles):
+                raise self.InvalidCmd(
+                'wrong process format: restriction should be place after the final states')
+        
+    
+        
     def check_history(self, args):
         """check the validity of line"""
         
