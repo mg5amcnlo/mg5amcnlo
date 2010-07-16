@@ -133,7 +133,6 @@ class HelasWriterForFortran(WriteHelas):
         MomentumConserve = []
         DeclareDict = {'F':'double complex f', 'V':'double complex V', \
                                 'S':'double complex s', 'T':'double complex T'}
-	print self.particles,self.offshell 
 	TypeToVariable = {2:'F',3:'V',5:'T',1:'S'}
         FermionNumber = 0
         VectorNumber = 0
@@ -145,7 +144,6 @@ class HelasWriterForFortran(WriteHelas):
         VectorList = []
         ScalarList = []
         TensorList = [] 
-	print self.namestring, self.symmetries
         for index, elem in enumerate(self.particles):
             
             # First define the size of the associate Object 
@@ -167,7 +165,6 @@ class HelasWriterForFortran(WriteHelas):
                 FermionNumber += 1 
             # Define the Calllist
             if index != (OffShell-1):
-		print elem
                 CallList.append('%s%d' % (TypeToVariable[elem], index + 1))
                 
             # Define Momentum Conservation
