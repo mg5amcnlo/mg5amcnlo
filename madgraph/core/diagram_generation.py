@@ -901,6 +901,13 @@ class MultiProcess(base_objects.PhysicsObject):
                 if amplitude.get('diagrams'):
                     amplitudes.append(amplitude)
 
+        # Raise exception if there are no amplitudes for this process
+        if not amplitudes:
+            raise MultiProcess.PhysicsObjectError, \
+                  "No amplitudes generated from process %s" % \
+                  process_definition.nice_string()
+        
+
         # Return the produced amplitudes
         return amplitudes
             

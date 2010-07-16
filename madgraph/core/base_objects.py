@@ -1585,6 +1585,67 @@ class ProcessDefinition(Process):
 
         return super(ProcessDefinition, self).get_sorted_keys()
 
+    def nice_string(self, indent=0):
+        """Returns a nicely formated string about current process
+        content"""
+
+        mystr = " " * indent + "Process: "
+        prevleg = None
+        for leg in self['legs']:
+            myparts = \
+                   "/".join([self['model'].get('particle_dict')[id].get_name() \
+                             for id in leg.get('ids')])
+            if prevleg and prevleg['state'] == False \
+                   and leg['state'] == True:
+                # Separate initial and final legs by ">"
+                mystr = mystr + '> '
+                # Add required s-channels
+                if self['required_s_channels']:
+                    for req_id in self['required_s_channels']:
+                        reqpart = self['model'].get('particle_dict')[req_id]
+                        mystr = mystr + reqpart.get_name() + ' '
+                    mystr = mystr + '> '
+
+            mystr = mystr + myparts + ' '
+            #mystr = mystr + '(%i) ' % leg['number']
+            prevleg = leg
+
+        # Add forbidden s-channels
+        if self['forbidden_s_channels']:
+            mystr = mystr + '$ '
+            for forb_id in self['forbidden_s_channels']:
+                forbpart = self['model'].get('particle_dict')[forb_id]
+                mystr = mystr + forbpart.get_name() + ' '
+
+        # Add forbidden particles
+        if self['forbidden_particles']:
+            mystr = mystr + '/ '
+            for forb_id in self['forbidden_particles']:
+                forbpart = self['model'].get('particle_dict')[forb_id]
+                mystr = mystr + forbpart.get_name() + ' '
+
+        if self['orders']:
+            mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
+                       for key in self['orders']]) + ' '
+
+        # Remove last space
+        mystr = mystr[:-1]
+
+        if self.get('id') or self.get('overall_orders'):
+            mystr += " @%d" % self.get('id')
+            if self.get('overall_orders'):
+                mystr += " " + " ".join([key + '=' + repr(self['orders'][key]) \
+                       for key in self['orders']]) + ' '
+        
+        if not self.get('decay_chains'):
+            return mystr
+
+        for decay in self['decay_chains']:
+            mystr = mystr + '\n' + \
+                    decay.nice_string(indent + 2).replace('Process', 'Decay')
+
+        return mystr
+
     def __eq__(self, other):
         """Overloading the equality operator, so that only comparison
         of process id and legs is being done, using compare_for_sort."""

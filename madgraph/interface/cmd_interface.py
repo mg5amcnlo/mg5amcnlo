@@ -1382,8 +1382,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         # run the program
         cpu_time1 = time.time()
-        myproc = diagram_generation.MultiProcess(myprocdef)
-        self._curr_amps = myproc.get('amplitudes')
+        try:
+            myproc = diagram_generation.MultiProcess(myprocdef)
+            self._curr_amps = myproc.get('amplitudes')
+        except Exception as error:
+            raise MadGraph5Error(str(error))
         cpu_time2 = time.time()
 
         # Reset _done_export and _done_finalize, since we have new process
