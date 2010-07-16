@@ -336,16 +336,16 @@ class HelpToCmd(object):
         print "   with the model and Helas set up appropriately."
         print "   If standalone_v4 is chosen, the directory will be in"
         print "   Standalone format."
-        print "   name is the name of the copy of Template."
+        print "   - name is the name of the copy of Template."
         print "   If you put '.' instead of a name, the code will try to locate"
         print "     a valid copy of the Template under focus."
         print "   If you put 'auto' instead an automatic name will be created."
         print "   If you have generated a process, the process will "
         print "     automatically be exported to the directory."
         print "   options:"
-        print "      -f: force the cleaning of the directory if this one exist"
-        print "      -d PATH: specify the directory where to create name"
-        print "      -noclean: no cleaning perform in name"
+        print "      -d PATH: specify the directory where to create \"name\""
+        print "      -f: force cleaning of the directory if it already exists"
+        print "      -noclean: no cleaning performed in \"name\""
         print "      -nojpeg: no jpeg diagrams will be generated"
         print "   Example:"
         print "       setup madevent_v4 MYRUN"
@@ -353,12 +353,12 @@ class HelpToCmd(object):
         
     def help_generate(self):
 
-        print "syntax: generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2"
+        print "syntax: generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N"
         print "-- generate diagrams for a given process"
         print "   Syntax example: l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1"
         print "Decay chain syntax:"
         print "   core process, decay1, (decay2, (decay2', ...)), ...  etc"
-        print "   Example: p p > t~ t QED=0 @2, (t~ > W- b~, W- > l- vl~), t > j j b"
+        print "   Example: p p > t~ t QED=0, (t~ > W- b~, W- > l- vl~), t > j j b @2"
         print "   Note that identical particles will all be decayed."
         print "To generate a second process use the \"add process\" command"
 
@@ -369,13 +369,13 @@ class HelpToCmd(object):
         print "   Syntax example: l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1"
         print "Decay chain syntax:"
         print "   core process, decay1, (decay2, (decay2', ...)), ...  etc"
-        print "   Example: p p > t~ t QED=0 @2, (t~ > W- b~, W- > l- vl~), t > j j b"
+        print "   Example: p p > t~ t QED=0, (t~ > W- b~, W- > l- vl~), t > j j b @2"
         print "   Note that identical particles will all be decayed."
 
     def help_define(self):
-        print "syntax: define multipart_name [ part_name_list ]"
+        print "syntax: define multipart_name [=] part_name_list"
         print "-- define a multiparticle"
-        print "   Example: define p u u~ c c~ d d~ s s~"
+        print "   Example: define p = g u u~ c c~ d d~ s s~ b b~"
 
     def help_export(self):
         print "syntax: export [" + "|".join(self._export_formats) + \
@@ -619,7 +619,7 @@ class CheckValidForCmd(object):
         if args[0] == 'proc_v4' and len(args)!=2 and not self._export_dir:
             self.help_import()
             raise self.InvalidCmd('PATH is mandatory in the current context\n' + \
-                                  'You maybe forget to run \"setup\" command')            
+                                  'Did you forget to run the \"setup\" command')            
         
     def check_load(self, args):
         """ check the validity of the line"""
@@ -1203,6 +1203,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         args = split_arg(line)
         if len(args) > 0 and args[0] == "stop":
+            logger_tuto.info("Thanks for using the tutorial!")
             logger_tuto.setLevel(logging.ERROR)
         else:
             logger_tuto.setLevel(logging.INFO)
@@ -2081,7 +2082,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         'export':['finalize'],
         'finalize': ['history PATH', 'exit'],
         'import proc_v4' : ['exit'],
-        'tutorial': ['import model_v4 sm','help']
+        'tutorial': ['import model_v4 sm']
         }
         
         print 'Contextual Help'
@@ -2094,7 +2095,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             print 'No suggestion available for your last command'
             return
         
-        text = 'The following command maybe usefull in order to continue.\n'
+        text = 'The following command(s) may be useful in order to continue.\n'
         for option in options:
             text+='\t %s \n' % option
         #text+='you can use help to have more information on those command'
