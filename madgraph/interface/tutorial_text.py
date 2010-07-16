@@ -14,10 +14,10 @@
 ################################################################################
 
 tutorial = """
-You have just entered in the tutorial mode. This will introduce you the main
-syntax options of MadGraph5.
+You have just entered in the tutorial mode. This will introduce you to
+the main syntax options of MadGraph5.
 
-To learn more about the different options on a given command, you can use  
+To learn more about the different options for a command, you can use
 mg5>help A_CMD
 To see a list of all commands, use
 mg5>help 
@@ -28,7 +28,7 @@ a) How to load a model
 b) How to generate a process
 c) How to create output for MadEvent
 
-Let's start with the first point: How to load a model:
+Let's start with the first point, how to load a model:
 mg5>import model_v4 sm
 """
 
@@ -70,11 +70,13 @@ To list all defined processes, type
 mg5>display processes
 
 To add a second process, please use the add process command:
-mg5>add process p p > W+ j j QED=1, W+ > l+ vl
+mg5>add process p p > W+ j QED=1, W+ > l+ vl
+This adds a decay chain process, with the W+ decaying
+leptonically.
 
 At this stage you can export your processes to different formats. In
-this tutorial, we will explain how to create a valid output for
-MadEvent. This is done simply by typing:
+this tutorial, we will explain how to create output for MadEvent.
+This is done simply by typing:
 mg5>setup madevent_v4 MY_FIRST_MG5_RUN -f
 """
 
@@ -133,7 +135,7 @@ If you followed the tutorial, the label is \"v\"
 Note that some multiparticles such as as p, j, l+, l- are
 predefined. Type
 mg5>display multiparticles
-to know more about their definition
+to see their definitions.
 
 MG5 allows you to store a file with the list of command that you have
 used in an interactive session:
@@ -171,9 +173,9 @@ directory, just like with MadGraph 4.
 
 draw = """
 You can look at the diagrams for example by running
-mg5>! gv ./diagrams_0_gg_ttx.eps
+mg5>!gv ./diagrams_0_gg_ttx.eps
 or on MacOS X
-mg5>! open ./diagrams_0_gg_ttx.eps
+mg5>!open ./diagrams_0_gg_ttx.eps
 
 This command was the last step of the tutorial. 
 Quit the tutorial by typing:
