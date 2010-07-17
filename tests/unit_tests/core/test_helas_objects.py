@@ -49,12 +49,12 @@ class HelasWavefunctionTest(unittest.TestCase):
         self.assertRaises(helas_objects.HelasWavefunction.PhysicsObjectError,
                           helas_objects.HelasWavefunction,
                           wrong_dict)
-        self.assertRaises(helas_objects.HelasWavefunction.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           helas_objects.HelasWavefunction,
                           a_number)
 
         # Test get
-        self.assertRaises(helas_objects.HelasWavefunction.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           mywavefunction.get,
                           a_number)
         self.assertRaises(helas_objects.HelasWavefunction.PhysicsObjectError,
@@ -62,7 +62,7 @@ class HelasWavefunctionTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(helas_objects.HelasWavefunction.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           mywavefunction.set,
                           a_number, 0)
         self.assertRaises(helas_objects.HelasWavefunction.PhysicsObjectError,
@@ -116,12 +116,12 @@ class HelasAmplitudeTest(unittest.TestCase):
         self.assertRaises(helas_objects.HelasAmplitude.PhysicsObjectError,
                           helas_objects.HelasAmplitude,
                           wrong_dict)
-        self.assertRaises(helas_objects.HelasAmplitude.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           helas_objects.HelasAmplitude,
                           a_number)
 
         # Test get
-        self.assertRaises(helas_objects.HelasAmplitude.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           myamplitude.get,
                           a_number)
         self.assertRaises(helas_objects.HelasAmplitude.PhysicsObjectError,
@@ -129,7 +129,7 @@ class HelasAmplitudeTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(helas_objects.HelasAmplitude.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           myamplitude.set,
                           a_number, 0)
         self.assertRaises(helas_objects.HelasAmplitude.PhysicsObjectError,
@@ -199,12 +199,12 @@ class HelasDiagramTest(unittest.TestCase):
         self.assertRaises(helas_objects.HelasDiagram.PhysicsObjectError,
                           helas_objects.HelasDiagram,
                           wrong_dict)
-        self.assertRaises(helas_objects.HelasDiagram.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           helas_objects.HelasDiagram,
                           a_number)
 
         # Test get
-        self.assertRaises(helas_objects.HelasDiagram.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           mydiagram.get,
                           a_number)
         self.assertRaises(helas_objects.HelasDiagram.PhysicsObjectError,
@@ -212,7 +212,7 @@ class HelasDiagramTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(helas_objects.HelasDiagram.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           mydiagram.set,
                           a_number, 0)
         self.assertRaises(helas_objects.HelasDiagram.PhysicsObjectError,
@@ -452,12 +452,12 @@ class HelasMatrixElementTest(unittest.TestCase):
         self.assertRaises(helas_objects.HelasMatrixElement.PhysicsObjectError,
                           helas_objects.HelasMatrixElement,
                           wrong_dict)
-        self.assertRaises(helas_objects.HelasMatrixElement.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           helas_objects.HelasMatrixElement,
                           a_number)
 
         # Test get
-        self.assertRaises(helas_objects.HelasMatrixElement.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           mymatrixelement.get,
                           a_number)
         self.assertRaises(helas_objects.HelasMatrixElement.PhysicsObjectError,
@@ -465,7 +465,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(helas_objects.HelasMatrixElement.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           mymatrixelement.set,
                           a_number, 0)
         self.assertRaises(helas_objects.HelasMatrixElement.PhysicsObjectError,
@@ -3140,13 +3140,13 @@ class HelasModelTest(unittest.TestCase):
         not_a_string = 1.
 
         # General
-        self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           mymodel.get,
                           not_a_string)
         self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
                           mymodel.get,
                           'wrong_key')
-        self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           mymodel.set,
                           not_a_string, None)
         self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,

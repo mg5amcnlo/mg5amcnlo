@@ -77,9 +77,8 @@ class FeynmanLine(base_objects.Leg):
     def def_begin_point(self, vertex):
         """-Re-Define the starting point of the line."""
 
-        if not isinstance(vertex, VertexPoint):
-            raise self.FeynmanLineError, 'The begin point should be a ' + \
-                 'Vertex_Point object'
+        # The begin point should be a Vertex_Point object
+        assert(isinstance(vertex, VertexPoint))
 
         self.start = vertex
         vertex.add_line(self)
@@ -88,9 +87,8 @@ class FeynmanLine(base_objects.Leg):
     def def_end_point(self, vertex):
         """-Re-Define the starting point of the line. with check"""
 
-        if not isinstance(vertex, VertexPoint):
-            raise self.FeynmanLineError, 'The end point should be a ' + \
-                 'Vertex_Point object'
+        # The end point should be a Vertex_Point object
+        assert(isinstance(vertex, VertexPoint))
                  
         self.end = vertex
         vertex.add_line(self)
@@ -459,10 +457,8 @@ class VertexPoint(base_objects.Vertex):
         """Update a vertex to a VertexPoint with additional information about
         positioning and link with other vertex/line of the diagram."""
 
-        # Check the validity of the parameter 
-        if not isinstance(vertex, base_objects.Vertex):
-            raise self.VertexPointError, 'cannot extend non VertexObject to' + \
-               ' Vertex_Point Object.\n type introduce {0}'.format(type(vertex))
+        # Check the validity of the parameter should be Vertex
+        assert(isinstance(vertex, base_objects.Vertex))
 
         # Copy data and add new entry                    
         base_objects.Vertex.__init__(self, vertex)
@@ -474,9 +470,9 @@ class VertexPoint(base_objects.Vertex):
     def def_position(self, x, y):
         """-Re-Define the position of the vertex in a square [0, 1]^2"""
 
-        if(not(0 <= x <= 1 and 0 <= y <= 1)):
-            raise self.VertexPointError, 'vertex coordinate should be in' + \
-                    '0,1 interval introduce value ({0},{1})'.format(x, y)
+        # Coordinate should b
+        assert  0 <= x <= 1 and 0 <= y <= 1 ,  'vertex coordinate should be' + \
+                    ' in  0,1 interval introduce value ({0},{1})'.format(x, y)
 
         self.pos_x = x
         self.pos_y = y
@@ -508,9 +504,8 @@ class VertexPoint(base_objects.Vertex):
         """Add the line in the list keeping line connected to this vertex :
         self.line. This routine avoid duplication of entry."""
 
-        if not isinstance(line, FeynmanLine):
-            raise self.VertexPointError, ' trying to add in a Vertex a non' + \
-                            ' FeynmanLine Object'
+        assert isinstance(line, FeynmanLine), \
+                           'Trying to add in a Vertex a non FeynmanLine Object'
 
         for oldline in self.line:
             if oldline is line:
@@ -524,9 +519,8 @@ class VertexPoint(base_objects.Vertex):
         (Then the line will be completely drop out, such that we dont't care
         about those vertex point."""
 
-        if not isinstance(line_to_del, FeynmanLine):
-            raise self.VertexPointError, 'trying to remove in a ' + \
-                            'Vertex_Point a non FeynmanLine Object'
+        assert isinstance(line_to_del, FeynmanLine), \
+                   'trying to remove in a Vertex_Point a non FeynmanLine Object'
 
         # Find the first item in the list and remove it. note that we cann't use
         #standard delete as remove because it's use '==' and not 'is'. 
@@ -545,8 +539,7 @@ class VertexPoint(base_objects.Vertex):
         distance is define has the number of non T-channel particles needed to 
         connect this particle to initial states starting point."""
 
-        if not isinstance(level, int):
-            raise self.VertexPointError, 'trying to attribute non integer level'
+        assert isinstance(level, int), 'Trying to attribute non integer level'
 
         self.level = level
 
@@ -658,24 +651,21 @@ class FeynmanDiagram:
         opt: A DrawingOpt instance with all options for drawing the diagram."""
 
         # Check if input are what we are expecting 
-        if isinstance(diagram, base_objects.Diagram):
-            self.diagram = diagram
-        else:
-            raise self.FeynamDiagramError('first argument should derivates' + \
-                                          ' from Diagram object')
-
-        if isinstance(model, base_objects.Model):
-            self.model = model
-        else:
-            raise self.FeynamDiagramError('second argument should derivates' + \
-                                          ' from Model object')
+        assert isinstance(diagram, base_objects.Diagram), \
+                           'first argument should derivates from Diagram object'
+        assert isinstance(model, base_objects.Model), \
+                            'second argument should derivates from Model object'
+        
+        
+        self.diagram = diagram
+        self.model = model
+        
         if opt is None:
             self.opt = DrawOption()
-        elif(isinstance(opt, DrawOption)):
-            self.opt = opt
         else:
-            raise self.FeynamDiagramError('third argument should derivates' + \
-                                          ' from DrawOption object')
+            assert isinstance(opt, DrawOption), 'third argument should derivates' + \
+                                          ' from DrawOption object'
+            self.opt = opt
 
         # Initialize other value to void.
         self.vertexList = [] # List of vertex associate to the diagram 
@@ -1663,15 +1653,11 @@ class DiagramDrawer(object):
             raise self.DrawDiagramError('No valid model provide to convert ' + \
                                         'diagram in appropriate format')
         
-
+        assert opt is None or isinstance(opt, DrawOption) , \
+                        'The Option to draw the diagram are in a invalid format'
 
         # A Test of the Amplitude should be added when this one will be 
         #use.
-
-        # Check the option
-        if opt and not isinstance(opt, DrawOption):
-            raise self.DrawDiagramError('The Option to draw the diagram are' + \
-                                        ' in a invalid format')
 
         # Store the parameter in the object variable
         self.diagram = diagram

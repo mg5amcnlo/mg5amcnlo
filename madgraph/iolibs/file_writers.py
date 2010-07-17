@@ -124,10 +124,10 @@ class FortranWriter(FileWriter):
     def write_line(self, line):
         """Write a fortran line, with correct indent and line splits"""
 
-        if not isinstance(line, str) or line.find('\n') >= 0:
-            raise self.FortranWriterError, \
-                  "write_fortran_line must have a single line as argument"
-
+        # This Routine is for a single line
+        assert(isinstance(line, str) and line.find('\n') == -1)
+        
+        
         res_lines = []
 
         # Check if empty line and write it
@@ -214,10 +214,9 @@ class FortranWriter(FileWriter):
 
     def write_comment_line(self, line):
         """Write a comment line, with correct indent and line splits"""
-
-        if not isinstance(line, str) or line.find('\n') >= 0:
-            raise self.FortranWriterError, \
-                  "write_comment_line must have a single line as argument"
+        
+        # write_comment_line must have a single line as argument
+        assert(isinstance(line, str) and line.find('\n') == -1)
 
         res_lines = []
 
@@ -357,9 +356,8 @@ class CPPWriter(FileWriter):
     def write_line(self, line):
         """Write a C++ line, with correct indent, spacing and line splits"""
 
-        if not isinstance(line, str) or line.find('\n') >= 0:
-            raise self.CPPWriterError, \
-                  "write_line must have a single line as argument"
+        # write_line must have a single line as argument
+        assert(isinstance(line, str) and line.find('\n') == -1)
 
         res_lines = []
 
@@ -617,9 +615,8 @@ class CPPWriter(FileWriter):
     def write_comment_line(self, line):
         """Write a comment line, with correct indent and line splits"""
 
-        if not isinstance(line, str) or line.find('\n') >= 0:
-            raise self.CPPWriterError, \
-                  "write_comment_line must have a single line as argument"
+        # write_comment_line must have a single line as argument
+        assert(isinstance(line, str) and line.find('\n') == -1)
 
         res_lines = []
 

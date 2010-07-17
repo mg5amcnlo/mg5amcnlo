@@ -21,7 +21,8 @@ import time
 import shutil
 import glob
 
-
+root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
+sys.path.append(root_path)
 from aloha.helasamp_object import *
 import aloha.WriteHelas as WriteHelas
 
@@ -50,7 +51,6 @@ class AbstractHelas(object):
         
     def write(self, output_dir, language='Fortran'):
         """ write the content of the object """
-        
         getattr(WriteHelas, 'HelasWriterFor%s' % language)(self, output_dir).write()
 
 
@@ -307,9 +307,10 @@ class AbstractHelasModel(dict):
             
         # Check that output directory exists
         aloha_dir = os.path.join(self.model_pos, format.lower())
+        logger.debug('aloha output dir is %s' %aloha_dir) 
         if not os.path.exists(aloha_dir):
             os.mkdir(aloha_dir)
-            
+        
         # Check that all routine are generated at default places:
         for (name, outgoing), abstract in self.items():
             routine_name = AbstractHelasBuilder.gethelasname(name, outgoing)
@@ -416,7 +417,7 @@ class AbstractHelasModel(dict):
         for abstract_helas in self.values():
             abstract_helas.write(output_dir, language)
         
-        self.write_makefile_inc(output_dir)
+        self.write_helas_file_inc(output_dir)
         
 
     def look_for_symmetries(self):
@@ -505,7 +506,23 @@ def create_library():
     cPickle.dump(lib, fsock, -1)
     logger.info('done')
     
-
+if '__main__' == __name__:       
+    logging.basicConfig(level=0)
+    #create_library()
+    import profile       
+    #model 
+    helasgenerator = AbstractHelasModel('sm')   
+    start = time.time()
+    def main(helasgenerator):
+        helasgenerator.compute_all()
+    def write(helasgenerator):
+        helasgenerator.write('/tmp/', 'Fortran')
+    #profile.run('main(helasgenerator)')
+    main(helasgenerator)
+    profile.run('write(helasgenerator)')
+    stop = time.time()
+    logger.info('done in %s s' % (stop-start))
+  
 
 
 

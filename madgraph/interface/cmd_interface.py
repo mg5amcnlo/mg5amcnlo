@@ -2070,7 +2070,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             create_helas.AbstractHelasModel(os.path.basename(self._model_dir),
                             write_dir=os.path.join(dir_path,'Source','DHELAS'))
             export_v4.make_model_symbolic_link(self._model_dir, dir_path)
-        
+            
         if args[0] == 'standalone_v4':
             export_v4.make_v4standalone(dir_path)
 

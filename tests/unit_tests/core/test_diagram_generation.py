@@ -77,12 +77,12 @@ class AmplitudeTest(unittest.TestCase):
         self.assertRaises(diagram_generation.Amplitude.PhysicsObjectError,
                           diagram_generation.Amplitude,
                           wrong_dict)
-        self.assertRaises(diagram_generation.Amplitude.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           diagram_generation.Amplitude,
                           a_number)
 
         # Test get
-        self.assertRaises(diagram_generation.Amplitude.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.myamplitude.get,
                           a_number)
         self.assertRaises(diagram_generation.Amplitude.PhysicsObjectError,
@@ -90,7 +90,7 @@ class AmplitudeTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(diagram_generation.Amplitude.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.myamplitude.set,
                           a_number, 0)
         self.assertRaises(diagram_generation.Amplitude.PhysicsObjectError,
@@ -1871,12 +1871,12 @@ class DecayChainAmplitudeTest(unittest.TestCase):
         self.assertRaises(diagram_generation.DecayChainAmplitude.PhysicsObjectError,
                           diagram_generation.DecayChainAmplitude,
                           wrong_dict)
-        self.assertRaises(diagram_generation.DecayChainAmplitude.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           diagram_generation.DecayChainAmplitude,
                           a_number)
 
         # Test get
-        self.assertRaises(diagram_generation.DecayChainAmplitude.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.my_decay_chain.get,
                           a_number)
         self.assertRaises(diagram_generation.DecayChainAmplitude.PhysicsObjectError,
@@ -1884,7 +1884,7 @@ class DecayChainAmplitudeTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(diagram_generation.DecayChainAmplitude.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.my_decay_chain.set,
                           a_number, 0)
         self.assertRaises(diagram_generation.DecayChainAmplitude.PhysicsObjectError,
@@ -2166,12 +2166,12 @@ class MultiProcessTest(unittest.TestCase):
         self.assertRaises(diagram_generation.MultiProcess.PhysicsObjectError,
                           diagram_generation.MultiProcess,
                           wrong_dict)
-        self.assertRaises(diagram_generation.MultiProcess.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           diagram_generation.MultiProcess,
                           a_number)
 
         # Test get
-        self.assertRaises(diagram_generation.MultiProcess.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.my_multi_process.get,
                           a_number)
         self.assertRaises(diagram_generation.MultiProcess.PhysicsObjectError,
@@ -2179,7 +2179,7 @@ class MultiProcessTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(diagram_generation.MultiProcess.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.my_multi_process.set,
                           a_number, 0)
         self.assertRaises(diagram_generation.MultiProcess.PhysicsObjectError,

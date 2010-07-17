@@ -136,9 +136,9 @@ class TestFeynmanLine(unittest.TestCase):
     def test_begin_end_wrong_input(self):
         """Test associate vertex fails on wrong input"""
 
-        self.assertRaises(drawing.FeynmanLine.FeynmanLineError, \
+        self.assertRaises(AssertionError, \
                           self.my_line.def_begin_point, [0, 0])
-        self.assertRaises(drawing.FeynmanLine.FeynmanLineError, \
+        self.assertRaises(AssertionError, \
                           self.my_line.def_end_point, [0, 0])
 
     def test_get_type(self):
@@ -526,7 +526,7 @@ class TestVertexPoint(unittest.TestCase):
         self.assertTrue(isinstance(my_vertex, drawing.VertexPoint))
 
         # Test fail if not Vertex Input in data
-        self.assertRaises(drawing.VertexPoint.VertexPointError, \
+        self.assertRaises(AssertionError, \
                           drawing.VertexPoint, {'data':''})
 
         # Ensure that my_vertex and self.vertex and 100% different
@@ -572,13 +572,13 @@ class TestVertexPoint(unittest.TestCase):
         my_vertex.def_position(0.3, 0)
         my_vertex.def_position(0.3, 1)
 
-        self.assertRaises(drawing.VertexPoint.VertexPointError, \
+        self.assertRaises(AssertionError, \
                           my_vertex.def_position, 1.4, 0.2)
-        self.assertRaises(drawing.VertexPoint.VertexPointError, \
+        self.assertRaises(AssertionError, \
                           my_vertex.def_position, -1.0, 0.2)
-        self.assertRaises(drawing.VertexPoint.VertexPointError, \
+        self.assertRaises(AssertionError, \
                           my_vertex.def_position, 0.4, 1.2)
-        self.assertRaises(drawing.VertexPoint.VertexPointError, \
+        self.assertRaises(AssertionError, \
                           my_vertex.def_position, 0, -0.2)
 
     def test_redef_position(self):
@@ -609,8 +609,7 @@ class TestVertexPoint(unittest.TestCase):
         my_vertex.add_line(self.line1)
         self.assertEquals(my_vertex.line.count(self.line1), 1)
 
-        self.assertRaises(drawing.VertexPoint.VertexPointError, \
-                                                    my_vertex.add_line, 'data')
+        self.assertRaises(AssertionError, my_vertex.add_line, 'data')
 
     def test_remove_line(self):
         """Test that line can be safely remove"""
@@ -622,8 +621,7 @@ class TestVertexPoint(unittest.TestCase):
 
         self.assertRaises(drawing.VertexPoint.VertexPointError, \
                           my_vertex.remove_line, self.line1)
-        self.assertRaises(drawing.VertexPoint.VertexPointError, \
-                                                    my_vertex.add_line, 'data')
+        self.assertRaises(AssertionError, my_vertex.add_line, 'data')
 
 
     def test_def_level(self):
@@ -633,7 +631,7 @@ class TestVertexPoint(unittest.TestCase):
         my_vertex.def_level(3)
         self.assertEquals(my_vertex.level, 3)
 
-        self.assertRaises(drawing.VertexPoint.VertexPointError, \
+        self.assertRaises(AssertionError, \
                           my_vertex.def_level, '3')
 
     def test_isexternal(self):

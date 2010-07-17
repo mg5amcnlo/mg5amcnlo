@@ -77,19 +77,21 @@ class WriteHelas:
     def write_obj(self, obj):
         """Calls the appropriate writing routine"""
 
-        if isinstance(obj, Number):
+        try:
+            vartype = obj.vartype
+        except:
             return self.change_number_format(obj)
-        elif obj.vartype == 2 : #isinstance(obj, Helas_Lib.MultVariable):
+
+        if vartype == 2 : # MultVariable
             return self.write_obj_Mult(obj)
-        elif not obj.vartype: #isinstance(obj, Helas_Lib.Variable):
+        elif not vartype: # Variable
             return self.write_obj_Var(obj)
-        elif obj.vartype == 1 : #isinstance(obj, Helas_Lib.AddVariable):
+        elif vartype == 1 : # AddVariable
             return self.write_obj_Add(obj)
-        elif obj.vartype == 5: #ConstantObject
+        elif vartype == 5: # ConstantObject
             return self.change_number_format(obj.value)
         else: 
-            print 'Warning unknown object', obj.vartype
-            return str(obj)
+            raise Exception('Warning unknown object: %s' % obj.vartype)
 
     def write_obj_Mult(self, obj):
         """Turn a multvariable into a string""" 
@@ -105,14 +107,17 @@ class WriteHelas:
     def write_obj_Add(self, obj):
         """Turns addvariable into a string"""
         mult_list = [self.write_obj(factor) for factor in obj]
-        text = '(' 
-        if obj.prefactor != 1:
-            if obj.prefactor != -1:
-                text = self.change_number_format(obj.prefactor) + '*' + text 
-            else: 
-                text = '-' + text
-        return text + '+'.join(mult_list) + ')'
+        prefactor = ''
+        if obj.prefactor == 1:
+            prefactor = ''
+        elif obj.prefactor == -1:
+            prefactor = '-'
+        else:
+            prefactor = '%s*' % self.change_number_format(obj.prefactor)
 
+        return '(%s %s)' % (prefactor, '+'.join(mult_list))
+
+        
     def write_obj_Var(self, obj):
         text = ''
         if obj.prefactor != 1:
@@ -277,8 +282,7 @@ class HelasWriterForFortran(WriteHelas):
         # Conservation of Energy Impulsion
         if self.offshell: 
             NegSign = momentum_conservation.pop(self.offshell -1) 
-            NegSignBool = re.match('-F', NegSign) 
-            if NegSignBool:
+            if NegSign.startswith('-F'):
                 NegString = '(' 
             else:
                 NegString = '-('
@@ -292,10 +296,9 @@ class HelasWriterForFortran(WriteHelas):
             else: 
                 str_out += '%s%d(5)=%s' % (offshelltype, self.offshell, NegString) 
             for elem in momentum_conservation:
-                print 'WriteHelas 281', elem
-                if re.match('-S', elem):
+                if elem.startswith('-S'):
                     str_out += elem + '(2)' 
-                elif re.match('-T', elem):
+                elif elem.startswith('-T'):
                     str_out += elem + '(17)' 
                 else:
                     str_out += elem + '(5)'
@@ -309,9 +312,9 @@ class HelasWriterForFortran(WriteHelas):
                 str_out += '%s%d(6)=%s' % (offshelltype, self.offshell, NegString)
                  
             for elem in momentum_conservation:
-                if re.match('-S', elem):
+                if elem.startswith('-S'):
                     str_out += elem + '(3)' 
-                elif re.match('-T', elem):
+                elif elem.startswith('-T'):
                     str_out += elem + '(18)' 
                 else:
                     str_out += elem + '(6)'
@@ -360,9 +363,7 @@ class HelasWriterForFortran(WriteHelas):
             out = '%.9f' % number
         return out
     
-    
     def define_expression(self):
-        TypeToVariable = {2:'F',3:'V',5:'T',1:'S'}
         OutString = ''
         if not self.offshell:
             for ind in self.obj.listindices():
@@ -372,7 +373,7 @@ class HelasWriterForFortran(WriteHelas):
                 string = re.sub('(?P<num>[0-9])[Jj]\.', '\g<num>.*(0d0,1d0)', string)
                 OutString = OutString + string + '\n'
         else:
-            OffShellParticle = '%s%d' % (TypeToVariable[self.particles[self.offshell-1]], self.offshell)
+            OffShellParticle = '%s%d' % (self.type_to_variable[self.particles[self.offshell-1]], self.offshell)
             numerator = self.obj.numerator
             denominator = self.obj.denominator
             for ind in denominator.listindices():
@@ -394,10 +395,9 @@ class HelasWriterForFortran(WriteHelas):
         return OutString 
     
     def define_symmetry(self):
-        TypeToVariable = {2:'F',3:'V',5:'T',1:'S'}
         calls = self.calllist['CallList']
         number = self.offshell 
-        Outstring = 'call '+self.namestring+'('+','.join(calls)+',C,M%s,W%s,%s%s)'%(number,number,TypeToVariable[self.particles[self.offshell-1]],number)
+        Outstring = 'call '+self.namestring+'('+','.join(calls)+',C,M%s,W%s,%s%s)'%(number,number,self.type_to_variable[self.particles[self.offshell-1]],number)
         return Outstring
     
     def define_foot(self):

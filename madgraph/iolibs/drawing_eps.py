@@ -307,11 +307,9 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.npage = 1 + len(diagramlist) // (self.nb_col * self.nb_line)
         
         if diagramlist:
-            if isinstance(diagramlist, base_objects.DiagramList):
-                self.diagramlist = diagramlist
-            else:
-                raise self.DrawDiagramError('diagramlist Argument should be a' +
-                    ' DiagramList object') 
+            # diagramlist Argument should be a DiagramList object
+            assert(isinstance(diagramlist, base_objects.DiagramList))
+            self.diagramlist = diagramlist
         else:
             self.diagramlist = None
             

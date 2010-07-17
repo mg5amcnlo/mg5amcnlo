@@ -114,7 +114,7 @@ C       Test
 
         writer = writers.FortranWriter(os.devnull)
         for nonstring in non_strings:
-            self.assertRaises(writers.FortranWriter.FortranWriterError,
+            self.assertRaises(AssertionError,
                               writer.write_line,
                               nonstring)
 
@@ -283,7 +283,7 @@ void Sigma2ff2fftgmZ::setIdColAcol()
 
         writer = writers.CPPWriter(os.devnull)
         for nonstring in non_strings:
-            self.assertRaises(writers.CPPWriter.CPPWriterError,
+            self.assertRaises(AssertionError,
                               writer.write_line,
                               nonstring)
 

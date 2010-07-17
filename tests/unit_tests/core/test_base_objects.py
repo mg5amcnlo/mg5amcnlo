@@ -77,12 +77,12 @@ class ParticleTest(unittest.TestCase):
         self.assertRaises(base_objects.Particle.PhysicsObjectError,
                           base_objects.Particle,
                           wrong_dict)
-        self.assertRaises(base_objects.Particle.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           base_objects.Particle,
                           a_number)
 
         # Test get
-        self.assertRaises(base_objects.Particle.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.mypart.get,
                           a_number)
         self.assertRaises(base_objects.Particle.PhysicsObjectError,
@@ -90,7 +90,7 @@ class ParticleTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(base_objects.Particle.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.mypart.set,
                           a_number, 0)
         self.assertRaises(base_objects.Particle.PhysicsObjectError,
@@ -212,7 +212,7 @@ class ParticleTest(unittest.TestCase):
         for part in mypartlist:
             self.assertEqual(part, self.mypart)
 
-        self.assertRaises(base_objects.ParticleList.PhysicsObjectListError,
+        self.assertRaises(AssertionError,
                           mypartlist.append,
                           not_a_part)
         # test particle search
@@ -302,12 +302,12 @@ class InteractionTest(unittest.TestCase):
         self.assertRaises(base_objects.Interaction.PhysicsObjectError,
                           base_objects.Interaction,
                           wrong_dict)
-        self.assertRaises(base_objects.Interaction.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           base_objects.Interaction,
                           a_number)
 
         # Test get
-        self.assertRaises(base_objects.Interaction.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.myinter.get,
                           a_number)
         self.assertRaises(base_objects.Interaction.PhysicsObjectError,
@@ -315,7 +315,7 @@ class InteractionTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(base_objects.Interaction.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.myinter.set,
                           a_number, 0)
         self.assertRaises(base_objects.Interaction.PhysicsObjectError,
@@ -477,7 +477,7 @@ class InteractionTest(unittest.TestCase):
 
         # Check error raising
         not_a_inter = 1
-        self.assertRaises(base_objects.InteractionList.PhysicsObjectListError,
+        self.assertRaises(AssertionError,
                           myinterlist.append,
                           not_a_inter)
 
@@ -587,13 +587,13 @@ class ModelTest(unittest.TestCase):
         not_a_string = 1.
 
         # General
-        self.assertRaises(base_objects.Model.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           mymodel.get,
                           not_a_string)
         self.assertRaises(base_objects.Model.PhysicsObjectError,
                           mymodel.get,
                           'wrong_key')
-        self.assertRaises(base_objects.Model.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           mymodel.set,
                           not_a_string, None)
         self.assertRaises(base_objects.Model.PhysicsObjectError,
@@ -658,12 +658,12 @@ class LegTest(unittest.TestCase):
         self.assertRaises(base_objects.Leg.PhysicsObjectError,
                           base_objects.Leg,
                           wrong_dict)
-        self.assertRaises(base_objects.Leg.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           base_objects.Leg,
                           a_number)
 
         # Test get
-        self.assertRaises(base_objects.Leg.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.myleg.get,
                           a_number)
         self.assertRaises(base_objects.Leg.PhysicsObjectError,
@@ -671,7 +671,7 @@ class LegTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(base_objects.Leg.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.myleg.set,
                           a_number, 0)
         self.assertRaises(base_objects.Leg.PhysicsObjectError,
@@ -724,7 +724,7 @@ class LegTest(unittest.TestCase):
         for leg in myleglist:
             self.assertEqual(leg, self.myleg)
 
-        self.assertRaises(base_objects.LegList.PhysicsObjectListError,
+        self.assertRaises(AssertionError,
                           myleglist.append,
                           not_a_leg)
 
@@ -801,12 +801,12 @@ class MultiLegTest(unittest.TestCase):
         self.assertRaises(base_objects.MultiLeg.PhysicsObjectError,
                           base_objects.MultiLeg,
                           wrong_dict)
-        self.assertRaises(base_objects.MultiLeg.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           base_objects.MultiLeg,
                           a_number)
 
         # Test get
-        self.assertRaises(base_objects.MultiLeg.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.my_multi_leg.get,
                           a_number)
         self.assertRaises(base_objects.MultiLeg.PhysicsObjectError,
@@ -814,7 +814,7 @@ class MultiLegTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(base_objects.MultiLeg.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.my_multi_leg.set,
                           a_number, 0)
         self.assertRaises(base_objects.MultiLeg.PhysicsObjectError,
@@ -862,7 +862,7 @@ class MultiLegTest(unittest.TestCase):
         for multi_leg in my_multi_leglist:
             self.assertEqual(multi_leg, self.my_multi_leg)
 
-        self.assertRaises(base_objects.MultiLegList.PhysicsObjectListError,
+        self.assertRaises(AssertionError,
                           my_multi_leglist.append,
                           not_a_multi_leg)
 
@@ -911,12 +911,12 @@ class VertexTest(unittest.TestCase):
         self.assertRaises(base_objects.Vertex.PhysicsObjectError,
                           base_objects.Vertex,
                           wrong_dict)
-        self.assertRaises(base_objects.Vertex.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           base_objects.Vertex,
                           a_number)
 
         # Test get
-        self.assertRaises(base_objects.Vertex.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.myvertex.get,
                           a_number)
         self.assertRaises(base_objects.Vertex.PhysicsObjectError,
@@ -924,7 +924,7 @@ class VertexTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(base_objects.Vertex.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.myvertex.set,
                           a_number, 0)
         self.assertRaises(base_objects.Vertex.PhysicsObjectError,
@@ -971,7 +971,7 @@ class VertexTest(unittest.TestCase):
         for vertex in myvertexlist:
             self.assertEqual(vertex, self.myvertex)
 
-        self.assertRaises(base_objects.VertexList.PhysicsObjectListError,
+        self.assertRaises(AssertionError,
                           myvertexlist.append,
                           not_a_vertex)
 
@@ -1021,12 +1021,12 @@ class DiagramTest(unittest.TestCase):
         self.assertRaises(base_objects.Diagram.PhysicsObjectError,
                           base_objects.Diagram,
                           wrong_dict)
-        self.assertRaises(base_objects.Diagram.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           base_objects.Diagram,
                           a_number)
 
         # Test get
-        self.assertRaises(base_objects.Diagram.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.mydiagram.get,
                           a_number)
         self.assertRaises(base_objects.Diagram.PhysicsObjectError,
@@ -1034,7 +1034,7 @@ class DiagramTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(base_objects.Diagram.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.mydiagram.set,
                           a_number, 0)
         self.assertRaises(base_objects.Diagram.PhysicsObjectError,
@@ -1076,7 +1076,7 @@ class DiagramTest(unittest.TestCase):
         for diagram in mydiagramlist:
             self.assertEqual(diagram, self.mydiagram)
 
-        self.assertRaises(base_objects.DiagramList.PhysicsObjectListError,
+        self.assertRaises(AssertionError,
                           mydiagramlist.append,
                           not_a_diagram)
 
@@ -1164,12 +1164,12 @@ class ProcessTest(unittest.TestCase):
         self.assertRaises(base_objects.Process.PhysicsObjectError,
                           base_objects.Process,
                           wrong_dict)
-        self.assertRaises(base_objects.Process.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           base_objects.Process,
                           a_number)
 
         # Test get
-        self.assertRaises(base_objects.Process.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.myprocess.get,
                           a_number)
         self.assertRaises(base_objects.Process.PhysicsObjectError,
@@ -1177,7 +1177,7 @@ class ProcessTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(base_objects.Process.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.myprocess.set,
                           a_number, 0)
         self.assertRaises(base_objects.Process.PhysicsObjectError,
@@ -1297,12 +1297,12 @@ class ProcessDefinitionTest(unittest.TestCase):
         self.assertRaises(base_objects.ProcessDefinition.PhysicsObjectError,
                           base_objects.ProcessDefinition,
                           wrong_dict)
-        self.assertRaises(base_objects.ProcessDefinition.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           base_objects.ProcessDefinition,
                           a_number)
 
         # Test get
-        self.assertRaises(base_objects.ProcessDefinition.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.my_process_definition.get,
                           a_number)
         self.assertRaises(base_objects.ProcessDefinition.PhysicsObjectError,
@@ -1310,7 +1310,7 @@ class ProcessDefinitionTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(base_objects.ProcessDefinition.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.my_process_definition.set,
                           a_number, 0)
         self.assertRaises(base_objects.ProcessDefinition.PhysicsObjectError,

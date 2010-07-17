@@ -46,9 +46,9 @@ class PhysicsObject(dict):
 
         self.default_setup()
 
-        if not isinstance(init_dict, dict):
-            raise self.PhysicsObjectError, \
-                "Argument %s is not a dictionary" % repr(init_dict)
+        assert isinstance(init_dict, dict), \
+                            "Argument %s is not a dictionary" % repr(init_dict)
+
 
         for item in init_dict.keys():
             self.set(item, init_dict[item])
@@ -73,9 +73,8 @@ class PhysicsObject(dict):
     def is_valid_prop(self, name):
         """Check if a given property name is valid"""
 
-        if not isinstance(name, str):
-            raise self.PhysicsObjectError, \
-                "Property name %s is not a string" % repr(name)
+        assert isinstance(name, str), \
+                                 "Property name %s is not a string" % repr(name)
 
         if name not in self.keys():
             raise self.PhysicsObjectError, \
@@ -119,11 +118,11 @@ class PhysicsObject(dict):
         """ 
         make a link between the  present object and the associate model 
         """
+        
+        assert isinstance(model, Model), ' try to assign a non model obect'
 
-        if isinstance(model, Model):
-            self._def_model(model)
-        else:
-            raise self.PhysicsObjectError(' try to assign a non model obect')
+        self._def_model(model)
+
 
     def _def_model(self, model):
         """
@@ -178,12 +177,11 @@ class PhysicsObjectList(list):
 
     def append(self, object):
         """Appends an element, but test if valid before."""
-        if not self.is_valid_element(object):
-            raise self.PhysicsObjectListError, \
-                "Object %s is not a valid object for the current list" % \
-                                                             repr(object)
-        else:
-            list.append(self, object)
+        
+        assert self.is_valid_element(object), \
+            "Object %s is not a valid object for the current list" % repr(object)
+
+        list.append(self, object)
 
     def is_valid_element(self, obj):
         """Test if object obj is a valid element for the list."""
@@ -397,9 +395,7 @@ class ParticleList(PhysicsObjectList):
         corresponding particle (first one in the list), with the 
         is_part flag set accordingly. None otherwise."""
 
-        if not isinstance(name, str):
-            raise self.PhysicsObjectError, \
-                "%s is not a valid string" % str(name)
+        assert isinstance(name, str), "%s is not a valid string" % str(name) 
 
         for part in self:
             mypart = copy.copy(part)
@@ -848,9 +844,7 @@ class Leg(PhysicsObject):
         """Returns True if the particle corresponding to the leg is a
         fermion"""
 
-        if not isinstance(model, Model):
-            raise self.PhysicsObjectError, \
-                  "%s is not a model" % str(model)
+        assert isinstance(model, Model), "%s is not a model" % str(model)
 
         return model.get('particle_dict')[self['id']].is_fermion()
 
@@ -858,9 +852,7 @@ class Leg(PhysicsObject):
         """Returns True if leg is an incoming fermion, i.e., initial
         particle or final antiparticle"""
 
-        if not isinstance(model, Model):
-            raise self.PhysicsObjectError, \
-                  "%s is not a model" % str(model)
+        assert isinstance(model, Model), "%s is not a model" % str(model)
 
         part = model.get('particle_dict')[self['id']]
         return part.is_fermion() and \
@@ -871,10 +863,8 @@ class Leg(PhysicsObject):
         """Returns True if leg is an outgoing fermion, i.e., initial
         antiparticle or final particle"""
 
-        if not isinstance(model, Model):
-            raise self.PhysicsObjectError, \
-                  "%s is not a model" % str(model)
-
+        assert isinstance(model, Model), "%s is not a model" % str(model)        
+        
         part = model.get('particle_dict')[self['id']]
         return part.is_fermion() and \
                (self.get('state') == True and part.get('is_part') or \
@@ -950,8 +940,8 @@ class LegList(PhysicsObjectList):
 
         res = []
 
-        if not isinstance(model, Model):
-            raise MadGraph5Error("Error! model not model")
+        assert isinstance(model, Model), "Error! model not model"
+
 
         for leg in self:
             if leg.get('state') == False:
