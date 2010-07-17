@@ -16,7 +16,8 @@
 """Unit test library for the helas_objects module"""
 
 import copy
-import unittest
+
+import tests.unit_tests as unittest
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects

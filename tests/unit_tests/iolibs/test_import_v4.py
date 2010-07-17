@@ -16,9 +16,10 @@
 """Unit test library for the import v4 format routines"""
 
 import StringIO
-import unittest
 import copy
 import os
+
+import tests.unit_tests as unittest
 
 import madgraph.iolibs.import_v4 as import_v4
 import madgraph.core.base_objects as base_objects

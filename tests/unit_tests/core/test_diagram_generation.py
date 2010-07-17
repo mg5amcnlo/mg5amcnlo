@@ -19,7 +19,9 @@ import copy
 import itertools
 import logging
 import math
-import unittest
+
+
+import tests.unit_tests as unittest
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation

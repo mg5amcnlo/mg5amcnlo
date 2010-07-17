@@ -16,9 +16,10 @@
 """Unit test library for the export v4 format routines"""
 
 import StringIO
-import unittest
 import copy
 import fractions
+
+import tests.unit_tests as unittest
 
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.export_v4 as export_v4

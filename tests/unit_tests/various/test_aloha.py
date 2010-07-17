@@ -15,11 +15,12 @@
 """Unit test Library for testing the Creation of Helas Amplitude created from 
 the output of the Feynman Rules."""
 from __future__ import division
-import unittest
+
 import aloha.helasamp_object as HelasObject
 import aloha.helasamp_lib as HelasLib
 import aloha.create_helas as Create_Helas
 
+import tests.unit_tests as unittest
 
 class TestVariable(unittest.TestCase):
 

@@ -24,7 +24,6 @@ from __future__ import division
 
 import os
 import pickle
-import unittest
 
 import madgraph.core.base_objects as base_objects
 import madgraph.iolibs.drawing as drawing
@@ -32,6 +31,7 @@ import madgraph.iolibs.drawing_eps as draw_eps
 import madgraph.iolibs.import_v4 as import_v4
 import madgraph.iolibs.files as files
 
+import tests.unit_tests as unittest
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
 # First define a valid model for Standard Model
@@ -621,6 +621,7 @@ class TestVertexPoint(unittest.TestCase):
 
         self.assertRaises(drawing.VertexPoint.VertexPointError, \
                           my_vertex.remove_line, self.line1)
+        
         self.assertRaises(AssertionError, my_vertex.add_line, 'data')
 
 

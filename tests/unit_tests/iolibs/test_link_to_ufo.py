@@ -15,8 +15,9 @@
 from madgraph import MG5DIR
 import subprocess
 import shutil
-import unittest
 import os
+
+import tests.unit_tests as unittest
 
 import madgraph.core.base_objects as base_objects
 import madgraph.iolibs.convert_ufo2mg4 as ufo2mg4

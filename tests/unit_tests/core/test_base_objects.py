@@ -16,10 +16,10 @@
 """Unit test library for the various base objects of the core library"""
 
 import copy
-import unittest
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
+import tests.unit_tests as unittest
 
 #===============================================================================
 # ParticleTest

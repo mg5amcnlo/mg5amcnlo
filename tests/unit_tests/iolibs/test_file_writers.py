@@ -16,9 +16,10 @@
 """Unit test library for the writer classes"""
 
 import StringIO
-import unittest
 import re
 import os
+
+import tests.unit_tests as unittest
 
 import madgraph.iolibs.file_writers as writers
 

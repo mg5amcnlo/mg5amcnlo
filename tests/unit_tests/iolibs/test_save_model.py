@@ -16,7 +16,8 @@
 """Unit test library for the save model routines"""
 
 import StringIO
-import unittest
+
+import tests.unit_tests as unittest
 
 import madgraph.core.base_objects as base_objects
 

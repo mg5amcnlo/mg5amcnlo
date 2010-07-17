@@ -18,9 +18,10 @@ in the core library"""
 
 import copy
 import fractions
-import unittest
 
 import madgraph.core.color_algebra as color
+import tests.unit_tests as unittest
+
 #
 class ColorObjectTest(unittest.TestCase):
     """Test class for the ColorObject objects"""
