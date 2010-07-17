@@ -823,6 +823,9 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         
         if '/' in args[2]:
             raise self.WebRestriction('Path can\'t be specify on the web.')
+        
+        if '-f' not in args and '-noclean' not in args:
+            args.append('-f')
     
 #===============================================================================
 # CompleteForCmd
