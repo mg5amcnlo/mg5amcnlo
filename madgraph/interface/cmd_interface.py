@@ -587,7 +587,6 @@ class CheckValidForCmd(object):
         if not self._curr_model['particles'] or not self._curr_model['interactions']:
             raise self.InvalidCmd("No model currently active, please import a model!")
 
-        print line
         self.check_process_format(line)
         return True
     
@@ -822,7 +821,9 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         CheckValidForCmd.check_setup(self, args)
         
         if '/' in args[2]:
-            raise self.WebRestriction('Path can\'t be specify on the web.')
+            logger_stderr.warning('Path specification in setup are forbidden ' +\
+                                  'in web mode. Pass to \"auto\" option')
+            args[2] = 'auto'
         
         if '-f' not in args and '-noclean' not in args:
             args.append('-f')

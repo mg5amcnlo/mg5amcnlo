@@ -3623,7 +3623,7 @@ C     Number of configs
         # Test dname.mg
         fsock = StringIO.StringIO()
         export_v4.write_dname_file(fsock, me, fortran_model)
-        self.assertEqual(fsock.getvalue(), "DIRNAME=P0_e-e+_e-sl2+ae-sl2+a\n")
+        self.assertEqual(fsock.getvalue(), "DIRNAME=P0_e-e+_n1n1_n1_e-sl2+a_n1_e-sl2+a\n")
         # Test iproc.inc
         fsock = StringIO.StringIO()
         export_v4.write_iproc_file(fsock, me, fortran_model)
