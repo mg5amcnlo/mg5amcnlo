@@ -78,6 +78,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # couplings = the coupling names from the interaction: {(0,0):'MGVX12'}
         self['interaction_id'] = 0
         self['pdg_codes'] = []
+        self['orders'] = {}
         self['inter_color'] = None
         self['lorentz'] = ''
         self['coupling'] = 'none'
@@ -184,6 +185,21 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if not isinstance(mystr, int):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid integer" % str(mystr)
+
+        if name == 'orders':
+            #Should be a dict with valid order names ask keys and int as values
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid dict for coupling orders" % \
+                                                                    str(value)
+            for order in value.keys():
+                if not isinstance(order, str):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid string" % str(order)
+                if not isinstance(value[order], int):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid integer" % str(value[order])
+
 
         if name == 'inter_color':
             # Should be None or a color string
@@ -302,6 +318,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     self.set('pdg_codes',
                              [part.get_pdg_code() for part in \
                               inter.get('particles')])
+                    self.set('orders', inter.get('orders'))
                     # Note that the following values might change, if
                     # the relevant color/lorentz/coupling is not index 0
                     if inter.get('color'):
@@ -329,8 +346,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         """Return particle property names as a nicely sorted list."""
 
         return ['particle', 'antiparticle', 'is_part',
-                'interaction_id', 'pdg_codes', 'inter_color', 'lorentz',
-                'coupling', 'coupl_key', 'state', 'number_external',
+                'interaction_id', 'pdg_codes', 'orders', 'inter_color', 
+                'lorentz', 'coupling', 'coupl_key', 'state', 'number_external',
                 'number', 'fermionflow', 'mothers']
 
     # Helper functions
@@ -1141,6 +1158,17 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
 
         return res
 
+    @staticmethod
+    def extract_wavefunctions(mothers):
+        """Recursively extract the wavefunctions from mothers of mothers"""
+
+        wavefunctions = copy.copy(mothers)
+        for wf in mothers:
+            wavefunctions.extend(HelasWavefunctionList.\
+                                 extract_wavefunctions(wf.get('mothers')))
+
+        return wavefunctions
+
 #===============================================================================
 # HelasAmplitude
 #===============================================================================
@@ -1156,6 +1184,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         # Properties related to the interaction generating the propagator
         self['interaction_id'] = 0
         self['pdg_codes'] = []
+        self['orders'] = {}
         self['inter_color'] = None
         self['lorentz'] = ''
         self['coupling'] = 'none'
@@ -1201,6 +1230,20 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 if not isinstance(mystr, int):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid integer" % str(mystr)
+
+        if name == 'orders':
+            #Should be a dict with valid order names ask keys and int as values
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid dict for coupling orders" % \
+                                                                    str(value)
+            for order in value.keys():
+                if not isinstance(order, str):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid string" % str(order)
+                if not isinstance(value[order], int):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid integer" % str(value[order])
 
         if name == 'inter_color':
             # Should be None or a color string
@@ -1299,6 +1342,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     self.set('pdg_codes',
                              [part.get_pdg_code() for part in \
                               inter.get('particles')])
+                    self.set('orders', inter.get('orders'))
                     # Note that the following values might change, if
                     # the relevant color/lorentz/coupling is not index 0
                     if inter.get('color'):
@@ -1317,8 +1361,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['interaction_id', 'pdg_codes', 'inter_color', 'lorentz',
-                'coupling', 'coupl_key', 'number', 'color_indices',
+        return ['interaction_id', 'pdg_codes', 'orders', 'inter_color', 
+                'lorentz', 'coupling', 'coupl_key', 'number', 'color_indices',
                 'fermionfactor', 'mothers']
 
 
@@ -1674,6 +1718,24 @@ class HelasDiagram(base_objects.PhysicsObject):
         """Return particle property names as a nicely sorted list."""
 
         return ['wavefunctions', 'amplitudes']
+
+    def calculate_orders(self):
+        """Calculate the actual coupling orders of this diagram"""
+
+        wavefunctions = HelasWavefunctionList.extract_wavefunctions(\
+            self.get('amplitudes')[0].get('mothers'))
+
+        coupling_orders = {}
+        for wf in wavefunctions + [self.get('amplitudes')[0]]:
+            if not wf.get('orders'): continue
+            for order in wf.get('orders').keys():
+                try:
+                    coupling_orders[order] += wf.get('orders')[order]
+                except:
+                    coupling_orders[order] = wf.get('orders')[order]
+
+        return coupling_orders
+
 
 #===============================================================================
 # HelasDiagramList
@@ -2138,6 +2200,51 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                   decay_dict[number],
                                   numbers,
                                   got_majoranas)
+
+        # Remove all diagrams that surpass overall coupling orders
+        overall_orders = self.get('processes')[0].get('overall_orders')
+        if overall_orders:
+            ndiag = len(self.get('diagrams'))
+            idiag = 0
+            while self.get('diagrams')[idiag:]:
+                diagram = self.get('diagrams')[idiag]
+                orders = diagram.calculate_orders()
+                remove_diagram = False
+                for order in orders.keys():
+                    try:
+                        if orders[order] > \
+                               overall_orders[order]:
+                            remove_diagram = True
+                    except KeyError:
+                        pass
+                if remove_diagram:
+                    self.get('diagrams').pop(idiag)
+                else:
+                    idiag += 1
+
+            if len(self.get('diagrams')) < ndiag:
+                # We have removed some diagrams - need to go through
+                # diagrams, renumber them and set new wavefunctions
+                wf_numbers = []
+                ndiagrams = 0
+                for diagram in self.get('diagrams'):
+                    ndiagrams += 1
+                    diagram.set('number', ndiagrams)
+                    # Extract all wavefunctions contributing to this amplitude
+                    diagram_wfs = HelasWavefunctionList()
+                    for amplitude in diagram.get('amplitudes'):
+                        wavefunctions = \
+                          sorted(HelasWavefunctionList.\
+                               extract_wavefunctions(amplitude.get('mothers')),
+                                 lambda wf1, wf2: wf1.get('number') - \
+                                                  wf2.get('number'))
+                        for wf in wavefunctions:
+                            # Check if wavefunction already used, otherwise add
+                            if wf.get('number') not in wf_numbers and \
+                                   wf not in diagram_wfs:
+                                diagram_wfs.append(wf)
+                                wf_numbers.append(wf.get('number'))
+                    diagram.set('wavefunctions', diagram_wfs)
 
         # Final cleaning out duplicate wavefunctions - needed only if
         # we have multiple fermion flows, i.e., either multiple replaced
@@ -2796,6 +2903,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             diagrams.append(diag.get('amplitudes')[0].get_base_diagram(\
                 wf_dict, vx_list, optimization))
 
+        for diag in diagrams:
+            diag.calculate_orders(self.get('processes')[0].get('model'))
+            
         return diagram_generation.Amplitude({\
             'process': self.get('processes')[0],
             'diagrams': diagrams})
@@ -2984,8 +3094,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         return col_amp_list
 
-
-
     @staticmethod
     def check_equal_decay_processes(decay1, decay2):
         """Check if two single-sided decay processes
@@ -3165,7 +3273,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                          - HelasMatrixElement.sort_spin_dict[\
                                           wf1.get_spin_state_number()]))
 
-
 #===============================================================================
 # HelasMatrixElementList
 #===============================================================================
@@ -3280,12 +3387,12 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
         HelasMatrixElements, combining the core process with the decay
         chains.
 
-        * If there are several identical final state particles and only
-        one decay chain defined, apply this decay chain to all
-        copies.
-        * If there are several decay chains defined for the same
-        particle, apply them in order of the FS particles and the
-        defined decay chains."""
+        * If the number of decay chains is the same as the number of
+        decaying particles, apply each decay chain to the corresponding
+        final state particle.
+        * If the number of decay chains and decaying final state particles
+        don't correspond, all decays applying to a given particle type are
+        combined (without double counting)."""
 
         # End recursion when there are no more decay chains
         if not self['decay_chains']:
@@ -3312,93 +3419,85 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
         while self['core_processes']:
             # Pop the process to save memory space
             core_process = self['core_processes'].pop(0)
-            # Get all final state legs
-            fs_legs = core_process.get('processes')[0].get_final_legs()
+            # Get all final state legs that have a decay chain defined
+            fs_legs = filter(lambda leg: any([any([id == leg.get('id') for id \
+                            in is_ids]) for is_ids in decay_is_ids]),
+                            core_process.get('processes')[0].get_final_legs())
+            # List of ids for the final state legs
             fs_ids = [leg.get('id') for leg in fs_legs]
+            # Create a dictionary from id to (index, leg number)
+            fs_numbers = {}
+            fs_indices = {}
+            for i, leg in enumerate(fs_legs):
+                fs_numbers[leg.get('id')] = \
+                    fs_numbers.setdefault(leg.get('id'), []) + \
+                    [leg.get('number')]
+                fs_indices[leg.get('id')] = \
+                    fs_indices.setdefault(leg.get('id'), []) + \
+                    [i]
+
             decay_lists = []
             # Loop over unique final state particle ids
             for fs_id in set(fs_ids):
-                # Check if the particle id for this leg has a decay
-                # chain defined
-                if not any([any([id == fs_id for id \
-                            in is_ids]) for is_ids in decay_is_ids]):
-                    continue
                 # decay_list has the leg numbers and decays for this
-                # fs particle id
+                # fs particle id:
+                # decay_list = [[[n1,d1],[n2,d2]],[[n1,d1'],[n2,d2']],...]
+
                 decay_list = []
-                # Now check if the number of decay chains with
-                # this particle id is the same as the number of
-                # identical particles in the core process - if so,
-                # use one chain for each of the identical
-                # particles. Otherwise, use all combinations of
-                # decay chains for the particles.
 
-                # Indices for the decay chain lists which contain at
-                # least one decay for this final state
-                chain_indices = filter(lambda index: fs_id in \
-                                                   decay_is_ids[index],
-                                       range(len(decay_is_ids)))
+                # Two cases: Either number of decay elements is same
+                # as number of decaying particles: Then use the
+                # corresponding decay for each particle. Or the number
+                # of decay elements is different: Then use any decay
+                # chain which defines the decay for this particle.
 
-                my_fs_legs = filter(lambda leg: leg.get('id') == fs_id,
-                                    fs_legs)
-                leg_numbers = [leg.get('number') for leg in my_fs_legs]
-
-                if len(leg_numbers) > 1 and \
-                       len(leg_numbers) == len(chain_indices):
-
+                if len(fs_legs) == len(decay_elements):
                     # The decay of the different fs parts is given
-                    # by the different decay chains, respectively
+                    # by the different decay chains, respectively.
                     # Chains is a list of matrix element lists
                     chains = []
-                    for index in chain_indices:
-                        decay_chains = decay_elements[index]
+                    for index in fs_indices[fs_id]:
                         chains.append(filter(lambda me: \
                                              me.get('processes')[0].\
                                              get_initial_ids()[0] == fs_id,
-                                             decay_chains))
-
-                    # Combine decays for this final state type
-                    for element in itertools.product(*chains):
-                        decay_list.append([[n, d] for [n, d] in \
-                                           zip(leg_numbers, element)])
+                                             decay_elements[index]))
                 else:
-                    # We let the particles decay according to the
-                    # first decay list only
-                    proc_index = chain_indices[0]
+                    # All decays for this particle type are used
+                    chain = sum([filter(lambda me: \
+                                        me.get('processes')[0].\
+                                        get_initial_ids()[0] == fs_id,
+                                        decay_chain) for decay_chain in \
+                                 decay_elements], [])
 
-                    # Generate all combinations of decay chains with
-                    # the given decays, without double counting
-                    decay_indices = filter(lambda index: fs_id == \
-                                           decay_is_ids[proc_index][index],
-                                       range(len(decay_is_ids[proc_index])))
+                    chains = [chain] * len(fs_numbers[fs_id])
 
+                red_decay_chains = []
+                for prod in itertools.product(*chains):
 
-                    red_decay_ids = []
-                    decay_ids = [decay_indices] * len(leg_numbers)
-                    # Combine all decays for this final state type,
-                    # without double counting
-                    for prod in itertools.product(*decay_ids):
+                    # Now, need to ensure that we don't append
+                    # duplicate chain combinations, e.g. (a>bc, a>de) and
+                    # (a>de, a>bc)
+                    
+                    # Remove double counting between final states
+                    if sorted([p.get('processes')[0] for p in prod],
+                              lambda x1, x2: x1.compare_for_sort(x2)) \
+                              in red_decay_chains:
+                        continue
+                    
+                    # Store already used combinations
+                    red_decay_chains.append(\
+                    sorted([p.get('processes')[0] for p in prod],
+                              lambda x1, x2: x1.compare_for_sort(x2)))
 
-                        # Remove double counting between final states
-                        if tuple(sorted(prod)) in red_decay_ids:
-                            continue
-
-                        # Specify decay processes in the matrix element process
-                        red_decay_ids.append(tuple(sorted(prod)));
-
-                        # Pick out the decays for this iteration
-                        decays = [decay_elements[proc_index][chain_index] \
-                                  for chain_index in prod]
-
-                        decay_list.append([[n, d] for [n, d] in \
-                                           zip(leg_numbers, decays)])
+                    # Add the decays to the list
+                    decay_list.append(zip(fs_numbers[fs_id], prod))
 
                 decay_lists.append(decay_list)
 
             # Finally combine all decays for this process,
             # and combine them, decay by decay
             for decays in itertools.product(*decay_lists):
-
+                
                 # Generate a dictionary from leg number to decay process
                 decay_dict = dict(sum(decays, []))
 
