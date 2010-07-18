@@ -577,7 +577,7 @@ def write_dname_file(fsock, matrix_element, fortran_model):
     """Write the dname.mg file for MG4"""
 
     line = "DIRNAME=P%s" % \
-           matrix_element.get('processes')[0].shell_string_v4()
+           matrix_element.get('processes')[0].shell_string()
 
     # Write the file
     fsock.write(line + "\n")
@@ -863,7 +863,7 @@ def write_subproc(fsock, matrix_element, fortran_model):
     """Append this subprocess to the subproc.mg file for MG4"""
 
     line = "P%s" % \
-           matrix_element.get('processes')[0].shell_string_v4()
+           matrix_element.get('processes')[0].shell_string()
 
     # Write line to file
     fsock.write(line + "\n")
@@ -907,7 +907,7 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
 
     # Create the directory PN_xx_xxxxx in the specified path
     dirpath = os.path.join(path, \
-                   "P%s" % matrix_element.get('processes')[0].shell_string_v4())
+                   "P%s" % matrix_element.get('processes')[0].shell_string())
     try:
         os.mkdir(dirpath)
     except os.error as error:
@@ -975,7 +975,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     pathdir = os.getcwd()
 
     # Create the directory PN_xx_xxxxx in the specified path
-    subprocdir = "P%s" % matrix_element.get('processes')[0].shell_string_v4()
+    subprocdir = "P%s" % matrix_element.get('processes')[0].shell_string()
     try:
         os.mkdir(subprocdir)
     except os.error as error:

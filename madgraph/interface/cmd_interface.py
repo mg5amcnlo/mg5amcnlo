@@ -1587,6 +1587,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         while index_comma > -1:
             line = line[index_comma + 1:]
+            if not line.strip():
+                break
             index_par = line.find(')')
             if line.lstrip()[0] == '(':
                 # Go down one level in process hierarchy

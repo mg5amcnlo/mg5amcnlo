@@ -46,7 +46,7 @@ which show information on the particles and the vertices of the model
 or presently defined multiparticle labels.
 
 You can now generate a process, by running
-mg5>generate p p > t t~ QED=0 @1
+mg5>generate p p > t t~ QED=0
 Note that a space is mandatory between the particle names.
 """
 
@@ -55,7 +55,7 @@ You have just seen some information about the model, which can help
 you in order to generate a process.
 
 You can now generate a process, by running
-mg5>generate p p > t t~ QED=0 @1
+mg5>generate p p > t t~ QED=0
 Note that a space is mandatory between the particle names.
 """
 display_particles = display_model
@@ -77,7 +77,7 @@ leptonically.
 At this stage you can export your processes to different formats. In
 this tutorial, we will explain how to create output for MadEvent.
 This is done simply by typing:
-mg5>setup madevent_v4 MY_FIRST_MG5_RUN -f
+mg5>setup madevent_v4 MY_FIRST_MG5_RUN
 """
 
 display_processes = """
@@ -86,7 +86,7 @@ You have seen a list of the already defined processes.
 At this stage you can export your processes to different formats. In
 this tutorial, we will explain how to create a valid output for
 MadEvent. This is done simply by typing:
-mg5>setup madevent_v4 MY_FIRST_MG5_RUN -f
+mg5>setup madevent_v4 MY_FIRST_MG5_RUN
 """
 
 add_process = """
@@ -95,9 +95,8 @@ You have added a process to your process list.
 At this stage you can export your processes to different formats. In
 this tutorial, we will explain how to create a valid output for
 MadEvent. This is done simply by typing:
-mg5>setup madevent_v4 MY_FIRST_MG5_RUN -f
+mg5>setup madevent_v4 MY_FIRST_MG5_RUN
 """
-
 setup_madevent_v4 = """
 If you are following the tutorial, a directory MY_FIRST_MG5_RUN has
 been created which can be used in order to run MadEvent exactly as if
