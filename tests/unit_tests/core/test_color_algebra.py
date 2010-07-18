@@ -147,7 +147,7 @@ class ColorObjectTest(unittest.TestCase):
     def test_f_object(self):
         """Test the f color object"""
         # T should have exactly 3 indices!
-        self.assertRaises(ValueError,
+        self.assertRaises(AssertionError,
                          color.f,
                          1, 2, 3, 4)
 
@@ -166,7 +166,7 @@ class ColorObjectTest(unittest.TestCase):
     def test_d_object(self):
         """Test the d color object"""
         # T should have exactly 3 indices!
-        self.assertRaises(ValueError,
+        self.assertRaises(AssertionError,
                          color.d,
                          1, 2)
 

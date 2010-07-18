@@ -12,7 +12,6 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
- 
 """Classes for diagram generation. Amplitude performs the diagram
 generation, DecayChainAmplitude keeps track of processes with decay
 chains, and MultiProcess allows generation of processes with
@@ -25,6 +24,7 @@ import logging
 
 import madgraph.core.base_objects as base_objects
 
+from madgraph import MadGraph5Error
 logger = logging.getLogger('madgraph.diagram_generation')
 
 #===============================================================================
@@ -147,8 +147,7 @@ class Amplitude(base_objects.PhysicsObject):
         model = self['process'].get('model')
         legs = self['process'].get('legs')
 
-        if not model.get('particles') or not model.get('interactions'):
-            raise self.PhysicsObjectError, \
+        assert model.get('particles') and model.get('interactions'), \
                   "%s is missing particles or interactions" % repr(model)
 
         res = base_objects.DiagramList()
@@ -624,7 +623,7 @@ class DecayChainAmplitude(Amplitude):
                 if not process.get('is_decay_chain'):
                     process.set('is_decay_chain',True)
                 if not process.get_ninitial() == 1:
-                    raise self.PhysicsObjectError,\
+                    raise MadGraph5Error,\
                           "Decay chain process must have exactly one" + \
                           " incoming particle"
                 self['decay_chains'].append(\
@@ -810,10 +809,9 @@ class MultiProcess(base_objects.PhysicsObject):
         identify processes with identical amplitudes.
         """
 
-        if not isinstance(process_definition, base_objects.ProcessDefinition):
-            raise base_objects.PhysicsObjectError,\
-                  "%s not valid ProcessDefinition object" % \
-                  repr(process_definition)
+        assert isinstance(process_definition, base_objects.ProcessDefinition), \
+                                    "%s not valid ProcessDefinition object" % \
+                                    repr(process_definition)
 
         processes = base_objects.ProcessList()
         amplitudes = AmplitudeList()
@@ -900,9 +898,7 @@ def expand_list(mylist):
     """
 
     # Check that argument is a list
-    if not isinstance(mylist, list):
-        raise base_objects.PhysicsObject.PhysicsObjectError, \
-              "Expand_list argument must be a list"
+    assert isinstance(mylist, list), "Expand_list argument must be a list"
 
     res = []
 
@@ -926,8 +922,7 @@ def expand_list_list(mylist):
 
     res = []
     # Check the first element is at least a list
-    if not isinstance(mylist[0], list):
-        raise base_objects.PhysicsObject.PhysicsObjectError, \
+    assert isinstance(mylist[0], list), \
               "Expand_list_list needs a list of lists and lists of lists"
 
     # Recursion stop condition, one single element

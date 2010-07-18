@@ -292,6 +292,9 @@ class ColorBasis(dict):
         or 1 arguments). If one arguments is given, it's interpreted as 
         an amplitude."""
 
+        assert len(args) < 2, "Object ColorBasis must be initialized with 0 or 1 arguments"
+
+
         dict.__init__(self)
 
         # Dictionary to save simplifications already done in a canonical form
@@ -300,14 +303,11 @@ class ColorBasis(dict):
         # Dictionary store the raw colorize information
         self._list_color_dict = []
 
-        if len(args) not in (0, 1):
-            raise ValueError, \
-                "Object ColorBasis must be initialized with 0 or 1 arguments"
 
-        if len(args) == 1:
-            if not isinstance(args[0], diagram_generation.Amplitude):
-                raise TypeError, \
-                        "%s is not a valid Amplitude object" % str(value)
+        if args:
+            assert isinstance(args[0], diagram_generation.Amplitude), \
+                        "%s is not a valid Amplitude object" % str(args[0])
+                        
             self.build(*args)
 
     def __str__(self):
