@@ -282,9 +282,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         set all other interaction properties. When setting pdg_code,
         if model is given, set all other particle properties."""
 
-        if len(arguments) < 2:
-            raise self.PhysicsObjectError, \
-                  "Too few arguments for set"
+        assert len(arguments) >1, "Too few arguments for set"
 
         name = arguments[0]
         value = arguments[1]
@@ -398,8 +396,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         Lorentz structure of the interaction, and set PDG code
         according to the particles in the interaction"""
 
-        if not isinstance(model, base_objects.Model):
-            raise self.PhysicsObjectError, \
+        assert isinstance(model, base_objects.Model), \
                   "%s is not a valid model for call to set_state_and_particle" \
                   % repr(model)
 
@@ -854,9 +851,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         init_mothers = filter(lambda wf: wf.get('number_external') <= ninitial,
                               self.get('mothers'))
 
-        if len(init_mothers) > 2:
-            raise self.PhysicsObjectError, \
-                  "get_s_and_t_channels can only handle up to 2 initial states"
+        assert len(init_mothers) < 3 , \
+                   "get_s_and_t_channels can only handle up to 2 initial states"
 
         if len(init_mothers) == 1:
             # This is an s-channel or t-channel leg. Add vertex and
@@ -1280,9 +1276,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         set all other interaction properties. When setting pdg_code,
         if model is given, set all other particle properties."""
 
-        if len(arguments) < 2:
-            raise self.PhysicsObjectError, \
-                  "Too few arguments for set"
+        assert len(arguments) > 1, "Too few arguments for set"
 
         name = arguments[0]
         value = arguments[1]
@@ -1839,11 +1833,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         Note that we need special treatment for decay chains, since
         the end product then is a wavefunction, not an amplitude.
         """
+        
+        assert  isinstance(amplitude, diagram_generation.Amplitude), \
+                    "Missing or erraneous arguments for generate_helas_diagrams"
+        assert isinstance(optimization, int), \
+                    "Missing or erraneous arguments for generate_helas_diagrams"
 
-        if not isinstance(amplitude, diagram_generation.Amplitude) or \
-               not isinstance(optimization, int):
-            raise self.PhysicsObjectError, \
-                  "Missing or erraneous arguments for generate_helas_diagrams"
 
         diagram_list = amplitude.get('diagrams')
         process = amplitude.get('process')
@@ -3002,17 +2997,14 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         external particles, corresponding to the external
         wavefunctions.
         """
-
-        if len(decay1.get('processes')) != 1 or \
-           len(decay2.get('processes')) != 1:
-            raise HelasMatrixElement.PhysicsObjectError, \
+        
+        assert len(decay1.get('processes')) == 1 == len(decay2.get('processes')), \
                   "Can compare only single process HelasMatrixElements"
 
-        if len(filter(lambda leg: leg.get('state') == False, \
-                      decay1.get('processes')[0].get('legs'))) != 1 or \
-           len(filter(lambda leg: leg.get('state') == False, \
-                      decay2.get('processes')[0].get('legs'))) != 1:
-            raise HelasMatrixElement.PhysicsObjectError, \
+        assert len(filter(lambda leg: leg.get('state') == False, \
+                      decay1.get('processes')[0].get('legs'))) == 1 and \
+               len(filter(lambda leg: leg.get('state') == False, \
+                      decay2.get('processes')[0].get('legs'))) == 1, \
                   "Call to check_decay_processes_equal requires " + \
                   "both processes to be unique"
 
@@ -3117,11 +3109,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         3. Fermions ordered IOIOIO... according to the pairs in
            the interaction."""
 
-        if not isinstance(arg, HelasWavefunction) and \
-               not isinstance(arg, HelasAmplitude):
-            raise base_objects.PhysicsObject.PhysicsObjectError, \
-                  "%s is not a valid HelasWavefunction or HelasAmplitude" % \
-                  repr(arg)
+        assert isinstance(arg, (HelasWavefunction, HelasAmplitude)), \
+            "%s is not a valid HelasWavefunction or HelasAmplitude" % repr(arg)
 
         if not arg.get('interaction_id'):
             return arg.get('mothers')
@@ -3281,9 +3270,9 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
         """Generate the HelasMatrixElements for the core processes and
         decay processes (separately)"""
 
-        if not isinstance(dc_amplitude, diagram_generation.DecayChainAmplitude):
-            raise self.PhysicsObjectError, \
-                  "%s is not a valid DecayChainAmplitude" % dc_amplitude
+        assert isinstance(dc_amplitude, diagram_generation.DecayChainAmplitude), \
+                        "%s is not a valid DecayChainAmplitude" % dc_amplitude
+
 
         matrix_elements = self['core_processes']
 
@@ -3558,8 +3547,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         identifying processes with identical matrix elements, as
         defined by HelasMatrixElement.__eq__"""
 
-        if not isinstance(amplitudes, diagram_generation.AmplitudeList):
-            raise self.PhysicsObjectError, \
+        assert isinstance(amplitudes, diagram_generation.AmplitudeList), \
                   "%s is not valid AmplitudeList" % repr(amplitudes)
 
         # Keep track of already generated color objects, to reuse as
@@ -3583,9 +3571,9 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                 matrix_element_list = [HelasMatrixElement(amplitude,
                                                           gen_color=False)]
             for matrix_element in matrix_element_list:
-                if not isinstance(matrix_element, HelasMatrixElement):
-                    raise self.PhysicsObjectError, \
-                          "Not a HelasMatrixElement: ", matrix_element
+                assert isinstance(matrix_element, HelasMatrixElement), \
+                          "Not a HelasMatrixElement: %s" % matrix_element
+
                 try:
                     # If an identical matrix element is already in the list,
                     # then simply add this process to the list of
@@ -3696,8 +3684,7 @@ class HelasModel(base_objects.PhysicsObject):
         """Return a list of strings, corresponding to the Helas calls
         for the matrix element"""
 
-        if not isinstance(matrix_element, HelasMatrixElement):
-            raise self.PhysicsObjectError, \
+        assert isinstance(matrix_element, HelasMatrixElement), \
                   "%s not valid argument for get_matrix_element_calls" % \
                   repr(matrix_element)
 
@@ -3737,16 +3724,11 @@ class HelasModel(base_objects.PhysicsObject):
         """Set the function for writing the wavefunction
         corresponding to the key"""
 
-
-        if not isinstance(key, tuple):
-            raise self.PhysicsObjectError, \
-                  "%s is not a valid tuple for wavefunction key" % \
-                  str(key)
-
-        if not callable(function):
-            raise self.PhysicsObjectError, \
-                  "%s is not a valid function for wavefunction string" % \
-                  str(function)
+        assert isinstance(key, tuple), \
+                       "%s is not a valid tuple for wavefunction key" % key
+        
+        assert callable(function), \
+                 "%s is not a valid function for wavefunction string" % function
 
         self.get('wavefunctions')[key] = function
         return True
@@ -3755,17 +3737,13 @@ class HelasModel(base_objects.PhysicsObject):
         """Set the function for writing the amplitude
         corresponding to the key"""
 
+        assert isinstance(key, tuple), \
+                        "%s is not a valid tuple for amplitude key" % str(key)
 
-        if not isinstance(key, tuple):
-            raise self.PhysicsObjectError, \
-                  "%s is not a valid tuple for amplitude key" % \
-                  str(key)
-
-        if not callable(function):
-            raise self.PhysicsObjectError, \
-                  "%s is not a valid function for amplitude string" % \
-                  str(function)
-
+        assert callable(function), \
+            "%s is not a valid function for amplitude string" % str(function)
+            
+            
         self.get('amplitudes')[key] = function
         return True
 
