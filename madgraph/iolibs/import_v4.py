@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+from madgraph.core import base_objects
 """Methods and classes to import v4 format model files."""
 
 import fractions
@@ -19,14 +20,80 @@ import logging
 import os
 import re
 
+from madgraph import MadGraph5Error, MG4DIR
 
 import madgraph.core.color_algebra as color
+import madgraph.iolibs.files as files
+import madgraph.iolibs.save_load_object as save_load_object
+
 from madgraph.core.base_objects import Particle, ParticleList
 from madgraph.core.base_objects import Interaction, InteractionList
-from madgraph import MadGraph5Error
+
+
 
 
 logger = logging.getLogger('madgraph.import_v4')
+
+#===============================================================================
+# import_v4model
+#===============================================================================
+def import_model(model_path):
+    """create a model from a MG4 model directory."""
+
+    # Check for a valid directory
+    if os.path.isdir(model_path):
+        pass
+    elif MG4DIR and os.path.isdir(os.path.join(MG4DIR, 'Models', model_path)):
+        model_path = os.path.join(MG4DIR, 'Models', model_path)
+    elif not MG4DIR:
+        error_text = "Path %s is not a valid pathname\n" % model_path
+        error_text += "and no MG_ME installation detected in order to search in Models"
+        raise MadGraph5Error(error_text)
+    else:
+        raise MadGraph5Error("Path %s is not a valid pathname" % model_path)
+
+
+    files_list = [os.path.join(model_path, 'particles.dat'),\
+                  os.path.join(model_path, 'interactions.dat')]
+    
+    for filepath in files_list:
+        if not os.path.isfile(filepath):
+            raise MadGraph5Error,  "%s directory is not a valid v4 model" % \
+                                                                    (model_path)
+                                                                
+    # use pickle files if defined
+    if files.is_update(os.path.join(model_path, 'model.pkl'), files_list):
+        model = save_load_object.load_from_file( \
+                                          os.path.join(model_path, 'model.pkl'))
+        return model
+
+    model = base_objects.Model()    
+    model.set('particles',files.read_from_file( \
+                                  os.path.join(model_path, 'particles.dat'),
+                                  read_particles_v4))
+    
+    model.set('interactions',files.read_from_file( \
+                                  os.path.join(model_path, 'interactions.dat'),
+                                  read_interactions_v4,
+                                  model['particles']))
+    
+    model.set('name', os.path.split(model_path)[-1])
+    model.set('path', model_path)  
+    
+    # save in a pickle files to fasten future usage
+    save_load_object.save_to_file(os.path.join(model_path, 'model.pkl'), model)
+    
+    return model  
+
+    
+
+    
+    
+    
+    
+
+
+
 
 #===============================================================================
 # read_particles_v4

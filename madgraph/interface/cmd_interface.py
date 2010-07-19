@@ -34,33 +34,27 @@ try:
 except:
     readline = None
     
-
-
-
-import madgraph.iolibs.misc as misc
-import madgraph.iolibs.files as files
-
-import madgraph.iolibs.import_v4 as import_v4
-import madgraph.iolibs.import_ufo as import_ufo
-#import madgraph.iolibs.save_model as save_model
-import madgraph.iolibs.save_load_object as save_load_object
-import madgraph.iolibs.export_v4 as export_v4
-import madgraph.iolibs.export_pythia8 as export_pythia8
-import madgraph.iolibs.convert_ufo2mg4 as ufo2mg4
-import madgraph.iolibs.file_writers as writers
+from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
-
 import madgraph.core.helas_objects as helas_objects
+
+import madgraph.iolibs.convert_ufo2mg4 as ufo2mg4
 import madgraph.iolibs.drawing as draw_lib
 import madgraph.iolibs.drawing_eps as draw
+import madgraph.iolibs.export_pythia8 as export_pythia8
+import madgraph.iolibs.export_v4 as export_v4
+import madgraph.iolibs.helas_call_writers as helas_call_writers
+import madgraph.iolibs.file_writers as writers
+import madgraph.iolibs.files as files
+import madgraph.iolibs.import_ufo as import_ufo
+import madgraph.iolibs.import_v4 as import_v4
+import madgraph.iolibs.misc as misc
+import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.tutorial_text as tutorial_text
 
-from madgraph import MG4DIR, MG5DIR, MadGraph5Error
-
-import models as ufomodels
 import aloha.create_helas as create_helas
 
 # Special logger for the Cmd Interface
@@ -494,7 +488,7 @@ class CheckValidForCmd(object):
             self.help_define()
             raise self.InvalidCmd('\"define\" command requires symbols \"=\" at the second position')
         
-        if len(self._curr_model['particles']) == 0:
+        if not self._curr_model:
             raise self.InvalidCmd("No particle list currently active, please import a model first")
 
         if self._curr_model['particles'].find_name(args[0]):
@@ -690,7 +684,7 @@ class CheckValidForCmd(object):
                     "Do a  \"setup\" first" 
             raise self.InvalidCmd(text)
         
-        if not self._model_dir:
+        if not self._curr_model:
             text = 'No model found. Please import a model first and then retry\n'
             text += 'for example do : import model_v4 sm'
             raise self.InvalidCmd(text)
@@ -1029,11 +1023,11 @@ class CompleteForCmd(CheckValidForCmd):
 class MadGraphCmd(CmdExtended, HelpToCmd):
     """The command line processor of MadGraph"""    
     
-    _curr_model = base_objects.Model()
+    _curr_model = None  #base_objects.Model()
     _curr_amps = diagram_generation.AmplitudeList()
     _curr_matrix_elements = helas_objects.HelasMultiProcess()
-    _curr_fortran_model = export_v4.HelasFortranModel()
-    _curr_cpp_model = export_pythia8.UFOHelasCPPModel()
+    _curr_fortran_model = helas_call_writers.FortranHelasCallWriter()
+    _curr_cpp_model = helas_call_writers.CPPUFOHelasCallWriter()
 
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams', 
                      'multiparticles', 'couplings']
@@ -1051,10 +1045,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         CmdExtended.__init__(self, *arg, **opt)
         self._generate_info = "" # store the first generated process
-        self._model_dir = None
         self._model_format = None
         self._multiparticles = {}
-        self._ufo_model = None
         
         # Detect If this script is launched from a valid copy of the Template
         #and if so store this position as standard output directory
@@ -1340,7 +1332,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                      'procdef_mg5.dat')
             if self._generate_info:
                 export_v4.write_procdef_mg5(card_path,
-                                os.path.split(self._model_dir)[-1],
+                                self._curr_model['name'],
                                 self._generate_info)
                 try:
                     cmd.Cmd.onecmd(self, 'history .')
@@ -1690,17 +1682,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self.check_import(args)
         
         if args[0] == 'model':
-            self._ufo_model = ufomodels.load_model(args[1])
-            ufo2mg5_converter = import_ufo.converter_ufo_mg5(self._ufo_model)
-            self._curr_model = ufo2mg5_converter.load_model()
-            if os.path.isdir(args[1]):
-                self._model_dir = args[1]
-            elif os.path.isdir(os.path.join(MG5DIR, 'models', args[1])):
-                self._model_dir = os.path.join(MG5DIR, 'models', args[1])
-            else:
-                raise self.InvalidCmd('Invalid model path/name')
-            self._curr_fortran_model = export_v4.UFOHelasFortranModel()
+            self._curr_model = import_ufo.import_model(args[1])
             self.add_default_multiparticles()
+            self._curr_fortran_model = \
+                                  helas_call_writers.FortranUFOHelasCallWriter()
         
         elif args[0] == 'command':
             if not os.path.isfile(args[1]):
@@ -1713,7 +1698,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self.import_mg5_proc_card(args[1])    
         
         elif args[0] == 'model_v4':
-            self.import_mg4_model(args[1:])
+            self._curr_model = import_v4.import_model(args[1])
+            print self._curr_model['path']
             self.add_default_multiparticles()
  
         elif args[0] == 'proc_v4':
@@ -1766,75 +1752,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self.exec_cmd(line)
     
         return 
-    
-    def import_mg4_model(self, args):
-        """Import the model from mg4"""
-        
-        def import_v4file(self, filepath):
-            """Helper function to load a v4 file from file path filepath"""
-            filename = os.path.basename(filepath)
-            if filename.endswith('particles.dat'):
-                self._curr_model.set('particles',
-                                     files.read_from_file(
-                                            filepath,
-                                            import_v4.read_particles_v4))
-                logger.info("%d particles imported" % \
-                      len(self._curr_model['particles']))
-                      
-            elif filename.endswith('interactions.dat'):
-                if len(self._curr_model['particles']) == 0:
-                    text =  "No particle list currently active,"
-                    text += "please create one first!"
-                    raise MadGraph5Error(text)
-                self._curr_model.set('interactions',
-                                     files.read_from_file(
-                                            filepath,
-                                            import_v4.read_interactions_v4,
-                                            self._curr_model['particles']))
-                logger.info("%d interactions imported" % \
-                      len(self._curr_model['interactions']))
            
-            else:
-                #not valid File
-                raise MadGraph5Error("%s is not a valid v4 file name" % \
-                                     filepath)
-                
-                        
-        # Check for a file
-        if os.path.isfile(args[0]):
-            import_v4file(self, args[0])
-            self._model_dir = os.path.dirname(args[0])
-            return
-            
-        # Check for a valid directory
-        elif os.path.isdir(args[0]):
-            self._model_dir = args[0]
-        elif MG4DIR and os.path.isdir(os.path.join(MG4DIR, 'Models', \
-                                                                      args[0])):
-            self._model_dir = os.path.join(MG4DIR, 'Models', args[0])
-        elif not MG4DIR:
-            error_text = "Path %s is not a valid pathname\n" % args[0]
-            error_text += "and no MG_ME installation detected in order to search in Models"
-            raise MadGraph5Error(error_text)
-        else:
-            raise MadGraph5Error("Path %s is not a valid pathname" % args[0])
-            
-        #Load the directory
-        if os.path.exists(os.path.join(self._model_dir, 'model.pkl')):
-            self.do_load('model %s' % os.path.join(self._model_dir, 'model.pkl'))
-            return
-        files_to_import = ('particles.dat', 'interactions.dat')
-        for filename in files_to_import:
-            if os.path.isfile(os.path.join(self._model_dir, filename)):
-                import_v4file(self, os.path.join(self._model_dir, filename))
-            else:
-                raise self.RWError("%s file doesn't exist in %s directory" % \
-                                        (filename, os.path.basename(args[1])))
-        #save model for next usage
-        save_load_object.save_to_file(os.path.join(self._model_dir, 'model.pkl')
-                                    , self._curr_model)
-            
-        
     def import_mg5_proc_card(self, filepath):
         # remove this call from history
         self.history.pop()
@@ -2023,12 +1941,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         elif args[1] == 'auto':
             if args[0] == 'madevent_v4':
                 name_dir = lambda i: 'PROC_%s_%s' % \
-                                        (os.path.split(self._model_dir)[-1], i)
+                                        (self._curr_model['name'], i)
                 auto_path = lambda i: os.path.join(self.writing_dir,
                                                    name_dir(i))
             elif args[0] == 'standalone_v4':
                 name_dir = lambda i: 'PROC_SA_%s_%s' % \
-                                        (os.path.split(self._model_dir)[-1], i)
+                                        (self._curr_model['name'], i)
                 auto_path = lambda i: os.path.join(self.writing_dir,
                                                    name_dir(i))                
             for i in range(500):
@@ -2049,27 +1967,31 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 raise MadGraph5Error('Stopped by user request')
 
         if args[0] == 'madevent_v4':
-            export_v4.copy_v4template(mgme_dir, dir_path,
-                                      self._model_dir, not noclean)
+            export_v4.copy_v4template(mgme_dir, dir_path, not noclean)
             self._export_format = 'madevent_v4'
         if args[0] == 'standalone_v4':
-            export_v4.copy_v4standalone(mgme_dir, dir_path,
-                                        self._model_dir, not noclean)
+            export_v4.copy_v4standalone(mgme_dir, dir_path, not noclean)
             self._export_format = 'standalone_v4'
 
         # Import the model/HELAS
-        if not self._ufo_model:
-            logger.info('import v4model files %s in directory %s' % \
-                       (os.path.basename(self._model_dir), args[1]))        
-            export_v4.export_model_files(self._model_dir, dir_path)
-            export_v4.export_helas(os.path.join(mgme_dir,'HELAS'), dir_path)
+        if self._curr_model['path']:
+            if args[0].endswith('_v4'):
+                logger.info('import v4model files %s in directory %s' % \
+                       (os.path.basename(self._curr_model['path']), args[1]))        
+                export_v4.export_model_files(self._curr_model['path'], dir_path)
+                export_v4.export_helas(os.path.join(mgme_dir,'HELAS'), dir_path)
+            else:
+                raise self.InvalidCmd, 'This setup doesn\'t work with a MG4 model as input'
         else:
-            logger.info('convert UFO model to MG4 format')
-            ufo2mg4.export_to_mg4(self._ufo_model, 
+            if args[0].endswith('_v4'):
+                logger.info('convert UFO model to MG4 format')
+                ufo2mg4.export_to_mg4(self._ufo_model, 
                                         os.path.join(dir_path,'Source','MODEL'))
-            create_helas.AbstractHelasModel(os.path.basename(self._model_dir),
+                create_helas.AbstractHelasModel(self._curr_model['name'],
                             write_dir=os.path.join(dir_path,'Source','DHELAS'))
-            export_v4.make_model_symbolic_link(self._model_dir, dir_path)
+                export_v4.make_model_symbolic_link(self._curr_model['path'], dir_path)
+            else:
+                raise NotImplemented
             
         if args[0] == 'standalone_v4':
             export_v4.make_v4standalone(dir_path)

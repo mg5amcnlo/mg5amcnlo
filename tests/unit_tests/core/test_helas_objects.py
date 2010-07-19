@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+from madgraph.iolibs import helas_call_writers
 
 """Unit test library for the helas_objects module"""
 
@@ -24,6 +25,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color
+import madgraph.iolibs.helas_call_writers
 import madgraph.iolibs.export_v4 as export_v4
 
 #===============================================================================
@@ -2723,7 +2725,7 @@ class HelasMultiProcessTest(unittest.TestCase):
 class HelasModelTest(unittest.TestCase):
     """Test class for the HelasModel object"""
 
-    mymodel = helas_objects.HelasModel()
+    mymodel = helas_call_writers.HelasCallWriter()
     mybasemodel = base_objects.Model()
 
     def setUp(self):
@@ -3137,20 +3139,20 @@ class HelasModelTest(unittest.TestCase):
     def test_setget_helas_model_error(self):
         """Test error raising in HelasModel object get and set"""
 
-        mymodel = helas_objects.HelasModel()
+        mymodel = helas_call_writers.HelasCallWriter()
         not_a_string = 1.
 
         # General
         self.assertRaises(AssertionError,
                           mymodel.get,
                           not_a_string)
-        self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
+        self.assertRaises(helas_call_writers.HelasCallWriter.PhysicsObjectError,
                           mymodel.get,
                           'wrong_key')
         self.assertRaises(AssertionError,
                           mymodel.set,
                           not_a_string, None)
-        self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
+        self.assertRaises(helas_call_writers.HelasCallWriter.PhysicsObjectError,
                           mymodel.set,
                           'wrong_subclass', None)
         # add_wavefunction and add_amplitude

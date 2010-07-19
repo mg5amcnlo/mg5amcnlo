@@ -43,7 +43,6 @@ class PhysicsObject(dict):
         use it to give values to properties."""
 
         dict.__init__(self)
-
         self.default_setup()
 
         assert isinstance(init_dict, dict), \
@@ -52,6 +51,7 @@ class PhysicsObject(dict):
 
         for item in init_dict.keys():
             self.set(item, init_dict[item])
+        
 
     def __getitem__(self, name):
         """ force the check that the property exist before returning the 
@@ -91,6 +91,10 @@ class PhysicsObject(dict):
         """Set the value of the property name. First check if value
         is a valid value for the considered property. Return True if the
         value has been correctly set, False otherwise."""
+
+        if not __debug__:
+            self[name] = value
+            return True
 
         if self.is_valid_prop(name):
             try:
@@ -174,7 +178,7 @@ class PhysicsObjectList(list):
         if init_list is not None:
             for object in init_list:
                 self.append(object)
-
+                
     def append(self, object):
         """Appends an element, but test if valid before."""
         
@@ -650,6 +654,7 @@ class Model(PhysicsObject):
     def default_setup(self):
 
         self['name'] = ""
+        self['path'] = ""
         self['particles'] = ParticleList()
         self['parameters'] = None
         self['interactions'] = InteractionList()

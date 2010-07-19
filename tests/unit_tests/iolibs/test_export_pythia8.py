@@ -24,6 +24,7 @@ import tests.unit_tests as unittest
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.export_pythia8 as export_pythia8
 import madgraph.iolibs.file_writers as writers
+import madgraph.iolibs.helas_call_writers as helas_call_writer
 import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -40,7 +41,7 @@ class IOExportPythia8Test(unittest.TestCase,
 
     mymodel = base_objects.Model()
     mymatrixelement = helas_objects.HelasMatrixElement()
-    mycppmodel = export_pythia8.UFOHelasCPPModel()
+    mycppmodel = helas_call_writer.CPPUFOHelasCallWriter()
     created_files = ['test_h', 'test_cc'
                     ]
 

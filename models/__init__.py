@@ -14,10 +14,18 @@
 ################################################################################
 """All the UFO MODEL"""
 
+import os
 import sys
 
 def load_model(name):
-
-    model_pos = 'models.%s' % name
-    __import__(model_pos)
-    return sys.modules[model_pos]
+    
+    path_split = name.split(os.sep)
+    if len(path_split) == 1:
+        model_pos = 'models.%s' % name
+        __import__(model_pos)
+        return sys.modules[model_pos]
+    else:
+        sys.path.append(os.sep.join(path_split[:-1]))
+        __import__(path_split[-1])
+        return sys.modules[path_split[-1]]
+        sys.path.pop()

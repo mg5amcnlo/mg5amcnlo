@@ -39,7 +39,7 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         
         # import UFO model
         import models.sm as model
-        converter = import_ufo.converter_ufo_mg5(model)
+        converter = import_ufo.UFOMG5Converter(model)
         ufo_model = converter.load_model()
         
         # import MG4 model

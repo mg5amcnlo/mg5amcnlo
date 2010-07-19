@@ -19,32 +19,59 @@ import logging
 import os
 import sys
 
-import madgraph
+from madgraph import MadGraph5Error, MG5DIR
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
-
+import madgraph.iolibs.files as files
+import madgraph.iolibs.save_load_object as save_load_object
 from madgraph.core.color_algebra import *
 
+import models as ufomodels
 
 logger = logging.getLogger('madgraph.import_ufo')
 
 
 
-def import_model(model=None, model_name=None):
+def import_model(model_name):
     """ a practical and efficient way to import one of those models """
 
-    if model_name:
-        model_pos = 'models.%s' % model_name
-        __import__(model_pos)   
-        model = sys.modules[model_pos]
-    elif not model:
-        raise madgraph.MadGraph5Error( \
-                    'import_ufo.import_model should have at least one argument')
-    ufo2mg5_converter = converter_ufo_mg5(model, auto=False)
-    return ufo2mg5_converter.load_model()
+    # Check for a valid directory
+    if os.path.isdir(model_name):
+        model_path = model_name
+    elif os.path.isdir(os.path.join(MG5DIR, 'models', model_name)):
+        model_path = os.path.join(MG5DIR, 'models', model_name)
+    else:
+        raise MadGraph5Error("Path %s is not a valid pathname" % model_name)
+
+    # Check the presence of a pickle files containing the information
+    files_list_prov = ['couplings.py','lorentz.py','parameters.py',
+                       'particles.py', 'vertices.py']
+    files_list = []
+    for filename in files_list_prov:
+        filepath = os.path.join(model_path, filename)
+        if not os.path.isfile(filepath):
+            raise MadGraph5Error,  "%s directory is not a valid UFO model: \n %s is missing" % \
+                                                         (model_path, filename)
+        files_list.append(filepath)
+        
+    # use pickle files if defined
+    if files.is_update(os.path.join(model_path, 'model.pkl'), files_list):
+        model = save_load_object.load_from_file( \
+                                          os.path.join(model_path, 'model.pkl'))
+        return model
+
+    ufo_model = ufomodels.load_model(model_name)
+    ufo2mg5_converter = UFOMG5Converter(ufo_model)
+    model = ufo2mg5_converter.load_model()
+    model.set('name', os.path.split(model_name)[-1])
+ 
+    # save in a pickle files to fasten future usage
+    save_load_object.save_to_file(os.path.join(model_path, 'model.pkl'), model) 
+ 
+    return model
     
 
-class converter_ufo_mg5(object):
+class UFOMG5Converter(object):
     """Convert a UFO model to the MG5 format"""
 
     def __init__(self, model, auto=False):
@@ -55,6 +82,7 @@ class converter_ufo_mg5(object):
         self.model = base_objects.Model()
         self.model.set('particles', self.particles)
         self.model.set('interactions', self.interactions)
+        
         
         self.ufomodel = model
         
@@ -196,7 +224,7 @@ class converter_ufo_mg5(object):
             if name != default[pdg]:
                 old_part = self.particles.find_name(default[pdg]) 
                 if old_part:
-                    raise madgraph.MadGraph5Error(
+                    raise MadGraph5Error(
     '%s particles with pdg code %s is in conflict with MG convention name for \
      particle %s' % (old_part.get_name(), old_part.get_pdg_code(), pdg  ))
                 
@@ -206,7 +234,7 @@ class converter_ufo_mg5(object):
             if name != antiname and antiname != default[-1 *pdg]:
                 old_part = self.particles.find_name(default[-1 * pdg]) 
                 if old_part:
-                    raise madgraph.MadGraph5Error(
+                    raise MadGraph5Error(
     '%s particles with pdg code %s is in conflict with MG convention name for \
      particle %s' % (old_part.get_name(), old_part.get_pdg_code(), -1 * pdg  ))
                 
@@ -216,7 +244,7 @@ class converter_ufo_mg5(object):
         """ load the default for name convention """
         
         default = {}
-        for line in open(os.path.join(madgraph.MG5DIR, 'input', \
+        for line in open(os.path.join(MG5DIR, 'input', \
                                                  'particles_name_default.txt')):
             line = line.lstrip()
             if line.startswith('#'):

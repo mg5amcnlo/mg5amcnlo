@@ -51,16 +51,16 @@ class CompactifyExpression:
         real = float(matchobj.group('real'))
         imag = float(matchobj.group('imag'))
         if real == 0 and imag ==1:
-            self.add_indep( ('COMPLEXI', 'complex(0,1)', 'complex') )
-            return 'COMPLEXI'
+            self.add_indep( ('complexi', 'complex(0,1)', 'complex')) 
+            return 'complexi'
         else:
             self.add_indep( 
-                ('R%sI%s__' % (real, imag), \
+                ('r%si%s__' % (real, imag), \
                  'complex(%s,%s)' % (python_to_fortran(real), python_to_fortran(imag)),
                  'complex'
                  )
             )
-            return 'R%sI%s__' % (real, imag)
+            return 'r%si%s__' % (real, imag)
         
         
     def shorten_expo(self, matchobj):
@@ -68,7 +68,7 @@ class CompactifyExpression:
         
         expr = matchobj.group('expr')
         exponent = matchobj.group('expo')
-        output = '%s__EXP__%s' % (expr, exponent)
+        output = '%s__exp__%s' % (expr, exponent)
         new_expr = '%s**%s' % (expr,exponent)
 
         if expr.isdigit():
@@ -86,7 +86,7 @@ class CompactifyExpression:
         """add the short expression, and retrun the nice string associate"""
         
         expr = matchobj.group('expr')
-        output = 'SQRT__%s' % (expr)
+        output = 'sqrt__%s' % (expr)
         if expr.isdigit():
             self.add_indep( ( output, ' cmath.sqrt(%s) ' %  float(expr), 'real' ))
         elif self.is_event_dependent(expr) and expr !='aS':
@@ -102,7 +102,7 @@ class CompactifyExpression:
         """add the short expression, and retrun the nice string associate"""
         
         expr = matchobj.group('expr')
-        output = 'CONJG__%s' % (expr)
+        output = 'conjg__%s' % (expr)
         if self.is_event_dependent(expr) and expr !='aS':
             self.add_dep( (output, ' complexconjugate(%s) ' % expr, 'complex') )
         else:
