@@ -4068,3 +4068,196 @@ CALL IOSXXX(W(1,15),W(1,2),W(1,19),GELN2P,AMP(9))""")
 
         self.assertEqual(export_v4.get_JAMP_lines(me)[0],
                          "JAMP(1)=+AMP(1)-AMP(2)-AMP(3)+AMP(4)-AMP(5)-AMP(6)+AMP(7)-AMP(8)-AMP(9)")
+
+    def test_decay_process_config(self):
+        """Test configs.inc for decay process t > e+ ve b~
+        """
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A electron and positron
+        mypartlist.append(base_objects.Particle({'name':'e-',
+                      'antiname':'e+',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'e^-',
+                      'antitexname':'e^+',
+                      'line':'straight',
+                      'charge':-1.,
+                      'pdg_code':11,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        eminus = mypartlist[len(mypartlist) - 1]
+        eplus = copy.copy(eminus)
+        eplus.set('is_part', False)
+
+        # An electron neutrino
+        mypartlist.append(base_objects.Particle({'name':'ve',
+                      'antiname':'ve~',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\nu_e',
+                      'antitexname':'\bar\nu_e',
+                      'line':'straight',
+                      'charge':0.,
+                      'pdg_code':12,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        ve = mypartlist[len(mypartlist) - 1]
+        vebar = copy.copy(ve)
+        vebar.set('is_part', False)
+
+        # Top and bottom
+        mypartlist.append(base_objects.Particle({'name':'t',
+                      'antiname':'t~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'mt',
+                      'width':'wt',
+                      'texname':'t',
+                      'antitexname':'\bar t',
+                      'line':'straight',
+                      'charge':2./3.,
+                      'pdg_code':6,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        t = mypartlist[len(mypartlist) - 1]
+        tbar = copy.copy(t)
+        tbar.set('is_part', False)
+
+        mypartlist.append(base_objects.Particle({'name':'b',
+                      'antiname':'b~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'mb',
+                      'width':'zero',
+                      'texname':'b',
+                      'antitexname':'\bar b',
+                      'line':'straight',
+                      'charge':-1./3.,
+                      'pdg_code':5,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        b = mypartlist[len(mypartlist) - 1]
+        bbar = copy.copy(b)
+        bbar.set('is_part', False)
+
+        # A W
+        mypartlist.append(base_objects.Particle({'name':'W',
+                      'antiname':'W-',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MW',
+                      'width':'WW',
+                      'texname':'W^+',
+                      'antitexname':'W^-',
+                      'line':'wavy',
+                      'charge':1.,
+                      'pdg_code':24,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        Wplus = mypartlist[len(mypartlist) - 1]
+        Wminus = copy.copy(Wplus)
+        Wminus.set('is_part', False)
+
+        # Coupling of W to e- and ve
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             ve, \
+                                             Wminus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'WEVE'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [vebar, \
+                                             eminus, \
+                                             Wplus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'WEVE'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of W to t and b
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [bbar, \
+                                             t, \
+                                             Wminus]),
+                      'color': [color.ColorString([color.T(1, 0)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'WTB'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [tbar, \
+                                             b, \
+                                             Wplus]),
+                      'color': [color.ColorString([color.T(1, 0)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'WTB'},
+                      'orders':{'QED':1}}))
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+
+        # t > b e+ ve
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':5,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':12,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mymodel,
+                                       'required_s_channels': 24})
+
+        myamplitude = diagram_generation.Amplitude(myproc)
+
+        me = helas_objects.HelasMatrixElement(myamplitude)
+
+        myfortranmodel = export_v4.HelasFortranModel()
+
+        fsock = StringIO.StringIO()
+
+        # Test configs file
+        nconfig, s_and_t_channels = export_v4.write_configs_file(fsock,
+                                     me,
+                                     myfortranmodel)
+
+        self.assertEqual(fsock.getvalue(),
+                         """C     Diagram 1, Amplitude 1
+      DATA MAPCONFIG(1)/1/
+      DATA (IFOREST(I,-1,1),I=1,2)/4,3/
+      DATA SPROP(-1,1)/24/
+      DATA (IFOREST(I,-2,1),I=1,2)/-1,2/
+      DATA SPROP(-2,1)/6/
+C     Number of configs
+      DATA MAPCONFIG(0)/1/
+""")
+

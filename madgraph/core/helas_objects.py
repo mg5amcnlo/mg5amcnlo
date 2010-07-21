@@ -878,8 +878,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
                   "get_s_and_t_channels can only handle up to 2 initial states"
 
         if len(init_mothers) == 1:
-            # This is an s-channel or t-channel leg. Add vertex and
-            # continue stepping down towards external initial state
+            # This is an s-channel or t-channel leg, or the initial
+            # leg of a decay process. Add vertex and continue stepping
+            # down towards external initial state
             legs = base_objects.LegList()
 
             if ninitial == 1 or init_mothers[0].get('number_external') == 2 \
@@ -899,15 +900,18 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     'from_group': False
                     }))
 
-            if ninitial == 1 or (init_mothers[0].get('number_external') == 1 \
-                             and init_mothers[0].get('leg_state') == False):
-                # For decay processes or if the mother is going
+            if ninitial == 1 or init_mothers[0].get('number_external') == 2 \
+                   or init_mothers[0].get('leg_state') == True:
+                # For decay processes or if this is an s-channel leg
+                # or we are going towards external leg 2, mother leg
+                # is one of the mothers
+                legs.insert(-1, mother_leg)
+                # Also need to switch direction of the resulting s-channel
+                legs[-1].set('id', init_mothers[0].get_anti_pdg_code())
+            else:
+                # If the mother is going
                 # towards external leg 1, mother leg is resulting wf
                 legs.append(mother_leg)
-            else:
-                # If this is an s-channel leg or we are going towards
-                # external leg 2, mother leg is one of the mothers
-                legs.insert(-1, mother_leg)
 
             # Renumber resulting leg according to minimum leg number
             legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
@@ -1525,8 +1529,9 @@ class HelasAmplitude(base_objects.PhysicsObject):
                   "get_s_and_t_channels can only handle up to 2 initial states"
 
         if len(init_mothers) == 1:
-            # This is an s-channel leg. Add vertex and start stepping down
-            # towards initial state
+            # This is an s-channel leg, or the first vertex in a decay
+            # process. Add vertex and start stepping down towards
+            # initial state
 
             # Create vertex
             legs = base_objects.LegList()
@@ -1540,6 +1545,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
             # Renumber resulting leg according to minimum leg number
             legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
+            # Change direction of init_mother
+            legs[-1].set('id', init_mothers[0].get_anti_pdg_code())
 
             # Add vertex to s-channels
             schannels.append(base_objects.Vertex({

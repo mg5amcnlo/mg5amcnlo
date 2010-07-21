@@ -213,10 +213,12 @@ class Amplitude(base_objects.PhysicsObject):
         # Reduce the leg list and return the corresponding
         # list of vertices
 
-        # Set is_decay_chain to True if this is a 1->N decay process
-        # as part of a decay chain.
-        is_decay_chain = process.get('is_decay_chain')
-        if is_decay_chain:
+        # For decay processes, generate starting from final-state
+        # particles and make sure the initial state particle is
+        # combined only as the last particle. This allows to use these
+        # in decay chains later on.
+        is_decay_proc = process.get_ninitial() == 1
+        if is_decay_proc:
             part = model.get('particle_dict')[leglist[0].get('id')]
             # For decay chain legs, we want everything to combine to
             # the initial leg. This is done by only allowing the
@@ -229,13 +231,13 @@ class Amplitude(base_objects.PhysicsObject):
             reduced_leglist = self.reduce_leglist(leglist,
                                                   max_multi_to1,
                                                   ref_dict_to0,
-                                                  is_decay_chain,
+                                                  is_decay_proc,
                                                   process.get('orders'))
         else:
             reduced_leglist = self.reduce_leglist(leglist,
                                                   max_multi_to1,
                                                   model.get('ref_dict_to0'),
-                                                  is_decay_chain,
+                                                  is_decay_proc,
                                                   process.get('orders'))
 
         for vertex_list in reduced_leglist:
@@ -251,6 +253,11 @@ class Amplitude(base_objects.PhysicsObject):
         # Note that we shouldn't look at the last vertex in each
         # diagram, since that is the n->0 vertex
         if process.get('required_s_channels'):
+            lastvx = -1
+            # For decay chain processes, there is an "artificial"
+            # extra vertex corresponding to particle 1=1, so we need
+            # to exclude the two last vertexes.
+            if is_decay_proc: lastvx = -2
             ninitial = len(filter(lambda leg: leg.get('state') == False,
                                   process.get('legs')))
             res = base_objects.DiagramList(\
@@ -258,7 +265,7 @@ class Amplitude(base_objects.PhysicsObject):
                        all([req_s_channel in \
                             [vertex.get_s_channel_id(\
                             process.get('model'), ninitial) \
-                            for vertex in diagram.get('vertices')[:-1]] \
+                            for vertex in diagram.get('vertices')[:lastvx]] \
                             for req_s_channel in \
                             process.get('required_s_channels')]), res))
 
@@ -293,7 +300,7 @@ class Amplitude(base_objects.PhysicsObject):
         return not failed_crossing
 
     def reduce_leglist(self, curr_leglist, max_multi_to1, ref_dict_to0,
-                       is_decay_chain = False, coupling_orders = None):
+                       is_decay_proc = False, coupling_orders = None):
         """Recursive function to reduce N LegList to N-1
            For algorithm, see doc for generate_diagrams.
         """
@@ -315,7 +322,7 @@ class Amplitude(base_objects.PhysicsObject):
         # If all legs can be combined in one single vertex, add this
         # vertex to res and continue.
         # Special treatment for decay chain legs
-        if curr_leglist.can_combine_to_0(ref_dict_to0, is_decay_chain):
+        if curr_leglist.can_combine_to_0(ref_dict_to0, is_decay_proc):
             # Extract the interaction id associated to the vertex 
             vertex_id = ref_dict_to0[tuple(sorted([leg.get('id') for \
                                                    leg in curr_leglist]))]
@@ -365,7 +372,7 @@ class Amplitude(base_objects.PhysicsObject):
             reduced_diagram = self.reduce_leglist(leg_vertex_tuple[0],
                                                   max_multi_to1,
                                                   ref_dict_to0,
-                                                  is_decay_chain,
+                                                  is_decay_proc,
                                                   new_coupling_orders)
             # If there is a reduced diagram
             if reduced_diagram:
