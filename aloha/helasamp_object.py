@@ -411,6 +411,30 @@ class Gamma5(HelasLib.LorentzObject):
                                              self.lorentz_ind,self.spin_ind,[]) 
         
 #===============================================================================
+# Conjugate Matrices
+#===============================================================================
+class C(HelasLib.LorentzObject):
+    
+    #[0, -1, 0, 0] [1,0,0,0] [0,0,0,1],[0,0,-1,0]
+    
+    Cmetrix = {(0,0): 0, (0,1): -1, (0,2): 0, (0,3): 0,\
+              (1,0): 1, (1,1): 0, (1,2): 0, (1,3): 0,\
+              (2,0): 0, (2,1): 0, (2,2): 0, (2,3): 1,\
+              (3,0): 0, (3,1): 0, (3,2): -1, (3,3): 0} 
+    
+    def __init__(self, spin1, spin2, prefactor=1):
+        #antisymmetric
+        if spin1 < spin2:
+            HelasLib.LorentzObject.__init__(self,[], [spin1, spin2], [], prefactor)
+        else:
+            HelasLib.LorentzObject.__init__(self,[], [spin2, spin1], [], -1*prefactor)
+
+    def create_representation(self):
+        self.representation = HelasLib.LorentzObjectRepresentation(self.Cmetrix,
+                                             self.lorentz_ind,self.spin_ind,[]) 
+    
+        
+#===============================================================================
 # Metric
 #===============================================================================
 class Metric(HelasLib.LorentzObject):
@@ -421,7 +445,7 @@ class Metric(HelasLib.LorentzObject):
               (3,0): 0, (3,1): 0, (3,2): 0, (3,3): -1}
     
     
-    [[1, 0, 0,0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, -1]]
+    #[[1, 0, 0,0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, -1]]
     
     def __init__(self, lorentz1, lorentz2, prefactor=1):
         if lorentz1 < lorentz2:

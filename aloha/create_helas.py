@@ -12,14 +12,15 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-import os
-import logging
-import sys
 import cPickle
-import numbers
-import time
-import shutil
 import glob
+import logging
+import numbers
+import os
+import re
+import shutil
+import sys
+import time
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
@@ -449,33 +450,25 @@ class AbstractHelasModel(dict):
             return self.has_symmetries(l_name, equiv, out=equiv)
         
         
-    def write_helas_file_inc(self, output_dir):
-        """Create the helas_makefile.inc which is can be use for the makefile"""
-        
-        
-        text="HELASRoutine = "
-        old_name = ''
-        for (name, outgoing), abstract in self.items():
-            if old_name != name:
-                text += '\\\n\t\t'
-            text += AbstractHelasBuilder.gethelasname(name, outgoing)
-            text += '.o'
-        text +='\n'
-        file(os.path.join(output_dir,'helas_file.inc'), 'w').write(text)
+def write_helas_file_inc(helas_dir,file_ext, comp_ext):
+    """find the list of HELAS routine in the directory and create a list 
+    of those files (but with compile extension)"""
 
-    def insertTemplate(self, outputdir, format):
-        """ copy the file from ALOHA/Template to output dir """
-        
-        if format == 'Fortran':
-            #copy Makefile
-            shutil.copy2(os.path.join(helas_path,'Template','Makefile_F'),
-                         os.path.join(outputdir, 'makefile') )
-            #copy fortran file
-            for filename in os.listdir(os.path.join(helas_path,'Template')):
-                if not filename.lower().endswith('.f'):
-                    continue
-                shutil.copy2(os.path.join(helas_path,'Template',filename), 
-                                                                      outputdir)
+    helas_files = []
+    
+    # Identify the valid files
+    helasfile_pattern = re.compile(r'''^[STFV]*[_\d]*_\d%s''' % file_ext)
+    for filename in os.listdir(helas_dir):
+        if os.path.isfile(os.path.join(helas_dir, filename)):
+            if helasfile_pattern.match(filename):
+                helas_files.append(filename.replace(file_ext, comp_ext))
+
+    text="HELASRoutine = "
+    text += ' '.join(helas_files)
+    text +='\n'
+    file(os.path.join(helas_dir, 'helas_file.inc'), 'w').write(text) 
+
+
             
 def create_library():
     

@@ -40,7 +40,6 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
 
-import madgraph.iolibs.convert_ufo2mg4 as ufo2mg4
 import madgraph.iolibs.drawing as draw_lib
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.export_pythia8 as export_pythia8
@@ -689,6 +688,12 @@ class CheckValidForCmd(object):
             text += 'for example do : import model_v4 sm'
             raise self.InvalidCmd(text)
 
+        if self._model_v4 and not args[0].endswith('_v4'):
+            text = " The Model imported (MG4 format) doesn't contain enough information\n "
+            text += " in order to create this type of output. In order to create an \n"
+            text += " output for " + agrs[0] + ", you have to use a UFO model."
+            text += " those model can be imported with mg5> import model NAME."
+
         if nojpeg:
             args.append(nojpeg)
 
@@ -1047,6 +1052,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self._generate_info = "" # store the first generated process
         self._model_format = None
         self._multiparticles = {}
+        self._model_v4 = None
         
         # Detect If this script is launched from a valid copy of the Template
         #and if so store this position as standard output directory
@@ -1698,8 +1704,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self.import_mg5_proc_card(args[1])    
         
         elif args[0] == 'model_v4':
-            self._curr_model = import_v4.import_model(args[1])
-            print self._curr_model['path']
+            self._curr_model, self._model_v4 = import_v4.import_model(args[1])
             self.add_default_multiparticles()
  
         elif args[0] == 'proc_v4':
@@ -1966,32 +1971,29 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if answer != 'y':
                 raise MadGraph5Error('Stopped by user request')
 
-        if args[0] == 'madevent_v4':
-            export_v4.copy_v4template(mgme_dir, dir_path, not noclean)
-            self._export_format = 'madevent_v4'
-        if args[0] == 'standalone_v4':
-            export_v4.copy_v4standalone(mgme_dir, dir_path, not noclean)
-            self._export_format = 'standalone_v4'
+        self._export_format = args[0]
 
-        # Import the model/HELAS
-        if self._curr_model['path']:
-            if args[0].endswith('_v4'):
+        # Make a Template Copy
+        if self._export_format == 'madevent_v4':
+            export_v4.copy_v4template(mgme_dir, dir_path, not noclean)
+        elif self._export_format == 'standalone_v4':
+            export_v4.copy_v4standalone(mgme_dir, dir_path, not noclean)
+
+        # Import the model/HELAS according to format
+        if self._model_v4:
                 logger.info('import v4model files %s in directory %s' % \
-                       (os.path.basename(self._curr_model['path']), args[1]))        
-                export_v4.export_model_files(self._curr_model['path'], dir_path)
+                       (os.path.basename(self._model_v4), args[1]))        
+                export_v4.export_model_files(self._model_v4, dir_path)
                 export_v4.export_helas(os.path.join(mgme_dir,'HELAS'), dir_path)
-            else:
-                raise self.InvalidCmd, 'This setup doesn\'t work with a MG4 model as input'
-        else:
-            if args[0].endswith('_v4'):
+        elif args[0].endswith('_v4'):
                 logger.info('convert UFO model to MG4 format')
-                ufo2mg4.export_to_mg4(self._ufo_model, 
-                                        os.path.join(dir_path,'Source','MODEL'))
-                create_helas.AbstractHelasModel(self._curr_model['name'],
-                            write_dir=os.path.join(dir_path,'Source','DHELAS'))
-                export_v4.make_model_symbolic_link(self._curr_model['path'], dir_path)
-            else:
-                raise NotImplemented
+                export_v4.convert_model_to_mg4(self._curr_model, 
+                                                         os.path.join(dir_path))
+                #create_helas.AbstractHelasModel(self._curr_model['name'],
+                #            write_dir=os.path.join(dir_path,'Source','DHELAS'))
+                #export_v4.make_model_symbolic_link(self._curr_model['path'], dir_path)
+        else:
+            raise NotImplemented
             
         if args[0] == 'standalone_v4':
             export_v4.make_v4standalone(dir_path)

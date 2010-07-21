@@ -654,7 +654,6 @@ class Model(PhysicsObject):
     def default_setup(self):
 
         self['name'] = ""
-        self['path'] = ""
         self['particles'] = ParticleList()
         self['parameters'] = None
         self['interactions'] = InteractionList()

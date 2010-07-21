@@ -62,10 +62,10 @@ def import_model(model_path):
                                                                     (model_path)
                                                                 
     # use pickle files if defined
-    if files.is_update(os.path.join(model_path, 'model.pkl'), files_list):
+    if files.is_uptodate(os.path.join(model_path, 'model.pkl'), files_list):
         model = save_load_object.load_from_file( \
                                           os.path.join(model_path, 'model.pkl'))
-        return model
+        return model, model_path
 
     model = base_objects.Model()    
     model.set('particles',files.read_from_file( \
@@ -77,13 +77,12 @@ def import_model(model_path):
                                   read_interactions_v4,
                                   model['particles']))
     
-    model.set('name', os.path.split(model_path)[-1])
-    model.set('path', model_path)  
+    model.set('name', os.path.split(model_path)[-1])  
     
     # save in a pickle files to fasten future usage
     save_load_object.save_to_file(os.path.join(model_path, 'model.pkl'), model)
     
-    return model  
+    return model, model_path  
 
     
 

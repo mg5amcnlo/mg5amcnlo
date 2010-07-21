@@ -17,6 +17,7 @@
 
 import logging
 import os
+import shutil
 
 
 logger = logging.getLogger('madgraph.files')
@@ -87,7 +88,7 @@ def append_to_file(filename, myfunct, *args):
 #===============================================================================
 # check piclke validity
 #===============================================================================
-def is_update(picklefile, path_list=None, min_time=1279550579):
+def is_uptodate(picklefile, path_list=None, min_time=1282000000):
     """Check if the pickle files is uptodate compare to a list of files. 
     If no files are given, the pickle files is checked against it\' current 
     directory"""
@@ -111,4 +112,65 @@ def is_update(picklefile, path_list=None, min_time=1279550579):
             return False
     #all pass
     return True
+
+
+################################################################################
+## helper function for universal file treatment
+################################################################################
+def format_path(path):
+    """Format the path in local format taking in entry a unix format"""
+    if path[0] != '/':
+        return os.path.join(*path.split('/'))
+    else:
+        return os.path.sep + os.path.join(*path.split('/'))
     
+def cp(path1, path2, log=True):
+    """ simple cp taking linux or mix entry"""
+    path1 = format_path(path1)
+    path2 = format_path(path2)
+    try:
+        shutil.copy2(path1, path2)
+    except IOError, why:
+        if log:
+            logger.warning(why)
+        
+    
+def mv(path1, path2):
+    """simple mv taking linux or mix format entry"""
+    path1 = format_path(path1)
+    path2 = format_path(path2)
+    try:
+        shutil.move(path1, path2)
+    except:
+        # An error can occur if the files exist at final destination
+        if os.path.isfile(path2):
+            os.remove(path2)
+            shutil.move(path1, path2)
+            return
+        elif os.path.isdir(path2) and os.path.exists(
+                                   os.path.join(path2, os.path.basename(path1))):      
+            path2 = os.path.join(path2, os.path.basename(path1))
+            os.remove(path2)
+            shutil.move(path1, path2)
+        else:
+            raise
+        
+def ln(file_pos, starting_dir='.', name='', log=True):
+    """a simple way to have a symbolic link whithout to have to change directory
+    starting_point is the directory where to write the link
+    file_pos is the file to link
+    WARNING: not the linux convention
+    """
+    file_pos = format_path(file_pos)
+    starting_dir = format_path(starting_dir)
+    if not name:
+        name = os.path.split(file_pos)[1]    
+        
+    try:
+        os.symlink(os.path.relpath(file_pos, starting_dir), \
+                        os.path.join(starting_dir, name))
+    except:
+        if log:
+            logger.warning('Could not link %s at position: %s' % (file_pos, \
+                                                os.path.realpath(starting_dir)))
+ 

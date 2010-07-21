@@ -22,7 +22,7 @@ import tests.unit_tests as unittest
 class TestFilesGestion(unittest.TestCase):
     """Check the validity of the pickle gestion routine"""
     
-    def test_is_update(self):
+    def test_is_uptodate(self):
         '''check if is_update works'''
         
         
@@ -33,18 +33,18 @@ class TestFilesGestion(unittest.TestCase):
             if i + 1 != len(filespath):
                 time.sleep(1)
         
-        self.assertTrue(files.is_update(filespath[1], [filespath[0]]))
-        self.assertFalse(files.is_update(filespath[0], [filespath[1]]))
-        self.assertTrue(files.is_update(filespath[1], [filespath[0], \
+        self.assertTrue(files.is_uptodate(filespath[1], [filespath[0]]))
+        self.assertFalse(files.is_uptodate(filespath[0], [filespath[1]]))
+        self.assertTrue(files.is_uptodate(filespath[1], [filespath[0], \
                                                                  filespath[0]]))
         
-        self.assertTrue(files.is_update(filespath[1], [filespath[1]]))
-        self.assertTrue(files.is_update(filespath[1]))
-        self.assertFalse(files.is_update(filespath[0]))
-        self.assertFalse(files.is_update('/xxx/yyyy'))
-        self.assertTrue(files.is_update(filespath[1], ['/tmp/mg5']))
+        self.assertTrue(files.is_uptodate(filespath[1], [filespath[1]]))
+        self.assertTrue(files.is_uptodate(filespath[1]))
+        self.assertFalse(files.is_uptodate(filespath[0]))
+        self.assertFalse(files.is_uptodate('/xxx/yyyy'))
+        self.assertTrue(files.is_uptodate(filespath[1], ['/tmp/mg5']))
         
-        self.assertRaises(AssertionError, files.is_update, \
+        self.assertRaises(AssertionError, files.is_uptodate, \
                                                       filespath[1], '/tmp/mg5')
         
         

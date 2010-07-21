@@ -2,8 +2,6 @@
 __date__ = "3 june 2010"
 __author__ = 'olivier.mattelaer@uclouvain.be'
 
-import parameters
-
 class ParamCardWriter(object):
     
     header = \
@@ -15,7 +13,9 @@ class ParamCardWriter(object):
         """write a valid param_card.dat"""
         
         if not list_of_parameters:
-            list_of_parameters = parameters.all_parameters
+            import parameters
+            list_of_parameters = [param for param in list_of_parameters if \
+                                                       param.nature=='external']
         
         self.fsock = open(filename, 'w')
         self.fsock.write(self.header)
@@ -23,12 +23,10 @@ class ParamCardWriter(object):
         self.write_card(list_of_parameters)
     
     
-    def write_card(self, list_of_parameters):
+    def write_card(self, all_ext_param):
         """ """
         
-        # remove internal parameters
-        all_ext_param = [param for param in list_of_parameters if \
-                                                       param.nature=='external']
+      
         
         # list all lhablock
         all_lhablock = set([param.lhablock for param in all_ext_param])

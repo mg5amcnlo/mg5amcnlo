@@ -1904,8 +1904,61 @@ class TestSomeObjectProperty(unittest.TestCase):
                              % (diff1.get_rep(ind),ind ))       
 
         
+    def testCAlgebraDefinition(self):
+        Gamma = HelasObject.Gamma
+        Gamma5 = HelasObject.Gamma5
+        Sigma = HelasObject.Sigma
+        ProjM = HelasObject.ProjM
+        ProjP = HelasObject.ProjP
+        Identity = HelasObject.Identity
+        Metric = HelasObject.Metric
+        C = HelasObject.C
+        
+        #Check basic property of the C function
+        # C^-1= -C         
+        product = C(1,2) *-1*C(2,3)
+        identity = Identity(1,3)
+        
+        product = product.simplify().expand().simplify()
+        identity = identity.simplify().expand().simplify()
+        self.assertEqual(product, identity)
+        
+        # C^T = -C
+        first = C(1,2)
+        second = -1 * C(2,1)
+        first = first.simplify().expand().simplify()
+        second = second.simplify().expand().simplify()        
+        
+        self.assertEqual(first, second)
+        
+        # C is a real matrix
+        for indices in first.listindices():
+            value = complex(first.get_rep(indices))
+            self.assertEqual(value, value.conjugate())
+        
+        # C* Gamma5 * C^-1 =  Gamma5^T
+        zero = C(1,2) * Gamma5(2,3) * C(3,4) + Gamma5(4,1)
+        zero = zero.simplify().expand().simplify()
+        for ind in zero.listindices():
+            self.assertEqual(zero.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (zero.get_rep(ind),ind ))
+            
+        # C* Gamma_mu * C^-1 =  Gamma_mu^T
+        zero = C(1,2) * Gamma('mu',2,3) * C(3,4) - Gamma('mu',4,1)
+        zero = zero.simplify().expand().simplify()
+        for ind in zero.listindices():
+            self.assertEqual(zero.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (zero.get_rep(ind),ind ))               
 
- 
+        # C* Sigma_mu_nu * C^-1 =  Sigma_mu_nu^T
+        zero = C(1,2) * Sigma('mu','nu',2,3) * C(3,4) - Sigma('mu','nu',4,1)
+        zero = zero.simplify().expand().simplify()
+        for ind in zero.listindices():
+            self.assertEqual(zero.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (zero.get_rep(ind),ind ))
+                    
+        
+
     
     def testemptyisFalse(self):
 

@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+from aloha import create_helas
 
 """Methods and classes to export matrix elements to v4 format."""
 
@@ -30,8 +31,11 @@ import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.template_files as Template
-from madgraph import MadGraph5Error 
+import madgraph.iolibs.ufo_expression_parsers as parsers
 
+import models.sm.write_param_card as write_param_card
+from madgraph import MadGraph5Error, MG5DIR
+from madgraph.iolibs.files import cp, ln, mv
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_v4')
 
@@ -837,9 +841,9 @@ def export_model_files(model_path, process_path):
         if os.path.isfile(os.path.join(model_path, file)):
             shutil.copy2(os.path.join(model_path, file), \
                                  os.path.join(process_path, 'Source', 'MODEL'))    
-    make_model_symbolic_link(model_path, process_path)
+    make_model_symbolic_link(process_path)
     
-def make_model_symbolic_link(model_path,process_path):
+def make_model_symbolic_link(process_path):
     #make the copy/symbolic link
     model_path = process_path + '/Source/MODEL/'
     ln(model_path + '/ident_card.dat', process_path + '/Cards', log=False)
@@ -1376,66 +1380,419 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
     return res_str + '*'
 
 
-################################################################################
-## helper function for universal file treatment
-################################################################################
-def format_path(path):
-    """Format the path in local format taking in entry a unix format"""
-    if path[0] != '/':
-        return os.path.join(*path.split('/'))
-    else:
-        return os.path.sep + os.path.join(*path.split('/'))
-def cp(path1, path2, log=True):
-    """ simple cp taking linux or mix entry"""
-    path1 = format_path(path1)
-    path2 = format_path(path2)
-    try:
-        shutil.copy2(path1, path2)
-    except IOError, why:
-        if log:
-            logger.warning(why)
-        
+
+def convert_model_to_mg4(model, output_dir):
+    """ Create a full valid MG4 model from a MG5 model (coming from UFO)"""
     
-def mv(path1, path2):
-    """simple mv taking linux or mix format entry"""
-    path1 = format_path(path1)
-    path2 = format_path(path2)
-    try:
-        shutil.move(path1, path2)
-    except:
-        # An error can occur if the files exist at final destination
-        if os.path.isfile(path2):
-            os.remove(path2)
-            shutil.move(path1, path2)
-            return
-        elif os.path.isdir(path2) and os.path.exists(
-                                   os.path.join(path2, os.path.basename(path1))):      
-            path2 = os.path.join(path2, os.path.basename(path1))
-            os.remove(path2)
-            shutil.move(path1, path2)
+    # create the MODEL
+    write_dir=os.path.join(output_dir, 'Source', 'MODEL')
+    model_builder = UFO_model_to_mg4(model, write_dir)
+    model_builder.build()
+    
+    # Write Helas Routine
+    write_dir=os.path.join(output_dir, 'Source', 'DHELAS')
+    for abstracthelas in model.get('lorentz').values():
+        abstracthelas.write(write_dir, language='Fortran')
+    
+    #copy Helas Template
+    cp(MG5DIR + '/aloha/Template/Makefile_F', write_dir+'/makefile')
+    for filename in os.listdir(os.path.join(MG5DIR,'aloha','Template')):
+        if not filename.lower().endswith('.f'):
+            continue
+        cp((MG5DIR + '/aloha/Template/' + filename), write_dir)
+    create_helas.write_helas_file_inc(write_dir, '.f', '.o')
+                
+    # Make final link in the Process
+    make_model_symbolic_link(output_dir)
+
+class UFO_model_to_mg4(object):
+    """ A converter of the UFO-MG5 Model to the MG4 format """
+    
+    def __init__(self, model, output_path):
+        """ initialization of the objects """
+        
+        self.model = model
+        self.model_name = model['name']
+        
+        self.dir_path = output_path
+        
+        self.coups_dep = []    # (name, expression, type)
+        self.coups_indep = []  # (name, expression, type)
+        self.params_dep = []   # (name, expression, type)
+        self.params_indep = [] # (name, expression, type)
+        self.params_ext = []   # external parameter
+        
+    def build(self):
+        """modify the couplings to fit with MG4 convention and creates all the 
+        different files"""
+
+        # Keep only separation in alphaS        
+        keys = self.model['parameters'].keys()
+        keys.sort(key=len)
+        for key in keys:
+            if key == ('external',):
+                self.params_ext += self.model['parameters'][key]
+            elif 'aS' in key:
+                self.params_dep += self.model['parameters'][key]
+            else:
+                self.params_indep += self.model['parameters'][key]
+        # same for couplings
+        keys = self.model['couplings'].keys()
+        keys.sort(key=len)
+        for key, coup_list in self.model['couplings'].items():
+            if 'aS' in key:
+                self.coups_dep += coup_list
+            else:
+                self.coups_indep += coup_list
+                
+        # MG4 use G and not aS as it basic object for alphas related computation
+        #Pass G in the  independant list
+        index = self.params_dep.index('G')
+        self.params_indep.insert(0, self.params_dep.pop(index))
+        index = self.params_dep.index('sqrt__aS')
+        self.params_indep.insert(0, self.params_dep.pop(index))
+
+        # write the files
+        self.write_all()
+
+    def open(self, name, comment='c', format='default'):
+        """ Open the file name in the correct directory and with a valid
+        header."""
+        
+        file_path = os.path.join(self.dir_path, name)
+        
+        if format == 'fortran':
+            fsock = writers.FortranWriter(file_path, 'w')
         else:
-            raise
+            fsock = open(file_path, 'w')
         
-def ln(file_pos, starting_dir='.', name='', log=True):
-    """a simple way to have a symbolic link whithout to have to change directory
-    starting_point is the directory where to write the link
-    file_pos is the file to link
-    WARNING: not the linux convention
-    """
-    file_pos = format_path(file_pos)
-    starting_dir = format_path(starting_dir)
-    if not name:
-        name = os.path.split(file_pos)[1]    
+        file.writelines(fsock, comment * 77 + '\n')
+        file.writelines(fsock,'%(comment)s written by the UFO converter\n' % \
+                               {'comment': comment + (6 - len(comment)) *  ' '})
+        file.writelines(fsock, comment * 77 + '\n\n')
+        return fsock       
+
+    
+    def write_all(self):
+        """ write all the files """
+        #write the part related to the external parameter
+        self.create_ident_card()
+        self.create_param_read()
         
-    try:
-        os.symlink(os.path.relpath(file_pos, starting_dir), \
-                        os.path.join(starting_dir, name))
-    except:
-        if log:
-            logger.warning('Could not link %s at position: %s' % (file_pos, \
-                                                os.path.realpath(starting_dir)))
+        #write the definition of the parameter
+        self.create_input()
+        self.create_intparam_def()
+        
+        
+        # definition of the coupling.
+        self.create_coupl_inc()
+        self.create_write_couplings()
+        self.create_couplings()
+        
+        # the makefile
+        self.create_makeinc()
+        self.create_param_write()
+        
+        # The param_card.dat        
+        self.create_param_card()
+        
+
+        # All the standard files
+        self.copy_standard_file()
+    ############################################################################
+    ##  ROUTINE CREATING THE FILES  ############################################
+    ############################################################################
+
+    def copy_standard_file(self):
+        """Copy the standard files for the fortran model."""
+    
+        
+        #copy the library files
+        file_to_link = ['formats.inc', 'lha_read.f', 'makefile','printout.f', \
+                        'rw_para.f', 'testprog.f', 'rw_para.f']
+    
+        for filename in file_to_link:
+            cp( MG5DIR + '/models/Template/fortran/' + filename, self.dir_path)
+
+    def create_coupl_inc(self):
+        """ write coupling.inc """
+        
+        fsock = self.open('coupl.inc', format='fortran')
+        
+        # Write header
+        header = """double precision G
+                common/strong/ G
+                 
+                double complex gal(2)
+                common/weak/ gal
+
+                double precision DUM0
+                common/FRDUM0/ DUM0
+
+                double precision DUM1
+                common/FRDUM1/ DUM1
+                """        
+        fsock.writelines(header)
+        
+        # Write the Mass definition/ common block
+        masses = [param.name for param in self.params_ext \
+                                                    if param.lhablock == 'MASS']
+        fsock.writelines('double precision '+','.join(masses)+'\n')
+        fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
+        
+        # Write the Width definition/ common block
+        widths = [param.name for param in self.params_ext \
+                                                   if param.lhablock == 'DECAY']
+        fsock.writelines('double precision '+','.join(widths)+'\n')
+        fsock.writelines('common/widths/ '+','.join(widths)+'\n\n')
+        
+        # Write the Couplings
+        coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep]       
+        fsock.writelines('double complex '+', '.join(coupling_list)+'\n')
+        fsock.writelines('common/couplings/ '+', '.join(coupling_list)+'\n')
+        
+    def create_write_couplings(self):
+        """ write the file coupl_write.inc """
+        
+        fsock = self.open('coupl_write.inc', format='fortran')
+        
+        fsock.writelines("""write(*,*)  ' Couplings of %s'  
+                            write(*,*)  ' ---------------------------------'
+                            write(*,*)  ' '""" % self.model_name)
+        def format(coupl):
+            return 'write(*,2) \'%(name)s = \', %(name)s' % {'name': coupl.name}
+        
+        # Write the Couplings
+        lines = [format(coupl) for coupl in self.coups_dep + self.coups_indep]       
+        fsock.writelines('\n'.join(lines))
+        
+        
+    def create_input(self):
+        """create input.inc containing the definition of the parameters"""
+        
+        fsock = self.open('input.inc', format='fortran')
+        
+        real_parameters = [param.name for param in self.params_dep + 
+                            self.params_indep if param.type == 'real'
+                            and param.name != 'G']
+        
+        real_parameters += [param.name for param in self.params_ext 
+                            if param.type == 'real'and 
+                               param.lhablock not in ['MASS', 'DECAY']]
+        
+        fsock.writelines('double precision '+','.join(real_parameters)+'\n')
+        fsock.writelines('common/params_R/ '+','.join(real_parameters)+'\n\n')
+        
+        complex_parameters = [param.name for param in self.params_dep + 
+                            self.params_indep if param.type == 'complex']
 
 
+        fsock.writelines('double complex '+','.join(complex_parameters)+'\n')
+        fsock.writelines('common/params_C/ '+','.join(complex_parameters)+'\n\n')                
+    
+    
+
+    def create_intparam_def(self):
+        """ create intparam_definition.inc """
+
+        fsock = self.open('intparam_definition.inc', format='fortran')
+        
+        fsock.write_comments(\
+                "Parameters that should not be recomputed event by event.\n")
+        fsock.writelines("if(readlha) then\n")
+        
+        for param in self.params_indep:
+            fsock.writelines("%s = %s\n" % (param.name, python_to_fortran(param.expr) ))
+        
+        fsock.writelines('endif')
+        
+        fsock.write_comments('\nParameters that should be recomputed at an event by even basis.\n')
+        for param in self.params_dep:
+            fsock.writelines("%s = %s\n" % (param.name, python_to_fortran(param.expr) ))
+           
+        fsock.write_comments("\nDefinition of the EW coupling used in the write out of aqed\n")
+        fsock.writelines(""" gal(1) = 1d0
+                             gal(2) = 1d0
+                         """)
+
+        fsock.write_comments("\nDefinition of DUM symbols\n")
+        fsock.writelines(""" DUM0 = 0
+                             DUM1 = 1
+                         """)
+    
+    def create_couplings(self):
+        """ create couplings.f and all couplingsX.f """
+        
+        nb_def_by_file = 25
+        
+        self.create_couplings_main(nb_def_by_file)
+        nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file
+        nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
+        
+        for i in range(nb_coup_indep):
+            data = self.coups_indep[nb_def_by_file * i: 
+                             min(len(self.coups_indep), nb_def_by_file * (i+1))]
+            self.create_couplings_part(i + 1, data)
+            
+        for i in range(nb_coup_dep):
+            data = self.coups_dep[nb_def_by_file * i: 
+                               min(len(self.coups_dep), nb_def_by_file * (i+1))]
+            self.create_couplings_part( i + 1 + nb_coup_indep , data)        
+        
+        
+    def create_couplings_main(self, nb_def_by_file=25):
+        """ create couplings.f """
+
+        fsock = self.open('couplings.f', format='fortran')
+        
+        fsock.writelines("""subroutine coup(readlha)
+
+                            implicit none
+                            logical readlha
+                            double precision PI
+                            parameter  (PI=3.141592653589793d0)
+                            
+                            include \'input.inc\'
+                            include \'coupl.inc\'
+                            include \'intparam_definition.inc\'\n\n
+                         """)
+        
+        nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
+        nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
+        
+        fsock.writelines('if (readlha) then\n')
+        fsock.writelines('\n'.join(\
+                    ['call coup%s()' %  (i + 1) for i in range(nb_coup_indep)]))
+        fsock.writelines('''\nendif\n''')
+        
+        fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
+
+        fsock.writelines('\n'.join(\
+                    ['call coup%s()' %  (nb_coup_indep + i + 1) \
+                      for i in range(nb_coup_dep)]))
+        fsock.writelines('''\n return \n end\n''')
+
+
+    def create_couplings_part(self, nb_file, data):
+        """ create couplings[nb_file].f containing information coming from data
+        """
+        
+        fsock = self.open('couplings%s.f' % nb_file, format='fortran')
+        fsock.writelines("""subroutine coup%s()
+        
+          implicit none
+      
+          include 'input.inc'
+          include 'coupl.inc'
+                        """ % nb_file)
+        
+        for coupling in data:            
+            fsock.writelines('%s = %s' % (coupling.name, \
+                                             python_to_fortran(coupling.expr)))
+        fsock.writelines('end')
+
+
+    def create_makeinc(self):
+        """create makeinc.inc containing the file to compile """
+        
+        fsock = self.open('makeinc.inc', comment='#')
+        text = 'MODEL = couplings.o lha_read.o printout.o rw_para.o '
+        
+        nb_coup_indep = 1 + len(self.coups_dep) // 25 
+        nb_coup_dep = 1 + len(self.coups_indep) // 25
+        text += ' '.join(['couplings%s.o' % (i+1) \
+                                  for i in range(nb_coup_dep + nb_coup_indep) ])
+        fsock.writelines(text)
+        
+    def create_param_write(self):
+        """ create param_write """
+
+        fsock = self.open('param_write.inc', format='fortran')
+        
+        fsock.writelines("""write(*,*)  ' External Params'
+                            write(*,*)  ' ---------------------------------'
+                            write(*,*)  ' '""")
+        def format(name):
+            return 'write(*,*) \'%(name)s = \', %(name)s' % {'name': name}
+        
+        # Write the external parameter
+        lines = [format(param.name) for param in self.params_ext]       
+        fsock.writelines('\n'.join(lines))        
+        
+        fsock.writelines("""write(*,*)  ' Internal Params'
+                            write(*,*)  ' ---------------------------------'
+                            write(*,*)  ' '""")        
+        lines = [format(data.name) for data in self.params_indep]
+        fsock.writelines('\n'.join(lines))
+        fsock.writelines("""write(*,*)  ' Internal Params evaluated point by point'
+                            write(*,*)  ' ----------------------------------------'
+                            write(*,*)  ' '""")         
+        lines = [format(data.name) for data in self.params_dep]
+        
+        fsock.writelines('\n'.join(lines))                
+        
+ 
+    
+    def create_ident_card(self):
+        """ create the ident_card.dat """
+    
+        def format(parameter):
+            """return the line for the ident_card corresponding to this parameter"""
+            colum = [parameter.lhablock] + \
+                    [str(value) for value in parameter.lhacode] + \
+                    [parameter.name]
+            return ' '.join(colum)+'\n'
+    
+        fsock = self.open('ident_card.dat')
+     
+        external_param = [format(param) for param in self.params_ext]
+        fsock.writelines('\n'.join(external_param))
+        
+    def create_param_read(self):    
+        """create param_read"""
+        
+        def format(parameter):
+            """return the line for the ident_card corresponding to this parameter"""
+            template = \
+            """ call LHA_get_real(npara,param,value,'%(name)s',%(name)s,%(value)s)"""
+            
+            return template % {'name': parameter.name, \
+                                    'value': python_to_fortran(parameter.value)}
+        
+        fsock = self.open('param_read.inc', format='fortran')
+        external_param = [format(param) for param in self.params_ext]
+        fsock.writelines('\n'.join(external_param))
+
+    def create_param_card(self):
+        """ create the param_card.dat """
+        
+        write_param_card.ParamCardWriter(
+                os.path.join(self.dir_path, 'param_card.dat'),
+                self.params_ext)
+
+#    def search_type(self, expr):
+#        """return the type associate to the expression"""
+#        
+#        for param in self.model.all_parameters:
+#            if param.name == expr:
+#                return param.type
+#        
+#        return CompactifyExpression.search_type(self, expr)
+
+    
+class python_to_fortran(str):
+    
+    fortran_parser = parsers.UFOExpressionParserFortran()
+
+    def __new__(cls, input):
+        """ test"""
+        
+        if isinstance(input, str):
+            converted = cls.fortran_parser.parse(input)
+        else:
+            converted = cls.fortran_parser.parse(str(input))
+
+        return super(python_to_fortran, cls).__new__(cls, converted) 
 
     
     

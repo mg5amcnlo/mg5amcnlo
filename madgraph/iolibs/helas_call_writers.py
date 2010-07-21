@@ -753,7 +753,8 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
     Includes the function generate_helas_call, which automatically
     generates the C++ Helas call based on the Lorentz structure of
     the interaction."""
-
+    mother_dict = {1: 's', 2: 'o', -2: 'i', 3: 'v', 5: 't'}
+    
     def generate_helas_call(self, argument):
         """Routine for automatic generation of C++ Helas calls
         according to just the spin structure of the interaction.
