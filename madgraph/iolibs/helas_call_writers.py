@@ -798,6 +798,7 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
             call = call + CPPUFOHelasCallWriter.mother_dict[\
                 argument.get_spin_state_number()]
             # Fill out with X up to 6 positions
+            call = call.lower()
             call = call + 'x' * (6 - len(call))
             call = call + "(pME[%d],"
             if argument.get('spin') != 1:
