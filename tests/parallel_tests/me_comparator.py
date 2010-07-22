@@ -87,10 +87,10 @@ class MG4Runner(MERunner):
 
     mg4_path = ""
     
+    type='v4'
     name = 'MadGraph v4'
     compilator ='f77'
     if misc.which('gfortran'):
-        print 'use gfortran'
         compilator = 'gfortran'
     model = ''
     orders = {}
@@ -114,8 +114,8 @@ class MG4Runner(MERunner):
         self.mg4_path = os.path.abspath(mg4_path)
 
         if not temp_dir:
-            temp_dir = "test_" + \
-                    datetime.datetime.now().strftime("%f")
+            temp_dir = "test_%s_%s" % (self.type,\
+                                         datetime.datetime.now().strftime("%f"))
 
         if os.path.exists(os.path.join(mg4_path, temp_dir)):
             raise IOError, "Path %s for test already exist" % \
@@ -222,28 +222,26 @@ class MG4Runner(MERunner):
 
         sys.stdout.write('.')
         sys.stdout.flush()
+        working_dir = os.path.join(self.mg4_path, self.temp_dir_name)
+         
+        shell_name = None
+        for filename in os.listdir(os.path.join(working_dir, 'SubProcesses')):
+            dir_name = os.path.join(working_dir, 'SubProcesses', filename)
+            if os.path.isdir(dir_name) and filename.startswith('P%i_' % proc_id):
+                shell_name = filename 
 
-        shell_name = proc
-
-        shell_name = shell_name.replace(' ', '')
-        shell_name = shell_name.replace('>', '_')
-        shell_name = shell_name.replace('~', 'x')
-        shell_name = "P%i_" % proc_id + shell_name
-
-        logging.info("Working on process %s in dir %s" % (proc,
-                                                          shell_name))
-        
-        dir_name = os.path.join(self.mg4_path, self.temp_dir_name, 'SubProcesses', shell_name)
         # If directory doesn't exist, skip and return 0
-        if not os.path.isdir(dir_name):
-            logging.info("Directory %s hasn't been created, skipping process %s" % \
-                            (shell_name, proc))
+        if not shell_name:
+            logging.info("Directory hasn't been created for process %s" % (proc))
             return ((0.0, 0), [])
 
+        logging.info("Working on process %s in dir %s" % (proc, shell_name))
+        
+        dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
         # Run make
         retcode = subprocess.call('make',
-                        cwd=dir_name,
-                        stdout=open('/dev/null', 'w'))#, stderr=subprocess.STDOUT)
+                        cwd=dir_name)#,
+                        #stdout=open('/dev/null', 'w'))#, stderr=subprocess.STDOUT)
         if retcode != 0:
             logging.info("Error while executing make in %s" % shell_name)
             return ((0.0, 0), [])
@@ -305,6 +303,7 @@ class MG5Runner(MG4Runner):
     mg5_path = ""
 
     name = 'MadGraph v5'
+    type = 'v5'
 
     def setup(self, mg5_path, mg4_path, temp_dir=None):
         """Wrapper for the mg4 setup, also initializing the mg5 path variable"""
@@ -370,7 +369,9 @@ class MG5Runner(MG4Runner):
 
 class MG5_UFO_Runner(MG5Runner):
     
-
+    name = 'UFO-ALOHA-MG5'
+    type = 'ufo'
+    
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 

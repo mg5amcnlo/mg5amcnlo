@@ -376,6 +376,12 @@ class AbstractHelasModel(dict):
                 # No Ghost for HELAS
                 continue
             self.compute_for_lorentz(lorentz)
+            if self.need_conjugate(lorentz):
+                conjugate_lorentz = -1 * C('c1',1) * lorentz * C(2, 'c2')
+                conjugate_lorentz.name += 'C'
+                self.complex_mode = True
+                self.compute_for_lorentz(conjugate_lorentz)
+                self.complex_mode = False # <- automatic?
         
         self.save()
         
@@ -448,7 +454,9 @@ class AbstractHelasModel(dict):
             return out
         else:
             return self.has_symmetries(l_name, equiv, out=equiv)
-        
+    
+    def need_conjugate(self, lorentz):
+        return False
         
 def write_helas_file_inc(helas_dir,file_ext, comp_ext):
     """find the list of HELAS routine in the directory and create a list 

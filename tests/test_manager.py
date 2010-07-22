@@ -354,6 +354,7 @@ if __name__ == "__main__":
     logging.root.setLevel(eval('logging.' + options.logging))
     logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
     logging.getLogger('cmdprint').setLevel(eval('logging.' + options.logging))
+    logging.getLogger('tutorial').setLevel('ERROR')
 
     #logging.basicConfig(level=vars(logging)[options.logging])
     run(args, re_opt=options.reopt, verbosity=options.verbose, \
