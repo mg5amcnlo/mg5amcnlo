@@ -2121,7 +2121,7 @@ class test_aloha_creation(unittest.TestCase):
         
         helas_suite = Create_Helas.AbstractHelasModel('sm')
         helas_suite.look_for_symmetries()
-        solution ={'VVV_9': {2: 1, 3: 1}, 'VVS_8': {2: 1}, 'VVSS_11': {2: 1, 4: 3}, 'VVVV_13': {2: 1, 4: 3}, 'VVVV_12': {2: 1, 3: 1, 4: 1}, 'VVVV_14': {2: 1, 3: 1, 4: 1}, 'SSS_1': {2: 1, 3: 1}, 'VVVV_15': {2: 1, 3: 1, 4: 1}, 'SSSS_10': {2: 1, 3: 1, 4: 1}}
+        solution = {'SSSS1': {2: 1, 3: 1, 4: 3}, 'VVVV4': {2: 1, 3: 1, 4: 1}, 'VVV1': {2: 1, 3: 1}, 'VVVV1': {2: 1, 3: 1, 4: 1}, 'VVVV3': {2: 1, 3: 1, 4: 1}, 'VVVV2': {2: 1, 4: 3}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 'VVS1': {2: 1}}
         self.assertEqual(solution, helas_suite.symmetries)
         
     def test_full_sm_aloha(self):

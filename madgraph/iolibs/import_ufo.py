@@ -219,9 +219,6 @@ class UFOMG5Converter(object):
             
         output = data_string.split('*')
         output = color.ColorString([eval(data).shift_indices() for data in output if data !='1'])
-        for i in range(len(output)):
-            if isinstance(output[i], color.T):
-                output[i][-1], output[i][-2] = output[i][-2], output[i][-1] 
         return output
     
     def pass_in_standard_name(self):

@@ -108,15 +108,23 @@ class CompareMG4WithUFOModel(unittest.TestCase):
     def check_interactions(self, mg4_vertex, ufo_vertex, vname):
         """ check that the internal definition for a particle comming from mg4 or
         comming from the UFO are the same """
-        
-        # don't check this for the moment. Too difficult to compare
-        return
-        
+                
+        #name = 'particles'
+        #mg4_name = [part.get('name') for part in mg4_vertex.get(name)]
+        #ufo_name = [part.get('name') for part in ufo_vertex.get(name)] 
+        #if mg4_name != ufo_name:
+        #    print 'fail for interactions %s different property for %s, %s != %s' % \
+        #    (vname[1], name, mg4_name, ufo_name )
+                
         # Checking only the color
         name = 'color'
-        self.assertEqual(mg4_vertex.get(name), ufo_vertex.get(name), 
-            'fail for interactions %s different property for %s, %s != %s' % \
-            (vname, name, mg4_vertex.get(name), ufo_vertex.get(name) ) )
+        if (mg4_vertex.get(name) != ufo_vertex.get(name)):
+            print 'fail for interactions %s different property for %s, %s != %s' % \
+            (vname[1], name, mg4_vertex.get(name), ufo_vertex.get(name) )
+        
+        #self.assertEqual(mg4_vertex.get(name), ufo_vertex.get(name), 
+        #    'fail for interactions %s different property for %s, %s != %s' % \
+        #    (vname, name, mg4_vertex.get(name), ufo_vertex.get(name) ) )
         
 class TestPythonToFrotran(unittest.TestCase):
     
@@ -222,7 +230,12 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
         """ creating the full model from scratch """
         CheckFileCreate.clean_files(self)
         
-        model = save_load_object.load_from_file(os.path.join(MG5DIR,'models','sm','model.pkl'))
+        picklefile = os.path.join(MG5DIR,'models','sm','model.pkl') 
+        if not files.is_uptodate(picklefile):
+            model = import_ufo.import_model('sm')
+        else:
+            model = save_load_object.load_from_file(picklefile)
+            
         export_v4.UFO_model_to_mg4(model, self.output_path).build()
         
 #    tearDown = CheckFileCreate.clean_files

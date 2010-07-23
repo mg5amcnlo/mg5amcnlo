@@ -8,46 +8,47 @@
 #
 #
 
-__date__ = "5 June 2010"
+__date__ = "22 July 2010"
 __author__ = "claude.duhr@durham.ac.uk"
 
 from cmath import cos, sin, acos, asin
+from object_library import Function
 
 #
 # shortcuts for functions from cmath
 #
 
-def complexconjugate(z):
-	"""Returns z.conjugate()"""
-	return z.conjugate()
+complexconjugate = Function(name = 'complexconjugate',
+                            arguments = ('z',),
+                            expression = 'z.conjugate()')
 
 
-def re(z):
-        """Returns z.re()"""
-        return z.real
+re = Function(name = 're',
+              arguments = ('z',),
+              expression = 'z.real')
 
-def im(z):
-        """Returns z.imag"""
-        return z.imag
+im = Function(name = 'im',
+              arguments = ('z',),
+              expression = 'z.imag')
 
 
 # New functions (trigonometric)
 
-def sec(z):
-        "Returns the secant of the complex number z."""
-        return 1./cos(z)
+sec = Function(name = 'sec',
+             arguments = ('z',),
+             expression = '1./cos(z)')
 
-def asec(z):
-        "Returns the arcsecant of the complex number z."""
-        return acos(1./z)
+asec = Function(name = 'asec',
+             arguments = ('z',),
+             expression = 'acos(1./z)')
 
-def csc(z):
-        "Returns the cosecant of the complex number z."""
-        return 1./sin(z)
+csc = Function(name = 'csc',
+             arguments = ('z',),
+             expression = '1./sin(z)')
 
-def acsc(z):
-        "Returns the arccosecant of the complex number z."""
-        return asin(1./z)
+acsc = Function(name = 'acsc',
+             arguments = ('z',),
+             expression = 'asin(1./z)')
 
 
 

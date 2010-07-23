@@ -54,7 +54,7 @@ if '__main__' == __name__:
     #                                      initial=2, final=2)
 
     # or give one
-    my_proc_list = ['e+ e- > e+ e- /z', 'e+ e- > a > e+ e-', 'e+ e- > e+ e- /z $a']
+    my_proc_list = ['g g > g g', 'e+ e- > e+ e-', 'e+ e- > e+ e- a']
 
     # Create a MERunner object for MG4
     my_mg4 = me_comparator.MG4Runner()
@@ -74,10 +74,10 @@ if '__main__' == __name__:
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                       model='sm', orders={'QED':2, 'QCD':2}, energy=500)
+                       model='sm', orders={'QED':4, 'QCD':4}, energy=500)
 
     # Do some cleanup
-    my_comp.cleanup()
+    #my_comp.cleanup()
 
     # Print the output
     my_comp.output_result(filename='sm_result.log')

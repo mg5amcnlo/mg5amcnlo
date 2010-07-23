@@ -186,13 +186,6 @@ class HelasWriterForFortran(WriteHelas):
             else: 
                 MomentumConserve.append('+F%d' % (index + 1))
                 Counter += 1
-        
-        
-        ##################################################################
-        ##  TEMP FLIP FERMION ############################################
-        ##################################################################
-        if not OffShell: #<-- Maybe...
-            FermiList.reverse()
                     
         # Reorder calllist cyclically. 
         if OffShell:
