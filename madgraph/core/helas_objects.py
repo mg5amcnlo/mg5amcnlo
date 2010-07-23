@@ -30,7 +30,6 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color
-import madgraph.iolibs.file_writers as file_writers
 
 #===============================================================================
 # 
@@ -2948,30 +2947,23 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
             col_amp = []
             for diag_tuple in self.get('color_basis')[col_basis_elem]:
-                res_amp = filter(lambda amp: \
+                res_amps = filter(lambda amp: \
                           tuple(amp.get('color_indices')) == diag_tuple[1],
                           self.get('diagrams')[diag_tuple[0]].get('amplitudes'))
-                if not res_amp:
-                    raise file_writers.FortranWriter.FortranWriterError, \
+                if not res_amps:
+                    raise self.PhysicsObjectError, \
                           """No amplitude found for color structure
                             %s and color index chain (%s) (diagram %i)""" % \
                             (col_basis_elem,
                              str(diag_tuple[1]),
                              diag_tuple[0])
 
-                if len(res_amp) > 1:
-                    raise file_writers.FortranWriter.FortranWriterError, \
-                        """More than one amplitude found for color structure
-                        %s and color index chain (%s) (diagram %i)""" % \
-                        (col_basis_elem,
-                         str(diag_tuple[1]),
-                         diag_tuple[0])
-
-                col_amp.append(((res_amp[0].get('fermionfactor'),
-                                 diag_tuple[2],
-                                 diag_tuple[3],
-                                 diag_tuple[4]),
-                                res_amp[0].get('number')))
+                for res_amp in res_amps:
+                    col_amp.append(((res_amp.get('fermionfactor'),
+                                     diag_tuple[2],
+                                     diag_tuple[3],
+                                     diag_tuple[4]),
+                                    res_amp.get('number')))
 
             col_amp_list.append(col_amp)
 

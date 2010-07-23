@@ -158,7 +158,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
             
             
 #===============================================================================
-# HelasFortranCallWriter
+# FortranHelasCallWriter
 #===============================================================================
 class FortranHelasCallWriter(HelasCallWriter):
     """The class for writing Helas calls in Fortran, starting from
