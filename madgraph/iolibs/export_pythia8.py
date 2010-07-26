@@ -147,6 +147,28 @@ def write_pythia8_process_cc_file(writer, matrix_element, cpp_model,
     writer.writelines(file)
 
 #===============================================================================
+# generate_model_files_pythia8
+#===============================================================================
+def generate_model_files_pythia8(model,
+                                 path=os.getcwd()):
+
+    """Generate the helicity amplitudes (ALOHA) files as well as the
+    coupling and parameter files needed for Pythia 8 to run processes
+    in model"""
+
+    cwd = os.getcwd()
+
+    os.chdir(path)
+
+    pathdir = os.getcwd()
+
+    logger.info('Creating model %s files in directory %s' % \
+                (model.get('name'), path))
+
+
+    os.chdir(cwd)
+
+#===============================================================================
 # Helper functions
 #===============================================================================
 def get_process_class_definitions(matrix_element):
