@@ -128,7 +128,7 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         
 class TestPythonToFrotran(unittest.TestCase):
     
-    py2f77 = export_v4.python_to_fortran
+    py2f77 = export_v4.UFO_model_to_mg4.python_to_fortran
     
     
     def test_convert_str(self):
@@ -136,7 +136,6 @@ class TestPythonToFrotran(unittest.TestCase):
         
         expr = 'cmath.sqrt(2)'
         converted = self.py2f77(expr)
-        self.assertEqual(converted.__class__, self.py2f77)
         self.assertTrue(isinstance(converted, str))
         self.assertEqual(converted, 'dsqrt(2.000000d+00)')
         
@@ -157,27 +156,23 @@ class TestPythonToFrotran(unittest.TestCase):
     def test_convert_number(self):
         """ test it can convert number in fortran string"""
         
-        expr = 2
+        expr = str(2)
         converted = self.py2f77(expr)
-        self.assertEqual(converted.__class__, self.py2f77)
         self.assertTrue(isinstance(converted, str))
         self.assertEqual(converted, '2.000000d+00')  
         
-        expr = 0.23
+        expr = str(0.23)
         converted = self.py2f77(expr)
-        self.assertEqual(converted.__class__, self.py2f77)
         self.assertTrue(isinstance(converted, str))
         self.assertEqual(converted, '2.300000d-01')  
         
-        expr = 2.5e6
+        expr = str(2.5e6)
         converted = self.py2f77(expr)
-        self.assertEqual(converted.__class__, self.py2f77)
         self.assertTrue(isinstance(converted, str))
         self.assertEqual(converted, '2.500000d+06')
         
-        expr = 0.0000116639  
+        expr = str(0.0000116639)  
         converted = self.py2f77(expr)
-        self.assertEqual(converted.__class__, self.py2f77)
         self.assertTrue(isinstance(converted, str))
         self.assertEqual(converted, '1.166390d-05')        
         

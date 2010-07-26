@@ -1408,6 +1408,8 @@ def convert_model_to_mg4(model, output_dir):
 class UFO_model_to_mg4(object):
     """ A converter of the UFO-MG5 Model to the MG4 format """
     
+    python_to_fortran = parsers.UFOExpressionParserFortran().parse
+
     def __init__(self, model, output_path):
         """ initialization of the objects """
         
@@ -1602,13 +1604,13 @@ class UFO_model_to_mg4(object):
         fsock.writelines("if(readlha) then\n")
         
         for param in self.params_indep:
-            fsock.writelines("%s = %s\n" % (param.name, python_to_fortran(param.expr) ))
+            fsock.writelines("%s = %s\n" % (param.name, self.python_to_fortran(param.expr) ))
         
         fsock.writelines('endif')
         
         fsock.write_comments('\nParameters that should be recomputed at an event by even basis.\n')
         for param in self.params_dep:
-            fsock.writelines("%s = %s\n" % (param.name, python_to_fortran(param.expr) ))
+            fsock.writelines("%s = %s\n" % (param.name, self.python_to_fortran(param.expr) ))
            
         fsock.write_comments("\nDefinition of the EW coupling used in the write out of aqed\n")
         fsock.writelines(""" gal(1) = 1d0
@@ -1688,7 +1690,7 @@ class UFO_model_to_mg4(object):
         
         for coupling in data:            
             fsock.writelines('%s = %s' % (coupling.name, \
-                                             python_to_fortran(coupling.expr)))
+                                             self.python_to_fortran(coupling.expr)))
         fsock.writelines('end')
 
 
@@ -1757,7 +1759,7 @@ class UFO_model_to_mg4(object):
             """ call LHA_get_real(npara,param,value,'%(name)s',%(name)s,%(value)s)"""
             
             return template % {'name': parameter.name, \
-                                    'value': python_to_fortran(parameter.value)}
+                                    'value': self.python_to_fortran(str(parameter.value))}
         
         fsock = self.open('param_read.inc', format='fortran')
         external_param = [format(param) for param in self.params_ext]
@@ -1778,21 +1780,8 @@ class UFO_model_to_mg4(object):
 #                return param.type
 #        
 #        return CompactifyExpression.search_type(self, expr)
-
-    
-class python_to_fortran(str):
-    
-    fortran_parser = parsers.UFOExpressionParserFortran()
-
-    def __new__(cls, input):
-        """ test"""
-        
-        if isinstance(input, str):
-            converted = cls.fortran_parser.parse(input)
-        else:
-            converted = cls.fortran_parser.parse(str(input))
-
-        return super(python_to_fortran, cls).__new__(cls, converted) 
+  
+ 
 
     
     

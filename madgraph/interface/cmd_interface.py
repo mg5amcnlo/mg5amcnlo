@@ -691,7 +691,7 @@ class CheckValidForCmd(object):
         if self._model_v4 and not args[0].endswith('_v4'):
             text = " The Model imported (MG4 format) doesn't contain enough information\n "
             text += " in order to create this type of output. In order to create an \n"
-            text += " output for " + agrs[0] + ", you have to use a UFO model."
+            text += " output for " + args[0] + ", you have to use a UFO model."
             text += " those model can be imported with mg5> import model NAME."
 
         if nojpeg:
