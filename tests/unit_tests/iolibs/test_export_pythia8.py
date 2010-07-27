@@ -21,10 +21,13 @@ import fractions
 
 import tests.unit_tests as unittest
 
+import aloha.WriteHelas as WriteHelas
+
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.export_pythia8 as export_pythia8
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.helas_call_writers as helas_call_writer
+import madgraph.iolibs.import_ufo as import_ufo
 import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -540,3 +543,65 @@ void Sigma_uux_uux::set_variable_parameters()
 
         self.assertFileContains('test_cc', goal_string)
 
+#===============================================================================
+# ExportUFOModelPythia8Test
+#===============================================================================
+class ExportUFOModelPythia8Test(unittest.TestCase,
+                                test_file_writers.CheckFileCreate):
+
+    created_files = [
+                    ]
+
+    def setUp(self):
+
+        print "Loading model"
+        self.model = import_ufo.import_model('sm')
+        print "Building model"
+        self.model_builder = export_pythia8.UFO_model_to_pythia8(self.model,
+                                                                 "/tmp")
+        
+        test_file_writers.CheckFileCreate.clean_files
+
+    tearDown = test_file_writers.CheckFileCreate.clean_files
+
+    def test_read_aloha_template_files(self):
+        """Test reading the ALOHA template .h and .cc files"""
+
+        template_h = self.model_builder.read_aloha_template_files("h")
+#        print ".h:"
+#        print "\n".join(template_h)
+        self.assertTrue(template_h)
+        for file_lines in template_h:
+            self.assertFalse(file_lines.find('#include') > -1)
+            self.assertFalse(file_lines.find('namespace') > -1)
+        template_cc = self.model_builder.read_aloha_template_files("cc")
+#        print ".cc:"
+#        print "\n".join(template_cc)
+        self.assertTrue(template_cc)
+        for file_lines in template_cc:
+            self.assertFalse(file_lines.find('#include') > -1)
+            self.assertFalse(file_lines.find('namespace') > -1) 
+       
+    def test_write_aloha_functions(self):
+        """Test writing function declarations and definitions"""
+
+        template_h_files = []
+        template_cc_files = []
+
+        for abstracthelas in self.model_builder.model.get('lorentz').values():
+            aloha_writer = WriteHelas.HelasWriterForCPP(abstracthelas,
+                                                        "/tmp")
+            aloha_writer.write()
+            aloha_writer.collect_variables()
+            aloha_writer.make_call_lists()
+            template_h_files.append(\
+                self.model_builder.write_function_declaration(\
+                                         aloha_writer))
+            template_cc_files.append(\
+                self.model_builder.write_function_definition(\
+                                          aloha_writer))
+
+        print ".h:"
+        print "\n".join(template_h_files)
+        print ".cc:"
+        print "\n".join(template_cc_files)

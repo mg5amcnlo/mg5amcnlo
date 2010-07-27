@@ -12,8 +12,6 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-from aloha import create_helas
-
 """Methods and classes to export matrix elements to v4 format."""
 
 import fractions
@@ -32,6 +30,8 @@ import madgraph.iolibs.misc as misc
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.template_files as Template
 import madgraph.iolibs.ufo_expression_parsers as parsers
+
+import aloha.create_helas as create_helas
 
 import models.sm.write_param_card as write_param_card
 from madgraph import MadGraph5Error, MG5DIR
@@ -1380,6 +1380,9 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
     return res_str + '*'
 
 
+#===============================================================================
+# Routines to output UFO models in MG4 format
+#===============================================================================
 
 def convert_model_to_mg4(model, output_dir):
     """ Create a full valid MG4 model from a MG5 model (coming from UFO)"""
@@ -1404,6 +1407,10 @@ def convert_model_to_mg4(model, output_dir):
                 
     # Make final link in the Process
     make_model_symbolic_link(output_dir)
+
+#===============================================================================
+# UFO_model_to_mg4
+#===============================================================================
 
 class UFO_model_to_mg4(object):
     """ A converter of the UFO-MG5 Model to the MG4 format """

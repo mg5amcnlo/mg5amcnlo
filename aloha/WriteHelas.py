@@ -556,12 +556,12 @@ class HelasWriterForCPP(WriteHelas):
             AddedDeclare.append('complex<double> denom')
             temp = self.particles[self.offshell-1]+'%s' %(self.offshell)
             if temp[0] in ['V','F']: 
-                range = 6
+                entries = 6
             elif temp[0] == 'S':
-                range = 3
+                entries = 3
             elif temp[0] == 'T':
-                range = 18
-            OutputParticle = 'complex<double> '+temp+'[%s]'%(range)
+                entries = 18
+            OutputParticle = 'complex<double> '+temp+'[%s]'%(entries)
             headerstring += 'void ' + self.namestring + '(' + ','.join(DeclareList + Mass+Width) \
                     + ',' + OutputParticle+');\n' 
             string += 'void ' + self.namestring + '(' + ','.join(DeclareList + Mass+Width) \
