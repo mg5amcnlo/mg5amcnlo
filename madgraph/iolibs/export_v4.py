@@ -1546,6 +1546,12 @@ class UFO_model_to_mg4(object):
         # Write the Mass definition/ common block
         masses = [param.name for param in self.params_ext \
                                                     if param.lhablock == 'MASS']
+        
+        is_mass = lambda name: name[0].lower() == 'm' and len(name)<4
+        masses += [param.name for param in self.params_dep + 
+                            self.params_indep if param.type == 'real'
+                            and is_mass(param.name)]      
+        
         fsock.writelines('double precision '+','.join(masses)+'\n')
         fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
         
@@ -1581,9 +1587,11 @@ class UFO_model_to_mg4(object):
         
         fsock = self.open('input.inc', format='fortran')
         
+        is_valid = lambda name: name!='G' and not (name[0].lower() == 'm' and len(name)<4)
+        
         real_parameters = [param.name for param in self.params_dep + 
                             self.params_indep if param.type == 'real'
-                            and param.name != 'G']
+                            and is_valid(param.name)]
         
         real_parameters += [param.name for param in self.params_ext 
                             if param.type == 'real'and 
