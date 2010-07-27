@@ -554,9 +554,7 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
 
     def setUp(self):
 
-        print "Loading model"
         self.model = import_ufo.import_model('sm')
-        print "Building model"
         self.model_builder = export_pythia8.UFO_model_to_pythia8(self.model,
                                                                  "/tmp")
         
@@ -605,3 +603,8 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
         print "\n".join(template_h_files)
         print ".cc:"
         print "\n".join(template_cc_files)
+
+    def test_write_aloha_routines(self):
+        """Test writing the aloha .h and.cc files"""
+
+        self.model_builder.write_aloha_routines()

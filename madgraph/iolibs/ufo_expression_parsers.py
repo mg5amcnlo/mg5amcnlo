@@ -53,7 +53,8 @@ class UFOExpressionParser:
     # List of tokens and literals
     tokens = (
         'POWER', 'SIN', 'COS', 'TAN', 'CSC', 'SEC', 'ACSC', 'ASEC',
-        'SQRT', 'CONJ', 'RE', 'IM', 'PI', 'COMPLEX', 'VARIABLE', 'NUMBER'
+        'SQRT', 'CONJ', 'RE', 'IM', 'PI', 'COMPLEX', 'FUNCTION',
+        'VARIABLE', 'NUMBER'
         )
     literals = "=+-*/(),"
 
@@ -98,8 +99,11 @@ class UFOExpressionParser:
     def t_COMPLEX(self, t):
         r'(?<!\w)complex(?=\()'
         return t
+    def t_FUNCTION(self, t):
+        r'[a-zA-Z_][0-9a-zA-Z_:]*(?=\()'
+        return t
     def t_VARIABLE(self, t):
-        r'[a-zA-Z_][0-9a-zA-Z_]*'
+        r'[a-zA-Z_][0-9a-zA-Z_:]*'
         return t
     
     t_NUMBER = r'([0-9]+\.[0-9]*|\.[0-9]+|[0-9]+)([eE][+-]{0,1}[0-9]+){0,1}'
@@ -127,7 +131,6 @@ class UFOExpressionParser:
         ('left','+','-'),
         ('left','*','/'),
         ('right','UMINUS'),
-        ('left','POWER'),
         ('right','SIN'),
         ('right','COS'),
         ('right','TAN'),
@@ -139,7 +142,9 @@ class UFOExpressionParser:
         ('right','CONJ'),
         ('right','RE'),
         ('right','IM'),
-        ('right','COMPLEX')
+        ('right','FUNCTION'),
+        ('right','COMPLEX'),
+        ('left','POWER')
         )
 
     # Dictionary of parser expressions
@@ -166,6 +171,14 @@ class UFOExpressionParser:
     def p_expression_group(self, p):
         "expression : group"
         p[0] = p[1]
+
+    def p_expression_function1(self, p):
+        "expression : FUNCTION '(' expression ')'"
+        p[0] = p[1] + '(' + p[3] + ')'
+
+    def p_expression_function2(self, p):
+        "expression : FUNCTION '(' expression ',' expression ')'"
+        p[0] = p[1] + '(' + p[3] + ',' + p[5] + ')'
 
     def p_error(self, p):
         if p:

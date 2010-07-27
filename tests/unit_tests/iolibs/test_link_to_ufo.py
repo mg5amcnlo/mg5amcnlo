@@ -143,6 +143,18 @@ class TestPythonToFrotran(unittest.TestCase):
         converted = self.py2f77(expr)
         self.assertEqual(converted, 'dsqrt(2.000000d+00)')
         
+        expr = 'randomfunction(2.)'
+        converted = self.py2f77(expr)
+        self.assertEqual(converted, 'randomfunction(2.000000d+00)')
+        
+        expr = 'randomcpp::function(2.)'
+        converted = self.py2f77(expr)
+        self.assertEqual(converted, 'randomcpp::function(2.000000d+00)')
+        
+        expr = 'randomcpp::function(2., a+b)'
+        converted = self.py2f77(expr)
+        self.assertEqual(converted, 'randomcpp::function(2.000000d+00,a+b)')
+        
         expr = 'cmath.sqrt(2.5)'
         converted = self.py2f77(expr)
         self.assertEqual(converted, 'dsqrt(2.500000d+00)')

@@ -28,6 +28,7 @@ import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
+import madgraph.iolibs.import_ufo as import_ufo
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.template_files as Template
@@ -727,6 +728,13 @@ class UFO_model_to_pythia8(object):
     python_to_fortran = parsers.UFOExpressionParserFortran().parse
     compiler_option_re = re.compile('^#\w')
     namespace_re = re.compile('^using namespace')
+    slha_to_expr = {('SMINPUTS', (1,)): '1./StandardModel:alphaEMmZ',
+                    ('SMINPUTS', (2,)): 'cmath.pi*StandardModel:alphaEMmZ*ParticleData::m0(23)**2/(cmath.sqrt(2.)*ParticleData::m0(24)**2*(ParticleData::m0(23)**2-ParticleData::m0(24)**2))',
+                    ('SMINPUTS', (3,)): 'alpS',
+                    ('CKMBLOCK', (1,)): 'StandardModel:Vus',
+                    }
+
+    slha_to_depend = {('SMINPUTS', (3,)): ('aS')}
 
     def __init__(self, model, output_path):
         """ initialization of the objects """
@@ -736,45 +744,78 @@ class UFO_model_to_pythia8(object):
         
         self.dir_path = output_path
         
-        self.coups_dep = []    # (name, expression, type)
-        self.coups_indep = []  # (name, expression, type)
-        self.params_dep = []   # (name, expression, type)
-        self.params_indep = [] # (name, expression, type)
-        self.params_ext = []   # external parameter
+        # For dependent couplings, only want to update the ones
+        # actually used in each process. For other couplings and
+        # parameters, just need a list of all.
+        self.coups_dep = {}    # name -> import_ufo.ParamExpr
+        self.coups_indep = []  # import_ufo.ParamExpr
+        self.params_dep = []   # import_ufo.ParamExpr
+        self.params_indep = [] # import_ufo.ParamExpr
+        self.params_ext = []   # import_ufo.ExternalParamExpr
         
     def build(self):
-        """modify the couplings to fit with MG4 convention and creates all the 
-        different files"""
+        """Modify the parameters to fit with Pythia8 conventions and
+        creates all necessary files"""
 
         # Write Helas Routines
         self.write_aloha_routines(model, output_dir)
 
-        # Keep only separation in alphaS        
+        # Keep only dependences on alphaS, to save time in execution
         keys = self.model['parameters'].keys()
         keys.sort(key=len)
         for key in keys:
             if key == ('external',):
-                self.params_ext += self.model['parameters'][key]
+                params_ext += self.model['parameters'][key]
             elif 'aS' in key:
                 self.params_dep += self.model['parameters'][key]
             else:
                 self.params_indep += self.model['parameters'][key]
+
         # same for couplings
         keys = self.model['couplings'].keys()
         keys.sort(key=len)
         for key, coup_list in self.model['couplings'].items():
             if 'aS' in key:
-                self.coups_dep += coup_list
+                self.coups_dep.update(dict([(coup.name, coup) for coup in \
+                                            coup_list]))
             else:
                 self.coups_indep += coup_list
                 
-        # MG4 use G and not aS as it basic object for alphas related computation
-        #Pass G in the  independant list
-        index = self.params_dep.index('G')
-        self.params_indep.insert(0, self.params_dep.pop(index))
-        index = self.params_dep.index('sqrt__aS')
-        self.params_indep.insert(0, self.params_dep.pop(index))
-
+        # For external parameters, want to use the internal Pythia
+        # parameters for SM params and masses and widths. For other
+        # parameters, want to read off the SLHA block code (TO BE
+        # IMPLEMENTED)
+        while params_ext:
+            param = params_ext.pop(0)
+            key = (param.lhablock, tuple(param.lhacode))
+            if 'aS' in slha_to_depend.setdefault(key, ()):
+                self.params_dep.insert(0,
+                                       import_ufo.ParamExpr(param.name,
+                                                            slha_to_expr[key],
+                                                            'real'))
+            else:
+                try:
+                    self.params_ext.append(\
+                      import_ufo.ParamExpr(param.name,
+                                           slha_to_expr[key],
+                                           'real'))
+                except:
+                    if param.lhablock == 'YUKAWA':
+                        slha_to_expr[key] = 'ParticleData::mRun(%i, 120.)' \
+                                            % param.lhacode[0]
+                    if param.lhablock == 'MASS':
+                        slha_to_expr[key] = 'ParticleData::m0(%i)' \
+                                            % param.lhacode[0]
+                    if param.lhablock == 'DECAY':
+                        slha_to_expr[key] = 'ParticleData::mWidth(%i)' \
+                                            % param.lhacode[0]
+                    if key in slha_to_expr:
+                        self.params_ext.append(\
+                            import_ufo.ParamExpr(param.name,
+                                                 slha_to_expr[key],
+                                                 'real'))
+                        
+                        
         # write the files
         self.write_all()
 
@@ -1098,29 +1139,34 @@ class UFO_model_to_pythia8(object):
         """Generate the hel_amp_model.h and hel_amp_model.cc files, which
         have the complete set of generalized Helas routines for the model"""
 
-        model_h_file = os.path.join(self.output_dir,
-                                    'hel_amp_%s.h' % model.get('name'))
-        model_cc_file = os.path.join(self.output_dir,
-                                     'hel_amp_%s.cc' % model.get('name'))
+        model_h_file = os.path.join(self.dir_path,
+                                    'hel_amp_%s.h' % self.model.get('name'))
+        model_cc_file = os.path.join(self.dir_path,
+                                     'hel_amp_%s.cc' % self.model.get('name'))
 
-        replace_dict_h = {}
-        replace_dict_cc = {}
+        replace_dict = {}
+
+        replace_dict['info_lines'] = get_mg5_info_lines()
+        replace_dict['model_name'] = self.model.get('name')
 
         # Read in the template .h and .cc files, stripped of compiler
         # commands and namespaces
         template_h_files = self.read_aloha_template_files(ext = 'h')
         template_cc_files = self.read_aloha_template_files(ext = 'cc')
         
-        for abstracthelas in self.model.get('lorentz').values():
-            aloha_writer = WriteHelas.HelasWriterForCPP(abstracthelas,
-                                                        self.output_dir)
-            template_h_files.append(self.write_function_declaration(\
-                                         aloha_writer))
-            template_cc_files.append(self.write_function_definition(\
-                                          aloha_writer))
+        #for abstracthelas in self.model.get('lorentz').values():
+        #    aloha_writer = WriteHelas.HelasWriterForCPP(abstracthelas,
+        #                                                self.output_dir)
+        #    template_h_files.append(self.write_function_declaration(\
+        #                                 aloha_writer))
+        #    template_cc_files.append(self.write_function_definition(\
+        #                                  aloha_writer))
 
-        file_h = read_template_file('hel_amp_model_h.inc') % replace_dict_h
-        file_cc = read_template_file('hel_amp_model_cc.inc') % replace_dict_cc
+        replace_dict['function_declarations'] = '\n'.join(template_h_files)
+        replace_dict['function_definitions'] = '\n'.join(template_cc_files)
+
+        file_h = read_template_file('pythia8_hel_amp_h.inc') % replace_dict
+        file_cc = read_template_file('pythia8_hel_amp_cc.inc') % replace_dict
 
         # Write the files
         writers.CPPWriter(model_h_file).writelines(file_h)
@@ -1132,14 +1178,13 @@ class UFO_model_to_pythia8(object):
 
         template_files = []
         for filename in glob.glob(os.path.join(MG5DIR, 'aloha', 'Template', '*.%s' % ext)):
-            print filename
             file = open(filename, 'r')
             template_file_string = ""
             while file:
                 line = file.readline()
                 if len(line) == 0: break
-                if self.compiler_option_re.match(line) or self.namespace_re.match(line):
-                    # Strip out compiler flags and namespaces
+                line = self.clean_line(line)
+                if not line:
                     continue
                 template_file_string += line.strip() + '\n'
             template_files.append(template_file_string)
@@ -1172,3 +1217,11 @@ class UFO_model_to_pythia8(object):
             ret_string += line
         return ret_string
 
+    def clean_line(self, line):
+        """Strip a line of compiler options and namespace options, and
+        replace complex<double> by complex."""
+
+        if self.compiler_option_re.match(line) or self.namespace_re.match(line):
+            return ""
+
+        return line
