@@ -209,7 +209,7 @@ class UFOMG5Converter(object):
         
         # Convert the string in order to be able to evaluate it
         # Change identity in color.TC
-        data_string = data_string.replace('Identity(','color.T(')
+        data_string = data_string.replace('Identity(1,2)','color.T(2,1)')
         # Change convention for summed indices
         data_string = data_string.replace(',a',',-')
         data_string = data_string.replace('(a','(-')
@@ -219,6 +219,7 @@ class UFOMG5Converter(object):
             
         output = data_string.split('*')
         output = color.ColorString([eval(data).shift_indices() for data in output if data !='1'])
+        
         return output
     
     def pass_in_standard_name(self):

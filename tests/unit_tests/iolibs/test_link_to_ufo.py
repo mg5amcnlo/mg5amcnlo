@@ -109,27 +109,27 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         """ check that the internal definition for a particle comming from mg4 or
         comming from the UFO are the same """
                 
-        #name = 'particles'
-        #mg4_name = [part.get('name') for part in mg4_vertex.get(name)]
-        #ufo_name = [part.get('name') for part in ufo_vertex.get(name)] 
-        #if mg4_name != ufo_name:
-        #    print 'fail for interactions %s different property for %s, %s != %s' % \
-        #    (vname[1], name, mg4_name, ufo_name )
-                
         # Checking only the color
-        name = 'color'
-        if (mg4_vertex.get(name) != ufo_vertex.get(name)):
-            print 'fail for interactions %s different property for %s, %s != %s' % \
-            (vname[1], name, mg4_vertex.get(name), ufo_vertex.get(name) )
+        mg4_color = mg4_vertex.get('color')
+        mg5_color = ufo_vertex.get('color')
+        try:
+            self.assertEqual(mg4_color, mg5_color, 
+            'fail for interactions %s different property for color, %s != %s' % \
+            (vname, mg4_vertex.get('color'), ufo_vertex.get('color') ) )
+        except AssertionError:
+            part_name =[part.get('name') for part in mg4_vertex.get('particles')]
+            if ['g']*len(mg4_vertex.get('particles')) == part_name:
+                pass #too complicate to test
+            elif str(mg4_color) == '[]':
+                self.assertEqual('[1 ]',str(mg5_color))
+            else:
+                raise
         
-        #self.assertEqual(mg4_vertex.get(name), ufo_vertex.get(name), 
-        #    'fail for interactions %s different property for %s, %s != %s' % \
-        #    (vname, name, mg4_vertex.get(name), ufo_vertex.get(name) ) )
         
 class TestPythonToFrotran(unittest.TestCase):
     
-    py2f77 = export_v4.UFO_model_to_mg4.python_to_fortran
-    
+    def py2f77(self,expr):
+        return export_v4.python_to_fortran(expr)
     
     def test_convert_str(self):
         """ python to fortran expression is working"""
