@@ -181,10 +181,10 @@ class HelasWriterForFortran(WriteHelas):
             if TypeToVariable[elem] in ['V', 'S', 'T']:
                 MomentumConserve.append('-%s%d' % (TypeToVariable[elem], index + 1))
             elif TypeToVariable[elem] == 'F' and Counter % 2 == 0:
-                MomentumConserve.append('-F%d' % (index + 1))
+                MomentumConserve.append('+F%d' % (index + 1))
                 Counter += 1 
             else: 
-                MomentumConserve.append('+F%d' % (index + 1))
+                MomentumConserve.append('-F%d' % (index + 1))
                 Counter += 1
                     
         # Reorder calllist cyclically. 
