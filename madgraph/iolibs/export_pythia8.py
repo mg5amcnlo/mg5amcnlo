@@ -725,16 +725,19 @@ def convert_model_to_pythia8(model, output_dir):
 class UFO_model_to_pythia8(object):
     """ A converter of the UFO-MG5 Model to the Pythia 8 format """
     
-    python_to_fortran = parsers.UFOExpressionParserFortran().parse
+    # Regular expressions for cleaning of lines from Aloha files
     compiler_option_re = re.compile('^#\w')
     namespace_re = re.compile('^using namespace')
+
+    # Dictionaries for expression of MG5 SM parameters into Pythia 8
     slha_to_expr = {('SMINPUTS', (1,)): '1./StandardModel:alphaEMmZ',
                     ('SMINPUTS', (2,)): 'cmath.pi*StandardModel:alphaEMmZ*ParticleData::m0(23)**2/(cmath.sqrt(2.)*ParticleData::m0(24)**2*(ParticleData::m0(23)**2-ParticleData::m0(24)**2))',
                     ('SMINPUTS', (3,)): 'alpS',
                     ('CKMBLOCK', (1,)): 'StandardModel:Vus',
                     }
 
-    slha_to_depend = {('SMINPUTS', (3,)): ('aS')}
+    slha_to_depend = {('SMINPUTS', (3,)): ('aS'),
+                      ('SMINPUTS', (1,)): ('aEM')}
 
     def __init__(self, model, output_path):
         """ initialization of the objects """
@@ -751,71 +754,19 @@ class UFO_model_to_pythia8(object):
         self.coups_indep = []  # import_ufo.ParamExpr
         self.params_dep = []   # import_ufo.ParamExpr
         self.params_indep = [] # import_ufo.ParamExpr
-        self.params_ext = []   # import_ufo.ExternalParamExpr
+        self.p_to_cpp = parsers.UFOExpressionParserPythia8()
         
     def build(self):
         """Modify the parameters to fit with Pythia8 conventions and
         creates all necessary files"""
 
         # Write Helas Routines
-        self.write_aloha_routines(model, output_dir)
+        self.write_aloha_routines()
 
-        # Keep only dependences on alphaS, to save time in execution
-        keys = self.model['parameters'].keys()
-        keys.sort(key=len)
-        for key in keys:
-            if key == ('external',):
-                params_ext += self.model['parameters'][key]
-            elif 'aS' in key:
-                self.params_dep += self.model['parameters'][key]
-            else:
-                self.params_indep += self.model['parameters'][key]
-
-        # same for couplings
-        keys = self.model['couplings'].keys()
-        keys.sort(key=len)
-        for key, coup_list in self.model['couplings'].items():
-            if 'aS' in key:
-                self.coups_dep.update(dict([(coup.name, coup) for coup in \
-                                            coup_list]))
-            else:
-                self.coups_indep += coup_list
+        # Prepare parameters and couplings
+        self.prepare_parameters()
+        self.prepare_couplings()
                 
-        # For external parameters, want to use the internal Pythia
-        # parameters for SM params and masses and widths. For other
-        # parameters, want to read off the SLHA block code (TO BE
-        # IMPLEMENTED)
-        while params_ext:
-            param = params_ext.pop(0)
-            key = (param.lhablock, tuple(param.lhacode))
-            if 'aS' in slha_to_depend.setdefault(key, ()):
-                self.params_dep.insert(0,
-                                       import_ufo.ParamExpr(param.name,
-                                                            slha_to_expr[key],
-                                                            'real'))
-            else:
-                try:
-                    self.params_ext.append(\
-                      import_ufo.ParamExpr(param.name,
-                                           slha_to_expr[key],
-                                           'real'))
-                except:
-                    if param.lhablock == 'YUKAWA':
-                        slha_to_expr[key] = 'ParticleData::mRun(%i, 120.)' \
-                                            % param.lhacode[0]
-                    if param.lhablock == 'MASS':
-                        slha_to_expr[key] = 'ParticleData::m0(%i)' \
-                                            % param.lhacode[0]
-                    if param.lhablock == 'DECAY':
-                        slha_to_expr[key] = 'ParticleData::mWidth(%i)' \
-                                            % param.lhacode[0]
-                    if key in slha_to_expr:
-                        self.params_ext.append(\
-                            import_ufo.ParamExpr(param.name,
-                                                 slha_to_expr[key],
-                                                 'real'))
-                        
-                        
         # write the files
         self.write_all()
 
@@ -1225,3 +1176,80 @@ class UFO_model_to_pythia8(object):
             return ""
 
         return line
+
+    # Routines for preparing parameters and couplings from the model
+
+    def prepare_parameters(self):
+        """Extract the parameters from the model, and store them in
+        the two lists params_indep and params_dep"""
+
+        # Keep only dependences on alphaS, to save time in execution
+        keys = self.model['parameters'].keys()
+        keys.sort(key=len)
+        params_ext = []
+        for key in keys:
+            if key == ('external',):
+                params_ext += self.model['parameters'][key]
+            elif 'aS' in key:
+                self.params_dep += self.model['parameters'][key]
+            else:
+                self.params_indep += self.model['parameters'][key]
+
+        # For external parameters, want to use the internal Pythia
+        # parameters for SM params and masses and widths. For other
+        # parameters, want to read off the SLHA block code (TO BE
+        # IMPLEMENTED)
+        while params_ext:
+            param = params_ext.pop(0)
+            key = (param.lhablock, tuple(param.lhacode))
+            if 'aS' in self.slha_to_depend.setdefault(key, ()):
+                # This value needs to be set event by event
+                self.params_dep.insert(0,
+                                       import_ufo.ParamExpr(param.name,
+                                                         self.slha_to_expr[key],
+                                                         'real'))
+            else:
+                try:
+                    # This is an SM parameter defined above
+                    self.params_indep.insert(0,
+                                             import_ufo.ParamExpr(param.name,
+                                                         self.slha_to_expr[key],
+                                                         'real'))
+                except:
+                    # For Yukawa couplings, masses and widths, insert
+                    # the Pythia 8 value
+                    if param.lhablock == 'YUKAWA':
+                        self.slha_to_expr[key] = 'ParticleData::mRun(%i, 120.)' \
+                                                 % param.lhacode[0]
+                    if param.lhablock == 'MASS':
+                        self.slha_to_expr[key] = 'ParticleData::m0(%i)' \
+                                            % param.lhacode[0]
+                    if param.lhablock == 'DECAY':
+                        self.slha_to_expr[key] = 'ParticleData::mWidth(%i)' \
+                                            % param.lhacode[0]
+                    if key in self.slha_to_expr:
+                        self.params_indep.insert(0,\
+                                                 import_ufo.ParamExpr(param.name,
+                                                          self.slha_to_expr[key],
+                                                          'real'))
+                    else:
+                        # Fix unknown parameters as soon as Pythia has fixed this
+                        raise MadGraph5Error, \
+                              "Parameter with key " + repr(key) + \
+                              " unknown in model export to Pythia 8"
+                        
+    def prepare_couplings(self):
+        """Extract the couplings from the model, and store them in
+        the two lists coups_indep and coups_dep"""
+
+
+        # Keep only dependences on alphaS, to save time in execution
+        keys = self.model['couplings'].keys()
+        keys.sort(key=len)
+        for key, coup_list in self.model['couplings'].items():
+            if 'aS' in key:
+                self.coups_dep.update(dict([(coup.name, coup) for coup in \
+                                            coup_list]))
+            else:
+                self.coups_indep += coup_list
+        

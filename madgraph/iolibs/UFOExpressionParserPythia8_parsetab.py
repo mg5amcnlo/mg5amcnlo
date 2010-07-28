@@ -5,9 +5,9 @@ _tabversion = '3.2'
 
 _lr_method = 'LALR'
 
-_lr_signature = "\x16\xe3\x04\x15'\xcf\xe5\xb3\x96V\xed\xce\xb7\xb4\x1f["
+_lr_signature = '\xb45\x05\xc8q\xcdi\x88d\x06;\x08r\x90\x02N'
     
-_lr_action_items = {'COS':([0,8,9,22,35,36,37,38,39,40,49,],[1,1,1,1,1,1,1,1,1,1,1,]),'NUMBER':([0,8,9,22,35,36,37,38,39,40,49,],[2,2,2,2,2,2,2,2,2,2,2,]),'COMPLEX':([0,8,9,22,35,36,37,38,39,40,49,],[3,3,3,3,3,3,3,3,3,3,3,]),'ASEC':([0,8,9,22,35,36,37,38,39,40,49,],[4,4,4,4,4,4,4,4,4,4,4,]),'CONJ':([0,8,9,22,35,36,37,38,39,40,49,],[5,5,5,5,5,5,5,5,5,5,5,]),'SIN':([0,8,9,22,35,36,37,38,39,40,49,],[6,6,6,6,6,6,6,6,6,6,6,]),'POWER':([2,7,14,18,20,21,23,24,25,26,27,28,29,30,31,32,33,34,41,42,43,44,45,46,47,48,50,51,],[-10,-9,-25,-11,35,-15,-20,-24,-14,35,35,-21,-18,-16,-19,-17,-22,-23,35,-8,-12,35,35,35,35,35,35,-13,]),')':([2,7,14,18,21,23,24,25,26,27,28,29,30,31,32,33,34,42,43,44,45,46,47,48,50,51,],[-10,-9,-25,-11,-15,-20,-24,-14,42,-7,-21,-18,-16,-19,-17,-22,-23,-8,-12,-3,-5,-4,-6,-2,51,-13,]),'(':([0,1,3,4,5,6,8,9,10,11,13,15,16,17,19,22,35,36,37,38,39,40,49,],[8,8,22,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,]),'+':([2,7,14,18,20,21,23,24,25,26,27,28,29,30,31,32,33,34,41,42,43,44,45,46,47,48,50,51,],[-10,-9,-25,-11,36,-15,-20,-24,-14,36,-7,-21,-18,-16,-19,-17,-22,-23,36,-8,-12,-3,-5,-4,-6,36,36,-13,]),'*':([2,7,14,18,20,21,23,24,25,26,27,28,29,30,31,32,33,34,41,42,43,44,45,46,47,48,50,51,],[-10,-9,-25,-11,37,-15,-20,-24,-14,37,-7,-21,-18,-16,-19,-17,-22,-23,37,-8,-12,37,-5,37,-6,37,37,-13,]),'-':([0,2,7,8,9,14,18,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,],[9,-10,-9,9,9,-25,-11,38,-15,9,-20,-24,-14,38,-7,-21,-18,-16,-19,-17,-22,-23,9,9,9,9,9,9,38,-8,-12,-3,-5,-4,-6,38,9,38,-13,]),',':([2,7,14,18,21,23,24,25,27,28,29,30,31,32,33,34,41,42,43,44,45,46,47,48,51,],[-10,-9,-25,-11,-15,-20,-24,-14,-7,-21,-18,-16,-19,-17,-22,-23,49,-8,-12,-3,-5,-4,-6,-2,-13,]),'/':([2,7,14,18,20,21,23,24,25,26,27,28,29,30,31,32,33,34,41,42,43,44,45,46,47,48,50,51,],[-10,-9,-25,-11,39,-15,-20,-24,-14,39,-7,-21,-18,-16,-19,-17,-22,-23,39,-8,-12,39,-5,39,-6,39,39,-13,]),'RE':([0,8,9,22,35,36,37,38,39,40,49,],[10,10,10,10,10,10,10,10,10,10,10,]),'SEC':([0,8,9,22,35,36,37,38,39,40,49,],[11,11,11,11,11,11,11,11,11,11,11,]),'TAN':([0,8,9,22,35,36,37,38,39,40,49,],[13,13,13,13,13,13,13,13,13,13,13,]),'PI':([0,8,9,22,35,36,37,38,39,40,49,],[14,14,14,14,14,14,14,14,14,14,14,]),'=':([2,7,14,18,20,21,23,24,25,26,27,28,29,30,31,32,33,34,41,42,43,44,45,46,47,48,50,51,],[-10,-9,-25,-11,40,-15,-20,-24,-14,40,-7,-21,-18,-16,-19,-17,-22,-23,40,-8,-12,-3,-5,-4,-6,-2,40,-13,]),'ACSC':([0,8,9,22,35,36,37,38,39,40,49,],[15,15,15,15,15,15,15,15,15,15,15,]),'$end':([2,7,12,14,18,20,21,23,24,25,27,28,29,30,31,32,33,34,42,43,44,45,46,47,48,51,],[-10,-9,0,-25,-11,-1,-15,-20,-24,-14,-7,-21,-18,-16,-19,-17,-22,-23,-8,-12,-3,-5,-4,-6,-2,-13,]),'CSC':([0,8,9,22,35,36,37,38,39,40,49,],[16,16,16,16,16,16,16,16,16,16,16,]),'IM':([0,8,9,22,35,36,37,38,39,40,49,],[17,17,17,17,17,17,17,17,17,17,17,]),'VARIABLE':([0,8,9,22,35,36,37,38,39,40,49,],[18,18,18,18,18,18,18,18,18,18,18,]),'SQRT':([0,8,9,22,35,36,37,38,39,40,49,],[19,19,19,19,19,19,19,19,19,19,19,]),}
+_lr_action_items = {'COS':([0,8,9,23,33,37,38,39,40,41,42,52,54,],[1,1,1,1,1,1,1,1,1,1,1,1,1,]),'NUMBER':([0,8,9,23,33,37,38,39,40,41,42,52,54,],[2,2,2,2,2,2,2,2,2,2,2,2,2,]),'COMPLEX':([0,8,9,23,33,37,38,39,40,41,42,52,54,],[3,3,3,3,3,3,3,3,3,3,3,3,3,]),'ASEC':([0,8,9,23,33,37,38,39,40,41,42,52,54,],[4,4,4,4,4,4,4,4,4,4,4,4,4,]),'CONJ':([0,8,9,23,33,37,38,39,40,41,42,52,54,],[5,5,5,5,5,5,5,5,5,5,5,5,5,]),'SIN':([0,8,9,23,33,37,38,39,40,41,42,52,54,],[6,6,6,6,6,6,6,6,6,6,6,6,6,]),'POWER':([2,7,14,19,21,22,24,25,26,27,28,29,30,31,32,34,35,36,43,44,45,46,47,48,49,50,51,53,55,56,57,58,],[-12,-9,-27,-13,37,-17,-22,-26,-16,37,37,-23,-20,-18,-21,-19,-24,-25,37,-8,37,-14,37,37,37,37,37,-10,37,37,-15,-11,]),')':([2,7,14,19,22,24,25,26,27,28,29,30,31,32,34,35,36,44,45,46,47,48,49,50,51,53,55,56,57,58,],[-12,-9,-27,-13,-17,-22,-26,-16,44,-7,-23,-20,-18,-21,-19,-24,-25,-8,53,-14,-3,-5,-4,-6,-2,-10,57,58,-15,-11,]),'(':([0,1,3,4,5,6,8,9,10,11,13,15,16,17,18,20,23,33,37,38,39,40,41,42,52,54,],[8,8,23,8,8,8,8,8,8,8,8,8,33,8,8,8,8,8,8,8,8,8,8,8,8,8,]),'+':([2,7,14,19,21,22,24,25,26,27,28,29,30,31,32,34,35,36,43,44,45,46,47,48,49,50,51,53,55,56,57,58,],[-12,-9,-27,-13,38,-17,-22,-26,-16,38,-7,-23,-20,-18,-21,-19,-24,-25,38,-8,38,-14,-3,-5,-4,-6,38,-10,38,38,-15,-11,]),'*':([2,7,14,19,21,22,24,25,26,27,28,29,30,31,32,34,35,36,43,44,45,46,47,48,49,50,51,53,55,56,57,58,],[-12,-9,-27,-13,39,-17,-22,-26,-16,39,-7,-23,-20,-18,-21,-19,-24,-25,39,-8,39,-14,39,-5,39,-6,39,-10,39,39,-15,-11,]),'-':([0,2,7,8,9,14,19,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,],[9,-12,-9,9,9,-27,-13,40,-17,9,-22,-26,-16,40,-7,-23,-20,-18,-21,9,-19,-24,-25,9,9,9,9,9,9,40,-8,40,-14,-3,-5,-4,-6,40,9,-10,9,40,40,-15,-11,]),',':([2,7,14,19,22,24,25,26,28,29,30,31,32,34,35,36,43,44,45,46,47,48,49,50,51,53,57,58,],[-12,-9,-27,-13,-17,-22,-26,-16,-7,-23,-20,-18,-21,-19,-24,-25,52,-8,54,-14,-3,-5,-4,-6,-2,-10,-15,-11,]),'/':([2,7,14,19,21,22,24,25,26,27,28,29,30,31,32,34,35,36,43,44,45,46,47,48,49,50,51,53,55,56,57,58,],[-12,-9,-27,-13,41,-17,-22,-26,-16,41,-7,-23,-20,-18,-21,-19,-24,-25,41,-8,41,-14,41,-5,41,-6,41,-10,41,41,-15,-11,]),'RE':([0,8,9,23,33,37,38,39,40,41,42,52,54,],[10,10,10,10,10,10,10,10,10,10,10,10,10,]),'SEC':([0,8,9,23,33,37,38,39,40,41,42,52,54,],[11,11,11,11,11,11,11,11,11,11,11,11,11,]),'TAN':([0,8,9,23,33,37,38,39,40,41,42,52,54,],[13,13,13,13,13,13,13,13,13,13,13,13,13,]),'PI':([0,8,9,23,33,37,38,39,40,41,42,52,54,],[14,14,14,14,14,14,14,14,14,14,14,14,14,]),'=':([2,7,14,19,21,22,24,25,26,27,28,29,30,31,32,34,35,36,43,44,45,46,47,48,49,50,51,53,55,56,57,58,],[-12,-9,-27,-13,42,-17,-22,-26,-16,42,-7,-23,-20,-18,-21,-19,-24,-25,42,-8,42,-14,-3,-5,-4,-6,-2,-10,42,42,-15,-11,]),'ACSC':([0,8,9,23,33,37,38,39,40,41,42,52,54,],[15,15,15,15,15,15,15,15,15,15,15,15,15,]),'$end':([2,7,12,14,19,21,22,24,25,26,28,29,30,31,32,34,35,36,44,46,47,48,49,50,51,53,57,58,],[-12,-9,0,-27,-13,-1,-17,-22,-26,-16,-7,-23,-20,-18,-21,-19,-24,-25,-8,-14,-3,-5,-4,-6,-2,-10,-15,-11,]),'FUNCTION':([0,8,9,23,33,37,38,39,40,41,42,52,54,],[16,16,16,16,16,16,16,16,16,16,16,16,16,]),'CSC':([0,8,9,23,33,37,38,39,40,41,42,52,54,],[17,17,17,17,17,17,17,17,17,17,17,17,17,]),'IM':([0,8,9,23,33,37,38,39,40,41,42,52,54,],[18,18,18,18,18,18,18,18,18,18,18,18,18,]),'VARIABLE':([0,8,9,23,33,37,38,39,40,41,42,52,54,],[19,19,19,19,19,19,19,19,19,19,19,19,19,]),'SQRT':([0,8,9,23,33,37,38,39,40,41,42,52,54,],[20,20,20,20,20,20,20,20,20,20,20,20,20,]),}
 
 _lr_action = { }
 for _k, _v in _lr_action_items.items():
@@ -16,7 +16,7 @@ for _k, _v in _lr_action_items.items():
       _lr_action[_x][_k] = _y
 del _lr_action_items
 
-_lr_goto_items = {'group':([0,1,4,5,6,8,9,10,11,13,15,16,17,19,22,35,36,37,38,39,40,49,],[7,21,23,24,25,7,7,28,29,30,31,32,33,34,7,7,7,7,7,7,7,7,]),'expression':([0,8,9,22,35,36,37,38,39,40,49,],[20,26,27,41,43,44,45,46,47,48,50,]),'statement':([0,],[12,]),}
+_lr_goto_items = {'group':([0,1,4,5,6,8,9,10,11,13,15,17,18,20,23,33,37,38,39,40,41,42,52,54,],[7,22,24,25,26,7,7,29,30,31,32,34,35,36,7,7,7,7,7,7,7,7,7,7,]),'expression':([0,8,9,23,33,37,38,39,40,41,42,52,54,],[21,27,28,43,45,46,47,48,49,50,51,55,56,]),'statement':([0,],[12,]),}
 
 _lr_goto = { }
 for _k, _v in _lr_goto_items.items():
@@ -26,29 +26,31 @@ for _k, _v in _lr_goto_items.items():
 del _lr_goto_items
 _lr_productions = [
   ("S' -> statement","S'",1,None,None,None),
-  ('statement -> expression','statement',1,'p_statement_expr','madgraph/iolibs/ufo_expression_parsers.py',147),
-  ('expression -> expression = expression','expression',3,'p_expression_binop','madgraph/iolibs/ufo_expression_parsers.py',151),
-  ('expression -> expression + expression','expression',3,'p_expression_binop','madgraph/iolibs/ufo_expression_parsers.py',152),
-  ('expression -> expression - expression','expression',3,'p_expression_binop','madgraph/iolibs/ufo_expression_parsers.py',153),
-  ('expression -> expression * expression','expression',3,'p_expression_binop','madgraph/iolibs/ufo_expression_parsers.py',154),
-  ('expression -> expression / expression','expression',3,'p_expression_binop','madgraph/iolibs/ufo_expression_parsers.py',155),
-  ('expression -> - expression','expression',2,'p_expression_uminus','madgraph/iolibs/ufo_expression_parsers.py',159),
-  ('group -> ( expression )','group',3,'p_group_parentheses','madgraph/iolibs/ufo_expression_parsers.py',163),
-  ('expression -> group','expression',1,'p_expression_group','madgraph/iolibs/ufo_expression_parsers.py',167),
-  ('expression -> NUMBER','expression',1,'p_expression_number','madgraph/iolibs/ufo_expression_parsers.py',245),
-  ('expression -> VARIABLE','expression',1,'p_expression_variable','madgraph/iolibs/ufo_expression_parsers.py',249),
-  ('expression -> expression POWER expression','expression',3,'p_expression_power','madgraph/iolibs/ufo_expression_parsers.py',253),
-  ('expression -> COMPLEX ( expression , expression )','expression',6,'p_expression_complex','madgraph/iolibs/ufo_expression_parsers.py',263),
-  ('expression -> SIN group','expression',2,'p_expression_func','madgraph/iolibs/ufo_expression_parsers.py',267),
-  ('expression -> COS group','expression',2,'p_expression_func','madgraph/iolibs/ufo_expression_parsers.py',268),
-  ('expression -> TAN group','expression',2,'p_expression_func','madgraph/iolibs/ufo_expression_parsers.py',269),
-  ('expression -> CSC group','expression',2,'p_expression_func','madgraph/iolibs/ufo_expression_parsers.py',270),
-  ('expression -> SEC group','expression',2,'p_expression_func','madgraph/iolibs/ufo_expression_parsers.py',271),
-  ('expression -> ACSC group','expression',2,'p_expression_func','madgraph/iolibs/ufo_expression_parsers.py',272),
-  ('expression -> ASEC group','expression',2,'p_expression_func','madgraph/iolibs/ufo_expression_parsers.py',273),
-  ('expression -> RE group','expression',2,'p_expression_func','madgraph/iolibs/ufo_expression_parsers.py',274),
-  ('expression -> IM group','expression',2,'p_expression_func','madgraph/iolibs/ufo_expression_parsers.py',275),
-  ('expression -> SQRT group','expression',2,'p_expression_func','madgraph/iolibs/ufo_expression_parsers.py',276),
-  ('expression -> CONJ group','expression',2,'p_expression_func','madgraph/iolibs/ufo_expression_parsers.py',277),
-  ('expression -> PI','expression',1,'p_expression_pi','madgraph/iolibs/ufo_expression_parsers.py',291),
+  ('statement -> expression','statement',1,'p_statement_expr','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',152),
+  ('expression -> expression = expression','expression',3,'p_expression_binop','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',156),
+  ('expression -> expression + expression','expression',3,'p_expression_binop','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',157),
+  ('expression -> expression - expression','expression',3,'p_expression_binop','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',158),
+  ('expression -> expression * expression','expression',3,'p_expression_binop','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',159),
+  ('expression -> expression / expression','expression',3,'p_expression_binop','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',160),
+  ('expression -> - expression','expression',2,'p_expression_uminus','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',164),
+  ('group -> ( expression )','group',3,'p_group_parentheses','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',168),
+  ('expression -> group','expression',1,'p_expression_group','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',172),
+  ('expression -> FUNCTION ( expression )','expression',4,'p_expression_function1','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',176),
+  ('expression -> FUNCTION ( expression , expression )','expression',6,'p_expression_function2','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',180),
+  ('expression -> NUMBER','expression',1,'p_expression_number','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',258),
+  ('expression -> VARIABLE','expression',1,'p_expression_variable','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',262),
+  ('expression -> expression POWER expression','expression',3,'p_expression_power','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',266),
+  ('expression -> COMPLEX ( expression , expression )','expression',6,'p_expression_complex','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',276),
+  ('expression -> SIN group','expression',2,'p_expression_func','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',280),
+  ('expression -> COS group','expression',2,'p_expression_func','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',281),
+  ('expression -> TAN group','expression',2,'p_expression_func','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',282),
+  ('expression -> CSC group','expression',2,'p_expression_func','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',283),
+  ('expression -> SEC group','expression',2,'p_expression_func','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',284),
+  ('expression -> ACSC group','expression',2,'p_expression_func','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',285),
+  ('expression -> ASEC group','expression',2,'p_expression_func','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',286),
+  ('expression -> RE group','expression',2,'p_expression_func','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',287),
+  ('expression -> IM group','expression',2,'p_expression_func','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',288),
+  ('expression -> SQRT group','expression',2,'p_expression_func','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',289),
+  ('expression -> CONJ group','expression',2,'p_expression_func','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',290),
+  ('expression -> PI','expression',1,'p_expression_pi','/home/alwall/MadEvent/MG5/UFO_MODEL/madgraph/iolibs/ufo_expression_parsers.py',304),
 ]

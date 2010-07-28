@@ -131,6 +131,7 @@ class UFOExpressionParser:
         ('left','+','-'),
         ('left','*','/'),
         ('right','UMINUS'),
+        ('left','POWER'),
         ('right','SIN'),
         ('right','COS'),
         ('right','TAN'),
@@ -143,8 +144,7 @@ class UFOExpressionParser:
         ('right','RE'),
         ('right','IM'),
         ('right','FUNCTION'),
-        ('right','COMPLEX'),
-        ('left','POWER')
+        ('right','COMPLEX')
         )
 
     # Dictionary of parser expressions

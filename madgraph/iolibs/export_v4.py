@@ -1431,6 +1431,7 @@ class UFO_model_to_mg4(object):
         self.params_dep = []   # (name, expression, type)
         self.params_indep = [] # (name, expression, type)
         self.params_ext = []   # external parameter
+        self.p_to_f = parsers.UFOExpressionParserFortran()
         
     def build(self):
         """modify the couplings to fit with MG4 convention and creates all the 
@@ -1620,14 +1621,16 @@ class UFO_model_to_mg4(object):
         fsock.writelines("if(readlha) then\n")
         
         for param in self.params_indep:
-            fsock.writelines("%s = %s\n" % (param.name, python_to_fortran(param.expr) ))
+            fsock.writelines("%s = %s\n" % (param.name,
+                                            self.p_to_f.parse(param.expr)))
         
         fsock.writelines('endif')
         
         fsock.write_comments('\nParameters that should be recomputed at an event by even basis.\n')
         for param in self.params_dep:
-            fsock.writelines("%s = %s\n" % (param.name, python_to_fortran(param.expr) ))
-           
+            fsock.writelines("%s = %s\n" % (param.name,
+                                            self.p_to_f.parse(param.expr)))
+
         fsock.write_comments("\nDefinition of the EW coupling used in the write out of aqed\n")
         fsock.writelines(""" gal(1) = 1d0
                              gal(2) = 1d0
@@ -1705,8 +1708,8 @@ class UFO_model_to_mg4(object):
                         """ % nb_file)
         
         for coupling in data:            
-            fsock.writelines('%s = %s' % (coupling.name, \
-                                             python_to_fortran(coupling.expr)))
+            fsock.writelines('%s = %s' % (coupling.name,
+                                          self.p_to_f.parse(coupling.expr)))
         fsock.writelines('end')
 
 
@@ -1774,8 +1777,8 @@ class UFO_model_to_mg4(object):
             template = \
             """ call LHA_get_real(npara,param,value,'%(name)s',%(name)s,%(value)s)"""
             
-            return template % {'name': parameter.name, \
-                                    'value': python_to_fortran(str(parameter.value))}
+            return template % {'name': parameter.name,
+                               'value': self.p_to_f.parse(str(parameter.value))}
         
         fsock = self.open('param_read.inc', format='fortran')
         external_param = [format(param) for param in self.params_ext]

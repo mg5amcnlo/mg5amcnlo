@@ -18,6 +18,7 @@
 import StringIO
 import copy
 import fractions
+import re
 
 import tests.unit_tests as unittest
 
@@ -608,3 +609,26 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
         """Test writing the aloha .h and.cc files"""
 
         self.model_builder.write_aloha_routines()
+
+        
+    def test_couplings_and_parameters(self):
+        """Test generation of couplings and parameters"""
+
+        self.model_builder.prepare_parameters()
+        self.model_builder.prepare_couplings()
+        
+        print "Dependent parameters: "
+        print "\n".join(["%s: %s" %(p.name, p.expr) for p in self.model_builder.params_dep])
+        print "Dependent couplings: "
+        print "\n".join(["%s: %s" %(p.name, p.expr) for p in self.model_builder.coups_dep.values()])
+
+        g_expr = re.compile("G(?!f)")
+
+        print "Independent parameters: "
+        for indep_par in self.model_builder.params_indep:
+            print "%s: %s" %(indep_par.name, indep_par.expr)
+            self.assertFalse(g_expr.search(indep_par.expr))
+        print "Independent couplings: "
+        for indep_coup in self.model_builder.coups_indep: 
+            print "%s: %s" %(indep_coup.name, indep_coup.expr)
+            self.assertFalse(g_expr.search(indep_coup.expr))
