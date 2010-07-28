@@ -429,7 +429,7 @@ class AddVariable(list):
                 try:
                     newadd = newadd.factorize()
                 except:
-                    raise Exception('')
+                    raise Exception('fail to factorize')
             else:
                 #take away the useless AddVariable to going back to a Variable class
                 newadd = newadd[0]
@@ -594,13 +594,17 @@ class MultVariable(list):
         
     def __eq__(self, obj):
         """Define When two MultVariable are identical"""
-        
-        if self.__class__ != obj.__class__ or len(self) != len(obj):
+        try:    
+            if obj.vartype !=2 or len(self) != len(obj):
+                return False
+        except:
             return False
         else:
-            out1 = set([(var.variable, var.power) for var in self])
-            out2 = set([(var.variable, var.power) for var in obj])
-            return out1 == out2
+            l1=[(var.variable, var.power) for var in self]
+            for var in obj:
+                if not (var.variable, var.power) in l1:
+                    return False
+            return True
                     
     def __str__(self):
         """ String representation """
@@ -760,10 +764,7 @@ class Variable(object):
         
     def __eq__(self, obj):
         """ identical if the variable is the same """
-        if not obj.vartype:
-            return self.variable == obj.variable
-        else:
-            return False
+        return not obj.vartype and self.variable == obj.variable
         
     def __str__(self):
         text = ''

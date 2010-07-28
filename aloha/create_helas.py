@@ -101,7 +101,7 @@ class AbstractHelasBuilder(object):
         nb_spinor = 0
         if not self.helas_kernel:
             AbstractHelasBuilder.counter += 1
-            logger.info('new kernel %s' % self.counter)
+            logger.info('aloha creates %s routines' % self.name)
             try:       
                 lorentz = eval(self.lorentz_expr)
             except NameError:
@@ -158,7 +158,7 @@ class AbstractHelasBuilder(object):
             lorentz *= complex(0,-1)
 
           
-        lorentz = lorentz.simplify()
+        #lorentz = lorentz.simplify()
         lorentz = lorentz.expand()
 
         if self.spins[self.outgoing-1] == 5:
@@ -369,7 +369,7 @@ class AbstractHelasModel(dict):
 
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
-        self.look_for_symmetries()
+        #self.look_for_symmetries()
         
         for lorentz in self.model.all_lorentz:
             if -1 in lorentz.spins:
@@ -512,15 +512,16 @@ if '__main__' == __name__:
     #create_library()
     import profile       
     #model 
-    helasgenerator = AbstractHelasModel('sm')   
+      
     start = time.time()
-    def main(helasgenerator):
+    def main():
+        helasgenerator = AbstractHelasModel('sm') 
         helasgenerator.compute_all()
     def write(helasgenerator):
         helasgenerator.write('/tmp/', 'Fortran')
-    #profile.run('main(helasgenerator)')
-    main(helasgenerator)
-    profile.run('write(helasgenerator)')
+    main()
+    #profile.run('main()')
+    #profile.run('write(helasgenerator)')
     stop = time.time()
     logger.info('done in %s s' % (stop-start))
   

@@ -315,7 +315,7 @@ class OrganizeModelExpression:
     conj_expr = re.compile(r'''complexconjugate\((?P<expr>\w+)\)''')
 
     #RE expression for is_event_dependent
-    separator = re.compile(r'''[+,-,*,/()]''')    
+    separator = re.compile(r'''[+\-*/()]''')    
     
     def __init__(self, model):
     
@@ -404,7 +404,6 @@ class OrganizeModelExpression:
     def find_dependencies(self, expr):
         """check if an expression should be evaluated points by points or not
         """
-
         depend_on = set()
 
         # Treat predefined result
@@ -412,7 +411,7 @@ class OrganizeModelExpression:
         #    return tuple()
         
         # Split the different part of the expression in order to say if a 
-        #subexpression is dependant of one of tracked variable
+        #subexpression is dependent of one of tracked variable
         expr = self.separator.sub(' ',expr)
         
         # look for each subexpression
