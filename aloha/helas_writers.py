@@ -690,7 +690,7 @@ class HelasWriterForCPP(WriteHelas):
         return cc_header
     
     def write(self):
-        """Write the .h and .cc files
+        """Write the .h and .cc files"""
 
         writer_h = writers.CPPWriter(self.out_path + ".h")
         writer_cc = writers.CPPWriter(self.out_path + ".cc")
