@@ -14,8 +14,9 @@ class WriteHelas:
     change_var_format = str
     change_number_format = str
     extension = ''
-    type_to_variable = {2:'F',3:'V',5:'T',1:'S'}
-    type_to_pos = {'S':2, 'T':17, 'V':5, 'F':5}
+    type_to_variable = {2:'f',3:'v',5:'t',1:'s'}
+    type_to_size = {'s':3, 't':18, 'v':6, 'f':6}
+    #type_to_pos = {'s':2, 't':17, 'v':5, 'f':5}
     
     def __init__(self, abstracthelas, dirpath):
 
@@ -23,12 +24,18 @@ class WriteHelas:
         helasname = get_helas_name(abstracthelas.name, abstracthelas.outgoing)
         self.out_path = os.path.join(dirpath, helasname + self.extension)
         self.dir_out = dirpath
-        self.particles = abstracthelas.spins
+        self.particles =  [self.type_to_variable[spin] for spin in \
+                          abstracthelas.spins]
         self.namestring = helasname
         self.comment = abstracthelas.infostr
         self.offshell = abstracthelas.outgoing 
         self.symmetries = abstracthelas.symmetries
-         
+
+        #prepare the necessary object
+        self.collect_variables() # Look for the different variables
+        self.make_all_lists()   # Compute the expression for the call ordering
+                                 #the definition of objects,...
+
     def collect_variables(self):
         """Collects Momenta,Mass,Width into lists"""
          
@@ -72,8 +79,8 @@ class WriteHelas:
         """Routine for making a string out of indice objects"""
         
         text = 'output(%s)' % indices
-        return text 
-
+        return text                 
+        
     def write_obj(self, obj):
         """Calls the appropriate writing routine"""
 
@@ -129,95 +136,139 @@ class WriteHelas:
         if obj.power != 1:
             text = text + self.power_symbol + str(obj.power)
         return text
+
+    def make_all_lists(self):
+        """ Make all the list for call ordering, conservation impulsion, 
+        basic declaration"""
+        
+        DeclareList = self.make_declaration_list()
+        CallList = self.make_call_list()
+        MomentumConserve = self.make_momentum_conservation()
+
+        self.calllist =  {'CallList':CallList,'DeclareList':DeclareList, \
+                           'Momentum':MomentumConserve}
+
+    
+    def make_call_list(self):
+        """find the way to write the call of the functions"""
+
+        # particle type counter
+        nb_type = {'s':0, 'f':0, 'v':0, 't':0}        
+        call_arg = [] #incoming argument of the routine
+        
+        # update the type counter + make call_arg for amplitude
+        for index,spin in enumerate(self.particles):
+            nb_type[spin] += 1
+            call_arg.append('%s%d' % (spin, index +1))
+            
+        # reorder call_arg if not amplitude
+        if self.offshell:
+            part_pos = self.offshell -1 
+            out_type = self.particles[part_pos]
+            
+            #order is FVST #look at the border of the cycling move
+            # start/stop are the index of the group of spin where to perform
+            #cycling ordering.
+            if out_type == 'f':
+                start = 0
+                stop = nb_type['f']
+            elif out_type == 'v':
+                start = nb_type['f']
+                stop = start + nb_type['v']
+            elif out_type == 's':
+                start = nb_type['f'] + nb_type['v']
+                stop = start + nb_type['s']
+            elif out_type == 't':
+                start = nb_type['f'] + nb_type['v']+ nb_type['s']
+                stop = start + nb_type['t']
+            else:
+                raise NotImplemented, 'Only type FVST are supported' 
+            
+            #reorganize the order and suppress the output from this part
+            call_arg = self.new_order(call_arg, part_pos, start, stop)
+        
+        return call_arg
+            
+    @ staticmethod
+    def new_order(call_list, remove, start, stop):
+        """ create the new order for the calling using cycling order"""
+        
+        assert(start <= remove <= stop <= len(call_list))
+        
+        new_list= call_list[:start]
+        for i in range(remove+1, stop):
+            new_list.append(call_list[i])
+        for i in range(start, remove):
+            new_list.append(call_list[i])
+        new_list += call_list[stop:]
+        
+        return new_list
+        
+    def make_momentum_conservation(self):
+        """ compute the sign for the momentum conservation """
+        
+        if not self.offshell:
+            return []
+        # How Convert  sign to a string
+        sign_dict = {1: '+', -1: '-'}
+        # help data 
+        momentum_conserve = []
+        nb_fermion =0
+        
+        #compute global sign
+        if not self.offshell % 2 and self.particles[self.offshell -1] == 'f': 
+            global_sign = 1
+        else:
+            global_sign = -1
+        
+        
+        for index, spin in enumerate(self.particles): 
+            assert(spin in ['s','f','v','t'])  
+      
+            #compute the sign
+            if spin != 'f':
+                sign = -1 * global_sign
+            elif nb_fermion % 2 == 0:
+                sign = global_sign
+                nb_fermion += 1
+            else: 
+                sign = -1 * global_sign
+                nb_fermion += 1
+            
+            # No need to include the outgoing particles in the definitions
+            if index == self.offshell -1:
+                continue 
+            
+            # write the
+            momentum_conserve.append('%s%s%d' % (sign_dict[sign], spin, \
+                                                                     index + 1))
+        
+        # Remove the
+        if momentum_conserve[0][0] == '+':
+            momentum_conserve[0] = momentum_conserve[0][1:]
+        
+        return momentum_conserve
+    
+    def make_declaration_list(self):
+        """ make the list of declaration nedded by the header """
+        
+        declare_list = []
+        for index, spin in enumerate(self.particles):
+            # First define the size of the associate Object 
+            declare_list.append(self.declare_dict[spin] % (index + 1) ) 
+ 
+        return declare_list
+ 
+    
         
 class HelasWriterForFortran(WriteHelas): 
     """routines for writing out Fortran"""
 
     extension = '.f'
-
-    def make_call_lists(self):
-        """ """
-        
-        CallList = []
-        DeclareList = ['double complex C']
-        MomentumConserve = []
-        DeclareDict = {'F':'double complex f', 'V':'double complex V', \
-                                'S':'double complex s', 'T':'double complex T'}
-        TypeToVariable = {2:'F',3:'V',5:'T',1:'S'}
-        FermionNumber = 0
-        VectorNumber = 0
-        ScalarNumber = 0
-        TensorNumber = 0
-        Counter = 0
-        OffShell = self.offshell 
-        FermiList = []
-        VectorList = []
-        ScalarList = []
-        TensorList = [] 
-        for index, elem in enumerate(self.particles):
-            
-            # First define the size of the associate Object 
-            if elem == 1:
-                DeclareList.append('%s%d(3)' % (DeclareDict['S'], index + 1))
-                ScalarList.append('%s%d' % ('S', index + 1))
-                ScalarNumber += 1 
-            elif elem == 5:
-                DeclareList.append('%s%d(18)' % (DeclareDict['T'], index + 1))
-                TensorList.append('%s%d' % ('T', index + 1))
-                TensorNumber += 1
-            elif elem == 3:
-                DeclareList.append('%s%d(6)' % (DeclareDict['V'], index + 1))  
-                VectorList.append('%s%d' % ('V', index + 1))
-                VectorNumber += 1 
-            elif elem == 2:
-                DeclareList.append('%s%d(6)' % (DeclareDict['F'], index + 1))  
-                FermiList.append('%s%d' % ('F', index + 1))  
-                FermionNumber += 1 
-            # Define the Calllist
-            if index != (OffShell-1):
-                CallList.append('%s%d' % (TypeToVariable[elem], index + 1))
-                
-            # Define Momentum Conservation
-            if TypeToVariable[elem] in ['V', 'S', 'T']:
-                MomentumConserve.append('-%s%d' % (TypeToVariable[elem], index + 1))
-            elif TypeToVariable[elem] == 'F' and Counter % 2 == 0:
-                MomentumConserve.append('+F%d' % (index + 1))
-                Counter += 1 
-            else: 
-                MomentumConserve.append('-F%d' % (index + 1))
-                Counter += 1
-                    
-        # Reorder calllist cyclically. 
-        if OffShell:
-            OffShellParticle = OffShell -1 
-            PermList = []
-            if OffShellParticle < FermionNumber:
-                for i in range(FermionNumber):
-                    PermList.append(OffShellParticle + i - FermionNumber + 1) 
-                FermiList = [FermiList[i] for i in PermList] 
-                FermiList.pop()
-            elif OffShellParticle < (FermionNumber + VectorNumber):
-                for i in range(len(VectorList)):
-                    Shift = FermionNumber + VectorNumber - 1 - OffShellParticle
-                    PermList.append(i - Shift) 
-                VectorList = [VectorList[i] for i in PermList] 
-                VectorList.pop()
-            elif OffShellParticle < (FermionNumber + VectorNumber + ScalarNumber):
-                for i in range(len(ScalarList)):
-                    Shift = FermionNumber + VectorNumber + ScalarNumber - 1 - OffShellParticle
-                    PermList.append(i - Shift) 
-                ScalarList = [ScalarList[i] for i in PermList] 
-                ScalarList.pop()
-            elif OffShellParticle < (FermionNumber + VectorNumber + ScalarNumber):
-                for i in range(len(VectorList)):
-                    Shift = len(self.particles) - 1 - OffShellParticle
-                    PermList.append(i - Shift) 
-                TensorList = [TensorList[i] for i in PermList] 
-                TensorList.pop()
-            CallList = FermiList + VectorList + ScalarList + TensorList
-            
-        self.calllist =  {'CallList':CallList,'DeclareList':DeclareList, \
-                           'Momentum':MomentumConserve}
+    declare_dict = {'s':'double complex S%d(3)',
+                    'f':'double complex F%d(6)',
+                    'v':'double complex V%d(6)',
+                    't':'double complex T%s(18)'}
     
     def define_header(self):
         """Define the Header of the fortran file. This include
@@ -232,6 +283,8 @@ class HelasWriterForFortran(WriteHelas):
         
         CallList = self.calllist['CallList']
         DeclareList = self.calllist['DeclareList']
+        DeclareList.append('double complex C')
+        
         local_declare = []
         OffShell = self.offshell
         OffShellParticle = OffShell -1 
@@ -248,7 +301,7 @@ class HelasWriterForFortran(WriteHelas):
             str_out = 'subroutine %(name)s(%(args)s, %(out)s%(number)d)\n' % \
                {'name': self.namestring,
                 'args': ','.join(CallList+ ['C'] + Mass + Width), 
-                'out': self.type_to_variable[self.particles[OffShellParticle]],
+                'out': self.particles[OffShellParticle],
                 'number': OffShellParticle + 1 
                 }
                                  
@@ -281,54 +334,28 @@ class HelasWriterForFortran(WriteHelas):
         str_out = ''
         # Conservation of Energy Impulsion
         if self.offshell: 
-            NegSign = momentum_conservation.pop(self.offshell -1) 
-            if NegSign.startswith('-F'):
-                NegString = '(' 
-            else:
-                NegString = '-('
-
-            offshelltype = self.type_to_variable[self.particles[self.offshell -1]]
-            #Implement the conservation of Energy Impulsion 
-            if 'S' == offshelltype:
-                str_out += '%s%d(2)=%s' % (offshelltype, self.offshell, NegString) 
-            elif 'T' == offshelltype:
-                str_out += '%s%d(17)=%s' % (offshelltype, self.offshell, NegString) 
-            else: 
-                str_out += '%s%d(5)=%s' % (offshelltype, self.offshell, NegString) 
-            for elem in momentum_conservation:
-                if elem.startswith('-S'):
-                    str_out += elem + '(2)' 
-                elif elem.startswith('-T'):
-                    str_out += elem + '(17)' 
-                else:
-                    str_out += elem + '(5)'
-                     
-            str_out += ')\n'
-            if 'S' == offshelltype:
-                str_out += '%s%d(3)=%s' % (offshelltype, self.offshell, NegString) 
-            elif 'T' == offshelltype:
-                str_out += '%s%d(18)=%s' % (offshelltype, self.offshell, NegString) 
-            else: 
-                str_out += '%s%d(6)=%s' % (offshelltype, self.offshell, NegString)
-                 
-            for elem in momentum_conservation:
-                if elem.startswith('-S'):
-                    str_out += elem + '(3)' 
-                elif elem.startswith('-T'):
-                    str_out += elem + '(18)' 
-                else:
-                    str_out += elem + '(6)'
-            str_out +=  ')\n' 
-
-        
+            offshelltype = self.particles[self.offshell -1]
+            offshell_size = self.type_to_size[offshelltype]            
+            #Implement the conservation of Energy Impulsion
+            for i in range(-1,1):
+                str_out += '%s%d(%d)= ' % (offshelltype, self.offshell, \
+                                                              offshell_size + i)
+                
+                pat=re.compile(r'^[-+]?(?P<spin>\w)')
+                for elem in momentum_conservation:
+                    spin = pat.search(elem).group('spin') 
+                    str_out += '%s(%d)' % (elem, self.type_to_size[spin] + i)  
+                str_out += '\n'  
+                    
         # Momentum
         for mom in momenta:
-            index = int(mom[-1])
+            #Mom is in format PX with X the number of the particle
+            index = int(mom[1:])
             
-            type = self.type_to_variable[self.particles[index - 1]]
-            energy_pos = self.type_to_pos[type]
+            type = self.particles[index - 1]
+            energy_pos = self.type_to_size[type] -1
             sign = ''
-            if self.offshell == index and (type == 'V' or type == 'S'):
+            if self.offshell == index and (type == 'v' or type == 's'):
                 sign = '-'
                 
             str_out += '%s(0) = %s dble(%s%d(%d))\n' % (mom, sign, type, index, energy_pos)
@@ -339,7 +366,8 @@ class HelasWriterForFortran(WriteHelas):
                    
         # Definition for the One Over Mass**2 terms
         for elem in overm:
-            index = int(elem[-1])
+            #Mom is in format OMX with X the number of the particle
+            index = int(elem[2:])
             str_out += 'om%d = 0d0\n' % (index)
             str_out += 'if (m%d .ne. 0d0) om%d' % (index, index) + '=1d0/dcmplx(m%d**2,-w%d*m%d)\n' % (index, index, index) 
         
@@ -373,7 +401,8 @@ class HelasWriterForFortran(WriteHelas):
                 string = re.sub('(?P<num>[0-9])[Jj]\.', '\g<num>.*(0d0,1d0)', string)
                 OutString = OutString + string + '\n'
         else:
-            OffShellParticle = '%s%d' % (self.type_to_variable[self.particles[self.offshell-1]], self.offshell)
+            OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
+                                                                  self.offshell)
             numerator = self.obj.numerator
             denominator = self.obj.denominator
             for ind in denominator.listindices():
@@ -397,20 +426,15 @@ class HelasWriterForFortran(WriteHelas):
     def define_symmetry(self):
         calls = self.calllist['CallList']
         number = self.offshell 
-        Outstring = 'call '+self.namestring+'('+','.join(calls)+',C,M%s,W%s,%s%s)'%(number,number,self.type_to_variable[self.particles[self.offshell-1]],number)
+        Outstring = 'call '+self.namestring+'('+','.join(calls)+',C,M%s,W%s,%s%s)' \
+                         %(number,number,self.particles[self.offshell-1],number)
         return Outstring
     
     def define_foot(self):
         return 'end' 
 
     def write(self):
-        
-        #prepare the necessary object
-        self.collect_variables() # Look for the different variables
-        self.make_call_lists()   # Compute the expression for the call ordering
-                                 #the definition of objects,...
-        
-        
+                
         writer = Writer.FortranWriter(self.out_path)
         writer.downcase = False 
         commentstring = 'This File is Automatically generated by ALOHA \n'
@@ -440,21 +464,15 @@ def get_helas_name(name,outgoing):
 
 class HelasWriterForCPP(WriteHelas): 
     """routines for writing out Fortran"""
+    
     extension = '.cc'
+    
     def __init__(self, abstracthelas, dirpath):
 
-        self.obj = abstracthelas.expr
+        WriteHelas.__init__(self, abstracthelas, dirpath)
+        
         helasname = get_helas_name(abstracthelas.name, abstracthelas.outgoing)
-        self.out_path = os.path.join(dirpath, helasname + self.extension)
         self.out_head = os.path.join(dirpath,helasname + '.h')
-        self.dir_out = dirpath
-        self.particles =[]
-        for elem in abstracthelas.spins: 
-                self.particles.append(self.type_to_variable[elem])
-        self.namestring = helasname
-        self.comment = abstracthelas.infostr
-        self.offshell = abstracthelas.outgoing 
-        self.symmetries = abstracthelas.symmetries 
         
     def make_call_lists(self):
         """ """
@@ -608,7 +626,7 @@ class HelasWriterForCPP(WriteHelas):
             index = int(mom[-1])
             
             type = self.particles[index-1]
-            energy_pos=self.type_to_pos[type]
+            energy_pos=self.type_to_size[type]
             sign = ''
             if OffShellParticle == index -1 and type !='S':
                 sign='-'
@@ -682,6 +700,14 @@ class HelasWriterForCPP(WriteHelas):
         return '}' 
 
     def write(self):
+        
+        #prepare the necessary object
+        self.collect_variables() # Look for the different variables
+        self.make_all_lists()   # Compute the expression for the call ordering
+                                #the definition of objects,...
+
+        
+        
         hWriter = Writer.CPPWriter(self.out_head)
         ccWriter = Writer.CPPWriter(self.out_path)
 #        commentstring = 'c   This File Automatically generated by MadGraph 5/FeynRules HELAS writer \n'
