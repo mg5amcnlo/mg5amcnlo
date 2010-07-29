@@ -7,7 +7,7 @@ import os
 import re 
 from numbers import Number
 
-class WriteHelas: 
+class WriteALOHA: 
     """ Generic writing functions """ 
     
     power_symbol = '**'
@@ -17,18 +17,18 @@ class WriteHelas:
     type_to_variable = {2:'F',3:'V',5:'T',1:'S'}
     type_to_size = {'S':3, 'T':18, 'V':6, 'F':6}
     
-    def __init__(self, abstracthelas, dirpath):
+    def __init__(self, abstract_routine, dirpath):
 
-        self.obj = abstracthelas.expr
-        helasname = get_helas_name(abstracthelas.name, abstracthelas.outgoing)
-        self.out_path = os.path.join(dirpath, helasname + self.extension)
+        self.obj = abstract_routine.expr
+        name = get_routine_name(abstract_routine.name, abstract_routine.outgoing)
+        self.out_path = os.path.join(dirpath, name + self.extension)
         self.dir_out = dirpath
         self.particles =  [self.type_to_variable[spin] for spin in \
-                          abstracthelas.spins]
-        self.namestring = helasname
-        self.comment = abstracthelas.infostr
-        self.offshell = abstracthelas.outgoing 
-        self.symmetries = abstracthelas.symmetries
+                          abstract_routine.spins]
+        self.namestring = name
+        self.comment = abstract_routine.infostr
+        self.offshell = abstract_routine.outgoing 
+        self.symmetries = abstract_routine.symmetries
 
         #prepare the necessary object
         self.collect_variables() # Look for the different variables
@@ -260,7 +260,7 @@ class WriteHelas:
  
     
         
-class HelasWriterForFortran(WriteHelas): 
+class ALOHAWriterForFortran(WriteALOHA): 
     """routines for writing out Fortran"""
 
     extension = '.f'
@@ -268,6 +268,13 @@ class HelasWriterForFortran(WriteHelas):
                     'F':'double complex F%d(6)',
                     'V':'double complex V%d(6)',
                     'T':'double complex T%s(18)'}
+    
+    def make_declaration_list(self):
+        """ make the list of declaration nedded by the header """
+        
+        declaration = WriteALOHA.make_declaration_list(self)
+        declaration.append('double complex C')
+        return declaration
     
     def define_header(self):
         """Define the Header of the fortran file. This include
@@ -282,8 +289,6 @@ class HelasWriterForFortran(WriteHelas):
         
         CallList = self.calllist['CallList']
         DeclareList = self.calllist['DeclareList']
-        DeclareList.append('double complex C')
-        
         local_declare = []
         OffShell = self.offshell
         OffShellParticle = OffShell -1 
@@ -456,12 +461,12 @@ class HelasWriterForFortran(WriteHelas):
             writer.writelines(symmetrybody)
             writer.writelines(self.define_foot())
         
-def get_helas_name(name,outgoing):
-    """ build the name of the helas function """
+def get_routine_name(name,outgoing):
+    """ build the name of the aloha function """
     
     return '%s_%s' % (name, outgoing) 
 
-class HelasWriterForCPP(WriteHelas): 
+class ALOHAWriterForCPP(WriteALOHA): 
     """Routines for writing out helicity amplitudes as C++ .h and .cc files."""
     
     declare_dict = {'S':'double complex S%d[3]',
@@ -483,7 +488,6 @@ class HelasWriterForCPP(WriteHelas):
         
         CallList = self.calllist['CallList']
         DeclareList = self.calllist['DeclareList']
-        DeclareList.append('double complex C')
         
         local_declare = []
         OffShell = self.offshell
@@ -690,7 +694,7 @@ class HelasWriterForCPP(WriteHelas):
         return cc_header
     
     def write(self):
-        """Write the .h and .cc files
+        """Write the .h and .cc files"""
 
         writer_h = writers.CPPWriter(self.out_path + ".h")
         writer_cc = writers.CPPWriter(self.out_path + ".cc")

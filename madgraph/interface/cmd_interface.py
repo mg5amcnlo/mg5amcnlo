@@ -54,7 +54,6 @@ import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.tutorial_text as tutorial_text
 
-import aloha.create_helas as create_helas
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
@@ -1991,9 +1990,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 logger.info('convert UFO model to MG4 format')
                 export_v4.convert_model_to_mg4(self._curr_model, 
                                                          os.path.join(dir_path))
-                #create_helas.AbstractHelasModel(self._curr_model['name'],
-                #            write_dir=os.path.join(dir_path,'Source','DHELAS'))
-                #export_v4.make_model_symbolic_link(self._curr_model['path'], dir_path)
         else:
             raise NotImplemented
             

@@ -31,7 +31,7 @@ import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.template_files as Template
 import madgraph.iolibs.ufo_expression_parsers as parsers
 
-import aloha.create_helas as create_helas
+import aloha.create_aloha as create_aloha
 
 import models.sm.write_param_card as write_param_card
 from madgraph import MadGraph5Error, MG5DIR
@@ -1403,7 +1403,7 @@ def convert_model_to_mg4(model, output_dir):
         if not filename.lower().endswith('.f'):
             continue
         cp((MG5DIR + '/aloha/Template/' + filename), write_dir)
-    create_helas.write_helas_file_inc(write_dir, '.f', '.o')
+    create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
                 
     # Make final link in the Process
     make_model_symbolic_link(output_dir)

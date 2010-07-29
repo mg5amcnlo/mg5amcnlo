@@ -27,7 +27,7 @@ import madgraph.iolibs.files as files
 import madgraph.iolibs.save_load_object as save_load_object
 from madgraph.core.color_algebra import *
 
-import aloha.create_helas as create_helas
+import aloha.create_aloha as create_aloha
 
 import models as ufomodels
 
@@ -70,8 +70,8 @@ def import_model(model_name):
     model.set('name', os.path.split(model_name)[-1])
  
     # Load Abstract Helas routine from Aloha
-    abstract_model = create_helas.AbstractHelasModel(model_name)
-    abstract_model.compute_all()
+    abstract_model = create_aloha.AbstractALOHAModel(model_name)
+    abstract_model.compute_all(save=False)
     model.set('lorentz', dict(abstract_model))
     
     # Load the Parameter/Coupling in a convinient format.

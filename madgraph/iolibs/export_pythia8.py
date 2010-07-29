@@ -35,8 +35,8 @@ import madgraph.iolibs.template_files as Template
 import madgraph.iolibs.ufo_expression_parsers as parsers
 from madgraph import MadGraph5Error, MG5DIR
 
-import aloha.create_helas as create_helas
-import aloha.helas_writers as helas_writers
+import aloha.create_aloha as create_aloha
+import aloha.aloha_writers as aloha_writers
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_pythia8')
@@ -983,7 +983,7 @@ class UFO_model_to_pythia8(object):
         template_cc_files = self.read_aloha_template_files(ext = 'cc')
         
         for abstracthelas in self.model.get('lorentz').values():
-            aloha_writer = helas_writers.HelasWriterForCPP(abstracthelas,
+            aloha_writer = aloha_writers.ALOHAWriterForCPP(abstracthelas,
                                                         self.dir_path)
             header = aloha_writer.define_header()
             template_h_files.append(self.write_function_declaration(\

@@ -3923,7 +3923,7 @@ class AlohaFortranWriterTest(unittest.TestCase):
         """ test the header of a file """
         
         from models.sm.object_library import Lorentz
-        import aloha.create_helas as create_helas
+        import aloha.create_aloha as create_aloha
         
         FFV1 = Lorentz(name = 'FFV1',
                spins = [ 2, 2, 3 ],
@@ -3951,7 +3951,7 @@ C
       P1(2) =  DIMAG(F1(6))
       P1(3) =  DIMAG(F1(5))"""
 
-        abstract_M = create_helas.AbstractHelasBuilder(FFV1).compute_helas(1)
+        abstract_M = create_aloha.AbstractRoutineBuilder(FFV1).compute_routine(1)
         abstract_M.write('/tmp','Fortran')
         
         self.assertTrue(os.path.exists('/tmp/FFV1_1.f'))
