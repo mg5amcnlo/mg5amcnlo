@@ -315,7 +315,7 @@ class OrganizeModelExpression:
     conj_expr = re.compile(r'''complexconjugate\((?P<expr>\w+)\)''')
 
     #RE expression for is_event_dependent
-    separator = re.compile(r'''[+\-*/()]''')    
+    separator = re.compile(r'''[+,\-*/()]''')    
     
     def __init__(self, model):
     

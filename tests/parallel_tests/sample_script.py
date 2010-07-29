@@ -50,11 +50,10 @@ if '__main__' == __name__:
     
     logging.basicConfig(level=logging.INFO)
     # Create a list of processes to check automatically
-    #my_proc_list = me_comparator.create_proc_list(['w+', 'w-'],
-    #                                      initial=2, final=2)
+    #my_proc_list = me_comparator.create_proc_list(['w+', 'w-','h','a'],initial=2, final=3)
 
     # or give one
-    my_proc_list = ['g g > g g g','a a> w+ w- a']
+    my_proc_list = ['e+ e- > e+ e- a', 'z z > z z','u u~ > u u~','g g > g g',' h h > h h h',' a w+ > a h w+',' a w+ > a a w+',' g g > g g g']
 
     # Create a MERunner object for MG4
     my_mg4 = me_comparator.MG4Runner()
@@ -74,7 +73,7 @@ if '__main__' == __name__:
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                       model='sm', orders={'QED':4, 'QCD':4}, energy=500)
+                       model=['sm_FR','sm'], orders={'QED':4, 'QCD':4}, energy=500)
 
     # Do some cleanup
     #my_comp.cleanup()

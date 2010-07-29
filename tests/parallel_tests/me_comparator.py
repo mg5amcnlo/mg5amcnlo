@@ -487,6 +487,9 @@ class MEComparator(object):
     def run_comparison(self, proc_list, model='sm', orders={}, energy=1000):
         """Run the codes and store results."""
 
+        if isinstance(model, basestring):
+            model= [model] * len(self.me_runners)
+
         self.results = []
         self.proc_list = proc_list
 
@@ -494,13 +497,13 @@ class MEComparator(object):
             "Running on %i processes with order: %s, in model %s @ %i GeV" % \
             (len(proc_list),
              ' '.join(["%s=%i" % (k, v) for k, v in orders.items()]),
-             model,
+             '/'.join([onemodel for onemodel in model]),
              energy))
 
-        for runner in self.me_runners:
+        for i,runner in enumerate(self.me_runners):
             cpu_time1 = time.time()
             logging.info("Now running %s" % runner.name)
-            self.results.append(runner.run(proc_list, model, orders, energy))
+            self.results.append(runner.run(proc_list, model[i], orders, energy))
             cpu_time2 = time.time()
             logging.info(" Done in %0.3f s" % (cpu_time2 - cpu_time1))
             logging.info(" (%i/%i with zero ME)" % \
