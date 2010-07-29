@@ -7,6 +7,7 @@
 #define Pythia8_%(process_file_name)s_H
 
 #include "SigmaProcess.h"
+#include "Parameters_%(model_name)s.h"
 
 using namespace std;
 

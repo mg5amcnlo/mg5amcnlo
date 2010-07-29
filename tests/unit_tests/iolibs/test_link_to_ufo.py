@@ -151,13 +151,9 @@ class TestUFOExpressionParsers(unittest.TestCase):
         converted = ufo_to_fortran.parse(expr)
         self.assertEqual(converted, 'randomfunction(2.000000d+00)')
         
-        expr = 'randomcpp::function(2.)'
+        expr = 'function(2., a+b)'
         converted = ufo_to_fortran.parse(expr)
-        self.assertEqual(converted, 'randomcpp::function(2.000000d+00)')
-        
-        expr = 'randomcpp::function(2., a+b)'
-        converted = ufo_to_fortran.parse(expr)
-        self.assertEqual(converted, 'randomcpp::function(2.000000d+00,a+b)')
+        self.assertEqual(converted, 'function(2.000000d+00,a+b)')
         
         expr = 'cmath.sqrt(2.5)'
         converted = ufo_to_fortran.parse(expr)
@@ -200,23 +196,15 @@ class TestUFOExpressionParsers(unittest.TestCase):
         expr = 'cmath.sqrt(2)'
         converted = ufo_to_pythia8.parse(expr)
         self.assertTrue(isinstance(converted, str))
-        self.assertEqual(converted, 'sqrt(2)')
-        
-        expr = 'cmath.sqrt(2.)'
-        converted = ufo_to_pythia8.parse(expr)
         self.assertEqual(converted, 'sqrt(2.)')
         
         expr = 'randomfunction(2.)'
         converted = ufo_to_pythia8.parse(expr)
         self.assertEqual(converted, 'randomfunction(2.)')
         
-        expr = 'randomcpp::function(2.)'
+        expr = 'function(2.0000000, a+b)'
         converted = ufo_to_pythia8.parse(expr)
-        self.assertEqual(converted, 'randomcpp::function(2.)')
-        
-        expr = 'randomcpp::function(2., a+b)'
-        converted = ufo_to_pythia8.parse(expr)
-        self.assertEqual(converted, 'randomcpp::function(2.,a+b)')
+        self.assertEqual(converted, 'function(2.,a+b)')
         
         expr = 'cmath.sqrt(2.5)'
         converted = ufo_to_pythia8.parse(expr)
@@ -225,8 +213,37 @@ class TestUFOExpressionParsers(unittest.TestCase):
         expr = '(ee**2*IMAG/(2.*sw**2) * (cmath.sin(cmath.sqrt(2)*ee)**2/3.))'
         converted = ufo_to_pythia8.parse(expr)
         self.assertEqual(converted, 
-        '(pow(ee,2)*IMAG/(2.*pow(sw,2))*(pow(sin(sqrt(2)*ee),2)/3.))')
+        '(pow(ee,2.)*IMAG/(2.*pow(sw,2.))*(pow(sin(sqrt(2.)*ee),2.)/3.))')
     
+    def test_convert_number_to_cpp(self):
+        """ test it can convert number in C++ string"""
+        
+        ufo_to_pythia8 = ufo_expression_parsers.UFOExpressionParserPythia8()
+        expr = str(2)
+        converted = ufo_to_pythia8.parse(expr)
+        self.assertTrue(isinstance(converted, str))
+        self.assertEqual(converted, '2.')  
+        
+        expr = str(2.00000)
+        converted = ufo_to_pythia8.parse(expr)
+        self.assertTrue(isinstance(converted, str))
+        self.assertEqual(converted, '2.')  
+        
+        expr = str(0.23)
+        converted = ufo_to_pythia8.parse(expr)
+        self.assertTrue(isinstance(converted, str))
+        self.assertEqual(converted, '0.23')  
+        
+        expr = '2.5e6'
+        converted = ufo_to_pythia8.parse(expr)
+        self.assertTrue(isinstance(converted, str))
+        self.assertEqual(converted, '2.5e6')
+        
+        expr = str(1.5)  
+        converted = ufo_to_pythia8.parse(expr)
+        self.assertTrue(isinstance(converted, str))
+        self.assertEqual(converted, '1.5')        
+        
 class CheckFileCreate():
     """Check that the files are correctly created"""
 

@@ -13,7 +13,8 @@ double t;
 ntry=ntry+1;
 
 // Set the parameters which change event by event
-set_variable_parameters();
+pars->setDependentParameters(particleDataPtr, coupSMPtr, alpS);
+pars->setDependentCouplings(particleDataPtr, coupSMPtr);
 
 // Reset color flows
 for(int i=0;i < ncolor; i++)

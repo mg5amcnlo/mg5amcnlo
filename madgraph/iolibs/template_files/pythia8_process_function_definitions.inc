@@ -6,6 +6,10 @@
 // Initialize process. 
   
 void %(process_class_name)s::initProc() {
+// Instantiate the model class and set parameters that stay fixed during run
+    pars = Parameters_%(model_name)s::getInstance();
+    pars->setIndependentParameters(particleDataPtr, coupSMPtr);
+    pars->setIndependentCouplings(particleDataPtr, coupSMPtr);
     %(initProc_lines)s
 } 
 
@@ -46,18 +50,3 @@ double %(process_class_name)s::weightDecay(Event& process, int iResBeg, int iRes
 double %(process_class_name)s::matrix(const int hel[]) { 
     %(matrix_lines)s
 }
-
-//--------------------------------------------------------------------------
-// Set couplings and other parameters that are fixed during the run
-
-void %(process_class_name)s::set_fixed_parameters() { 
-    %(fixed_parameter_lines)s
-}
-
-//--------------------------------------------------------------------------
-// Set couplings and other parameters that vary event by event
-
-void %(process_class_name)s::set_variable_parameters() { 
-    %(variable_parameter_lines)s
-}
-

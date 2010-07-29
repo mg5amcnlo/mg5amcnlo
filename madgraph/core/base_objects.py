@@ -469,13 +469,6 @@ class Interaction(PhysicsObject):
         self['couplings'] = { (0, 0):'none'}
         self['orders'] = {}
 
-    def __init__(self, init_dict={}):
-        """Creates a new Interaction object. Since there are special
-        checks for the \'couplings\' variable, it needs to be set
-        last."""
-
-        super(Interaction, self).__init__(init_dict)
-
     def filter(self, name, value):
         """Filter for valid interaction property values."""
 

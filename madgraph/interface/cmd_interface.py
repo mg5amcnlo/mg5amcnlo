@@ -1032,7 +1032,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _curr_amps = diagram_generation.AmplitudeList()
     _curr_matrix_elements = helas_objects.HelasMultiProcess()
     _curr_fortran_model = helas_call_writers.FortranHelasCallWriter()
-    _curr_cpp_model = helas_call_writers.CPPUFOHelasCallWriter()
+    _curr_cpp_model = None
 
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams', 
                      'multiparticles', 'couplings']
@@ -1352,6 +1352,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                             me, self._curr_fortran_model, path)
             
         if args[0] == 'pythia8':
+            self._curr_cpp_model = \
+                  helas_call_writers.Pythia8UFOHelasCallWriter(self._curr_model)
             for me in self._curr_matrix_elements.get('matrix_elements'):
                 export_pythia8.generate_process_files_pythia8(\
                             me, self._curr_cpp_model, path)

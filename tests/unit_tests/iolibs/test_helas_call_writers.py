@@ -38,7 +38,7 @@ class HelasModelTestSetup(unittest.TestCase):
     mybasemodel = base_objects.Model()
 
     def setUp(self):
-        self.mymodel.set('name', 'sm')
+        self.mymodel.set('model_name', 'sm')
 
         # Set up model
 
@@ -449,7 +449,7 @@ class HelasModelTest(HelasModelTestSetup):
     def test_setget_helas_model_correct(self):
         """Test correct HelasModel object get and set"""
 
-        self.assertEqual(self.mymodel.get('name'), 'sm')
+        self.assertEqual(self.mymodel.get('model_name'), 'sm')
 
     def test_setget_helas_model_error(self):
         """Test error raising in HelasModel object get and set"""

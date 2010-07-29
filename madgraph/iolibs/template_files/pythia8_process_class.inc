@@ -41,10 +41,6 @@ private:
   // Private function to calculate the matrix element for given helicities
   double matrix(const int helicities[]);
 
-  // Private functions to set the couplings and parameters used in this process
-  void set_fixed_parameters();
-  void set_variable_parameters();
-
   // Constants for array limits
   static const int nexternal = %(nexternal)d;
   static const int ncolor = %(ncolor)d;
@@ -55,6 +51,7 @@ private:
   // Color flows, used when selecting color
   double jamp2[ncolor];
 
-  // Other process-specific information, e.g. masses and couplings
-%(process_variables)s
+  // Pointer to the model parameters
+  Parameters_%(model_name)s* pars;
+
 };

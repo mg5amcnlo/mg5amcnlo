@@ -18,21 +18,25 @@
 import StringIO
 import copy
 import fractions
+import os
 import re
 
 import tests.unit_tests as unittest
 
-import aloha.WriteHelas as WriteHelas
+import aloha.helas_writers as helas_writers
 
-import madgraph.iolibs.misc as misc
 import madgraph.iolibs.export_pythia8 as export_pythia8
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.helas_call_writers as helas_call_writer
 import madgraph.iolibs.import_ufo as import_ufo
+import madgraph.iolibs.misc as misc
+import madgraph.iolibs.save_load_object as save_load_object
+
 import madgraph.core.base_objects as base_objects
+import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
-import madgraph.core.color_algebra as color
+
 import tests.unit_tests.core.test_helas_objects as test_helas_objects
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 
@@ -45,8 +49,7 @@ class IOExportPythia8Test(unittest.TestCase,
 
     mymodel = base_objects.Model()
     mymatrixelement = helas_objects.HelasMatrixElement()
-    mycppmodel = helas_call_writer.CPPUFOHelasCallWriter()
-    created_files = ['test_h', 'test_cc'
+    created_files = ['test.h', 'test.cc'
                     ]
 
     def setUp(self):
@@ -62,8 +65,8 @@ class IOExportPythia8Test(unittest.TestCase,
                       'antiname':'u~',
                       'spin':2,
                       'color':3,
-                      'mass':'mu',
-                      'width':'zero',
+                      'mass':'ZERO',
+                      'width':'ZERO',
                       'texname':'u',
                       'antitexname':'\bar u',
                       'line':'straight',
@@ -80,8 +83,8 @@ class IOExportPythia8Test(unittest.TestCase,
                       'antiname':'c~',
                       'spin':2,
                       'color':3,
-                      'mass':'mu',
-                      'width':'zero',
+                      'mass':'ZERO',
+                      'width':'ZERO',
                       'texname':'c',
                       'antitexname':'\bar c',
                       'line':'straight',
@@ -99,8 +102,8 @@ class IOExportPythia8Test(unittest.TestCase,
                       'antiname':'g',
                       'spin':3,
                       'color':8,
-                      'mass':'zero',
-                      'width':'zero',
+                      'mass':'ZERO',
+                      'width':'ZERO',
                       'texname':'g',
                       'antitexname':'g',
                       'line':'curly',
@@ -137,8 +140,8 @@ class IOExportPythia8Test(unittest.TestCase,
                                              u, \
                                              g]),
                       'color': [color.ColorString([color.T(2, 1, 0)])],
-                      'lorentz':['FFV'],
-                      'couplings':{(0, 0):'QQG'},
+                      'lorentz':['FFV2'],
+                      'couplings':{(0, 0):'GC_10'},
                       'orders':{'QCD':1}}))
 
         # Gamma couplings to quarks
@@ -149,14 +152,16 @@ class IOExportPythia8Test(unittest.TestCase,
                                              u, \
                                              z]),
                       'color': [color.ColorString([color.T(1, 0)])],
-                      'lorentz':['FFV'],
-                      'couplings':{(0, 0):'QQA'},
+                      'lorentz':['FFV2', 'FFV5'],
+                      'couplings':{(0,0): 'GC_35', (0,1): 'GC_47'},
                       'orders':{'QED':1}}))
 
         self.mymodel.set('particles', mypartlist)
         self.mymodel.set('interactions', myinterlist)
-        self.mymodel.set('name', 'SM')
+        self.mymodel.set('name', 'sm')
 
+        self.mycppmodel = helas_call_writer.Pythia8UFOHelasCallWriter(self.mymodel)
+    
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':2,
@@ -212,6 +217,7 @@ class IOExportPythia8Test(unittest.TestCase,
 #define Pythia8_Sigma_uux_uux_H
 
 #include "SigmaProcess.h"
+#include "Parameters_sm.h"
 
 using namespace std; 
 
@@ -223,7 +229,7 @@ namespace Pythia8
 // Process: c c~ > c c~
 //--------------------------------------------------------------------------
 
-class Sigma_uux_uux : public Sigma2Process
+class Sigma_uux_uux : public Sigma2Process 
 {
   public:
 
@@ -246,7 +252,7 @@ class Sigma_uux_uux : public Sigma2Process
     virtual double weightDecay(Event& process, int iResBeg, int iResEnd); 
 
     // Info on the subprocess.
-    virtual string name() const {return "u u~ > u u~ (SM)";}
+    virtual string name() const {return "u u~ > u u~ (sm)";}
 
     virtual int code() const {return 10000;}
 
@@ -263,11 +269,6 @@ class Sigma_uux_uux : public Sigma2Process
     // Private function to calculate the matrix element for given helicities
     double matrix(const int helicities[]); 
 
-    // Private functions to set the couplings and parameters used in this
-    // process
-    void set_fixed_parameters(); 
-    void set_variable_parameters(); 
-
     // Constants for array limits
     static const int nexternal = 4; 
     static const int ncolor = 2; 
@@ -278,13 +279,9 @@ class Sigma_uux_uux : public Sigma2Process
     // Color flows, used when selecting color
     double jamp2[ncolor]; 
 
-    // Other process-specific information, e.g. masses and couplings
-    // Propagator masses
-    double MZ; 
-    // Propagator widths
-    double WZ; 
-    // Couplings
-    complex QQG, QQA; 
+    // Pointer to the model parameters
+    Parameters_sm * pars; 
+
 }; 
 
 }  // end namespace Pythia
@@ -293,10 +290,10 @@ class Sigma_uux_uux : public Sigma2Process
 """ % misc.get_pkg_info()
 
         export_pythia8.write_pythia8_process_h_file(\
-            writers.CPPWriter(self.give_pos('test_h')),
+            writers.CPPWriter(self.give_pos('test.h')),
             self.mymatrixelement)
 
-        self.assertFileContains('test_h', goal_string)
+        self.assertFileContains('test.h', goal_string)
 
     def test_write_process_cc_file(self):
         """Test writing the .cc Pythia file for a matrix element"""
@@ -310,6 +307,9 @@ class Sigma_uux_uux : public Sigma2Process
 //==========================================================================
 
 #include "Sigma_uux_uux.h"
+#include "hel_amps_sm.h"
+
+using namespace Pythia8_sm; 
 
 namespace Pythia8 
 {
@@ -324,8 +324,11 @@ namespace Pythia8
 
 void Sigma_uux_uux::initProc() 
 {
-  // Set all parameters that are fixed once and for all
-  set_fixed_parameters(); 
+  // Instantiate the model class and set parameters that stay fixed during run
+  pars = Parameters_sm::getInstance(); 
+  pars->setIndependentParameters(particleDataPtr, coupSMPtr); 
+  pars->setIndependentCouplings(particleDataPtr, coupSMPtr); 
+
 }
 
 //--------------------------------------------------------------------------
@@ -351,7 +354,8 @@ void Sigma_uux_uux::sigmaKin()
   ntry = ntry + 1; 
 
   // Set the parameters which change event by event
-  set_variable_parameters(); 
+  pars->setDependentParameters(particleDataPtr, coupSMPtr, alpS); 
+  pars->setDependentCouplings(particleDataPtr, coupSMPtr); 
 
   // Reset color flows
   for(int i = 0; i < ncolor; i++ )
@@ -460,8 +464,7 @@ double Sigma_uux_uux::weightDecay(Event& process, int iResBeg, int iResEnd)
 double Sigma_uux_uux::matrix(const int hel[]) 
 {
   // Local variables
-  const int nwavefuncs = 8, ngraphs = 4; 
-  const double zero = 0., ZERO = 0.; 
+  const int nwavefuncs = 10, ngraphs = 10; 
   int i, j; 
   complex ztemp; 
   complex amp[ngraphs], jamp[ncolor]; 
@@ -470,27 +473,47 @@ double Sigma_uux_uux::matrix(const int hel[])
   static const double denom[ncolor] = {1, 1}; 
   static const double cf[ncolor][ncolor] = {9, 3, 3, 9}; 
 
+  // Convert Pythia 4-vectors to double[]
+  double p[nexternal][4]; 
+  for(i = 0; i < nexternal; i++ )
+  {
+    p[i][0] = pME[i].e(); 
+    p[i][1] = pME[i].px(); 
+    p[i][2] = pME[i].py(); 
+    p[i][3] = pME[i].pz(); 
+  }
+
   // Calculate all amplitudes
-  ixxxxx(pME[0], mME[0], hel[0], +1, w[0]); 
-  oxxxxx(pME[1], mME[1], hel[1], -1, w[1]); 
-  oxxxxx(pME[2], mME[2], hel[2], +1, w[2]); 
-  ixxxxx(pME[3], mME[3], hel[3], -1, w[3]); 
-  FFV_110(w[0], w[1], QQG, zero, zero, w[4]); 
+  Pythia8_sm::ixxxxx(p[0], mME[0], hel[0], +1, w[0]); 
+  Pythia8_sm::oxxxxx(p[1], mME[1], hel[1], -1, w[1]); 
+  Pythia8_sm::oxxxxx(p[2], mME[2], hel[2], +1, w[2]); 
+  Pythia8_sm::ixxxxx(p[3], mME[3], hel[3], -1, w[3]); 
+  FFV2_3(w[0], w[1], pars->GC_10, pars->ZERO, pars->ZERO, w[4]); 
   // Amplitude(s) for diagram number 1
-  FFV_111(w[3], w[2], w[4], QQG, amp[0]); 
-  FFV_110(w[0], w[1], QQA, MZ, WZ, w[5]); 
+  FFV2_0(w[3], w[2], w[4], pars->GC_10, amp[0]); 
+  FFV5_3(w[0], w[1], pars->GC_47, pars->MZ, pars->WZ, w[5]); 
+  FFV2_3(w[0], w[1], pars->GC_35, pars->MZ, pars->WZ, w[6]); 
   // Amplitude(s) for diagram number 2
-  FFV_111(w[3], w[2], w[5], QQA, amp[1]); 
-  FFV_110(w[0], w[2], QQG, zero, zero, w[6]); 
+  FFV5_0(w[3], w[2], w[5], pars->GC_47, amp[1]); 
+  FFV2_0(w[3], w[2], w[5], pars->GC_35, amp[2]); 
+  FFV5_0(w[3], w[2], w[6], pars->GC_47, amp[3]); 
+  FFV2_0(w[3], w[2], w[6], pars->GC_35, amp[4]); 
+  FFV2_3(w[0], w[2], pars->GC_10, pars->ZERO, pars->ZERO, w[7]); 
   // Amplitude(s) for diagram number 3
-  FFV_111(w[3], w[1], w[6], QQG, amp[2]); 
-  FFV_110(w[0], w[2], QQA, MZ, WZ, w[7]); 
+  FFV2_0(w[3], w[1], w[7], pars->GC_10, amp[5]); 
+  FFV5_3(w[0], w[2], pars->GC_47, pars->MZ, pars->WZ, w[8]); 
+  FFV2_3(w[0], w[2], pars->GC_35, pars->MZ, pars->WZ, w[9]); 
   // Amplitude(s) for diagram number 4
-  FFV_111(w[3], w[1], w[7], QQA, amp[3]); 
+  FFV5_0(w[3], w[1], w[8], pars->GC_47, amp[6]); 
+  FFV2_0(w[3], w[1], w[8], pars->GC_35, amp[7]); 
+  FFV5_0(w[3], w[1], w[9], pars->GC_47, amp[8]); 
+  FFV2_0(w[3], w[1], w[9], pars->GC_35, amp[9]); 
 
   // Calculate color flows
-  jamp[0] = +1./6. * amp[0] - amp[1] + 1./2. * amp[2]; 
-  jamp[1] = -1./2. * amp[0] - 1./6. * amp[2] + amp[3]; 
+  jamp[0] = +1./6. * amp[0] - amp[1] - amp[2] - amp[3] - amp[4] + 1./2. *
+      amp[5];
+  jamp[1] = -1./2. * amp[0] - 1./6. * amp[5] + amp[6] + amp[7] + amp[8] +
+      amp[9];
 
   // Sum and square the color flows to get the matrix element
   double matrix = 0; 
@@ -510,27 +533,6 @@ double Sigma_uux_uux::matrix(const int hel[])
 
 }
 
-//--------------------------------------------------------------------------
-// Set couplings and other parameters that are fixed during the run
-
-void Sigma_uux_uux::set_fixed_parameters() 
-{
-  // Propagator masses and widths
-  MZ = ParticleData::m0(23); 
-  WZ = ParticleData::mWidth(23); 
-}
-
-//--------------------------------------------------------------------------
-// Set couplings and other parameters that vary event by event
-
-void Sigma_uux_uux::set_variable_parameters() 
-{
-  // Couplings
-  QQG = expression; 
-  QQA = expression; 
-}
-
-
 }  // end namespace Pythia
 
 """ % misc.get_pkg_info()
@@ -538,12 +540,24 @@ void Sigma_uux_uux::set_variable_parameters()
         color_amplitudes = self.mymatrixelement.get_color_amplitudes()
 
         export_pythia8.write_pythia8_process_cc_file(\
-            writers.CPPWriter(self.give_pos('test_cc')),
+            writers.CPPWriter(self.give_pos('test.cc')),
             self.mymatrixelement, self.mycppmodel,
             color_amplitudes)
 
-        self.assertFileContains('test_cc', goal_string)
+        self.assertFileContains('test.cc', goal_string)
 
+
+    def test_write_process_files(self):
+        """Test writing the .h  and .cc Pythia file for a matrix element"""
+
+        export_pythia8.generate_process_files_pythia8(self.mymatrixelement,
+                                                      self.mycppmodel,
+                                                      "/tmp")
+        
+        print "Please try compiling the file /tmp/Sigma_uux_uux.cc:"
+        print "cd /tmp; g++ -c -I $PATH_TO_PYTHIA8/include Sigma_uux_uux.cc"
+
+        
 #===============================================================================
 # ExportUFOModelPythia8Test
 #===============================================================================
@@ -555,7 +569,11 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
 
     def setUp(self):
 
-        self.model = import_ufo.import_model('sm')
+        model_pkl = os.path.join('models','sm','model.pkl')
+        if os.path.isfile(model_pkl):
+            self.model = save_load_object.load_from_file(model_pkl)
+        else:
+            self.model = import_ufo.import_model('sm')
         self.model_builder = export_pythia8.UFO_model_to_pythia8(self.model,
                                                                  "/tmp")
         
@@ -581,54 +599,89 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
             self.assertFalse(file_lines.find('#include') > -1)
             self.assertFalse(file_lines.find('namespace') > -1) 
        
-    def test_write_aloha_functions(self):
-        """Test writing function declarations and definitions"""
+##    def test_write_aloha_functions(self):
+##        """Test writing function declarations and definitions"""
 
-        template_h_files = []
-        template_cc_files = []
+##        template_h_files = []
+##        template_cc_files = []
 
-        for abstracthelas in self.model_builder.model.get('lorentz').values():
-            aloha_writer = WriteHelas.HelasWriterForCPP(abstracthelas,
-                                                        "/tmp")
-            aloha_writer.write()
-            aloha_writer.collect_variables()
-            aloha_writer.make_call_lists()
-            template_h_files.append(\
-                self.model_builder.write_function_declaration(\
-                                         aloha_writer))
-            template_cc_files.append(\
-                self.model_builder.write_function_definition(\
-                                          aloha_writer))
+##        for abstracthelas in self.model_builder.model.get('lorentz').values():
+##            aloha_writer = helas_writers.HelasWriterForCPP(abstracthelas,
+##                                                        "/tmp")
+##            header = aloha_writer.define_header()
+##            template_h_files.append(\
+##                self.model_builder.write_function_declaration(\
+##                                         aloha_writer, header))
+##            template_cc_files.append(\
+##                self.model_builder.write_function_definition(\
+##                                          aloha_writer, header))
 
-        print ".h:"
-        print "\n".join(template_h_files)
-        print ".cc:"
-        print "\n".join(template_cc_files)
+##        print ".h:"
+##        print "\n".join(template_h_files)
+##        print ".cc:"
+##        print "\n".join(template_cc_files)
 
     def test_write_aloha_routines(self):
         """Test writing the aloha .h and.cc files"""
 
         self.model_builder.write_aloha_routines()
+        print "Please try compiling the file /tmp/hel_amps_sm.cc:"
+        print "cd /tmp; g++ -c hel_amps_sm.cc"
 
-        
     def test_couplings_and_parameters(self):
         """Test generation of couplings and parameters"""
 
-        self.model_builder.prepare_parameters()
-        self.model_builder.prepare_couplings()
-        
-        print "Dependent parameters: "
-        print "\n".join(["%s: %s" %(p.name, p.expr) for p in self.model_builder.params_dep])
-        print "Dependent couplings: "
-        print "\n".join(["%s: %s" %(p.name, p.expr) for p in self.model_builder.coups_dep.values()])
+        self.assertTrue(self.model_builder.params_indep)
+        self.assertTrue(self.model_builder.params_dep)
+        self.assertTrue(self.model_builder.coups_indep)
+        self.assertTrue(self.model_builder.coups_dep)
+
+##        print "Dependent parameters: "
+##        print "\n".join(["%s: %s" %(p.name, p.expr) for p in self.model_builder.params_dep])
+##        print "Dependent couplings: "
+##        print "\n".join(["%s: %s" %(p.name, p.expr) for p in self.model_builder.coups_dep.values()])
 
         g_expr = re.compile("G(?!f)")
 
-        print "Independent parameters: "
+##        print "Independent parameters: "
         for indep_par in self.model_builder.params_indep:
-            print "%s: %s" %(indep_par.name, indep_par.expr)
+##            print "%s: %s" %(indep_par.name, indep_par.expr)
             self.assertFalse(g_expr.search(indep_par.expr))
-        print "Independent couplings: "
+##        print "Independent couplings: "
         for indep_coup in self.model_builder.coups_indep: 
-            print "%s: %s" %(indep_coup.name, indep_coup.expr)
+##            print "%s: %s" %(indep_coup.name, indep_coup.expr)
             self.assertFalse(g_expr.search(indep_coup.expr))
+
+    def test_write_parameter_files(self):
+        """Test writing the model parameter .h and.cc files"""
+
+        self.model_builder.write_parameter_class_files()        
+        
+        print "Please try compiling the file /tmp/Parameters_sm.cc:"
+        print "cd /tmp; g++ -c -I $PATH_TO_PYTHIA8/include Parameters_sm.cc"
+
+##    def test_write_parameters_and_couplings(self):
+##        """Test generation of couplings and parameters"""
+
+##        print "Independent parameters: "
+##        print self.model_builder.write_parameters(self.model_builder.params_indep)
+##        print "Dependent parameters: "
+##        print self.model_builder.write_parameters(self.model_builder.params_dep)
+##        print "Independent couplings: "
+##        print self.model_builder.write_parameters(self.model_builder.coups_indep)
+##        print "Independent couplings: "
+##        print self.model_builder.write_parameters(self.model_builder.coups_indep)
+##        print "Dependent couplings: "
+##        print self.model_builder.write_parameters(self.model_builder.coups_dep.values())
+
+##    def test_write_set_parameters_and_couplings(self):
+##        """Test generation of couplings and parameters"""
+
+##        print "Independent parameters: "
+##        print self.model_builder.write_set_parameters(self.model_builder.params_indep)
+##        print "Dependent parameters: "
+##        print self.model_builder.write_set_parameters(self.model_builder.params_dep)
+##        print "Independent couplings: "
+##        print self.model_builder.write_set_parameters(self.model_builder.coups_indep)
+##        print "Dependent couplings: "
+##        print self.model_builder.write_set_parameters(self.model_builder.coups_dep.values())

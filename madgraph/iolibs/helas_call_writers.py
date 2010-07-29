@@ -34,14 +34,14 @@ class HelasCallWriter(base_objects.PhysicsObject):
 
     def default_setup(self):
 
-        self['name'] = ""
+        self['model_name'] = ""
         self['wavefunctions'] = {}
         self['amplitudes'] = {}
 
     def filter(self, name, value):
         """Filter for model property values"""
 
-        if name == 'name':
+        if name == 'model_name':
             if not isinstance(value, str):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a string" % \
@@ -74,7 +74,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return ['name', 'wavefunctions', 'amplitudes']
+        return ['model_name', 'wavefunctions', 'amplitudes']
 
     def get_matrix_element_calls(self, matrix_element):
         """Return a list of strings, corresponding to the Helas calls
@@ -145,12 +145,12 @@ class HelasCallWriter(base_objects.PhysicsObject):
 
     # Customized constructor
     def __init__(self, argument={}):
-        """Allow generating a HelasModel from a Model
+        """Allow generating a HelasCallWriter from a Model
         """
 
         if isinstance(argument, base_objects.Model):
             super(HelasCallWriter, self).__init__()
-            self.set('name', argument.get('name'))
+            self.set('model_name', argument.get('name'))
         else:
             super(HelasCallWriter, self).__init__(argument)
             
@@ -695,7 +695,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                                  wf.get('number_external'),
                                  wf.get('number'))
         else:
-            # String is LOR1_1110, FIVXXX, JIOXXX etc.
+            # String is LOR1_0, LOR1_2 etc.
             
             if isinstance(argument, helas_objects.HelasWavefunction):
                 outgoing = self.find_outgoing_number(argument) + 1
@@ -744,9 +744,9 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
 
 
 #===============================================================================
-# CPPUFOHelasCallWriter
+# Pythia8UFOHelasCallWriter
 #===============================================================================
-class CPPUFOHelasCallWriter(UFOHelasCallWriter):
+class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
     """The class for writing Helas calls in C++, starting from
     HelasWavefunctions and HelasAmplitudes.
 
@@ -796,12 +796,14 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
         if isinstance(argument, helas_objects.HelasWavefunction) and \
                not argument.get('mothers'):
             # String is just ixxxxx, oxxxxx, vxxxxx or sxxxxx
-            call = call + CPPUFOHelasCallWriter.mother_dict[\
+            call = call + Pythia8UFOHelasCallWriter.mother_dict[\
                 argument.get_spin_state_number()]
             # Fill out with X up to 6 positions
             call = call.lower()
             call = call + 'x' * (6 - len(call))
-            call = call + "(pME[%d],"
+            # Specify namespace for Helas calls
+            call = "Pythia8_%s::" % self.get('model_name') + call
+            call = call + "(p[%d],"
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity
                 call = call + "mME[%d],hel[%d],"
@@ -829,15 +831,13 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
                                  - (-1) ** wf.get_with_flow('is_part'),
                                  wf.get('number')-1)
         else:
-            # String is LOR1_1110, FIVXXX, JIOXXX etc.
+            # String is LOR1_0, LOR1_2 etc.
             
             if isinstance(argument, helas_objects.HelasWavefunction):
-                outgoing = self.find_outgoing_number(argument)
-                outgoing = '1' * outgoing + '0' + \
-                            '1' * (len(argument.get('mothers')) - outgoing)
+                outgoing = self.find_outgoing_number(argument) + 1
                 call = '%s_%s' % (argument.get('lorentz'), outgoing) 
             else:
-                outgoing = '1' * len(argument.get('mothers'))
+                outgoing = 0
                 call = '%s_%s' % (argument.get('lorentz'), outgoing)
 
             # Check if we need to append a charge conjugation flag
@@ -849,11 +849,11 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
             # Wavefunctions
             call = call + "w[%d]," * len(argument.get('mothers'))
             # Couplings
-            call = call + "%s,"
+            call = call + "pars->%s,"
 
             if isinstance(argument, helas_objects.HelasWavefunction):
                 # Create call for wavefunction
-                call = call + "%s, %s, w[%d]);"
+                call = call + "pars->%s, pars->%s, w[%d]);"
                 #CALL L_4_011(W(1,%d),W(1,%d),%s,%s, %s, W(1,%d))
                 call_function = lambda wf: call % \
                     (tuple([mother.get('number')-1 for mother in wf.get('mothers')]) + \

@@ -100,10 +100,10 @@ class UFOExpressionParser:
         r'(?<!\w)complex(?=\()'
         return t
     def t_FUNCTION(self, t):
-        r'[a-zA-Z_][0-9a-zA-Z_:]*(?=\()'
+        r'[a-zA-Z_][0-9a-zA-Z_]*(?=\()'
         return t
     def t_VARIABLE(self, t):
-        r'[a-zA-Z_][0-9a-zA-Z_:]*'
+        r'[a-zA-Z_][0-9a-zA-Z_]*'
         return t
     
     t_NUMBER = r'([0-9]+\.[0-9]*|\.[0-9]+|[0-9]+)([eE][+-]{0,1}[0-9]+){0,1}'
@@ -206,7 +206,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         'expression : expression POWER expression'
         try:
             p3 = float(p[3].replace('d','e'))
-            # Check if exponent is an integer
+            # Chebck if exponent is an integer
             if p3 == int(p3):
                 p3 = str(int(p3))
                 p[0] = p[1] + "**" + p3
@@ -257,6 +257,9 @@ class UFOExpressionParserPythia8(UFOExpressionParser):
     def p_expression_number(self, p):
         "expression : NUMBER"
         p[0] = p[1]
+        # Check number is an integer, if so add "."
+        if float(p[1]) == int(float(p[1])) and float(p[1]) < 1000:
+            p[0] = str(int(float(p[1]))) + '.'
 
     def p_expression_variable(self, p):
         "expression : VARIABLE"
@@ -302,7 +305,7 @@ class UFOExpressionParserPythia8(UFOExpressionParser):
 
     def p_expression_pi(self, p):
         '''expression : PI'''
-        p[0] = 'pi'
+        p[0] = 'M_PI'
 
 
 # Main program, allows to interactively test the parser

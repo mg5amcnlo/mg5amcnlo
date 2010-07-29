@@ -25,7 +25,7 @@ import time
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
 from aloha.helasamp_object import *
-import aloha.WriteHelas as WriteHelas
+import aloha.helas_writers as helas_writers
 
 
 helas_path = os.path.dirname(os.path.realpath(__file__))
@@ -52,7 +52,7 @@ class AbstractHelas(object):
         
     def write(self, output_dir, language='Fortran'):
         """ write the content of the object """
-        getattr(WriteHelas, 'HelasWriterFor%s' % language)(self, output_dir).write()
+        getattr(helas_writers, 'HelasWriterFor%s' % language)(self, output_dir).write()
 
 
 

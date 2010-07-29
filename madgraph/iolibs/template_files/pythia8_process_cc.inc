@@ -4,6 +4,9 @@
 //==========================================================================
 
 #include "%(process_file_name)s.h"
+#include "hel_amps_%(model_name)s.h"
+
+using namespace Pythia8_%(model_name)s;
 
 namespace Pythia8 {
 
