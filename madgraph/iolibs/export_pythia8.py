@@ -1024,7 +1024,7 @@ class UFO_model_to_pythia8(object):
         """Write the function declaration for the ALOHA routine"""
 
         ret_lines = []
-        for line in header['headerfile'].split('\n'):
+        for line in aloha_writer.write_h(header).split('\n'):
             if self.compiler_option_re.match(line) or self.namespace_re.match(line):
                 # Strip out compiler flags and namespaces
                 continue
@@ -1035,11 +1035,7 @@ class UFO_model_to_pythia8(object):
         """Write the function definition for the ALOHA routine"""
 
         ret_lines = []
-        head = header['head']
-        body = aloha_writer.define_expression()
-        foot = aloha_writer.define_foot()
-        out = head + body + foot
-        for line in out.split('\n'):
+        for line in aloha_writer.write_cc(header).split('\n'):
             if self.compiler_option_re.match(line) or self.namespace_re.match(line):
                 # Strip out compiler flags and namespaces
                 continue
