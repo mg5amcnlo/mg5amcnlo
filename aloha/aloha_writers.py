@@ -26,6 +26,7 @@ class WriteALOHA:
         self.particles =  [self.type_to_variable[spin] for spin in \
                           abstract_routine.spins]
         self.namestring = name
+        self.abstractname = abstract_routine.name
         self.comment = abstract_routine.infostr
         self.offshell = abstract_routine.outgoing 
         self.symmetries = abstract_routine.symmetries
@@ -39,26 +40,17 @@ class WriteALOHA:
         """Collects Momenta,Mass,Width into lists"""
          
         MomentaList = set()
-        MassList = set()
-        WidthList = set()
         OverMList = set()
         for elem in self.obj.tag:
             if elem.startswith('P'):
                 MomentaList.add(elem)
-            elif elem.startswith('M'):
-                MassList.add(elem)
-            elif elem.startswith('W'):
-                WidthList.add(elem)
             elif elem.startswith('O'):
                 OverMList.add(elem) 
 
         MomentaList = list(MomentaList)
-        MassList = list(MassList)
-        WidthList = list(WidthList)
         OverMList = list(OverMList)
         
-        self.collected = {'momenta':MomentaList, 'width':WidthList, \
-                          'mass':MassList, 'om':OverMList}
+        self.collected = {'momenta':MomentaList, 'om':OverMList}
         
         return self.collected
 
@@ -269,13 +261,6 @@ class ALOHAWriterForFortran(WriteALOHA):
                     'V':'double complex V%d(6)',
                     'T':'double complex T%s(18)'}
     
-    def make_declaration_list(self):
-        """ make the list of declaration nedded by the header """
-        
-        declaration = WriteALOHA.make_declaration_list(self)
-        declaration.append('double complex C')
-        return declaration
-    
     def define_header(self):
         """Define the Header of the fortran file. This include
             - function tag
@@ -283,44 +268,45 @@ class ALOHAWriterForFortran(WriteALOHA):
         """
             
         Momenta = self.collected['momenta']
-        Width = self.collected['width']
-        Mass = self.collected['mass']
         OverM = self.collected['om']
         
         CallList = self.calllist['CallList']
-        DeclareList = self.calllist['DeclareList']
-        local_declare = []
-        OffShell = self.offshell
-        OffShellParticle = OffShell -1 
-        
-        
-        # define the type of function and argument
-        if not OffShell:
+        declare_list = self.calllist['DeclareList']
+        declare_list.append('double complex C')
+
+        # define the type of function and argument        
+        if not self.offshell:
             str_out = 'subroutine %(name)s(%(args)s,vertex)\n' % \
                {'name': self.namestring,
-                'args': ','.join(CallList+ ['C'] + Mass + Width) } 
-            local_declare.append('double complex vertex\n') 
-        else: 
-            local_declare.append('double complex denom\n')
-            str_out = 'subroutine %(name)s(%(args)s, %(out)s%(number)d)\n' % \
-               {'name': self.namestring,
-                'args': ','.join(CallList+ ['C'] + Mass + Width), 
-                'out': self.particles[OffShellParticle],
-                'number': OffShellParticle + 1 
-                }
-                                 
+                'args': ','.join(CallList+ ['C']) } 
+            declare_list.append('double complex vertex\n') 
+        else:
+            declare_list.append('double complex denom')
+            declare_list.append('double precision M%(id)d, W%(id)d' % 
+                                                          {'id': self.offshell})
+            call_arg = '%(args)s, C, M%(id)d, W%(id)d, %(spin)s%(id)d' % \
+                    {'args': ', '.join(CallList), 
+                     'spin': self.particles[self.offshell -1],
+                     'id': self.offshell}
+            str_out = ' subroutine %s(%s)\n' % (self.namestring, call_arg) 
+
         # Forcing implicit None
         str_out += 'implicit none \n'
         
         # Declare all the variable
-        for elem in DeclareList + local_declare:
+        for elem in declare_list:
             str_out += elem + '\n'
-        if len(Mass + Width) > 0:
-            str_out += 'double precision ' + ','.join(Mass + Width) + '\n'
         if len(OverM) > 0: 
             str_out += 'double complex ' + ','.join(OverM) + '\n'
         if len(Momenta) > 0:
             str_out += 'double precision ' + '(0:3),'.join(Momenta) + '(0:3)\n'
+
+        # Add entry for symmetry
+        str_out += '\n'
+        for elem in self.symmetries:
+            str_out += ' entry %(name)s(%(args)s)\n' % \
+                        {'name': get_routine_name(self.abstractname, elem),
+                         'args': call_arg}
 
         return str_out
 
@@ -452,15 +438,6 @@ class ALOHAWriterForFortran(WriteALOHA):
         writer.writelines(self.define_expression())
         writer.writelines(self.define_foot())
         
-        for elem in self.symmetries: 
-            symmetryhead = self.define_header().replace( \
-                             self.namestring,self.namestring[0:-1]+'%s' %(elem))
-            symmetrybody = self.define_symmetry()
-            writer.write_comments('\n%s\n' % ('#'*65))
-            writer.writelines(symmetryhead)
-            writer.writelines(symmetrybody)
-            writer.writelines(self.define_foot())
-        
 def get_routine_name(name,outgoing):
     """ build the name of the aloha function """
     
@@ -481,8 +458,8 @@ class ALOHAWriterForCPP(WriteALOHA):
             - momentum conservation
         """
             
-        Width = self.collected['width']
-        Mass = self.collected['mass']
+        #Width = self.collected['width']
+        #Mass = self.collected['mass']
         
         CallList = self.calllist['CallList']
         
@@ -492,20 +469,20 @@ class ALOHAWriterForCPP(WriteALOHA):
         # Transform function call variables to C++ format
         for i, call in enumerate(CallList):
             CallList[i] = "complex<double> %s[]" % call
-        if Mass:
-            Mass[0] = "double %s" % Mass[0]
-        if Width:
-            Width[0] = "double %s" % Width[0]
+        #if Mass:
+        #    Mass[0] = "double %s" % Mass[0]
+        #if Width:
+        #    Width[0] = "double %s" % Width[0]
         
         # define the type of function and argument
         if not OffShell:
             str_out = 'void %(name)s(%(args)s, complex<double> vertex)' % \
                {'name': self.namestring,
-                'args': ','.join(CallList + ['complex<double> C'] + Mass + Width)}
+                'args': ','.join(CallList + ['complex<double> C'])}
         else: 
-            str_out = 'void %(name)s(%(args)s, complex<double>%(out)s%(number)d[])' % \
+            str_out = 'void %(name)s(%(args)s, double M%(number)d, double W%(number)d, complex<double>%(out)s%(number)d[])' % \
               {'name': self.namestring,
-               'args': ','.join(CallList+ ['complex<double> C'] + Mass + Width),
+               'args': ','.join(CallList+ ['complex<double> C']),
                'out': self.particles[OffShellParticle],
                'number': OffShellParticle + 1 
                }

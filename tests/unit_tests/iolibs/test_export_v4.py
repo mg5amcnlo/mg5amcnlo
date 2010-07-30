@@ -3918,6 +3918,12 @@ CALL IOSXXX(W(1,15),W(1,2),W(1,19),GELN2P,AMP(9))""")
 class AlohaFortranWriterTest(unittest.TestCase):
     """ A basic test to see if the Aloha Fortran Writter is working """
     
+    def setUp(self):
+        """ check that old file are remove """
+        try:
+            os.remove('/tmp/FFV1_1.f')
+        except:
+            pass
     
     def test_header(self):
         """ test the header of a file """
@@ -3933,16 +3939,17 @@ class AlohaFortranWriterTest(unittest.TestCase):
 C     The process calculated in this file is: 
 C     Gamma(3,2,1)
 C     
-      SUBROUTINE FFV1_1(F2,V3,C,M1,W1, F1)
+      SUBROUTINE FFV1_1(F2, V3, C, M1, W1, F1)
       IMPLICIT NONE
       DOUBLE COMPLEX F1(6)
       DOUBLE COMPLEX F2(6)
       DOUBLE COMPLEX V3(6)
       DOUBLE COMPLEX C
       DOUBLE COMPLEX DENOM
-
-      DOUBLE PRECISION M1,W1
+      DOUBLE PRECISION M1, W1
       DOUBLE PRECISION P1(0:3)
+
+      ENTRY FFV1_2(F2, V3, C, M1, W1, F1)
 
       F1(5)= F2(5)+V3(5)
       F1(6)= F2(6)+V3(6)
@@ -3952,6 +3959,7 @@ C
       P1(3) =  DIMAG(F1(5))"""
 
         abstract_M = create_aloha.AbstractRoutineBuilder(FFV1).compute_routine(1)
+        abstract_M.add_symmetry(2)
         abstract_M.write('/tmp','Fortran')
         
         self.assertTrue(os.path.exists('/tmp/FFV1_1.f'))

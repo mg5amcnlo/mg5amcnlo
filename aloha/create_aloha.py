@@ -97,7 +97,9 @@ class AbstractRoutineBuilder(object):
         
     def compute_aloha_high_kernel(self, mode):
         """compute the abstract routine associate to this mode """
-        
+
+        aloha_lib.USE_TAG=set()
+
         #multiply by the wave functions
         nb_spinor = 0
         if not self.routine_kernel:
@@ -110,9 +112,10 @@ class AbstractRoutineBuilder(object):
                 raise
             else:
                 self.routine_kernel = lorentz
-                
+                self.kernel_tag = set(aloha_lib.USE_TAG)
         else:
             lorentz = self.routine_kernel
+            aloha_lib.USE_TAG = set(self.kernel_tag) 
 
         for (i, spin ) in enumerate(self.spins):
             id = i + 1
@@ -152,9 +155,8 @@ class AbstractRoutineBuilder(object):
         # If no particle OffShell
         if self.outgoing:
             lorentz /= DenominatorPropagator(self.outgoing)
-            lorentz.tag.add('OM%s' % self.outgoing )  
-            lorentz.tag.add('P%s' % self.outgoing)  
-            lorentz.tag.add('W%s' % self.outgoing)  
+            #lorentz.tag.add('OM%s' % self.outgoing )  
+            #lorentz.tag.add('P%s' % self.outgoing)  
         else:
             lorentz *= complex(0,-1)
 
@@ -170,6 +172,8 @@ class AbstractRoutineBuilder(object):
         
         lorentz = lorentz.simplify()
         lorentz = lorentz.factorize()
+        
+        lorentz.tag = set(aloha_lib.USE_TAG)
         return lorentz         
         
     def compute_aloha_low_kernel(self, mode):

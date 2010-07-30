@@ -56,16 +56,16 @@ from numbers import Number
 #number below this number will be consider as ZERO
 precision_cut = 1e-14
 
+USE_TAG=set() #global to check which tag are used
+
 #===============================================================================
 # FracVariable
 #=============================================================================== 
 class FracVariable(object):
     """A representation of a fraction. This object simply have 
            - a numerator (self.numerator)
-           - a denominator (self.denominator) 
-           - a information content (self.tag) 
-    The numerator/denominator can be of any type of Object (but should contains 
-    tag information. (exception if the numerator is a number).
+           - a denominator (self.denominator)  
+    The numerator/denominator can be of any type of Object.
     
     All call function simply retranslate the call on the numerator/denominator
     """
@@ -78,10 +78,10 @@ class FracVariable(object):
         
         self.numerator = numerator
         self.denominator = denominator
-        if  isinstance(self.numerator, Number):
-            self.tag = self.denominator.tag
-        else:
-            self.tag = self.numerator.tag.union(self.denominator.tag)
+        #if  isinstance(self.numerator, Number):
+        #    self.tag = self.denominator.tag
+        #else:
+        #    self.tag = self.numerator.tag.union(self.denominator.tag)
     
     def copy(self):
         """return a copy of the frac variable"""
@@ -165,7 +165,7 @@ class FracVariable(object):
             text = 'number of lorentz index :' + str(len(self.numerator.lorentz_ind)) + '\n'
             text += str(self.numerator.lorentz_ind)
             text += 'number of spin index :' + str(len(self.numerator.spin_ind)) + '\n'
-            text += 'other info ' + str(self.numerator.tag) + '\n'
+            #text += 'other info ' + str(self.numerator.tag) + '\n'
             for ind in self.numerator.listindices():
                 ind = tuple(ind)
                 text += str(ind) + ' --> '
@@ -192,7 +192,7 @@ class AddVariable(list):
         """ initialization of the object with default value """
                 
         self.prefactor = prefactor
-        self.tag = set()
+        #self.tag = set()
         list.__init__(self, old_data)
         
     def copy(self):
@@ -466,7 +466,7 @@ class MultVariable(list):
         """ initialization of the object with default value """
         
         self.prefactor = prefactor
-        self.tag = set()
+        #self.tag = set()
         list.__init__(self, old_data)
         
     def copy(self):
@@ -784,16 +784,15 @@ class ScalarVariable(Variable):
     """ A concrete symbolic scalar variable
     """
     
-    def __init__(self, variable_name, indices='', prefactor=1):
+    def __init__(self, variable_name, prefactor=1):
         """ initialization of the object with default value """
         
-        self.indices = indices
         Variable.__init__(self, prefactor, variable_name)
         
         
     def copy(self):
         """ Define a independant copy of the object"""
-        new = ScalarVariable(self.variable, self.indices, self.prefactor) 
+        new = ScalarVariable(self.variable, self.prefactor) 
                                                             
         new.power = self.power
         return new
@@ -923,6 +922,15 @@ class MultLorentz(MultVariable):
         # Fail if not the same class
         if self[i].__class__ != obj[j].__class__:
             return False
+        # Fail if not linked to the same particle
+        if hasattr(self[i], 'particle') or hasattr(obj[j], 'particle'):
+            try:
+                samepart = (self[i].particle == obj[j].particle)
+            except:
+                return False
+            
+            if not samepart:
+                return False
         
         # Check if an assignement already exist for any of the factor consider
         if map.has_key(i):
@@ -934,8 +942,8 @@ class MultLorentz(MultVariable):
             return False
         
         # Check if the tag information is identical
-        if self[i].tag != obj[j].tag:
-            return False
+        #if self[i].tag != obj[j].tag:
+        #    return False
         
         # Check all lorentz indices
         for k in range(len(self[i].lorentz_ind)):
@@ -1065,13 +1073,13 @@ class LorentzObject(Variable):
     mult_class = MultLorentz # The class for the multiplication
     add_class = AddVariable # The class for the addition
     
-    def __init__(self, lorentz_indices, spin_indices, other_indices, prefactor=1,
+    def __init__(self, lorentz_indices, spin_indices, prefactor=1, other_indices=[],
                                                                     variable=''):
         """ initialization of the object with default value """
         
         self.lorentz_ind = lorentz_indices
         self.spin_ind = spin_indices
-        self.tag = set(other_indices)
+        USE_TAG.update(set(other_indices))
         
         # Automatic variable_name creation. (interesting for debugging) and
         #help to compare object
@@ -1093,8 +1101,7 @@ class LorentzObject(Variable):
         
         #computing of the argument depending of the class
         if self.__class__ == LorentzObject:
-            arg = [self.lorentz_ind] + [self.spin_ind, self.tag ] + \
-                              [self.prefactor]
+            arg = [self.lorentz_ind] + [self.spin_ind, self.prefactor ] 
         elif hasattr(self, 'particle'):
             arg = self.lorentz_ind + self.spin_ind + [self.particle] + \
                               [self.prefactor]
@@ -1133,7 +1140,6 @@ class LorentzObject(Variable):
         return (self.__class__ == obj.__class__ and \
                     self.lorentz_ind == obj.lorentz_ind and \
                     self.spin_ind == obj.spin_ind and \
-                    self.tag == obj.tag and 
                     self.variable == obj.variable)
         
     def has_component(self, lor_list, spin_list):
@@ -1198,7 +1204,7 @@ class LorentzObjectRepresentation(dict):
     class LorentzObjectRepresentationError(Exception):
         """Specify error for LorentzObjectRepresentation"""
 
-    def __init__(self, representation, lorentz_indices, spin_indices, other_indices):
+    def __init__(self, representation, lorentz_indices, spin_indices):
         """ initialize the lorentz object representation"""
 
         self.lorentz_ind = lorentz_indices #lorentz indices
@@ -1207,7 +1213,7 @@ class LorentzObjectRepresentation(dict):
         self.nb_spin = len(spin_indices) #their number
         self.nb_ind = self.nb_lor + self.nb_spin #total number of indices
         
-        self.tag = set(other_indices) #some information
+        #self.tag = set(other_indices) #some information
         
         #store the representation
         if self.lorentz_ind or self.spin_ind:
@@ -1247,8 +1253,7 @@ class LorentzObjectRepresentation(dict):
             switch = lambda ind : (ind)
             
         # define an empty representation
-        new = LorentzObjectRepresentation({}, self.lorentz_ind, self.spin_ind , \
-                                                            self.tag.union(obj.tag))
+        new = LorentzObjectRepresentation({}, self.lorentz_ind, self.spin_ind)
         
         # loop over all indices and fullfill the new object           
         if fact == 1:
@@ -1279,8 +1284,7 @@ class LorentzObjectRepresentation(dict):
         """multiplication performing directly the einstein/spin sommation.
         """
         if not hasattr(obj, 'vartype') or not self.vartype:
-            out = LorentzObjectRepresentation({}, self.lorentz_ind, self.spin_ind,
-                                             self.tag)
+            out = LorentzObjectRepresentation({}, self.lorentz_ind, self.spin_ind)
             for ind in out.listindices():
                 out.set_rep(ind, obj * self.get_rep(ind))
             return out
@@ -1304,8 +1308,7 @@ class LorentzObjectRepresentation(dict):
        
         # elsewher made a spin contraction
         # create an empty representation but with correct indices
-        new_object = LorentzObjectRepresentation({}, l_ind, s_ind, \
-                                                       self.tag.union(obj.tag))
+        new_object = LorentzObjectRepresentation({}, l_ind, s_ind)
         #loop and fullfill the representation
         for indices in new_object.listindices():
             #made a dictionary (pos -> index_value) for how call the object
@@ -1401,8 +1404,7 @@ class LorentzObjectRepresentation(dict):
 
         new_object = LorentzObjectRepresentation({}, \
                                            self.lorentz_ind + obj.lorentz_ind, \
-                                           self.spin_ind + obj.spin_ind, \
-                                           self.tag.union(obj.tag))
+                                           self.spin_ind + obj.spin_ind)
 
         #some shortcut
         lor1 = self.nb_lor
@@ -1438,8 +1440,7 @@ class LorentzObjectRepresentation(dict):
         """ define division 
         Only division by scalar!!!"""
         
-        out = LorentzObjectRepresentation({}, self.lorentz_ind, self.spin_ind,
-                                             self.tag)
+        out = LorentzObjectRepresentation({}, self.lorentz_ind, self.spin_ind)
         try:
             obj.vartype
         except:
@@ -1521,7 +1522,7 @@ class LorentzObjectRepresentation(dict):
         """ string representation """
         text = 'number of lorentz index :' + str(self.nb_lor) + '\n'
         text += 'number of spin index :' + str(self.nb_spin) + '\n'
-        text += 'other info ' + str(self.tag) + '\n'
+        #text += 'other info ' + str(self.tag) + '\n'
         for ind in self.listindices():
             ind = tuple(ind)
             text += str(ind) + ' --> '
@@ -1537,7 +1538,7 @@ class ConstantObject(LorentzObjectRepresentation):
     lorentz_ind = []
     spin_ind = []
     nb_ind = 0
-    tag = []
+    #tag = []
     variable = '0'
     prefactor = 1    
     power = 1

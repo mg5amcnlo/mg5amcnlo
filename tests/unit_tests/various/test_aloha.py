@@ -439,11 +439,11 @@ class TestAddVariable(unittest.TestCase):
     def testfactorization(self):
         """test the factorization"""
         
-        p1 = aloha_lib.ScalarVariable('p1',[])
-        p2 = aloha_lib.ScalarVariable('p2',[])        
-        p3 = aloha_lib.ScalarVariable('p3',[])
-        p4 = aloha_lib.ScalarVariable('p4',[])
-        p5 = aloha_lib.ScalarVariable('p5',[])
+        p1 = aloha_lib.ScalarVariable('p1')
+        p2 = aloha_lib.ScalarVariable('p2')        
+        p3 = aloha_lib.ScalarVariable('p3')
+        p4 = aloha_lib.ScalarVariable('p4')
+        p5 = aloha_lib.ScalarVariable('p5')
         
         
         sum = p1 * p2 + p1 * p3
@@ -492,10 +492,10 @@ class TestAddVariable(unittest.TestCase):
                                                     aloha_lib.ConstantObject(1))
  
         
-        s3 = aloha_lib.ScalarVariable('s3',[])
-        s2 = aloha_lib.ScalarVariable('s2',[])
-        p1 = aloha_lib.ScalarVariable('p1',[])
-        om1 = aloha_lib.ScalarVariable('om1',[])
+        s3 = aloha_lib.ScalarVariable('s3')
+        s2 = aloha_lib.ScalarVariable('s2')
+        p1 = aloha_lib.ScalarVariable('p1')
+        om1 = aloha_lib.ScalarVariable('om1')
         sum = 2/3 * s3 * s2 - 4/3 * p1 * p1 * s3 * s2 * om1 + \
               2/3 * p1 * p1 * p1 * p1 * om1 *om1
         sum = sum.factorize()
@@ -550,8 +550,8 @@ class TestMultVariable(unittest.TestCase):
     def testdealingwithpower1(self):
         """Check that the power is correctly set in a product"""
         
-        p1 = aloha_lib.ScalarVariable('p1', [])
-        p2 = aloha_lib.ScalarVariable('p2', [])
+        p1 = aloha_lib.ScalarVariable('p1')
+        p2 = aloha_lib.ScalarVariable('p2')
         
         prod = p1 * p1
         self.assertEqual(prod.__class__, aloha_lib.MultVariable)       
@@ -978,8 +978,8 @@ class testLorentzObject(unittest.TestCase):
         
         new6 = aloha_obj.P(3,2) * aloha_obj.Gamma(3,3,2)       
         self.assertNotEqual(new, new6)
-
-        new7 = aloha_obj.P(3,4) * aloha_obj.Gamma(3,2,3)       
+        
+        new7 = aloha_obj.P(3,4) * aloha_obj.Gamma(3,2,3)    
         self.assertNotEqual(new, new7)
         
         #Test contraction on spin
@@ -1108,8 +1108,8 @@ class testLorentzObject(unittest.TestCase):
         self.assertEqual(low_level.__class__, aloha_lib.LorentzObjectRepresentation)
         for ind in low_level.listindices():
             self.assertEqual(low_level.get_rep(ind).__class__, aloha_lib.MultVariable)
-            self.assertEqual(low_level.get_rep(ind), aloha_lib.ScalarVariable('M3',[3]) 
-                                * aloha_lib.ScalarVariable('P2_%s' % ind[0],[0]))
+            self.assertEqual(low_level.get_rep(ind), aloha_lib.ScalarVariable('M3') 
+                                * aloha_lib.ScalarVariable('P2_%s' % ind[0]))
                             
         
 class TestLorentzObjectRepresentation(unittest.TestCase):
@@ -1147,7 +1147,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         """test that we return the correct list of indices"""
         
         #only lorentz indices
-        test1 = aloha_lib.LorentzObjectRepresentation([],[1,2],[],[])
+        test1 = aloha_lib.LorentzObjectRepresentation([],[1,2],[])
         
         already_use=[]
         for ind in test1.listindices():
@@ -1159,7 +1159,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         self.assertEqual(len(already_use), 16)
         
         #only spin indices
-        test1 = aloha_lib.LorentzObjectRepresentation([],[],[1,2,3],[])
+        test1 = aloha_lib.LorentzObjectRepresentation([],[],[1,2,3])
         
         already_use=[]
         for ind in test1.listindices():
@@ -1171,7 +1171,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         self.assertEqual(len(already_use), 64)
         
         #mix of indices        
-        test1 = aloha_lib.LorentzObjectRepresentation([],[1],[1,2,3],[])
+        test1 = aloha_lib.LorentzObjectRepresentation([],[1],[1,2,3])
         
         already_use=[]
         for ind in test1.listindices():
@@ -1183,7 +1183,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         self.assertEqual(len(already_use), 256)
         
         #only one indice        
-        test1 = aloha_lib.LorentzObjectRepresentation([],[1],[],[])
+        test1 = aloha_lib.LorentzObjectRepresentation([],[1],[])
         
         already_use=[]
         for ind in test1.listindices():
@@ -1195,7 +1195,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         self.assertEqual(len(already_use), 4)
         
         #no indices        
-        test1 = aloha_lib.LorentzObjectRepresentation(38,[],[],[])
+        test1 = aloha_lib.LorentzObjectRepresentation(38,[],[])
         
         already_use=[]
         for ind in test1.listindices():
@@ -1212,9 +1212,9 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
               (3,0):4, (3,1):8, (3,2):12, (3,3):16
               }
                 
-        repr1 = aloha_lib.LorentzObjectRepresentation(data, [1], [1], [])
-        repr2 = aloha_lib.LorentzObjectRepresentation(data, [1, 2], [], [])
-        repr3 = aloha_lib.LorentzObjectRepresentation(data, [], [1, 2], [])
+        repr1 = aloha_lib.LorentzObjectRepresentation(data, [1], [1])
+        repr2 = aloha_lib.LorentzObjectRepresentation(data, [1, 2], [])
+        repr3 = aloha_lib.LorentzObjectRepresentation(data, [], [1, 2])
         
         for ind in repr1.listindices():
             self.assertEquals(repr1.get_rep(ind), (ind[0]+1)*(ind[1]+1))
@@ -1223,7 +1223,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
             
         
         #check the dealing with scalar
-        repr4 = aloha_lib.LorentzObjectRepresentation(49, [], [], [])
+        repr4 = aloha_lib.LorentzObjectRepresentation(49, [], [])
         for ind in repr4.listindices():
             self.assertEquals(repr4.get_rep(ind), 49)
             
@@ -1232,9 +1232,9 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         
         goal=[[1, 2, 3 , 4], [2, 4, 6, 8], [3, 6, 9, 12], [4, 8, 12, 16]]
         
-        repr1 = aloha_lib.LorentzObjectRepresentation([], [1], [1], [])
-        repr2 = aloha_lib.LorentzObjectRepresentation([], [1, 2], [], [])
-        repr3 = aloha_lib.LorentzObjectRepresentation([], [], [1, 2], [])
+        repr1 = aloha_lib.LorentzObjectRepresentation([], [1], [1])
+        repr2 = aloha_lib.LorentzObjectRepresentation([], [1, 2], [])
+        repr3 = aloha_lib.LorentzObjectRepresentation([], [], [1, 2])
         
         for ind in repr1.listindices():
             repr1.set_rep(ind, (ind[0]+1)*(ind[1]+1))
@@ -1265,7 +1265,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         self.assertTrue(isinstance(product, aloha_lib.LorentzObjectRepresentation))
         self.assertEquals(product.lorentz_ind, [1,2])
         self.assertEqual(product.spin_ind, [])
-        self.assertEqual(product.tag, set(['P1','P2']))
+#        self.assertEqual(product.tag, set(['P1','P2']))
         
         #check the representation
         for ind in product.listindices():
@@ -1288,7 +1288,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         self.assertTrue(isinstance(product1, aloha_lib.LorentzObjectRepresentation))
         self.assertEquals(product1.lorentz_ind, [1,2])
         self.assertEqual(product1.spin_ind, [1,2,3,4])
-        self.assertEqual(product1.tag, set([]))
+
         
         #check the representation
         for ind in product1.listindices():
@@ -1306,7 +1306,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         self.assertTrue(isinstance(product2, aloha_lib.LorentzObjectRepresentation))
         self.assertEquals(product2.lorentz_ind, [])
         self.assertEqual(product2.spin_ind, [1,2,3,4])
-        self.assertEqual(product2.tag, set([]))
+#        self.assertEqual(product2.tag, set([]))
         
         #check the representation
         for ind in product2.listindices():
@@ -1401,7 +1401,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         self.assertTrue(isinstance(prod1, aloha_lib.LorentzObjectRepresentation))
         self.assertEquals(prod1.lorentz_ind, [2])
         self.assertEqual(prod1.spin_ind, [])
-        self.assertEqual(prod1.tag, set(['P1','P2']))
+#        self.assertEqual(prod1.tag, set(['P1','P2']))
         
         #check the representation
         for ind in prod1.listindices():
@@ -1425,7 +1425,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         self.assertTrue(isinstance(prod2, aloha_lib.LorentzObjectRepresentation))
         self.assertEquals(prod2.lorentz_ind, [])
         self.assertEqual(prod2.spin_ind, [])
-        self.assertEqual(prod2.tag, set(['P1','P2']))
+#        self.assertEqual(prod2.tag, set(['P1','P2']))
         
         #check the representation
         for ind in prod2.listindices():
@@ -1443,14 +1443,14 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
             """ local representation """
             
             def __init__(self, l1, l2, prefactor=1, constant=0):
-                aloha_lib.LorentzObject.__init__(self,[l1, l2], [], [])
+                aloha_lib.LorentzObject.__init__(self,[l1, l2], [])
             
             representation = aloha_lib.LorentzObjectRepresentation(
             {(0,0): 0, (0,1): 0, (0,2): 0, (0,3):-1,
              (1,0): 0, (1,1): 0, (1,2): -1, (1,3):0,
              (2,0): 0, (2,1): 1, (2,2): 0, (2,3):0,
              (3,0): 1, (3,1): 0, (3,2): 0, (3,3):0
-             }, [1,2], [], [])
+             }, [1,2], [])
             
 #            create_representation = lambda : representation
             
@@ -1484,14 +1484,14 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
             """ local representation """
             
             def __init__(self, s1, s2, prefactor=1, constant=0):
-                aloha_lib.LorentzObject.__init__(self, [], [s1, s2], [])
+                aloha_lib.LorentzObject.__init__(self, [], [s1, s2])
             
             representation = aloha_lib.LorentzObjectRepresentation(
                             {(0,0): 0, (0,1): 0, (0,2): 0, (0,3):-1,
                              (1,0): 0, (1,1): 0, (1,2): -1, (1,3):0,
                              (2,0): 0, (2,1): 1, (2,2): 0, (2,3):0,
                              (3,0): 1, (3,1): 0, (3,2): 0, (3,3):0},
-                                        [], [1,2], [])
+                                        [], [1,2])
             
 #            create_representation = lambda : representation
         
@@ -1529,7 +1529,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         self.assertTrue(isinstance(sum, aloha_lib.LorentzObjectRepresentation))
         self.assertEquals(sum.lorentz_ind, [1])
         self.assertEqual(sum.spin_ind, [])
-        self.assertEqual(sum.tag, set(['P1','P2']))
+#        self.assertEqual(sum.tag, set(['P1','P2']))
         
         #check the representation
         for ind in sum.listindices():
@@ -1549,7 +1549,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         self.assertTrue(isinstance(sum, aloha_lib.LorentzObjectRepresentation))
         self.assertEquals(sum.lorentz_ind, [1, 2])
         self.assertEqual(sum.spin_ind, [])
-        tag = set(list(sum.tag))
+#        tag = set(list(sum.tag))
 
         #check the representation
         for ind in sum.listindices():
@@ -1575,7 +1575,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         self.assertTrue(isinstance(sum, aloha_lib.LorentzObjectRepresentation))
         self.assertEquals(sum.lorentz_ind, [1, 2])
         self.assertEqual(sum.spin_ind, [])
-        self.assertEqual(sum.tag, tag)
+#        self.assertEqual(sum.tag, tag)
         for ind in sum.listindices():
             rep = sum.get_rep(ind)
             if rep.prefactor == 1:
@@ -1878,7 +1878,7 @@ class TestSomeObjectProperty(unittest.TestCase):
         sigma = complex(0, 1/2) * (Gamma(1,1,2)*Gamma(2,2,3) - Gamma(2,1,2)*Gamma(1,2,3))
 
         #handly build
-        sigma_2 = aloha_lib.LorentzObjectRepresentation({},[2,1],[3,1],[])
+        sigma_2 = aloha_lib.LorentzObjectRepresentation({},[2,1],[3,1])
         prod_gam = Gamma(1,1,2) * Gamma(2,2,3)
         prod_gam = prod_gam.expand().simplify()
         for ind in prod_gam.listindices():
