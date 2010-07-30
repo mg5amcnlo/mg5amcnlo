@@ -23,7 +23,7 @@ import re
 
 import tests.unit_tests as unittest
 
-import aloha.helas_writers as helas_writers
+import aloha.aloha_writers as aloha_writers
 
 import madgraph.iolibs.export_pythia8 as export_pythia8
 import madgraph.iolibs.file_writers as writers
@@ -175,7 +175,7 @@ class IOExportPythia8Test(unittest.TestCase,
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
-
+        
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         self.mymatrixelement = helas_objects.HelasMatrixElement(myamplitude)
@@ -599,27 +599,19 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
             self.assertFalse(file_lines.find('#include') > -1)
             self.assertFalse(file_lines.find('namespace') > -1) 
        
-##    def test_write_aloha_functions(self):
-##        """Test writing function declarations and definitions"""
+    def test_write_aloha_functions(self):
+        """Test writing function declarations and definitions"""
 
-##        template_h_files = []
-##        template_cc_files = []
+        template_h_files = []
+        template_cc_files = []
 
-##        for abstracthelas in self.model_builder.model.get('lorentz').values():
-##            aloha_writer = helas_writers.HelasWriterForCPP(abstracthelas,
-##                                                        "/tmp")
-##            header = aloha_writer.define_header()
-##            template_h_files.append(\
-##                self.model_builder.write_function_declaration(\
-##                                         aloha_writer, header))
-##            template_cc_files.append(\
-##                self.model_builder.write_function_definition(\
-##                                          aloha_writer, header))
+        for abstracthelas in self.model_builder.model.get('lorentz').values():
+            abstracthelas.write('/tmp', 'CPP')
+            abstracthelas.write('/tmp', 'Fortran')
 
-##        print ".h:"
-##        print "\n".join(template_h_files)
-##        print ".cc:"
-##        print "\n".join(template_cc_files)
+        print "Please try compiling the files /tmp/*.cc and /tmp/*.f:"
+        print "cd /tmp; g++ -c *.cc; gfortran -c *.f"
+        
 
     def test_write_aloha_routines(self):
         """Test writing the aloha .h and.cc files"""

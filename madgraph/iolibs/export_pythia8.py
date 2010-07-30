@@ -922,6 +922,15 @@ class UFO_model_to_pythia8(object):
         replace_dict['set_dependent_couplings'] = \
                                self.write_set_parameters(self.coups_dep.values())
 
+        replace_dict['print_independent_parameters'] = \
+                               self.write_print_parameters(self.params_indep)
+        replace_dict['print_independent_couplings'] = \
+                               self.write_print_parameters(self.coups_indep)
+        replace_dict['print_dependent_parameters'] = \
+                               self.write_print_parameters(self.params_dep)
+        replace_dict['print_dependent_couplings'] = \
+                               self.write_print_parameters(self.coups_dep.values())
+
         file_h = read_template_file('pythia8_model_parameters_h.inc') % \
                  replace_dict
         file_cc = read_template_file('pythia8_model_parameters_cc.inc') % \
@@ -958,6 +967,17 @@ class UFO_model_to_pythia8(object):
         res_strings = []
         for param in params:
             res_strings.append("%s=%s;" % (param.name, param.expr))
+
+        return "\n".join(res_strings)
+
+    def write_print_parameters(self, params):
+        """Write out the lines of independent parameters"""
+
+        # For each parameter, write name = expr;
+
+        res_strings = []
+        for param in params:
+            res_strings.append("cout << setw(20) << \"%s \" << \"= \" << setiosflags(ios::scientific) << setw(10) << %s << endl;" % (param.name, param.name))
 
         return "\n".join(res_strings)
 

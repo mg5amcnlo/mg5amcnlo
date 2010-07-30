@@ -3,6 +3,7 @@
 %(info_lines)s
 //==========================================================================
 
+#include <iostream>
 #include "Parameters_%(model_name)s.h"
 #include "PythiaStdlib.h"
 
@@ -33,6 +34,24 @@ namespace Pythia8 {
     }
     void Parameters_%(model_name)s::setDependentCouplings(ParticleData*& pd, CoupSM*&csm){
 	%(set_dependent_couplings)s
+    }
+
+    // Routines for printing out parameters
+    void Parameters_%(model_name)s::printIndependentParameters(){
+	cout << "%(model_name)s model parameters independent of event kinematics:" << endl;
+	%(print_independent_parameters)s
+    }
+    void Parameters_%(model_name)s::printIndependentCouplings(){
+	cout << "%(model_name)s model couplings independent of event kinematics:" << endl;
+	%(print_independent_couplings)s
+    }
+    void Parameters_%(model_name)s::printDependentParameters(){
+	cout << "%(model_name)s model parameters dependent on event kinematics:" << endl;
+	%(print_dependent_parameters)s
+    }
+    void Parameters_%(model_name)s::printDependentCouplings(){
+	cout << "%(model_name)s model couplings dependent on event kinematics:" << endl;
+	%(print_dependent_couplings)s
     }
 
 } // end namespace Pythia8

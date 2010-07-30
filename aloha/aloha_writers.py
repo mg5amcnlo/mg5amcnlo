@@ -481,13 +481,10 @@ class ALOHAWriterForCPP(WriteALOHA):
             - momentum conservation
         """
             
-        Momenta = self.collected['momenta']
         Width = self.collected['width']
         Mass = self.collected['mass']
-        OverM = self.collected['om']
         
         CallList = self.calllist['CallList']
-        DeclareList = self.calllist['DeclareList']
         
         local_declare = []
         OffShell = self.offshell
@@ -506,7 +503,6 @@ class ALOHAWriterForCPP(WriteALOHA):
                {'name': self.namestring,
                 'args': ','.join(CallList + ['complex<double> C'] + Mass + Width)}
         else: 
-            local_declare.append('complex<double> denom;\n')
             str_out = 'void %(name)s(%(args)s, complex<double>%(out)s%(number)d[])' % \
               {'name': self.namestring,
                'args': ','.join(CallList+ ['complex<double> C'] + Mass + Width),
@@ -516,13 +512,6 @@ class ALOHAWriterForCPP(WriteALOHA):
 
         h_string = str_out + ";\n\n"
         cc_string = str_out + "{\n"
-        # Declare all the variable
-        for elem in local_declare:
-            cc_string += elem + '\n'
-        if len(OverM) > 0: 
-            cc_string += 'complex<double> %s;\n' % ','.join(OverM)
-        if len(Momenta) > 0:
-            cc_string += 'double %s[4];\n' % '[4],'.join(Momenta)
 
         return {'h_header': h_string, 'cc_header': cc_string}
             
@@ -535,6 +524,14 @@ class ALOHAWriterForCPP(WriteALOHA):
         momentum_conservation = self.calllist['Momentum']
         
         str_out = ''
+        # Declare auxiliary variables
+        if self.offshell:
+            str_out += 'complex<double> denom;\n'
+        if len(overm) > 0: 
+            str_out += 'complex<double> %s;\n' % ','.join(overm)
+        if len(momenta) > 0:
+            str_out += 'double %s[4];\n' % '[4],'.join(momenta)
+
         # Energy
         if self.offshell: 
             offshelltype = self.particles[self.offshell -1]
@@ -556,7 +553,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             index = int(mom[1:])
             
             type = self.particles[index - 1]
-            energy_pos = self.type_to_size[type] -1
+            energy_pos = self.type_to_size[type] - 2
             sign = ''
             if self.offshell == index and (type == 'V' or type == 'S'):
                 sign = '-'
@@ -566,7 +563,6 @@ class ALOHAWriterForCPP(WriteALOHA):
             str_out += '%s[2] = %s%s%d[%d].imag();\n' % (mom, sign, type, index, energy_pos + 1)
             str_out += '%s[3] = %s%s%d[%d].imag();\n' % (mom, sign, type, index, energy_pos)            
             
-                   
         # Definition for the One Over Mass**2 terms
         for elem in overm:
             #Mom is in format OMX with X the number of the particle
@@ -639,17 +635,20 @@ class ALOHAWriterForCPP(WriteALOHA):
     
     def define_symmetry(self):
         """Write the call for symmetric routines"""
-        
-        calls = self.calllist['CallList']
+
+        remove_double = re.compile('complex<double> (?P<name>[\w]+)\[\]')
+        # For the call, need to remove the type specification
+        calls = [remove_double.match(call).group('name') for call in \
+                 self.calllist['CallList']]
         number = self.offshell 
-        Outstring = self.namestring+'('+','.join(calls)+',complex<double> C,double M%s,double W%s,complex<double>%s%s[]);' \
+        Outstring = self.namestring+'('+','.join(calls)+',C,M%s,W%s,%s%s);' \
                          %(number,number,self.particles[self.offshell-1],number)
         return Outstring
     
     def define_foot(self):
         """Return the end of the function definition"""
 
-        return '}' 
+        return '}\n' 
 
     def write_h(self, header):
         """Return the full contents of the .h file"""
@@ -666,9 +665,8 @@ class ALOHAWriterForCPP(WriteALOHA):
         for elem in self.symmetries: 
             symmetryhead = h_header.replace( \
                              self.namestring,self.namestring[0:-1]+'%s' %(elem))
-            h_string += ('//\n//%s\n' % ('#'*65))
             h_string += symmetryhead
-
+            
         h_string += '#endif'
 
         return h_string
@@ -678,20 +676,20 @@ class ALOHAWriterForCPP(WriteALOHA):
 
         cc_string = '#include \"%s.h\"\n\n' % self.namestring
         cc_header = header['cc_header']
-        cc_header += self.define_momenta()
-        cc_header += self.define_expression()
-        cc_header += self.define_foot()
+        cc_string += cc_header
+        cc_string += self.define_momenta()
+        cc_string += self.define_expression()
+        cc_string += self.define_foot()
 
         for elem in self.symmetries: 
             symmetryhead = cc_header.replace( \
                              self.namestring,self.namestring[0:-1]+'%s' %(elem))
             symmetrybody = self.define_symmetry()
-            cc_header += '//\n//%s\n' % ('#'*65)
-            cc_header += symmetryhead
-            cc_header += symmetrybody
-            cc_header += self.define_foot()
+            cc_string += symmetryhead
+            cc_string += symmetrybody
+            cc_string += self.define_foot()
 
-        return cc_header
+        return cc_string
     
     def write(self):
         """Write the .h and .cc files"""

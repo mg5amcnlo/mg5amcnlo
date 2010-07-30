@@ -52,6 +52,7 @@ class AbstractRoutine(object):
         
     def write(self, output_dir, language='Fortran'):
         """ write the content of the object """
+
         getattr(aloha_writers, 'ALOHAWriterFor%s' % language)(self, output_dir).write()
 
 

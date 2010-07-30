@@ -36,6 +36,16 @@ void setDependentParameters(ParticleData*& pd, CoupSM*& csm, double alpS);
 // Set couplings that are changed event by event
 void setDependentCouplings(ParticleData*& pd, CoupSM*& csm);
 
+// Print parameters that are unchanged during the run
+void printIndependentParameters();
+// Print couplings that are unchanged during the run
+void printIndependentCouplings();
+// Print parameters that are changed event by event
+void printDependentParameters();
+// Print couplings that are changed event by event
+void printDependentCouplings();
+
+
   private:
 static Parameters_%(model_name)s* instance;
 };
