@@ -51,6 +51,7 @@ to a set of particles:
 mg5>define v w+ w- z a
 defines the symbol \"v\" to correspond to any vector.
 """
+import_model = import_model_v4
 
 display_model = """
 You have just seen some information about the model, which can help
