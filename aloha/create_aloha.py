@@ -123,7 +123,6 @@ class AbstractRoutineBuilder(object):
         else:
             lorentz = self.routine_kernel
             aloha_lib.USE_TAG = set(self.kernel_tag) 
-
         for (i, spin ) in enumerate(self.spins):
             id = i + 1
             
@@ -137,9 +136,9 @@ class AbstractRoutineBuilder(object):
                         id += _conjugate_gap
                     nb_spinor += 1
                     if nb_spinor %2:
-                        lorentz *= SpinorPropagator(id, 'I2', id)
+                        lorentz *= SpinorPropagator(id, 'I2', i + 1)
                     else:
-                        lorentz *= SpinorPropagator('I2', id, id) 
+                        lorentz *= SpinorPropagator('I2', id, i + 1) 
                 elif spin == 3 :
                     lorentz *= VectorPropagator(id, 'I2', id)
                 elif spin == 5 :
@@ -152,8 +151,10 @@ class AbstractRoutineBuilder(object):
                 if spin == 1:
                     lorentz *= Scalar(id)
                 elif spin == 2:
+                    if self.conjg: 
+                        id += _conjugate_gap
                     nb_spinor += 1
-                    lorentz *= Spinor(id, id)
+                    lorentz *= Spinor(id, i + 1)
                 elif spin == 3:        
                     lorentz *= Vector(id, id)
                 elif spin == 5:

@@ -2126,20 +2126,26 @@ class test_aloha_creation(unittest.TestCase):
         
     def test_full_sm_aloha(self):
         """test that the full SM seems to work"""
+        # Note that this test check also some of the routine define inside this
+        #because of use of some global.
         helas_suite = create_aloha.AbstractALOHAModel('sm')
+
+        self.assertEqual(helas_suite.look_for_conjugate(), [])
         helas_suite.compute_all()
         lorentz_index = {1:0, 2:0,3:1}
         spin_index = {1:0, 2:1, 3:0}
+        error = 'wrong contraction for %s'
         for (name, output_part), abstract in helas_suite.items():
             if not output_part:
-                self.assertEqual(abstract.expr.nb_lor, 0)
-                self.assertEqual(abstract.expr.nb_spin, 0)
+                self.assertEqual(abstract.expr.nb_lor, 0, error % name)
+                self.assertEqual(abstract.expr.nb_spin, 0, error % abstract.expr.spin_ind)
                 continue
             helas = self.find_helas(name, helas_suite.model)
             lorentz_solution = lorentz_index[helas.spins[output_part -1]]
             self.assertEqual(abstract.expr.numerator.nb_lor, lorentz_solution)
             spin_solution = spin_index[helas.spins[output_part -1]]
-            self.assertEqual(abstract.expr.numerator.nb_spin, spin_solution)
+            self.assertEqual(abstract.expr.numerator.nb_spin, spin_solution, \
+                             error % name)
             
     def find_helas(self, name, model):
         for lorentz in model.all_lorentz:
@@ -2148,7 +2154,21 @@ class test_aloha_creation(unittest.TestCase):
             
         raise Exception('the test is confuse by name %s' % name)
         
-        
+    def test_aloha_FFVC(self):
+        """ test the FFV creation of vertex """
+        from models.sm.object_library import Lorentz
+
+        FFVC = Lorentz(name = 'FFVC',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'C(51,1) * Gamma(3,1,2) * C(2,52)')        
+            
+        ampC = create_aloha.AbstractRoutineBuilder(FFVC).compute_routine(0)
+
+        # Check correct contraction
+        error = 'wrong contraction for %s'
+        self.assertEqual(ampC.expr.nb_lor, 0, error % 'FFVC')
+        self.assertEqual(ampC.expr.nb_spin, 0, error % 'FFVC')
+      
         
 
 
