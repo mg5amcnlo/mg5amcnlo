@@ -31,6 +31,8 @@ import aloha.aloha_writers as aloha_writers
 aloha_path = os.path.dirname(os.path.realpath(__file__))
 logger = logging.getLogger('ALOHA')
 
+_conjugate_gap = 50
+
 class AbstractRoutine(object):
     """ store the result of the computation of Helicity Routine
     this is use for storing and passing to writer """
@@ -76,6 +78,10 @@ class AbstractRoutineBuilder(object):
 
         self.spins = lorentz.spins
         self.name = lorentz.name
+        if self.name[-1] == 'C':
+            self.conjg = True
+        else:
+            self.conjg = False
         self.outgoing = None
         self.lorentz_expr = lorentz.structure        
         self.routine_kernel = None
@@ -98,6 +104,7 @@ class AbstractRoutineBuilder(object):
     def compute_aloha_high_kernel(self, mode):
         """compute the abstract routine associate to this mode """
 
+        # reset tag for particles
         aloha_lib.USE_TAG=set()
 
         #multiply by the wave functions
@@ -125,6 +132,9 @@ class AbstractRoutineBuilder(object):
                 if spin == 1: 
                     lorentz *= complex(0,1)
                 elif spin == 2:
+                    # shift the tag if we multiply by C matrices
+                    if self.conjg: 
+                        id += _conjugate_gap
                     nb_spinor += 1
                     if nb_spinor %2:
                         lorentz *= SpinorPropagator(id, 'I2', id)
@@ -179,6 +189,8 @@ class AbstractRoutineBuilder(object):
     def compute_aloha_low_kernel(self, mode):
         """ compute the abstract routine associate to this mode """
         
+        aloha_lib.USE_TAG=set()
+        
         if not self.routine_kernel:
             self.routine_kernel = self.define_routine_kernel()
         
@@ -223,9 +235,9 @@ class AbstractRoutineBuilder(object):
         # If no particle OffShell
         if self.outgoing:
             lorentz /= self.aloha_lib[('Denom', id)]
+            lorentz.tag = set(aloha_lib.USE_TAG)
             lorentz.tag.add('OM%s' % self.outgoing )  
-            lorentz.tag.add('P%s' % self.outgoing)  
-            lorentz.tag.add('W%s' % self.outgoing)  
+            lorentz.tag.add('P%s' % self.outgoing)    
         else:
             lorentz *= complex(0,-1)
             
@@ -376,18 +388,20 @@ class AbstractALOHAModel(dict):
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
         self.look_for_symmetries()
+        conjugate_list = self.look_for_conjugate()
         
         for lorentz in self.model.all_lorentz:
             if -1 in lorentz.spins:
                 # No Ghost in ALOHA
                 continue
             self.compute_for_lorentz(lorentz)
-            if self.need_conjugate(lorentz):
-                conjugate_lorentz = -1 * C('c1',1) * lorentz * C(2, 'c2')
+            if lorentz.name in conjugate_list:
+                conjugate_lorentz = -1 * C(_conjugate_gap + 1, 1) * lorentz *\
+                                                        C(2, _conjugate_gap + 2)
                 conjugate_lorentz.name += 'C'
                 self.complex_mode = True
                 self.compute_for_lorentz(conjugate_lorentz)
-                self.complex_mode = False # <- automatic?
+                self.complex_mode = False
         
         if save:
             self.save()
@@ -415,7 +429,7 @@ class AbstractALOHAModel(dict):
         wavefunction = builder.compute_routine(0)
         self.set(name, 0, wavefunction)
         
-        # Create the routine associate to an externel particles
+        # Create the routine associate to an external particles
         for outgoing in range(1, len(lorentz.spins) + 1 ):
             symmetric = self.has_symmetries(lorentz.name, outgoing)
             if symmetric:
@@ -462,9 +476,55 @@ class AbstractALOHAModel(dict):
         else:
             return self.has_symmetries(l_name, equiv, out=equiv)
     
-    def need_conjugate(self, lorentz):
-        return False
+    def look_for_conjugate(self):
+        """ create a list for the routine needing to be conjugate """
+
+        # Check if they are majorana in the model.
+        need = False
+        for particle in self.model.all_particles:
+            if particle.spin == 2 and particle.selfconjugate:
+                need = True
+                break
         
+        # No majorana particles    
+        if not need:
+            return []
+        
+        conjugate_list = set()
+        # Check each vertex
+        for vertex in self.model.all_vertices:
+            # check that they are at least one fermion
+            if vertex.particles[0].spin != 2:
+                continue
+            # check that they are no majorana in the interactions
+            found_one = True
+            for part in vertex.particles:
+                if part.spin != 2:
+                    break
+                if part.selfconjugate:
+                    found_one = False 
+                    break
+            # if no majorana add the associate lorentz structure
+            if found_one:
+                for lorentz in vertex.lorentzs:
+                    conjugate_list.add(lorentz.name)
+        
+        # Update symmetries
+        for name in conjugate_list:
+            if self.symmetries.has_key(name):
+                self.symmetries[name + 'C'] = self.symmetries[name]
+                     
+        return list(conjugate_list)
+    
+    
+    
+    
+    
+
+            
+        
+        
+            
 def write_aloha_file_inc(aloha_dir,file_ext, comp_ext):
     """find the list of Helicity routine in the directory and create a list 
     of those files (but with compile extension)"""
