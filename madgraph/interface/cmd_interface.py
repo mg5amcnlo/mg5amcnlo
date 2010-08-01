@@ -1499,6 +1499,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         # Check basic validity of the line
         if not line.count('>') in [1,2]:
+            self.do_help('generate')
+            print
             raise self.InvalidCmd('Wrong use of \">\" special character.')
         
 

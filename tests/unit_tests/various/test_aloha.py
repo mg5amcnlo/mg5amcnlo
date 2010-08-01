@@ -2130,7 +2130,7 @@ class test_aloha_creation(unittest.TestCase):
         #because of use of some global.
         helas_suite = create_aloha.AbstractALOHAModel('sm')
 
-        self.assertEqual(helas_suite.look_for_conjugate(), [])
+        self.assertEqual(helas_suite.look_for_conjugate(), {})
         helas_suite.compute_all()
         lorentz_index = {1:0, 2:0,3:1}
         spin_index = {1:0, 2:1, 3:0}
@@ -2158,18 +2158,21 @@ class test_aloha_creation(unittest.TestCase):
         """ test the FFV creation of vertex """
         from models.sm.object_library import Lorentz
 
-        FFVC = Lorentz(name = 'FFVC',
+        FFV = Lorentz(name = 'FFV',
                  spins = [ 2, 2, 3 ],
-                 structure = 'C(51,1) * Gamma(3,1,2) * C(2,52)')        
-            
-        ampC = create_aloha.AbstractRoutineBuilder(FFVC).compute_routine(0)
-
+                 structure = 'Gamma(3,1,2)')        
+        builder = create_aloha.AbstractRoutineBuilder(FFV)
+        amp = builder.compute_routine(0)
+        conjg_builder= builder.define_conjugate_builder()
+        conjg_amp = conjg_builder.compute_routine(0)
+    
         # Check correct contraction
-        error = 'wrong contraction for %s'
-        self.assertEqual(ampC.expr.nb_lor, 0, error % 'FFVC')
-        self.assertEqual(ampC.expr.nb_spin, 0, error % 'FFVC')
+        self.assertEqual(conjg_amp.expr.nb_lor, 0)
+        self.assertEqual(conjg_amp.expr.nb_spin, 0)
       
-        
+        # Check expr are different
+        self.assertNotEqual(str(amp.expr), str(conjg_amp.expr))
+        self.assertNotEqual(amp.name, conjg_amp.name)
 
 
         

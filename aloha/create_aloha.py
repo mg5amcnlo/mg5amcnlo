@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+import copy
 import cPickle
 import glob
 import logging
@@ -78,10 +79,7 @@ class AbstractRoutineBuilder(object):
 
         self.spins = lorentz.spins
         self.name = lorentz.name
-        if self.name[-1] == 'C':
-            self.conjg = True
-        else:
-            self.conjg = False
+        self.conjg = 0
         self.outgoing = None
         self.lorentz_expr = lorentz.structure        
         self.routine_kernel = None
@@ -92,6 +90,25 @@ class AbstractRoutineBuilder(object):
         self.outgoing = mode
         self.expr = self.compute_aloha_high_kernel(mode)
         return self.define_simple_output()
+    
+    def define_conjugate_builder(self, pair=1):
+        """ return a AbstractRoutine Builder for the conjugate operation.
+        If they are more than one pair of fermion. Then use pair to claim which 
+        one is conjugated"""
+        
+        new_builder = copy.copy(self)
+        
+        old_id = pair
+        new_id = _conjugate_gap + old_id
+        
+        new_builder.routine_kernel = \
+         -1 * C(new_id, old_id) * self.routine_kernel * C(new_id + 1, old_id +1)
+        new_builder.name += 'C'
+        if pair:
+            new_builder.name += str(pair)
+        new_builder.conjg = pair 
+    
+        return new_builder
     
     def define_simple_output(self):
         """ define a simple output for this AbstractRoutine """
@@ -132,7 +149,7 @@ class AbstractRoutineBuilder(object):
                     lorentz *= complex(0,1)
                 elif spin == 2:
                     # shift the tag if we multiply by C matrices
-                    if self.conjg: 
+                    if (id+1) // 2 == self.conjg: 
                         id += _conjugate_gap
                     nb_spinor += 1
                     if nb_spinor %2:
@@ -151,7 +168,8 @@ class AbstractRoutineBuilder(object):
                 if spin == 1:
                     lorentz *= Scalar(id)
                 elif spin == 2:
-                    if self.conjg: 
+                    # shift the tag if we multiply by C matrices
+                    if (id+1) // 2 == self.conjg:
                         id += _conjugate_gap
                     nb_spinor += 1
                     lorentz *= Spinor(id, i + 1)
@@ -186,66 +204,7 @@ class AbstractRoutineBuilder(object):
         
         lorentz.tag = set(aloha_lib.USE_TAG)
         return lorentz         
-        
-    def compute_aloha_low_kernel(self, mode):
-        """ compute the abstract routine associate to this mode """
-        
-        aloha_lib.USE_TAG=set()
-        
-        if not self.routine_kernel:
-            self.routine_kernel = self.define_routine_kernel()
-        
-        if not AbstractRoutineBuilder.aloha_lib:
-            AbstractRoutineBuilder.load_library()
-        
-        #multiply by the wave functions
-        nb_spinor = 0
-        lorentz = self.routine_kernel
-        for (i, spin ) in enumerate(self.spins):
-            id = i + 1
-            
-            #Check if this is the outgoing particle
-            if id == self.outgoing:
-                if spin == 1 : 
-                    lorentz *= self.aloha_lib[('ScalarProp', id)]
-                elif spin == 2 :
-                    nb_spinor += 1
-                    lorentz *= self.aloha_lib[('SpinorProp', id, nb_spinor %2)]
-                elif spin == 3 :
-                    lorentz *= self.aloha_lib[('VectorProp', id)]
-                elif spin == 5 :
-                    lorentz *= self.aloha_lib[('Spin2Prop', id)]
-                else:
-                    raise self.AbstractRoutineError(
-                                'The spin value %s is not supported yet' % spin)
-            else:
-                # This is an incoming particle
-                if spin == 1:
-                    lorentz *= self.aloha_lib[('Scalar', id)]
-                elif spin == 2:
-                    nb_spinor += 1
-                    lorentz *= self.aloha_lib[('Spinor', id)]
-                elif spin == 3:        
-                    lorentz *= self.aloha_lib[('Vector', id)]
-                elif spin == 5:
-                    lorentz *= self.aloha_lib[('Spin2', id)]
-                else:
-                    raise self.AbstractRoutineError(
-                                'The spin value %s is not supported yet' % spin)                    
-            
-        # If no particle OffShell
-        if self.outgoing:
-            lorentz /= self.aloha_lib[('Denom', id)]
-            lorentz.tag = set(aloha_lib.USE_TAG)
-            lorentz.tag.add('OM%s' % self.outgoing )  
-            lorentz.tag.add('P%s' % self.outgoing)    
-        else:
-            lorentz *= complex(0,-1)
-            
-        lorentz = lorentz.simplify()
-        lorentz = lorentz.factorize()
-        return lorentz 
-                
+                        
     def define_lorentz_expr(self, lorentz_expr):
         """Define the expression"""
         
@@ -394,47 +353,49 @@ class AbstractALOHAModel(dict):
         for lorentz in self.model.all_lorentz:
             if -1 in lorentz.spins:
                 # No Ghost in ALOHA
-                continue
-            self.compute_for_lorentz(lorentz)
+                continue 
+            builder = AbstractRoutineBuilder(lorentz)
+            self.compute_aloha(builder)
             if lorentz.name in conjugate_list:
-                conjugate_lorentz = -1 * C(_conjugate_gap + 1, 1) * lorentz *\
-                                                        C(2, _conjugate_gap + 2)
-                conjugate_lorentz.name += 'C'
-                self.complex_mode = True
-                self.compute_for_lorentz(conjugate_lorentz)
-                self.complex_mode = False
-        
+                for pair in conjugate_list[lorentz.name]:
+                    conjg_builder = builder.define_conjugate_builder(pair)
+                    self.compute_aloha(conjg_builder, lorentz.name)
+                    
         if save:
             self.save()
         
-    def compute_for_lorentz(self, lorentz):
-        """ """
-        self.compute_lorentz_with_kernel(lorentz)
+    def compute_aloha(self, builder, symetry=None):
+        """convinient alias to choose to use or not the kernel"""
+        self.compute_aloha_with_kernel(builder, symetry)
         
-    def compute_lorentz_without_kernel(self, lorentz):
+    def compute_aloha_without_kernel(self, builder, symetry=None):
         """define all the AbstractRoutine"""
         
-        name = lorentz.name
-        for outgoing in range(len(lorentz.spins) + 1 ):
-            builder = AbstractRoutineBuilder(lorentz)
+        name = builder.name
+            
+        for outgoing in range(len(builder.spins) + 1 ):
+            builder.routine_kernel = None
             wavefunction = builder.compute_routine(outgoing)
             self.set(name, outgoing, wavefunction)
         
         
-    def compute_lorentz_with_kernel(self, lorentz):
-        """ define all the AbstractRoutine linked to a given lorentz structure"""
+    def compute_aloha_with_kernel(self, builder, symetry=None):
+        """ define all the AbstractRoutine linked to a given lorentz structure
+        symetry authorizes to use the symetry of anoter lorentz structure."""
         
-        name = lorentz.name
+        name = builder.name
+        if not symetry:
+            symetry = name
+        
         # first compute the amplitude contribution
-        builder = AbstractRoutineBuilder(lorentz)
         wavefunction = builder.compute_routine(0)
         self.set(name, 0, wavefunction)
         
         # Create the routine associate to an external particles
-        for outgoing in range(1, len(lorentz.spins) + 1 ):
-            symmetric = self.has_symmetries(lorentz.name, outgoing)
+        for outgoing in range(1, len(builder.spins) + 1 ):
+            symmetric = self.has_symmetries(symetry, outgoing)
             if symmetric:
-                self.get(lorentz.name, symmetric).add_symmetry(outgoing)
+                self.get(symetry, symmetric).add_symmetry(outgoing)
             else:
                 wavefunction = builder.compute_routine(outgoing)
                 #Store the information
@@ -489,41 +450,33 @@ class AbstractALOHAModel(dict):
         
         # No majorana particles    
         if not need:
-            return []
+            return {}
         
-        conjugate_list = set()
-        # Check each vertex
+        conjugate_request = {}
+        # Check each vertex if they are fermion and/or majorana
         for vertex in self.model.all_vertices:
-            # check that they are at least one fermion
-            if vertex.particles[0].spin != 2:
-                continue
-            # check that they are no majorana in the interactions
-            found_one = True
-            for part in vertex.particles:
-                if part.spin != 2:
+            for i in range(0, len(vertex.particles),2):
+                part1 = vertex.particles[i]
+                if part1.spin !=2:
+                    # deal only with fermion
                     break
-                if part.selfconjugate:
-                    found_one = False 
-                    break
-            # if no majorana add the associate lorentz structure
-            if found_one:
+                # check if this pair contains a majorana
+                if part1.selfconjugate:
+                    continue
+                part2 = vertex.particles[i + 1]
+                if part2.selfconjugate:
+                    continue
+                
+                # No majorana => add the associate lorentz structure
                 for lorentz in vertex.lorentzs:
-                    conjugate_list.add(lorentz.name)
-        
-        # Update symmetries
-        for name in conjugate_list:
-            if self.symmetries.has_key(name):
-                self.symmetries[name + 'C'] = self.symmetries[name]
+                    try:
+                        conjugate_request[lorentz.name].add(i+1)
+                    except:
+                        conjugate_request[lorentz.name] = set([i+1])
+                
                      
-        return list(conjugate_list)
-    
-    
-    
-    
-    
-
+        return list(conjugate_request)
             
-        
         
             
 def write_aloha_file_inc(aloha_dir,file_ext, comp_ext):
