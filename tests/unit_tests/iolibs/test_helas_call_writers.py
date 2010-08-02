@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+from madgraph import core
 
 import copy
 
@@ -27,6 +28,8 @@ import madgraph.iolibs.misc as misc
 import tests.unit_tests as unittest
 import tests.unit_tests.core.test_helas_objects as test_helas_objects
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
+
+
 
 #===============================================================================
 # HelasModelTestSetup
@@ -745,4 +748,150 @@ class FortranHelasCallWriterTest(HelasModelTestSetup):
         #self.assertEqual(fortran_model.get_amplitude_call(amplitude),
         #                 goal[goal_counter])
         goal_counter = goal_counter + 1
+
+
+class UFOHELASCallWriterTest(unittest.TestCase):
+    """Test class for the FortranHelasCallWriterTest object"""
+
+    mymodel = helas_call_writers.HelasCallWriter()
+    mybasemodel = base_objects.Model()
+
+    def setUp(self):
+        self.mymodel.set('model_name', 'sm')
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A photon
+        mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        a = mypartlist[len(mypartlist) - 1]
+
+        # W+ and W-
+        mypartlist.append(base_objects.Particle({'name':'w+',
+                      'antiname':'w-',
+                      'spin':3,
+                      'color':1,
+                      'mass':'wmas',
+                      'width':'wwid',
+                      'texname':'W^+',
+                      'antitexname':'W^-',
+                      'line':'wavy',
+                      'charge':1.,
+                      'pdg_code':24,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        wplus = mypartlist[len(mypartlist) - 1]
+        wminus = copy.copy(wplus)
+        wminus.set('is_part', False)
+
+        # Z
+        mypartlist.append(base_objects.Particle({'name':'z',
+                      'antiname':'z',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zmas',
+                      'width':'zwid',
+                      'texname':'Z',
+                      'antitexname':'Z',
+                      'line':'wavy',
+                      'charge':1.,
+                      'pdg_code':23,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        z = mypartlist[len(mypartlist) - 1]
+
+        # a-a-w+w- 4-vertex
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [a, \
+                                             a,
+                                             wminus,
+                                             wplus]),
+                      'color': [],
+                      'lorentz':['VVVV1'],
+                      'couplings':{(0, 0):'GC_51'},
+                      'orders':{'QED':2}}))
+
+        # w+w-z vertex
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [wminus,
+                                             wplus,
+                                             z]),
+                      'color': [],
+                      'lorentz':['VVV1'],
+                      'couplings':{(0, 0):'GC_12'},
+                      'orders':{'QED':1}}))
+
+        self.mybasemodel.set('particles', mypartlist)
+        self.mybasemodel.set('interactions', myinterlist)
+        
+        
+        #import madgraph.interface.cmd_interface as cmd
+        #CMD = cmd.MadGraphCmdShell()
+        #CMD._curr_model = self.mybasemodel
+        #CMD._curr_fortran_model = helas_call_writers.FortranUFOHelasCallWriter 
+        #CMD.do_generate('a w- > w- a z')
+        #CMD.do_export('matrix_v4 /tmp/')
+        
+        
+        
+        leg1 = base_objects.Leg({'id':22,'state':False})
+        leg2 = base_objects.Leg({'id':24,'state':False})
+        leg3 = base_objects.Leg({'id':22,'state':True})
+        leg4 = base_objects.Leg({'id':24,'state':True})
+        leg5 = base_objects.Leg({'id':23,'state':True}) 
+
+        legList1 = base_objects.LegList([leg1, leg2, leg3, leg4, leg5])
+        
+        myproc = base_objects.Process({'legs':legList1,
+                                       'model':self.mybasemodel})
+        
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+        
+        self.mymatrixelement = helas_objects.HelasMatrixElement(myamplitude)
+        
+    def test_UFO_ordering(self):
+        """Test automatic generation of wavefunction and amplitude calls"""
+        
+        fortran_model = helas_call_writers.FortranUFOHelasCallWriter()
+        
+        result = fortran_model.get_matrix_element_calls(self.mymatrixelement)
+        solution =["CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))",
+                   "CALL VXXXXX(P(0,2),wmas,NHEL(2),-1*IC(2),W(1,2))",
+                   "CALL VXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))",
+                   "CALL VXXXXX(P(0,4),wmas,NHEL(4),+1*IC(4),W(1,4))",
+                   "CALL VXXXXX(P(0,5),zmas,NHEL(5),+1*IC(5),W(1,5))",
+                   "CALL VVVV1_4(W(1,1),W(1,3),W(1,2),GC_51,wmas, wwid, W(1,6))",
+                   "# Amplitude(s) for diagram number 1",
+                   "CALL VVV1_0(W(1,6),W(1,4),W(1,5),GC_12,AMP(1))",
+                   "CALL VVVV1_3(W(1,4),W(1,1),W(1,3),GC_51,wmas, wwid, W(1,7))",
+                   "# Amplitude(s) for diagram number 2",
+                   "CALL VVV1_0(W(1,2),W(1,7),W(1,5),GC_12,AMP(2))"]
+        
+        for i, line in enumerate(solution):
+            self.assertEqual(line, result[i])
+        
+
+
+
 

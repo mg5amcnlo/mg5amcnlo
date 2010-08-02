@@ -561,21 +561,6 @@ class UFOHelasCallWriter(HelasCallWriter):
     generates the Fortran Helas call based on the Lorentz structure of
     the interaction."""
 
-    def find_outgoing_number(self, wf):
-        "Return the position of the resulting particles in the interactions"
-        # First shot: just the index in the interaction
-        wf_index = wf.get('pdg_codes').index(wf.get_anti_pdg_code())
-        # If fermion, then we need to correct for I/O status
-        spin_state = wf.get_spin_state_number()
-        if spin_state % 2 == 0:
-            if wf_index % 2 == 0 and spin_state < 0:
-                # Outgoing particle at even slot -> increase by 1
-                wf_index += 1
-            elif wf_index % 2 == 1 and spin_state > 0:
-                # Incoming particle at odd slot -> decrease by 1
-                wf_index -= 1
-        
-        return wf_index
 
     def get_wavefunction_call(self, wavefunction):
         """Return the function for writing the wavefunction
@@ -698,15 +683,16 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             # String is LOR1_0, LOR1_2 etc.
             
             if isinstance(argument, helas_objects.HelasWavefunction):
-                outgoing = self.find_outgoing_number(argument) + 1
-                call = 'CALL %s_%s' % (argument.get('lorentz'), outgoing) 
+                outgoing = argument.find_outgoing_number() + 1    
             else:
                 outgoing = 0
-                call = 'CALL %s_%s' % (argument.get('lorentz'), outgoing)
 
             # Check if we need to append a charge conjugation flag
+            c_flag = '' 
             if argument.needs_hermitian_conjugate():
-                call = call + '_C'
+                c_flag = 'C'
+
+            call = 'CALL %s%s_%s' % (argument.get('lorentz'), c_flag, outgoing) 
 
             # Add the wave function
             call = call + '('

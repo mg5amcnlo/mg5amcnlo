@@ -91,8 +91,19 @@ class AbstractRoutineBuilder(object):
         self.expr = self.compute_aloha_high_kernel(mode)
         return self.define_simple_output()
     
+    def define_all_conjugate_builder(self, pair_list):
+        """ return the full set of AbstractRoutineBuilder linked to fermion 
+        clash"""
+        
+        solution = []
+        for i, pair in pair_list:
+            new_builder = self.define_conjugate_builder(pair)
+            solution.append(new_builder)
+            solution += new_builder.define_all_conjugate_builder(pair_list[i+1:])
+        return solution
+    
     def define_conjugate_builder(self, pair=1):
-        """ return a AbstractRoutine Builder for the conjugate operation.
+        """ return a AbstractRoutineBuilder for the conjugate operation.
         If they are more than one pair of fermion. Then use pair to claim which 
         one is conjugated"""
         
@@ -357,9 +368,11 @@ class AbstractALOHAModel(dict):
             builder = AbstractRoutineBuilder(lorentz)
             self.compute_aloha(builder)
             if lorentz.name in conjugate_list:
-                for pair in conjugate_list[lorentz.name]:
-                    conjg_builder = builder.define_conjugate_builder(pair)
-                    self.compute_aloha(conjg_builder, lorentz.name)
+                conjg_builder_list= builder.define_all_conjg(\
+                                                   conjugate_list[lorentz.name])
+                for conjg_builder in conjg_builder_list:
+                        self.compute_aloha(conjg_builder, lorentz.name)
+                    
                     
         if save:
             self.save()

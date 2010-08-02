@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+from madgraph.core import base_objects
 """Definitions of objects used to generate language-independent Helas
 calls: HelasWavefunction, HelasAmplitude, HelasDiagram for the
 generation of wavefunctions and amplitudes, HelasMatrixElement and
@@ -730,6 +731,23 @@ class HelasWavefunction(base_objects.PhysicsObject):
                state_number[self.get('state')] * \
                self.get('spin')
 
+    def find_outgoing_number(self):
+        "Return the position of the resulting particles in the interactions"
+        # First shot: just the index in the interaction
+        if self.get('interaction_id') == 0:
+            return 0
+        wf_index = self.get('pdg_codes').index(self.get_anti_pdg_code())
+        # If fermion, then we need to correct for I/O status
+        spin_state = self.get_spin_state_number()
+        if spin_state % 2 == 0:
+            if wf_index % 2 == 0 and spin_state < 0:
+                # Outgoing particle at even slot -> increase by 1
+                wf_index += 1
+            elif wf_index % 2 == 1 and spin_state > 0:
+                # Incoming particle at odd slot -> decrease by 1
+                wf_index -= 1
+        return wf_index
+
     def get_call_key(self):
         """Generate the (spin, state) tuple used as key for the helas call
         dictionaries in HelasModel"""
@@ -742,6 +760,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         res.sort()
 
         res.append(self.get_spin_state_number())
+
+        res.append(self.find_outgoing_number())
 
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():
@@ -2239,7 +2259,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         # Need to replace Particle in all wavefunctions to avoid
         # deepcopy
-        idecay = 0
         for decay_element in decay_elements:
             for idiag, diagram in enumerate(decay.get('diagrams')):
                 wfs = diagram.get('wavefunctions')
@@ -2361,7 +2380,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                                 decay_diag.get('wavefunctions'))
                         # Need to replace Particle in all
                         # wavefunctions to avoid deepcopy
-                        idecay = 0
                         for i, wf in enumerate(decay_diag.get('wavefunctions')):
                             decay_diag_wfs[i].set('particle', \
                                                   wf.get('particle'))
@@ -3433,14 +3451,17 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                 decay_dict = dict(sum(decays, []))
 
                 # Make sure to not modify the original matrix element
+                model_bk = core_process.get('processes')[0].get('model')
+                # Avoid Python copying the complete model every time
+                for i, process in enumerate(core_process.get('processes')):
+                    process.set('model',base_objects.Model())
                 matrix_element = copy.deepcopy(core_process)
                 # Avoid Python copying the complete model every time
                 for i, process in enumerate(matrix_element.get('processes')):
-                    process.set('model',
-                            core_process.get('processes')[i].get('model'))
+                    process.set('model', model_bk)
+                    core_process.get('processes')[i].set('model', model_bk)
                 # Need to replace Particle in all wavefunctions to avoid
                 # deepcopy
-                idecay = 0
                 org_wfs = core_process.get_all_wavefunctions()
                 for i, wf in enumerate(matrix_element.get_all_wavefunctions()):
                     wf.set('particle', org_wfs[i].get('particle'))
