@@ -36,6 +36,7 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
+from madgraph import MG5DIR
 
 import tests.unit_tests.core.test_helas_objects as test_helas_objects
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
@@ -574,7 +575,7 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
 
     def setUp(self):
 
-        model_pkl = os.path.join('models','sm','model.pkl')
+        model_pkl = os.path.join(MG5DIR, 'models','sm','model.pkl')
         if os.path.isfile(model_pkl):
             self.model = save_load_object.load_from_file(model_pkl)
         else:
