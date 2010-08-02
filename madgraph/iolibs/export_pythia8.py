@@ -419,7 +419,17 @@ def get_matrix_lines(matrix_element, cpp_helas_writer, color_amplitudes):
 def get_sigmaHat_lines(matrix_element):
     """Get sigmaHat_lines for function definition for Pythia 8 .cc file"""
 
-    sigmaHat_lines = "// Already calculated matrix_element in sigmaKin\n"
+    # Create a set with the pairs of incoming partons
+    beams = set([(process.get('legs')[0].get('id'),
+                  process.get('legs')[1].get('id')) \
+                 for process in matrix_element.get('processes')])
+
+    sigmaHat_lines = "// Return 0 if not correct initial state assignment\n"
+    sigmaHat_lines += "if(!(%s)){return 0;}\n" % \
+                      " || ".join(["(id1 == %d && id2 == %d)" % beam for \
+                                   beam in beams])
+    
+    sigmaHat_lines += "// Already calculated matrix_element in sigmaKin\n"
     sigmaHat_lines += "return matrix_element;"
 
     return sigmaHat_lines
