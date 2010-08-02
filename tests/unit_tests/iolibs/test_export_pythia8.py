@@ -140,7 +140,7 @@ class IOExportPythia8Test(unittest.TestCase,
                                              u, \
                                              g]),
                       'color': [color.ColorString([color.T(2, 1, 0)])],
-                      'lorentz':['FFV2'],
+                      'lorentz':['FFV1'],
                       'couplings':{(0, 0):'GC_10'},
                       'orders':{'QCD':1}}))
 
@@ -262,7 +262,7 @@ class Sigma_uux_uux : public Sigma2Process
     int id4Mass() const {return 2;}
 
     // Tell Pythia that sigmaHat returns the ME^2
-    virtual bool convertME() const {return true;}
+    virtual bool convertM2() const {return true;}
 
   private:
 
@@ -398,8 +398,8 @@ void Sigma_uux_uux::sigmaKin()
       t = matrix(helicities[ihel]); 
       matrix_element += t * hwgt; 
     }
-    matrix_element /= denominator; 
   }
+  matrix_element /= denominator; 
 
 }
 
@@ -408,6 +408,11 @@ void Sigma_uux_uux::sigmaKin()
 
 double Sigma_uux_uux::sigmaHat() 
 {
+  // Return 0 if not correct initial state assignment
+  if( !((id1 == 4 && id2 == -4) || (id1 == 2 && id2 == -2)))
+  {
+    return 0; 
+  }
   // Already calculated matrix_element in sigmaKin
   return matrix_element; 
 }
@@ -488,9 +493,9 @@ double Sigma_uux_uux::matrix(const int hel[])
   Pythia8_sm::oxxxxx(p[1], mME[1], hel[1], -1, w[1]); 
   Pythia8_sm::oxxxxx(p[2], mME[2], hel[2], +1, w[2]); 
   Pythia8_sm::ixxxxx(p[3], mME[3], hel[3], -1, w[3]); 
-  FFV2_3(w[0], w[1], pars->GC_10, pars->ZERO, pars->ZERO, w[4]); 
+  FFV1_3(w[0], w[1], pars->GC_10, pars->ZERO, pars->ZERO, w[4]); 
   // Amplitude(s) for diagram number 1
-  FFV2_0(w[3], w[2], w[4], pars->GC_10, amp[0]); 
+  FFV1_0(w[3], w[2], w[4], pars->GC_10, amp[0]); 
   FFV5_3(w[0], w[1], pars->GC_47, pars->MZ, pars->WZ, w[5]); 
   FFV2_3(w[0], w[1], pars->GC_35, pars->MZ, pars->WZ, w[6]); 
   // Amplitude(s) for diagram number 2
@@ -498,9 +503,9 @@ double Sigma_uux_uux::matrix(const int hel[])
   FFV2_0(w[3], w[2], w[5], pars->GC_35, amp[2]); 
   FFV5_0(w[3], w[2], w[6], pars->GC_47, amp[3]); 
   FFV2_0(w[3], w[2], w[6], pars->GC_35, amp[4]); 
-  FFV2_3(w[0], w[2], pars->GC_10, pars->ZERO, pars->ZERO, w[7]); 
+  FFV1_3(w[0], w[2], pars->GC_10, pars->ZERO, pars->ZERO, w[7]); 
   // Amplitude(s) for diagram number 3
-  FFV2_0(w[3], w[1], w[7], pars->GC_10, amp[5]); 
+  FFV1_0(w[3], w[1], w[7], pars->GC_10, amp[5]); 
   FFV5_3(w[0], w[2], pars->GC_47, pars->MZ, pars->WZ, w[8]); 
   FFV2_3(w[0], w[2], pars->GC_35, pars->MZ, pars->WZ, w[9]); 
   // Amplitude(s) for diagram number 4
@@ -520,7 +525,7 @@ double Sigma_uux_uux::matrix(const int hel[])
   for(i = 0; i < ncolor; i++ )
   {
     ztemp = 0.; 
-    for(j = 1; j < ncolor; j++ )
+    for(j = 0; j < ncolor; j++ )
       ztemp = ztemp + cf[i][j] * jamp[j]; 
     matrix = matrix + real(ztemp * conj(jamp[i]))/denom[i]; 
   }

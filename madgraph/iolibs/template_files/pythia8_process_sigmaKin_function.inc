@@ -51,5 +51,5 @@ else
     t=matrix(helicities[ihel]);
     matrix_element += t*hwgt;
   }
-  matrix_element /= denominator;
 }
+matrix_element /= denominator;

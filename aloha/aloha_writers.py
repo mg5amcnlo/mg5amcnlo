@@ -476,7 +476,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         
         # define the type of function and argument
         if not OffShell:
-            str_out = 'void %(name)s(%(args)s, complex<double> vertex)' % \
+            str_out = 'void %(name)s(%(args)s, complex<double>& vertex)' % \
                {'name': self.namestring,
                 'args': ','.join(CallList + ['complex<double> C'])}
         else: 

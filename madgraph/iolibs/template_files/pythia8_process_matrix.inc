@@ -26,7 +26,7 @@ for(i=0;i < nexternal;i++){
 double matrix = 0;
 for(i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 1; j < ncolor; j++)
+  for(j = 0; j < ncolor; j++)
     ztemp = ztemp + cf[i][j]*jamp[j];
   matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
 }

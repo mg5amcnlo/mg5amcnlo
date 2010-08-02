@@ -34,7 +34,7 @@ public:
 
   %(id_masses)s
   // Tell Pythia that sigmaHat returns the ME^2
-  virtual bool   convertME() const {return true;}
+  virtual bool   convertM2() const {return true;}
 
 private:
 

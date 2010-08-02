@@ -818,17 +818,18 @@ class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
                                  wf.get('number')-1)
         else:
             # String is LOR1_0, LOR1_2 etc.
-            
+
             if isinstance(argument, helas_objects.HelasWavefunction):
-                outgoing = self.find_outgoing_number(argument) + 1
-                call = '%s_%s' % (argument.get('lorentz'), outgoing) 
+                outgoing = argument.find_outgoing_number() + 1    
             else:
                 outgoing = 0
-                call = '%s_%s' % (argument.get('lorentz'), outgoing)
 
             # Check if we need to append a charge conjugation flag
+            c_flag = '' 
             if argument.needs_hermitian_conjugate():
-                call = call + '_c'
+                c_flag = 'c'
+
+            call = 'CALL %s%s_%s' % (argument.get('lorentz'), c_flag, outgoing) 
 
             # Add the wave function
             call = call + '('

@@ -516,13 +516,8 @@ class CheckValidForCmd(object):
         syntax: add process PROCESS 
         """
         
-        if len(self._curr_model['particles']) == 0:
-            raise self.InvalidCmd("No particle list currently active, " + \
-                                              "please create one first!")
-
-        if len(self._curr_model['interactions']) == 0:
-            raise self.InvalidCmd("No interaction list currently active," + \
-            " please create one first!")
+        if not self._curr_model:
+            raise self.InvalidCmd("No particle list currently active, please import a model first")
 
         if len(args) < 2:
             self.help_add()
@@ -567,7 +562,7 @@ class CheckValidForCmd(object):
             self.help_display()
             raise self.InvalidCmd
 
-        if not self._curr_model['particles'] or not self._curr_model['interactions']:
+        if not self._curr_model:
             raise self.InvalidCmd("No model currently active, please import a model!")
 
         if args[0] in ['processes', 'diagrams'] and not self._curr_amps:
@@ -651,7 +646,7 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd("\"generate\" requires an argument.")
             
 
-        if not self._curr_model['particles'] or not self._curr_model['interactions']:
+        if  not self._curr_model:
             raise self.InvalidCmd("No model currently active, please import a model!")
 
         return True
@@ -1361,7 +1356,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Check the validity of the arguments and return the output path
         path = self.check_export(args)
 
-        if self._done_export == path:
+        if self._done_export == path and self._export_format == args[0]:
             # We have already done export in this path
             logger.info("Matrix elements already exported")
             return        
@@ -1375,7 +1370,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if not args:
             args = [self._export_format]
 
-        if args[0] in ['standalone_v4', 'madevent_v4']:
+        if args[0] in self._setup_opts:
             self._export_format = args[0]
             self._export_dir = path
             path = os.path.join(path, 'SubProcesses')
@@ -1445,7 +1440,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Reset _done_finalize, since we now have new subprocesses
         self._done_finalize = False
 
-        if self._export_format:
+        if self._export_format in self._setup_opts:
             # Automatically run finalize
             options = ''
             if nojpeg:
