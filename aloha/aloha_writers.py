@@ -250,8 +250,7 @@ class WriteALOHA:
  
         return declare_list
  
-    
-        
+     
 class ALOHAWriterForFortran(WriteALOHA): 
     """routines for writing out Fortran"""
 
@@ -272,17 +271,25 @@ class ALOHAWriterForFortran(WriteALOHA):
         
         CallList = self.calllist['CallList']
         declare_list = self.calllist['DeclareList']
-        declare_list.append('double complex C')
+        if 'double complex C' in declare_list:
+            alredy_update = True
+        else:
+            alredy_update = False
+        
+        if not alredy_update:    
+            declare_list.append('double complex C')
 
         # define the type of function and argument        
         if not self.offshell:
             str_out = 'subroutine %(name)s(%(args)s,vertex)\n' % \
                {'name': self.namestring,
-                'args': ','.join(CallList+ ['C']) } 
-            declare_list.append('double complex vertex\n') 
+                'args': ','.join(CallList+ ['C']) }
+            if not alredy_update: 
+                declare_list.append('double complex vertex\n') 
         else:
-            declare_list.append('double complex denom')
-            declare_list.append('double precision M%(id)d, W%(id)d' % 
+            if not alredy_update:
+                declare_list.append('double complex denom')
+                declare_list.append('double precision M%(id)d, W%(id)d' % 
                                                           {'id': self.offshell})
             call_arg = '%(args)s, C, M%(id)d, W%(id)d, %(spin)s%(id)d' % \
                     {'args': ', '.join(CallList), 
@@ -302,15 +309,14 @@ class ALOHAWriterForFortran(WriteALOHA):
             str_out += 'double precision ' + '(0:3),'.join(Momenta) + '(0:3)\n'
 
         # Add entry for symmetry
-        str_out += '\n'
-        for elem in self.symmetries:
-            str_out += ' entry %(name)s(%(args)s)\n' % \
-                        {'name': get_routine_name(self.abstractname, elem),
-                         'args': call_arg}
+        #str_out += '\n'
+        #for elem in self.symmetries:
+        #    str_out += ' entry %(name)s(%(args)s)\n' % \
+        #                {'name': get_routine_name(self.abstractname, elem),
+        #                 'args': self.rotate_elem(call_arg,self.outgoing, elem)}
 
         return str_out
-
-            
+      
     def define_momenta(self):
         """Define the Header of the fortran file. This include
             - momentum conservation
@@ -437,6 +443,16 @@ class ALOHAWriterForFortran(WriteALOHA):
         writer.writelines(self.define_momenta())
         writer.writelines(self.define_expression())
         writer.writelines(self.define_foot())
+        
+        for elem in self.symmetries: 
+            symmetryhead = self.define_header().replace( \
+                             self.namestring,self.namestring[0:-1]+'%s' %(elem))
+            symmetrybody = self.define_symmetry()
+            writer.write_comments('\n%s\n' % ('#'*65))
+            writer.writelines(symmetryhead)
+            writer.writelines(symmetrybody)
+            writer.writelines(self.define_foot())
+        
         
 def get_routine_name(name,outgoing):
     """ build the name of the aloha function """

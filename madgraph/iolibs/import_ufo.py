@@ -208,8 +208,12 @@ class UFOMG5Converter(object):
         """ convert the string to ColorStirng"""
         
         # Convert the string in order to be able to evaluate it
+        
+        p = re.compile(r'''Identity\((?P<first>\d*),(?P<second>\d*)\)''')
+        data_string = p.sub('color.T(\g<second>,\g<first>)', data_string)
+        
         # Change identity in color.TC
-        data_string = data_string.replace('Identity(1,2)','color.T(2,1)')
+        #data_string = data_string.replace('Identity(1,2)','color.T(2,1)')
         # Change convention for summed indices
         data_string = data_string.replace(',a',',-')
         data_string = data_string.replace('(a','(-')

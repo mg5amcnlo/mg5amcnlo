@@ -3949,8 +3949,6 @@ C
       DOUBLE PRECISION M1, W1
       DOUBLE PRECISION P1(0:3)
 
-      ENTRY FFV1_2(F2, V3, C, M1, W1, F1)
-
       F1(5)= F2(5)+V3(5)
       F1(6)= F2(6)+V3(6)
       P1(0) =  DBLE(F1(5))

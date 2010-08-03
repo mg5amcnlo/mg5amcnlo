@@ -342,7 +342,6 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
             for i, singlevalue in enumerate(value):
 #                try:
                     self.assertAlmostEqual(singlevalue, solutions[variable][i], 7, 'fail to be equal for param %s : %s != %s' % (variable, singlevalue, solutions[variable][i]))
-                    print "Almost equal: ", singlevalue, solutions[variable][i]
 #                except:
 #                    print i, singlevalue, [variable]
 #                    if i == 0:

@@ -96,7 +96,8 @@ class AbstractRoutineBuilder(object):
         clash"""
         
         solution = []
-        for i, pair in pair_list:
+
+        for i, pair in enumerate(pair_list):
             new_builder = self.define_conjugate_builder(pair)
             solution.append(new_builder)
             solution += new_builder.define_all_conjugate_builder(pair_list[i+1:])
@@ -368,7 +369,7 @@ class AbstractALOHAModel(dict):
             builder = AbstractRoutineBuilder(lorentz)
             self.compute_aloha(builder)
             if lorentz.name in conjugate_list:
-                conjg_builder_list= builder.define_all_conjg(\
+                conjg_builder_list= builder.define_all_conjugate_builder(\
                                                    conjugate_list[lorentz.name])
                 for conjg_builder in conjg_builder_list:
                         self.compute_aloha(conjg_builder, lorentz.name)
@@ -420,7 +421,7 @@ class AbstractALOHAModel(dict):
         for abstract_routine in self.values():
             abstract_routine.write(output_dir, language)
         
-        self.write_aloha_file_inc(output_dir)
+        #self.write_aloha_file_inc(output_dir)
         
 
     def look_for_symmetries(self):
@@ -481,14 +482,16 @@ class AbstractALOHAModel(dict):
                     continue
                 
                 # No majorana => add the associate lorentz structure
-                for lorentz in vertex.lorentzs:
+                for lorentz in vertex.lorentz:
                     try:
                         conjugate_request[lorentz.name].add(i+1)
                     except:
                         conjugate_request[lorentz.name] = set([i+1])
-                
-                     
-        return list(conjugate_request)
+        
+        for elem in conjugate_request:
+            conjugate_request[elem] = list(conjugate_request[elem])
+        
+        return conjugate_request
             
         
             
@@ -549,11 +552,13 @@ if '__main__' == __name__:
       
     start = time.time()
     def main():
-        alohagenerator = AbstractALOHAModel('sm') 
-        alohagenerator.compute_all()
+        alohagenerator = AbstractALOHAModel('mssm') 
+        alohagenerator.compute_all(save=False)
+        return alohagenerator
     def write(alohagenerator):
         alohagenerator.write('/tmp/', 'Fortran')
-    main()
+    alohagenerator = main()
+    #write(alohagenerator)
     #profile.run('main()')
     #profile.run('write(alohagenerator)')
     stop = time.time()
