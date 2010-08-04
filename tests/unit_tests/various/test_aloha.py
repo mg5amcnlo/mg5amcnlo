@@ -2122,7 +2122,7 @@ class test_aloha_creation(unittest.TestCase):
         
         helas_suite = create_aloha.AbstractALOHAModel('sm')
         helas_suite.look_for_symmetries()
-        solution = {'SSSS1': {2: 1, 3: 1, 4: 3}, 'VVVV4': {2: 1, 3: 1, 4: 1}, 'VVV1': {2: 1, 3: 1}, 'VVVV1': {2: 1, 3: 1, 4: 1}, 'VVVV3': {2: 1, 3: 1, 4: 1}, 'VVVV2': {2: 1, 4: 3}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 'VVS1': {2: 1}}
+        solution = {'SSSS1': {2: 1, 3: 1, 4: 3}, 'VVS1': {2: 1}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 'VVVV2': {2: 1, 4: 3}} 
         self.assertEqual(solution, helas_suite.symmetries)
         
     def test_full_sm_aloha(self):
@@ -2242,7 +2242,7 @@ class TestAlohaWriter(unittest.TestCase):
         call_list= writer.calllist['CallList']
         # Vertex AAW+W-
         # vertex_2 receives W+W-A with label 234
-        # vertex_1 ask for AW+W_ so should be label 423
+        # vertex_1 ask for AW+W- so should be label 423
         
         new_call = writer.reorder_call_list(call_list, 1, 2)
         self.assertEqual(['V4', 'V2', 'V3'], new_call)
@@ -2296,3 +2296,19 @@ class TestAlohaWriter(unittest.TestCase):
         
         new_call = writer.reorder_call_list(call_list, 2, 3)
         self.assertEqual(['F1', 'V3', 'S4'], new_call)
+        
+        UVVS = UFOLorentz(name = 'UVVS',
+               spins = [ 2, 3, 3, 1])
+    
+        
+        abstract = AbstractRoutineBuilder(UVVS).compute_routine(2)
+        writer = aloha_writers.ALOHAWriterForFortran(abstract, '/tmp')
+        call_list= writer.calllist['CallList']
+        # Vertex UAAH
+        # vertex_3 receives UAH with label 134
+        # vertex_2 ask for UAH so should be label 134
+        
+        new_call = writer.reorder_call_list(call_list, 2, 3)
+        self.assertEqual(['F1', 'V3', 'S4'], new_call)        
+        
+        

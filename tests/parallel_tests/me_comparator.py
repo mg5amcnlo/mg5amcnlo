@@ -223,6 +223,8 @@ class MG4Runner(MERunner):
         sys.stdout.write('.')
         sys.stdout.flush()
         working_dir = os.path.join(self.mg4_path, self.temp_dir_name)
+        print 'search for proc_id', proc_id
+        print 'search in', os.listdir(os.path.join(working_dir, 'SubProcesses'))
          
         shell_name = None
         for filename in os.listdir(os.path.join(working_dir, 'SubProcesses')):
@@ -274,6 +276,7 @@ class MG4Runner(MERunner):
         me_value_pattern = re.compile(r"\sMatrix\selement\s=\s*(?P<value>-?\d*\.\d*(E[+-]?\d*)?)\s*GeV\^\s*(?P<pow>-?\d+)",
                                       re.IGNORECASE | re.VERBOSE)
         for line in output.split('\n'):
+            print line
             match_momentum = momentum_pattern.match(line)
             if match_momentum:
                 res_p.append([float(s) for s in match_momentum.groups()])

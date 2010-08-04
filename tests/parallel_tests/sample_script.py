@@ -53,8 +53,8 @@ if '__main__' == __name__:
     #my_proc_list = me_comparator.create_proc_list(['w+', 'w-','h','a','u','u~','d','d~','e+','e-','g','ve','mu+','mu-'],initial=2, final=2)
 
     # or give one
-    my_proc_list = ['e+ e- > e+ e-', 'g g> g g g','a w+ > a h w+', 'a w+ > a a w+', 'a w- > a h w-', 'a w- > a a w-', 'a h > a w+ w-', 'a a > h w+ w-', 'a a > a w+ w-']
-
+    my_proc_list = ['e+ e- > e+ e-', 'g g> g g g','a w+ > a h w+/z', 'a w+ > a a w+', 'a w- > a h w-', 'a w- > a a w-', 'a h > a w+ w-', 'a a > h w+ w-', 'a a > a w+ w-']
+    my_proc_list = ['w+ w- > u u~','w+ w- > mu+ u~']
     # Create a MERunner object for MG4
     my_mg4 = me_comparator.MG4Runner()
     my_mg4.setup(mg4_path)

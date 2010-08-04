@@ -359,7 +359,7 @@ class AbstractALOHAModel(dict):
 
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
-        #self.look_for_symmetries()
+        self.look_for_symmetries()
         conjugate_list = self.look_for_conjugate()
         
         for lorentz in self.model.all_lorentz:
@@ -433,7 +433,8 @@ class AbstractALOHAModel(dict):
             for i, part1 in enumerate(vertex.particles):
                 for j in range(i):
                     part2 = vertex.particles[j]
-                    if part1.name == part2.name:
+                    if part1.name == part2.name and \
+                                                part1.color == part2.color == 1:
                         for lorentz in vertex.lorentz:
                             if self.symmetries.has_key(lorentz.name):
                                 self.symmetries[lorentz.name][i+1] = j+1
