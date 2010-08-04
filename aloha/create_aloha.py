@@ -359,7 +359,7 @@ class AbstractALOHAModel(dict):
 
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
-        self.look_for_symmetries()
+        #self.look_for_symmetries()
         conjugate_list = self.look_for_conjugate()
         
         for lorentz in self.model.all_lorentz:
@@ -552,13 +552,13 @@ if '__main__' == __name__:
       
     start = time.time()
     def main():
-        alohagenerator = AbstractALOHAModel('mssm') 
+        alohagenerator = AbstractALOHAModel('sm') 
         alohagenerator.compute_all(save=False)
         return alohagenerator
     def write(alohagenerator):
         alohagenerator.write('/tmp/', 'Fortran')
     alohagenerator = main()
-    #write(alohagenerator)
+    write(alohagenerator)
     #profile.run('main()')
     #profile.run('write(alohagenerator)')
     stop = time.time()

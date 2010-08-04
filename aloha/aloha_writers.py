@@ -33,7 +33,7 @@ class WriteALOHA:
 
         #prepare the necessary object
         self.collect_variables() # Look for the different variables
-        self.make_all_lists()   # Compute the expression for the call ordering
+        self.make_all_lists()    # Compute the expression for the call ordering
                                  #the definition of objects,...
 
     def collect_variables(self):
@@ -140,8 +140,11 @@ class WriteALOHA:
                            'Momentum':MomentumConserve}
 
     
-    def make_call_list(self):
+    def make_call_list(self, outgoing=None):
         """find the way to write the call of the functions"""
+
+        if outgoing is None:
+            outgoing = self.offshell
 
         # particle type counter
         nb_type = {'S':0, 'F':0, 'V':0, 'T':0}        
@@ -153,8 +156,8 @@ class WriteALOHA:
             call_arg.append('%s%d' % (spin, index +1))
             
         # reorder call_arg if not amplitude
-        if self.offshell:
-            part_pos = self.offshell -1 
+        if outgoing:
+            part_pos = outgoing -1 
             out_type = self.particles[part_pos]
             
             #order is FVST #look at the border of the cycling move
@@ -179,7 +182,40 @@ class WriteALOHA:
             call_arg = self.new_order(call_arg, part_pos, start, stop)
         
         return call_arg
-            
+
+    def reorder_call_list(self, call_list, old, new):
+        """ restore the cycling ordering """
+        spins = self.particles
+        assert(0 < old < new)
+        old, new = old -1, new -1 # pass in real position in particles list
+        assert(spins[old] == spins[new])
+        spin =spins[old]
+        
+        new_call = []
+        #before first same spin
+        for i in range(len(spins)):
+            if spins[i] == spins[old]:
+                start_spin = i
+                break
+            new_call.append(call_list[i])
+        #find end of same spin area
+        stop_spin = len(spins)
+        for i in range(new+1, len(spins)):
+            if spins[i] != spins[old]:
+                stop_spin = i
+                break
+        l_old = range(old + 1, stop_spin) + range(start_spin, old)
+        l_new = range(new + 1, stop_spin) + range(start_spin, new)
+        old_index = l_new.index(old)
+        l_new[old_index] = new
+        for i in range(len(l_old)):
+            part_nb = l_old[l_new.index(l_old[i])] +1
+            new_call.append('%s%d' % (spin, part_nb))
+
+        for i in range(stop_spin, len(spins)):
+            new_call.append(call_list[i-1])           
+        return new_call
+    
     @ staticmethod
     def new_order(call_list, remove, start, stop):
         """ create the new order for the calling using cycling order"""
@@ -311,9 +347,16 @@ class ALOHAWriterForFortran(WriteALOHA):
         # Add entry for symmetry
         #str_out += '\n'
         #for elem in self.symmetries:
+        #    CallList2 = self.reorder_call_list(CallList, self.offshell, elem)
+        #    call_arg = '%(args)s, C, M%(id)d, W%(id)d, %(spin)s%(id)d' % \
+        #            {'args': ', '.join(CallList2), 
+        #             'spin': self.particles[self.offshell -1],
+        #             'id': self.offshell}
+        #    
+        #    
         #    str_out += ' entry %(name)s(%(args)s)\n' % \
         #                {'name': get_routine_name(self.abstractname, elem),
-        #                 'args': self.rotate_elem(call_arg,self.outgoing, elem)}
+        #                 'args': call_arg}
 
         return str_out
       
@@ -419,11 +462,12 @@ class ALOHAWriterForFortran(WriteALOHA):
                 counter += 1
         return OutString 
     
-    def define_symmetry(self):
-        calls = self.calllist['CallList']
+    def define_symmetry(self, new_nb):
         number = self.offshell 
+        calls = self.reorder_call_list(self.calllist['CallList'], self.offshell,
+                                                                        new_nb)
         Outstring = 'call '+self.namestring+'('+','.join(calls)+',C,M%s,W%s,%s%s)' \
-                         %(number,number,self.particles[self.offshell-1],number)
+                         %(number,number,self.particles[number-1],number)
         return Outstring
     
     def define_foot(self):
@@ -447,7 +491,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         for elem in self.symmetries: 
             symmetryhead = self.define_header().replace( \
                              self.namestring,self.namestring[0:-1]+'%s' %(elem))
-            symmetrybody = self.define_symmetry()
+            symmetrybody = self.define_symmetry(elem)
             writer.write_comments('\n%s\n' % ('#'*65))
             writer.writelines(symmetryhead)
             writer.writelines(symmetrybody)
@@ -625,14 +669,14 @@ class ALOHAWriterForCPP(WriteALOHA):
         OutString = re.sub('(?P<variable>[A-Za-z]+[0-9]\[*[0-9]*\]*)\*\*(?P<num>[0-9])','pow(\g<variable>,\g<num>)',OutString)
         return OutString 
 
-    
-    def define_symmetry(self):
+    remove_double = re.compile('complex<double> (?P<name>[\w]+)\[\]')
+    def define_symmetry(self, new_nb):
         """Write the call for symmetric routines"""
-
-        remove_double = re.compile('complex<double> (?P<name>[\w]+)\[\]')
+        calls = self.reorder_call_list(self.calllist['CallList'], self.offshell,
+                                                                        new_nb)
         # For the call, need to remove the type specification
-        calls = [remove_double.match(call).group('name') for call in \
-                 self.calllist['CallList']]
+        #calls = [self.remove_double.match(call).group('name') for call in \
+        #         calls]
         number = self.offshell 
         Outstring = self.namestring+'('+','.join(calls)+',C,M%s,W%s,%s%s);' \
                          %(number,number,self.particles[self.offshell-1],number)
@@ -677,7 +721,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         for elem in self.symmetries: 
             symmetryhead = cc_header.replace( \
                              self.namestring,self.namestring[0:-1]+'%s' %(elem))
-            symmetrybody = self.define_symmetry()
+            symmetrybody = self.define_symmetry(elem)
             cc_string += symmetryhead
             cc_string += symmetrybody
             cc_string += self.define_foot()

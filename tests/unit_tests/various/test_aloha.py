@@ -19,7 +19,8 @@ from __future__ import division
 import aloha.aloha_object as aloha_obj
 import aloha.aloha_lib as aloha_lib
 import aloha.create_aloha as create_aloha
-
+import aloha.aloha_writers as aloha_writers
+import models.sm.object_library as object_library
 import tests.unit_tests as unittest
 
 class TestVariable(unittest.TestCase):
@@ -2175,6 +2176,123 @@ class test_aloha_creation(unittest.TestCase):
         self.assertNotEqual(amp.name, conjg_amp.name)
 
 
-        
-
+class UFOLorentz(object):
+    """ simple UFO LORENTZ OBJECT """
     
+    def __init__(self, name='',spins=[],structure='1'):
+        """fake lorentz initialization"""
+        self.name = name
+        self.spins=spins
+        self.structure = structure
+        
+class AbstractRoutineBuilder(create_aloha.AbstractRoutineBuilder):
+    
+    
+    def compute_routine(self, mode):
+        """avoid computation"""
+        self.outgoing = mode
+        self.expr = aloha_obj.C(1,2)
+        self.expr.tag=[]
+        return self.define_simple_output()
+
+class TestAlohaWriter(unittest.TestCase):
+    """ simple unittest of the writer more test are in test_export_v4
+    and test_export_pythia"""
+    
+    
+    def test_reorder_call_listFFVV(self):
+        
+        FFVV = UFOLorentz(name = 'FFVV',
+               spins = [ 2, 2, 3, 3])
+        
+        abstract = AbstractRoutineBuilder(FFVV).compute_routine(1)
+        abstract.add_symmetry(2)
+        
+        writer = aloha_writers.ALOHAWriterForFortran(abstract, '/tmp')
+        call_list= writer.calllist['CallList']
+        new_call = writer.reorder_call_list(call_list, 1, 2)
+        self.assertEqual(['F2', 'V3', 'V4'], new_call)
+
+    def test_reorder_call_listFVVV(self):
+        FVVV = UFOLorentz(name = 'FVVV',
+               spins = [ 2, 3, 3, 3])
+        
+        abstract = AbstractRoutineBuilder(FVVV).compute_routine(2)
+        writer = aloha_writers.ALOHAWriterForFortran(abstract, '/tmp')
+        call_list= writer.calllist['CallList']
+        #vertex UAAW
+        #vertex_3 receives UWA with label 134
+        #vertex_2 expects UAW => need label 143 
+        new_call = writer.reorder_call_list(call_list, 2, 3)
+        #self.assertEqual(['F1', 'V4', 'V3'], new_call)
+        
+        #vertex UAWA
+        #vertex_4 receives UAW with label 134 
+        #vertex_2 expects UWA => need label 143
+        new_call = writer.reorder_call_list(call_list, 2, 4)
+        self.assertEqual(['F1', 'V4', 'V3'], new_call)                  
+    
+    def test_reorder_call_listVVVV(self):
+        VVVV = UFOLorentz(name = 'VVVV',
+               spins = [ 3, 3, 3, 3])
+    
+            
+        abstract = AbstractRoutineBuilder(VVVV).compute_routine(1)
+        writer = aloha_writers.ALOHAWriterForFortran(abstract, '/tmp')
+        call_list= writer.calllist['CallList']
+        # Vertex AAW+W-
+        # vertex_2 receives W+W-A with label 234
+        # vertex_1 ask for AW+W_ so should be label 423
+        
+        new_call = writer.reorder_call_list(call_list, 1, 2)
+        self.assertEqual(['V4', 'V2', 'V3'], new_call)
+        
+        # Vertex Aw+AW-
+        #vertex_3 receives w-Aw+  with label 234
+        #vertex_1 ask for w+Aw- so should be call with 432
+        new_call = writer.reorder_call_list(call_list, 1, 3)
+        self.assertEqual(['V4', 'V3', 'V2'], new_call) 
+        # Vertex Aw+w-A
+        #vertex_4 receives Aw+w-  with label 234
+        #vertex_1 ask for w+w-A so should be call with 342        
+        new_call = writer.reorder_call_list(call_list, 1, 4)
+        self.assertEqual(['V3', 'V4', 'V2'], new_call)        
+        
+        abstract = create_aloha.AbstractRoutineBuilder(VVVV).compute_routine(2)
+        writer = aloha_writers.ALOHAWriterForFortran(abstract, '/tmp')
+        call_list= writer.calllist['CallList']
+        # Vertex W+AAW-
+        # vertex3 receives W-W+A with label 341
+        # vertex2 ask for AW-W+ so we should use label 134
+        new_call = writer.reorder_call_list(call_list, 2, 3)
+        self.assertEqual(['V1', 'V3', 'V4'], new_call)
+        # Vertex W+AW-A
+        # vertex4 receives W+AW-with label 341
+        # vertex2 ask for W-AW+ so we should use label 143        
+        new_call = writer.reorder_call_list(call_list, 2, 4)
+        self.assertEqual(['V1', 'V4', 'V3'], new_call)
+
+        abstract = create_aloha.AbstractRoutineBuilder(VVVV).compute_routine(3)
+        writer = aloha_writers.ALOHAWriterForFortran(abstract, '/tmp')
+        call_list= writer.calllist['CallList']
+
+        # Vertex W+W-AA
+        # vertex4 receives W+W-A with label 412
+        # vertex3 ask for AW+W- so we should use label 241
+        new_call = writer.reorder_call_list(call_list, 3, 4)
+        self.assertEqual(['V2', 'V4', 'V1'], new_call)
+
+    def test_reorder_call_listUVVS(self):
+        UVVS = UFOLorentz(name = 'UVVS',
+               spins = [ 2, 3, 3, 1])
+    
+        
+        abstract = AbstractRoutineBuilder(UVVS).compute_routine(2)
+        writer = aloha_writers.ALOHAWriterForFortran(abstract, '/tmp')
+        call_list= writer.calllist['CallList']
+        # Vertex UAAH
+        # vertex_3 receives UAH with label 134
+        # vertex_2 ask for UAH so should be label 134
+        
+        new_call = writer.reorder_call_list(call_list, 2, 3)
+        self.assertEqual(['F1', 'V3', 'S4'], new_call)
