@@ -1356,11 +1356,9 @@ class Process(PhysicsObject):
         '+' -> 'p' and '-' -> 'm', including process number,
         intermediate s-channels and forbidden particles"""
 
-        mystr = ""
-
-        if self['id']:
-            mystr += "%d_" % self['id']
-
+        
+        mystr = "%d_" % self['id']
+        
         prevleg = None
         for leg in self['legs']:
             mypart = self['model'].get('particle_dict')[leg['id']]
