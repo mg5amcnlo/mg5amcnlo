@@ -186,7 +186,7 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         # Gluon 4-vertex division tensor calls ggT for the FR sm and mssm
 
-        key = ((3, 3, 5), 'A')
+        key = ((3, 3, 5, 3), 'A')
 
         call = lambda wf: \
                "CALL UVVAXX(W(1,%d),W(1,%d),%s,zero,zero,zero,W(1,%d))" % \
@@ -197,7 +197,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 wf.get('number'))
         self.add_wavefunction(key, call)
 
-        key = ((3, 5, 3), 'A')
+        key = ((3, 5, 3, 1), 'A')
 
         call = lambda wf: \
                "CALL JVTAXX(W(1,%d),W(1,%d),%s,zero,zero,W(1,%d))" % \
@@ -222,7 +222,7 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         # SM gluon 4-vertex components
 
-        key = ((3, 3, 3, 3), 'gggg1')
+        key = ((3, 3, 3, 3, 1), 'gggg1')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
                (wf.get('mothers')[0].get('number'),
@@ -241,7 +241,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('coupling'),
                 amp.get('number'))
         self.add_amplitude(key, call)
-        key = ((3, 3, 3, 3), 'gggg2')
+        key = ((3, 3, 3, 3, 1), 'gggg2')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
                (wf.get('mothers')[2].get('number'),
@@ -260,7 +260,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('coupling'),
                 amp.get('number'))
         self.add_amplitude(key, call)
-        key = ((3, 3, 3, 3), 'gggg3')
+        key = ((3, 3, 3, 3, 1), 'gggg3')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
                (wf.get('mothers')[1].get('number'),
@@ -683,7 +683,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             # String is LOR1_0, LOR1_2 etc.
             
             if isinstance(argument, helas_objects.HelasWavefunction):
-                outgoing = argument.find_outgoing_number() + 1    
+                outgoing = argument.find_outgoing_number()
             else:
                 outgoing = 0
 
@@ -820,7 +820,7 @@ class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
             # String is LOR1_0, LOR1_2 etc.
 
             if isinstance(argument, helas_objects.HelasWavefunction):
-                outgoing = argument.find_outgoing_number() + 1    
+                outgoing = argument.find_outgoing_number()
             else:
                 outgoing = 0
 
@@ -829,7 +829,7 @@ class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
             if argument.needs_hermitian_conjugate():
                 c_flag = 'c'
 
-            call = 'CALL %s%s_%s' % (argument.get('lorentz'), c_flag, outgoing) 
+            call = '%s%s_%s' % (argument.get('lorentz'), c_flag, outgoing)
 
             # Add the wave function
             call = call + '('

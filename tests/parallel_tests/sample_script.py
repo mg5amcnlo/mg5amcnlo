@@ -54,7 +54,7 @@ if '__main__' == __name__:
 
     # or give one
     my_proc_list = ['e+ e- > e+ e-', 'g g> g g g','a w+ > a h w+/z', 'a w+ > a a w+', 'a w- > a h w-', 'a w- > a a w-', 'a h > a w+ w-', 'a a > h w+ w-', 'a a > a w+ w-']
-    my_proc_list = ['e+ e- > e+ e-', 'w+ w+ > w+ w+']
+    my_proc_list = ['g g > g g g', 'e+ e- > e+ e-', 'w+ w+ > w+ w+']
     # Create a MERunner object for MG4
     my_mg4 = me_comparator.MG4Runner()
     my_mg4.setup(mg4_path)
@@ -64,12 +64,12 @@ if '__main__' == __name__:
     #my_mg5.setup(mg5_path, mg4_path)
 
     # Create a MERunner object for UFO-ALOHA-MG5
-    my_mg5 = me_comparator.MG5_UFO_Runner()
-    my_mg5.setup(mg5_path, mg4_path)
+    my_mg5_ufo = me_comparator.MG5_UFO_Runner()
+    my_mg5_ufo.setup(mg5_path, mg4_path)
 
     # Create and setup a comparator
     my_comp = me_comparator.MEComparator()
-    my_comp.set_me_runners(my_mg4, my_mg5)
+    my_comp.set_me_runners(my_mg4, my_mg5_ufo)
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,

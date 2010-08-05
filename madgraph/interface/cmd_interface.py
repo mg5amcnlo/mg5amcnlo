@@ -1406,7 +1406,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Check the validity of the arguments and return the output path
         path = self.check_export(args)
 
-        if self._done_export == path and self._export_format == args[0]:
+        if self._done_export == path and (not args or self._export_format == args[0]):
             # We have already done export in this path
             logger.info("Matrix elements already exported")
             return        

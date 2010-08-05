@@ -763,11 +763,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
             elif wf_index % 2 == 1 and spin_state > 0:
                 # Incoming particle at odd slot -> decrease by 1
                 wf_index -= 1
-        return wf_index
+        return wf_index + 1
 
     def get_call_key(self):
-        """Generate the (spin, state) tuple used as key for the helas call
-        dictionaries in HelasModel"""
+        """Generate the (spin, number, C-state) tuple used as key for
+        the helas call dictionaries in HelasModel"""
 
         res = []
         for mother in self.get('mothers'):
@@ -2039,7 +2039,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
                     # Need one amplitude for each Lorentz/color structure,
                     # i.e. for each coupling
-                    for coupl_key in inter.get('couplings').keys():
+                    for coupl_key in sorted(inter.get('couplings').keys()):
                         wf = HelasWavefunction(last_leg, vertex.get('id'), model)
                         wf.set('coupling', inter.get('couplings')[coupl_key])
                         # Special feature: For HVS vertices with the two
@@ -2129,7 +2129,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 # Now generate HelasAmplitudes from the last vertex.
                 if lastvx.get('id'):
                     inter = model.get('interaction_dict')[lastvx.get('id')]
-                    keys = inter.get('couplings').keys()
+                    keys = sorted(inter.get('couplings').keys())
                 else:
                     # Special case for decay chain - amplitude is just a
                     # placeholder for replaced wavefunction

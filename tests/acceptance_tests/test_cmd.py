@@ -67,8 +67,8 @@ class TestCmdShell1(unittest.TestCase):
                                                           'sm.pkl'))
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('draw .')
-        self.assertTrue(os.path.exists('./diagrams_epem_epem.eps'))
-        os.remove('./diagrams_epem_epem.eps')
+        self.assertTrue(os.path.exists('./diagrams_0_epem_epem.eps'))
+        os.remove('./diagrams_0_epem_epem.eps')
         
         self.do('generate g g > g g')
         self.do('draw .')
@@ -114,7 +114,7 @@ class TestCmdShell2(unittest.TestCase):
         self.do('setup madevent_v4 %s -nojpeg' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                               'SubProcesses', 'P_epem_epem')))
+                                               'SubProcesses', 'P0_epem_epem')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                  'Cards', 'proc_card_mg5.dat')))
         self.assertFalse(os.path.exists(os.path.join(self.out_dir,
@@ -143,7 +143,7 @@ class TestCmdShell2(unittest.TestCase):
                                                        'Cards','proc_card.dat'))
 
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                              'SubProcesses', 'P1_e-e+_vevex')))
+                                              'SubProcesses', 'P1_emep_vevex')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                  'Cards', 'proc_card_mg5.dat')))
         self.assertFalse(os.path.exists(os.path.join(self.out_dir,
@@ -204,8 +204,6 @@ class TestCmdShell2(unittest.TestCase):
                                                'lib', 'libdhelas3.a')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'lib', 'libmodel.a')))
-        self.assertTrue(os.path.exists(os.path.join(\
-                                           MG5DIR, 'models','sm', 'helas.pkl')))
         
     def test_ufo_standard_sm(self):
         """ check that we can use standard MG4 name """

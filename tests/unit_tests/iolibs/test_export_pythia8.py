@@ -497,23 +497,23 @@ double Sigma_uux_uux::matrix(const int hel[])
   FFV1_3(w[0], w[1], pars->GC_10, pars->ZERO, pars->ZERO, w[4]); 
   // Amplitude(s) for diagram number 1
   FFV1_0(w[3], w[2], w[4], pars->GC_10, amp[0]); 
-  FFV5_3(w[0], w[1], pars->GC_47, pars->MZ, pars->WZ, w[5]); 
-  FFV2_3(w[0], w[1], pars->GC_35, pars->MZ, pars->WZ, w[6]); 
+  FFV2_3(w[0], w[1], pars->GC_35, pars->MZ, pars->WZ, w[5]); 
+  FFV5_3(w[0], w[1], pars->GC_47, pars->MZ, pars->WZ, w[6]); 
   // Amplitude(s) for diagram number 2
-  FFV5_0(w[3], w[2], w[5], pars->GC_47, amp[1]); 
-  FFV2_0(w[3], w[2], w[5], pars->GC_35, amp[2]); 
-  FFV5_0(w[3], w[2], w[6], pars->GC_47, amp[3]); 
-  FFV2_0(w[3], w[2], w[6], pars->GC_35, amp[4]); 
+  FFV2_0(w[3], w[2], w[5], pars->GC_35, amp[1]); 
+  FFV5_0(w[3], w[2], w[5], pars->GC_47, amp[2]); 
+  FFV2_0(w[3], w[2], w[6], pars->GC_35, amp[3]); 
+  FFV5_0(w[3], w[2], w[6], pars->GC_47, amp[4]); 
   FFV1_3(w[0], w[2], pars->GC_10, pars->ZERO, pars->ZERO, w[7]); 
   // Amplitude(s) for diagram number 3
   FFV1_0(w[3], w[1], w[7], pars->GC_10, amp[5]); 
-  FFV5_3(w[0], w[2], pars->GC_47, pars->MZ, pars->WZ, w[8]); 
-  FFV2_3(w[0], w[2], pars->GC_35, pars->MZ, pars->WZ, w[9]); 
+  FFV2_3(w[0], w[2], pars->GC_35, pars->MZ, pars->WZ, w[8]); 
+  FFV5_3(w[0], w[2], pars->GC_47, pars->MZ, pars->WZ, w[9]); 
   // Amplitude(s) for diagram number 4
-  FFV5_0(w[3], w[1], w[8], pars->GC_47, amp[6]); 
-  FFV2_0(w[3], w[1], w[8], pars->GC_35, amp[7]); 
-  FFV5_0(w[3], w[1], w[9], pars->GC_47, amp[8]); 
-  FFV2_0(w[3], w[1], w[9], pars->GC_35, amp[9]); 
+  FFV2_0(w[3], w[1], w[8], pars->GC_35, amp[6]); 
+  FFV5_0(w[3], w[1], w[8], pars->GC_47, amp[7]); 
+  FFV2_0(w[3], w[1], w[9], pars->GC_35, amp[8]); 
+  FFV5_0(w[3], w[1], w[9], pars->GC_47, amp[9]); 
 
   // Calculate color flows
   jamp[0] = +1./6. * amp[0] - amp[1] - amp[2] - amp[3] - amp[4] + 1./2. *
@@ -553,7 +553,7 @@ double Sigma_uux_uux::matrix(const int hel[])
         self.assertFileContains('test.cc', goal_string)
 
 
-    def test_write_process_files(self):
+    def disabled_test_write_process_files(self):
         """Test writing the .h  and .cc Pythia file for a matrix element"""
 
         export_pythia8.generate_process_files_pythia8(self.mymatrixelement,
@@ -573,7 +573,7 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
     created_files = [
                     ]
 
-    def setUp(self):
+    def disabled_setUp(self):
 
         model_pkl = os.path.join(MG5DIR, 'models','sm','model.pkl')
         if os.path.isfile(model_pkl):
@@ -587,25 +587,21 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
 
     tearDown = test_file_writers.CheckFileCreate.clean_files
 
-    def test_read_aloha_template_files(self):
+    def disabled_test_read_aloha_template_files(self):
         """Test reading the ALOHA template .h and .cc files"""
 
         template_h = self.model_builder.read_aloha_template_files("h")
-#        print ".h:"
-#        print "\n".join(template_h)
         self.assertTrue(template_h)
         for file_lines in template_h:
             self.assertFalse(file_lines.find('#include') > -1)
             self.assertFalse(file_lines.find('namespace') > -1)
         template_cc = self.model_builder.read_aloha_template_files("cc")
-#        print ".cc:"
-#        print "\n".join(template_cc)
         self.assertTrue(template_cc)
         for file_lines in template_cc:
             self.assertFalse(file_lines.find('#include') > -1)
             self.assertFalse(file_lines.find('namespace') > -1) 
        
-    def test_write_aloha_functions(self):
+    def disabled_test_write_aloha_functions(self):
         """Test writing function declarations and definitions"""
 
         template_h_files = []
@@ -619,14 +615,14 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
         print "cd /tmp; g++ -c *.cc; gfortran -c *.f"
         
 
-    def test_write_aloha_routines(self):
+    def disabled_test_write_aloha_routines(self):
         """Test writing the aloha .h and.cc files"""
 
         self.model_builder.write_aloha_routines()
         print "Please try compiling the file /tmp/hel_amps_sm.cc:"
         print "cd /tmp; g++ -c hel_amps_sm.cc"
 
-    def test_couplings_and_parameters(self):
+    def disabled_test_couplings_and_parameters(self):
         """Test generation of couplings and parameters"""
 
         self.assertTrue(self.model_builder.params_indep)
@@ -634,23 +630,14 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
         self.assertTrue(self.model_builder.coups_indep)
         self.assertTrue(self.model_builder.coups_dep)
 
-##        print "Dependent parameters: "
-##        print "\n".join(["%s: %s" %(p.name, p.expr) for p in self.model_builder.params_dep])
-##        print "Dependent couplings: "
-##        print "\n".join(["%s: %s" %(p.name, p.expr) for p in self.model_builder.coups_dep.values()])
-
         g_expr = re.compile("G(?!f)")
 
-##        print "Independent parameters: "
         for indep_par in self.model_builder.params_indep:
-##            print "%s: %s" %(indep_par.name, indep_par.expr)
             self.assertFalse(g_expr.search(indep_par.expr))
-##        print "Independent couplings: "
         for indep_coup in self.model_builder.coups_indep: 
-##            print "%s: %s" %(indep_coup.name, indep_coup.expr)
             self.assertFalse(g_expr.search(indep_coup.expr))
 
-    def test_write_parameter_files(self):
+    def disabled_test_write_parameter_files(self):
         """Test writing the model parameter .h and.cc files"""
 
         self.model_builder.write_parameter_class_files()        
@@ -658,28 +645,3 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
         print "Please try compiling the file /tmp/Parameters_sm.cc:"
         print "cd /tmp; g++ -c -I $PATH_TO_PYTHIA8/include Parameters_sm.cc"
 
-##    def test_write_parameters_and_couplings(self):
-##        """Test generation of couplings and parameters"""
-
-##        print "Independent parameters: "
-##        print self.model_builder.write_parameters(self.model_builder.params_indep)
-##        print "Dependent parameters: "
-##        print self.model_builder.write_parameters(self.model_builder.params_dep)
-##        print "Independent couplings: "
-##        print self.model_builder.write_parameters(self.model_builder.coups_indep)
-##        print "Independent couplings: "
-##        print self.model_builder.write_parameters(self.model_builder.coups_indep)
-##        print "Dependent couplings: "
-##        print self.model_builder.write_parameters(self.model_builder.coups_dep.values())
-
-##    def test_write_set_parameters_and_couplings(self):
-##        """Test generation of couplings and parameters"""
-
-##        print "Independent parameters: "
-##        print self.model_builder.write_set_parameters(self.model_builder.params_indep)
-##        print "Dependent parameters: "
-##        print self.model_builder.write_set_parameters(self.model_builder.params_dep)
-##        print "Independent couplings: "
-##        print self.model_builder.write_set_parameters(self.model_builder.coups_indep)
-##        print "Dependent couplings: "
-##        print self.model_builder.write_set_parameters(self.model_builder.coups_dep.values())
