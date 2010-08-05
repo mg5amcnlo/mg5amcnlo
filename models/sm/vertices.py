@@ -15,11 +15,17 @@ V_1 = Vertex(name = 'V_1',
              lorentz = [ L.VVV1 ],
              couplings = {(0,0):C.GC_9})
 
+#V_2 = Vertex(name = 'V_2',
+#             particles = [ P.G, P.G, P.G, P.G ],
+#             color = [ 'f(2,3,\'a1\')*f(\'a1\',1,4)', 'f(2,4,\'a1\')*f(\'a1\',1,3)', 'f(3,4,\'a1\')*f(\'a1\',1,2)' ],
+#             lorentz = [ L.VVVV1, L.VVVV3, L.VVVV4 ],
+#             couplings = {(1,1):C.GC_11,(2,0):C.GC_11,(0,2):C.GC_11})
+
 V_2 = Vertex(name = 'V_2',
              particles = [ P.G, P.G, P.G, P.G ],
-             color = [ 'f(2,3,\'a1\')*f(\'a1\',1,4)', 'f(2,4,\'a1\')*f(\'a1\',1,3)', 'f(3,4,\'a1\')*f(\'a1\',1,2)' ],
+             color = [ 'f(2,4,\'a1\')*f(\'a1\',1,3)', 'f(3,4,\'a1\')*f(\'a1\',1,2)','f(2,3,\'a1\')*f(\'a1\',1,4)'],
              lorentz = [ L.VVVV1, L.VVVV3, L.VVVV4 ],
-             couplings = {(1,1):C.GC_11,(2,0):C.GC_11,(0,2):C.GC_11})
+             couplings = {(1,1):C.GC_11,(2,2):C.GC_11,(0,0):C.GC_11})
 
 V_3 = Vertex(name = 'V_3',
              particles = [ P.A, P.W__minus__, P.W__plus__ ],

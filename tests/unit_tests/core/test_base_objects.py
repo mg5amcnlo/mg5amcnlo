@@ -556,6 +556,22 @@ class ModelTest(unittest.TestCase):
         self.assertEqual(mymodel['interactions'],
                          base_objects.InteractionList())
 
+    def test_get_particle(self):
+        """ test that get_particle is working """
+        
+        obj = self.mymodel.get_particle(6)
+        self.assertEqual(obj['name'], 't')
+        obj = self.mymodel.get_particle(7)
+        self.assertEqual(obj, None)        
+
+    def test_get_interaction(self):
+        """ test that get_particle is working """
+        
+        obj = self.mymodel.get_interaction(1)
+        self.assertEqual(obj['lorentz'], ['L1'])
+        obj = self.mymodel.get_interaction(7)
+        self.assertEqual(obj, None)  
+
     def test_setget_model_correct(self):
         """Test correct Model object get and set"""
 

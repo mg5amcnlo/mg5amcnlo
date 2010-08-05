@@ -120,6 +120,7 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         except AssertionError:
             part_name =[part.get('name') for part in mg4_vertex.get('particles')]
             if ['g']*len(mg4_vertex.get('particles')) == part_name:
+                #print part_name, mg4_color,"=?=", mg5_color
                 pass #too complicate to test
             elif str(mg4_color) == '[]':
                 self.assertEqual('[1 ]',str(mg5_color))

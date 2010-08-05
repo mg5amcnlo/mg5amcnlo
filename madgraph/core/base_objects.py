@@ -118,23 +118,6 @@ class PhysicsObject(dict):
 
         return self.keys().sort()
 
-    def def_model(self, model):
-        """ 
-        make a link between the  present object and the associate model 
-        """
-        
-        assert isinstance(model, Model), ' try to assign a non model obect'
-
-        self._def_model(model)
-
-
-    def _def_model(self, model):
-        """
-        make a link between the  present object and the associate model 
-        no class verification
-        """
-        self.model = model
-
     def __str__(self):
         """String representation of the object. Outputs valid Python 
         with improved format."""

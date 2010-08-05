@@ -1751,6 +1751,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self.check_import(args)
         
         if args[0] == 'model':
+            self._model_v4 = None
             self._curr_model = import_ufo.import_model(args[1])
             self.add_default_multiparticles()
             self._curr_fortran_model = \
