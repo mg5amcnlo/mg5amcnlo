@@ -758,9 +758,9 @@ class DiagramGenerationTest(unittest.TestCase):
 
         goaldiagrams = base_objects.DiagramList([\
             base_objects.Diagram({'vertices': base_objects.VertexList(\
-            [vx12glue, vx34glue, vx12glue34glue5])}),
+            [vx12glue, vx34glue, vx12glue34glue5]), 'orders':{'QCD':3}}),
             base_objects.Diagram({'vertices': base_objects.VertexList(\
-            [vx12glue, vx35, vx12glue354])})\
+            [vx12glue, vx35, vx12glue354]), 'orders':{'QCD':3}})\
             ])
 
         for diagram in mydiagrams:

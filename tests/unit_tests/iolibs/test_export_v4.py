@@ -3367,7 +3367,7 @@ C     Number of configs
         writer = writers.FortranWriter(self.give_pos('test'))
         export_v4.write_dname_file(writer, me, fortran_model)
         writer.close()
-        self.assertFileContains('test', "DIRNAME=P0_e-e+_e-sl2+ae-sl2+a\n")
+        self.assertFileContains('test', "DIRNAME=Pemep_n1n1_n1_emsl2pa_n1_emsl2pa\n")
         # Test iproc.inc
         writer = writers.FortranWriter(self.give_pos('test'))
         export_v4.write_iproc_file(writer, me, fortran_model)
@@ -3851,7 +3851,6 @@ CALL IOSXXX(W(1,15),W(1,2),W(1,19),GELN2P,AMP(9))""")
         mypartlist.append(base_objects.Particle({'name':'z',
                       'antiname':'z',
                       'spin':3,
-                      'color':1,
                       'mass':'zmass',
                       'width':'zwidth',
                       'texname':'\gamma',
@@ -3875,6 +3874,7 @@ CALL IOSXXX(W(1,15),W(1,2),W(1,19),GELN2P,AMP(9))""")
                       'lorentz':['L4', 'L7'],
                       'couplings':{(0,0):'GC_23',(0,1):'GC_24'},
                       'orders':{'QED':1}}))
+
 
 
         mymodel = base_objects.Model()
@@ -3965,11 +3965,3 @@ C
         split_sol = solution.split('\n')
         for i in range(len(split_sol)):
             self.assertEqual(split_sol[i]+'\n', textfile.readline())
-
-        
-    
-    
-    
-
-
-     

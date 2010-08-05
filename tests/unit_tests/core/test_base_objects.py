@@ -1008,7 +1008,8 @@ class DiagramTest(unittest.TestCase):
 
     def setUp(self):
 
-        self.mydict = {'vertices':self.myvertexlist}
+        self.mydict = {'vertices':self.myvertexlist,
+                       'orders':{}}
 
         self.mydiagram = base_objects.Diagram(self.mydict)
 
@@ -1077,8 +1078,9 @@ class DiagramTest(unittest.TestCase):
         """Test diagram object string representation."""
 
         goal = "{\n"
-        goal = goal + "    \'vertices\': %s\n}" % repr(self.myvertexlist)
-
+        goal = goal + "    \'vertices\': %s,\n" % repr(self.myvertexlist)
+        goal = goal + "    'orders': {}\n}"
+        
         self.assertEqual(goal, str(self.mydiagram))
 
     def test_diagram_list(self):
@@ -1103,11 +1105,11 @@ class DiagramTest(unittest.TestCase):
         mydiagramlist = base_objects.DiagramList(mylist)
 
         goal_string1 = "  (" + "(5(3),5(3),5(3),5(3),5(3),5(3),5(3),5(3),5(3)>5(3),id:3),"*10
-        goal_string1 = goal_string1[:-1] + ")\n"
+        goal_string1 = goal_string1[:-1] + ") ()\n"
 
         goal_string = ""
-        for i in range(10):
-            goal_string = goal_string + str(i+1) + goal_string1
+        for i in range(1,11):
+            goal_string = goal_string + str(i) + goal_string1
 
         self.assertEqual(mydiagramlist.nice_string(),
                          "10 diagrams:\n" + goal_string[:-1])
@@ -1151,7 +1153,8 @@ class ProcessTest(unittest.TestCase):
                        'forbidden_s_channels':[],
                        'forbidden_particles':[],
                        'is_decay_chain': False,
-                       'decay_chains': base_objects.ProcessList()}
+                       'decay_chains': base_objects.ProcessList(),
+                       'overall_orders': {}}
 
         self.myprocess = base_objects.Process(self.mydict)
 
@@ -1222,6 +1225,8 @@ class ProcessTest(unittest.TestCase):
         goal = "{\n"
         goal = goal + "    \'legs\': %s,\n" % repr(self.myleglist)
         goal = goal + "    \'orders\': %s,\n" % repr(self.myprocess['orders'])
+        goal = goal + "    \'overall_orders\': %s,\n" % \
+               repr(self.myprocess['overall_orders'])
         goal = goal + "    \'model\': %s,\n" % repr(self.myprocess['model'])
         goal = goal + "    \'id\': 1,\n"
         goal = goal + "    \'required_s_channels\': [],\n"
@@ -1235,7 +1240,7 @@ class ProcessTest(unittest.TestCase):
     def test_nice_string(self):
         """Test Process nice_string representation"""
 
-        goal_str = "Process: c c > c c c QED=1 QCD=5"
+        goal_str = "Process: c c > c c c QED=1 QCD=5 @1"
 
         self.assertEqual(goal_str, self.myprocess.nice_string())
 
@@ -1284,7 +1289,8 @@ class ProcessDefinitionTest(unittest.TestCase):
                        'forbidden_s_channels':[],
                        'forbidden_particles':[],
                        'is_decay_chain': False,
-                       'decay_chains': base_objects.ProcessList()}
+                       'decay_chains': base_objects.ProcessList(),
+                       'overall_orders':{}}
 
         self.my_process_definition = base_objects.ProcessDefinition(self.mydict)
 
@@ -1355,6 +1361,7 @@ class ProcessDefinitionTest(unittest.TestCase):
         goal = "{\n"
         goal = goal + "    \'legs\': %s,\n" % repr(self.my_multi_leglist)
         goal = goal + "    \'orders\': %s,\n" % repr(self.my_process_definition['orders'])
+        goal = goal + "    \'overall_orders\': %s,\n" % repr(self.my_process_definition['overall_orders'])
         goal = goal + "    \'model\': %s,\n" % repr(self.my_process_definition['model'])
         goal = goal + "    \'id\': %s,\n" % repr(self.my_process_definition['id'])
         goal = goal + "    \'required_s_channels\': [],\n"

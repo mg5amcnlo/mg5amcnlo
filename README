@@ -33,10 +33,6 @@ Make a copy of the Template. Modify the Cards/proc_card.dat, and run:
 After completed process generation, you will find the sequence of
 commands used by MG5 in the file Cards/proc_card_mg5.dat.
 *Note*: You need MG/ME v. 4.4.44 or later.
-*Warning*: For decay chains in MG5, coupling orders refer to the core
-process only, while in MG4 they refer to the complete process
-including decays. Please modify the proc_card.dat accordingly.
-
 
 To run the test suite:
 ----------------------

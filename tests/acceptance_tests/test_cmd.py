@@ -114,17 +114,17 @@ class TestCmdShell2(unittest.TestCase):
         self.do('setup madevent_v4 %s -nojpeg' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                               'SubProcesses', 'P0_e+e-_e+e-')))
+                                               'SubProcesses', 'P_epem_epem')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                  'Cards', 'proc_card_mg5.dat')))
         self.assertFalse(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P0_e+e-_e+e-',
+                                                    'P0_epem_epem',
                                                     'matrix1.jpg')))
         self.do('finalize')
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P0_e+e-_e+e-',
+                                                    'P0_epem_epem',
                                                     'matrix1.jpg')))
 
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
@@ -148,7 +148,7 @@ class TestCmdShell2(unittest.TestCase):
                                                  'Cards', 'proc_card_mg5.dat')))
         self.assertFalse(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P0_e+e-_e+e-',
+                                                    'P0_epem_epem',
                                                     'matrix1.jpg')))
 
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
@@ -163,7 +163,7 @@ class TestCmdShell2(unittest.TestCase):
         self.do('import proc_v4 %s' % self.join_path(_pickle_path, \
                                                      'simple_v4_proc_card.dat'))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                              'SubProcesses', 'P1_e-e+_vevex')))        
+                                              'SubProcesses', 'P1_emep_vevex')))        
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                  'Cards', 'proc_card_mg5.dat')))
 
@@ -178,7 +178,7 @@ class TestCmdShell2(unittest.TestCase):
         self.assertTrue(os.path.isfile(os.path.join(self.out_dir, 'lib', 'libdhelas3.a')))
         self.assertTrue(os.path.isfile(os.path.join(self.out_dir, 'lib', 'libmodel.a')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                               'SubProcesses', 'P0_e+e-_e+e-')))
+                                               'SubProcesses', 'P0_epem_epem')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'Cards', 'proc_card_mg5.dat')))
         
