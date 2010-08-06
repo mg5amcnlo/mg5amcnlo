@@ -27,6 +27,7 @@ import optparse
 import logging
 import logging.config
 
+import subprocess
 import os.path as path
 
 
@@ -35,6 +36,7 @@ import os.path as path
 
 root_path = path.split(path.dirname(path.realpath( __file__ )))[0]
 sys.path.append(root_path)
+
 
 # Write out nice usage message if called with -h or --help
 usage = "usage: %prog [options] [FILE] "
@@ -45,10 +47,17 @@ parser.add_option("-f", "--file", default='',
 					help="use script file FILE")
 parser.add_option("","--web", action="store_true", default=False, dest='web', \
                  help='force to be in secure mode')
-
+parser.add_option("","--debug", action="store_true", default=False, dest='debug', \
+                 help='force to launch debug mode')
 (options, args) = parser.parse_args()
 if len(args) == 0:
     args = ''
+
+# Check if debug mode is (and should be) activated
+if __debug__ and not options.debug:
+    subprocess.call([sys.executable] + ['-O'] + sys.argv)
+    sys.exit()
+
 
 # Set logging level according to the logging level given by options
 #logging.basicConfig(level=vars(logging)[options.logging])
