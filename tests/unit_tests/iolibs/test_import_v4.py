@@ -77,8 +77,8 @@ class IOImportV4Test(unittest.TestCase):
                                                       'propagating':True,
                                                       'is_part':True,
                                                       'self_antipart':False}),
-                                 base_objects.Particle({'name':'T1',
-                                                      'antiname':'T1',
+                                 base_objects.Particle({'name':'t1',
+                                                      'antiname':'t1',
                                                       'spin':5,
                                                       'color':8,
                                                       'mass':'ZERO',
@@ -233,10 +233,11 @@ class IOImportV4Test(unittest.TestCase):
                                      'lorentz':[''],
                                      'couplings':{(0, 0):'MGVX4'},
                                      'orders':{'QED':1}})])
-
-        self.assertEqual(import_v4.read_interactions_v4(fsock_inter,
-                                                        myparts),
-                                                goal_inter_list)
+        
+        result = import_v4.read_interactions_v4(fsock_inter, myparts)
+        self.assertEqual(len(result), len(goal_inter_list))
+        for i in range(len(result)):
+            self.assertEqual(result[i], goal_inter_list[i])
 
 
 class ProcCardV4ReaderTest(unittest.TestCase):

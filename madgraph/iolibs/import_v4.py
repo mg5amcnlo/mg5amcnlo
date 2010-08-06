@@ -134,8 +134,8 @@ def read_particles_v4(fsock):
                     "Unvalid initialization string:" + line
             else:
                 try:
-                    mypart.set('name', values[0])
-                    mypart.set('antiname', values[1])
+                    mypart.set('name', values[0].lower())
+                    mypart.set('antiname', values[1].lower())
 
                     if mypart['name'] == mypart['antiname']:
                         mypart['self_antipart'] = True
@@ -203,7 +203,7 @@ def read_interactions_v4(fsock, ref_part_list):
 
             try:
                 for str_name in values:
-                    curr_part = ref_part_list.find_name(str_name)
+                    curr_part = ref_part_list.find_name(str_name.lower())
                     if isinstance(curr_part, Particle):
                         # Look at the total number of strings, stop if 
                         # anyway not enough, required if a variable name 
