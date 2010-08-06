@@ -1334,8 +1334,72 @@ class Process(PhysicsObject):
 
         return mystr
 
+    def input_string(self):
+        """Returns a process string corresponding to the input string
+        in the command line interface."""
+
+        mystr = ""
+        prevleg = None
+
+        for leg in self['legs']:
+            mypart = self['model'].get('particle_dict')[leg['id']]
+            if prevleg and prevleg['state'] == False \
+                   and leg['state'] == True:
+                # Separate initial and final legs by ">"
+                mystr = mystr + '> '
+                # Add required s-channels
+                if self['required_s_channels']:
+                    for req_id in self['required_s_channels']:
+                        reqpart = self['model'].get('particle_dict')[req_id]
+                        mystr = mystr + reqpart.get_name() + ' '
+                    mystr = mystr + '> '
+
+            mystr = mystr + mypart.get_name() + ' '
+            #mystr = mystr + '(%i) ' % leg['number']
+            prevleg = leg
+
+        # Add forbidden s-channels
+        if self['forbidden_s_channels']:
+            mystr = mystr + '$ '
+            for forb_id in self['forbidden_s_channels']:
+                forbpart = self['model'].get('particle_dict')[forb_id]
+                mystr = mystr + forbpart.get_name() + ' '
+
+        # Add forbidden particles
+        if self['forbidden_particles']:
+            mystr = mystr + '/ '
+            for forb_id in self['forbidden_particles']:
+                forbpart = self['model'].get('particle_dict')[forb_id]
+                mystr = mystr + forbpart.get_name() + ' '
+
+        if self['orders']:
+            mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
+                       for key in self['orders']]) + ' '
+
+        # Remove last space
+        mystr = mystr[:-1]
+
+        if self.get('overall_orders'):
+            mystr += " @%d" % self.get('id')
+            if self.get('overall_orders'):
+                mystr += " " + " ".join([key + '=' + repr(self['orders'][key]) \
+                       for key in self['orders']]) + ' '
+        
+        if not self.get('decay_chains'):
+            return mystr
+
+        for decay in self['decay_chains']:
+            paren1 = ''
+            paren2 = ''
+            if decay.get('decay_chains'):
+                paren1 = '('
+                paren2 = ')'
+            mystr += ', ' + paren1 + decay.input_string() + paren2
+
+        return mystr
+
     def base_string(self):
-        """Returns a string containing only the basic process (w/ decays)."""
+        """Returns a string containing only the basic process (w/o decays)."""
 
         mystr = ""
         prevleg = None
