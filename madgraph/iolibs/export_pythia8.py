@@ -281,7 +281,8 @@ def get_process_file_name(matrix_element):
     if not matrix_element.get('processes'):
         raise MadGraph5Error('Matrix element has no processes')
 
-    return "Sigma_%s" % matrix_element.get('processes')[0].shell_string()
+    return "Sigma_%s" % matrix_element.get('processes')[0].shell_string().\
+           replace("0_", "")
 
 def get_process_info_lines(matrix_element):
     """Return info lines describing the processes for this matrix element"""

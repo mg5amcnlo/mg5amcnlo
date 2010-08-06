@@ -1355,8 +1355,9 @@ class Process(PhysicsObject):
         '+' -> 'p' and '-' -> 'm', including process number,
         intermediate s-channels and forbidden particles"""
 
-        
-        mystr = "%d_" % self['id']
+        mystr = ""
+        if not self.get('is_decay_chain'):
+            mystr += "%d_" % self['id']
         
         prevleg = None
         for leg in self['legs']:
