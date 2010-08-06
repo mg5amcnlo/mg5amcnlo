@@ -1244,6 +1244,22 @@ class ProcessTest(unittest.TestCase):
 
         self.assertEqual(goal_str, self.myprocess.nice_string())
 
+    def test_input_string(self):
+        """Test Process nice_string representation"""
+
+        goal_str = "c c > c c c QED=1 QCD=5, (c > c c c c, c > c c c c)"
+
+        decay = copy.copy(self.myprocess)
+        decay.set('legs', copy.deepcopy(decay.get('legs')))
+        decay.get('legs')[1].set('state', True)
+        decay.set('is_decay_chain', True)
+        decay.set('orders', {})
+        decay2 = copy.copy(decay)
+        self.myprocess.set('decay_chains', base_objects.ProcessList([decay]))
+        decay.set('decay_chains', base_objects.ProcessList([decay2]))
+
+        self.assertEqual(goal_str, self.myprocess.input_string())
+
     def test_shell_string(self):
         """Test Process shell_string representation"""
 
