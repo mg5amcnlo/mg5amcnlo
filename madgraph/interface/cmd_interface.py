@@ -1366,9 +1366,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             filename = os.path.join(args[0], 'diagrams_' + \
                                     amp.get('process').shell_string() + ".eps")
             plot = draw.MultiEpsDiagramDrawer(amp['diagrams'],
-                                              filename,
-                                              model=self._curr_model,
-                                              amplitude='')
+                                          filename,
+                                          model=self._curr_model,
+                                          amplitude='',
+                                          legend=amp.get('process').nice_string())
 
             logger.info("Drawing " + \
                          amp.get('process').nice_string())

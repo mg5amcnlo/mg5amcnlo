@@ -290,12 +290,12 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
     nb_col = 2
     
     
-    lower_scale = 15
+    lower_scale = 5
     second_scale ={'x_min': 40, 'x_size':150,'y_min':600,'y_size':100,
                    'x_gap':42,'y_gap':30,'font':6,'nb_line':5,'nb_col':3}
     
     def __init__(self, diagramlist=None, filename='diagram.eps', \
-                  model=None, amplitude=None):
+                  model=None, amplitude=None, legend=''):
         """Define basic variable and store some global information
         all argument are optional
         diagramlist : are the list of object to draw. item should inherit 
@@ -310,7 +310,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         #use standard initialization but without any diagram
         super(MultiEpsDiagramDrawer, self).__init__(None, filename , model, \
                                                                       amplitude)
-
+        self.legend = legend
         #additional information
         self.block_nb = 0  # keep track of the number of diagram already written
         self.curr_page = 0 # keep track of the page position
@@ -384,6 +384,11 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         # Initialize some variable before starting to draw the diagram
         # This creates the header-library of the output file
         self.initialize()
+        self.text += '/Helvetica findfont %s scalefont setfont\n' % self.font
+        self.text += ' 50         770  moveto\n'
+        self.text += ' (Diagrams by MadGraph5: %s) show\n' % self.legend
+        self.text += ' 320         50  moveto\n'
+        self.text += ' (page %s/%s) show\n' % (self.curr_page + 1, self.npage)
         # Loop on all diagram
         for diagram in diagramlist:
             # Check if they need to be convert in correct format
@@ -414,8 +419,9 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.text += '%%PageBoundingBox:-20 -20 600 800\n'
         self.text += '%%PageFonts: Helvetica\n'
         self.text += '/Helvetica findfont %s scalefont setfont\n' % self.font
-        self.text += ' 240         770  moveto\n'
-        self.text += ' (Diagrams by MadGraph) show\n'
-
+        self.text += ' 50         770  moveto\n'
+        self.text += ' (Diagrams by MadGraph5: %s) show\n' % self.legend
+        self.text += ' 500         770  moveto\n'
+        self.text += ' (page %s/%s) show\n' % (self.curr_page, self.npage)
         
 

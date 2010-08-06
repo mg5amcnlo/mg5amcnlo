@@ -1,4 +1,4 @@
-#! /usr/bin/env python -O
+#! /usr/bin/env python 
 ################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
