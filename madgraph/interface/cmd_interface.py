@@ -1118,6 +1118,9 @@ class CompleteForCmd(CheckValidForCmd):
                 out = self.path_completion(text, os.path.join(MG4DIR,'Models'))
             else:
                 out = []
+            for i, value in enumerate(out):
+                if value.endswith('/'):
+                    out[i] = value[:-1]
             return out + self.path_completion(text)
 
         # Filename if directory is given
