@@ -179,7 +179,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         """ADD the comment 'diagram [number]' just below the diagram."""
 
         # Postion of the text in [0,1] square
-        x = 0.42
+        x = 0.33
         y = -0.17
         # Compute the EPS coordinate
         x, y = self.rescale(x, y)
@@ -291,7 +291,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
     
     
     lower_scale = 5
-    second_scale ={'x_min': 40, 'x_size':150,'y_min':600,'y_size':100,
+    second_scale ={'x_min': 40, 'x_size':150,'y_min':620,'y_size':100,
                    'x_gap':42,'y_gap':30,'font':6,'nb_line':5,'nb_col':3}
     
     def __init__(self, diagramlist=None, filename='diagram.eps', \
@@ -319,13 +319,16 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.npage = 1
         
         limit = self.lower_scale * self.nb_col * self.nb_line
+        print 'limit', limit, len(diagramlist)
         if len(diagramlist) < limit:
+            print (self.nb_col * self.nb_line), len(diagramlist) //(self.nb_col * self.nb_line)
             self.npage += len(diagramlist) // (self.nb_col * self.nb_line)
         else:
-            add = len(diagramlist) - self.lower_scale // \
-                     self.second_scale['nb_col'] * self.second_scale['nb_line']
-            self.npage += limit + add
-        
+            print (self.nb_col * self.nb_line),len(diagramlist) //(self.nb_col * self.nb_line)
+            add = (len(diagramlist) - self.lower_scale) // \
+                     (self.second_scale['nb_col'] * self.second_scale['nb_line'])
+            self.npage += self.lower_scale + add
+        print 'pages', self.npage
         if diagramlist:
             # diagramlist Argument should be a DiagramList object
             assert(isinstance(diagramlist, base_objects.DiagramList))
@@ -386,9 +389,11 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.initialize()
         self.text += '/Helvetica findfont %s scalefont setfont\n' % self.font
         self.text += ' 50         770  moveto\n'
-        self.text += ' (Diagrams by MadGraph5: %s) show\n' % self.legend
-        self.text += ' 320         50  moveto\n'
+        self.text += ' (%s) show\n' % self.legend
+        self.text += ' 525         770  moveto\n'
         self.text += ' (page %s/%s) show\n' % (self.curr_page + 1, self.npage)
+        self.text += ' 260         50  moveto\n'
+        self.text += ' (Diagrams made by MadGraph5) show\n'       
         # Loop on all diagram
         for diagram in diagramlist:
             # Check if they need to be convert in correct format
@@ -418,10 +423,10 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.text += '%%' + 'Page: %s %s \n' % (self.curr_page, self.curr_page)
         self.text += '%%PageBoundingBox:-20 -20 600 800\n'
         self.text += '%%PageFonts: Helvetica\n'
-        self.text += '/Helvetica findfont %s scalefont setfont\n' % self.font
         self.text += ' 50         770  moveto\n'
-        self.text += ' (Diagrams by MadGraph5: %s) show\n' % self.legend
-        self.text += ' 500         770  moveto\n'
-        self.text += ' (page %s/%s) show\n' % (self.curr_page, self.npage)
+        self.text += ' (%s) show\n' % self.legend
+        self.text += ' 525         770  moveto\n'
+        self.text += ' (page %s/%s) show\n' % (self.curr_page + 1, self.npage)
+        self.text += ' 260         40  moveto\n'
+        self.text += ' (Diagrams made by MadGraph5) show\n'
         
-

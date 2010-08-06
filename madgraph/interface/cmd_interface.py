@@ -1369,7 +1369,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                           filename,
                                           model=self._curr_model,
                                           amplitude='',
-                                          legend=amp.get('process').nice_string())
+                                          legend=amp.get('process').input_string())
 
             logger.info("Drawing " + \
                          amp.get('process').nice_string())
