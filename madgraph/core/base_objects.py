@@ -123,7 +123,6 @@ class PhysicsObject(dict):
         with improved format."""
 
         mystr = '{\n'
-
         for prop in self.get_sorted_keys():
             if isinstance(self[prop], str):
                 mystr = mystr + '    \'' + prop + '\': \'' + \

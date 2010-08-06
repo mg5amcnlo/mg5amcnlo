@@ -273,6 +273,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
     # Define where to put the diagrams in the page. This is the coordinate of 
     #the lower left corner of the drawing area of the first graph. and the 
     #dimension associate to this drawing area.
+    
     x_min = 75
     x_size = 200
     y_min = 560
@@ -281,10 +282,18 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
     x_gap = 75
     y_gap = 70
 
+    #define font
+    font=9
+    
     #Defines the number of line-column in a EPS page
     nb_line = 3
     nb_col = 2
-
+    
+    
+    lower_scale = 15
+    second_scale ={'x_min': 40, 'x_size':150,'y_min':600,'y_size':100,
+                   'x_gap':42,'y_gap':30,'font':6,'nb_line':5,'nb_col':3}
+    
     def __init__(self, diagramlist=None, filename='diagram.eps', \
                   model=None, amplitude=None):
         """Define basic variable and store some global information
@@ -304,7 +313,18 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
 
         #additional information
         self.block_nb = 0  # keep track of the number of diagram already written
-        self.npage = 1 + len(diagramlist) // (self.nb_col * self.nb_line)
+        self.curr_page = 0 # keep track of the page position
+        self.block_in_page = 0 #ckeep track of the block in a page
+        #compute the number of pages
+        self.npage = 1
+        
+        limit = self.lower_scale * self.nb_col * self.nb_line
+        if len(diagramlist) < limit:
+            self.npage += len(diagramlist) // (self.nb_col * self.nb_line)
+        else:
+            add = len(diagramlist) - self.lower_scale // \
+                     self.second_scale['nb_col'] * self.second_scale['nb_line']
+            self.npage += limit + add
         
         if diagramlist:
             # diagramlist Argument should be a DiagramList object
@@ -320,7 +340,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         a oblong. Deformation are linear."""
 
         # Compute the current line and column
-        block_pos = self.block_nb % (self.nb_col * self.nb_line)
+        block_pos = self.block_in_page 
         line_pos = block_pos // self.nb_col
         col_pos = block_pos % self.nb_col
 
@@ -348,6 +368,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         # But keep track how many diagrams are already drawn
         
         self.block_nb += 1
+        self.block_in_page +=1
 
 
     def draw(self, diagramlist='', opt=None):
@@ -371,7 +392,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
             self.draw_diagram(diagram)
 
             # Check if the current page is full or not
-            if self.block_nb % (self.nb_col * self.nb_line) == 0:
+            if self.block_in_page % (self.nb_col * self.nb_line) == 0:
                 #if full initialize a new page
                 self.pass_to_next_page()
 
@@ -381,11 +402,20 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
     def pass_to_next_page(self):
         """Insert text in order to pass to next EPS page."""
 
+        self.curr_page += 1
+        self.block_in_page = 0
+        if self.curr_page == self.lower_scale:
+            for key, value in self.second_scale.items():
+                setattr(self, key, value)
+        
+        
         self.text += 'showpage\n'
-        new_page = 1 + self.block_nb // (self.nb_col * self.nb_line)
-        self.text += '%%' + 'Page: %s %s \n' % (new_page, new_page)
+        self.text += '%%' + 'Page: %s %s \n' % (self.curr_page, self.curr_page)
         self.text += '%%PageBoundingBox:-20 -20 600 800\n'
         self.text += '%%PageFonts: Helvetica\n'
-        self.text += '/Helvetica findfont 10 scalefont setfont\n'
+        self.text += '/Helvetica findfont %s scalefont setfont\n' % self.font
         self.text += ' 240         770  moveto\n'
         self.text += ' (Diagrams by MadGraph) show\n'
+
+        
+

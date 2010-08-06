@@ -125,8 +125,8 @@ class TestFeynmanLine(unittest.TestCase):
         self.assertTrue(self.my_line.end is self.my_vertex)
 
         #test if the vertex references the line correctly
-        self.assertTrue(self.my_line in self.my_vertex.line)
-        self.assertTrue(self.my_line in self.my_vertex2.line)
+        self.assertTrue(self.my_line in self.my_vertex.lines)
+        self.assertTrue(self.my_line in self.my_vertex2.lines)
 
         #check that the swithching method runs fine.
         self.my_line.inverse_begin_end()
@@ -200,9 +200,9 @@ class TestFeynmanLine(unittest.TestCase):
         line = self.def_line([0, 0], [0, 0])
 
         line.inverse_part_antipart()
-        self.assertEquals(line.get('pid'), -11)
+        self.assertEquals(line.pid, -11)
         line.inverse_part_antipart()
-        self.assertEquals(line.get('pid'), 11)
+        self.assertEquals(line.pid, 11)
 
     def test_inverse_pid_for_type(self):
         """Test change particle in anti-particle for drawing type"""
@@ -217,20 +217,20 @@ class TestFeynmanLine(unittest.TestCase):
         line3.inverse_pid_for_type('wavy')
         line4.inverse_pid_for_type('wavy')
 
-        self.assertEquals(line1.get('pid'), -24)
-        self.assertEquals(line2.get('pid'), 24)
-        self.assertEquals(line3.get('pid'), -22)
-        self.assertEquals(line4.get('pid'), 1)
+        self.assertEquals(line1.pid, -24)
+        self.assertEquals(line2.pid, 24)
+        self.assertEquals(line3.pid, -22)
+        self.assertEquals(line4.pid, 1)
 
         line1.inverse_pid_for_type()
         line2.inverse_pid_for_type()
         line3.inverse_pid_for_type()
         line4.inverse_pid_for_type()
 
-        self.assertEquals(line1.get('pid'), -24)
-        self.assertEquals(line2.get('pid'), 24)
-        self.assertEquals(line3.get('pid'), -22)
-        self.assertEquals(line4.get('pid'), -1)
+        self.assertEquals(line1.pid, -24)
+        self.assertEquals(line2.pid, 24)
+        self.assertEquals(line3.pid, -22)
+        self.assertEquals(line4.pid, -1)
 
     def test_domain_intersection(self):
         """ Test domain intersection between two FeynmanLine """
@@ -260,11 +260,11 @@ class TestFeynmanLine(unittest.TestCase):
         """Test domain intersection fails on wrong input"""
 
         my_line1 = self.def_line([0, 0], [1, 1])
-        self.assertRaises(drawing.FeynmanLine.FeynmanLineError, \
+        self.assertRaises(AssertionError, \
                            my_line1.domain_intersection, [0, 1])
-        self.assertRaises(drawing.FeynmanLine.FeynmanLineError, \
+        self.assertRaises(AssertionError, \
                            my_line1.domain_intersection, (0, 1))
-        self.assertRaises(drawing.FeynmanLine.FeynmanLineError, \
+        self.assertRaises(AssertionError, \
                            my_line1.domain_intersection, ([0, 1], 1))
 
     def test_hasintersection(self):
@@ -522,7 +522,7 @@ class TestVertexPoint(unittest.TestCase):
 
         my_vertex = drawing.VertexPoint(self.vertex)
         # Test the File has the correct link with basic object
-        self.assertTrue(isinstance(my_vertex, base_objects.Vertex))
+        #self.assertTrue(isinstance(my_vertex, base_objects.Vertex))
         self.assertTrue(isinstance(my_vertex, drawing.VertexPoint))
 
         # Test fail if not Vertex Input in data
@@ -531,15 +531,15 @@ class TestVertexPoint(unittest.TestCase):
 
         # Ensure that my_vertex and self.vertex and 100% different
         self.assertFalse(my_vertex is self.vertex)
-        my_vertex['value'] = 2
+        my_vertex.value = 2
         self.assertRaises(base_objects.PhysicsObject.PhysicsObjectError,
                           self.vertex.__getitem__, 'value')
-        self.assertTrue('value' in my_vertex.keys())
+        self.assertTrue(hasattr(my_vertex,'value'))
         self.assertFalse('value' in self.vertex.keys())
 
         # Check that we have new attributes
-        self.assertTrue(hasattr(my_vertex, 'line'))
-        self.assertTrue('id' in my_vertex.keys())
+        self.assertTrue(hasattr(my_vertex, 'lines'))
+        self.assertTrue(hasattr(my_vertex, 'id'))
         self.assertTrue(hasattr(my_vertex, 'pos_x'))
         self.assertTrue(hasattr(my_vertex, 'pos_x'))
 
@@ -551,7 +551,7 @@ class TestVertexPoint(unittest.TestCase):
 
         # Check that adding a line acts only on one vertex.
         my_vertex.add_line(self.line1)
-        self.assertFalse(self.line1 in my_vertex2.line)
+        self.assertFalse(self.line1 in my_vertex2.lines)
 
 
 
@@ -605,9 +605,9 @@ class TestVertexPoint(unittest.TestCase):
         my_vertex = drawing.VertexPoint(self.vertex)
         my_vertex.add_line(self.line1)
 
-        self.assertTrue(self.line1 in my_vertex.line)
+        self.assertTrue(self.line1 in my_vertex.lines)
         my_vertex.add_line(self.line1)
-        self.assertEquals(my_vertex.line.count(self.line1), 1)
+        self.assertEquals(my_vertex.lines.count(self.line1), 1)
 
         self.assertRaises(AssertionError, my_vertex.add_line, 'data')
 
@@ -615,9 +615,9 @@ class TestVertexPoint(unittest.TestCase):
         """Test that line can be safely remove"""
 
         my_vertex = drawing.VertexPoint(self.vertex)
-        my_vertex.line = [self.line1]
+        my_vertex.lines = [self.line1]
         my_vertex.remove_line(self.line1)
-        self.assertFalse(self.line1 in my_vertex.line)
+        self.assertFalse(self.line1 in my_vertex.lines)
 
         self.assertRaises(drawing.VertexPoint.VertexPointError, \
                           my_vertex.remove_line, self.line1)
@@ -690,13 +690,13 @@ class TestVertexPoint(unittest.TestCase):
         #fuse the two vertex
         vertex1.fuse_vertex(vertex2, line_s)
 
-        #check that vertex1.line is correctly modify
-        self.assertEqual(len(vertex1.line), 4)
-        self.assertEqual(len([l for l in vertex1.line if l is line1]), 1)
-        self.assertEqual(len([l for l in vertex1.line if l is line2]), 1)
-        self.assertEqual(len([l for l in vertex1.line if l is line3]), 1)
-        self.assertEqual(len([l for l in vertex1.line if l is line4]), 1)
-        self.assertEqual(len([l for l in vertex1.line if l is line_s]), 0)
+        #check that vertex1.lines is correctly modify
+        self.assertEqual(len(vertex1.lines), 4)
+        self.assertEqual(len([l for l in vertex1.lines if l is line1]), 1)
+        self.assertEqual(len([l for l in vertex1.lines if l is line2]), 1)
+        self.assertEqual(len([l for l in vertex1.lines if l is line3]), 1)
+        self.assertEqual(len([l for l in vertex1.lines if l is line4]), 1)
+        self.assertEqual(len([l for l in vertex1.lines if l is line_s]), 0)
 
         #check that line3-line4 begin vertex are correctly modify
         self.assertTrue(vertex1 is line3.start)
@@ -837,8 +837,8 @@ class TestFeynmanDiagram(unittest.TestCase):
         """return a integer which acts like an id"""
 
         tag = 0
-        for i, line in enumerate(vertex.line):
-            tag += (10 ** i) * line.get('number')
+        for i, line in enumerate(vertex.lines):
+            tag += (10 ** i) * line.number
         return tag
 
 
@@ -887,7 +887,7 @@ class TestFeynmanDiagram(unittest.TestCase):
         for i in range(0, 10):
             self.assertEquals(self.mix_drawing.vertexList[i].level, \
                                                             level_solution[i])
-            self.assertEquals(len(self.mix_drawing.vertexList[i].line), \
+            self.assertEquals(len(self.mix_drawing.vertexList[i].lines), \
                                                             number_of_line[i])
 
         self.s_drawing.load_diagram()
@@ -1389,7 +1389,7 @@ class TestFeynmanDiagram(unittest.TestCase):
         
         #check that all line end at y=1
         for line in diagram.lineList:
-            if line.is_external() and line.get('number') > 2:
+            if line.is_external() and line.number > 2:
                 self.assertEquals(line.end.pos_x, 1)
 
         #T-chanel (3 T-vertex and the central decay in 2 level decay)
@@ -1401,7 +1401,7 @@ class TestFeynmanDiagram(unittest.TestCase):
         diagram.find_initial_vertex_position()
         diagram.adjust_position()
         for line in diagram.lineList:
-            if line.is_external() and line.get('number') in [5, 7]:
+            if line.is_external() and line.number in [5, 7]:
                 dist = (line.end.pos_x - line.start.pos_x) * diagram.max_level
                 self.assertEquals(dist, 1.5)
         

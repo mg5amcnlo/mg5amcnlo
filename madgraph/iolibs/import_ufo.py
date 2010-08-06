@@ -45,7 +45,7 @@ def import_model(model_name):
         model_path = os.path.join(MG5DIR, 'models', model_name)
     else:
         raise MadGraph5Error("Path %s is not a valid pathname" % model_name)
-
+            
     # Check the validity of the model
     files_list_prov = ['couplings.py','lorentz.py','parameters.py',
                        'particles.py', 'vertices.py']

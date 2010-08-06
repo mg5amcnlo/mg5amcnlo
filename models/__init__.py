@@ -19,6 +19,10 @@ import sys
 
 def load_model(name):
     
+    # avoid final '/' in the path
+    if name.endswith('/'):
+        name = name[:-1]
+    
     path_split = name.split(os.sep)
     if len(path_split) == 1:
         model_pos = 'models.%s' % name
