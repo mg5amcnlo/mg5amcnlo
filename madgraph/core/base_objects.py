@@ -21,7 +21,6 @@ import itertools
 import logging
 import numbers
 import re
-
 import madgraph.core.color_algebra as color
 from madgraph import MadGraph5Error
 
