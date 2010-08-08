@@ -103,6 +103,17 @@ class ProcessExporterPythia8(object):
                         self.matrix_elements[0].get_nexternal_ninitial()
         self.nfinal = self.nexternal - self.ninitial
 
+        # Check if we can use the same helicities for all matrix
+        # elements (to speed up production)
+        
+        self.single_helicities = True
+
+        hel_matrix = self.get_helicity_matrix(self.matrix_elements[0])
+
+        for me in self.matrix_elements[1:]:
+            if self.get_helicity_matrix(me) != hel_matrix:
+                self.single_helicities = False
+
     # Methods for generation of process files for Pythia 8
 
     def generate_process_files_pythia8(self):
@@ -234,11 +245,14 @@ class ProcessExporterPythia8(object):
         replace_dict['nexternal'] = self.nexternal
         replace_dict['nprocesses'] = len(self.matrix_elements)
 
-        replace_dict['all_sigma_kin_definitions'] = \
-                       "\n".join(["void sigmaKin_%s();" % \
-                                  me.get('processes')[0].shell_string_v4().\
-                                  replace("0_", "") \
-                                  for me in self.matrix_elements])
+        if self.single_helicities:
+            replace_dict['all_sigma_kin_definitions'] = ""
+        else:
+            replace_dict['all_sigma_kin_definitions'] = \
+                          "\n".join(["void sigmaKin_%s();" % \
+                                     me.get('processes')[0].shell_string_v4().\
+                                     replace("0_", "") \
+                                     for me in self.matrix_elements])
 
         replace_dict['all_matrix_definitions'] = \
                        "\n".join(["double matrix_%s(const int hel[]);" % \
@@ -271,13 +285,13 @@ class ProcessExporterPythia8(object):
                             self.matrix_elements]
 
         replace_dict['initProc_lines'] = \
-                                       self.get_initProc_lines(color_amplitudes)
-
+                                     self.get_initProc_lines(color_amplitudes)
+        replace_dict['reset_jamp_lines'] = \
+                                     self.get_reset_jamp_lines(color_amplitudes)
         replace_dict['sigmaKin_lines'] = \
-                                       self.get_sigmaKin_lines()
-
+                                     self.get_sigmaKin_lines(color_amplitudes)
         replace_dict['sigmaHat_lines'] = \
-                                       self.get_sigmaHat_lines()
+                                     self.get_sigmaHat_lines()
 
         replace_dict['setIdColAcol_lines'] = \
                                    self.get_setIdColAcol_lines(color_amplitudes)
@@ -404,23 +418,74 @@ class ProcessExporterPythia8(object):
 
         return "\n".join(initProc_lines)
 
-    def get_sigmaKin_lines(self):
+    def get_reset_jamp_lines(self, color_amplitudes):
+        """Get lines to reset jamps"""
+
+        ret_lines = ""
+        for icol, col_amp in enumerate(color_amplitudes):
+            ret_lines+= """for(int i=0;i < %(ncolor)d; i++)
+            jamp2[%(proc_number)d][i]=0.;\n""" % \
+            {"ncolor": len(col_amp), "proc_number": icol}
+        return ret_lines
+        
+
+    def get_sigmaKin_lines(self, color_amplitudes):
         """Get sigmaKin_lines for function definition for Pythia 8 .cc file"""
 
-        return "\n".join(["sigmaKin_%s();" % \
-                          me.get('processes')[0].shell_string_v4().\
-                                  replace("0_", "") for \
-                          me in self.matrix_elements])
+        
+        if self.single_helicities:
+            replace_dict = {}
 
+            # Number of helicity combinations
+            replace_dict['ncomb'] = \
+                            self.matrix_elements[0].get_helicity_combinations()
+
+            # Process name
+            replace_dict['process_class_name'] = self.process_name
+        
+            # Extract helicity matrix
+            replace_dict['helicity_matrix'] = \
+                            self.get_helicity_matrix(self.matrix_elements[0])
+            # Extract denominator
+            replace_dict['den_factors'] = \
+                     ",".join([str(me.get_denominator_factor()) for me in \
+                               self.matrix_elements])
+
+            replace_dict['get_matrix_t_lines'] = "\n".join(
+                    ["t[%(iproc)d]=matrix_%(proc_name)s(helicities[ihel]);" % \
+                     {"iproc": i, "proc_name": \
+                      me.get('processes')[0].shell_string_v4().replace("0_", "")} \
+                     for i, me in enumerate(self.matrix_elements)])
+
+            file = \
+                 read_template_file(\
+                            'pythia8_process_sigmaKin_function.inc') %\
+                            replace_dict
+
+            return file
+
+        else:
+            ret_lines = "// Call the individual sigmaKin for each process\n"
+            return ret_lines + \
+                   "\n".join(["sigmaKin_%s();" % \
+                              me.get('processes')[0].shell_string_v4().\
+                              replace("0_", "") for \
+                              me in self.matrix_elements])
 
     def get_all_sigmaKin_lines(self, color_amplitudes):
         """Get sigmaKin_process for all subprocesses for Pythia 8 .cc file"""
 
-        return "\n".join([self.get_sigmaKin_single_process(i, me,
-                                                           color_amplitudes[i])\
-                          for i, me in enumerate(self.matrix_elements)])
+        ret_lines = ""
+        if not self.single_helicities:
+            ret_lines += "\n".join([self.get_sigmaKin_single_process(i, me) \
+                                  for i, me in enumerate(self.matrix_elements)])
+        ret_lines += "\n".join([self.get_matrix_single_process(i, me,
+                                                      color_amplitudes[i]) \
+                                for i, me in enumerate(self.matrix_elements)])
+        return ret_lines
 
-    def get_sigmaKin_single_process(self, i, matrix_element, color_amplitudes):
+
+    def get_sigmaKin_single_process(self, i, matrix_element):
         """Write sigmaKin for each process"""
 
         # Write sigmaKin for the process
@@ -444,16 +509,33 @@ class ProcessExporterPythia8(object):
         replace_dict['helicity_matrix'] = \
                                       self.get_helicity_matrix(matrix_element)
         # Extract denominator
-        replace_dict['den_factor_line'] = \
-                                      self.get_den_factor_line(matrix_element)
+        replace_dict['den_factor'] = matrix_element.get_denominator_factor()
+
+        file = \
+         read_template_file('pythia8_process_sigmaKin_subproc_function.inc') %\
+         replace_dict
+
+        return file
+
+    def get_matrix_single_process(self, i, matrix_element, color_amplitudes):
+        """Write sigmaKin for each process"""
+
+        # Write matrix() for the process
+
+        replace_dict = {}
+
+        # Process name
+        replace_dict['proc_name'] = \
+          matrix_element.get('processes')[0].shell_string_v4().replace("0_", "")
+        
+        # Process name
+        replace_dict['process_class_name'] = self.process_name
+        
+        # Process number
+        replace_dict['proc_number'] = i
 
         # Number of color flows
         replace_dict['ncolor'] = len(color_amplitudes)
-
-        file = read_template_file('pythia8_process_sigmaKin_function.inc') % \
-               replace_dict
-
-        # Write matrix() for the process
 
         # Number of wavefunctions and amplitudes
         replace_dict['nwavefuncs'] = matrix_element.get_number_of_wavefunctions()
@@ -471,7 +553,7 @@ class ProcessExporterPythia8(object):
             self.helas_call_writer.get_matrix_element_calls(matrix_element))
         replace_dict['jamp_lines'] = self.get_jamp_lines(color_amplitudes)
 
-        file += read_template_file('pythia8_process_matrix.inc') % \
+        file = read_template_file('pythia8_process_matrix.inc') % \
                 replace_dict
 
         return file
