@@ -38,18 +38,19 @@ public:
 
 private:
 
-  // Private function to calculate the matrix element for given helicities
-  double matrix(const int helicities[]);
+  // Private functions to calculate the matrix element for all subprocesses
+  %(all_sigma_kin_definitions)s
+  %(all_matrix_definitions)s
 
   // Constants for array limits
   static const int nexternal = %(nexternal)d;
-  static const int ncolor = %(ncolor)d;
+  static const int nprocesses = %(nprocesses)d;
 
   // Store the matrix element value from sigmaKin
-  double matrix_element;
+  double matrix_element[nprocesses];
 
   // Color flows, used when selecting color
-  double jamp2[ncolor];
+  double* jamp2[nprocesses];
 
   // Pointer to the model parameters
   Parameters_%(model_name)s* pars;

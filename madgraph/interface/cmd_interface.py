@@ -1464,9 +1464,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if args[0] == 'pythia8':
             self._curr_cpp_model = \
                   helas_call_writers.Pythia8UFOHelasCallWriter(self._curr_model)
-            for me in self._curr_matrix_elements.get('matrix_elements'):
-                export_pythia8.generate_process_files_pythia8(\
-                            me, self._curr_cpp_model, path)
+            export_pythia8.generate_process_files_pythia8(\
+                            self._curr_matrix_elements, self._curr_cpp_model,
+                            process_string = self._generate_info, path = path)
                 
         self._export_format = args[0]
 

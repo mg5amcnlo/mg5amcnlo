@@ -45,8 +45,6 @@ double %(process_class_name)s::weightDecay(Event& process, int iResBeg, int iRes
 // Private class member functions
 
 //--------------------------------------------------------------------------
-// Evaluate |M|^2 for a given helicity
+// Evaluate |M|^2 for each subprocess
 
-double %(process_class_name)s::matrix(const int hel[]) { 
-    %(matrix_lines)s
-}
+%(all_sigmaKin)s

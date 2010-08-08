@@ -179,7 +179,7 @@ class IOExportPythia8Test(unittest.TestCase,
         
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
-        self.mymatrixelement = helas_objects.HelasMatrixElement(myamplitude)
+        self.mymatrixelement = helas_objects.HelasMultiProcess(myamplitude)
 
         myleglist = base_objects.LegList()
 
@@ -199,7 +199,9 @@ class IOExportPythia8Test(unittest.TestCase,
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
 
-        self.mymatrixelement.get('processes').append(myproc)
+        self.mymatrixelement.get('matrix_elements')[0].\
+                                               get('processes').append(myproc)
+
         
     tearDown = test_file_writers.CheckFileCreate.clean_files
 
@@ -214,8 +216,8 @@ class IOExportPythia8Test(unittest.TestCase,
 // Please visit us at https://launchpad.net/madgraph5
 //==========================================================================
 
-#ifndef Pythia8_Sigma_uux_uux_H
-#define Pythia8_Sigma_uux_uux_H
+#ifndef Pythia8_Sigma_sm_qqx_qqx_H
+#define Pythia8_Sigma_sm_qqx_qqx_H
 
 #include "SigmaProcess.h"
 #include "Parameters_sm.h"
@@ -230,12 +232,12 @@ namespace Pythia8
 // Process: c c~ > c c~
 //--------------------------------------------------------------------------
 
-class Sigma_uux_uux : public Sigma2Process 
+class Sigma_sm_qqx_qqx : public Sigma2Process 
 {
   public:
 
     // Constructor.
-    Sigma_uux_uux() {}
+    Sigma_sm_qqx_qqx() {}
 
     // Initialize process.
     virtual void initProc(); 
@@ -253,32 +255,31 @@ class Sigma_uux_uux : public Sigma2Process
     virtual double weightDecay(Event& process, int iResBeg, int iResEnd); 
 
     // Info on the subprocess.
-    virtual string name() const {return "u u~ > u u~ (sm)";}
+    virtual string name() const {return "q q~ > q q~ (sm)";}
 
     virtual int code() const {return 10000;}
 
     virtual string inFlux() const {return "qqbarSame";}
 
-    int id3Mass() const {return 2;}
-    int id4Mass() const {return 2;}
 
     // Tell Pythia that sigmaHat returns the ME^2
     virtual bool convertM2() const {return true;}
 
   private:
 
-    // Private function to calculate the matrix element for given helicities
-    double matrix(const int helicities[]); 
+    // Private functions to calculate the matrix element for all subprocesses
+    void sigmaKin_uux_uux(); 
+    double matrix_uux_uux(const int hel[]); 
 
     // Constants for array limits
     static const int nexternal = 4; 
-    static const int ncolor = 2; 
+    static const int nprocesses = 1; 
 
     // Store the matrix element value from sigmaKin
-    double matrix_element; 
+    double matrix_element[nprocesses]; 
 
     // Color flows, used when selecting color
-    double jamp2[ncolor]; 
+    double * jamp2[nprocesses]; 
 
     // Pointer to the model parameters
     Parameters_sm * pars; 
@@ -287,12 +288,14 @@ class Sigma_uux_uux : public Sigma2Process
 
 }  // end namespace Pythia
 
-#endif  // Pythia8_Sigma_uux_uux_H
+#endif  // Pythia8_Sigma_sm_qqx_qqx_H
 """ % misc.get_pkg_info()
 
-        export_pythia8.write_pythia8_process_h_file(\
-            writers.CPPWriter(self.give_pos('test.h')),
-            self.mymatrixelement)
+        exporter = export_pythia8.ProcessExporterPythia8(self.mymatrixelement,
+        self.mycppmodel, process_string = "q q~ > q q~")
+
+        exporter.write_pythia8_process_h_file(\
+        writers.CPPWriter(self.give_pos('test.h')))
 
         self.assertFileContains('test.h', goal_string)
 
@@ -307,7 +310,7 @@ class Sigma_uux_uux : public Sigma2Process
 // Please visit us at https://launchpad.net/madgraph5
 //==========================================================================
 
-#include "Sigma_uux_uux.h"
+#include "Sigma_sm_qqx_qqx.h"
 #include "hel_amps_sm.h"
 
 using namespace Pythia8_sm; 
@@ -323,22 +326,110 @@ namespace Pythia8
 //--------------------------------------------------------------------------
 // Initialize process.
 
-void Sigma_uux_uux::initProc() 
+void Sigma_sm_qqx_qqx::initProc() 
 {
   // Instantiate the model class and set parameters that stay fixed during run
   pars = Parameters_sm::getInstance(); 
   pars->setIndependentParameters(particleDataPtr, coupSMPtr); 
   pars->setIndependentCouplings(particleDataPtr, coupSMPtr); 
-
+  jamp2[0] = new double[2]; 
 }
 
 //--------------------------------------------------------------------------
 // Evaluate |M|^2, part independent of incoming flavour.
 
-void Sigma_uux_uux::sigmaKin() 
+void Sigma_sm_qqx_qqx::sigmaKin() 
 {
+  sigmaKin_uux_uux(); 
+}
+
+//--------------------------------------------------------------------------
+// Evaluate |M|^2, including incoming flavour dependence.
+
+double Sigma_sm_qqx_qqx::sigmaHat() 
+{
+  // Select between the different processes
+  if(id1 == 4 && id2 == -4)
+  {
+    // Add matrix elements for processes with beams (4, -4)
+    return matrix_element[0] * 1; 
+  }
+  else if(id1 == 2 && id2 == -2)
+  {
+    // Add matrix elements for processes with beams (2, -2)
+    return matrix_element[0] * 1; 
+  }
+  else
+  {
+    // Return 0 if not correct initial state assignment
+    return 0.; 
+  }
+}
+
+//--------------------------------------------------------------------------
+// Select identity, colour and anticolour.
+
+void Sigma_sm_qqx_qqx::setIdColAcol() 
+{
+  if(id1 == 4 && id2 == -4)
+  {
+    // Pick one of the flavor combinations (4, -4)
+    int flavors[1][2] = {4, -4}; 
+    vector<double> probs; 
+    double sum = matrix_element[0]; 
+    probs.push_back(matrix_element[0]/sum); 
+    int choice = rndmPtr->pick(probs); 
+    id3 = flavors[choice][0]; 
+    id4 = flavors[choice][1]; 
+  }
+  else if(id1 == 2 && id2 == -2)
+  {
+    // Pick one of the flavor combinations (2, -2)
+    int flavors[1][2] = {2, -2}; 
+    vector<double> probs; 
+    double sum = matrix_element[0]; 
+    probs.push_back(matrix_element[0]/sum); 
+    int choice = rndmPtr->pick(probs); 
+    id3 = flavors[choice][0]; 
+    id4 = flavors[choice][1]; 
+  }
+  setId(id1, id2, id3, id4); 
+  int ncolor[1] = {2}; 
+  if(id1 == 2 && id2 == -2 && id3 == 2 && id4 == -2 || id1 == 4 && id2 == -4 &&
+      id3 == 4 && id4 == -4)
+  {
+    vector<double> probs; 
+    double sum = jamp2[0][0] + jamp2[0][1]; 
+    for(int i = 0; i < ncolor[0]; i++ )
+      probs.push_back(jamp2[0][i]/sum); 
+    int ic = rndmPtr->pick(probs); 
+    static int col[2][8] = {1, 0, 0, 1, 2, 0, 0, 2, 2, 0, 0, 1, 2, 0, 0, 1}; 
+    setColAcol(col[ic][0], col[ic][1], col[ic][2], col[ic][3], col[ic][4],
+        col[ic][5], col[ic][6], col[ic][7]);
+  }
+}
+
+//--------------------------------------------------------------------------
+// Evaluate weight for angles of decay products in process
+
+double Sigma_sm_qqx_qqx::weightDecay(Event& process, int iResBeg, int iResEnd) 
+{
+  // Just use isotropic decay (default)
+  return 1.; 
+}
+
+//==========================================================================
+// Private class member functions
+
+//--------------------------------------------------------------------------
+// Evaluate |M|^2 for each subprocess
+
+void Sigma_sm_qqx_qqx::sigmaKin_uux_uux() 
+{
+
   // Local variables and constants
   const int ncomb = 16; 
+  const int ncolor = 2; 
   static bool goodhel[ncomb] = {ncomb * false}; 
   static int ntry = 0, sum_hel = 0, ngood = 0; 
   static int igood[ncomb]; 
@@ -360,10 +451,10 @@ void Sigma_uux_uux::sigmaKin()
 
   // Reset color flows
   for(int i = 0; i < ncolor; i++ )
-    jamp2[i] = 0.; 
+    jamp2[0][i] = 0.; 
 
   // Calculate the matrix element
-  matrix_element = 0.; 
+  matrix_element[0] = 0.; 
 
   if (sum_hel == 0 || ntry < 10)
   {
@@ -372,8 +463,8 @@ void Sigma_uux_uux::sigmaKin()
     {
       if (goodhel[ihel] || ntry < 2)
       {
-        t = matrix(helicities[ihel]); 
-        matrix_element += t; 
+        t = matrix_uux_uux(helicities[ihel]); 
+        matrix_element[0] += t; 
         // Store which helicities give non-zero result
         if (t != 0. && !goodhel[ihel])
         {
@@ -396,81 +487,19 @@ void Sigma_uux_uux::sigmaKin()
         jhel = 0; 
       double hwgt = double(ngood)/double(sum_hel); 
       int ihel = igood[jhel]; 
-      t = matrix(helicities[ihel]); 
-      matrix_element += t * hwgt; 
+      t = matrix_uux_uux(helicities[ihel]); 
+      matrix_element[0] += t * hwgt; 
     }
   }
-  matrix_element /= denominator; 
+
+  matrix_element[0] /= denominator; 
 
 }
-
-//--------------------------------------------------------------------------
-// Evaluate |M|^2, including incoming flavour dependence.
-
-double Sigma_uux_uux::sigmaHat() 
-{
-  // Return 0 if not correct initial state assignment
-  if( !((id1 == 4 && id2 == -4) || (id1 == 2 && id2 == -2)))
-  {
-    return 0; 
-  }
-  // Already calculated matrix_element in sigmaKin
-  return matrix_element; 
-}
-
-//--------------------------------------------------------------------------
-// Select identity, colour and anticolour.
-
-void Sigma_uux_uux::setIdColAcol() 
-{
-  if(id1 == 4 && id2 == -4)
-  {
-    // Pick one of the flavor combinations [[4, -4]]
-    int flavors[1][2] = {4, -4}; 
-    vector<double> probs(1, 1./1.); 
-    int choice = rndmPtr->pick(probs); 
-    id3 = flavors[choice][0]; 
-    id4 = flavors[choice][1]; 
-  }
-  else if(id1 == 2 && id2 == -2)
-  {
-    // Pick one of the flavor combinations [[2, -2]]
-    int flavors[1][2] = {2, -2}; 
-    vector<double> probs(1, 1./1.); 
-    int choice = rndmPtr->pick(probs); 
-    id3 = flavors[choice][0]; 
-    id4 = flavors[choice][1]; 
-  }
-  setId(id1, id2, id3, id4); 
-  vector<double> probs; 
-  double sum = jamp2[0] + jamp2[1]; 
-  for(int i = 0; i < ncolor; i++ )
-    probs.push_back(jamp2[i]/sum); 
-  int ic = rndmPtr->pick(probs); 
-  static int col[2][8] = {1, 0, 0, 1, 2, 0, 0, 2, 2, 0, 0, 1, 2, 0, 0, 1}; 
-  setColAcol(col[ic][0], col[ic][1], col[ic][2], col[ic][3], col[ic][4],
-      col[ic][5], col[ic][6], col[ic][7]);
-}
-
-//--------------------------------------------------------------------------
-// Evaluate weight for angles of decay products in process
-
-double Sigma_uux_uux::weightDecay(Event& process, int iResBeg, int iResEnd) 
-{
-  // Just use isotropic decay (default)
-  return 1.; 
-}
-
-//==========================================================================
-// Private class member functions
-
-//--------------------------------------------------------------------------
-// Evaluate |M|^2 for a given helicity
-
-double Sigma_uux_uux::matrix(const int hel[]) 
+double Sigma_sm_qqx_qqx::matrix_uux_uux(const int hel[]) 
 {
   // Local variables
   const int nwavefuncs = 10, ngraphs = 10; 
+  const int ncolor = 2; 
   int i, j; 
   complex ztemp; 
   complex amp[ngraphs], jamp[ncolor]; 
@@ -533,22 +562,20 @@ double Sigma_uux_uux::matrix(const int hel[])
 
   // Store the leading color flows for choice of color
   for(i = 0; i < ncolor; i++ )
-    jamp2[i] += real(jamp[i] * conj(jamp[i])); 
+    jamp2[0][i] += real(jamp[i] * conj(jamp[i])); 
 
   return matrix; 
-
 }
 
-}  // end namespace Pythia
 
+}  // end namespace Pythia
 """ % misc.get_pkg_info()
 
-        color_amplitudes = self.mymatrixelement.get_color_amplitudes()
+        exporter = export_pythia8.ProcessExporterPythia8(self.mymatrixelement,
+        self.mycppmodel, process_string = "q q~ > q q~")
 
-        export_pythia8.write_pythia8_process_cc_file(\
-            writers.CPPWriter(self.give_pos('test.cc')),
-            self.mymatrixelement, self.mycppmodel,
-            color_amplitudes)
+        exporter.write_pythia8_process_cc_file(\
+        writers.CPPWriter(self.give_pos('test.cc')))
 
         self.assertFileContains('test.cc', goal_string)
 
@@ -558,10 +585,11 @@ double Sigma_uux_uux::matrix(const int hel[])
 
         export_pythia8.generate_process_files_pythia8(self.mymatrixelement,
                                                       self.mycppmodel,
-                                                      "/tmp")
+                                                      process_string = "q q~ > q q~",
+                                                      path = "/tmp")
         
-        print "Please try compiling the file /tmp/Sigma_uux_uux.cc:"
-        print "cd /tmp; g++ -c -I $PATH_TO_PYTHIA8/include Sigma_uux_uux.cc"
+        print "Please try compiling the file /tmp/Sigma_sm_qqx_qqx.cc:"
+        print "cd /tmp; g++ -c -I $PATH_TO_PYTHIA8/include Sigma_sm_qqx_qqx.cc.cc"
 
         
 #===============================================================================

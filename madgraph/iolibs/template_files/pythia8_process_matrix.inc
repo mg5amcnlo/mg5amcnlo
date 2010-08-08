@@ -1,5 +1,7 @@
+double %(process_class_name)s::matrix_%(proc_name)s(const int hel[]) { 
 // Local variables
 const int nwavefuncs = %(nwavefuncs)d, ngraphs = %(ngraphs)d;
+const int ncolor = %(ncolor)d;
 int i,j;
 complex ztemp;
 complex amp[ngraphs], jamp[ncolor];
@@ -33,6 +35,7 @@ for(i=0;i < ncolor; i++){
 
 // Store the leading color flows for choice of color
 for(i=0;i < ncolor; i++)
-    jamp2[i] += real(jamp[i]*conj(jamp[i]));
+    jamp2[%(proc_number)d][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
+}
