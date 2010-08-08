@@ -95,6 +95,35 @@ class HelasCallWriter(base_objects.PhysicsObject):
 
         return res
 
+    def get_wavefunction_calls(self, wavefunctions):
+        """Return a list of strings, corresponding to the Helas calls
+        for the matrix element"""
+
+        assert isinstance(wavefunctions, helas_objects.HelasWavefunctionList), \
+               "%s not valid argument for get_wavefunction_calls" % \
+               repr(wavefunctions)
+
+        res = [self.get_wavefunction_call(wf) for wf in wavefunctions]
+
+        return res
+
+    def get_amplitude_calls(self, matrix_element):
+        """Return a list of strings, corresponding to the Helas calls
+        for the matrix element"""
+        
+        assert isinstance(matrix_element, helas_objects.HelasMatrixElement), \
+               "%s not valid argument for get_matrix_element_calls" % \
+               repr(matrix_element)            
+
+        res = []
+        for diagram in matrix_element.get('diagrams'):
+            res.append("# Amplitude(s) for diagram number %d" % \
+                       diagram.get('number'))
+            for amplitude in diagram.get('amplitudes'):
+                res.append(self.get_amplitude_call(amplitude))
+
+        return res
+
     def get_wavefunction_call(self, wavefunction):
         """Return the function for writing the wavefunction
         corresponding to the key"""

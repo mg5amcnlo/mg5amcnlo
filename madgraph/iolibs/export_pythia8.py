@@ -104,7 +104,8 @@ class ProcessExporterPythia8(object):
         self.nfinal = self.nexternal - self.ninitial
 
         # Check if we can use the same helicities for all matrix
-        # elements (to speed up production)
+        # elements, and hence reuse the same wavefunctions for
+        # different processes
         
         self.single_helicities = True
 
@@ -114,6 +115,21 @@ class ProcessExporterPythia8(object):
             if self.get_helicity_matrix(me) != hel_matrix:
                 self.single_helicities = False
 
+        if self.single_helicities:
+            self.wavefunctions = []
+            wf_number = 0
+
+            for me in self.matrix_elements:
+                for iwf, wf in enumerate(me.get_all_wavefunctions()):
+                    try:
+                        old_wf = \
+                               self.wavefunctions[self.wavefunctions.index(wf)]
+                        wf.set('number', old_wf.get('number'))
+                    except ValueError:
+                        wf_number += 1
+                        wf.set('number', wf_number)
+                        self.wavefunctions.append(wf)
+ 
     # Methods for generation of process files for Pythia 8
 
     def generate_process_files_pythia8(self):
@@ -246,19 +262,29 @@ class ProcessExporterPythia8(object):
         replace_dict['nprocesses'] = len(self.matrix_elements)
 
         if self.single_helicities:
-            replace_dict['all_sigma_kin_definitions'] = ""
+            replace_dict['all_sigma_kin_definitions'] = \
+                          """// Calculate wavefunctions
+                          void calculate_wavefunctions(const int hel[]);
+                          static const int nwavefuncs = %d;
+                          complex w[nwavefuncs][18];""" % \
+                                                    len(self.wavefunctions)
+            replace_dict['all_matrix_definitions'] = \
+                           "\n".join(["double matrix_%s();" % \
+                                      me.get('processes')[0].shell_string_v4().\
+                                      replace("0_", "") \
+                                      for me in self.matrix_elements])
+
         else:
             replace_dict['all_sigma_kin_definitions'] = \
                           "\n".join(["void sigmaKin_%s();" % \
                                      me.get('processes')[0].shell_string_v4().\
                                      replace("0_", "") \
                                      for me in self.matrix_elements])
-
-        replace_dict['all_matrix_definitions'] = \
-                       "\n".join(["double matrix_%s(const int hel[]);" % \
-                                  me.get('processes')[0].shell_string_v4().\
-                                  replace("0_", "") \
-                                  for me in self.matrix_elements])
+            replace_dict['all_matrix_definitions'] = \
+                           "\n".join(["double matrix_%s(const int hel[]);" % \
+                                      me.get('processes')[0].shell_string_v4().\
+                                      replace("0_", "") \
+                                      for me in self.matrix_elements])
 
 
         file = read_template_file('pythia8_process_class.inc') % replace_dict
@@ -429,6 +455,24 @@ class ProcessExporterPythia8(object):
         return ret_lines
         
 
+    def get_calculate_wavefunctions(self, wavefunctions):
+        """Return the lines for optimized calculation of the
+        wavefunctions for all subprocesses"""
+
+        replace_dict = {}
+
+        replace_dict['nwavefuncs'] = len(wavefunctions)
+
+        replace_dict['wavefunction_calls'] = "\n".join(\
+            self.helas_call_writer.get_wavefunction_calls(\
+            helas_objects.HelasWavefunctionList(wavefunctions)))
+
+        file = read_template_file('pythia8_process_wavefunctions.inc') % \
+                replace_dict
+
+        return file
+       
+
     def get_sigmaKin_lines(self, color_amplitudes):
         """Get sigmaKin_lines for function definition for Pythia 8 .cc file"""
 
@@ -446,13 +490,14 @@ class ProcessExporterPythia8(object):
             # Extract helicity matrix
             replace_dict['helicity_matrix'] = \
                             self.get_helicity_matrix(self.matrix_elements[0])
+
             # Extract denominator
             replace_dict['den_factors'] = \
                      ",".join([str(me.get_denominator_factor()) for me in \
                                self.matrix_elements])
 
             replace_dict['get_matrix_t_lines'] = "\n".join(
-                    ["t[%(iproc)d]=matrix_%(proc_name)s(helicities[ihel]);" % \
+                    ["t[%(iproc)d]=matrix_%(proc_name)s();" % \
                      {"iproc": i, "proc_name": \
                       me.get('processes')[0].shell_string_v4().replace("0_", "")} \
                      for i, me in enumerate(self.matrix_elements)])
@@ -475,14 +520,22 @@ class ProcessExporterPythia8(object):
     def get_all_sigmaKin_lines(self, color_amplitudes):
         """Get sigmaKin_process for all subprocesses for Pythia 8 .cc file"""
 
-        ret_lines = ""
-        if not self.single_helicities:
-            ret_lines += "\n".join([self.get_sigmaKin_single_process(i, me) \
+        ret_lines = []
+        if self.single_helicities:
+            ret_lines.append(\
+                "void %s::calculate_wavefunctions(const int hel[]){" % \
+                self.process_name)
+            ret_lines.append("// Calculate wavefunctions for all processes")
+            ret_lines.append(self.get_calculate_wavefunctions(\
+                self.wavefunctions))
+            ret_lines.append("}")
+        else:
+            ret_lines.extend([self.get_sigmaKin_single_process(i, me) \
                                   for i, me in enumerate(self.matrix_elements)])
-        ret_lines += "\n".join([self.get_matrix_single_process(i, me,
+        ret_lines.extend([self.get_matrix_single_process(i, me,
                                                       color_amplitudes[i]) \
                                 for i, me in enumerate(self.matrix_elements)])
-        return ret_lines
+        return "\n".join(ret_lines)
 
 
     def get_sigmaKin_single_process(self, i, matrix_element):
@@ -528,6 +581,18 @@ class ProcessExporterPythia8(object):
         replace_dict['proc_name'] = \
           matrix_element.get('processes')[0].shell_string_v4().replace("0_", "")
         
+
+        if self.single_helicities:
+            replace_dict['matrix_args'] = ""
+            replace_dict['all_wavefunction_calls'] = "int i, j;"
+        else:
+            replace_dict['matrix_args'] = "const int hel[]"
+            wavefunctions = matrix_element.get_all_wavefunctions()
+            replace_dict['all_wavefunction_calls'] = \
+                         """const int nwavefuncs = %d;
+                         complex w[nwavefuncs][18];\n""" % len(wavefunctions)+ \
+                         self.get_calculate_wavefunctions(wavefunctions)
+
         # Process name
         replace_dict['process_class_name'] = self.process_name
         
@@ -537,12 +602,7 @@ class ProcessExporterPythia8(object):
         # Number of color flows
         replace_dict['ncolor'] = len(color_amplitudes)
 
-        # Number of wavefunctions and amplitudes
-        replace_dict['nwavefuncs'] = matrix_element.get_number_of_wavefunctions()
-
         replace_dict['ngraphs'] = matrix_element.get_number_of_amplitudes()
-
-        replace_dict['ncolor'] = len(color_amplitudes)
 
         # Extract color matrix
         replace_dict['color_matrix_lines'] = \
@@ -550,7 +610,7 @@ class ProcessExporterPythia8(object):
 
         # The Helicity amplitude calls
         replace_dict['amplitude_calls'] = "\n".join(\
-            self.helas_call_writer.get_matrix_element_calls(matrix_element))
+            self.helas_call_writer.get_amplitude_calls(matrix_element))
         replace_dict['jamp_lines'] = self.get_jamp_lines(color_amplitudes)
 
         file = read_template_file('pythia8_process_matrix.inc') % \
@@ -685,6 +745,8 @@ class ProcessExporterPythia8(object):
         
         # Here goes the color connections corresponding to the JAMPs
         # Only one output, for the first subproc!
+
+        res_lines.append("// Pick color flow")
 
         res_lines.append("int ncolor[%d] = {%s};" % \
                          (len(color_amplitudes),

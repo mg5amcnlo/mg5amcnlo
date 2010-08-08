@@ -1,23 +1,12 @@
-double %(process_class_name)s::matrix_%(proc_name)s(const int hel[]) { 
+double %(process_class_name)s::matrix_%(proc_name)s(%(matrix_args)s) { 
+%(all_wavefunction_calls)s
 // Local variables
-const int nwavefuncs = %(nwavefuncs)d, ngraphs = %(ngraphs)d;
+const int ngraphs = %(ngraphs)d;
 const int ncolor = %(ncolor)d;
-int i,j;
 complex ztemp;
 complex amp[ngraphs], jamp[ncolor];
-complex w[nwavefuncs][18];
 // The color matrix;
 %(color_matrix_lines)s
-
-// Convert Pythia 4-vectors to double[]
-double p[nexternal][4];
-for(i=0;i < nexternal;i++){
-    p[i][0] = pME[i].e();
-    p[i][1] = pME[i].px();
-    p[i][2] = pME[i].py();
-    p[i][3] = pME[i].pz();
-}
-
 // Calculate all amplitudes
 %(amplitude_calls)s
 

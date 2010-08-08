@@ -4,6 +4,7 @@ static bool goodhel[ncomb] = {ncomb * false};
 static int ntry = 0, sum_hel = 0, ngood = 0;
 static int igood[ncomb];
 static int jhel;
+complex **wfs;
 double t[nprocesses];
 // Helicities for the process
 %(helicity_matrix)s
@@ -21,6 +22,7 @@ if (sum_hel == 0 || ntry < 10){
 // Calculate the matrix element for all helicities
   for(int ihel = 0; ihel < ncomb; ihel ++){
     if (goodhel[ihel] || ntry < 2){
+      calculate_wavefunctions(helicities[ihel]);
       %(get_matrix_t_lines)s
       double tsum = 0;
       for(int iproc = 0;iproc < nprocesses; iproc++){
@@ -46,6 +48,7 @@ else
     if (jhel >= ngood) jhel=0;
     double hwgt = double(ngood)/double(sum_hel);
     int ihel = igood[jhel];
+    calculate_wavefunctions(helicities[ihel]);
     %(get_matrix_t_lines)s
     for(int iproc = 0;iproc < nprocesses; iproc++){
       matrix_element[iproc]+=t[iproc]*hwgt;
