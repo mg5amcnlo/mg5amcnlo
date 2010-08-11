@@ -13,7 +13,8 @@
 #
 ################################################################################
 
-"""Methods and classes to export matrix elements to v4 format."""
+"""Methods and classes to export models and matrix elements to Pythia8
+format."""
 
 import fractions
 import glob
@@ -104,8 +105,7 @@ class ProcessExporterPythia8(object):
         self.nfinal = self.nexternal - self.ninitial
 
         # Check if we can use the same helicities for all matrix
-        # elements, and hence reuse the same wavefunctions for
-        # different processes
+        # elements
         
         self.single_helicities = True
 
@@ -116,6 +116,10 @@ class ProcessExporterPythia8(object):
                 self.single_helicities = False
 
         if self.single_helicities:
+            # If all processes have the same helicity structure, this
+            # allows us to reuse the same wavefunctions for the
+            # different processes
+            
             self.wavefunctions = []
             wf_number = 0
 

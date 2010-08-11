@@ -268,8 +268,11 @@ class Sigma_sm_qqx_qqx : public Sigma2Process
   private:
 
     // Private functions to calculate the matrix element for all subprocesses
-    void sigmaKin_uux_uux(); 
-    double matrix_uux_uux(const int hel[]); 
+    // Calculate wavefunctions
+    void calculate_wavefunctions(const int hel[]); 
+    static const int nwavefuncs = 10; 
+    complex w[nwavefuncs][18]; 
+    double matrix_uux_uux(); 
 
     // Constants for array limits
     static const int nexternal = 4; 
@@ -340,7 +343,88 @@ void Sigma_sm_qqx_qqx::initProc()
 
 void Sigma_sm_qqx_qqx::sigmaKin() 
 {
-  sigmaKin_uux_uux(); 
+  // Set the parameters which change event by event
+  pars->setDependentParameters(particleDataPtr, coupSMPtr, alpS); 
+  pars->setDependentCouplings(particleDataPtr, coupSMPtr); 
+  // Reset color flows
+  for(int i = 0; i < 2; i++ )
+    jamp2[0][i] = 0.; 
+
+  // Local variables and constants
+  const int ncomb = 16; 
+  static bool goodhel[ncomb] = {ncomb * false}; 
+  static int ntry = 0, sum_hel = 0, ngood = 0; 
+  static int igood[ncomb]; 
+  static int jhel; 
+  complex * * wfs; 
+  double t[nprocesses]; 
+  // Helicities for the process
+  static const int helicities[ncomb][nexternal] = {-1, -1, -1, -1, -1, -1, -1,
+      1, -1, -1, 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, 1, -1, 1, -1, 1, 1,
+      -1, -1, 1, 1, 1, 1, -1, -1, -1, 1, -1, -1, 1, 1, -1, 1, -1, 1, -1, 1, 1,
+      1, 1, -1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1, 1, 1, 1};
+  // Denominators: spins, colors and identical particles
+  const int denominators[nprocesses] = {36}; 
+
+  ntry = ntry + 1; 
+
+  // Reset the matrix elements
+  for(int i = 0; i < nprocesses; i++ )
+  {
+    matrix_element[i] = 0.; 
+  }
+
+  if (sum_hel == 0 || ntry < 10)
+  {
+    // Calculate the matrix element for all helicities
+    for(int ihel = 0; ihel < ncomb; ihel++ )
+    {
+      if (goodhel[ihel] || ntry < 2)
+      {
+        calculate_wavefunctions(helicities[ihel]); 
+        t[0] = matrix_uux_uux(); 
+        double tsum = 0; 
+        for(int iproc = 0; iproc < nprocesses; iproc++ )
+        {
+          matrix_element[iproc] += t[iproc]; 
+          tsum += t[iproc]; 
+        }
+        // Store which helicities give non-zero result
+        if (tsum != 0. && !goodhel[ihel])
+        {
+          goodhel[ihel] = true; 
+          ngood++; 
+          igood[ngood] = ihel; 
+        }
+      }
+    }
+    jhel = 0; 
+    sum_hel = min(sum_hel, ngood); 
+  }
+  else
+  {
+    // Only use the "good" helicities
+    for(int j = 0; j < sum_hel; j++ )
+    {
+      jhel++; 
+      if (jhel >= ngood)
+        jhel = 0; 
+      double hwgt = double(ngood)/double(sum_hel); 
+      int ihel = igood[jhel]; 
+      calculate_wavefunctions(helicities[ihel]); 
+      t[0] = matrix_uux_uux(); 
+      for(int iproc = 0; iproc < nprocesses; iproc++ )
+      {
+        matrix_element[iproc] += t[iproc] * hwgt; 
+      }
+    }
+  }
+
+  for (int i = 0; i < nprocesses; i++ )
+    matrix_element[i] /= denominators[i]; 
+
+
+
 }
 
 //--------------------------------------------------------------------------
@@ -394,6 +478,7 @@ void Sigma_sm_qqx_qqx::setIdColAcol()
     id4 = flavors[choice][1]; 
   }
   setId(id1, id2, id3, id4); 
+  // Pick color flow
   int ncolor[1] = {2}; 
   if(id1 == 2 && id2 == -2 && id3 == 2 && id4 == -2 || id1 == 4 && id2 == -4 &&
       id3 == 4 && id4 == -4)
@@ -424,92 +509,13 @@ double Sigma_sm_qqx_qqx::weightDecay(Event& process, int iResBeg, int iResEnd)
 //--------------------------------------------------------------------------
 // Evaluate |M|^2 for each subprocess
 
-void Sigma_sm_qqx_qqx::sigmaKin_uux_uux() 
+void Sigma_sm_qqx_qqx::calculate_wavefunctions(const int hel[])
 {
-
-  // Local variables and constants
-  const int ncomb = 16; 
-  const int ncolor = 2; 
-  static bool goodhel[ncomb] = {ncomb * false}; 
-  static int ntry = 0, sum_hel = 0, ngood = 0; 
-  static int igood[ncomb]; 
-  static int jhel; 
-  double t; 
-  // Helicities for the process
-  static const int helicities[ncomb][nexternal] = {-1, -1, -1, -1, -1, -1, -1,
-      1, -1, -1, 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, 1, -1, 1, -1, 1, 1,
-      -1, -1, 1, 1, 1, 1, -1, -1, -1, 1, -1, -1, 1, 1, -1, 1, -1, 1, -1, 1, 1,
-      1, 1, -1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1, 1, 1, 1};
-  // Denominator: spins, colors and identical particles
-  const int denominator = 36; 
-
-  ntry = ntry + 1; 
-
-  // Set the parameters which change event by event
-  pars->setDependentParameters(particleDataPtr, coupSMPtr, alpS); 
-  pars->setDependentCouplings(particleDataPtr, coupSMPtr); 
-
-  // Reset color flows
-  for(int i = 0; i < ncolor; i++ )
-    jamp2[0][i] = 0.; 
-
-  // Calculate the matrix element
-  matrix_element[0] = 0.; 
-
-  if (sum_hel == 0 || ntry < 10)
-  {
-    // Calculate the matrix element for all helicities
-    for(int ihel = 0; ihel < ncomb; ihel++ )
-    {
-      if (goodhel[ihel] || ntry < 2)
-      {
-        t = matrix_uux_uux(helicities[ihel]); 
-        matrix_element[0] += t; 
-        // Store which helicities give non-zero result
-        if (t != 0. && !goodhel[ihel])
-        {
-          goodhel[ihel] = true; 
-          ngood++; 
-          igood[ngood] = ihel; 
-        }
-      }
-    }
-    jhel = 0; 
-    sum_hel = min(sum_hel, ngood); 
-  }
-  else
-  {
-    // Only use the "good" helicities
-    for(int j = 0; j < sum_hel; j++ )
-    {
-      jhel++; 
-      if (jhel >= ngood)
-        jhel = 0; 
-      double hwgt = double(ngood)/double(sum_hel); 
-      int ihel = igood[jhel]; 
-      t = matrix_uux_uux(helicities[ihel]); 
-      matrix_element[0] += t * hwgt; 
-    }
-  }
-
-  matrix_element[0] /= denominator; 
-
-}
-double Sigma_sm_qqx_qqx::matrix_uux_uux(const int hel[]) 
-{
-  // Local variables
-  const int nwavefuncs = 10, ngraphs = 10; 
-  const int ncolor = 2; 
+  // Calculate wavefunctions for all processes
+  double p[nexternal][4]; 
   int i, j; 
-  complex ztemp; 
-  complex amp[ngraphs], jamp[ncolor]; 
-  complex w[nwavefuncs][18]; 
-  // The color matrix;
-  static const double denom[ncolor] = {1, 1}; 
-  static const double cf[ncolor][ncolor] = {9, 3, 3, 9}; 
 
   // Convert Pythia 4-vectors to double[]
-  double p[nexternal][4]; 
   for(i = 0; i < nexternal; i++ )
   {
     p[i][0] = pME[i].e(); 
@@ -518,26 +524,41 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux(const int hel[])
     p[i][3] = pME[i].pz(); 
   }
 
-  // Calculate all amplitudes
+  // Calculate all wavefunctions
   Pythia8_sm::ixxxxx(p[0], mME[0], hel[0], +1, w[0]); 
   Pythia8_sm::oxxxxx(p[1], mME[1], hel[1], -1, w[1]); 
   Pythia8_sm::oxxxxx(p[2], mME[2], hel[2], +1, w[2]); 
   Pythia8_sm::ixxxxx(p[3], mME[3], hel[3], -1, w[3]); 
   FFV1_3(w[0], w[1], pars->GC_10, pars->ZERO, pars->ZERO, w[4]); 
-  // Amplitude(s) for diagram number 1
-  FFV1_0(w[3], w[2], w[4], pars->GC_10, amp[0]); 
   FFV2_3(w[0], w[1], pars->GC_35, pars->MZ, pars->WZ, w[5]); 
   FFV5_3(w[0], w[1], pars->GC_47, pars->MZ, pars->WZ, w[6]); 
+  FFV1_3(w[0], w[2], pars->GC_10, pars->ZERO, pars->ZERO, w[7]); 
+  FFV2_3(w[0], w[2], pars->GC_35, pars->MZ, pars->WZ, w[8]); 
+  FFV5_3(w[0], w[2], pars->GC_47, pars->MZ, pars->WZ, w[9]); 
+
+
+}
+double Sigma_sm_qqx_qqx::matrix_uux_uux() 
+{
+  int i, j; 
+  // Local variables
+  const int ngraphs = 10; 
+  const int ncolor = 2; 
+  complex ztemp; 
+  complex amp[ngraphs], jamp[ncolor]; 
+  // The color matrix;
+  static const double denom[ncolor] = {1, 1}; 
+  static const double cf[ncolor][ncolor] = {9, 3, 3, 9}; 
+  // Calculate all amplitudes
+  // Amplitude(s) for diagram number 1
+  FFV1_0(w[3], w[2], w[4], pars->GC_10, amp[0]); 
   // Amplitude(s) for diagram number 2
   FFV2_0(w[3], w[2], w[5], pars->GC_35, amp[1]); 
   FFV5_0(w[3], w[2], w[5], pars->GC_47, amp[2]); 
   FFV2_0(w[3], w[2], w[6], pars->GC_35, amp[3]); 
   FFV5_0(w[3], w[2], w[6], pars->GC_47, amp[4]); 
-  FFV1_3(w[0], w[2], pars->GC_10, pars->ZERO, pars->ZERO, w[7]); 
   // Amplitude(s) for diagram number 3
   FFV1_0(w[3], w[1], w[7], pars->GC_10, amp[5]); 
-  FFV2_3(w[0], w[2], pars->GC_35, pars->MZ, pars->WZ, w[8]); 
-  FFV5_3(w[0], w[2], pars->GC_47, pars->MZ, pars->WZ, w[9]); 
   // Amplitude(s) for diagram number 4
   FFV2_0(w[3], w[1], w[8], pars->GC_35, amp[6]); 
   FFV5_0(w[3], w[1], w[8], pars->GC_47, amp[7]); 
