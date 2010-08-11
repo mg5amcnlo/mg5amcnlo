@@ -51,7 +51,8 @@ class AbstractRoutine(object):
     def add_symmetry(self, outgoing):
         """ add an outgoing """
         
-        self.symmetries.append(outgoing)
+        if not outgoing in self.symmetries:
+            self.symmetries.append(outgoing)
         
     def write(self, output_dir, language='Fortran'):
         """ write the content of the object """
@@ -144,7 +145,7 @@ class AbstractRoutineBuilder(object):
             try:       
                 lorentz = eval(self.lorentz_expr)
             except NameError:
-                print 'unknow type in Lorentz Evaluation'
+                logger.error('unknow type in Lorentz Evaluation')
                 raise
             else:
                 self.routine_kernel = lorentz
@@ -228,13 +229,8 @@ class AbstractRoutineBuilder(object):
         if not lorentz:
             logger.info('compute kernel %s' % self.counter)
             AbstractRoutineBuilder.counter += 1  
-            try:        
-                lorentz = eval(self.lorentz_expr)
-            except NameError, why:
-                print dir(why)
-                print why.args
-                raise
-                
+            lorentz = eval(self.lorentz_expr)
+                 
             if isinstance(lorentz, numbers.Number):
                 self.routine_kernel = lorentz
                 return lorentz
@@ -372,7 +368,8 @@ class AbstractALOHAModel(dict):
                 conjg_builder_list= builder.define_all_conjugate_builder(\
                                                    conjugate_list[lorentz.name])
                 for conjg_builder in conjg_builder_list:
-                        self.compute_aloha(conjg_builder, lorentz.name)
+                    assert conjg_builder_list.count(conjg_builder) == 1
+                    self.compute_aloha(conjg_builder, lorentz.name)
                     
                     
         if save:
@@ -434,7 +431,8 @@ class AbstractALOHAModel(dict):
                 for j in range(i):
                     part2 = vertex.particles[j]
                     if part1.name == part2.name and \
-                                                part1.color == part2.color == 1:
+                                        part1.color == part2.color == 1 and\
+                                        part1.spin != 2:
                         for lorentz in vertex.lorentz:
                             if self.symmetries.has_key(lorentz.name):
                                 self.symmetries[lorentz.name][i+1] = j+1

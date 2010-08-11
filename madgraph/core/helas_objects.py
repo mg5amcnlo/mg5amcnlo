@@ -753,7 +753,13 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # First shot: just the index in the interaction
         if self.get('interaction_id') == 0:
             return 0
-        wf_index = self.get('pdg_codes').index(self.get_anti_pdg_code())
+        
+        wf_indices = self.get('pdg_codes')
+        # take the last index in case of identical particles
+        wf_indices.reverse() 
+        wf_index = len(wf_indices) - wf_indices.index(self.get_anti_pdg_code()) -1
+        wf_indices.reverse() # restore the ordering
+        #wf_index = self.get('pdg_codes').index(self.get_anti_pdg_code())
         # If fermion, then we need to correct for I/O status
         spin_state = self.get_spin_state_number()
         if spin_state % 2 == 0:

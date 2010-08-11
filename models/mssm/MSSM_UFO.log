@@ -1,0 +1,63 @@
+# This file was automatically created by FeynRules $Revision: 216 $
+# Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
+# Date: Wed 11 Aug 2010 14:09:56
+
+
+# 
+# This is the logfile for the model MSSM
+
+# Authors: Benjamin Fuks, Neil D. Christensen
+# Model version: 1.1.9
+# Checking the Lagrangians
+   * All Lagrangians are ok.
+#
+# Particle definitions
+#
+
+   * No particles removed. All particles correspond to GenInt setup.
+
+# Automatically assigned PDG numbers
+   * Assigned PDG number 9000001 to particle ghG
+   * Assigned PDG number 9000002 to particle ghA
+   * Assigned PDG number 9000003 to particle ghZ
+   * Assigned PDG number 9000004 to particle ghWp
+   * Assigned PDG number 9000005 to particle ghWm
+
+
+# Compulsory PDG codes:
+   * Class SM leptons complete.
+   * Class SM neutrinos complete.
+   * Class SM quarks complete.
+   * Class SM gauge bosons complete.
+#
+# Parameter definitions
+#
+
+   * All parameters are ok.
+
+
+# Vertices
+   * Calling FeynmanRules for 12 Lagrangians.
+   * Number of classes vertices: 301
+   * Number of flavored vertices: 964
+   * Checked QNumber conservation.
+   * particles.py written.
+   * parameters.py written.
+#
+# Vertex definitions
+#
+
+   * 964 vertices written.
+   * vertices.py written.
+#
+# Lorentz structure definitions
+#
+
+   * 21 lorentz structures written.
+   * lorentz.py written.
+#
+# Coupling definitions
+#
+
+   * 1077 couplings written.
+   * couplings.py written.
