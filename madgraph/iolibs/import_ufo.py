@@ -215,11 +215,15 @@ class UFOMG5Converter(object):
         # Change identity in color.TC
         #data_string = data_string.replace('Identity(1,2)','color.T(2,1)')
         # Change convention for summed indices
-        data_string = data_string.replace(',a',',-')
-        data_string = data_string.replace('(a','(-')
-        data_string = data_string.replace(',\'a',',-')
-        data_string = data_string.replace('(\'a','(-')
-        data_string = data_string.replace('\'','')
+        p = re.compile(r'''\'\w(?P<number>\d+)\'''')
+        data_string = p.sub('-\g<number>', data_string)
+        
+        
+        #data_string = data_string.replace(',a',',-')
+        #data_string = data_string.replace('(a','(-')
+        #data_string = data_string.replace(',\'a',',-')
+        #data_string = data_string.replace('(\'a','(-')
+        #data_string = data_string.replace('\'','')
             
         output = data_string.split('*')
         output = color.ColorString([eval(data).shift_indices() for data in output if data !='1'])
