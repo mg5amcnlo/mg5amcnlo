@@ -12,7 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-from madgraph import MG5DIR
+from madgraph import MG5DIR, MG4DIR
 from madgraph.iolibs import save_load_object
 import subprocess
 import shutil
@@ -75,6 +75,50 @@ class CompareMG4WithUFOModel(unittest.TestCase):
                     self.check_interactions(vertex, ufo_vertex, rep )
             
         self.assertEqual(nb_vertex, 67)
+  
+    def test_mssm_equivalence(self):
+        """ test the UFO and MG4 model correspond to the same model """
+        
+        # import UFO model
+        import models.mssm as model
+        converter = import_ufo.UFOMG5Converter(model)
+        ufo_model = converter.load_model()
+        
+        # import MG4 model
+        model = base_objects.Model()
+        model.set('particles', files.read_from_file(
+               os.path.join(MG4DIR,'Models','mssm_mg5','particles.dat'),
+               import_v4.read_particles_v4))
+        model.set('interactions', files.read_from_file(
+            os.path.join(MG4DIR,'Models','mssm_mg5','interactions.dat'),
+            import_v4.read_interactions_v4,
+            model['particles']))
+        
+        # Checking the particles
+        for particle in model['particles']:
+            if particle['pdg_code']> 8000000:
+                # different ways to treat 4 gluon vertex
+                continue
+            ufo_particle = ufo_model["particle_dict"][particle['pdg_code']]
+            self.check_particles(particle, ufo_particle)
+        
+        # Checking the interactions
+        nb_vertex = 0
+        for ufo_vertex in ufo_model['interactions']:
+            pdg_code_ufo = [abs(part['pdg_code']) for part in ufo_vertex['particles']]
+            int_name = [part['name'] for part in ufo_vertex['particles']]
+            rep = (pdg_code_ufo, int_name)
+            pdg_code_ufo.sort()
+            for vertex in model['interactions']:
+                pdg_code_mg4 = [abs(part['pdg_code']) for part in vertex['particles']]
+                pdg_code_mg4.sort()
+                
+                if pdg_code_mg4 == pdg_code_ufo:
+                    nb_vertex += 1
+                    self.check_interactions(vertex, ufo_vertex, rep )
+            
+        self.assertEqual(nb_vertex, 1307)  
+  
             
     
     def check_particles(self, mg4_part, ufo_part):
@@ -120,12 +164,13 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         except AssertionError:
             part_name =[part.get('name') for part in mg4_vertex.get('particles')]
             if ['g']*len(mg4_vertex.get('particles')) == part_name:
-                #print part_name, mg4_color,"=?=", mg5_color
+                print part_name, mg4_color,"=?=", mg5_color
                 pass #too complicate to test
             elif str(mg4_color) == '[]':
                 self.assertEqual('[1 ]',str(mg5_color))
             else:
-                raise
+                part_name_5 = [part.get('name') for part in ufo_vertex.get('particles')]
+                print part_name, mg4_color,"mg4=?=mg5", mg5_color, part_name_5
         
         
 # Test UFO Expression parsers

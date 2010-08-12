@@ -25,7 +25,7 @@ complexconjugate = Function(name = 'complexconjugate',
 
 re = Function(name = 're',
               arguments = ('z',),
-              expression = 'z/real')
+              expression = 'z.real')
 
 im = Function(name = 'im',
               arguments = ('z',),

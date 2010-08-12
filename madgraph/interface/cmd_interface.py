@@ -390,6 +390,9 @@ class HelpToCmd(object):
     def help_display(self):
         print "syntax: display " + "|".join(self._display_opts)
         print "-- display a the status of various internal state variables"
+        print "   for particles/interactions you can specify the name of the"
+        print "   particles/interactions to receive more details information."
+        print "   example display particles e+ "
 
     def help_tutorial(self):
         print "syntax: tutorial [" + "|".join(self._tutorial_opts) + "]"
@@ -560,7 +563,7 @@ class CheckValidForCmd(object):
         syntax: display XXXXX
         """
             
-        if len(args) != 1 or args[0] not in self._display_opts:
+        if len(args) not in [1,2] or args[0] not in self._display_opts:
             self.help_display()
             raise self.InvalidCmd
 
@@ -569,6 +572,7 @@ class CheckValidForCmd(object):
 
         if args[0] in ['processes', 'diagrams'] and not self._curr_amps:
             raise self.InvalidCmd("No process generated, please generate a process!")
+
 
     def check_draw(self, args):
         """check the validity of line
@@ -1271,7 +1275,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         #check the validity of the arguments
         self.check_display(args)
 
-        if args[0] == 'particles':
+        if args[0] == 'particles' and len(args) == 1:
             print "Current model contains %i particles:" % \
                     len(self._curr_model['particles'])
             part_antipart = [part for part in self._curr_model['particles'] \
@@ -1285,7 +1289,18 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 print part['name'],
             print ''
 
-        elif args[0] == 'interactions':
+        elif args[0] == 'particles':
+            if args[1].isdigit() or (args[1][0] == '-' and args[1][1:].isdigit()):
+                particle = self._curr_model.get_particle(abs(int(args[1])))
+            else:
+                particle = self._curr_model['particles'].find_name(args[1])
+            if not particle:
+                raise self.InvalidCmd, 'no particles %s in current model' % args[1]
+            
+            print "Particle %s has the following property:" % particle.get('name')
+            print str(particle)
+            
+        elif args[0] == 'interactions' and len(args) == 1:
             text = "Current model contains %i interactions\n" % \
                     len(self._curr_model['interactions'])
             for inter in self._curr_model['interactions']:
@@ -1300,6 +1315,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                  for order in inter['orders'])
                 text += '\n'
             pydoc.pager(text)
+
+        elif args[0] == 'interactions':
+            if int(args[1]) > len(self._curr_model['interactions']):
+                raise self.InvalidCmd, 'no interaction %s in current model' % args[1]
+            print "Interactions %s has the following property:" % args[1]
+            print self._curr_model['interactions'][int(args[1])]
+
 
         elif args[0] == 'processes':
             for amp in self._curr_amps:

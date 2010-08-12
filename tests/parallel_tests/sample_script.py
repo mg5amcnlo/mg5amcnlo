@@ -72,7 +72,7 @@ if '__main__' == __name__:
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                       model=['sm_FR','sm'], orders={'QED':4, 'QCD':4}, energy=500)
+                       model=['mssm_mg5','mssm'], orders={'QED':4, 'QCD':4}, energy=500)
 
     # Do some cleanup
     #my_comp.cleanup()

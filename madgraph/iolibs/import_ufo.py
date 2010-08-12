@@ -195,7 +195,7 @@ class UFOMG5Converter(object):
         interaction.set('orders', mg5_order)
 
         # Import color information:
-        colors = [self.treat_color(color_obj) for color_obj in \
+        colors = [self.treat_color(color_obj, interaction_info) for color_obj in \
                                     interaction_info.color]
         
         interaction.set('color', colors)
@@ -204,27 +204,25 @@ class UFOMG5Converter(object):
         self.interactions.append(interaction)
         
     @staticmethod
-    def treat_color(data_string):
+    def treat_color(data_string, interaction_info):
         """ convert the string to ColorStirng"""
         
         # Convert the string in order to be able to evaluate it
-        
+
+        # Change identity in color.TC        
         p = re.compile(r'''Identity\((?P<first>\d*),(?P<second>\d*)\)''')
-        data_string = p.sub('color.T(\g<second>,\g<first>)', data_string)
-        
-        # Change identity in color.TC
-        #data_string = data_string.replace('Identity(1,2)','color.T(2,1)')
+        pattern = p.search(data_string)
+        if pattern:
+            particle = interaction_info.particles[int(pattern.group('first'))-1]
+            if particle.pdg_code < 0:
+                data_string = p.sub('color.T(\g<second>,\g<first>)', data_string)
+            else:
+                data_string = p.sub('color.T(\g<first>,\g<second>)', data_string)
+                
         # Change convention for summed indices
         p = re.compile(r'''\'\w(?P<number>\d+)\'''')
         data_string = p.sub('-\g<number>', data_string)
-        
-        
-        #data_string = data_string.replace(',a',',-')
-        #data_string = data_string.replace('(a','(-')
-        #data_string = data_string.replace(',\'a',',-')
-        #data_string = data_string.replace('(\'a','(-')
-        #data_string = data_string.replace('\'','')
-            
+                    
         output = data_string.split('*')
         output = color.ColorString([eval(data).shift_indices() for data in output if data !='1'])
         
