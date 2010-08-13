@@ -84,7 +84,7 @@ class IOExportPythia8Test(unittest.TestCase,
                       'antiname':'c~',
                       'spin':2,
                       'color':3,
-                      'mass':'ZERO',
+                      'mass':'MC',
                       'width':'ZERO',
                       'texname':'c',
                       'antitexname':'\bar c',
@@ -202,8 +202,35 @@ class IOExportPythia8Test(unittest.TestCase,
         self.mymatrixelement.get('matrix_elements')[0].\
                                                get('processes').append(myproc)
 
+        self.exporter = export_pythia8.ProcessExporterPythia8(\
+            self.mymatrixelement, self.mycppmodel,
+            process_string = "q q~ > q q~")
         
     tearDown = test_file_writers.CheckFileCreate.clean_files
+
+    def test_pythia8_export_functions(self):
+        """Test functions used by the Pythia export"""
+
+        # Test the exporter setup
+        self.assertEqual(self.exporter.model, self.mymodel)
+        self.assertEqual(self.exporter.matrix_elements, self.mymatrixelement.get('matrix_elements'))
+        self.assertEqual(self.exporter.process_string, "q q~ > q q~")
+        self.assertEqual(self.exporter.process_name, "Sigma_sm_qqx_qqx")
+        self.assertEqual(self.exporter.nexternal, 4)
+        self.assertEqual(self.exporter.ninitial, 2)
+        self.assertEqual(self.exporter.nfinal, 2)
+        self.assertTrue(self.exporter.single_helicities)
+        self.assertEqual(self.exporter.wavefunctions, self.mymatrixelement.get('matrix_elements')[0].get_all_wavefunctions())
+
+        # Test get_process_influx
+        processes = self.mymatrixelement.get('matrix_elements')[0].get('processes')
+        self.assertEqual(self.exporter.get_process_influx(), "qqbarSame")
+        self.assertEqual(self.exporter.get_id_masses(processes[0]), "")
+        self.assertEqual(self.exporter.get_id_masses(processes[1]), \
+                        """int id3Mass() const {return 4;}
+int id4Mass() const {return 4;}""")
+        self.assertEqual(self.exporter.get_resonance_lines(), \
+                        "virtual int resonanceA() const {return 23;}")
 
     def test_write_process_h_file(self):
         """Test writing the .h Pythia file for a matrix element"""
@@ -261,7 +288,7 @@ class Sigma_sm_qqx_qqx : public Sigma2Process
 
     virtual string inFlux() const {return "qqbarSame";}
 
-
+    virtual int resonanceA() const {return 23;}
     // Tell Pythia that sigmaHat returns the ME^2
     virtual bool convertM2() const {return true;}
 
@@ -294,11 +321,10 @@ class Sigma_sm_qqx_qqx : public Sigma2Process
 #endif  // Pythia8_Sigma_sm_qqx_qqx_H
 """ % misc.get_pkg_info()
 
-        exporter = export_pythia8.ProcessExporterPythia8(self.mymatrixelement,
-        self.mycppmodel, process_string = "q q~ > q q~")
+        self.exporter.write_pythia8_process_h_file(\
+            writers.CPPWriter(self.give_pos('test.h')))
 
-        exporter.write_pythia8_process_h_file(\
-        writers.CPPWriter(self.give_pos('test.h')))
+        #print open(self.give_pos('test.h')).read()
 
         self.assertFileContains('test.h', goal_string)
 

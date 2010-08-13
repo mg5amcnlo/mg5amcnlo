@@ -31,8 +31,8 @@ public:
   virtual int    code()    const {return %(process_code)s;}
 
   virtual string inFlux()  const {return "%(inFlux)s";}
-
   %(id_masses)s
+  %(resonances)s
   // Tell Pythia that sigmaHat returns the ME^2
   virtual bool   convertM2() const {return true;}
 

@@ -123,6 +123,13 @@ class ProcessExporterPythia8(object):
             self.wavefunctions = []
             wf_number = 0
 
+            # Redefine equality so that mass differences for external
+            # particles don't matter (since Pythia gives the mass
+            # explicitly anyway)
+            wf_equal = helas_objects.HelasWavefunction.__eq__
+            helas_objects.HelasWavefunction.__eq__ = \
+                              helas_objects.HelasWavefunction.almost_equal
+
             for me in self.matrix_elements:
                 for iwf, wf in enumerate(me.get_all_wavefunctions()):
                     try:
@@ -133,7 +140,10 @@ class ProcessExporterPythia8(object):
                         wf_number += 1
                         wf.set('number', wf_number)
                         self.wavefunctions.append(wf)
- 
+
+            # Redefined the equality back to the original
+            helas_objects.HelasWavefunction.__eq__ = wf_equal
+
     # Methods for generation of process files for Pythia 8
 
     def generate_process_files_pythia8(self):
@@ -261,6 +271,7 @@ class ProcessExporterPythia8(object):
         replace_dict['inFlux'] = self.get_process_influx()
 
         replace_dict['id_masses'] = self.get_id_masses(process)
+        replace_dict['resonances'] = self.get_resonance_lines()
 
         replace_dict['nexternal'] = self.nexternal
         replace_dict['nprocesses'] = len(self.matrix_elements)
@@ -274,19 +285,19 @@ class ProcessExporterPythia8(object):
                                                     len(self.wavefunctions)
             replace_dict['all_matrix_definitions'] = \
                            "\n".join(["double matrix_%s();" % \
-                                      me.get('processes')[0].shell_string_v4().\
+                                      me.get('processes')[0].shell_string().\
                                       replace("0_", "") \
                                       for me in self.matrix_elements])
 
         else:
             replace_dict['all_sigma_kin_definitions'] = \
                           "\n".join(["void sigmaKin_%s();" % \
-                                     me.get('processes')[0].shell_string_v4().\
+                                     me.get('processes')[0].shell_string().\
                                      replace("0_", "") \
                                      for me in self.matrix_elements])
             replace_dict['all_matrix_definitions'] = \
                            "\n".join(["double matrix_%s(const int hel[]);" % \
-                                      me.get('processes')[0].shell_string_v4().\
+                                      me.get('processes')[0].shell_string().\
                                       replace("0_", "") \
                                       for me in self.matrix_elements])
 
@@ -363,6 +374,8 @@ class ProcessExporterPythia8(object):
         process_string = process_string.replace('+', 'p')
         process_string = process_string.replace('-', 'm')
         process_string = process_string.replace('~', 'x')
+        process_string = process_string.replace('/', '_no_')
+        process_string = process_string.replace('$', '_nos_')
         if proc_number != 0:
             process_string = "%d_%s" % (proc_number, process_string)
 
@@ -428,15 +441,78 @@ class ProcessExporterPythia8(object):
         """Return the lines which define the ids for the final state particles,
         for the Pythia phase space"""
 
-        mass_string = ""
-
+        if self.nfinal == 1:
+            return ""
+        
+        mass_strings = []
         for i in range(2, len(process.get('legs'))):
             if self.model.get_particle(process.get('legs')[i].get('id')).\
                    get('mass') not in  ['zero', 'ZERO']:
-                mass_string += "int id%dMass() const {return %d;}\n" % \
-                               (i + 1, abs(process.get('legs')[i].get('id')))
+                mass_strings.append("int id%dMass() const {return %d;}" % \
+                                (i + 1, abs(process.get('legs')[i].get('id'))))
 
-        return mass_string
+        return "\n".join(mass_strings)
+
+    def get_resonance_lines(self):
+        """Return the lines which define the ids for the final state particles,
+        for the Pythia phase space"""
+
+        if self.nfinal == 1:
+            return "virtual int resonanceA() const {return %d;}" % \
+                           abs(process.get('legs')[2].get('id'))
+        
+        res_strings = []
+        res_letters = ['A', 'B']
+
+        sids, singleres, schannel = self.get_resonances()
+
+        for i, sid in enumerate(sids[:2]):
+            res_strings.append("virtual int resonance%s() const {return %d;}"\
+                                % (res_letters[i], sid))
+
+        if singleres != 0:
+            res_strings.append("virtual int idSChannel() const {return %d;}" \
+                               % singleres)
+        if schannel:
+            res_strings.append("virtual bool isSChannel() const {return true;}")
+            
+        return "\n".join(res_strings)
+
+    def get_resonances(self):
+        """Return the PIDs for any resonances in 2->2 and 2->3 processes."""
+
+        resonances = []
+
+        # Get a list of all resonant s-channel contributions
+        diagrams = sum([me.get('diagrams') for me in self.matrix_elements], [])
+        for diagram in diagrams:
+            schannels, tchannels = diagram.get('amplitudes')[0].\
+                                   get_s_and_t_channels(self.ninitial)
+
+            for schannel in schannels:
+                sid = schannel.get('legs')[-1].get('id')
+                width = self.model.get_particle(sid).get('width')
+                if width.lower() != 'zero':
+                    resonances.append(sid)
+
+        resonance_set = set(resonances)
+
+        singleres = 0
+        # singleres is set if all diagrams have the same resonance
+        if len(resonances) == len(diagrams) and len(resonance_set) == 1:
+            singleres = resonances[0]
+
+        # Only care about absolute value of resonance PIDs:
+        resonance_set = list(set([abs(pid) for pid in resonance_set]))
+
+        # schannel is True if all diagrams are s-channel and there are
+        # no QCD vertices
+        schannel = not any([\
+            len(d.get('amplitudes')[0].get_s_and_t_channels(self.ninitial)[0])\
+                 == 0 for d in diagrams]) and \
+                   not any(['QCD' in d.calculate_orders() for d in diagrams])
+
+        return resonance_set, singleres, schannel
 
     def get_initProc_lines(self, color_amplitudes):
         """Get initProc_lines for function definition for Pythia 8 .cc file"""
@@ -503,7 +579,7 @@ class ProcessExporterPythia8(object):
             replace_dict['get_matrix_t_lines'] = "\n".join(
                     ["t[%(iproc)d]=matrix_%(proc_name)s();" % \
                      {"iproc": i, "proc_name": \
-                      me.get('processes')[0].shell_string_v4().replace("0_", "")} \
+                      me.get('processes')[0].shell_string().replace("0_", "")} \
                      for i, me in enumerate(self.matrix_elements)])
 
             file = \
@@ -517,7 +593,7 @@ class ProcessExporterPythia8(object):
             ret_lines = "// Call the individual sigmaKin for each process\n"
             return ret_lines + \
                    "\n".join(["sigmaKin_%s();" % \
-                              me.get('processes')[0].shell_string_v4().\
+                              me.get('processes')[0].shell_string().\
                               replace("0_", "") for \
                               me in self.matrix_elements])
 
@@ -551,7 +627,7 @@ class ProcessExporterPythia8(object):
 
         # Process name
         replace_dict['proc_name'] = \
-          matrix_element.get('processes')[0].shell_string_v4().replace("0_", "")
+          matrix_element.get('processes')[0].shell_string().replace("0_", "")
         
         # Process name
         replace_dict['process_class_name'] = self.process_name
@@ -583,7 +659,7 @@ class ProcessExporterPythia8(object):
 
         # Process name
         replace_dict['proc_name'] = \
-          matrix_element.get('processes')[0].shell_string_v4().replace("0_", "")
+          matrix_element.get('processes')[0].shell_string().replace("0_", "")
         
 
         if self.single_helicities:
