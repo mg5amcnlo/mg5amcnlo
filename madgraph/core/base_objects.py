@@ -20,10 +20,11 @@ import copy
 import itertools
 import logging
 import numbers
+import os
 import re
 
 import madgraph.core.color_algebra as color
-from madgraph import MadGraph5Error
+from madgraph import MadGraph5Error, MG5DIR
 
 logger = logging.getLogger('madgraph.base_objects')
 
@@ -771,6 +772,67 @@ class Model(PhysicsObject):
         self['interaction_dict'] = {}
         self['ref_dict_to1'] = {}
         self['ref_dict_to0'] = {}
+        
+    def pass_particles_name_in_mg_default(self):
+        """Change the name of the particles such that all SM and MSSM particles
+        follows the MG convention"""
+        logger.info('pass particles name in MadGraph convention')
+
+        # Check that default name/antiname is not already use 
+        def check_name_free(self, name):
+            """ check if name is not use for a particle in the model if it is 
+            raise an MadGraph5error"""
+            part = self['particles'].find_name(name)
+            if part: 
+                error_text = \
+                '%s particles with pdg code %s is in conflict with MG ' + \
+                'convention name for particle %s.\n Use --modelname in order ' + \
+                'to use the particles name defined in the model and not the ' + \
+                'MadGraph convention'
+                
+                raise MadGraph5Error, error_text % \
+                                     (part.get_name(), part.get_pdg_code(), pdg)                
+
+        default = self.load_default_name()
+        
+        for particle in self['particles']:
+            pdg = particle.get_pdg_code()
+            if pdg not in default.keys():
+                continue
+            name = particle.get_name()
+            antiname = particle.get('antiname')
+            
+            if name != default[pdg]:
+                check_name_free(self, default[pdg])
+                particle.set('name', default[pdg])
+                if name == antiname:
+                    particle.set('antiname', default[pdg])
+                elif name != default[-1 *pdg]:
+                    check_name_free(self, default[-1 *pdg])
+                    particle.set('antiname', default[-1 *pdg])        
+                continue
+            elif name != antiname and antiname != default[-1 *pdg]:
+                    check_name_free(self, default[-1 *pdg])
+                    particle.set('antiname', default[-1 *pdg])  
+    
+    @ staticmethod
+    def load_default_name():
+        """ load the default for name convention """
+        
+        default = {}
+        for line in open(os.path.join(MG5DIR, 'input', \
+                                                 'particles_name_default.txt')):
+            line = line.lstrip()
+            if line.startswith('#'):
+                continue
+            
+            args = line.split()
+            if len(args) != 2:
+                logger.warning('Invalid syntax in interface/default_name:\n %s' % line)
+                continue
+            default[int(args[0])] = args[1].lower()
+        
+        return default
 
 #===============================================================================
 # Classes used in diagram generation and process definition:

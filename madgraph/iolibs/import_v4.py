@@ -114,6 +114,7 @@ def read_particles_v4(fsock):
                   'w': 'wavy',
                   'c': 'curly'}
 
+    logger.info('load particles')
 
     mypartlist = ParticleList()
 
@@ -185,6 +186,7 @@ def read_interactions_v4(fsock, ref_part_list):
     """Read a list of interactions from stream fsock, using the old v4 format.
     Requires a ParticleList object as an input to recognize particle names."""
 
+    logger.info('load interactions')
     myinterlist = InteractionList()
 
     if not isinstance(ref_part_list, ParticleList):

@@ -518,18 +518,20 @@ class CheckValidForCmd(object):
         """check the validity of line
         syntax: add process PROCESS 
         """
-        
-        if not self._curr_model:
-            raise self.InvalidCmd("No particle list currently active, please import a model first")
-
+    
         if len(args) < 2:
             self.help_add()
             raise self.InvalidCmd('\"add\" requires two arguments')
         
         if args[0] != 'process':
             raise self.InvalidCmd('\"add\" requires the argument \"process\"')
-        
+
         self.check_process_format(' '.join(args[1:]))
+
+        if not self._curr_model:
+            logger.info('No model currently active. Try with the Standard Model')
+            self.do_import('model sm')
+
     
     def check_define(self, args):
         """check the validity of line
@@ -652,11 +654,12 @@ class CheckValidForCmd(object):
             self.help_generate()
             raise self.InvalidCmd("\"generate\" requires an argument.")
             
-
-        if  not self._curr_model:
-            raise self.InvalidCmd("No model currently active, please import a model!")
-
         self.check_process_format(line)
+        
+        if  not self._curr_model:
+            logger.info('No model currently active. Try with the Standard Model')
+            self.do_import('model sm')
+        
         return True
     
     def check_process_format(self, process):
@@ -726,13 +729,23 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd('wrong \"import\" format')
         
         if args[0] != 'proc_v4' and len(args) != 2:
-            self.help_import()
-            raise self.InvalidCmd(' incorrect number of arguments')
+            if len(args) == 3 and '--modelname' in args:
+                if args[-1] != '--modelname':
+                    args.remove('--modelname')
+                    args.append('--modelname')
+            else:
+                self.help_import()
+                raise self.InvalidCmd('incorrect number of arguments')
         
         if args[0] == 'proc_v4' and len(args) != 2 and not self._export_dir:
             self.help_import()
             raise self.InvalidCmd('PATH is mandatory in the current context\n' + \
-                                  'Did you forget to run the \"setup\" command')            
+                                  'Did you forget to run the \"setup\" command')
+                        
+        if '--modelname' in args:
+            if args[-1] != '--modelname':
+                args.remove('--modelname')
+                args.append('--modelname')
         
     def check_load(self, args):
         """ check the validity of the line"""
@@ -1842,6 +1855,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if args[0] == 'model':
             self._model_v4 = None
             self._curr_model = import_ufo.import_model(args[1])
+            if '--modelname' not in args:
+                self._curr_model.pass_particles_name_in_mg_default()
             self.add_default_multiparticles()
             self._curr_fortran_model = \
                                   helas_call_writers.FortranUFOHelasCallWriter()
@@ -1858,6 +1873,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         elif args[0] == 'model_v4':
             self._curr_model, self._model_v4 = import_v4.import_model(args[1])
+            if '--modelname' not in args:
+                self._curr_model.pass_particles_name_in_mg_default()
             self.add_default_multiparticles()
  
         elif args[0] == 'proc_v4':
@@ -1897,7 +1914,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # Add comment to history
             self.exec_cmd("# Import the model %s" % reader.model)
             #model_dir = os.path.join(MG4DIR, 'Models')
-            line = self.exec_cmd('import model_v4 %s' % (reader.model))
+            line = self.exec_cmd('import model_v4 %s --modelname' % (reader.model))
         else:
             logging.error('No MG_ME installation detected')
             return    
@@ -2342,13 +2359,14 @@ class CmdFile(file):
         return self.lines.__iter__()
   
 #===============================================================================
-# Draw Command Parser
+# Command Parser
 #=============================================================================== 
-_usage = "draw FILEPATH [options]\n" + \
+# DRAW
+_draw_usage = "draw FILEPATH [options]\n" + \
          "-- draw the diagrams in eps format\n" + \
          "   Files will be FILEPATH/diagrams_\"process_string\".eps \n" + \
          "   Example: draw plot_dir . \n"
-_draw_parser = optparse.OptionParser(usage=_usage)
+_draw_parser = optparse.OptionParser(usage=_draw_usage)
 _draw_parser.add_option("", "--horizontal", default=False,
                    action='store_true', help="force S-channel to be horizontal")
 _draw_parser.add_option("", "--external", default=0, type='float',
@@ -2362,7 +2380,7 @@ _draw_parser.add_option("", "--non_propagating", default=True, \
                           help="avoid contractions of non propagating lines") 
 _draw_parser.add_option("", "--add_gap", default=0, type='float', \
                           help="set the x-distance between external particles")  
-  
+
     
     
     

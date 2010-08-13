@@ -109,9 +109,6 @@ class UFOMG5Converter(object):
         logger.info('load particle')
         for particle_info in self.ufomodel.all_particles:            
             self.add_particle(particle_info)
-
-        logger.info('pass the particles name in MG convention')
-        self.pass_in_standard_name()
             
         logger.info('load vertex')
         for interaction_info in self.ufomodel.all_vertices:
@@ -206,75 +203,43 @@ class UFOMG5Converter(object):
     @staticmethod
     def treat_color(data_string, interaction_info):
         """ convert the string to ColorStirng"""
-        
-        # Convert the string in order to be able to evaluate it
-
+        original = copy.copy(data_string)
         # Change identity in color.TC        
         p = re.compile(r'''Identity\((?P<first>\d*),(?P<second>\d*)\)''')
+        #data_string = p.sub('color.T(\g<first>,\g<second>)', data_string)
         pattern = p.search(data_string)
         if pattern:
             particle = interaction_info.particles[int(pattern.group('first'))-1]
-            if particle.pdg_code < 0:
+            if particle.color < 0 :
                 data_string = p.sub('color.T(\g<second>,\g<first>)', data_string)
             else:
                 data_string = p.sub('color.T(\g<first>,\g<second>)', data_string)
-                
+        
         # Change convention for summed indices
         p = re.compile(r'''\'\w(?P<number>\d+)\'''')
         data_string = p.sub('-\g<number>', data_string)
-                    
+         
+        # Compute how change indices to match MG5 convention
+        info = [(i+1,part.color) for i,part in enumerate(interaction_info.particles) 
+                 if part.color!=1]
+        order = sorted(info, lambda p1, p2:p1[1] - p2[1])
+        new_indices={}
+        for i,(j, pcolor) in enumerate(order):
+            new_indices[j]=i
+                        
+#            p = re.compile(r'''(?P<prefix>[^-@])(?P<nb>%s)(?P<postfix>\D)''' % j)
+#            data_string = p.sub('\g<prefix>@%s\g<postfix>' % i, data_string)
+#        data_string = data_string.replace('@','')                    
         output = data_string.split('*')
-        output = color.ColorString([eval(data).shift_indices() for data in output if data !='1'])
+        output = color.ColorString([eval(data) \
+                                              for data in output if data !='1'])
+        for col_obj in output:
+            col_obj.replace_indices(new_indices)
         
         return output
     
-    def pass_in_standard_name(self):
-        """check that all SM particles have The same name as MG4 version"""
         
-        default = self.load_default_name()
         
-        for particle in self.particles:
-            pdg = particle.get_pdg_code()
-            if pdg not in default.keys():
-                continue
-            name = particle.get_name()
-            antiname = particle.get('antiname')
-            if name != default[pdg]:
-                old_part = self.particles.find_name(default[pdg]) 
-                if old_part:
-                    raise MadGraph5Error(
-    '%s particles with pdg code %s is in conflict with MG convention name for \
-     particle %s' % (old_part.get_name(), old_part.get_pdg_code(), pdg  ))
-                
-                particle.set('name', default[pdg])
-            
-            
-            if name != antiname and antiname != default[-1 *pdg]:
-                old_part = self.particles.find_name(default[-1 * pdg]) 
-                if old_part:
-                    raise MadGraph5Error(
-    '%s particles with pdg code %s is in conflict with MG convention name for \
-     particle %s' % (old_part.get_name(), old_part.get_pdg_code(), -1 * pdg  ))
-                
-                particle.set('antiname', default[-1 *pdg])
-    
-    def load_default_name(self):
-        """ load the default for name convention """
-        
-        default = {}
-        for line in open(os.path.join(MG5DIR, 'input', \
-                                                 'particles_name_default.txt')):
-            line = line.lstrip()
-            if line.startswith('#'):
-                continue
-            
-            args = line.split()
-            if len(args) != 2:
-                logger.warning('Invalid syntax in interface/default_name:\n %s' % line)
-                continue
-            default[int(args[0])] = args[1].lower()
-        
-        return default
             
 # Helping class
 class ParamExpr(object):

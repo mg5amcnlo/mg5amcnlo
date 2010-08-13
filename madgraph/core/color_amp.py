@@ -140,7 +140,7 @@ class ColorBasis(dict):
                 color_num_pairs.append((curr_color, curr_num))
 
         # Order the color/number pairs according to increasing color (assumed
-        # to be the ordering chose in interactions.py). For identical colors,
+        # to be the ordering choose in interactions.py). For identical colors,
         # keep the normal leg ordering.
         color_num_pairs = sorted(color_num_pairs, lambda p1, p2:p1[0] - p2[0])
 
