@@ -1228,15 +1228,19 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 else:
                     myprocdef, line = self.extract_decay_chain_process(line)
             except MadGraph5Error, error:
-                raise MadGraph5Error("Empty or wrong format process :\n" + \
+                logger_stderr.warning("Empty or wrong format process :\n" + \
                                      str(error))
                 
             if myprocdef:
 
                 cpu_time1 = time.time()
-
-                myproc = diagram_generation.MultiProcess(myprocdef)
-
+                
+                try:
+                    myproc = diagram_generation.MultiProcess(myprocdef)
+                except MadGraph5Error, error:
+                    logger_stderr.warning("Empty or wrong format process :\n" + \
+                                     str(error))
+                    
                 for amp in myproc.get('amplitudes'):
                     if amp not in self._curr_amps:
                         self._curr_amps.append(amp)

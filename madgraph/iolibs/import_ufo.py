@@ -282,9 +282,10 @@ class OrganizeModelExpression:
     # regular expression to shorten the expressions
     complex_number = re.compile(r'''complex\((?P<real>[^,\(\)]+),(?P<imag>[^,\(\)]+)\)''')
     expo_expr = re.compile(r'''(?P<expr>\w+)\s*\*\*\s*(?P<expo>\d+)''')
-    sqrt_expr = re.compile(r'''cmath.sqrt\((?P<expr>\w+)\)''')
+    cmath_expr = re.compile(r'''cmath.(?P<operation>\w+)\((?P<expr>\w+)\)''')
+    #operation is usualy sqrt / sin / cos / tan
     conj_expr = re.compile(r'''complexconjugate\((?P<expr>\w+)\)''')
-
+    
     #RE expression for is_event_dependent
     separator = re.compile(r'''[+,\-*/()]''')    
     
@@ -406,7 +407,7 @@ class OrganizeModelExpression:
 
         expr = self.complex_number.sub(self.shorten_complex, expr)
         expr = self.expo_expr.sub(self.shorten_expo, expr)
-        expr = self.sqrt_expr.sub(self.shorten_sqrt, expr)
+        expr = self.cmath_expr.sub(self.shorten_cmath, expr)
         expr = self.conj_expr.sub(self.shorten_conjugate, expr)
         return expr
     
@@ -442,12 +443,13 @@ class OrganizeModelExpression:
         self.add_parameter(new_param)
         return output
         
-    def shorten_sqrt(self, matchobj):
+    def shorten_cmath(self, matchobj):
         """add the short expression, and retrun the nice string associate"""
         
         expr = matchobj.group('expr')
-        output = 'sqrt__%s' % (expr)
-        old_expr = ' cmath.sqrt(%s) ' %  expr
+        operation = matchobj.group('operation')
+        output = '%s__%s' % (operation, expr)
+        old_expr = ' cmath.%s(%s) ' %  (operation, expr)
         if expr.isdigit():
             new_param = ParamExpr(output, old_expr , 'real')
         else:
