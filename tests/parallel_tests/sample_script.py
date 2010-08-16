@@ -50,14 +50,19 @@ if '__main__' == __name__:
     
     logging.basicConfig(level=logging.INFO)
     # Create a list of processes to check automatically
-    #my_proc_list = me_comparator.create_proc_list(['w+', 'w-','h','a','u','u~','d','d~','e+','e-','g','ve','mu+','mu-'],initial=2, final=2)
+    my_proc_list = me_comparator.create_proc_list(
+                                ['mu+','mu-','sl4+','sl4-','sl1+','sl1-'],
+                                initial=2, final=2)
 
     # or give one
-    my_proc_list = ['e+ e- > e+ e-', 'g g> g g', 'g g> g g g', 'g g> g g g g', 'a w+ > a h w+/z', 'a w+ > a a w+', 'a w- > a h w-', 'a w- > a a w-', 'a h > a w+ w-', 'a a > h w+ w-', 'a a > a w+ w-']
-    my_proc_list += ['u u~ > d d~', 'ul ul~ > g g' , 'go go > su1 sul~', 'su1 su1~ > g g g', 'su1 su1~ > su1 su1~' ]
+    #my_proc_list = ['e+ e- > e+ e-', 'g g> g g', 'g g> g g g', 'g g> g g g g', 'a w+ > a h1 w+/z', 'a w+ > a a w+', 'a w- > a h1 w-', 'a w- > a a w-', 'a h1 > a w+ w-', 'a a > h1 w+ w-', 'a a > a w+ w-']
+    #my_proc_list += ['u u~ > d d~', 'ul ul~ > g g' , 'go go > su1 su1~', 'su1 su1~ > g g', 'su1 su1~ > g g g', 'su1 su1~ > su1 su1~' ]
+    #my_proc_list += ['u u~ > g g su1 su1~', 'g g > go go  su1 su1~']
+    #my_proc_list = ['su1 su1~ > g g g','su1 su1~ > g g', 'g g > su1 su1~', 'g su1 > g su1']
+    #my_proc_list += ['el sve~ > g g g','el sve~ > g g', 'g g > el sve~', 'g el > g el', 'el sve~ >el sve~']
+    #my_proc_list = ['mu+ mu+ > sl4+ sl4+']
     
-    my_proc_list = ['w+ w+ > w+ w+', 'w+ w+ > w+ w+ / h1 h2 h3', 'w+ w- > h1 > w+ w-',
-                    'w+ w- > h2 > w+ w-']
+    
     # Create a MERunner object for MG4
     my_mg4 = me_comparator.MG4Runner()
     my_mg4.setup(mg4_path)
@@ -76,7 +81,7 @@ if '__main__' == __name__:
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                       model=['mssm_mg5','mssm'], orders={'QED':4, 'QCD':4}, energy=500)
+                       model=['mssm_mg5','mssm'], orders={'QED':4, 'QCD':4}, energy=10000)
 
     # Do some cleanup
     #my_comp.cleanup()

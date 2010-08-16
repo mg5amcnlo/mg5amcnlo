@@ -719,7 +719,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             # Check if we need to append a charge conjugation flag
             c_flag = '' 
             if argument.needs_hermitian_conjugate():
-                c_flag = 'C'
+                c_flag = 'C1' # MG5 not configure for 4F vertex
 
             call = 'CALL %s%s_%s' % (argument.get('lorentz'), c_flag, outgoing) 
 
@@ -856,7 +856,7 @@ class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
             # Check if we need to append a charge conjugation flag
             c_flag = '' 
             if argument.needs_hermitian_conjugate():
-                c_flag = 'c'
+                c_flag = 'c1' # MG5 not configure for 4F vertex
 
             call = '%s%s_%s' % (argument.get('lorentz'), c_flag, outgoing)
 

@@ -1230,6 +1230,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             except MadGraph5Error, error:
                 logger_stderr.warning("Empty or wrong format process :\n" + \
                                      str(error))
+                return
                 
             if myprocdef:
 
@@ -1240,6 +1241,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 except MadGraph5Error, error:
                     logger_stderr.warning("Empty or wrong format process :\n" + \
                                      str(error))
+                    return
                     
                 for amp in myproc.get('amplitudes'):
                     if amp not in self._curr_amps:
