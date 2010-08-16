@@ -1,5 +1,4 @@
 #!/usr/bin/env python 
-
 ################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
@@ -30,25 +29,30 @@
 
 import inspect
 import logging
+import logging.config
 import optparse
 import os
 import re
 import sys
 import unittest
 
-#Add the ROOT dir to the current PYTHONPATH
 
+#Add the ROOT dir to the current PYTHONPATH
 # Only for profiling with -m cProfile!
 #root_path = os.path.split(os.path.dirname(os.path.realpath(sys.argv[0])))[0]
 #sys.path.append(root_path)
-
 root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
-
 sys.path.append(root_path)
+
+from madgraph import MG4DIR
+
+#position of MG_ME
+MGME_dir = MG4DIR
+
 #===============================================================================
 # run
 #===============================================================================
-def run(expression='', re_opt=0, package='./tests/', verbosity=1):
+def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1):
     """ running the test associated to expression. By default, this launch all 
     test inherited from TestCase. Expression can be the name of directory, 
     module, class, function or event standard regular expression (in re format)
@@ -83,13 +87,15 @@ class TestFinder(list):
         """Error associated to the TestFinder class."""
         pass
 
-    def __init__(self, package='./tests/', expression='', re_opt=0):
+    def __init__(self, package='tests/', expression='', re_opt=0):
         """ initialize global variable for the test """
 
         list.__init__(self)
 
         self.package = package
-        if self.package[-1] != '/': self.package += '/'
+        self.rule = []
+        if self.package[-1] != '/': 
+            self.package += '/'
         self.restrict_to(expression, re_opt)
         self.launch_pos = ''
 
@@ -120,10 +126,11 @@ class TestFinder(list):
             self.go_to_root()
 
 
-        for name in os.listdir(directory):
+        for name in os.listdir(os.path.join(root_path,directory)):
             local_check = checking
 
-            status = self.status_file(directory + '/' + name)
+            status = self.status_file(os.path.join(root_path, directory,name))
+                                      #directory + '/' + name)
             if status is None:
                 continue
 
@@ -139,15 +146,14 @@ class TestFinder(list):
         if move:
             self.go_to_initpos()
 
-    def collect_file(self, file, checking=True):
+    def collect_file(self, filename, checking=True):
         """ Find the different class instance derivated of TestCase """
 
-        pyname = self.passin_pyformat(file)
+        pyname = self.passin_pyformat(filename)
         exec('import ' + pyname + ' as obj')
-
         #look at class
         for name in dir(obj):
-            exec('class_=obj.' + name)
+            class_ = getattr(obj, name)
             if inspect.isclass(class_) and \
                     issubclass(class_, unittest.TestCase):
                 if checking:
@@ -204,8 +210,11 @@ class TestFinder(list):
 
         self.rule = []
         for expr in expression:
-            if not expr.startswith('^'): expr = '^' + expr #fix the begin of the re
-            if not expr.endswith('$'): expr = expr + '$' #fix the end of the re
+            #fix the beginning/end of the regular expression
+            if not expr.startswith('^'):
+                expr = '^' + expr 
+            if not expr.endswith('$'):
+                expr = expr + '$' 
             self.rule.append(re.compile(expr, re_opt))
 
     def check_valid(self, name):
@@ -223,11 +232,11 @@ class TestFinder(list):
     @staticmethod
     def status_file(name):
         """ check if a name is a module/a python file and return the status """
-        if os.path.isfile(name):
+        if os.path.isfile(os.path.join(root_path, name)):
             if name.endswith('.py') and '__init__' not in name:
                 return 'file'
-        elif os.path.isdir(name):
-            if os.path.isfile(name + '/__init__.py'):
+        elif os.path.isdir(os.path.join(root_path, name)):
+            if os.path.isfile(os.path.join(root_path, name , '__init__.py')):
                 return 'module'
 
     @classmethod
@@ -278,7 +287,8 @@ class TestFinder(list):
 
         #print name
         #sanity
-        if name.startswith('./'): name = name[2:]
+        if name.startswith('./'): 
+            name = name[2:]
         name = name.replace('//', '/')
         # init with solution #
         out = [name]
@@ -310,8 +320,9 @@ class TestFinder(list):
         This ensures that the script works correctly whatever the position
         where is launched
         """
-        self.launch_pos = os.path.realpath(os.getcwd())
-        os.chdir(root_path)
+        #self.launch_pos = os.path.realpath(os.getcwd())
+        #self.root_path = root_path
+        #os.chdir(root_path)
 
     def go_to_initpos(self):
         """ 
@@ -319,8 +330,8 @@ class TestFinder(list):
         This ensures that the script works correctly whatever the position
         where is launched
         """
-        os.chdir(self.launch_pos)
-        self.launch_pos = ''
+        #os.chdir(self.launch_pos)
+        #self.launch_pos = ''
 
 if __name__ == "__main__":
 
@@ -330,7 +341,7 @@ if __name__ == "__main__":
                       help="defined the verbosity level [%default]")
     parser.add_option("-r", "--reopt", type="int", default=0,
                   help="regular expression tag [%default]")
-    parser.add_option("-p", "--path", default='./tests/',
+    parser.add_option("-p", "--path", default='tests/unit_tests',
                   help="position to start the search (from root)  [%default]")
     parser.add_option("-l", "--logging", default='CRITICAL',
         help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
@@ -338,7 +349,13 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
     if len(args) == 0:
         args = ''
-    logging.basicConfig(level=vars(logging)[options.logging])
+
+    logging.config.fileConfig(os.path.join(root_path,'tests','.mg5_logging.conf'))
+    logging.root.setLevel(eval('logging.' + options.logging))
+    logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
+    logging.getLogger('cmdprint').setLevel(eval('logging.' + options.logging))
+
+    #logging.basicConfig(level=vars(logging)[options.logging])
     run(args, re_opt=options.reopt, verbosity=options.verbose, \
             package=options.path)
 

@@ -15,20 +15,245 @@
 
 """Methods and classes to export matrix elements to v4 format."""
 
-import copy
 import fractions
+import glob
 import logging
 import os
 import re
-import sys
+import shutil
+import subprocess
 
 import madgraph.core.color_algebra as color
-import madgraph.iolibs.drawing_eps as draw
 import madgraph.core.helas_objects as helas_objects
+import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
+import madgraph.iolibs.template_files as Template
+from madgraph import MadGraph5Error 
 
-logger = logging.getLogger('export_v4')
+_file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
+logger = logging.getLogger('madgraph.export_v4')
+
+#===============================================================================
+# copy the Template in a new directory.
+#===============================================================================
+def copy_v4template(mgme_dir, dir_path, model_dir, clean):
+    """create the directory run_name as a copy of the MadEvent Template
+       and import the model, Helas, and clean the directory 
+    """
+    
+    #First copy the full template tree if dir_path doesn't exit
+    if not os.path.isdir(dir_path):
+        logger.info('initialize a new directory: %s' % \
+                    os.path.basename(dir_path))
+        shutil.copytree(os.path.join(mgme_dir, 'Template'), dir_path, True)
+
+    #Ensure that the Template is clean
+    if clean:
+        logger.info('remove old information in %s' % os.path.basename(dir_path))
+        if os.environ.has_key('MADGRAPH_BASE'):
+            subprocess.call([os.path.join('bin', 'clean_template'), '--web'], \
+                                                                   cwd=dir_path)
+        else:
+            try:
+                subprocess.call([os.path.join('bin', 'clean_template')], \
+                                                                   cwd=dir_path)
+            except Exception, why:
+                raise MadGraph5Error('Failed to clean correctly Template: \n %s' \
+                                                                          % why)
+        
+        #Write version info
+        MG_version = misc.get_pkg_info()
+        open(os.path.join(dir_path, 'SubProcesses', 'MGVersion.txt'), 'w').write(
+                                                          MG_version['version'])
+        
+#===============================================================================
+# copy the Template in a new directory and set up Standalone MG
+#===============================================================================
+def copy_v4standalone(mgme_dir, dir_path, model_dir, clean):
+    """create the directory run_name as a copy of the Template,
+       run standalone, import the model and Helas, and clean the directory 
+    """
+
+    #First copy the full template tree if dir_path doesn't exit
+    if not os.path.isdir(dir_path):
+        logger.info('initialize a new directory: %s' % \
+                    os.path.basename(dir_path))
+        shutil.copytree(os.path.join(mgme_dir, 'Template'), dir_path, True)
+
+    # Run standalone
+    logger.info('Setup directory %s for standalone' % \
+                os.path.basename(dir_path))
+
+    try:
+        subprocess.call([os.path.join('bin', 'standalone')],
+                        stdout = os.open(os.devnull, os.O_RDWR), cwd=dir_path)
+    except OSError:
+        # Probably standalone already called
+        pass
+
+    #Ensure that the Template is clean
+    if clean:
+        logger.info('remove old information in %s' % \
+                    os.path.basename(dir_path))
+        
+        for pdir in glob.glob(os.path.join(dir_path, "SubProcesses", "P*")):
+            shutil.rmtree(os.path.join(dir_path, pdir))
+            
+        #Write version info
+        MG_version = misc.get_pkg_info()
+        open(os.path.join(dir_path, 'SubProcesses', 'MGVersion.txt'), 'w').write(
+                                                          MG_version['version'])
+        export_helas(mgme_dir, dir_path)
+
+def export_helas(mgme_dir, dir_path):
+
+        # Copy the HELAS directory
+        helas_dir = os.path.join(mgme_dir, 'HELAS')
+        for filename in os.listdir(helas_dir): 
+            if os.path.isfile(os.path.join(helas_dir, filename)):
+                shutil.copy2(os.path.join(helas_dir, filename),
+                            os.path.join(dir_path, 'Source', 'DHELAS'))
+        shutil.move(os.path.join(dir_path, 'Source', 'DHELAS', 'Makefile.template'),
+                    os.path.join(dir_path, 'Source', 'DHELAS', 'Makefile'))
+        
+#===============================================================================
+# Make the Helas and Model directories for Standalone directory
+#===============================================================================
+def make_v4standalone(dir_path):
+    """Run make in the DHELAS and MODEL directories, to set up
+    everything for running standalone
+    """
+    
+
+    source_dir = os.path.join(dir_path, "Source")
+    # Run standalone
+    logger.info("Running make for Helas")
+    if misc.which('gfortran'):
+        logger.info('use gfortran')
+        subprocess.call(['python','./bin/Passto_gfortran.py'], cwd=dir_path, \
+                        stdout = open(os.devnull, 'w')) 
+    
+    subprocess.call(['make', '../lib/libdhelas3.a'],
+                    stdout = open(os.devnull, 'w'), cwd=source_dir)
+    logger.info("Running make for Model")
+    subprocess.call(['make', '../lib/libmodel.a'],
+                    stdout = open(os.devnull, 'w'), cwd=source_dir)
+
+        
+#===============================================================================
+# write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
+#===============================================================================
+def write_procdef_mg5(file_pos, modelname, process_str):
+    """ write an equivalent of the MG4 proc_card in order that all the Madevent
+    Perl script of MadEvent4 are still working properly for pure MG5 run."""
+    
+    proc_card_template = Template.mg4_proc_card.mg4_template
+    process_template = Template.mg4_proc_card.process_template
+    process_text = ''
+    coupling = ''
+    new_process_content = []
+    
+    
+    # First find the coupling and suppress the coupling from process_str
+    #But first ensure that coupling are define whithout spaces:
+    process_str = process_str.replace(' =', '=')
+    process_str = process_str.replace('= ', '=')
+    process_str = process_str.replace(',',' , ')
+    #now loop on the element and treat all the coupling
+    for info in process_str.split():
+        if '=' in info:
+            coupling += info + '\n'
+        else:
+            new_process_content.append(info)
+    # Recombine the process_str (which is the input process_str without coupling
+    #info)
+    process_str = ' '.join(new_process_content)
+    
+    #format the SubProcess
+    process_text += process_template.substitute({'process': process_str, \
+                                                        'coupling': coupling})
+    
+    text = proc_card_template.substitute({'process': process_text,
+                                        'model': modelname,
+                                        'multiparticle':''})
+    ff = open(file_pos, 'w')
+    ff.write(text)
+    ff.close()
+
+#===============================================================================
+# Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
+#===============================================================================
+def finalize_madevent_v4_directory(dir_path, makejpg, history):
+    """Finalize ME v4 directory by creating jpeg diagrams, html
+    pages,proc_card_mg5.dat and madevent.tar.gz."""
+
+    old_pos = os.getcwd()
+    os.chdir(os.path.join(dir_path, 'SubProcesses'))
+    P_dir_list = [proc for proc in os.listdir('.') if os.path.isdir(proc) and \
+                                                                proc[0] == 'P']
+    
+    devnull = os.open(os.devnull, os.O_RDWR)
+    # Convert the poscript in jpg files (if authorize)
+    if makejpg:
+        logger.info("Generate jpeg diagrams")
+        for Pdir in P_dir_list:
+            os.chdir(Pdir)
+            subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_jpeg-pl')],
+                            stdout = devnull)
+            os.chdir(os.path.pardir)
+
+    logger.info("Generate web pages")
+    # Create the WebPage using perl script
+
+    subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_cardhtml-pl')], \
+                                                            stdout = devnull)
+    subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_infohtml-pl')], \
+                                                            stdout = devnull)
+    os.chdir(os.path.pardir)
+    subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_crossxhtml-pl')],
+                    stdout = devnull)
+    [mv(name, './HTML/') for name in os.listdir('.') if \
+                        (name.endswith('.html') or name.endswith('.jpg')) and \
+                        name != 'index.html']               
+    
+    # Write command history as proc_card_mg5
+    if os.path.isdir('Cards'):
+        output_file = os.path.join('Cards', 'proc_card_mg5.dat')
+        output_file = open(output_file, 'w')
+        text = ('\n'.join(history) + '\n') % misc.get_time_info()
+        output_file.write(text)
+        output_file.close()
+
+    subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_cardhtml-pl')],
+                    stdout = devnull)
+    
+    # Run "make" to generate madevent.tar.gz file
+    if os.path.exists(os.path.join('SubProcesses', 'subproc.mg')):
+        if os.path.exists('madevent.tar.gz'):
+            os.remove('madevent.tar.gz')
+        subprocess.call(['make'], stdout = devnull)
+    
+    
+    subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_cardhtml-pl')],
+                    stdout = devnull)
+    
+    #return to the initial dir
+    os.chdir(old_pos)               
+           
+#===============================================================================
+# Create proc_card_mg5.dat for Standalone directory
+#===============================================================================
+def finalize_standalone_v4_directory(dir_path, history):
+    """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
+
+    # Write command history as proc_card_mg5
+    if os.path.isdir(os.path.join(dir_path, 'Cards')):
+        output_file = os.path.join(dir_path, 'Cards', 'proc_card_mg5.dat')
+        output_file = open(output_file, 'w')
+        text = ('\n'.join(history) + '\n') % misc.get_time_info()
+        output_file.write(text)
+        output_file.close()
 
 #===============================================================================
 # write_matrix_element_v4_standalone
@@ -96,122 +321,9 @@ def write_matrix_element_v4_standalone(fsock, matrix_element, fortran_model):
     jamp_lines = get_JAMP_lines(matrix_element)
     replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
-    file = \
-"""      SUBROUTINE SMATRIX(P,ANS)
-C  
-%(info_lines)s
-C 
-C MadGraph StandAlone Version
-C 
-C Returns amplitude squared summed/avg over colors
-c and helicities
-c for the point in phase space P(0:3,NEXTERNAL)
-C  
-%(process_lines)s
-C  
-      IMPLICIT NONE
-C  
-C CONSTANTS
-C  
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=%(nexternal)d)
-      INTEGER                 NCOMB         
-      PARAMETER (             NCOMB=%(ncomb)d)
-C  
-C ARGUMENTS 
-C  
-      REAL*8 P(0:3,NEXTERNAL),ANS
-C  
-C LOCAL VARIABLES 
-C  
-      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
-      REAL*8 T
-      REAL*8 MATRIX
-      INTEGER IHEL,IDEN, I
-      INTEGER JC(NEXTERNAL)
-      LOGICAL GOODHEL(NCOMB)
-      DATA NTRY/0/
-      DATA GOODHEL/NCOMB*.FALSE./
-%(helicity_lines)s
-%(den_factor_line)s
-C ----------
-C BEGIN CODE
-C ----------
-      NTRY=NTRY+1
-      DO IHEL=1,NEXTERNAL
-         JC(IHEL) = +1
-      ENDDO
-      ANS = 0D0
-          DO IHEL=1,NCOMB
-             IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
-                 T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
-               ANS=ANS+T
-               IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
-                   GOODHEL(IHEL)=.TRUE.
-               ENDIF
-             ENDIF
-          ENDDO
-      ANS=ANS/DBLE(IDEN)
-      END
-       
-       
-      REAL*8 FUNCTION MATRIX(P,NHEL,IC)
-C  
-%(info_lines)s
-C
-C Returns amplitude squared summed/avg over colors
-c for the point with external lines W(0:6,NEXTERNAL)
-C  
-%(process_lines)s
-C  
-      IMPLICIT NONE
-C  
-C CONSTANTS
-C  
-      INTEGER    NGRAPHS
-      PARAMETER (NGRAPHS=%(ngraphs)d) 
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=%(nexternal)d)
-      INTEGER    NWAVEFUNCS, NCOLOR
-      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
-      REAL*8     ZERO
-      PARAMETER (ZERO=0D0)
-C  
-C ARGUMENTS 
-C  
-      REAL*8 P(0:3,NEXTERNAL)
-      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
-C  
-C LOCAL VARIABLES 
-C  
-      INTEGER I,J
-      COMPLEX*16 ZTEMP
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
-      COMPLEX*16 W(18,NWAVEFUNCS)
-C  
-C GLOBAL VARIABLES
-C  
-      include 'coupl.inc'
-C  
-C COLOR DATA
-C  
-%(color_data_lines)s
-C ----------
-C BEGIN CODE
-C ----------
-%(helas_calls)s
-%(jamp_lines)s
-
-      MATRIX = 0.D0 
-      DO I = 1, NCOLOR
-          ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-              ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
-          ENDDO
-          MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
-      ENDDO
-      END""" % replace_dict
+    file = open(os.path.join(_file_path, \
+                      'iolibs/template_files/matrix_standalone_v4.inc')).read()
+    file = file % replace_dict
 
     # Write the file
     for line in file.split('\n'):
@@ -285,215 +397,10 @@ def write_matrix_element_v4_madevent(fsock, matrix_element, fortran_model):
     jamp_lines = get_JAMP_lines(matrix_element)
     replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
-    file = \
-"""      SUBROUTINE SMATRIX(P,ANS)
-C  
-%(info_lines)s
-C 
-C MadGraph for Madevent Version
-C 
-C Returns amplitude squared summed/avg over colors
-c and helicities
-c for the point in phase space P(0:3,NEXTERNAL)
-C  
-%(process_lines)s
-C  
-    IMPLICIT NONE
-C  
-C CONSTANTS
-C  
-    Include 'genps.inc'
-    Include 'maxamps.inc'
-    INTEGER                 NCOMB         
-    PARAMETER (             NCOMB=%(ncomb)d)
-    INTEGER    THEL
-    PARAMETER (THEL=NCOMB)
-C  
-C ARGUMENTS 
-C  
-    REAL*8 P(0:3,NEXTERNAL),ANS
-C  
-C LOCAL VARIABLES 
-C  
-    INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
-    REAL*8 T,MATRIX
-    INTEGER IHEL,IDEN
-    INTEGER IPROC,JC(NEXTERNAL), I
-    LOGICAL GOODHEL(NCOMB)
-    INTEGER NGRAPHS
-    REAL*8 hwgt, xtot, xtry, xrej, xr, yfrac(0:ncomb)
-    INTEGER idum, ngood, igood(ncomb), jhel, j, jj
-    LOGICAL warned
-    REAL     xran1
-    EXTERNAL xran1
-C  
-C GLOBAL VARIABLES
-C  
-    Double Precision amp2(maxamps), jamp2(0:maxamps)
-    common/to_amps/  amp2,       jamp2
+    file = open(os.path.join(_file_path, \
+                      'iolibs/template_files/matrix_madevent_v4.inc')).read()
+    file = file % replace_dict
     
-    character*79         hel_buff
-    common/to_helicity/  hel_buff
-    
-    REAL*8 POL(2)
-    common/to_polarization/ POL
-    
-    integer          isum_hel
-    logical                    multi_channel
-    common/to_matrix/isum_hel, multi_channel
-    INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
-    common/to_mconfigs/mapconfig, iconfig
-    DATA NTRY,IDUM /0,-1/
-    DATA xtry, xrej, ngood /0,0,0/
-    DATA warned, isum_hel/.false.,0/
-    DATA multi_channel/.true./
-    SAVE yfrac, igood, jhel
-    DATA NGRAPHS /%(ngraphs)d/          
-    DATA jamp2(0) /%(ncolor)d/          
-    DATA GOODHEL/THEL*.FALSE./
-%(helicity_lines)s
-%(den_factor_line)s
-C ----------
-C BEGIN CODE
-C ----------
-    NTRY=NTRY+1
-    DO IHEL=1,NEXTERNAL
-       JC(IHEL) = +1
-    ENDDO
-     
-    IF (multi_channel) THEN
-        DO IHEL=1,NGRAPHS
-            amp2(ihel)=0d0
-            jamp2(ihel)=0d0
-        ENDDO
-        DO IHEL=1,int(jamp2(0))
-            jamp2(ihel)=0d0
-        ENDDO
-    ENDIF
-    ANS = 0D0
-    write(hel_buff,'(16i5)') (0,i=1,nexternal)
-    IF (ISUM_HEL .EQ. 0 .OR. NTRY .LT. 10) THEN
-        DO IHEL=1,NCOMB
-           IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
-               T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
-             DO JJ=1,nincoming
-               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
-                 T=T*ABS(POL(JJ))
-               ELSE IF(POL(JJ).NE.1d0)THEN
-                 T=T*(2d0-ABS(POL(JJ)))
-               ENDIF
-             ENDDO
-             ANS=ANS+T
-             IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
-                 GOODHEL(IHEL)=.TRUE.
-                 NGOOD = NGOOD +1
-                 IGOOD(NGOOD) = IHEL
-             ENDIF
-           ENDIF
-        ENDDO
-        JHEL = 1
-        ISUM_HEL=MIN(ISUM_HEL,NGOOD)
-    ELSE              !RANDOM HELICITY
-        DO J=1,ISUM_HEL
-            JHEL=JHEL+1
-            IF (JHEL .GT. NGOOD) JHEL=1
-            HWGT = REAL(NGOOD)/REAL(ISUM_HEL)
-            IHEL = IGOOD(JHEL)
-            T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
-            DO JJ=1,nincoming
-              IF(POL(JJ).NE.1d0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
-                T=T*ABS(POL(JJ))
-              ELSE IF(POL(JJ).NE.1d0)THEN
-                T=T*(2d0-ABS(POL(JJ)))
-              ENDIF
-            ENDDO
-            ANS=ANS+T*HWGT
-        ENDDO
-        IF (ISUM_HEL .EQ. 1) THEN
-            WRITE(HEL_BUFF,'(16i5)')(NHEL(i,IHEL),i=1,nexternal)
-        ENDIF
-    ENDIF
-    IF (MULTI_CHANNEL) THEN
-        XTOT=0D0
-        DO IHEL=1,MAPCONFIG(0)
-            XTOT=XTOT+AMP2(MAPCONFIG(IHEL))
-        ENDDO
-        IF (XTOT.NE.0D0) THEN
-            ANS=ANS*AMP2(MAPCONFIG(ICONFIG))/XTOT
-        ELSE
-            ANS=0D0
-        ENDIF
-    ENDIF
-    ANS=ANS/DBLE(IDEN)
-    END
- 
- 
-REAL*8 FUNCTION MATRIX(P,NHEL,IC)
-C  
-%(info_lines)s
-C
-C Returns amplitude squared summed/avg over colors
-c for the point with external lines W(0:6,NEXTERNAL)
-C  
-%(process_lines)s
-C  
-    IMPLICIT NONE
-C  
-C CONSTANTS
-C  
-    INTEGER    NGRAPHS,    NEIGEN 
-    PARAMETER (NGRAPHS=%(ngraphs)d,NEIGEN=  1) 
-    include 'genps.inc'
-    include 'maxamps.inc'
-    INTEGER    NWAVEFUNCS     , NCOLOR
-    PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
-    REAL*8     ZERO
-    PARAMETER (ZERO=0D0)
-C  
-C ARGUMENTS 
-C  
-    REAL*8 P(0:3,NEXTERNAL)
-    INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
-C  
-C LOCAL VARIABLES 
-C  
-    INTEGER I,J
-    COMPLEX*16 ZTEMP
-    REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-    COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
-    COMPLEX*16 W(18,NWAVEFUNCS)
-C  
-C GLOBAL VARIABLES
-C  
-    Double Precision amp2(maxamps), jamp2(0:maxamps)
-    common/to_amps/  amp2,       jamp2
-    include 'coupl.inc'
-C  
-C COLOR DATA
-C  
-%(color_data_lines)s
-C ----------
-C BEGIN CODE
-C ----------
-%(helas_calls)s
-%(jamp_lines)s
-    MATRIX = 0.D0 
-    DO I = 1, NCOLOR
-        ZTEMP = (0.D0,0.D0)
-        DO J = 1, NCOLOR
-            ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
-        ENDDO
-        MATRIX =MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
-    ENDDO
-    Do I = 1, NGRAPHS
-        amp2(i)=amp2(i)+amp(i)*dconjg(amp(i))
-    Enddo
-    Do I = 1, NCOLOR
-        Jamp2(i)=Jamp2(i)+Jamp(i)*dconjg(Jamp(i))
-    Enddo
-
-    END""" % replace_dict
-
     # Write the file
     for line in file.split('\n'):
         writer.write_fortran_line(fsock, line)
@@ -541,83 +448,9 @@ def write_auto_dsig_file(fsock, matrix_element, fortran_model):
 
     replace_dict['dsig_line'] = dsig_line
 
-    file = \
-"""      DOUBLE PRECISION FUNCTION DSIG(PP,WGT)
-C ****************************************************
-C
-%(info_lines)s
-C
-%(process_lines)s
-C
-C     RETURNS DIFFERENTIAL CROSS SECTION
-C     Input:
-C             pp    4 momentum of external particles
-C             wgt   weight from Monte Carlo
-C     Output:
-C             Amplitude squared and summed
-C ****************************************************
-      IMPLICIT NONE
-C  
-C CONSTANTS
-C  
-      include 'genps.inc'
-      DOUBLE PRECISION       CONV
-      PARAMETER (CONV=389379.66*1000)  !CONV TO PICOBARNS
-      REAL*8     PI
-      PARAMETER (PI=3.1415926d0)
-C  
-C ARGUMENTS 
-C  
-      DOUBLE PRECISION PP(0:3,NEXTERNAL), WGT
-C  
-C LOCAL VARIABLES 
-C  
-      INTEGER I, ICROSS,ITYPE,LP
-      DOUBLE PRECISION u1,ub1,d1,db1,c1,cb1,s1,sb1,b1,bb1
-      DOUBLE PRECISION u2,ub2,d2,db2,c2,cb2,s2,sb2,b2,bb2
-      DOUBLE PRECISION g1,g2
-      DOUBLE PRECISION a1,a2
-      DOUBLE PRECISION XPQ(-7:7)
-      DOUBLE PRECISION DSIGUU
-C  
-C EXTERNAL FUNCTIONS
-C  
-      LOGICAL PASSCUTS
-      DOUBLE PRECISION ALPHAS2,REWGT,PDG2PDF
-C  
-C GLOBAL VARIABLES
-C  
-      INTEGER              IPROC
-      DOUBLE PRECISION PD(0:MAXPROC)
-      COMMON /SubProc/ PD, IPROC
-      include 'coupl.inc'
-      include 'run.inc'
-C  
-C DATA
-C  
-      DATA u1,ub1,d1,db1,c1,cb1,s1,sb1,b1,bb1/10*1d0/
-      DATA u2,ub2,d2,db2,c2,cb2,s2,sb2,b2,bb2/10*1d0/
-      DATA a1,g1/2*1d0/
-      DATA a2,g2/2*1d0/
-      DATA IPROC,ICROSS/1,1/
-C ----------
-C BEGIN CODE
-C ----------
-      DSIG=0D0
-      IF (PASSCUTS(PP)) THEN
-%(pdf_lines)s
-         CALL SMATRIX(PP,DSIGUU)                                              
-         dsiguu=dsiguu*rewgt(PP)
-         If (dsiguu.lt.1d199) then
-         dsig=%(dsig_line)s
-         else
-             write(*,*) "Error in matrix element"
-             dsiguu=0d0
-             dsig=0d0
-         endif
-         call unwgt(pp,%(dsig_line)s*wgt)
-      ENDIF
-      END""" % replace_dict
+    file = open(os.path.join(_file_path, \
+                      'iolibs/template_files/auto_dsig_v4.inc')).read()
+    file = file % replace_dict
 
     # Write the file
     for line in file.split('\n'):
@@ -743,12 +576,8 @@ def write_decayBW_file(fsock, matrix_element, fortran_model,
 def write_dname_file(fsock, matrix_element, fortran_model):
     """Write the dname.mg file for MG4"""
 
-    writer = FortranWriter()
-
-    replace_dict = {}
-
     line = "DIRNAME=P%s" % \
-           matrix_element.get('processes')[0].shell_string_v4()
+           matrix_element.get('processes')[0].shell_string()
 
     # Write the file
     fsock.write(line + "\n")
@@ -762,8 +591,6 @@ def write_iproc_file(fsock, matrix_element, fortran_model):
     """Write the iproc.inc file for MG4"""
 
     writer = FortranWriter()
-
-    replace_dict = {}
 
     line = "%d" % \
            matrix_element.get('processes')[0].get('id')
@@ -780,8 +607,6 @@ def write_leshouche_file(fsock, matrix_element, fortran_model):
     """Write the leshouche.inc file for MG4"""
 
     writer = FortranWriter()
-
-    replace_dict = {}
 
     # Extract number of external particles
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
@@ -840,9 +665,9 @@ def write_maxamps_file(fsock, matrix_element, fortran_model):
 
     writer = FortranWriter()
 
-    file = \
-"""   integer    maxamps
-      parameter (maxamps=%d)""" % len(matrix_element.get_all_amplitudes())
+    file = "       integer    maxamps\n"
+    file = file + "parameter (maxamps=%d)" % \
+           len(matrix_element.get_all_amplitudes())
 
     # Write the file
     for line in file.split('\n'):
@@ -861,10 +686,10 @@ def write_mg_sym_file(fsock, matrix_element, fortran_model):
     lines = []
 
     # Extract process with all decays included
-    final_legs = filter(lambda leg: leg.get('state') == 'final',
+    final_legs = filter(lambda leg: leg.get('state') == True,
                    matrix_element.get('processes')[0].get_legs_with_decays())
 
-    ninitial = len(filter(lambda leg: leg.get('state') == 'initial',
+    ninitial = len(filter(lambda leg: leg.get('state') == False,
                           matrix_element.get('processes')[0].get('legs')))
 
     identical_indices = {}
@@ -881,6 +706,7 @@ def write_mg_sym_file(fsock, matrix_element, fortran_model):
     for key in identical_indices.keys():
         if len(identical_indices[key]) < 2:
             del identical_indices[key]
+            
     # Write mg.sym file
     lines.append(str(len(identical_indices.keys())))
     for key in identical_indices.keys():
@@ -897,7 +723,7 @@ def write_mg_sym_file(fsock, matrix_element, fortran_model):
 #===============================================================================
 # write_ncombs_file
 #===============================================================================
-def write_ncombs_file(fsock, matrix_element, fortran_model, ncombs):
+def write_ncombs_file(fsock, matrix_element, fortran_model):
     """Write the ncombs.inc file for MadEvent."""
 
     writer = FortranWriter()
@@ -906,9 +732,8 @@ def write_ncombs_file(fsock, matrix_element, fortran_model, ncombs):
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
     # ncomb (used for clustering) is 2^(nexternal + 1)
-    file = \
-"""      integer    n_max_cl
-      parameter (n_max_cl=%d)""" % (2 ** (nexternal + 1))
+    file = "       integer    n_max_cl\n"
+    file = file + "parameter (n_max_cl=%d)" % (2 ** (nexternal + 1))
 
     # Write the file
 
@@ -932,12 +757,11 @@ def write_nexternal_file(fsock, matrix_element, fortran_model):
     replace_dict['nexternal'] = nexternal
     replace_dict['ninitial'] = ninitial
 
-    file = \
-"""   integer    nexternal
+    file = """ \
+      integer    nexternal
       parameter (nexternal=%(nexternal)d)
       integer    nincoming
       parameter (nincoming=%(ninitial)d)""" % replace_dict
-
 
     # Write the file
     for line in file.split('\n'):
@@ -954,9 +778,8 @@ def write_ngraphs_file(fsock, matrix_element, fortran_model, nconfigs):
 
     writer = FortranWriter()
 
-    file = \
-"""   integer    n_max_cg
-      parameter (n_max_cg=%d)""" % nconfigs
+    file = "       integer    n_max_cg\n"
+    file = file + "parameter (n_max_cg=%d)" % nconfigs
 
     # Write the file
     for line in file.split('\n'):
@@ -1039,15 +862,37 @@ def write_props_file(fsock, matrix_element, fortran_model, s_and_t_channels):
 def write_subproc(fsock, matrix_element, fortran_model):
     """Append this subprocess to the subproc.mg file for MG4"""
 
-    replace_dict = {}
-
     line = "P%s" % \
-           matrix_element.get('processes')[0].shell_string_v4()
+           matrix_element.get('processes')[0].shell_string()
 
     # Write line to file
     fsock.write(line + "\n")
 
     return True
+
+#===============================================================================
+# export the model
+#===============================================================================
+def export_model(model_path, process_path):
+    """Configure the files/link of the process according to the model"""
+    
+    # Import the model
+    for file in os.listdir(model_path):
+        if os.path.isfile(os.path.join(model_path, file)):
+            shutil.copy2(os.path.join(model_path, file), \
+                                 os.path.join(process_path, 'Source', 'MODEL'))    
+
+
+    #make the copy/symbolic link
+    model_path = process_path + '/Source/MODEL/'
+    ln(model_path + '/ident_card.dat', process_path + '/Cards', log=False)
+    cp(model_path + '/param_card.dat', process_path + '/Cards')
+    mv(model_path + '/param_card.dat', process_path + '/Cards/param_card_default.dat')
+    ln(model_path + '/particles.dat', process_path + '/SubProcesses')
+    ln(model_path + '/interactions.dat', process_path + '/SubProcesses')
+    ln(model_path + '/coupl.inc', process_path + '/Source')
+    ln(model_path + '/coupl.inc', process_path + '/SubProcesses')
+    ln(process_path + '/Source/run.inc', process_path + '/SubProcesses', log=False)
 
 #===============================================================================
 # generate_subprocess_directory_v4_standalone
@@ -1062,7 +907,7 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
 
     # Create the directory PN_xx_xxxxx in the specified path
     dirpath = os.path.join(path, \
-                   "P%s" % matrix_element.get('processes')[0].shell_string_v4())
+                   "P%s" % matrix_element.get('processes')[0].shell_string())
     try:
         os.mkdir(dirpath)
     except os.error as error:
@@ -1104,11 +949,9 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
 
     linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
 
-    try:
-        for file in linkfiles:
-            os.symlink(os.path.join('..', file), file)
-    except os.error:
-        logger.warning('Could not link to ' + os.path.join('..', file))
+    
+    for file in linkfiles:
+        ln('../%s' % file)
 
     # Return to original PWD
     os.chdir(cwd)
@@ -1120,8 +963,8 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
 # generate_subprocess_directory_v4_madevent
 #===============================================================================
 def generate_subprocess_directory_v4_madevent(matrix_element,
-                                                fortran_model,
-                                                path=os.getcwd()):
+                                              fortran_model,
+                                              path=os.getcwd()):
     """Generate the Pxxxxx directory for a subprocess in MG4 madevent,
     including the necessary matrix.f and various helper files"""
 
@@ -1132,7 +975,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     pathdir = os.getcwd()
 
     # Create the directory PN_xx_xxxxx in the specified path
-    subprocdir = "P%s" % matrix_element.get('processes')[0].shell_string_v4()
+    subprocdir = "P%s" % matrix_element.get('processes')[0].shell_string()
     try:
         os.mkdir(subprocdir)
     except os.error as error:
@@ -1212,8 +1055,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     files.write_to_file(filename,
                         write_ncombs_file,
                         matrix_element,
-                        fortran_model,
-                        nconfigs)
+                        fortran_model)
 
     filename = 'nexternal.inc'
     files.write_to_file(filename,
@@ -1249,12 +1091,12 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
                                       model=matrix_element.get('processes')[0].\
                                          get('model'),
                                       amplitude='')
-    logging.info("Generating Feynman diagrams for " + \
+    logger.info("Generating Feynman diagrams for " + \
                  matrix_element.get('processes')[0].nice_string())
     plot.draw()
 
-    # Generate jpgs
-    os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
+    # Generate jpgs -> pass in make_html
+    #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
 
     linkfiles = ['addmothers.f',
                  'cluster.f',
@@ -1277,12 +1119,12 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
                  'symmetry.f',
                  'unwgt.f']
 
-
     for file in linkfiles:
-        try:
-            os.symlink(os.path.join('..', file), file)
-        except os.error:
-            logger.warning('Could not link to ' + os.path.join('..', file))
+        ln('../' + file , '.')
+    
+    #import nexternal/leshouch in Source
+    ln('nexternal.inc', '../../Source', log=False)
+    ln('leshouche.inc', '../../Source', log=False)
 
     # Return to SubProcesses dir
     os.chdir(pathdir)
@@ -1312,12 +1154,17 @@ def get_mg5_info_lines():
 
     info = misc.get_pkg_info()
     info_lines = ""
-    if info.has_key('version') and  info.has_key('date'):
+    if info and info.has_key('version') and  info.has_key('date'):
         info_lines = "C  Generated by MadGraph 5 v. %s, %s\n" % \
                      (info['version'], info['date'])
         info_lines = info_lines + \
                      "C  By the MadGraph Development Team\n" + \
                      "C  Please visit us at https://launchpad.net/madgraph5"
+    else:
+        info_lines = "C  Generated by MadGraph 5\n" + \
+                     "C  By the MadGraph Development Team\n" + \
+                     "C  Please visit us at https://launchpad.net/madgraph5"        
+
     return info_lines
 
 def get_process_info_lines(matrix_element):
@@ -1375,8 +1222,7 @@ def get_color_data_lines(matrix_element, n=6):
                 ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
                                 (index + 1, k + 1, min(k + n, len(num_list)),
                                  ','.join(["%5r" % i for i in num_list[k:k + n]])))
-
-            my_cs.from_immutable(matrix_element.get('color_basis').keys()[index])
+            my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[index])
             ret_list.append("C %s" % repr(my_cs))
         return ret_list
 
@@ -1402,21 +1248,19 @@ def get_icolamp_lines(matrix_element):
     ret_list.append("logical icolamp(%d,%d)" % \
                     (len(amplitudes), len(color_amplitudes)))
 
-    bool_list = []
-
-    for icolor, coeff_list in \
-            enumerate(color_amplitudes):
+    for icolor, coeff_list in enumerate(color_amplitudes):
 
         # List of amplitude numbers used in this JAMP
         amp_list = [amp_number for (dummy, amp_number) in coeff_list]
 
         # List of True or False 
-        bool_list.extend([(i + 1 in amp_list) for i in \
-                          range(len(amplitudes))])
-    # Add line
-    ret_list.append("DATA icolamp/%s/" % \
-                         ','.join(["%s" % booldict[i] for i in \
-                                   bool_list]))
+        bool_list = [(i + 1 in amp_list) for i in \
+                          range(len(amplitudes))]
+        # Add line
+        ret_list.append("DATA(icolamp(i,%d),i=1,%d)/%s/" % \
+                            (icolor + 1, len(bool_list),
+                             ','.join(["%s" % booldict[i] for i in \
+                                       bool_list])))
 
     return ret_list
 
@@ -1443,12 +1287,15 @@ def get_JAMP_lines(matrix_element):
         for (coefficient, amp_number) in coeff_list:
             if common_factor:
                 res = res + "%sAMP(%d)" % (coeff(coefficient[0],
-                                           coefficient[1]/abs(coefficient[1]),
+                                           coefficient[1] / abs(coefficient[1]),
                                            coefficient[2],
                                            coefficient[3]),
                                            amp_number)
             else:
-                res = res + "%sAMP(%d)" % (apply(coeff, coefficient),
+                res = res + "%sAMP(%d)" % (coeff(coefficient[0],
+                                           coefficient[1],
+                                           coefficient[2],
+                                           coefficient[3]),
                                            amp_number)
 
         if common_factor:
@@ -1565,7 +1412,6 @@ class FortranWriter():
                   "write_fortran_line must have a single line as argument"
 
         # Check if this line is a comment
-        comment = False
         if self.__comment_pattern.search(line):
             # This is a comment
             myline = " " * (5 + self.__indent) + line.lstrip()[1:].lstrip()
@@ -2102,6 +1948,74 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
     return res_str + '*'
 
 
+################################################################################
+## helper function for universal file treatment
+################################################################################
+def format_path(path):
+    """Format the path in local format taking in entry a unix format"""
+    if path[0] != '/':
+        return os.path.join(*path.split('/'))
+    else:
+        return os.path.sep + os.path.join(*path.split('/'))
+def cp(path1, path2, log=True):
+    """ simple cp taking linux or mix entry"""
+    path1 = format_path(path1)
+    path2 = format_path(path2)
+    try:
+        shutil.copy2(path1, path2)
+    except IOError, why:
+        if log:
+            logger.warning(why)
+        
+    
+def mv(path1, path2):
+    """simple mv taking linux or mix format entry"""
+    path1 = format_path(path1)
+    path2 = format_path(path2)
+    try:
+        shutil.move(path1, path2)
+    except:
+        # An error can occur if the files exist at final destination
+        if os.path.isfile(path2):
+            os.remove(path2)
+            shutil.move(path1, path2)
+            return
+        elif os.path.isdir(path2) and os.path.exists(
+                                   os.path.join(path2, os.path.basename(path1))):      
+            path2 = os.path.join(path2, os.path.basename(path1))
+            os.remove(path2)
+            shutil.move(path1, path2)
+        else:
+            raise
+        
+def ln(file_pos, starting_dir='.', name='', log=True):
+    """a simple way to have a symbolic link whithout to have to change directory
+    starting_point is the directory where to write the link
+    file_pos is the file to link
+    WARNING: not the linux convention
+    """
+    file_pos = format_path(file_pos)
+    starting_dir = format_path(starting_dir)
+    if not name:
+        name = os.path.split(file_pos)[1]
+        
+    try:
+        os.symlink(os.path.relpath(file_pos, starting_dir), \
+                        os.path.join(starting_dir, name))
+    except:
+        if log:
+            logger.warning('Could not link %s at position: %s' % (file_pos, \
+                                                os.path.realpath(starting_dir)))
 
+
+
+    
+    
+    
+    
+    
+    
+    
+    
 
 

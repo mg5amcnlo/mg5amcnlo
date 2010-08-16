@@ -1,0 +1,43 @@
+************************************************************
+*                                                          *
+*           W E L C O M E  to  M A D G R A P H  5          *
+*                                                          *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*    The MadGraph Development Team - Please visit us at    *
+*    https://server06.fynu.ucl.ac.be/projects/madgraph     *
+*                                                          *
+*                   Code download from:                    *
+*             https://launchpad.net/madgraph5              *
+*                                                          *
+************************************************************
+
+Dependencies :
+===============
+
+- Python 2.6 (or higher, but not compatible with 3.X)
+
+If you need to provide output for MadEvent, you also need:
+- bash
+- perl 5.8 (or higher)
+
+
+Running with MadEvent
+=====================
+
+If you want full MadEvent functionality (for cross section calculation
+and event generation), you should install the MG5 directory in the
+MG_ME directory (version 4.4.44 or higher) with the name "madgraph5".
+
+
+On Windows:
+===========
+
+In order to run MG5 you should
+1) add the Python directory to the PATH
+2) run $> python ./bin/mg5

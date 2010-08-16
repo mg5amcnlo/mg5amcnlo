@@ -355,6 +355,151 @@ class Epsilon(ColorObject):
         self.triplets = not self.triplets
 
 #===============================================================================
+# Color sextet objects: delta6, K6, K3, T3, T6
+#===============================================================================
+class delta6(ColorObject):
+    """delta6, the sextet identity object."""
+
+    def __init__(self, *args):
+        """Ensure delta6 objects have strictly 2 indices"""
+
+        super(f, self).__init__()
+        if len(args) != 2:
+            raise ValueError, \
+                "delta6 objects must have two indices!"
+
+    def simplify(self):
+        """Implement delta6(i,j) = T(i,j)"""
+
+        # delta6(i,j) = T(i,j)
+        return ColorFactor([ColorString([T(self[:])])])
+
+class K6(ColorObject):
+    """K6, the symmetry clebsch coefficient, mapping into the symmetric
+    tensor."""
+
+    def __init__(self, *args):
+        """Ensure sextet color objects have strictly 3 indices"""
+
+        super(K6, self).__init__()
+        if len(args) != 3:
+            raise ValueError, \
+                "sextet color objects must have three indices!"
+
+        self.bar = False
+
+    def pair_simplify(self, col_obj):
+        """Implement the replacement rules
+        K6(m,i,j)K6B(m,k,l) = 1/2(delta3(l,i)delta3(k,j)
+                                  + delta3(k,i)delta3(l,j)
+        K6(m,i,j)K6B(n,j,i) = delta6(m,n)
+        K6(m,i,j)K6B(n,i,j) = delta6(m,n)."""
+
+        if self.bar and isinstance(col_obj, K6) and not col_obj.bar:
+            return col_obj.pair_simplify(self)
+
+        if not self.bar and isinstance(col_obj, K6) and col_obj.bar:
+
+            # I ASSUME THAT delta3 == T
+            # Rules for delta6 are missing.
+
+            m = self[0]
+            n = col_obj[0]
+
+            ij1 = self[-2:]
+            ij2 = col_obj[-2:]
+
+            # K6(m,i,j)K6B(m,k,l) = 1/2(delta3(l,i)delta3(k,j)
+            #                           + delta3(k,i)delta3(l,j)
+            if m == n:
+                col_str1 = ColorString([T([ij2[1] + ij1[0]]),
+                                        T([ij2[0] + ij1[1]])])
+                #col_str1 = ColorString([T(*(ij2[1:] + ij1[:1])),
+                #                        T(*(ij2[:1] + ij1[1:]))])
+                col_str2 = ColorString([T([ij2[0], ij1[0]]),
+                                        T([ij2[1], ij1[1]])])
+                #col_str2 = ColorString([T(*(ij2[:1] + ij1[:1])),
+                #                        T(*(ij2[1:] + ij1[1:]))])
+                col_str1.coeff = fractions.Fraction(1, 2)
+                col_str2.coeff = fractions.Fraction(1, 2)
+
+                return ColorFactor([col_str1, col_str2])
+
+            # K6(m,i,j)K6B(n,j,i) = delta6(m,n)
+            if ij1[1] == ij2[0] and ij1[0] == ij2[1]:
+                return ColorFactor([ColorString([delta6([m, n])])])
+
+            # K6(m,i,j)K6B(n,i,j) = delta6(m,n)
+            if ij1[0] == ij2[0] and ij1[1] == ij2[1]:
+                return ColorFactor([ColorString([delta6([m, n])])])
+
+class K3(K6):
+    """K3, the antisymmetry clebsch coefficient, mapping into the
+    antisymmetric tensor."""
+
+    def pair_simplify(self, col_obj):
+        """Implement the replacement rules
+        K3(m,i,j)K3B(m,k,l) = 1/2(delta3(l,i)delta3(k,j)
+                                  - delta3(k,i)delta3(l,j)
+        K3(m,i,j)K3B(n,j,i) = delta6(m,n)
+        K3(m,i,j)K3B(n,i,j) = delta6(m,n)."""
+
+        if self.bar and isinstance(col_obj, K3) and not col_obj.bar:
+            return col_obj.pair_simplify(self)
+
+        if not self.bar and isinstance(col_obj, K3) and col_obj.bar:
+
+            # I ASSUME THAT delta3 == T
+            # Rules for delta6 are missing.
+
+            m = self[0]
+            n = col_obj[0]
+
+            ij1 = self[-2:]
+            ij2 = col_obj[-2:]
+
+            # K3(m,i,j)K3B(m,k,l) = 1/2(delta3(l,i)delta3(k,j)
+            #                           - delta3(k,i)delta3(l,j)
+            if m == n:
+                col_str1 = ColorString([T([ij2[1] + ij1[0]]),
+                                        T([ij2[0] + ij1[1]])])
+                col_str2 = ColorString([T([ij2[0], ij1[0]]),
+                                        T([ij2[1], ij1[1]])])
+                col_str1.coeff = fractions.Fraction(1, 2)
+                col_str2.coeff = fractions.Fraction(-1, 2)
+
+                return ColorFactor([col_str1, col_str2])
+
+            # K3(m,i,j)K3B(n,j,i) = delta3(m,n)
+            if ij1[1] == ij2[0] and ij1[0] == ij2[1]:
+                return ColorFactor([ColorString([delta6([m, n])])])
+
+            # K3(m,i,j)K3B(n,i,j) = -delta3(m,n)
+            if ij1[0] == ij2[0] and ij1[1] == ij2[1]:
+                col_str = ColorString([delta6([m, n])])
+                col_str.coeff = fractions.Fraction(-1, 1)
+                return ColorFactor([col_str])
+
+class T3(ColorObject):
+    """The T3 color object. For SU(3), T3 == T."""
+
+    def __init__(self, *args):
+        """Check for exactly three indices"""
+
+        super(T3, self).__init__()
+        if len(args) != 3:
+            raise ValueError, \
+                "T3 objects must have three indices!"
+
+    def simplify(self):
+        """Implement T3(a,i,j) = 2(K3(i,ii,jj)T(a,jj,kk)K3B(j,kk,ii))"""
+
+        # THIS IS NOT THE RIGHT WAY TO DO THIS - WE SHOULD IMPLEMENT
+        # THE SIMPLIFICATION RULES FOR THE OBJECT
+
+        return 
+
+#===============================================================================
 # ColorString
 #===============================================================================
 class ColorString(list):
@@ -366,7 +511,9 @@ class ColorString(list):
     coeff = fractions.Fraction(1, 1)
     is_imaginary = False
     Nc_power = 0
-
+    canonical = None
+    immutable = None
+    
     def __init__(self, init_list=[],
                  coeff=fractions.Fraction(1, 1),
                  is_imaginary=False, Nc_power=0):
@@ -409,6 +556,10 @@ class ColorString(list):
         elif self.is_imaginary or other.is_imaginary:
             self.is_imaginary = True
 
+        # Reset "canonical", so don't get wrong result from comparison
+        self.canonical = None
+        self.immutable = None
+        
         self.extend(other)
 
     def simplify(self):
@@ -470,7 +621,7 @@ class ColorString(list):
             compl_conj_str.coeff = -compl_conj_str.coeff
 
         return compl_conj_str
-
+    
     def to_immutable(self):
         """Returns an immutable object summarizing the color structure of the
         current color string. Format is ((name1,indices1),...) where name is the
@@ -478,11 +629,16 @@ class ColorString(list):
         indices. An immutable object, in Python, is built on tuples, strings and
         numbers, i.e. objects which cannot be modified. Their crucial property
         is that they can be used as dictionary keys!"""
+        
+        if self.immutable:
+            return self.immutable
 
         ret_list = [(col_obj.__class__.__name__, tuple(col_obj)) \
                         for col_obj in self]
         ret_list.sort()
-        return tuple(ret_list)
+        self.immutable = tuple(ret_list)
+
+        return self.immutable
 
     def from_immutable(self, immutable_rep):
         """Fill the current object with Color Objects created using an immutable
@@ -544,6 +700,9 @@ class ColorString(list):
         if not immutable:
             immutable = self.to_immutable()
 
+        if self.canonical:
+            return self.canonical
+
         replaced_indices = {}
         curr_ind = 1
         return_list = []
@@ -562,7 +721,8 @@ class ColorString(list):
 
         return_list.sort()
 
-        return (tuple(return_list), replaced_indices)
+        self.canonical = (tuple(return_list), replaced_indices)
+        return self.canonical
 
     def __eq__(self, col_str):
         """Check if two color strings are equivalent by checking if their
@@ -618,6 +778,10 @@ class ColorFactor(list):
     def extend_str(self, new_col_fact):
         """Special extend taking care of adding new strings to strings already
         existing with the same structure."""
+
+        # Reset "canonical", so don't get wrong result from comparison
+        self.canonical = None
+        self.immutable = None
 
         for col_str in new_col_fact:
             self.append_str(col_str)

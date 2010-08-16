@@ -23,7 +23,7 @@ import re
 
 import madgraph.core.color_algebra as color
 
-logger = logging.getLogger('base_objects')
+logger = logging.getLogger('madgraph.base_objects')
 
 #===============================================================================
 # PhysicsObject
@@ -806,7 +806,8 @@ class Leg(PhysicsObject):
 
         self['id'] = 0
         self['number'] = 0
-        self['state'] = 'final'
+        # True = final, False = initial (boolean to save memory)
+        self['state'] = True
         self['from_group'] = True
 
     def filter(self, name, value):
@@ -818,13 +819,9 @@ class Leg(PhysicsObject):
                         "%s is not a valid integer for leg id" % str(value)
 
         if name == 'state':
-            if not isinstance(value, str):
+            if not isinstance(value, bool):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid string for leg state" % \
-                                                                    str(value)
-            if value not in ['initial', 'final']:
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid leg state (initial|final)" % \
+                        "%s is not a valid leg state (True|False)" % \
                                                                     str(value)
 
         if name == 'from_group':
@@ -860,8 +857,8 @@ class Leg(PhysicsObject):
 
         part = model.get('particle_dict')[self['id']]
         return part.is_fermion() and \
-               (self.get('state') == 'initial' and part.get('is_part') or \
-                self.get('state') == 'final' and not part.get('is_part'))
+               (self.get('state') == False and part.get('is_part') or \
+                self.get('state') == True and not part.get('is_part'))
 
     def is_outgoing_fermion(self, model):
         """Returns True if leg is an outgoing fermion, i.e., initial
@@ -873,8 +870,8 @@ class Leg(PhysicsObject):
 
         part = model.get('particle_dict')[self['id']]
         return part.is_fermion() and \
-               (self.get('state') == 'final' and part.get('is_part') or \
-                self.get('state') == 'initial' and not part.get('is_part'))
+               (self.get('state') == True and part.get('is_part') or \
+                self.get('state') == False and not part.get('is_part'))
 
 #===============================================================================
 # LegList
@@ -947,7 +944,7 @@ class LegList(PhysicsObjectList):
             return res
 
         for leg in self:
-            if leg.get('state') == 'initial':
+            if leg.get('state') == False:
                 res.append(model.get('particle_dict')[leg.get('id')].get_anti_pdg_code())
             else:
                 res.append(leg.get('id'))
@@ -965,7 +962,7 @@ class MultiLeg(PhysicsObject):
         """Default values for all properties"""
 
         self['ids'] = []
-        self['state'] = 'final'
+        self['state'] = True
 
     def filter(self, name, value):
         """Filter for valid multileg property values."""
@@ -980,11 +977,7 @@ class MultiLeg(PhysicsObject):
                           "%s is not a valid list of integers" % str(value)
 
         if name == 'state':
-            if not isinstance(value, str):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid string for leg state" % \
-                                                                    str(value)
-            if value not in ['initial', 'final']:
+            if not isinstance(value, bool):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid leg state (initial|final)" % \
                                                                     str(value)
@@ -1051,8 +1044,8 @@ class Vertex(PhysicsObject):
 
         if ninitial == 1:
             # For one initial particle, all legs are s-channel
-            # Only need to flip particle id if state is 'initial'
-            if leg.get('state') == 'final':
+            # Only need to flip particle id if state is False
+            if leg.get('state') == True:
                 return leg.get('id')
             else:
                 return model.get('particle_dict')[leg.get('id')].\
@@ -1060,7 +1053,7 @@ class Vertex(PhysicsObject):
 
         # Number of initial particles is at least 2
         if self.get('id') == 0 or \
-           leg.get('state') == 'initial':
+           leg.get('state') == False:
             # identity vertex or t-channel particle
             return 0
 
@@ -1074,7 +1067,7 @@ class Vertex(PhysicsObject):
 
         ## Check if the other legs are initial or final.
         ## If the latter, return leg id, if the former, return -leg id
-        #if self.get('legs')[0].get('state') == 'final':
+        #if self.get('legs')[0].get('state') == True:
         #    return leg.get('id')
         #else:
         #    return model.get('particle_dict')[leg.get('id')].\
@@ -1119,6 +1112,7 @@ class Diagram(PhysicsObject):
         """Default values for all properties"""
 
         self['vertices'] = VertexList()
+        self['orders'] = {}
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
@@ -1128,12 +1122,15 @@ class Diagram(PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid VertexList object" % str(value)
 
+        if name == 'orders':
+            Interaction.filter(Interaction(), 'orders', value)
+
         return True
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['vertices']
+        return ['vertices', 'orders']
 
     def nice_string(self):
         """Returns a nicely formatted string of the diagram content."""
@@ -1151,9 +1148,27 @@ class Diagram(PhysicsObject):
                 mystr = mystr + str(vert['legs'][-1]['number']) + '(%s)' % str(vert['legs'][-1]['id']) + ','
                 mystr = mystr + 'id:' + str(vert['id']) + '),'
             mystr = mystr[:-1] + ')'
+            mystr += " (%s)" % ",".join(["%s=%d" % (key, self['orders'][key]) \
+                                        for key in self['orders'].keys()])
             return mystr
         else:
             return '()'
+
+    def calculate_orders(self, model):
+        """Calculate the actual coupling orders of this diagram"""
+
+        coupling_orders = {}
+        for vertex in self['vertices']:
+            if vertex.get('id') == 0: continue
+            couplings = model.get('interaction_dict')[vertex.get('id')].\
+                        get('orders')
+            for coupling in couplings.keys():
+                try:
+                    coupling_orders[coupling] += couplings[coupling]
+                except:
+                    coupling_orders[coupling] = couplings[coupling]
+
+        self.set('orders', coupling_orders)
 
 #===============================================================================
 # DiagramList
@@ -1198,6 +1213,7 @@ class Process(PhysicsObject):
         self['forbidden_s_channels'] = []
         self['forbidden_particles'] = []
         self['is_decay_chain'] = False
+        self['overall_orders'] = {}
         # Decay chain processes associated with this process
         self['decay_chains'] = ProcessList()
 
@@ -1208,7 +1224,8 @@ class Process(PhysicsObject):
             if not isinstance(value, LegList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid LegList object" % str(value)
-        if name == 'orders':
+
+        if name in ['orders', 'overall_orders']:
             Interaction.filter(Interaction(), 'orders', value)
 
         if name == 'model':
@@ -1261,14 +1278,17 @@ class Process(PhysicsObject):
         """Special set for forbidden particles - set to abs value."""
 
         if name == 'forbidden_particles':
-            value = [abs(i) for i in value]
+            try:
+                value = [abs(i) for i in value]
+            except:
+                pass
 
         return super(Process, self).set(name, value) # call the mother routine
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return ['legs', 'orders', 'model', 'id',
+        return ['legs', 'orders', 'overall_orders', 'model', 'id',
                 'required_s_channels', 'forbidden_s_channels',
                 'forbidden_particles', 'is_decay_chain', 'decay_chains']
 
@@ -1280,8 +1300,8 @@ class Process(PhysicsObject):
         prevleg = None
         for leg in self['legs']:
             mypart = self['model'].get('particle_dict')[leg['id']]
-            if prevleg and prevleg['state'] == 'initial' \
-                   and leg['state'] == 'final':
+            if prevleg and prevleg['state'] == False \
+                   and leg['state'] == True:
                 # Separate initial and final legs by ">"
                 mystr = mystr + '> '
                 # Add required s-channels
@@ -1316,6 +1336,12 @@ class Process(PhysicsObject):
         # Remove last space
         mystr = mystr[:-1]
 
+        if self.get('id') or self.get('overall_orders'):
+            mystr += " @%d" % self.get('id')
+            if self.get('overall_orders'):
+                mystr += " " + " ".join([key + '=' + repr(self['orders'][key]) \
+                       for key in self['orders']]) + ' '
+        
         if not self.get('decay_chains'):
             return mystr
 
@@ -1326,14 +1352,14 @@ class Process(PhysicsObject):
         return mystr
 
     def base_string(self):
-        """Returns a string containing only the basic process."""
+        """Returns a string containing only the basic process (w/ decays)."""
 
         mystr = ""
         prevleg = None
-        for leg in self['legs']:
+        for leg in self.get_legs_with_decays():
             mypart = self['model'].get('particle_dict')[leg['id']]
-            if prevleg and prevleg['state'] == 'initial' \
-                   and leg['state'] == 'final':
+            if prevleg and prevleg['state'] == False \
+                   and leg['state'] == True:
                 # Separate initial and final legs by ">"
                 mystr = mystr + '> '
             mystr = mystr + mypart.get_name() + ' '
@@ -1351,8 +1377,8 @@ class Process(PhysicsObject):
         prevleg = None
         for leg in self['legs']:
             mypart = self['model'].get('particle_dict')[leg['id']]
-            if prevleg and prevleg['state'] == 'initial' \
-                   and leg['state'] == 'final':
+            if prevleg and prevleg['state'] == False \
+                   and leg['state'] == True:
                 # Separate initial and final legs by ">"
                 mystr = mystr + '_'
                 # Add required s-channels
@@ -1392,8 +1418,8 @@ class Process(PhysicsObject):
         prevleg = None
         for leg in self.get_legs_with_decays():
             mypart = self['model'].get('particle_dict')[leg['id']]
-            if prevleg and prevleg['state'] == 'initial' \
-                   and leg['state'] == 'final':
+            if prevleg and prevleg['state'] == False \
+                   and leg['state'] == True:
                 # Separate initial and final legs by ">"
                 mystr = mystr + '_'
             if mypart['is_part']:
@@ -1414,27 +1440,27 @@ class Process(PhysicsObject):
     def get_ninitial(self):
         """Gives number of initial state particles"""
 
-        return len(filter(lambda leg: leg.get('state') == 'initial',
+        return len(filter(lambda leg: leg.get('state') == False,
                            self.get('legs')))
 
     def get_initial_ids(self):
         """Gives the pdg codes for initial state particles"""
 
         return [leg.get('id') for leg in \
-                filter(lambda leg: leg.get('state') == 'initial',
+                filter(lambda leg: leg.get('state') == False,
                        self.get('legs'))]
 
     def get_initial_pdg(self, number):
         """Return the pdg codes for initial state particles for beam number"""
 
-        return filter(lambda leg: leg.get('state') == 'initial' and\
+        return filter(lambda leg: leg.get('state') == False and\
                        leg.get('number') == number,
                        self.get('legs'))[0].get('id')
 
     def get_final_legs(self):
         """Gives the pdg codes for initial state particles"""
 
-        return filter(lambda leg: leg.get('state') == 'final',
+        return filter(lambda leg: leg.get('state') == True,
                        self.get('legs'))
     
     def get_legs_with_decays(self):
@@ -1445,7 +1471,7 @@ class Process(PhysicsObject):
             legs.pop(0)
         ileg = 0
         for decay in self.get('decay_chains'):
-            while legs[ileg].get('state') == 'initial' or \
+            while legs[ileg].get('state') == False or \
                       legs[ileg].get('id') != decay.get('legs')[0].get('id'):
                 ileg = ileg + 1
             decay_legs = decay.get_legs_with_decays()
@@ -1456,6 +1482,55 @@ class Process(PhysicsObject):
             leg.set('number', ileg + 1)
             
         return LegList(legs)
+
+    def compare_for_sort(self, other):
+        """Sorting routine which allows to sort processes for
+        comparison. Compare only process id and legs."""
+
+        if self['id'] != other['id']:
+            return self['id'] - other['id']
+
+        initlegs = sorted([l.get('id') for l in \
+                           filter(lambda leg: not leg.get('state'),
+                                  self['legs'])])
+        otherinitlegs = sorted([l.get('id') for l in \
+                           filter(lambda leg: not leg.get('state'),
+                                  self['legs'])])
+
+        if len(initlegs) != len(otherinitlegs):
+            return len(initlegs) - len(otherinitlegs)
+                
+        for leg, otherleg in zip(initlegs, otherinitlegs):
+            if leg != otherleg:
+                return leg - otherleg
+        
+        legs = sorted([l.get('id') for l in \
+                       filter(lambda leg: leg.get('state'),
+                              self.get_legs_with_decays())])
+        otherlegs = sorted([l.get('id') for l in \
+                       filter(lambda leg: leg.get('state'),
+                              other.get_legs_with_decays())])
+
+        if len(legs) != len(otherlegs):
+            return len(legs) - len(otherlegs)
+                
+        for leg, otherleg in zip(legs, otherlegs):
+            if leg != otherleg:
+                return leg - otherleg
+        
+        return 0
+        
+    def __eq__(self, other):
+        """Overloading the equality operator, so that only comparison
+        of process id and legs is being done, using compare_for_sort."""
+
+        if not isinstance(other, Process):
+            return False
+
+        return self.compare_for_sort(other) == 0
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 #===============================================================================
 # ProcessList
@@ -1509,6 +1584,73 @@ class ProcessDefinition(Process):
         """Return process property names as a nicely sorted list."""
 
         return super(ProcessDefinition, self).get_sorted_keys()
+
+    def nice_string(self, indent=0):
+        """Returns a nicely formated string about current process
+        content"""
+
+        mystr = " " * indent + "Process: "
+        prevleg = None
+        for leg in self['legs']:
+            myparts = \
+                   "/".join([self['model'].get('particle_dict')[id].get_name() \
+                             for id in leg.get('ids')])
+            if prevleg and prevleg['state'] == False \
+                   and leg['state'] == True:
+                # Separate initial and final legs by ">"
+                mystr = mystr + '> '
+                # Add required s-channels
+                if self['required_s_channels']:
+                    for req_id in self['required_s_channels']:
+                        reqpart = self['model'].get('particle_dict')[req_id]
+                        mystr = mystr + reqpart.get_name() + ' '
+                    mystr = mystr + '> '
+
+            mystr = mystr + myparts + ' '
+            #mystr = mystr + '(%i) ' % leg['number']
+            prevleg = leg
+
+        # Add forbidden s-channels
+        if self['forbidden_s_channels']:
+            mystr = mystr + '$ '
+            for forb_id in self['forbidden_s_channels']:
+                forbpart = self['model'].get('particle_dict')[forb_id]
+                mystr = mystr + forbpart.get_name() + ' '
+
+        # Add forbidden particles
+        if self['forbidden_particles']:
+            mystr = mystr + '/ '
+            for forb_id in self['forbidden_particles']:
+                forbpart = self['model'].get('particle_dict')[forb_id]
+                mystr = mystr + forbpart.get_name() + ' '
+
+        if self['orders']:
+            mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
+                       for key in self['orders']]) + ' '
+
+        # Remove last space
+        mystr = mystr[:-1]
+
+        if self.get('id') or self.get('overall_orders'):
+            mystr += " @%d" % self.get('id')
+            if self.get('overall_orders'):
+                mystr += " " + " ".join([key + '=' + repr(self['orders'][key]) \
+                       for key in self['orders']]) + ' '
+        
+        if not self.get('decay_chains'):
+            return mystr
+
+        for decay in self['decay_chains']:
+            mystr = mystr + '\n' + \
+                    decay.nice_string(indent + 2).replace('Process', 'Decay')
+
+        return mystr
+
+    def __eq__(self, other):
+        """Overloading the equality operator, so that only comparison
+        of process id and legs is being done, using compare_for_sort."""
+
+        return super(Process, self).__eq__(other)
 
 #===============================================================================
 # ProcessDefinitionList

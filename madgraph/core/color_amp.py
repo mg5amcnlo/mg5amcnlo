@@ -13,6 +13,10 @@
 #
 ################################################################################
 
+"""Classes, methods and functions required to write QCD color information 
+for a diagram and build a color basis, and to square a QCD color string for
+squared diagrams and interference terms."""
+
 import copy
 import fractions
 import operator
@@ -20,10 +24,6 @@ import re
 
 import madgraph.core.color_algebra as color_algebra
 import madgraph.core.diagram_generation as diagram_generation
-
-"""Classes, methods and functions required to write QCD color information 
-for a diagram and build a color basis, and to square a QCD color string for
-squared diagrams and interference terms."""
 
 #===============================================================================
 # ColorBasis
@@ -81,6 +81,7 @@ class ColorBasis(dict):
                         for cs in res_dict.values()]):
                     res_dict = {}
                 # Return since this must be the last vertex
+
                 return res_dict
 
         # NORMAL VERTICES WITH ID != 0 -----------------------------------------
@@ -91,6 +92,7 @@ class ColorBasis(dict):
         if all([cs == color_algebra.ColorString() \
                         for cs in res_dict.values()]):
             res_dict = {}
+
         return res_dict
 
     def add_vertex(self, vertex, diagram, model,
@@ -290,6 +292,14 @@ class ColorBasis(dict):
         or 1 arguments). If one arguments is given, it's interpreted as 
         an amplitude."""
 
+        dict.__init__(self)
+
+        # Dictionary to save simplifications already done in a canonical form
+        self._canonical_dict = {}
+
+        # Dictionary store the raw colorize information
+        self._list_color_dict = []
+
         if len(args) not in (0, 1):
             raise ValueError, \
                 "Object ColorBasis must be initialized with 0 or 1 arguments"
@@ -383,7 +393,7 @@ class ColorBasis(dict):
 
         res = []
 
-        for col_basis_entry in self.keys():
+        for col_basis_entry in sorted(self.keys()):
 
             res_dict = {}
             fake_repl = []
@@ -441,7 +451,7 @@ class ColorBasis(dict):
 # ColorMatrix
 #===============================================================================
 class ColorMatrix(dict):
-    """A color matrix, i.e. a dictionary with pairs (i,j) as keys where i
+    """A color matrix, meaning a dictionary with pairs (i,j) as keys where i
     and j refer to elements of color basis objects. Values are Color Factor
     objects. Also contains two additional dictionaries, one with the fixed Nc
     representation of the matrix, and the other one with the "inverted" matrix,
@@ -483,11 +493,10 @@ class ColorMatrix(dict):
         to be symmetric."""
 
         canonical_dict = {}
-
         for i1, struct1 in \
-                    enumerate(self._col_basis1.keys()):
+                    enumerate(sorted(self._col_basis1.keys())):
             for i2, struct2 in \
-                    enumerate(self._col_basis2.keys()):
+                    enumerate(sorted(self._col_basis2.keys())):
 
                 # Only scan upper right triangle if symmetric
                 if is_symmetric and i2 < i1:
