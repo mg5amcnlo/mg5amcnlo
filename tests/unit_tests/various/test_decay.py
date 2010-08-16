@@ -12,2146 +12,350 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-"""Unit test Library for testing the Creation of Helas Amplitude created from 
-the output of the Feynman Rules."""
+"""Unit test Library for the objects in decay module."""
 from __future__ import division
 
-import aloha.helasamp_object as HelasObject
-import aloha.helasamp_lib as HelasLib
-import aloha.create_helas as Create_Helas
+import copy
+import sys
+sys.path.append('/home/hsien/Documents/HEP.Hou/MadGraph+Event/MG_ME_V4.4.44/UFO_MODEL')
 
 import tests.unit_tests as unittest
+import madgraph.core.base_objects as base_objects
+import decay.decay_objects as decay_objects
 
-class TestVariable(unittest.TestCase):
+#===============================================================================
+# DecayParticleTest
+#===============================================================================
+class Test_DecayParticle(unittest.TestCase):
+    """Test class for the DecayParticle object"""
 
-    def setUp(self):
-        self.var1 = HelasLib.Variable(2, 'var1')
-        self.var2 = HelasLib.Variable(3, 'var2')
-        self.var3 = HelasLib.Variable(11, 'var3')
-        
-        
-    def testsumvarvar (self):
-        """ test the sum of two Variable Object"""
-        
-        #Sum of Two Variable
-        sum = self.var1 + self.var2
-        
-        #check sanity
-        self.assertEquals(sum.__class__,HelasLib.AddVariable)
-        self.assertTrue(self.var1 in sum)        
-        self.assertTrue(self.var2 in sum)
-        self.assertEquals(len(sum),2)
-        
-        #test prefactor, constant term treatment
-        self.assertEquals(sum.prefactor,1)
-        self.assertTrue(self.var1 in sum)
-        for term in sum:
-            if term == self.var1:
-                self.assertEqual(term.prefactor, 2)
-                self.assertFalse(term is self.var1)
-            elif term == self.var2:
-                self.assertEqual(term.prefactor, 3)
-                self.assertFalse(term is self.var2)
-                
-        self.assertEquals(self.var1.prefactor, 2) #prefactor is preserve
-        self.assertEquals(self.var2.prefactor, 3)   
-         
-    def testrsumvarvar (self):
-        """ test the sum of two Variable Object (inverse order)"""
-        
-        #Sum of Two Variable
-        sum = self.var2 + self.var1        
-        #check sanity
-        self.assertEquals(sum.__class__,HelasLib.AddVariable)
-        self.assertTrue(self.var1 in sum)        
-        self.assertTrue(self.var2 in sum)
-        self.assertEquals(len(sum),2)
-        
-        #test prefactor, constant term treatment
-        self.assertEquals(sum.prefactor,1)
-        self.assertTrue(self.var1 in sum)
-        for term in sum:
-            if term == self.var1:
-                self.assertEqual(term.prefactor, 2)
-                self.assertFalse(term is self.var1)
-            elif term == self.var2:
-                self.assertEqual(term.prefactor, 3)
-                self.assertFalse(term is self.var2)
-                                  
-        self.assertEquals(self.var1.prefactor,2) #prefactor is preserve
-        self.assertEquals(self.var2.prefactor,3)   
- 
-    def testsumvarint(self):
-        """ test the sum of one Variable with an integer"""
+    mydict = {}
+    mypart = None
+    mymodel = {}
+    my2leglist = base_objects.LegList([base_objects.Leg({'id':6,
+                                                       'number': 4,
+                                                       'state': False,
+                                                       'from_group': False})]+ \
+                                      [base_objects.Leg({'id':5,
+                                                       'number': 4,
+                                                       'state': True,
+                                                       'from_group': False})] *2
+                                     )
+    my_2bodyvertexlist = base_objects.VertexList( 
+                           [base_objects.Vertex({'id':1, 'legs':my2leglist})]*5)
 
-        self.assertRaises(AttributeError,HelasLib.Variable.__add__, self.var1, 4)
-        return
-    
-    def testsumvaradd(self):
-        """ test the sum of one Variable with an AddVariable"""        
+    my3leglist = base_objects.LegList([base_objects.Leg({'id':6,
+                                                       'number': 4,
+                                                       'state': False,
+                                                       'from_group': False})] +\
+                                      [base_objects.Leg({'id':5,
+                                                       'number': 4,
+                                                       'state': True,
+                                                       'from_group': False})]* 3
+                                      )
+    my_3bodyvertexlist = base_objects.VertexList(
+                           [base_objects.Vertex({'id':1, 'legs':my3leglist})]*5)
 
-        add = HelasLib.AddVariable()
-        add.append(self.var1)
-        add.append(self.var2)
+    my_2bodyvertexlist_2ini = base_objects.VertexList()
+    my_2bodyvertexlist_wrongini = base_objects.VertexList()
+    my_3bodyvertexlist_2ini = base_objects.VertexList()
+    my_3bodyvertexlist_wrongini = base_objects.VertexList()
 
-        sum = self.var3 + add
-        
-        self.assertEquals(sum.__class__,HelasLib.AddVariable)
-        self.assertTrue(self.var3 in sum)
-        self.assertEquals(len(sum), 3)
-        for data in sum:
-            if data == self.var3:
-                self.assertFalse(data is self.var3)
-            else:
-                self.assertTrue(data is self.var1 or data is self.var2)
-                    
-                
-        #test prefactor- constant_term
-        self.assertEquals(sum.prefactor, 1)
-        self.assertEquals(self.var1.prefactor,2)
-        
-    def testsumvarmult(self):
-        """ test the sum of one Variable with an MultVariable"""        
-        
-        mult = HelasLib.MultVariable()
-        mult.append(self.var1)
-        mult.append(self.var2) 
-        sum = self.var3 + mult
-        
-        self.assertEquals(sum.__class__,HelasLib.AddVariable)
-        self.assertTrue(self.var3 in sum)
-        self.assertEquals(len(sum), 2)
-        for data in sum:
-            if data == self.var3:
-                self.assertFalse(data is self.var3)
-                self.assertEqual(data.prefactor, self.var3.prefactor)
-                
-        #test prefactor- constant_term
-        self.assertEquals(sum.prefactor, 1)
-        self.assertEquals(self.var3.prefactor, 11)
-         
-    def testmultvarvar(self):
-        """product of Two Variable"""
-        
-        prod = self.var1 * self.var2
-        
-        #check sanity
-        self.assertEquals(prod.__class__,HelasLib.MultVariable)
-        self.assertTrue(self.var1 in prod) # presence of single term        
-        self.assertTrue(self.var2 in prod) # presence of single term
-        self.assertEquals(len(prod),2)
-        
-        
-        self.assertEquals(prod.prefactor,6)
+    #Add one more initial particle to the leglist.
+    my2leglist_2ini = base_objects.LegList(my2leglist + [my2leglist[0]])
+    my3leglist_2ini = base_objects.LegList(my3leglist + [my3leglist[0]])
+
+    #Vertex with more than one initial particles.
+    my_2bodyvertexlist_2ini = base_objects.VertexList(my_2bodyvertexlist + \
+        base_objects.VertexList([base_objects.Vertex({'id':1, 'legs':my2leglist_2ini})]))
+    my_3bodyvertexlist_2ini = base_objects.VertexList(my_3bodyvertexlist + \
+        base_objects.VertexList([base_objects.Vertex({'id':1, 'legs':my3leglist_2ini})]))
 
 
-    def testmultvarAdd(self):
-        """product of Variable with an AddVariable"""
-        
-        add = self.var1 + self.var2
-        prod = self.var3 * add
-        #sanity check
-        self.assertEquals(prod.__class__, HelasLib.AddVariable)
-        self.assertEquals(len(prod), 2)
-        
-        #check prefactor of each term
-        for term in prod:
-            if self.var1 not in term:
-                self.assertEquals(term.prefactor, 33)
-            elif self.var2 not in term:
-                self.assertEquals(term.prefactor, 22)
-            else:
-                raise Exception('not valid term')
-                
-    
-    def testmultvarMult(self):
-        """product of Variable with an MultVariable"""
-        
-        var1 = HelasLib.Variable(2)
-        var2 = HelasLib.Variable(3,'y')
-        mult = HelasLib.MultVariable()
-        mult.append(var1)
-        mult.append(var2)
-        
-        prod = self.var1 * mult
-        
-        #Sanity
-        self.assertEquals(prod.__class__, HelasLib.MultVariable)
-        self.assertEquals(len(prod), 3)
-        
-        #check prefactor
-        self.assertEquals(prod.prefactor, 12)
-        
-               
-    def testmultvarint(self):
-        """product of Var with an integer"""
-        
-        prod1 = self.var1 * 2
-        prod2 = 2 * self.var2
+    #Initial particle of Vertex is not the same as the parent one.
+    my_2bodyvertexlist_wrongini = copy.deepcopy(base_objects.VertexList(my_2bodyvertexlist))
+    my_2bodyvertexlist_wrongini[0]['legs'][0]['id'] = 5
+    my_3bodyvertexlist_wrongini = copy.deepcopy(base_objects.VertexList(my_3bodyvertexlist))
+    my_3bodyvertexlist_wrongini[0]['legs'][0]['id'] = 5
 
-        #SanityCheck
-        self.assertTrue(prod1, HelasLib.Variable)
-        self.assertTrue(prod2, HelasLib.Variable)
-        self.assertEquals(prod1, self.var1)
-        self.assertEquals(prod2, self.var2)
-        self.assertFalse(prod1 is self.var1)
-        self.assertFalse(prod2 is self.var2)
-        
-        #check prefactor - constant term
-        self.assertEquals(prod1.prefactor, 4)
-        self.assertEquals(prod2.prefactor, 6)
-
-class TestAddVariable(unittest.TestCase):
+    if my_2bodyvertexlist[0]['legs'][0]['id'] == 5:
+        print 'Wrong here'
 
     def setUp(self):
-        """Initialize basic object"""
-        self.var1 = HelasLib.Variable(2, 'var1')
-        self.var2 = HelasLib.Variable(3, 'var2')
-        self.add1 = HelasLib.AddVariable()
-        self.add1.append(self.var1)
-        self.add1.append(self.var2)
 
-        self.var3 = HelasLib.Variable(11, 'var3')
-        self.var4 = HelasLib.Variable(4, 'var4')
-        self.add2 = HelasLib.AddVariable()
-        self.add2.append(self.var3)
-        self.add2.append(self.var4)        
-    
-    def testsumaddint(self):
-        """Test the sum of an Add variable with an integer"""
-        
-        add2 = self.add1 + 5
-        self.assertEqual(type(add2), HelasLib.AddVariable)
-        self.assertEqual(len(add2), 3)
-        for term in add2:
-            if term == self.var1:
-                self.assertTrue(term.prefactor, 2)
-            elif term == self.var2:
-                self.assertTrue(term.prefactor, 3)
-            else:
-                self.assertEqual(type(term), HelasLib.ConstantObject)
-                self.assertEqual(term.value, 5)
-            
-        return
-                
-    def testsumaddmult(self):
-        """Test the sum of an AddVariable with a MultVariable."""
-        
-        var1 = HelasLib.Variable(2)
-        var2 = HelasLib.Variable(3)
-        mult = HelasLib.MultVariable()
-        mult.append(var1)
-        mult.append(var2)
-        mult.constant_term =2
-                
-        sum = self.add1 + mult
-        
-        #Sanity Check
-        self.assertEquals(sum.__class__, HelasLib.AddVariable)
-        self.assertEqual(len(sum), 3)
-        self.assertTrue(mult in sum)
-        
-        #check new term 
-        for term in sum:
-            if term.__class__ == HelasLib.AddVariable:
-                self.assertTrue(term.prefactor, 6)
-                self.assertTrue(term.constant_term, 0)
-                
-    def testsumaddvar(self):
-        """Test the sum of an AddVariable with a Variable."""
-        
-        var3 = HelasLib.Variable(11, 'var3')
-        sum = self.add1 + var3
-        self.assertEquals(sum.__class__,HelasLib.AddVariable)
-        self.assertTrue(self.var1 in sum)
-        self.assertTrue(self.var2 in sum)
-        self.assertTrue(self.var3 in sum)        
-        self.assertEquals(len(sum), 3)
-        for data in sum:
-            if data == self.var1:
-                self.assertEquals(data.prefactor,2)
-            elif data == self.var2:
-                self.assertEquals(data.prefactor,3)
-            elif data == self.var3:
-                self.assertEquals(data.prefactor,11)
-                
-        #test prefactor- constant_term
-        self.assertEquals(sum.prefactor, 1)
-    
-    def testsumaddadd(self):
-        """Test the sum of two add object"""
-        
-        sum = self.add1 + self.add2
-        
-        self.assertEquals(sum.__class__, HelasLib.AddVariable)
-        self.assertEquals(len(sum), 4)
-        
-        self.assertTrue(self.var1 in sum)
-        self.assertTrue(self.var2 in sum)
-        self.assertTrue(self.var3 in sum)
-        self.assertTrue(self.var4 in sum)
-        
-        for data in sum:
-            if data == self.var1:
-                self.assertEquals(data.prefactor, 2)
-            elif data == self.var2:
-                self.assertEquals(data.prefactor, 3)
-            elif data == self.var3:
-                self.assertEquals(data.prefactor, 11)
-            elif data == self.var4:
-                self.assertEquals(data.prefactor, 4)
-        #test prefactor- constant_term
-        self.assertEquals(sum.prefactor, 1)
-        
-    def testmultaddint(self):
-        """test the multiplication of an AddVariable by a Integer"""
-        
-        prod1 = 3 * self.add1
-        prod2 = self.add2 * 2
-        
-        self.assertEquals(prod1.__class__, HelasLib.AddVariable)
-        self.assertEquals(prod2.__class__, HelasLib.AddVariable)
-        self.assertFalse(prod1 is self.add1)
-        self.assertFalse(prod2 is self.add2)
-        self.assertEquals(len(prod1), 2)
-        self.assertEquals(len(prod2), 2)
-        
-        self.assertEquals(prod1.prefactor, 1)
-        self.assertEquals(prod2.prefactor, 1)
-                
-        for data in prod1:
-            if data == self.var1:
-                self.assertEquals(data.prefactor, 6)
-            elif data == self.var2:
-                self.assertEquals(data.prefactor, 9)
-        for data in prod2:
-            if data == self.var3:
-                self.assertEquals(data.prefactor, 22)
-            elif data == self.var4:
-                self.assertEquals(data.prefactor, 8)
+        self.mydict = {'name':'t',
+                      'antiname':'t~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'mt',
+                      'width':'wt',
+                      'texname':'t',
+                      'antitexname':'\\overline{t}',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':6,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False,
+                       # decay_vertexlist must have two lists, one for on-shell,
+                       # one for off-shell
+                      '2_body_decay_vertexlist':[self.my_2bodyvertexlist] *2,
+                      '3_body_decay_vertexlist':[self.my_3bodyvertexlist] *2}
 
-    
-    def testmultadd_legacy(self):
-        """ int * AddVariable doens't change the content of AddVariable """
-        
-        var1 = HelasObject.P(1,2)
-        var2 = HelasObject.P(2,2)
-        prod = var1 * var2
-        #assert(prod.__class__, HelasLib.MultLorentz)
-        var3 = HelasObject.Metric(1,2)
-        
-        sum = (var3 + var1 * var2)    
-        new_sum = 2 * sum
-        
-        self.assertEqual(new_sum.__class__, HelasLib.AddVariable)
-        self.assertEqual(len(new_sum), 2)
-        self.assertEqual(new_sum.prefactor, 1)
-        for term in new_sum:
-            self.assertEqual(term.prefactor, 2)
-            if term.__class__ == HelasObject.Metric:
-                self.assertFalse(var3 is term)
-            else:
-                self.assertEqual(term.__class__, HelasLib.MultLorentz)
-                self.assertEqual(prod, term)
-                self.assertFalse(prod is term) 
-    
-    def testmultaddvar(self):
-        """Test the multiplication of an Addvariable with a Variable"""
-        
-        var3 = HelasLib.Variable(11, 'var3')
-        prod = self.add1 * var3
-        #sanity check
-        self.assertEquals(prod.__class__, HelasLib.AddVariable)
-        self.assertEquals(len(prod), 2)
-        
-        #check prefactor of each term
-        for term in prod:
-            if self.var1 not in term:
-                self.assertEquals(term.prefactor, 33)
-            elif self.var2 not in term:
-                self.assertEquals(term.prefactor, 22)
-            else:
-                raise Exception('not valid term')
-                
-    
-    def testmultaddvar_legacy(self):
-        """Test that the legacy is preserve for Add/var multiplication"""
-        
-        p1 = HelasObject.P(1,1)
-        p2 = HelasObject.P(1,2)
-        p3 = HelasObject.P(3,3)
-        
-        #make (p1+p2)*p3
-        add= p1+p2
-        result= add *p3 
-        
-        self.assertEqual(result.__class__, HelasLib.AddVariable)
-        self.assertEqual(len(result), 2)
-        for term in result:
-            self.assertTrue(p3 in term)
-            self.assertEqual(term.__class__,HelasObject.P.mult_class)
-        
-        
-        
-        
-    def testmultaddmult(self):
-        """Test the multiplication of an AddVariable with a MultVariable."""
-        
-        var3 = HelasLib.Variable(2, 'var3')
-        var4 = HelasLib.Variable(1, 'var4')
-        prod = self.add1 * (var3 *var4)
-        
-        self.assertEqual(prod.__class__, HelasLib.AddVariable)
-        self.assertEqual(len(prod), 2)
-        
-        for data in prod:
-            if self.var1 in data:
-                self.assertEqual(data.__class__, HelasLib.MultVariable)
-                self.assertEqual(data.prefactor, 4)
-            else:
-                self.assertEqual(data.__class__, HelasLib.MultVariable)
-                self.assertEqual(data.prefactor, 6)
-        self.assertEqual(prod.prefactor, 1)
-        
-                
-    def testmultaddadd(self):
-        """Test the multiplication between two AddVariable."""
-        
-        prod = self.add1 * self.add2
-        self.assertEqual(prod.__class__, HelasLib.AddVariable)
-        self.assertEqual(len(prod), 4)
-        
-        for data in prod:
-            if self.var1 in data and self.var3 in data:
-                self.assertEqual(data.__class__, HelasLib.MultVariable)
-                self.assertEqual(data.prefactor, 22)
-            elif self.var1 in data:
-                self.assertEqual(data.__class__, HelasLib.MultVariable)
-                self.assertEqual(data.prefactor, 8)
-            elif self.var2 in data and self.var3 in data:
-                self.assertEqual(data.__class__, HelasLib.MultVariable)
-                self.assertEqual(data.prefactor, 33)
-            else:
-                self.assertEqual(data.__class__, HelasLib.MultVariable)
-                self.assertEqual(data.prefactor, 12)
-        
+        self.mypart = decay_objects.DecayParticle(self.mydict)
+        #self.mypart.set('2_body_decay_vertexlist',[self.my_2bodyvertexlist] *2)
+        #self.mypart.set('3_body_decay_vertexlist',[self.my_3bodyvertexlist] *2)
 
-    def testfactorization(self):
-        """test the factorization"""
-        
-        p1 = HelasLib.ScalarVariable('p1',[])
-        p2 = HelasLib.ScalarVariable('p2',[])        
-        p3 = HelasLib.ScalarVariable('p3',[])
-        p4 = HelasLib.ScalarVariable('p4',[])
-        p5 = HelasLib.ScalarVariable('p5',[])
-        
-        
-        sum = p1 * p2 + p1 * p3
-        sum = sum.factorize()
-        self.assertEqual(sum.__class__,HelasLib.MultVariable)
-        self.assertEqual(len(sum),2)
-        for fact in sum:
-            if isinstance(fact, HelasLib.Variable):
-                self.assertEqual(fact, p1)
-            else:
-                self.assertEqual(fact, p3 + p2) 
-        
-        
-        sum = p1 * p2 + p1 * p3 + 2 * p1 + 2 *p1 * p2 * p4
-        sum = sum.factorize()
-        #Should return p1*(p2(2*p4 + 1) + p3 + 2)
-    
-        self.assertEqual(sum.__class__,HelasLib.MultVariable)
-        self.assertEqual(len(sum),2)
-        for fact in sum:
-            if isinstance(fact, HelasLib.Variable):
-                self.assertEqual(fact, p1)
-            else:
-                self.assertEqual(fact.__class__,HelasLib.AddVariable)
-                self.assertEqual(len(fact), 2)
-                for term in fact:
-                    if isinstance(term, HelasLib.AddVariable):
-                        self.assertEqual(term[0], p3)
-                        self.assertEqual(term[1], HelasLib.ConstantObject(2))
-                    else:
-                        self.assertEqual(term.__class__, HelasLib.MultVariable)
-                        self.assertTrue(p2 in term)
-                        self.assertTrue(len(term),2)
-                        for data in term:
-                            if data == p2: 
-                                pass
-                            else:
-                                self.assertEqual(data.__class__, HelasLib.AddVariable)
-                                self.assertTrue(p4 in data)
-                                self.assertTrue(HelasLib.ConstantObject(1) in data)
-                                for term2 in data:
-                                    if term2 == p4:
-                                        self.assertEqual(term2.prefactor,2)
-                                    else:
-                                        self.assertEqual(term2, \
-                                                    HelasLib.ConstantObject(1))
- 
-        
-        s3 = HelasLib.ScalarVariable('s3',[])
-        s2 = HelasLib.ScalarVariable('s2',[])
-        p1 = HelasLib.ScalarVariable('p1',[])
-        om1 = HelasLib.ScalarVariable('om1',[])
-        sum = 2/3 * s3 * s2 - 4/3 * p1 * p1 * s3 * s2 * om1 + \
-              2/3 * p1 * p1 * p1 * p1 * om1 *om1
-        sum = sum.factorize()
-
-            
-            
-class TestMultVariable(unittest.TestCase):
-
-    def setUp(self):
-        self.var1 = HelasLib.Variable(2, 'var1')
-        self.var2 = HelasLib.Variable(3, 'var2')
-        self.var3 = HelasLib.Variable(4, 'var3')
-        self.var4 = HelasLib.Variable(5, 'var4')
-        
-        self.mult1 = self.var1 * self.var2
-        self.mult2 = self.var3 * self.var4
-    
-    def testequality(self):
-        """test the definition of Equality"""
-
-        #test with mult obj
-        
-        self.assertNotEqual(self.mult1, self.mult2)
-                
-        #test with other type of obj
-        self.assertNotEqual(self.mult1, 32)
-        self.assertNotEqual(self.mult1, self.var1)
-        self.assertNotEqual(self.mult1, self.var1 + self.var2)
-                
-    def testsummultmul(self):
-        """Test the sum of two MultVariable"""
-        
-        sum = self.mult1 + self.mult2 
-        self.assertEqual(sum.__class__, HelasLib.AddVariable)
-        self.assertEqual(len(sum),2)
-        self.assertEqual(sum.prefactor, 1)
-        
-        for term in sum:
-            if self.var1 in term:
-                self.assertEqual(term.prefactor, 6)
-                self.assertFalse(term is self.mult1)
-            else:
-                self.assertEqual(term.prefactor, 20)
-                self.assertFalse(term is self.mult2)
-                
-        sum =  self.mult1 - self.mult1
-        sum = sum.simplify()
-        self.assertEqual(sum.__class__, HelasLib.ConstantObject)
-        self.assertEqual(len(sum),0)
-        self.assertEqual(sum.prefactor, 1)
-        
-    def testdealingwithpower1(self):
-        """Check that the power is correctly set in a product"""
-        
-        p1 = HelasLib.ScalarVariable('p1', [])
-        p2 = HelasLib.ScalarVariable('p2', [])
-        
-        prod = p1 * p1
-        self.assertEqual(prod.__class__, HelasLib.MultVariable)       
-        prod = prod.simplify()
-        self.assertEqual(prod.__class__, HelasLib.ScalarVariable)
-        self.assertEqual(prod.power, 2)
-        self.assertEqual(p1.power, 1)
-        
-        prod *= p1
-        prod = prod.simplify()
-        self.assertEqual(prod.__class__, HelasLib.ScalarVariable)
-        self.assertEqual(prod.power, 3)
-        self.assertEqual(p1.power, 1)
-        
-        prod *= p2
-        prod.simplify()
-        self.assertEqual(prod.__class__, HelasLib.MultVariable)
-        self.assertEqual(prod[0].power, 3)
-        self.assertEqual(prod[1].power, 1)       
-        self.assertEqual(p1.power, 1)
-        self.assertEqual(p2.power, 1)                                
-        
-        prod *= p1
-        prod.simplify()
-        self.assertEqual(prod.__class__, HelasLib.MultVariable)
-        self.assertEqual(prod[0].power, 4)
-        self.assertEqual(prod[1].power, 1)       
-        self.assertEqual(p1.power, 1)
-        self.assertEqual(p2.power, 1)                                   
-                                
-    def testdealingwithpower2(self):
-        """Check that the power is correctly set in a product"""       
-        
-        p1 = HelasLib.ScalarVariable('p1', [])
-        p2 = HelasLib.ScalarVariable('p2', [])
-        p3 = HelasLib.ScalarVariable('p3', [])
-        p4 = HelasLib.ScalarVariable('p2', [])
-        p5 = HelasLib.ScalarVariable('p5', [])
-        sum1 = p1 + p2
-        sum2 = p4 + p3
-
-        prod = p3 * sum2 * sum1
-        self.assertEqual(prod.__class__, HelasLib.AddVariable)
-        for term in sum1 + sum2:
-            self.assertEqual(term.power, 1)
-        
-        obj1 = 0
-        for term in prod:
-            if p2 == term:
-                self.assertEqual(term.power, 2)
-            elif p1 in term and p2 in term and p3 in term:
-                self.assertEqual(term[0].power, 1)
-                self.assertEqual(term[1].power, 1)        
-                self.assertEqual(term[2].power, 1)
-                if not obj1:
-                    obj1= term[1]
-                else:
-                    self.assertFalse(obj1 is term[1])
-            elif p2 in term and p3 in term:
-                self.assertEqual(term[0].power+term[1].power, 3)
-                if not obj1:
-                    obj1= term[1]
-                else:
-                    self.assertFalse(obj1 is term[1])                
-        
-        
-        
-        
-    
-    def test_obj_are_not_modified(self):
-        """Check that a sum-product-... doesn't change part of the objects"""
-        
-        sum = self.mult1 + self.mult2
-        for term in sum:
-            self.assertFalse(term is self.mult1)
-            self.assertFalse(term is self.mult2)
-            
-        
-        sum2 = sum - (self.mult1 + self.mult2)
-        #for term in sum:
-        #    for term2 in sum2:
-        #        self.assertFalse(term is term2)
-        
-        sum2 = sum2.simplify()
-        
-        #check that sum2 is zero
-        self.assertEqual(len(sum2), 0)
-        self.assertEqual(sum2.__class__, HelasLib.ConstantObject)
-        self.assertEqual(sum2, 0)       
-        
-        #check that the sum is not modify in this game      
-        self.assertEqual(sum.__class__, HelasLib.AddVariable)
-        self.assertEqual(len(sum), 2)
-        self.assertEqual(sum.prefactor, 1)
-        
-        for data in sum:
-            self.assertEqual(len(data), 2)
-            if self.var1 in data:
-                self.assertEqual(data.prefactor, 6)
-                self.assertTrue(self.var2 in data)
-            else:
-                self.assertEqual(data.prefactor, 20)
-                self.assertTrue(self.var3 in data)
-                self.assertTrue(self.var4 in data)
-            
-    def testsummultint(self):
-        """Test the sum of a MultVariable object with a number"""
-        
-        add = self.mult1 + 2
-        self.assertEqual(add.__class__, HelasLib.AddVariable)
-        self.assertEqual(len(add), 2)
-        for term in add:
-            if term.__class__ == HelasLib.MultVariable:
-                self.assertEqual(term.prefactor, 6)
-                self.assertEqual(len(term), 2)
-                self.assertFalse(term is self.mult1)
-            else:
-                self.assertEqual(term.__class__, HelasLib.ConstantObject)
-                self.assertEqual(term.value, 2)
-        
-        return
-        
-    def testsummultadd(self):
-        """Test the sum of an MultVariable with a AddVariable."""
-        
-        var1 = HelasLib.Variable(2,'xxx')
-        var2 = HelasLib.Variable(3,'yyy')
-        add = var1 + var2
-                
-        sum = self.mult2 + add
-        #Sanity Check
-        self.assertEquals(sum.__class__, HelasLib.AddVariable)
-        self.assertEqual(len(sum), 3)
-        self.assertTrue(var1 in sum)
-        self.assertTrue(var2 in sum)
-        
-        #check new term 
-        for term in sum:
-            if term.__class__ == HelasLib.MultVariable:
-                self.assertEqual(term.prefactor, 20)
-                self.assertTrue(self.var3 in term)
-                self.assertTrue(self.var4 in term)
-            elif term == var1:
-                self.assertEqual(term.prefactor, 2)
-            elif term == var2:
-                self.assertEqual(term.prefactor, 3)
-                
-            self.assertEqual(sum.prefactor, 1)
-            
-    def testsummulvar(self):
-        """Test the sum of a MultVariable with a Variable"""
-        
-        
-        var = HelasLib.Variable(3,'xxx')
-        sum = self.mult2 + var
-        
-        self.assertEquals(sum.__class__,HelasLib.AddVariable)
-        self.assertTrue(var in sum)
-        self.assertEquals(len(sum), 2)
-        for term in sum:
-            if term == var:
-                self.assertEquals(term.prefactor, 3)
-                self.assertFalse(term is var)
-            else:
-                self.assertTrue(self.var3 in term)
-                self.assertTrue(self.var4 in term)
-                self.assertEqual(term.prefactor, 20)
-                
-        #test prefactor- constant_term
-        self.assertEquals(sum.prefactor, 1)
-        self.assertEquals(var.prefactor, 3)
-        self.assertEquals(self.mult2.prefactor, 20)
-        
-    def testmultmultint(self):
-        """Test the multiplication of an MultVariable with an integer"""
-        
-        prod1 = self.mult1 * 2
-        
-        self.assertEqual(prod1.__class__, HelasLib.MultVariable)
-        self.assertEqual(len(prod1), 2)
-        self.assertFalse(prod1 is self.mult1)
-        self.assertEqual(prod1.prefactor, 12)
-        for fact in prod1:
-            if fact == self.var1:
-                self.assertEqual(fact.prefactor, 1)
-            if fact == self.var2:
-                self.assertEqual(fact.prefactor, 1)
-                            
-        prod2 = 2 * self.mult1
-
-        self.assertEqual(prod2.__class__, HelasLib.MultVariable)
-        self.assertEqual(len(prod2), 2)
-        self.assertEqual(prod2.prefactor, 12)
-        for fact in prod1:
-            if fact == self.var1:
-                self.assertEqual(fact.prefactor, 1)
-            if fact == self.var2:
-                self.assertEqual(fact.prefactor, 1)
-        
-                
-    def testmultmultmult(self):
-        """test the multiplication of two MultVariable"""
-        
-        prod1 = self.mult1 * self.mult2
-        self.assertEqual(prod1.__class__, HelasLib.MultVariable)
-        self.assertEqual(len(prod1), 4)
-        self.assertTrue(self.var1 in prod1)
-        self.assertTrue(self.var2 in prod1)
-        self.assertTrue(self.var3 in prod1)
-        self.assertTrue(self.var4 in prod1)        
-        self.assertEqual(prod1.prefactor, 120)
-
-        for fact in prod1:
-            self.assertEqual(fact.prefactor, 1)
-        
-        
-                
-class TestFracVariable(unittest.TestCase):
-    """ Class to test the Operation linked to a FracVariable """
-    
-    def setUp(self):
-        """ some building block """
-        
-        self.p1 = HelasObject.P(1,2)
-        self.p2 = HelasObject.P(1,3)
-        self.mass1 = HelasObject.Mass(2)
-        self.mass2 = HelasObject.Mass(3)
-        self.frac1 = HelasLib.FracVariable(self.p1, self.mass1)
-        self.frac2 = HelasLib.FracVariable(self.p2, self.mass2)
-        
-    def testcreation(self):
-        """ test if we can create FracVariable Object with division"""
-        
-        #
-        # First check the creation at Lorentz Object
-        #
-        frac1= self.p1 / self.mass1
-        self.assertEqual(frac1.__class__, HelasLib.FracVariable)
-        self.assertEqual(frac1, self.frac1)
-        # Verif that the object are different
-        self.assertFalse(frac1.numerator is self.p1)
-        self.assertFalse(frac1.denominator is self.mass1)
-        
-        sum = self.p1 +self.p2
-        frac2 = sum / self.mass1
-        self.assertEqual(frac2.__class__, HelasLib.FracVariable)        
-        self.assertEqual(frac2.numerator, sum)
-        self.assertEqual(frac2.denominator, self.mass1)
-        # Verif that the object are different
-        self.assertFalse(frac2.numerator is sum)
-        self.assertFalse(frac2.denominator is self.mass1)
-        
-        prod = self.p1 * self.p2
-        frac3 = prod / self.mass1
-        self.assertEqual(frac3.__class__, HelasLib.FracVariable)        
-        self.assertEqual(frac3.numerator, prod)
-        self.assertEqual(frac3.denominator, self.mass1)        
-        # Verif that the object are different
-        self.assertFalse(frac3.numerator is prod)
-        self.assertFalse(frac3.denominator is self.mass1)
-        
-        frac4 = 2 / self.mass1
-        self.assertEqual(frac4.__class__, HelasLib.FracVariable)
-        self.assertTrue(isinstance(frac4.numerator, int))
-        self.assertEqual(frac4.numerator, 2)
-        self.assertTrue(isinstance(frac4.denominator,HelasLib.Variable))
-        self.assertEqual(frac4.denominator, self.mass1)
-        self.assertFalse(frac4.denominator is self.mass1)
-        
-        sum = (self.mass1 + self.mass2)
-        frac4 = 2 / sum
-        self.assertEqual(frac4.__class__, HelasLib.FracVariable)
-        self.assertTrue(isinstance(frac4.numerator, int))
-        self.assertEqual(frac4.numerator, 2)
-        self.assertTrue(isinstance(frac4.denominator,HelasLib.AddVariable))
-        self.assertEqual(frac4.denominator, sum)
-        self.assertFalse(frac4.denominator is sum)        
-        
-        prod = self.mass1 * self.mass2
-        frac4 = 2 / prod
-        self.assertEqual(frac4.__class__, HelasLib.FracVariable)
-        self.assertTrue(isinstance(frac4.numerator, int))
-        self.assertEqual(frac4.numerator, 2)
-        self.assertTrue(isinstance(frac4.denominator,HelasLib.MultVariable))
-        self.assertTrue(isinstance(frac4.denominator,HelasLib.MultLorentz))
-        self.assertEqual(frac4.denominator, prod)
-        self.assertFalse(frac4.denominator is prod)  
-        
-
-    def testmultiplacation(self):
-        """Frac Variable can be multiply by any object"""
-        
-        #product with Variable
-        prod1 = self.frac1 * self.p1
-        self.assertEqual(prod1.__class__, HelasLib.FracVariable)
-        self.assertEqual(prod1.numerator, self.p1 * self.p1)
-        self.assertEqual(prod1.denominator, self.mass1)
-        
-        prod2 = self.p1 * self.frac1
-        self.assertEqual(prod2.__class__, HelasLib.FracVariable)
-        self.assertEqual(prod2.numerator, self.p1 * self.p1)
-        self.assertEqual(prod2.denominator, self.mass1)        
-    
-        #product with MultVariable
-        prod = self.p1 * self.p2
-        prod2 = prod * self.frac1
-        self.assertEqual(prod2.__class__, HelasLib.FracVariable)
-        self.assertEqual(prod2.numerator, self.p1 * self.p2 * self.p1)
-        self.assertEqual(prod2.denominator, self.mass1)          
-        
-        prod3 = self.frac1 * prod
-        self.assertEqual(prod3.__class__, HelasLib.FracVariable)
-        self.assertEqual(prod3.numerator, self.p1 * self.p2 * self.p1)
-        self.assertEqual(prod3.denominator, self.mass1)
-        
-        # Product with SumVariable
-        sum = self.p1 +self.p2
-        prod2 = sum * self.frac1
-        self.assertEqual(prod2.__class__, HelasLib.FracVariable)
-        self.assertEqual(prod2.numerator, sum * self.p1)
-        self.assertEqual(prod2.denominator, self.mass1) 
-        
-        prod3 = self.frac1 * sum
-        self.assertEqual(prod3.__class__, HelasLib.FracVariable)
-        self.assertEqual(prod3.numerator, sum * self.p1)
-        self.assertEqual(prod3.denominator, self.mass1) 
-               
-               
-        # Product with FracVariable
-        prod = self.frac1 * self.frac2
-        self.assertEqual(prod.__class__, HelasLib.FracVariable)
-        self.assertEqual(prod.numerator.__class__, HelasLib.MultLorentz)
-        self.assertEqual(prod.numerator, self.p2 * self.p1)
-        self.assertEqual(prod.denominator, self.mass1 * self.mass2)
-               
-        prod3 = self.frac2 * self.frac1
-        self.assertEqual(prod3.__class__, HelasLib.FracVariable)
-        self.assertEqual(prod3.numerator, self.p2 * self.p1)
-        self.assertEqual(prod3.denominator, self.mass1 * self.mass2)       
-        
-    
-    def testdivision(self):
-        """ Test division with a FracVariable """ 
-        
-        #divide with Variable
-        prod1 = self.frac1 / self.p1
-        self.assertEqual(prod1.__class__, HelasLib.FracVariable)
-        self.assertEqual(prod1.numerator, self.p1)
-        self.assertEqual(prod1.denominator, self.p1 * self.mass1)
-        
-        #divide with a MultVariable
-        prod= self.p1 * self.p2
-        prod3 = self.frac1 / prod
-        self.assertEqual(prod3.__class__, HelasLib.FracVariable)
-        self.assertEqual(prod3.numerator, self.p1)
-        self.assertEqual(prod3.denominator, self.mass1 * self.p1 * self.p2)
-        
-        # divide with AddVariable
-        sum = self.p1 +self.p2
-        prod2 = self.frac1 / sum
-        self.assertEqual(prod2.__class__, HelasLib.FracVariable)
-        self.assertEqual(prod2.numerator, self.p1)
-        self.assertEqual(prod2.denominator, sum * self.mass1) 
-        
-
-        
-        
-class testLorentzObject(unittest.TestCase):
-    """ Class to test the Operation linked to a Lorentz Object"""
-    
-    def setUp(self):
-        
-        self.p1= HelasObject.P(1,2)
-        self.p2= HelasObject.P(1,3)
-        self.p3= HelasObject.P(2,2)
-        self.p4= HelasObject.P(2,3)
-        
-    def testbasicoperation(self):       
-        """Test the sum/product run correctly on High level object.
-        Those test will be basic since everything should derive from particle
+    def test_setgetinit_correct(self):
+        """Test __init__, get, and set functions of DecayParticle
+           mypart should give the dict as my dict
         """
-       
-        new = self.p1 * self.p2 + self.p3 * self.p4       
-        self.assertEqual(new.__class__, HelasLib.AddVariable)
-        self.assertEqual(len(new), 2)
-       
-        new2 =  HelasObject.Gamma(1,2,3) * HelasObject.P(1,2) 
+        
+        mypart2 = decay_objects.DecayParticle()
 
-        self.assertEqual(new2.__class__, HelasLib.MultLorentz)
-        self.assertEqual(len(new2), 2)         
-        
-        new2 += HelasObject.Gamma(1,2,3) * HelasObject.P(1,3)
-        self.assertEqual(new2.__class__, HelasLib.AddVariable) 
-        self.assertEqual(len(new2), 2)
-        self.assertNotEqual(new, new2)
-        
-    def test_equality(self):
-        """test the equality of Lorentz Object"""
-        
-        self.assertEqual(self.p1,self.p1)
-        self.assertNotEqual(self.p1,self.p2)
-        self.assertNotEqual(self.p1,self.p3)
-        self.assertNotEqual(self.p1,self.p4)
-        self.assertEqual(self.p1, HelasObject.P(1,2))
-        
-        self.assertNotEqual(self.p1, HelasObject.Gamma(1,2,3))
-        
-        new = HelasObject.Gamma(1,2,3) * HelasObject.P(1,2)
-        new2 = HelasObject.Gamma(1,2,3) * HelasObject.P(1,2)
-        self.assertEqual(new, new2)
-        
-        #Check that sum indices are not consider for equality
-        new3 = HelasObject.Gamma(3,2,3) * HelasObject.P(3,2)
-        self.assertEqual(new, new3)
-        
-        new4 = HelasObject.P(3,2) * HelasObject.Gamma(3,2,3)
-        self.assertEqual(new, new4)
-        self.assertEqual(new3, new4)
-        
-        new5 = HelasObject.P(4,2) * HelasObject.Gamma(4,2,3)
-        self.assertEqual(new, new5)
-        self.assertEqual(new3, new5)
-        self.assertEqual(new4, new5)
-        
-        new6 = HelasObject.P(3,2) * HelasObject.Gamma(3,3,2)       
-        self.assertNotEqual(new, new6)
+        #To avoid the error raised when setting the vertexlist
+        #because of the wrong particle id.
+        mypart2.set('pdg_code', self.mydict['pdg_code'])
+        for key in self.mydict:
+            #Test for the __init__ assign values as mydict
+            self.assertEqual(self.mydict[key], self.mypart[key])
 
-        new7 = HelasObject.P(3,4) * HelasObject.Gamma(3,2,3)       
-        self.assertNotEqual(new, new7)
-        
-        #Test contraction on spin
-        new = HelasObject.Gamma(3,3,2) * HelasObject.Gamma(2,2,4) * \
-                                                    HelasObject.P(3,3) * HelasObject.P(2,4)
-        new2 = HelasObject.Gamma(3,3,2) * HelasObject.Gamma(2,2,4) * \
-                                                    HelasObject.P(3,4) * HelasObject.P(2,3)
-        self.assertNotEqual(new,new2)
-    
-        new3 = HelasObject.P(1,3) * HelasObject.Gamma(1,3,1) * HelasObject.P(4,4) * \
-                                                        HelasObject.Gamma(4,1,4)
-        self.assertEqual(new, new3)
-        self.assertNotEqual(new2, new3)
-                                                            
-        new4 = HelasObject.P(1,3) * HelasObject.Gamma(1,3,2) * HelasObject.P(4,4) * \
-                                                        HelasObject.Gamma(4,1,4)
-        self.assertNotEqual(new,new4)
-    
-    def testexpand(self):
-        """Test if the expansion from HighLevel to LowLevel works correctly"""
-        
-        #expand a single object
-        obj = HelasObject.P(1,2)
-        low_level = obj.expand()
+            #Test the set function
+            mypart2.set(key, self.mydict[key])
+            self.assertEqual(mypart2[key], self.mydict[key])
 
-        keys= low_level.keys()
-        keys.sort()
-        self.assertEqual(keys, [(0,),(1,),(2,),(3,)])
-        self.assertEqual(low_level[(0,)], HelasLib.ScalarVariable('P2_0',[2]))
-        self.assertEqual(low_level[(1,)], HelasLib.ScalarVariable('P2_1',[2]))
-        self.assertEqual(low_level[(2,)], HelasLib.ScalarVariable('P2_2',[2]))
-        self.assertEqual(low_level[(3,)], HelasLib.ScalarVariable('P2_3',[2]))
-
-        
-        #expand a product
-        obj = HelasObject.P(1,2) * HelasObject.P(2,3)
-        low_level = obj.expand()
-        
-        for ind in low_level.listindices():
-            self.assertEqual(low_level.get_rep(ind), \
-                             HelasLib.ScalarVariable('P2_%s' % ind[1]) * \
-                             HelasLib.ScalarVariable('P3_%s' % ind[0]))
-        
-        #expand a sum
-        obj = HelasObject.P(1,2) + HelasObject.P(1,3)
-        low_level = obj.expand()
-        
-        for ind in low_level.listindices():
-            self.assertEqual(low_level.get_rep(ind), \
-                             HelasLib.ScalarVariable('P2_%s' % ind[0]) + \
-                             HelasLib.ScalarVariable('P3_%s' % ind[0]))
-            
-        #expand zero
-        obj = HelasObject.P(1,2) - HelasObject.P(1,2)
-        obj = obj.simplify()
-        low_level = obj.expand()
-        pass_in_check = 0
-        for ind in low_level.listindices():
-            pass_in_check += 1
-            self.assertEqual(low_level.get_rep(ind), 0)
-        self.assertEqual(pass_in_check, 1)      
-             
-        #expand zero without first simplification
-        obj = HelasObject.P(1,2) - HelasObject.P(1,2)
-        low_level = obj.expand().simplify()
-        pass_in_check = 0 
-        for ind in low_level.listindices():
-            pass_in_check += 1
-            self.assertEqual(low_level.get_rep(ind), 0)
-        self.assertEqual(pass_in_check, 4)  
-        
-        #expand standard frac variable
-        obj = HelasObject.P(1,2) / HelasObject.P(1,2)   
-        obj = obj.expand()
-        result = {(0,): HelasLib.ScalarVariable('P2_0',[2]), \
-                                    (1,): HelasLib.ScalarVariable('P2_1',[2]), \
-                                    (2,): HelasLib.ScalarVariable('P2_2',[2]), \
-                                    (3,): HelasLib.ScalarVariable('P2_3',[2])}
-        for i in range(3):
-            self.assertEqual(result[tuple([i])], obj.numerator[tuple([i])])
-            self.assertEqual(result[tuple([i])], obj.denominator[tuple([i])])
-        
-        
-        #expand standard frac variable with number numerator
-        obj = 1 / HelasObject.P(1,2)   
-        obj = obj.expand()
-        self.assertEqual(obj.numerator, 1)    
-        for i in range(3):
-            self.assertEqual(result[tuple([i])], obj.denominator[tuple([i])])        
-        
-        # Check for the prefactor
-        obj = 36 * HelasObject.P(1,2)
-        obj = obj.expand()
-        for ind in obj.listindices():
-            expression = obj.get_rep(ind)
-            self.assertEqual(expression.prefactor, 36)
-             
-        # Check for the prefactor
-        obj = 36 * HelasObject.P(1,2) * HelasObject.P(2,2)
-        obj = obj.expand()
-        for ind in obj.listindices():
-            expression = obj.get_rep(ind)
-            self.assertEqual(expression.prefactor, 36)  
-  
-        
-    def testTraceofObject(self):
-        """Check that we can output the trace of an object"""
-        
-        obj = HelasObject.Gamma(1,1,1)
-        obj.expand()
-        obj.simplify()      
-
-    def testscalarmanipulation(self):
-        """Deal correctly with Scalar type of LorentzObject"""
-        
-        obj= HelasObject.Mass(3) 
-        obj = obj.simplify()
-        low_level = obj.expand()
-        for ind in low_level.listindices():
-            self.assertEqual(low_level.get_rep(ind).__class__, HelasLib.ScalarVariable)
-            self.assertEqual(low_level.get_rep(ind), HelasLib.ScalarVariable('M3',[3])) 
-                                
-        obj= HelasObject.Mass(3) * HelasObject.P(1,2)
-        obj = obj.simplify()
-        low_level = obj.expand()
-        self.assertEqual(low_level.__class__, HelasLib.LorentzObjectRepresentation)
-        for ind in low_level.listindices():
-            self.assertEqual(low_level.get_rep(ind).__class__, HelasLib.MultVariable)
-            self.assertEqual(low_level.get_rep(ind), HelasLib.ScalarVariable('M3',[3]) 
-                                * HelasLib.ScalarVariable('P2_%s' % ind[0],[0]))
-                            
-        
-class TestLorentzObjectRepresentation(unittest.TestCase):
-    """Class to test the operation in the LorentzObjectRepresentation"""
-    
-    #for lorentz manipulation
-    p1nu = HelasObject.P(1,1)
-    p1nu = p1nu.expand()
-    p1mu = HelasObject.P(2,1)
-    p1mu = p1mu.expand()   
-    p2nu = HelasObject.P(1,2)
-    p2nu = p2nu.expand()
-    p2mu = HelasObject.P(2,2)
-    p2mu = p2mu.expand()
-    
-    #for lorentz - spin manipulation
-    gamma_nu_ij = HelasObject.Gamma(1,1,2)
-    gamma_nu_ij = gamma_nu_ij.expand()
-    gamma_nu_ji = HelasObject.Gamma(1,2,1)
-    gamma_nu_ji = gamma_nu_ji.expand()
-    gamma_mu_ij = HelasObject.Gamma(2,1,2)    
-    gamma_mu_ij = gamma_mu_ij.expand()
-    gamma_nu_jk = HelasObject.Gamma(1,2,3)
-    gamma_nu_jk = gamma_nu_jk.expand()
-    gamma_mu_jk = HelasObject.Gamma(2,2,3)
-    gamma_mu_jk = gamma_mu_jk.expand()
-    gamma_nu_kl = HelasObject.Gamma(1,3,4)
-    gamma_nu_kl = gamma_nu_kl.expand()
-    gamma_mu_kl = HelasObject.Gamma(2,3,4)
-    gamma_mu_kl = gamma_mu_kl.expand()    
-    gamma_mu_ki = HelasObject.Gamma(2,3,1)
-    gamma_mu_ki = gamma_mu_ki.expand()     
-   
-    def testlistindices(self):
-        """test that we return the correct list of indices"""
-        
-        #only lorentz indices
-        test1 = HelasLib.LorentzObjectRepresentation([],[1,2],[],[])
-        
-        already_use=[]
-        for ind in test1.listindices():
-            self.assertFalse(ind in already_use, '%s appear two times' % ind)
-            already_use.append(list(ind))
-            for value in ind:
-                self.assertTrue(value >= 0)
-                self.assertTrue(value < 4)
-        self.assertEqual(len(already_use), 16)
-        
-        #only spin indices
-        test1 = HelasLib.LorentzObjectRepresentation([],[],[1,2,3],[])
-        
-        already_use=[]
-        for ind in test1.listindices():
-            self.assertFalse(ind in already_use, '%s appear two times' % ind)
-            already_use.append(list(ind))
-            for value in ind:
-                self.assertTrue(value >= 0)
-                self.assertTrue(value < 4)
-        self.assertEqual(len(already_use), 64)
-        
-        #mix of indices        
-        test1 = HelasLib.LorentzObjectRepresentation([],[1],[1,2,3],[])
-        
-        already_use=[]
-        for ind in test1.listindices():
-            self.assertFalse(ind in already_use, '%s appear two times' % ind)
-            already_use.append(list(ind))
-            for value in ind:
-                self.assertTrue(value >= 0)
-                self.assertTrue(value < 4)
-        self.assertEqual(len(already_use), 256)
-        
-        #only one indice        
-        test1 = HelasLib.LorentzObjectRepresentation([],[1],[],[])
-        
-        already_use=[]
-        for ind in test1.listindices():
-            self.assertFalse(ind in already_use, '%s appear two times' % ind)
-            already_use.append(list(ind))
-            for value in ind:
-                self.assertTrue(value >= 0)
-                self.assertTrue(value < 4)
-        self.assertEqual(len(already_use), 4)
-        
-        #no indices        
-        test1 = HelasLib.LorentzObjectRepresentation(38,[],[],[])
-        
-        already_use=[]
-        for ind in test1.listindices():
-            self.assertEqual(ind,[0])
-            already_use.append(list(ind))
-        self.assertEqual(len(already_use), 1)                
-
-    def testgetrepresentation(self):
-        """Check the way to find representation"""
-        
-        data={(0,0):1, (0,1):2, (0,2):3, (0,3):4,
-              (1,0):2, (1,1):4, (1,2):6, (1,3):8,
-              (2,0):3, (2,1):6, (2,2):9, (2,3):12,
-              (3,0):4, (3,1):8, (3,2):12, (3,3):16
-              }
-                
-        repr1 = HelasLib.LorentzObjectRepresentation(data, [1], [1], [])
-        repr2 = HelasLib.LorentzObjectRepresentation(data, [1, 2], [], [])
-        repr3 = HelasLib.LorentzObjectRepresentation(data, [], [1, 2], [])
-        
-        for ind in repr1.listindices():
-            self.assertEquals(repr1.get_rep(ind), (ind[0]+1)*(ind[1]+1))
-            self.assertEquals(repr2.get_rep(ind), (ind[0]+1)*(ind[1]+1))
-            self.assertEquals(repr3.get_rep(ind), (ind[0]+1)*(ind[1]+1))
-            
-        
-        #check the dealing with scalar
-        repr4 = HelasLib.LorentzObjectRepresentation(49, [], [], [])
-        for ind in repr4.listindices():
-            self.assertEquals(repr4.get_rep(ind), 49)
-            
-    def testsetrepresentation(self):
-        """Check the way to set a representation"""
-        
-        goal=[[1, 2, 3 , 4], [2, 4, 6, 8], [3, 6, 9, 12], [4, 8, 12, 16]]
-        
-        repr1 = HelasLib.LorentzObjectRepresentation([], [1], [1], [])
-        repr2 = HelasLib.LorentzObjectRepresentation([], [1, 2], [], [])
-        repr3 = HelasLib.LorentzObjectRepresentation([], [], [1, 2], [])
-        
-        for ind in repr1.listindices():
-            repr1.set_rep(ind, (ind[0]+1)*(ind[1]+1))
-            repr2.set_rep(ind, (ind[0]+1)*(ind[1]+1))
-            repr3.set_rep(ind, (ind[0]+1)*(ind[1]+1))
-
-        for ind in repr1.listindices():
-            self.assertEquals(repr1.get_rep(ind), (ind[0]+1)*(ind[1]+1))
-            self.assertEquals(repr2.get_rep(ind), (ind[0]+1)*(ind[1]+1))
-            self.assertEquals(repr3.get_rep(ind), (ind[0]+1)*(ind[1]+1))
-
-        for ind in repr1.listindices():
-            self.assertEquals(repr1.get_rep(ind), goal[ind[0]][ind[1]])
-            self.assertEquals(repr2.get_rep(ind), goal[ind[0]][ind[1]])
-            self.assertEquals(repr3.get_rep(ind), goal[ind[0]][ind[1]])
-            
-            self.assertEquals(repr1.get_rep(ind), (ind[0]+1)*(ind[1]+1))
-            self.assertEquals(repr2.get_rep(ind), (ind[0]+1)*(ind[1]+1))
-            self.assertEquals(repr3.get_rep(ind), (ind[0]+1)*(ind[1]+1))    
-            
-                    
-    def testtensorialproductlorentz(self):
-        """Test that two object have correct product"""
-        
-        product = self.p1nu * self.p2mu
-        
-        #check global
-        self.assertTrue(isinstance(product, HelasLib.LorentzObjectRepresentation))
-        self.assertEquals(product.lorentz_ind, [1,2])
-        self.assertEqual(product.spin_ind, [])
-        self.assertEqual(product.tag, set(['P1','P2']))
-        
-        #check the representation
-        for ind in product.listindices():
-            rep = product.get_rep(ind)
-            self.assertEqual(rep.__class__, HelasLib.MultVariable)
-            self.assertEqual(len(rep), 2)
-            for data in rep:
-                if not( data.variable == 'P1_%s' % ind[0] or data.variable == \
-                                                            'P2_%s' % ind[1]):
-                    raise Exception('invalid product')
-            self.assertNotEqual(rep[0].variable, rep[1].variable)
-        
-        
-    def testtensorialproductspin(self):
-        """test the product in spin indices"""
-        
-        product1 = self.gamma_nu_ij * self.gamma_mu_kl
-        
-        #check global
-        self.assertTrue(isinstance(product1, HelasLib.LorentzObjectRepresentation))
-        self.assertEquals(product1.lorentz_ind, [1,2])
-        self.assertEqual(product1.spin_ind, [1,2,3,4])
-        self.assertEqual(product1.tag, set([]))
-        
-        #check the representation
-        for ind in product1.listindices():
-            rep = product1.get_rep(ind)
-            
-            fact1 = self.gamma_nu_ij.get_rep([ind[0],ind[2],ind[3]])
-            fact2 = self.gamma_mu_kl.get_rep([ind[1],ind[4],ind[5]])
-            self.assertEqual(rep, fact1 * fact2)
-            
-        
-        #Check with a lorentz contraction
-        product2 = self.gamma_nu_ij * self.gamma_nu_kl
-        
-        #check global
-        self.assertTrue(isinstance(product2, HelasLib.LorentzObjectRepresentation))
-        self.assertEquals(product2.lorentz_ind, [])
-        self.assertEqual(product2.spin_ind, [1,2,3,4])
-        self.assertEqual(product2.tag, set([]))
-        
-        #check the representation
-        for ind in product2.listindices():
-            rep = product2.get_rep(ind)
-            
-            sol = product1.get_rep([0,0] + ind) - product1.get_rep([1,1] + ind) - \
-                    product1.get_rep([2,2] + ind) -product1.get_rep([3,3] + ind)
-
-            product1.get_rep([2,2] + ind),product1.get_rep([3,3] + ind)            
-            self.assertEqual(rep, sol)
-            
- 
-    def testspincontraction(self):
-        """Test the spin contraction"""
-        prod0 = self.gamma_mu_ij * self.gamma_nu_kl
-        prod1 = self.gamma_mu_ij * self.gamma_nu_jk
-        
-        #check global
-        self.assertTrue(isinstance(prod1, HelasLib.LorentzObjectRepresentation))
-        self.assertEquals(prod1.lorentz_ind, [2, 1])
-        self.assertEqual(prod1.spin_ind, [1,3])
-        
-        for ind in prod1.listindices():
-
-            rep = prod1.get_rep(ind)
-            sol = prod0.get_rep([ind[0], ind[1], ind[2], 0, 0, ind[3]]) + \
-                prod0.get_rep([ind[0], ind[1], ind[2], 1, 1, ind[3]]) + \
-                prod0.get_rep([ind[0], ind[1], ind[2], 2, 2, ind[3]]) + \
-                prod0.get_rep([ind[0], ind[1], ind[2], 3, 3, ind[3]]) 
-            self.assertEqual(rep, sol)
-        
-        
-        prod2 = self.gamma_mu_ij * self.gamma_mu_jk
- 
-        #check global
-        self.assertTrue(isinstance(prod2, HelasLib.LorentzObjectRepresentation))
-        self.assertEquals(prod2.lorentz_ind, [])
-        self.assertEqual(prod2.spin_ind, [1,3])
-
-        for ind in prod2.listindices():
-
-            rep = prod2.get_rep(ind)
-            sol = prod1.get_rep([0, 0, ind[0], ind[1]])  \
-                        - prod1.get_rep([1, 1, ind[0], ind[1]]) + \
-                        - prod1.get_rep([2, 2, ind[0], ind[1]]) + \
-                        - prod1.get_rep([3, 3, ind[0], ind[1]])
-                        
-            self.assertEqual(rep, sol)         
-        
-        #test 3-> scalar
-        prod3 = self.gamma_nu_ij * self.gamma_nu_ji 
- 
-        #check global
-        self.assertTrue(isinstance(prod3, HelasLib.LorentzObjectRepresentation))
-        self.assertEquals(prod3.lorentz_ind, [])
-        self.assertEqual(prod3.spin_ind, [])            
-
-        for ind in prod3.listindices():
-            
-            rep = prod3.get_rep(ind)
-            sol = prod2.get_rep([0,0])  \
-                      + prod2.get_rep([1,1])  \
-                      + prod2.get_rep([2,2])  \
-                      + prod2.get_rep([3,3])                 
-            self.assertEqual(rep, sol)         
-
-        #test 4-> scalar
-        prod3 =  self.gamma_nu_ji * self.gamma_nu_ij
- 
-        #check global
-        self.assertTrue(isinstance(prod3, HelasLib.LorentzObjectRepresentation))
-        self.assertEquals(prod3.lorentz_ind, [])
-        self.assertEqual(prod3.spin_ind, [])            
-
-        for ind in prod3.listindices():
-            
-            rep = prod3.get_rep(ind)
-            sol = prod2.get_rep([0,0])  \
-                      + prod2.get_rep([1,1])  \
-                      + prod2.get_rep([2,2])  \
-                      + prod2.get_rep([3,3])                 
-            self.assertEqual(rep, sol)         
+        for key in self.mypart:
+            #Test the get function return the value as in mypart
+            self.assertEqual(self.mypart[key], self.mypart.get(key))
 
 
+    def test_setgetinit_exceptions(self):
+        """Test the exceptions raised by __init__, get, and set."""
+        
+        myNondict = 1.
+        myWrongdict = self.mydict
+        myWrongdict['Wrongkey'] = 'wrongvalue'
+        
+        #Test __init__
+        self.assertRaises(AssertionError,
+                          decay_objects.DecayParticle,
+                          myNondict)
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          decay_objects.DecayParticle,
+                          myWrongdict)
+                          
+        #Test get
+        self.assertRaises(AssertionError,
+                          self.mypart.get,
+                          myNondict)
 
-    def testEinsteinsum(self):
-        """Test the Einstein summation"""
-        
-        prod1 = self.p1nu * self.p2mu * self.p2nu
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          self.mypart.get,
+                          'WrongParameter')
+                          
+        #Test set
+        self.assertRaises(AssertionError,
+                          self.mypart.set,
+                          myNondict, 1)
 
-        #check global
-        self.assertTrue(isinstance(prod1, HelasLib.LorentzObjectRepresentation))
-        self.assertEquals(prod1.lorentz_ind, [2])
-        self.assertEqual(prod1.spin_ind, [])
-        self.assertEqual(prod1.tag, set(['P1','P2']))
-        
-        #check the representation
-        for ind in prod1.listindices():
-            rep = prod1.get_rep(ind)
-            self.assertEqual(rep.__class__, HelasLib.AddVariable)
-            self.assertEqual(len(rep), 4)
-            for data in rep:
-                self.assertEqual(data.__class__, HelasLib.MultVariable)
-                power = [data2.power for data2 in data]
-                power.sort()
-                if len(power) == 2:
-                    self.assertEqual(power, [1,2])
-                else:
-                    self.assertEqual(power, [1,1,1])
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          self.mypart.set,
+                          'WrongParameter', 1)
 
-        
-        # Returning a scalar
-        prod2 = self.p1nu * self.p2nu
+    def test_values_for_prop(self):
+        """Test filters for DecayParticle properties."""
 
-        #check global
-        self.assertTrue(isinstance(prod2, HelasLib.LorentzObjectRepresentation))
-        self.assertEquals(prod2.lorentz_ind, [])
-        self.assertEqual(prod2.spin_ind, [])
-        self.assertEqual(prod2.tag, set(['P1','P2']))
-        
-        #check the representation
-        for ind in prod2.listindices():
-            rep = prod2.get_rep(ind)
-            self.assertEqual(rep.__class__, HelasLib.AddVariable)
-            self.assertEqual(len(rep), 4)
-            for data in rep:
-                self.assertEqual(data.__class__, HelasLib.MultVariable)
-                self.assertEqual(len(data), 2)
-                self.assertNotEqual(data[0].variable, data[1].variable)
-      
-    def testeinsteinsum2(self):
-        
-        class gamma_in_lorentz(HelasLib.LorentzObject):
-            """ local representation """
-            
-            def __init__(self, l1, l2, prefactor=1, constant=0):
-                HelasLib.LorentzObject.__init__(self,[l1, l2], [], [])
-            
-            representation = HelasLib.LorentzObjectRepresentation(
-            {(0,0): 0, (0,1): 0, (0,2): 0, (0,3):-1,
-             (1,0): 0, (1,1): 0, (1,2): -1, (1,3):0,
-             (2,0): 0, (2,1): 1, (2,2): 0, (2,3):0,
-             (3,0): 1, (3,1): 0, (3,2): 0, (3,3):0
-             }, [1,2], [], [])
-            
-#            create_representation = lambda : representation
-            
-        obj = gamma_in_lorentz([1,2],[],[])
-        
-        
-        obj2 = obj.expand()
-        self.assertEqual(obj2.get_rep((0,3)), -1)
-        self.assertEqual(obj2.get_rep((1,2)), -1)
-        self.assertEqual(obj2.get_rep((2,1)), 1)
-        self.assertEqual(obj2.get_rep((3,0)), 1)
-                        
-        new= obj * HelasObject.P(2,2)
-        new = new.simplify()
-        new = new.expand()
-        new = new.simplify()
-        self.assertEqual(new.__class__, HelasLib.LorentzObjectRepresentation)
-        self.assertEqual(new.lorentz_ind, [1])
-        self.assertEqual(new.get_rep([3]), HelasLib.ScalarVariable('P2_0'))
-        self.assertEqual(new.get_rep([2]), HelasLib.ScalarVariable('P2_1'))
-        self.assertEqual(new.get_rep([1]), HelasLib.ScalarVariable('P2_2'))
-        self.assertEqual(new.get_rep([0]), HelasLib.ScalarVariable('P2_3')) 
-        self.assertEqual(new.get_rep([0]).prefactor, 1)
-        self.assertEqual(new.get_rep([1]).prefactor, 1)   
-        self.assertEqual(new.get_rep([2]).prefactor, -1)                  
-        self.assertEqual(new.get_rep([3]).prefactor, 1)
-        
-    def testspinsum(self):
-        
-        class gamma_in_spin(HelasLib.LorentzObject):
-            """ local representation """
-            
-            def __init__(self, s1, s2, prefactor=1, constant=0):
-                HelasLib.LorentzObject.__init__(self, [], [s1, s2], [])
-            
-            representation = HelasLib.LorentzObjectRepresentation(
-                            {(0,0): 0, (0,1): 0, (0,2): 0, (0,3):-1,
-                             (1,0): 0, (1,1): 0, (1,2): -1, (1,3):0,
-                             (2,0): 0, (2,1): 1, (2,2): 0, (2,3):0,
-                             (3,0): 1, (3,1): 0, (3,2): 0, (3,3):0},
-                                        [], [1,2], [])
-            
-#            create_representation = lambda : representation
-        
-        
-        obj = gamma_in_spin(1,2)
-        
-        obj2 = obj.expand()
-        self.assertEqual(obj2.get_rep((0,3)), -1)
-        self.assertEqual(obj2.get_rep((1,2)), -1)
-        self.assertEqual(obj2.get_rep((2,1)), 1)
-        self.assertEqual(obj2.get_rep((3,0)), 1)
-                        
-        new= obj * HelasObject.Spinor(2,2)
-        new = new.simplify()
-        new = new.expand()
-        new = new.simplify()
-        self.assertEqual(new.__class__, HelasLib.LorentzObjectRepresentation)
-        self.assertEqual(new.spin_ind, [1])
-        self.assertEqual(new.get_rep([3]), HelasLib.ScalarVariable('F2_1'))
-        self.assertEqual(new.get_rep([2]), HelasLib.ScalarVariable('F2_2'))
-        self.assertEqual(new.get_rep([1]), HelasLib.ScalarVariable('F2_3'))
-        self.assertEqual(new.get_rep([0]), HelasLib.ScalarVariable('F2_4')) 
-        self.assertEqual(new.get_rep([0]).prefactor, -1)
-        self.assertEqual(new.get_rep([1]).prefactor, -1)   
-        self.assertEqual(new.get_rep([2]).prefactor, 1)                  
-        self.assertEqual(new.get_rep([3]).prefactor, 1)       
-      
-      
-    def test_sumofLorentzObj(self):
-        """ Check the sumation of LorentzObject"""
-        
-        sum = self.p1nu + self.p2nu
-        
-        #check global
-        self.assertTrue(isinstance(sum, HelasLib.LorentzObjectRepresentation))
-        self.assertEquals(sum.lorentz_ind, [1])
-        self.assertEqual(sum.spin_ind, [])
-        self.assertEqual(sum.tag, set(['P1','P2']))
-        
-        #check the representation
-        for ind in sum.listindices():
-            rep = sum.get_rep(ind)
-            self.assertEqual(rep.__class__, HelasLib.AddVariable)
-            self.assertEqual(len(rep), 2)
-            for data in rep:
-                self.assertEqual(data.__class__, HelasLib.ScalarVariable)
-        
-        ##
-        ## check more complex with indices in wrong order
-        ##
-        
-        sum = self.p1nu * self.p2mu + self.p1mu * self.p2nu
+        test_values = [
+                       {'prop':'name',
+                        'right_list':['h', 'e+', 'e-', 'u~',
+                                      'k++', 'k--', 'T', 'u+~'],
+                        'wrong_list':['', 'x ', 'e?', '{}', '9x', 'd~3', 'd+g',
+                                      'u~+', 'u~~']},
+                       {'prop':'spin',
+                        'right_list':[1, 2, 3, 4, 5],
+                        'wrong_list':[-1, 0, 'a', 6]},
+                       {'prop':'color',
+                        'right_list':[1, 3, 6, 8],
+                        'wrong_list':[2, 0, 'a', 23, -1, -3, -6]},
+                       {'prop':'mass',
+                        'right_list':['me', 'zero', 'mm2'],
+                        'wrong_list':['m+', '', ' ', 'm~']},
+                       {'prop':'pdg_code',
+                        'right_list':[1, 12, 80000000, -1],
+                        'wrong_list':[1.2, 'a']},
+                       {'prop':'line',
+                        'right_list':['straight', 'wavy', 'curly', 'dashed'],
+                        'wrong_list':[-1, 'wrong']},
+                       {'prop':'charge',
+                        'right_list':[1., -1., -2. / 3., 0.],
+                        'wrong_list':[1, 'a']},
+                       {'prop':'propagating',
+                        'right_list':[True, False],
+                        'wrong_list':[1, 'a', 'true', None]},
+                       {'prop':'is_part',
+                        'right_list':[True, False],
+                        'wrong_list':[1, 'a', 'true', None]},
+                       {'prop':'self_antipart',
+                        'right_list':[True, False],
+                        'wrong_list':[1, 'a', 'true', None]},
+                      {'prop':'2_body_decay_vertexlist',
+                        'right_list':[[self.my_2bodyvertexlist] * 2],
+                        'wrong_list':[1, [self.my_2bodyvertexlist] * 3,
+                                      ['hey', self.my_2bodyvertexlist],
+                                      ['hey'] *2,
+                                      [self.my_2bodyvertexlist, 
+                                       self.my_3bodyvertexlist],
+                                      [self.my_2bodyvertexlist_2ini,
+                                       self.my_2bodyvertexlist],
+                                      [self.my_2bodyvertexlist,
+                                       self.my_2bodyvertexlist_2ini],
+                                      [self.my_2bodyvertexlist_wrongini,
+                                       self.my_2bodyvertexlist],
+                                      [self.my_2bodyvertexlist,
+                                       self.my_2bodyvertexlist_wrongini]
+                                     ]},
+                       {'prop':'3_body_decay_vertexlist',
+                        'right_list':[[self.my_3bodyvertexlist] *2 ],
+                        'wrong_list':[1, [self.my_3bodyvertexlist] * 3,
+                                      ['hey', self.my_3bodyvertexlist],
+                                      ['hey'] *2,
+                                      [self.my_2bodyvertexlist, 
+                                       self.my_3bodyvertexlist],
+                                      [self.my_3bodyvertexlist_2ini,
+                                       self.my_3bodyvertexlist],
+                                      [self.my_3bodyvertexlist,
+                                       self.my_3bodyvertexlist_2ini],
+                                      [self.my_3bodyvertexlist_wrongini,
+                                       self.my_2bodyvertexlist],
+                                      [self.my_2bodyvertexlist,
+                                       self.my_3bodyvertexlist_wrongini]
+                                     ]}
+                       ]
 
-        #check global
-        self.assertTrue(isinstance(sum, HelasLib.LorentzObjectRepresentation))
-        self.assertEquals(sum.lorentz_ind, [1, 2])
-        self.assertEqual(sum.spin_ind, [])
-        tag = set(list(sum.tag))
+        temp_part = self.mypart
 
-        #check the representation
-        for ind in sum.listindices():
-            rep = sum.get_rep(ind)
-            if rep.prefactor == 1:
-                self.assertEqual(rep.__class__, HelasLib.AddVariable)
-                self.assertEqual(len(rep), 2)
-                for data in rep:
-                    self.assertEqual(data.__class__, HelasLib.MultVariable)
-                    self.assertEqual(data.prefactor, 1)
-            else:
-                self.assertEqual(rep.__class__, HelasLib.MultVariable)
-                self.assertEqual(len(rep), 2)
-                self.assertEqual(rep.prefactor,2)
-        sum2 = sum - (self.p1nu * self.p2mu +  self.p2nu * self.p1mu)
-        sum2 = sum2.simplify()
-        for ind in sum2.listindices():
-            rep = sum2.get_rep(ind)
-            self.assertEqual(rep, 0)
-        
-            
-        #check sum is unchanged
-        self.assertTrue(isinstance(sum, HelasLib.LorentzObjectRepresentation))
-        self.assertEquals(sum.lorentz_ind, [1, 2])
-        self.assertEqual(sum.spin_ind, [])
-        self.assertEqual(sum.tag, tag)
-        for ind in sum.listindices():
-            rep = sum.get_rep(ind)
-            if rep.prefactor == 1:
-                self.assertEqual(rep.__class__, HelasLib.AddVariable)
-                self.assertEqual(len(rep), 2)
-                for data in rep:
-                    self.assertEqual(data.__class__, HelasLib.MultVariable)
-                    self.assertEqual(data.prefactor,1)
-            else:
-                self.assertEqual(rep.__class__, HelasLib.MultVariable)
-                self.assertEqual(len(rep), 2)
-                self.assertEqual(rep.prefactor,2)
-        self.assertEqual(sum, self.p1nu * self.p2mu + self.p1mu * self.p2nu)
-        
-        sumbis = self.p1nu * self.p2mu + self.p1mu * self.p2nu 
-        for ind in sumbis.listindices():
-            self.assertEqual(sumbis.get_rep(ind),sum.get_rep(ind))
-             
-        sum -= sumbis
-        sum = sum.simplify()
-        for ind in sum.listindices():
-            rep = sum.get_rep(ind)
-            self.assertEqual(rep, 0)        
-        self.assertEqual(sum,sum2)
-        
-        #check wrong sum
-        self.assertRaises( \
-            HelasLib.LorentzObjectRepresentation.LorentzObjectRepresentationError, \
-            HelasLib.LorentzObjectRepresentation.__add__,self.p1nu,self.p2mu)
+        for test in test_values:
+            for x in test['right_list']:
+                self.assert_(temp_part.set(test['prop'], x))
+            for x in test['wrong_list']:
+                #print test['prop'], x
+                self.assertFalse(temp_part.set(test['prop'], x))
 
-class TestSomeObjectProperty(unittest.TestCase):
-    """Test that some property pass correctly for Object"""
-        
-    def testmassisdiffaswidth(self):
-        """Ensure that a mass object is different of a width object"""
-            
-        mass = HelasObject.Mass(1)
-        width = HelasObject.Width(1)
-        self.assertNotEqual(mass, width)
-        self.assertNotEqual(mass * mass, mass * width)
-        
-            
-        mass = mass.expand()
-        width = width.expand()
-        self.assertNotEqual(mass, width)
-        self.assertNotEqual(mass * mass, mass * width)
-            
-        mass = mass.simplify()
-        width = width.simplify()
-        self.assertNotEqual(mass, width)
-        self.assertNotEqual(mass * mass, mass * width)
- 
-        mass = HelasObject.Mass(1)
-        width = HelasObject.Width(1)
-        sum = mass * mass + mass * width
-        sum.simplify()
-        self.assertEqual(sum.__class__, HelasLib.AddVariable)
-        self.assertEqual(len(sum), 2)
-        
-    def testIdentityMatrix(self):
-        """ Test the Identity Matrix"""
-        Identity = HelasObject.Identity
-        Gamma = HelasObject.Gamma
-        Gamma5 = HelasObject.Gamma5
-        Metric = HelasObject.Metric
-        
-        #Test that Identity is idenpotent
-        obj1 = Identity(1,2).expand()
-        obj2 = Identity(1,3).expand() * Identity(3,2).expand()
-        self.assertEqual(obj1.lorentz_ind, obj2.lorentz_ind)  
-        self.assertEqual(obj1.spin_ind, obj2.spin_ind)  
-        self.assertEqual(obj1, obj2)          
-        
-        #Test at low level
-        obj1 = Gamma(1,1,2).expand()
-        obj2 = Identity(1,3).expand() * Gamma(1,3,2).expand()
-        self.assertEqual(obj1.lorentz_ind, obj2.lorentz_ind)  
-        self.assertEqual(obj1.spin_ind, obj2.spin_ind)  
-        self.assertEqual(obj1, obj2)       
-                  
-        #Gamma = Identity * Gamma
-        obj1 = Gamma(1,1,2)
-        obj2 = Identity(1,3) * Gamma(1,3,2)
-        obj1 = obj1.simplify().expand().simplify()
-        obj2 = obj2.simplify().expand().simplify()
-        self.assertEqual(obj1.lorentz_ind, obj2.lorentz_ind)  
-        self.assertEqual(set(obj1.spin_ind), set(obj2.spin_ind))
-        for ind in obj1.listindices():
-            if obj1.spin_ind == obj2.spin_ind:
-                mapind = lambda ind : ind
-            else:
-                mapind = lambda ind : [ind[0],ind[2],ind[1]]
-            self.assertEqual(obj1.get_rep(ind),obj2.get_rep(mapind(ind)))
+    def test_getsetvertexlist_correct(self):
+        """Test the get and set for vertexlist is correct"""
+        temp_part = self.mypart
+        #Reset the off-shell '2_body_decay_vertexlist'
+        templist = self.my_2bodyvertexlist
+        templist.extend(templist)
+        temp_part.set_decay_vertexlist(2, False, templist)
+        #Test for equality from get_decay_vertexlist
+        self.assertEqual(temp_part.get_decay_vertexlist(2, False), \
+                             templist)
 
+        #Reset the on-shell '2_body_decay_vertexlist'
+        templist.extend(templist)
+        temp_part.set_decay_vertexlist(2, True, templist)
+        #Test for equality from get_decay_vertexlist
+        self.assertEqual(temp_part.get_decay_vertexlist(2, True), \
+                             templist)
+
+        #Reset the off-shell '3_body_decay_vertexlist'
+        templist = self.my_3bodyvertexlist
+        templist.extend(templist)
+        temp_part.set_decay_vertexlist(3, False, templist)
+        #Test for equality from get_decay_vertexlist
+        self.assertEqual(temp_part.get_decay_vertexlist(3, False), \
+                             templist)
+
+        #Reset the on-shell '3_body_decay_vertexlist'
+        templist.extend(templist)
+        temp_part.set_decay_vertexlist(3, True, templist)
+        #Test for equality from get_decay_vertexlist
+        self.assertEqual(temp_part.get_decay_vertexlist(3, True), \
+                             templist)
+
+    def test_getsetvertexlist_exceptions(self):
+        """Test for the exceptions raised by the get_ or set_decay_vertexlist"""
+
+        #Test of get_decay_vertexlist
+        #Test the exceptions raised from partnum
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          self.mypart.get_decay_vertexlist,
+                          'string', True)
         
-        #self.assertEqual(obj1, obj2)
-        
-        #Gamma = Identity * Identity * Gamma
-        #at low level
-        obj1 = Gamma(1,1,2).expand()
-        obj2 = Identity(3,4).expand() * Gamma(1,4,2).expand()
-        obj3 = Identity(1,3).expand() *obj2
-        self.assertEqual(obj1.lorentz_ind, obj2.lorentz_ind)
-        self.assertEqual(obj1.lorentz_ind, obj3.lorentz_ind)
-        self.assertEqual(obj2.spin_ind, [3,2])          
-        self.assertEqual(obj1.spin_ind, obj3.spin_ind)
-        for ind in obj1.listindices():
-            self.assertEqual(obj1.get_rep(ind),obj3.get_rep(ind))
-        self.assertEqual(obj1, obj3)
-        
-        #at High Level        
-        obj1 = Gamma(1,1,2)
-        obj2 = Identity(1,3) * Identity(3,4) 
-        obj3 = obj2 * Gamma(1,4,2)
-        obj1 = obj1.simplify().expand().simplify()
-        obj2 = obj2.simplify().expand().simplify()
-        obj3 = obj3.simplify().expand().simplify()        
-        #self.assertEqual(obj1.lorentz_ind, obj2.lorentz_ind)
-        self.assertEqual(obj1.lorentz_ind, obj3.lorentz_ind)
-        self.assertEqual(set(obj2.spin_ind), set([1,4]))          
-        self.assertEqual(set(obj1.spin_ind), set(obj3.spin_ind))
-        for ind in obj1.listindices():
-            if obj1.spin_ind == obj3.spin_ind:
-                mapind = lambda ind : ind
-            else:
-                mapind = lambda ind : [ind[0],ind[2],ind[1]]
-            self.assertEqual(obj1.get_rep(ind),obj3.get_rep(mapind(ind)))
-        #self.assertEqual(obj1, obj3)  
-              
-        #at High Level        
-        obj1 = Gamma(1,1,2)
-        obj2 = Identity(1,3) * Identity(3,4) * Gamma(1,4,2) 
-        obj1 = obj1.simplify().expand().simplify()
-        obj2 = obj2.simplify().expand().simplify()    
-        self.assertEqual(obj1.lorentz_ind, obj2.lorentz_ind)
-        self.assertEqual(set(obj2.spin_ind), set([1,2]))          
-        self.assertEqual(set(obj1.spin_ind), set(obj2.spin_ind))
-        for ind in obj1.listindices():
-            if obj1.spin_ind == obj2.spin_ind:
-                mapind = lambda ind : ind
-            else:
-                mapind = lambda ind : [ind[0],ind[2],ind[1]]            
-            self.assertEqual(obj1.get_rep(ind),obj2.get_rep(mapind(ind)))
-        #self.assertEqual(obj1, obj2)         
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          self.mypart.get_decay_vertexlist,
+                          1.5, True)
+
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          self.mypart.get_decay_vertexlist,
+                          5, True)
+        #Test the exceptions raised from the onshell
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          self.mypart.get_decay_vertexlist,
+                          2, 15)
+
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          self.mypart.get_decay_vertexlist,
+                          2, 'Notbool')
 
 
-    def testgammaproperty(self):
-        """ Check constitutive properties of Gamma """
-        Gamma = HelasObject.Gamma
-        Gamma5 = HelasObject.Gamma5
-        Sigma = HelasObject.Sigma
-        ProjM = HelasObject.ProjM
-        ProjP = HelasObject.ProjP
-        Identity = HelasObject.Identity
-        Metric = HelasObject.Metric        
-
-        # Gamma_mu* Gamma_mu = 4 * Id
-        fact1 = HelasObject.Gamma('mu', 'a', 'b')
-        fact2 = HelasObject.Gamma('mu', 'b', 'c')
-        fact1 = fact1.expand()
-        fact2 = fact2.expand()
+        #Test of set_decay_vertexlist
+        #Test the exceptions raised from partnum
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          self.mypart.set_decay_vertexlist,
+                          'string', True, self.my_2bodyvertexlist, self.mymodel)
         
-        result = 4 * HelasObject.Identity('a','c')
-        result = result.expand().simplify()
-        prod = fact1 * fact2  
-        self.assertEqual(prod, result)
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          self.mypart.set_decay_vertexlist,
+                          1.5, True, self.my_2bodyvertexlist, self.mymodel)
 
-        # gamma_product Gamma_mu * Gamma_nu = - Gamma_nu * Gamma_mu
-        prod_gam = Gamma(1,1,2) * Gamma(2,2,3)
-        prod_gam = prod_gam.simplify().expand().simplify()
-        for ind in prod_gam.listindices():
-            if ind[0] != ind[1]:
-                self.assertEqual(prod_gam.get_rep(ind), 
-                    -1 * prod_gam.get_rep((ind[1],ind[0],ind[2],ind[3])),ind)
-        
-        prod_gam2 = Gamma(2,1,2) * Gamma(1,2,3)
-        self.assertNotEqual(prod_gam, prod_gam2)
-    
-        # Sigma_mu_nu * Sigma_mu_nu = 12* Id
-        sigma_cont  = Sigma(1,2,1,2) * Sigma(1,2,2,1) 
-        sigma_cont = sigma_cont.expand().simplify()
-        self.assertEqual(sigma_cont.get_rep((0,)), 48)
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          self.mypart.set_decay_vertexlist,
+                          5, True, self.my_2bodyvertexlist, self.mymodel)
 
-        # Sigma_mu_nu * Gamma_nu = 3i * Gamma_nu # Trace
-        prod = Sigma(1,2,'a','b') * Gamma(2,'b','a')
-        prod = prod.expand().simplify()
-        self.assertEqual(prod.get_rep((0,)), 0)
+        #Test the exceptions raised from the onshell
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          self.mypart.set_decay_vertexlist,
+                          2, 15, self.my_2bodyvertexlist, self.mymodel)
 
-        # Sigma_mu_nu * Gamma_nu = 3i * Gamma_nu # Full
-        zero = Sigma(1,2,'a','b') * Gamma(2,'b','c') - complex(0,3) * Gamma(1,'a','c')
-        zero = zero.expand().simplify()
-        for ind in zero.listindices():
-            self.assertEqual(zero.get_rep(ind), 0, '%s != 0.0for %s' % \
-                             (zero.get_rep(ind), ind))  
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          self.mypart.set_decay_vertexlist,
+                          2, 'Notbool', self.my_2bodyvertexlist, self.mymodel)
+
+        #Test the exceptions raised from value in set_decay_vertexlist
+        #Test for non vertexlist objects
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          self.mypart.set_decay_vertexlist,
+                          2, True, ['not', 'Vertexlist'], self.mymodel)
+
+        #Test for vertexlist not consistent with partnum
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          self.mypart.set_decay_vertexlist,
+                          2, True, self.my_3bodyvertexlist, self.mymodel)
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          self.mypart.set_decay_vertexlist,
+                          3, True, self.my_2bodyvertexlist, self.mymodel)
+
+        #Test for vertexlist not consistent with initial particle
+        #for both number and id
+        #Use the vertexlist from test_getsetvertexlist_exceptions
+
+        Wrong_vertexlist = [self.my_2bodyvertexlist_wrongini,
+                            self.my_2bodyvertexlist_2ini,
+                            self.my_3bodyvertexlist_wrongini,
+                            self.my_3bodyvertexlist_2ini]
 
 
-    def test_other(self):        
-        Gamma = HelasObject.Gamma
-        Gamma5 = HelasObject.Gamma5
-        Sigma = HelasObject.Sigma
-        ProjM = HelasObject.ProjM
-        ProjP = HelasObject.ProjP
-        Identity = HelasObject.Identity
-        Metric = HelasObject.Metric  
+        for item in Wrong_vertexlist:
+            for partnum in [2,3]:
+                self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                                  self.mypart.set_decay_vertexlist,
+                                  partnum, False, item)
         
-
-    
-        
-    def testGammaAlgebraDefinition(self):
-        """Test the coherence between gamma/gamma5/sigma/projector"""
-        Gamma = HelasObject.Gamma
-        Gamma5 = HelasObject.Gamma5
-        Sigma = HelasObject.Sigma
-        ProjM = HelasObject.ProjM
-        ProjP = HelasObject.ProjP
-        Identity = HelasObject.Identity
-        Metric = HelasObject.Metric
-        
-        #Gamma5 = i *Gamma0 * Gamma1 * Gamma2 * Gamma3 
-        gamma5 = complex(0,1) * Gamma(0,1,2) * Gamma(1,2,3) * Gamma(2,3,4) * \
-                                                                    Gamma(3,4,5)
-        self.assertEqual(gamma5.__class__,HelasLib.MultLorentz)
-        self.assertEqual(gamma5.prefactor, complex(0,1))
-        
-        gamma5_2 = Gamma5(1,5)
-        
-        gamma5 = gamma5.expand().simplify()
-        gamma5_2 = gamma5_2.expand().simplify()
-        
-        for ind in gamma5_2.listindices():
-            component1 = gamma5.get_rep([0,1,2,3] + ind)
-            component2 = gamma5_2.get_rep(ind)
-            self.assertEqual(component1, component2)
-        
-        #ProjP = (1+ Gamma5)/2
-        
-        projp = 1/2 * (Identity(1,2) + Gamma5(1,2))
-        projp = projp.simplify()
-        projp = projp.expand()
-        projp = projp.simplify()
-        
-        projp2 = ProjP(1,2)
-        projp2 = projp2.simplify()
-        projp2 = projp2.expand()
-        projp2 = projp2.simplify()         
-
-        self.assertEqual(projp,projp2)
-        
-        #ProjM = (1 - Gamma5)/2
-        
-        projm = 1/2 * (Identity(1,2) - Gamma5(1,2))
-        projm = projm.simplify()
-        projm = projm.expand()
-        projm = projm.simplify()
-        
-        projm2 = ProjM(1,2)
-        projm2 = projm2.simplify()
-        projm2 = projm2.expand()
-        projm2 = projm2.simplify()         
-
-        self.assertEqual(projm,projm2)
-        
-        
-        # Identity = ProjP + ProjM
-        identity= ProjM(1,2) + ProjP(1,2)
-        identity = identity.simplify().expand().simplify()
-        
-        identity2 = Identity(1,2)
-        identity2 = identity2.simplify().expand().simplify()
-        
-        self.assertEqual(identity,identity2)
-
-        # Gamma* ProjP + Gamma* ProjM =Gamma
-        part1 = Gamma(1,1,2) * ProjP(2,3)  + Gamma(1,1,2) * ProjM(2,3)
-        part2 = Gamma(1,1,3)
-        
-        
-        part1 = part1.simplify().expand().simplify()
-        part2 = part2.simplify().expand().simplify()
-        
-        zero = part1 - part2
-        for ind in zero.listindices():
-            self.assertEqual(zero.get_rep(ind), 0, '%s != 0.0for %s' % \
-                             (zero.get_rep(ind), ind)) 
+    def test_find_vertexlist(self):
+        pass
 
 
-          
-        #metric_mu_nu = 1/2 {Gamma_nu, Gamma_mu} 
-        metric = 1/2 * (Gamma(1,1,2)*Gamma(2,2,3) + Gamma(2,1,2)*Gamma(1,2,3))
-        metric = metric.simplify().expand().simplify() 
-        
-        metric2 = Metric(1,2) * Identity(1,3)
-        metric2 = metric2.simplify().expand().simplify()
-        for ind in metric.listindices(): 
-            self.assertEqual(metric.get_rep(ind), metric2.get_rep(ind))
-        self.assertEqual(metric, metric2)
-
-       
-        #Sigma_mu_nu = i/2 * [Gamma_mu, Gamma_nu]
-        sigma = complex(0, 1/2) * (Gamma(1,1,2)*Gamma(2,2,3) - Gamma(2,1,2)*Gamma(1,2,3))
-
-        #handly build
-        sigma_2 = HelasLib.LorentzObjectRepresentation({},[2,1],[3,1],[])
-        prod_gam = Gamma(1,1,2) * Gamma(2,2,3)
-        prod_gam = prod_gam.expand().simplify()
-        for ind in prod_gam.listindices():
-            if ind[0] == ind[1]:
-                sigma_2.set_rep(ind, 0)
-            else:
-                value = complex(0, 1)* (prod_gam.get_rep(ind))
-                sigma_2.set_rep(ind, value)
-     
-        sigma_3 = Sigma(1,2,1,3)
-        diff1 = sigma - sigma_3
-        diff1 = diff1.simplify()
-        diff1 = diff1.expand()
-        diff1 = diff1.simplify()
-        
-        for ind in diff1.listindices():
-            self.assertEqual(diff1.get_rep(ind), 0)
-        
-        diff1 = sigma.expand() + -1 * sigma_2
-        diff1 = diff1.simplify()
-        for ind in diff1.listindices():
-            self.assertEqual(diff1.get_rep(ind), 0, 'not zero %s for %s' 
-                             % (diff1.get_rep(ind),ind ))       
-
-        
-    def testCAlgebraDefinition(self):
-        Gamma = HelasObject.Gamma
-        Gamma5 = HelasObject.Gamma5
-        Sigma = HelasObject.Sigma
-        ProjM = HelasObject.ProjM
-        ProjP = HelasObject.ProjP
-        Identity = HelasObject.Identity
-        Metric = HelasObject.Metric
-        C = HelasObject.C
-        
-        #Check basic property of the C function
-        # C^-1= -C         
-        product = C(1,2) *-1*C(2,3)
-        identity = Identity(1,3)
-        
-        product = product.simplify().expand().simplify()
-        identity = identity.simplify().expand().simplify()
-        self.assertEqual(product, identity)
-        
-        # C^T = -C
-        first = C(1,2)
-        second = -1 * C(2,1)
-        first = first.simplify().expand().simplify()
-        second = second.simplify().expand().simplify()        
-        
-        self.assertEqual(first, second)
-        
-        # C is a real matrix
-        for indices in first.listindices():
-            value = complex(first.get_rep(indices))
-            self.assertEqual(value, value.conjugate())
-        
-        # C* Gamma5 * C^-1 =  Gamma5^T
-        zero = C(1,2) * Gamma5(2,3) * C(3,4) + Gamma5(4,1)
-        zero = zero.simplify().expand().simplify()
-        for ind in zero.listindices():
-            self.assertEqual(zero.get_rep(ind), 0, 'not zero %s for %s' 
-                             % (zero.get_rep(ind),ind ))
-            
-        # C* Gamma_mu * C^-1 =  Gamma_mu^T
-        zero = C(1,2) * Gamma('mu',2,3) * C(3,4) - Gamma('mu',4,1)
-        zero = zero.simplify().expand().simplify()
-        for ind in zero.listindices():
-            self.assertEqual(zero.get_rep(ind), 0, 'not zero %s for %s' 
-                             % (zero.get_rep(ind),ind ))               
-
-        # C* Sigma_mu_nu * C^-1 =  Sigma_mu_nu^T
-        zero = C(1,2) * Sigma('mu','nu',2,3) * C(3,4) - Sigma('mu','nu',4,1)
-        zero = zero.simplify().expand().simplify()
-        for ind in zero.listindices():
-            self.assertEqual(zero.get_rep(ind), 0, 'not zero %s for %s' 
-                             % (zero.get_rep(ind),ind ))
-                    
-        
-
-    
-    def testemptyisFalse(self):
-
-        false = HelasLib.AddVariable([])
-        if false:
-            raise AssertionError, 'empty list are not False'
-        
-        false = HelasLib.MultVariable([])
-        if false:
-            raise AssertionError, 'empty list are not False'      
-          
-class TestConstantObject(unittest.TestCase):
-    """Check the different Operation for a Constant Object"""
-    
-    def testsum(self):
-        
-        const = HelasLib.ConstantObject()
-        p = HelasObject.P(1,1)
-        
-        sum = const + p
-        self.assertEqual(type(sum),type(p))
-        self.assertEqual(sum, p)
-                
-        p2 = HelasObject.P(1,2) 
-        add = p + p2   
-
-class TestSimplify(unittest.TestCase):
-    """Check that the simplification works correctly"""        
-
-    def testsimplifyMultLorentz(self):
-        
-        # For Standard Product : No Simplification
-        prod = HelasObject.Gamma(1, 2, 3) * HelasObject.Gamma(3, 4, 5)
-        
-        simp = prod.simplify()
-        self.assertEqual(simp, prod)
-        
-        # Look if Multiply by Propagator
-        prod = HelasObject.Gamma(1, 2, 3) * HelasObject.SpinorPropagator(1, 2 ,3) / \
-                                            HelasObject.DenominatorPropagator(3) 
-        simp = prod.simplify()
-        
-        self.assertEqual(simp.__class__, HelasLib.FracVariable)
-        self.assertEqual(simp.denominator.__class__, HelasLib.AddVariable)
-        simp = simp.expand()
-        simp = simp.simplify()
-        self.assertEqual(simp.denominator.__class__, HelasLib.LorentzObjectRepresentation) 
-        denominator = simp.denominator.get_rep([0])     
-        for data in denominator:
-            if HelasLib.ScalarVariable('P3_0') == data:
-                self.assertEqual(data.prefactor, 1)
-                self.assertEqual(data.power, 2)
-            elif HelasLib.ScalarVariable('P3_1') == data:
-                self.assertEqual(data.prefactor, -1)
-                self.assertEqual(data.power, 2)
-            elif HelasLib.ScalarVariable('P3_2') == data:
-                self.assertEqual(data.prefactor, -1)
-                self.assertEqual(data.power, 2)                
-            elif HelasLib.ScalarVariable('P3_3') == data:
-                self.assertEqual(data.prefactor, -1)
-                self.assertEqual(data.power, 2)
-            elif HelasLib.ScalarVariable('M3') == data:
-                self.assertEqual(data.prefactor, -1)
-                self.assertEqual(data.power, 2)                
-            elif HelasLib.ScalarVariable('W3') in data:
-                self.assertEqual(data.prefactor, complex(0,1))
-
-        
-        
-    def testsimplifyFracVariable(self):
-        
-        # For Standard Product : No Simplification
-        prod = HelasObject.Gamma(1, 2, 3) * HelasObject.Gamma(3, 4, 5)
-        
-        simp = prod.simplify()
-        self.assertEqual(simp, prod)
-        
-        # Look if Multiply by Propagator
-        
-        prod = HelasObject.Gamma(1, 2, 3) * HelasObject.SpinorPropagator(1, 2 ,3) / \
-                                            HelasObject.DenominatorPropagator(3) 
-        simp = prod.simplify()
-        
-        self.assertEqual(simp.__class__, HelasLib.FracVariable)
-        self.assertEqual(simp.denominator.__class__, HelasLib.AddVariable)
-        
-        
-class test_aloha_creation(unittest.TestCase):
-    """ test the creation of one aloha routine from the create_helas routine """
-    
-    def test_aloha_VVS(self):
-        """ Test the VVS creation of vertex """
-        from models.sm.object_library import Lorentz
-        
-        VVS_15 = Lorentz(name = 'VVS_15',
-                 spins = [ 3, 3, 1 ],
-                 structure = 'Metric(1,2)')
-
-        abstract = Create_Helas.AbstractHelasBuilder(VVS_15).compute_helas(3)
-        
-        self.assertEqual(abstract.expr.numerator.nb_lor, 0)
-        self.assertEqual(abstract.expr.numerator.nb_spin, 0)
-        
-    def test_aloha_FFV(self):
-        """ test the FFV creation of vertex """
-        from models.sm.object_library import Lorentz
-        FFV_M = Lorentz(name = 'FFV_4',
-                 spins = [ 2, 2, 3 ],
-                 structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2)')        
-        
-        FFV_P = Lorentz(name = 'FFV_5',
-                 spins = [ 2, 2, 3 ],
-                 structure = 'Gamma(3,1,\'s1\')*ProjP(\'s1\',2)')
-        
-        FFV = Lorentz(name = 'FFV',
-                 spins = [ 2, 2, 3 ],
-                 structure = 'Gamma(3,1,2)')
-        
-        
-        abstract_M = Create_Helas.AbstractHelasBuilder(FFV_M).compute_helas(3)       
-        abstract_P = Create_Helas.AbstractHelasBuilder(FFV_P).compute_helas(3)       
-        abstract = Create_Helas.AbstractHelasBuilder(FFV).compute_helas(3)
-        
-        zero = abstract_M.expr.numerator + abstract_P.expr.numerator - \
-                            abstract.expr.numerator
-        F2_1, F2_2, F2_3, F2_4  = 1, 2, 3, 4
-        F1_1, F1_2, F1_3, F1_4  = 5, 6, 7, 8
-        OM3 = 9
-        j = complex(0,1)
-        P3_0,P3_1,P3_2,P3_3 = 10, 11, 12, 13
-            
-        for ind in zero.listindices():
-            self.assertEqual(eval(str(zero.get_rep(ind))),0)
-            
-        #tested solution again MG4
-        s1 = -j*((OM3*(P3_0*((F2_1*((F1_3*(-P3_0-P3_3))+(F1_4*(-P3_1-1*j*P3_2))))+(F2_2*((F1_3*(-P3_1+1*j*P3_2))+(F1_4*(-P3_0+P3_3)))))))+((F1_3*F2_1)+(F1_4*F2_2)))        
-        s2 = -j*((OM3*(P3_1*((F2_1*((F1_3*(-P3_0-P3_3))+(F1_4*(-P3_1-1*j*P3_2))))+(F2_2*((F1_3*(-P3_1+1*j*P3_2))+(F1_4*(-P3_0+P3_3)))))))+(-(F1_4*F2_1)-(F1_3*F2_2)))
-        s3 = -j*((OM3*(P3_2*((F2_1*((F1_3*(-P3_0-P3_3))+(F1_4*(-P3_1-1*j*P3_2))))+(F2_2*((F1_3*(-P3_1+1*j*P3_2))+(F1_4*(-P3_0+P3_3)))))))+(-1*j*(F1_4*F2_1)+1*j*(F1_3*F2_2)))
-        s4 = -j*((OM3*(P3_3*((F2_1*((F1_3*(-P3_0-P3_3))+(F1_4*(-P3_1-1*j*P3_2))))+(F2_2*((F1_3*(-P3_1+1*j*P3_2))+(F1_4*(-P3_0+P3_3)))))))+(-(F1_3*F2_1)+(F1_4*F2_2)))
-        
-        self.assertEqual(s1, eval(str(abstract_M.expr.numerator.get_rep([0]))))
-        self.assertEqual(s2, eval(str(abstract_M.expr.numerator.get_rep([1]))))    
-        self.assertEqual(s3, eval(str(abstract_M.expr.numerator.get_rep([2]))))    
-        self.assertEqual(s4, eval(str(abstract_M.expr.numerator.get_rep([3]))))                                   
-
-        FFV_6 = Lorentz(name = 'FFV_6',
-                spins = [ 2, 2, 3 ],
-                structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2) + 2*Gamma(3,1,\'s1\')*ProjP(\'s1\',2)')
-
-        abstract_6 = Create_Helas.AbstractHelasBuilder(FFV_6).compute_helas(3)
-         
-        zero = abstract_6.expr.numerator - abstract_M.expr.numerator - \
-                                                    2* abstract_P.expr.numerator   
-        
-        for ind in zero.listindices():
-            self.assertEqual(eval(str(zero.get_rep(ind))),0)
-        
-    def test_aloha_symmetries(self):
-        """ test that the symmetries of particles works """
-        
-        helas_suite = Create_Helas.AbstractHelasModel('sm')
-        helas_suite.look_for_symmetries()
-        solution = {'SSSS1': {2: 1, 3: 1, 4: 3}, 'VVVV4': {2: 1, 3: 1, 4: 1}, 'VVV1': {2: 1, 3: 1}, 'VVVV1': {2: 1, 3: 1, 4: 1}, 'VVVV3': {2: 1, 3: 1, 4: 1}, 'VVVV2': {2: 1, 4: 3}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 'VVS1': {2: 1}}
-        self.assertEqual(solution, helas_suite.symmetries)
-        
-    def test_full_sm_aloha(self):
-        """test that the full SM seems to work"""
-        helas_suite = Create_Helas.AbstractHelasModel('sm')
-        helas_suite.compute_all()
-        lorentz_index = {1:0, 2:0,3:1}
-        spin_index = {1:0, 2:1, 3:0}
-        for (name, output_part), abstract in helas_suite.items():
-            if not output_part:
-                self.assertEqual(abstract.expr.nb_lor, 0)
-                self.assertEqual(abstract.expr.nb_spin, 0)
-                continue
-            helas = self.find_helas(name, helas_suite.model)
-            lorentz_solution = lorentz_index[helas.spins[output_part -1]]
-            self.assertEqual(abstract.expr.numerator.nb_lor, lorentz_solution)
-            spin_solution = spin_index[helas.spins[output_part -1]]
-            self.assertEqual(abstract.expr.numerator.nb_spin, spin_solution)
-            
-    def find_helas(self, name, model):
-        for lorentz in model.all_lorentz:
-            if lorentz.name == name:
-                return lorentz
-            
-        raise Exception('the test is confuse by name %s' % name)
-        
-        
-        
-
-
-        
-
-    
+if __name__ == '__main__':
+    unittest.unittest.main()

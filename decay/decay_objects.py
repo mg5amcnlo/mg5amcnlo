@@ -44,8 +44,32 @@ class DecayParticle(base_objects.Particle):
                    'charge', 'mass', 'width', 'pdg_code',
                    'texname', 'antitexname', 'line', 'propagating',
                    'is_part', 'self_antipart', 
-                   '2_body_decay_vertexlist','3_body_decay_vertexlist']
-    
+                   '2_body_decay_vertexlist','3_body_decay_vertexlist'
+                  ]
+
+    vertexlistwritten = False
+
+    def __init__(self, init_dict={}):
+        """Creates a new particle object. If a dictionary is given, tries to 
+        use it to give values to properties.
+        A repeated assignment is to avoid error of inconsistent pdg_code and
+        initial particle id of vertex"""
+
+        dict.__init__(self)
+        self.default_setup()
+
+        assert isinstance(init_dict, dict), \
+                            "Argument %s is not a dictionary" % repr(init_dict)
+
+
+        for item in init_dict.keys():
+            self.set(item, init_dict[item])
+
+        #To avoid the pdg_code remain 0 and then induce the error when
+        #set the vertexlist
+        for item in init_dict.keys():
+            self.set(item, init_dict[item])
+
     def default_setup(self):
         """Default values for all properties"""
         
@@ -53,51 +77,221 @@ class DecayParticle(base_objects.Particle):
 
         # The decay_vertexlist contain a list of real decay vertex
         # and one for pseudo decay vertex.
-        # n_body_decay_vertexlist[0]=off-shell decay;
-        # n_body_decay_vertexlist[1]=on-shell decay.
+        # n_body_decay_vertexlist[0](or [False]): off-shell decay;
+        # n_body_decay_vertexlist[1](or [True] ):on-shell decay.
 
         self['2_body_decay_vertexlist'] =[base_objects.VertexList(),
                                           base_objects.VertexList()]
         self['3_body_decay_vertexlist'] =[base_objects.VertexList(),
                                           base_objects.VertexList()]
+
+
+    def check_vertexlist(self, partnum, onshell, value, model = {}):
+        """Check if the all the vertex in the vertexlist satisfy the following
+           conditions. If so, return true; if not, raise error messages.
+
+           1. There is only one initial particle with the id the same as self
+           2. The number of final particles is equal to partnum
+           3. If model is not None, check the onshell condition
+        """
+
+        #Check if partnum is an integer.
+        if not isinstance(partnum, int):
+            raise self.PhysicsObjectError, \
+                "Final particle number %s must be an integer." % str(partnum)
+
+        #Check if partnum is 2 or 3.
+        #If so, return the vertexlist with the on-shell condition.
+        if partnum not in [2 ,3]:
+            raise self.PhysicsObjectError, \
+                "Final particle number %s must be 2 or 3." % str(partnum)
         
+        #Check if onshell condition is Boolean number.
+        if not isinstance(onshell, bool):
+            raise self.PhysicsObjectError, \
+                "%s must be a Boolean number" % str(onshell)
+                
+        #Check if the value is a vertexlist
+        if not isinstance(value, base_objects.VertexList):
+            raise self.PhysicsObjectError, \
+                "%s must be a VertexList" % str(value)
+        
+        #Check if the model is a valid object.
+        if not (isinstance(model, base_objects.Model) or model == {}):
+            raise self.PhysicsObjectError, \
+                "%s must be a Model" % str(model)
+
+        #Determine the number of initial and final particles.
+        #Check the id of initial particle as well.
+
+        #Check if the model is given
+        if not model:
+            #No need to check the on-shell condition
+            for vert in value:
+                #Reset the number of initial/final particles,
+                #initial particle id
+                num_ini = 0
+                num_final = 0
+                ini_part_id = 0
+                
+                for leg in vert['legs']:
+                    if leg['state']:
+                        num_final += 1
+                    else:
+                        num_ini += 1
+                        ini_part_id = leg['id']
+                #Check the number of final particles is the same as partnum
+                if num_final != partnum:
+                    raise self.PhysicsObjectError, \
+                        "The vertex is a %s-body decay, not a %s-body one."\
+                        % (str(num_final), str(partnum))
+
+                #Check if the initial particle number is one.
+                if num_ini != 1:
+                    raise self.PhysicsObjectError, \
+                        "The initial particle number is %s, not 1."\
+                        % str(num_ini)
+                #Check if the initial particle has the same id as the mother.
+                if ini_part_id != self['pdg_code']:
+                    raise self.PhysicsObjectError, \
+                        "The initial particle id is %s, not %s"\
+                        %(str(ini_part_id), str(self['pdg_code']))
+        
+        #Model is not None, check the on-shell condition
+        else:
+            for vert in value:
+
+                #Reset the number of initial/final particles,
+                #initial particle id, and total and initial mass
+                num_ini = 0
+                num_final = 0
+                ini_part_id = 0
+                
+                total_mass = 0
+                ini_mass = 0
+
+                for leg in vert['legs']:
+                    #Calculate the total mass of all the particles
+                    total_mass += model.get_particle(leg['id'])['mass']
+                    
+                    if leg['state']:
+                        num_final += 1
+
+                    #Record the particle with 'state' == False (incoming)
+                    #Multi-initial particles vertex will be blocked.
+                    else:
+                        num_ini += 1
+                        ini_part_id = leg['id']
+                        ini_mass = model.get_particle(leg['id'])['mass']
+
+                #Check the number of final particles is the same as partnum
+                if num_final != partnum:
+                    raise self.PhysicsObjectError, \
+                        "The vertex is a %s -body decay, not a %s -body one."\
+                        % (str(num_final), str(partnum))
+
+                #Check if the initial particle number is one.
+                if num_ini != 1:
+                    raise self.PhysicsObjectError, \
+                        "The initial particle number is %s, not 1." % str(num_ini)
+
+                #Check if the initial particle has the same id as the mother.
+                if ini_part_id != self['pdg_code']:
+                    raise self.PhysicsObjectError, \
+                        "The initial particle id is %s, not %.s"\
+                        % (str(ini_part_id), str(self['pdg_code']))
+                
+                if (ini_mass > (total_mass - ini_mass)) != onshell:
+                    raise self.PhysicsObjectError, \
+                        "The on-shell condition is not satisfied."
+        return True
+
+
     def filter(self, name, value):
         """Filter for valid decay particle property values."""
-
+        
         if name in ['2_body_decay_vertexlist', '3_body_decay_vertexlist']:
-            # Must be a 2-element list of VertexList
-            
+
+            #Value must be a list of 2 elements.
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
                     "Decay_vertexlist %s is not a list of vertexlist." % str(value)
-            elif not len(value)==2:
+            elif not len(value) == 2:
                 raise self.PhysicsObjectError, \
-                    "Decay_vertexlist %s is not of length 2." % str(value)
+                    "Decay_vertexlist %s must be 2-element list." % str(value)
 
-            elif not isinstance(value[0], base_objects.VertexList) or \
-                 not isinstance(value[1], base_objects.VertexList):
-                
-                raise self.PhysicsObjectError, \
-                    "Element of Decay_vertexlist %s must be VertexList." % str(value)
-                
-           
-            print 'Warning: It is advised to set the decay_vertex '+ \
-                  'properties from method of Model.'
+            #Use the check_vertexlist to check
+            elif name == '2_body_decay_vertexlist':
+                self.check_vertexlist(2, False, value[0])
+                self.check_vertexlist(2, True, value[1])
+            else:
+                self.check_vertexlist(3, False, value[0])
+                self.check_vertexlist(3, True, value[1])
+
             
-        super(DecayParticle, self).filter(self, name, value)
+        super(DecayParticle, self).filter(name, value)
 
-    def FindChannel(self, model):
+        return True
+
+    def get_decay_vertexlist(self, partnum ,onshell):
+        """Return the n-body decay vertexlist.
+           partnum = n.
+           If onshell=false, return the on-shell list and vice versa.
+        """
+        #Check if partnum is an integer.
+        if not isinstance(partnum, int):
+            raise self.PhysicsObjectError, \
+                "Final particle number %s must be an integer." % str(partnum)
+
+        #Check if partnum is 2 or 3.
+        #If so, return the vertexlist with the on-shell condition.
+        if partnum not in [2 ,3]:
+            raise self.PhysicsObjectError, \
+                "Final particle number %s must be 2 or 3." % str(partnum)
+        
+        #Check if onshell condition is Boolean number.
+        if not isinstance(onshell, bool):
+            raise self.PhysicsObjectError, \
+                "%s must be a Boolean number" % str(onshell)
+
+        return self.get(str(partnum)+'_body_decay_vertexlist')[onshell]
+
+
+    def set_decay_vertexlist(self, partnum ,onshell, value, model = {}):
+        """Set the n_body_decay_vertexlist,
+           partnum: n, 
+           onshell: True for on-shell decay, and False for off-shell
+           value: the decay_vertexlist that is tried to assign.
+           model: the underlying model for vertexlist
+                  Use to check the correctness of on-shell condition.
+        """
+        #Check the vertexlist by check_vertexlist
+        #Error is raised (by check_vertexlist) if value is not valid
+        if self.check_vertexlist(partnum, onshell, value, model):            
+            self[str(partnum)+'_body_decay_vertexlist'][onshell] = \
+                copy.copy(value)
+
+    def find_vertexlist(self, model, option=False):
         """Find the possible decay channel to decay,
-           for both on-shell and off-shell
+           for both on-shell and off-shell.
+           If option=False (default), 
+           do not rewrite the VertexList if it exists.
+           If option=True, rewrite the VertexList anyway.
         """
         
-        # Raise error if self is not in model.
-        if not self['pdg_code'] in keys(model['particles'].generate_dict()):
+        #Raise error if self is not in model.
+        if not self.get_pdg_code() in keys(model['particles'].generate_dict()):
             raise self.PhysicsObjectError, \
-                    "The Particle is not in the model."
-
-        # pass the find channels program
-
+                    "The parent particle is not in the model %s." % str(model)
+        
+        #If 'decay_vertexlist_written' is true and option is false,
+        #no action is proceed.
+        if self.decay_vertexlist_written and not option:
+            return 'The vertexlist has been setup. No action proceeds because of False option.'
+        else:
+            # pass the find channels program
+            pass
+        
 #===============================================================================
 # Channel: Each channel for the decay
 #===============================================================================
