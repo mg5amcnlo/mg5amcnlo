@@ -67,7 +67,14 @@ class TestUFOExpressionParsers(unittest.TestCase):
         converted = ufo_to_fortran.parse(expr)
         self.assertEqual(converted, 'dsqrt(2.500000d+00)')
 
-        
+        expr = 'cmath.testfcn(2.00, a+b)'
+        converted = ufo_to_fortran.parse(expr)
+        self.assertEqual(converted, 'testfcn(2.000000d+00,a+b)')
+                
+        expr = 'cmath.sin(2.00)'
+        converted = ufo_to_fortran.parse(expr)
+        self.assertEqual(converted, 'sin(2.000000d+00)')
+                
         expr = '(ee**2*IMAG/(2.*sw**2) * (cmath.sin(cmath.sqrt(2)*ee)**2/3.))'
         converted = ufo_to_fortran.parse(expr)
         self.assertEqual(converted, 
@@ -118,6 +125,10 @@ class TestUFOExpressionParsers(unittest.TestCase):
         converted = ufo_to_pythia8.parse(expr)
         self.assertEqual(converted, 'sqrt(2.5)')
 
+        expr = 'cmath.testfcn(2.00, a+b)'
+        converted = ufo_to_pythia8.parse(expr)
+        self.assertEqual(converted, 'testfcn(2.,a+b)')
+        
         expr = '(ee**2*IMAG/(2.*sw**2) * (cmath.sin(cmath.sqrt(2)*ee)**2/3.))'
         converted = ufo_to_pythia8.parse(expr)
         self.assertEqual(converted, 
