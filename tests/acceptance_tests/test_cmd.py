@@ -72,8 +72,8 @@ class TestCmdShell1(unittest.TestCase):
         
         self.do('generate g g > g g')
         self.do('draw .')
-        self.assertTrue(os.path.exists('diagrams_gg_gg.eps'))
-        os.remove('diagrams_gg_gg.eps')
+        self.assertTrue(os.path.exists('diagrams_0_gg_gg.eps'))
+        os.remove('diagrams_0_gg_gg.eps')
 
 
 class TestCmdShell2(unittest.TestCase):

@@ -52,7 +52,7 @@ class UFOExpressionParser:
 
     # List of tokens and literals
     tokens = (
-        'POWER', 'SIN', 'COS', 'TAN', 'CSC', 'SEC', 'ACSC', 'ASEC',
+        'POWER', 'SIN', 'COS', 'TAN', 'CSC', 'SEC', 'ACSC', 'ASEC', 'ATAN',
         'SQRT', 'CONJ', 'RE', 'IM', 'PI', 'COMPLEX', 'FUNCTION',
         'VARIABLE', 'NUMBER'
         )
@@ -69,6 +69,9 @@ class UFOExpressionParser:
     def t_TAN(self, t):
         r'cmath\.tan'
         return t
+    def t_ATAN(self, t):
+        r'cmath\.atan'
+        return t    
     def t_CSC(self, t):
         r'(?<!\w)csc(?=\()'
         return t
@@ -139,6 +142,7 @@ class UFOExpressionParser:
         ('right','SEC'),
         ('right','ACSC'),
         ('right','ASEC'),
+        ('right','ATAN'),
         ('right','SQRT'),
         ('right','CONJ'),
         ('right','RE'),
@@ -227,6 +231,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
                       | SEC group
                       | ACSC group
                       | ASEC group
+                      | ATAN group
                       | RE group
                       | IM group
                       | SQRT group
@@ -238,6 +243,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         elif p[1] == 'sec': p[0] = '1d0/sin' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
         elif p[1] == 'asec': p[0] = 'acos(1./' + p[2] + ')'
+        elif p[1] == 'cmath.atan': p[0] = 'atan '+ p[2]
         elif p[1] == 're': p[0] = 'dble' + p[2]
         elif p[1] == 'im': p[0] = 'dimag' + p[2]
         elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'dsqrt' + p[2]
@@ -287,6 +293,7 @@ class UFOExpressionParserPythia8(UFOExpressionParser):
                       | SEC group
                       | ACSC group
                       | ASEC group
+                      | ATAN group
                       | RE group
                       | IM group
                       | SQRT group
@@ -298,6 +305,7 @@ class UFOExpressionParserPythia8(UFOExpressionParser):
         elif p[1] == 'sec': p[0] = '1./sin' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
         elif p[1] == 'asec': p[0] = 'acos(1./' + p[2] + ')'
+        elif p[1] == 'atan': p[0] = 'atan' + p[2]
         elif p[1] == 're': p[0] = 'real' + p[2]
         elif p[1] == 'im': p[0] = 'imag' + p[2]
         elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]

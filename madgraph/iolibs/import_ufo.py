@@ -109,9 +109,6 @@ class UFOMG5Converter(object):
         logger.info('load particle')
         for particle_info in self.ufomodel.all_particles:            
             self.add_particle(particle_info)
-
-        logger.info('pass the particles name in MG convention')
-        self.pass_in_standard_name()
             
         logger.info('load vertex')
         for interaction_info in self.ufomodel.all_vertices:
@@ -195,7 +192,7 @@ class UFOMG5Converter(object):
         interaction.set('orders', mg5_order)
 
         # Import color information:
-        colors = [self.treat_color(color_obj) for color_obj in \
+        colors = [self.treat_color(color_obj, interaction_info) for color_obj in \
                                     interaction_info.color]
         
         interaction.set('color', colors)
@@ -204,75 +201,45 @@ class UFOMG5Converter(object):
         self.interactions.append(interaction)
         
     @staticmethod
-    def treat_color(data_string):
+    def treat_color(data_string, interaction_info):
         """ convert the string to ColorStirng"""
-        
-        # Convert the string in order to be able to evaluate it
-        
+        original = copy.copy(data_string)
+        # Change identity in color.TC        
         p = re.compile(r'''Identity\((?P<first>\d*),(?P<second>\d*)\)''')
-        data_string = p.sub('color.T(\g<second>,\g<first>)', data_string)
+        #data_string = p.sub('color.T(\g<first>,\g<second>)', data_string)
+        pattern = p.search(data_string)
+        if pattern:
+            particle = interaction_info.particles[int(pattern.group('first'))-1]
+            if particle.color < 0 :
+                data_string = p.sub('color.T(\g<second>,\g<first>)', data_string)
+            else:
+                data_string = p.sub('color.T(\g<first>,\g<second>)', data_string)
         
-        # Change identity in color.TC
-        #data_string = data_string.replace('Identity(1,2)','color.T(2,1)')
         # Change convention for summed indices
-        data_string = data_string.replace(',a',',-')
-        data_string = data_string.replace('(a','(-')
-        data_string = data_string.replace(',\'a',',-')
-        data_string = data_string.replace('(\'a','(-')
-        data_string = data_string.replace('\'','')
-            
+        p = re.compile(r'''\'\w(?P<number>\d+)\'''')
+        data_string = p.sub('-\g<number>', data_string)
+         
+        # Compute how change indices to match MG5 convention
+        info = [(i+1,part.color) for i,part in enumerate(interaction_info.particles) 
+                 if part.color!=1]
+        order = sorted(info, lambda p1, p2:p1[1] - p2[1])
+        new_indices={}
+        for i,(j, pcolor) in enumerate(order):
+            new_indices[j]=i
+                        
+#            p = re.compile(r'''(?P<prefix>[^-@])(?P<nb>%s)(?P<postfix>\D)''' % j)
+#            data_string = p.sub('\g<prefix>@%s\g<postfix>' % i, data_string)
+#        data_string = data_string.replace('@','')                    
         output = data_string.split('*')
-        output = color.ColorString([eval(data).shift_indices() for data in output if data !='1'])
+        output = color.ColorString([eval(data) \
+                                              for data in output if data !='1'])
+        for col_obj in output:
+            col_obj.replace_indices(new_indices)
         
         return output
     
-    def pass_in_standard_name(self):
-        """check that all SM particles have The same name as MG4 version"""
         
-        default = self.load_default_name()
         
-        for particle in self.particles:
-            pdg = particle.get_pdg_code()
-            if pdg not in default.keys():
-                continue
-            name = particle.get_name()
-            antiname = particle.get('antiname')
-            if name != default[pdg]:
-                old_part = self.particles.find_name(default[pdg]) 
-                if old_part:
-                    raise MadGraph5Error(
-    '%s particles with pdg code %s is in conflict with MG convention name for \
-     particle %s' % (old_part.get_name(), old_part.get_pdg_code(), pdg  ))
-                
-                particle.set('name', default[pdg])
-            
-            
-            if name != antiname and antiname != default[-1 *pdg]:
-                old_part = self.particles.find_name(default[-1 * pdg]) 
-                if old_part:
-                    raise MadGraph5Error(
-    '%s particles with pdg code %s is in conflict with MG convention name for \
-     particle %s' % (old_part.get_name(), old_part.get_pdg_code(), -1 * pdg  ))
-                
-                particle.set('antiname', default[-1 *pdg])
-    
-    def load_default_name(self):
-        """ load the default for name convention """
-        
-        default = {}
-        for line in open(os.path.join(MG5DIR, 'input', \
-                                                 'particles_name_default.txt')):
-            line = line.lstrip()
-            if line.startswith('#'):
-                continue
-            
-            args = line.split()
-            if len(args) != 2:
-                logger.warning('Invalid syntax in interface/default_name:\n %s' % line)
-                continue
-            default[int(args[0])] = args[1].lower()
-        
-        return default
             
 # Helping class
 class ParamExpr(object):
@@ -315,9 +282,10 @@ class OrganizeModelExpression:
     # regular expression to shorten the expressions
     complex_number = re.compile(r'''complex\((?P<real>[^,\(\)]+),(?P<imag>[^,\(\)]+)\)''')
     expo_expr = re.compile(r'''(?P<expr>\w+)\s*\*\*\s*(?P<expo>\d+)''')
-    sqrt_expr = re.compile(r'''cmath.sqrt\((?P<expr>\w+)\)''')
+    cmath_expr = re.compile(r'''cmath.(?P<operation>\w+)\((?P<expr>\w+)\)''')
+    #operation is usualy sqrt / sin / cos / tan
     conj_expr = re.compile(r'''complexconjugate\((?P<expr>\w+)\)''')
-
+    
     #RE expression for is_event_dependent
     separator = re.compile(r'''[+,\-*/()]''')    
     
@@ -439,7 +407,7 @@ class OrganizeModelExpression:
 
         expr = self.complex_number.sub(self.shorten_complex, expr)
         expr = self.expo_expr.sub(self.shorten_expo, expr)
-        expr = self.sqrt_expr.sub(self.shorten_sqrt, expr)
+        expr = self.cmath_expr.sub(self.shorten_cmath, expr)
         expr = self.conj_expr.sub(self.shorten_conjugate, expr)
         return expr
     
@@ -475,12 +443,13 @@ class OrganizeModelExpression:
         self.add_parameter(new_param)
         return output
         
-    def shorten_sqrt(self, matchobj):
+    def shorten_cmath(self, matchobj):
         """add the short expression, and retrun the nice string associate"""
         
         expr = matchobj.group('expr')
-        output = 'sqrt__%s' % (expr)
-        old_expr = ' cmath.sqrt(%s) ' %  expr
+        operation = matchobj.group('operation')
+        output = '%s__%s' % (operation, expr)
+        old_expr = ' cmath.%s(%s) ' %  (operation, expr)
         if expr.isdigit():
             new_param = ParamExpr(output, old_expr , 'real')
         else:
