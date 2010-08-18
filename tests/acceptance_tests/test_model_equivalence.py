@@ -68,7 +68,7 @@ class CompareMG4WithUFOModel(unittest.TestCase):
     """checking if the MG4 model and the UFO model are coherent when they should"""
     
     
-    def test_model_equivalence(self):
+    def test_sm_equivalence(self):
         """ test the UFO and MG4 model correspond to the same model """
         
         # import UFO model
@@ -283,15 +283,15 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
                 value=[float(numb) for numb in split[1].split()]
             nb_value +=1
             for i, singlevalue in enumerate(value):
-#                try:
+                try:
                     self.assertAlmostEqual(singlevalue, solutions[variable][i], 7, 'fail to be equal for param %s : %s != %s' % (variable, singlevalue, solutions[variable][i]))
-#                except:
-#                    print i, singlevalue, [variable]
-#                    if i == 0:
-#                        solutions[variable] = [singlevalue]
-#                    else:
-#                        solutions[variable].append(singlevalue)
-#        print solutions
+                except:
+                    print i, singlevalue, [variable]
+                    if i == 0:
+                        solutions[variable] = [singlevalue]
+                    else:
+                        solutions[variable].append(singlevalue)
+        print solutions
         self.assertEqual(nb_value, 123)
         
         
@@ -303,7 +303,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
         alreadydefine = []
         for line in self.ReturnFile('intparam_definition.inc'):
             if 'ENDIF' in line:
-                self.assertEqual(len(alreadydefine), 53)
+                self.assertEqual(len(alreadydefine), 55)
                 
             if '=' not in line:
                 continue
@@ -314,7 +314,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
             alreadydefine.append(new_def)
         alreadydefine = [name.lower() for name in alreadydefine]
         alreadydefine.sort()
-        solution = ['AEW ', 'sqrt__AS ', 'G ', 'YE ', 'YM ', 'YU ', 'YD ', 'YS ', 'CKM11 ', 'CKM12 ', 'CKM13 ', 'CKM21 ', 'CKM22 ', 'CKM23 ', 'CKM31 ', 'CKM32 ', 'CKM33 ', 'MZ__exp__2 ', 'MZ__exp__4 ', 'sqrt__2 ', 'MW ', 'sqrt__AEW ', 'EE ', 'MW__exp__2 ', 'SW2 ', 'CW ', 'sqrt__SW2 ', 'SW ', 'G1 ', 'GW ', 'V ', 'MH__exp__2 ', 'V__exp__2 ', 'LAM ', 'YB ', 'YC ', 'YT ', 'YTAU ', 'MUH ', 'COMPLEXI ', 'GW__exp__2 ', 'CW__exp__2 ', 'EE__exp__2 ', 'SW__exp__2 ', 'conjg__CKM11 ', 'conjg__CKM12 ', 'conjg__CKM13 ', 'conjg__CKM21 ', 'conjg__CKM22 ', 'conjg__CKM23 ', 'conjg__CKM31 ', 'conjg__CKM32 ', 'conjg__CKM33 ', 'G__exp__2 ', 'GAL(1) ', 'GAL(2) ', 'DUM0 ', 'DUM1 ']
+        solution = ['AEW ', 'cos__cabi ','sin__cabi ','sqrt__AS ', 'G ', 'YE ', 'YM ', 'YU ', 'YD ', 'YS ', 'CKM11 ', 'CKM12 ', 'CKM13 ', 'CKM21 ', 'CKM22 ', 'CKM23 ', 'CKM31 ', 'CKM32 ', 'CKM33 ', 'MZ__exp__2 ', 'MZ__exp__4 ', 'sqrt__2 ', 'MW ', 'sqrt__AEW ', 'EE ', 'MW__exp__2 ', 'SW2 ', 'CW ', 'sqrt__SW2 ', 'SW ', 'G1 ', 'GW ', 'V ', 'MH__exp__2 ', 'V__exp__2 ', 'LAM ', 'YB ', 'YC ', 'YT ', 'YTAU ', 'MUH ', 'COMPLEXI ', 'GW__exp__2 ', 'CW__exp__2 ', 'EE__exp__2 ', 'SW__exp__2 ', 'conjg__CKM11 ', 'conjg__CKM12 ', 'conjg__CKM13 ', 'conjg__CKM21 ', 'conjg__CKM22 ', 'conjg__CKM23 ', 'conjg__CKM31 ', 'conjg__CKM32 ', 'conjg__CKM33 ', 'G__exp__2 ', 'GAL(1) ', 'GAL(2) ', 'DUM0 ', 'DUM1 ']
         solution = [name.lower() for name in solution]
         solution.sort()
         self.assertEqual(len(alreadydefine), len(solution))

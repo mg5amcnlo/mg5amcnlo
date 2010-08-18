@@ -114,8 +114,11 @@ class MG4Runner(MERunner):
         self.mg4_path = os.path.abspath(mg4_path)
 
         if not temp_dir:
-            temp_dir = "test_%s_%s" % (self.type,\
-                                         datetime.datetime.now().strftime("%f"))
+            i=0
+            while os.path.exists(os.path.join(mg4_path, 
+                                              "test_%s_%s" % (self.type, i))):
+                i+1
+            temp_dir = "test_%s_%s" % (self.type, i)         
 
         if os.path.exists(os.path.join(mg4_path, temp_dir)):
             raise IOError, "Path %s for test already exist" % \
