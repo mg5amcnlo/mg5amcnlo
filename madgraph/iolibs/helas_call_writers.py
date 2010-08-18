@@ -34,18 +34,17 @@ class HelasCallWriter(base_objects.PhysicsObject):
 
     def default_setup(self):
 
-        self['model_name'] = ""
+        self['model'] = base_objects.Model()
         self['wavefunctions'] = {}
         self['amplitudes'] = {}
 
     def filter(self, name, value):
         """Filter for model property values"""
 
-        if name == 'model_name':
-            if not isinstance(value, str):
+        if name == 'model':
+            if not isinstance(value, base_objects.Model):
                 raise self.PhysicsObjectError, \
-                    "Object of type %s is not a string" % \
-                                                            type(value)
+                    "Object of type %s is not a model" % type(value)
 
         if name == 'wavefunctions':
             # Should be a dictionary of functions returning strings, 
@@ -74,7 +73,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return ['model_name', 'wavefunctions', 'amplitudes']
+        return ['model', 'wavefunctions', 'amplitudes']
 
     def get_matrix_element_calls(self, matrix_element):
         """Return a list of strings, corresponding to the Helas calls
@@ -172,6 +171,10 @@ class HelasCallWriter(base_objects.PhysicsObject):
         self.get('amplitudes')[key] = function
         return True
 
+    def get_model_name(self):
+        """Return the model name"""
+        return self['model'].get('name')
+
     # Customized constructor
     def __init__(self, argument={}):
         """Allow generating a HelasCallWriter from a Model
@@ -179,7 +182,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
 
         if isinstance(argument, base_objects.Model):
             super(HelasCallWriter, self).__init__()
-            self.set('model_name', argument.get('name'))
+            self.set('model', argument)
         else:
             super(HelasCallWriter, self).__init__(argument)
             
@@ -315,6 +318,11 @@ class FortranHelasCallWriter(HelasCallWriter):
         generate_helas_call is called to automatically create the
         function."""
 
+        if wavefunction.get('spin') == 1 and \
+               wavefunction.get('interaction_id') != 0:
+            # Add necessary minus sign to coupling in HVS-type wavefunctions,
+            # due to non-identical scalars
+            wavefunction.set_scalar_coupling_sign(self['model'])
         val = super(FortranHelasCallWriter, self).get_wavefunction_call(wavefunction)
 
         if val:
@@ -817,7 +825,7 @@ class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
             call = call.lower()
             call = call + 'x' * (6 - len(call))
             # Specify namespace for Helas calls
-            call = "Pythia8_%s::" % self.get('model_name') + call
+            call = "Pythia8_%s::" % self.get_model_name() + call
             call = call + "(p[%d],"
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity

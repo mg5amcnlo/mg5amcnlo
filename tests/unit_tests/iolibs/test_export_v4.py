@@ -43,7 +43,7 @@ class IOExportV4Test(unittest.TestCase,
 
     mymodel = base_objects.Model()
     mymatrixelement = helas_objects.HelasMatrixElement()
-    myfortranmodel = helas_call_writers.FortranHelasCallWriter()
+    myfortranmodel = helas_call_writers.FortranHelasCallWriter(mymodel)
     created_files = ['test'
                     ]
 
@@ -374,8 +374,9 @@ class FullHelasOutputTest(test_helas_call_writers.HelasModelTestSetup,
 
         # I have checked that the resulting Helas calls
         # below give identical result as MG4
-        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter().\
-                                   get_matrix_element_calls(matrix_element)),
+        self.assertEqual("\n".join(\
+            helas_call_writers.FortranHelasCallWriter(self.mymodel).\
+            get_matrix_element_calls(matrix_element)),
                          """CALL IXXXXX(P(0,1),me,NHEL(1),+1*IC(1),W(1,1))
 CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
 CALL VXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
@@ -417,7 +418,8 @@ CALL IOVXXX(W(1,6),W(1,4),W(1,2),MGVX12,AMP(2))""")
 
         # I have checked that the resulting Helas calls
         # below give identical result as MG4
-        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter().\
+        self.assertEqual("\n".join(\
+            helas_call_writers.FortranHelasCallWriter(self.mymodel).\
                                    get_matrix_element_calls(matrix_element)),
                          """CALL IXXXXX(P(0,1),mu,NHEL(1),+1*IC(1),W(1,1))
 CALL OXXXXX(P(0,2),mu,NHEL(2),-1*IC(2),W(1,2))
@@ -537,7 +539,7 @@ CALL IOVXXX(W(1,1),W(1,6),W(1,7),MGVX15,AMP(2))""")
 
         # Test Helas calls
 
-        fortran_model = helas_call_writers.FortranHelasCallWriter()
+        fortran_model = helas_call_writers.FortranHelasCallWriter(mybasemodel)
 
         self.assertEqual("\n".join(fortran_model.\
                                    get_matrix_element_calls(matrix_element)),
@@ -827,7 +829,7 @@ PD(IPROC)=PD(IPROC-1) + u1*ub2""")
 
         # Test Helas calls
 
-        fortran_model = helas_call_writers.FortranHelasCallWriter()
+        fortran_model = helas_call_writers.FortranHelasCallWriter(mybasemodel)
 
         self.assertEqual("\n".join(fortran_model.\
                                    get_matrix_element_calls(matrix_element)),
@@ -904,7 +906,7 @@ JAMP(6)=+2*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))""")
 
         # I have checked that the resulting Helas calls
         # below give identical result as MG4, apart from the sign! (AMP 1,2)
-        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter().\
+        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter(self.mybasemodel).\
                                    get_matrix_element_calls(matrix_element)),
                          """CALL OXXXXX(P(0,1),mu,NHEL(1),-1*IC(1),W(1,1))
 CALL IXXXXX(P(0,2),mu,NHEL(2),+1*IC(2),W(1,2))
@@ -941,7 +943,7 @@ CALL IOSXXX(W(1,2),W(1,6),W(1,3),MGVX575,AMP(2))""")
 
         # I have checked that the resulting Helas calls
         # below give identical result as MG4
-        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter().\
+        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter(self.mybasemodel).\
                                    get_matrix_element_calls(matrix_element)),
                          """CALL VXXXXX(P(0,1),zmas,NHEL(1),-1*IC(1),W(1,1))
 CALL VXXXXX(P(0,2),zmas,NHEL(2),-1*IC(2),W(1,2))
@@ -1081,7 +1083,7 @@ CALL IOVXXX(W(1,6),W(1,3),W(1,2),GZN11,AMP(2))""")
         # I have checked that the resulting Helas calls below give
         # identical result as MG4 (when fermionfactors are taken into
         # account)
-        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter().\
+        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element)),
                          """CALL OXXXXX(P(0,1),me,NHEL(1),-1*IC(1),W(1,1))
 CALL IXXXXX(P(0,2),me,NHEL(2),+1*IC(2),W(1,2))
@@ -1151,7 +1153,7 @@ CALL IOSXXX(W(1,2),W(1,19),W(1,24),MGVX494,AMP(8))""")
 
         # I have checked that the resulting Helas calls
         # below give identical result as MG4, apart from sign! (AMP 1,2,5,6)
-        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter().\
+        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter(self.mybasemodel).\
                                    get_matrix_element_calls(matrix_element)),
                          """CALL OXXXXX(P(0,1),mu,NHEL(1),-1*IC(1),W(1,1))
 CALL IXXXXX(P(0,2),mu,NHEL(2),+1*IC(2),W(1,2))
@@ -1296,7 +1298,7 @@ CALL IOSCXX(W(1,13),W(1,1),W(1,10),MGVX575,AMP(8))""")
 
         # I have checked that the resulting Helas calls
         # below give identical result as MG4
-        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter().\
+        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element)),
                          """CALL IXXXXX(P(0,1),me,NHEL(1),+1*IC(1),W(1,1))
 CALL OXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
@@ -1430,7 +1432,7 @@ CALL IOVXXX(W(1,4),W(1,3),W(1,5),MGVX27,AMP(1))""")
         # I have checked that the resulting Helas calls below give
         # identical result as MG4.  Note that this looks like it uses
         # incoming bosons instead of outgoing though
-        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter().\
+        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element)),
                          """CALL VXXXXX(P(0,1),MW,NHEL(1),-1*IC(1),W(1,1))
 CALL VXXXXX(P(0,2),MW,NHEL(2),-1*IC(2),W(1,2))
@@ -1611,7 +1613,7 @@ CALL VVVXXX(W(1,2),W(1,4),W(1,8),MGVX5,AMP(5))""")
 
         # I have checked that the resulting Helas calls below give
         # identical result as MG4.
-        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter().\
+        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element)),
                          """CALL VXXXXX(P(0,1),MW,NHEL(1),-1*IC(1),W(1,1))
 CALL VXXXXX(P(0,2),MW,NHEL(2),-1*IC(2),W(1,2))
@@ -1798,7 +1800,7 @@ CALL VVVXXX(W(1,6),W(1,2),W(1,3),MGVX5,AMP(3))""")
 
         # I have checked that the resulting Helas calls below give
         # identical result as MG4.
-        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter().\
+        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element)),
                          """CALL VXXXXX(P(0,1),MW,NHEL(1),-1*IC(1),W(1,1))
 CALL VXXXXX(P(0,2),MW,NHEL(2),-1*IC(2),W(1,2))
@@ -1942,7 +1944,7 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, gen_color=False)
 
-        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter().\
+        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element)),
                          """CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
 CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
@@ -2155,13 +2157,12 @@ C     Amplitude(s) for diagram number 6
         """Test matrix.f for multistage decay chain
         """
 
-        myfortranmodel = helas_call_writers.FortranHelasCallWriter()
-
         # Set up local model
 
         mybasemodel = base_objects.Model()
         mypartlist = base_objects.ParticleList()
         myinterlist = base_objects.InteractionList()
+        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mybasemodel)
 
         # A electron and positron
         mypartlist.append(base_objects.Particle({'name':'e+',
@@ -2392,13 +2393,12 @@ CALL IOVXXX(W(1,26),W(1,23),W(1,2),GAL,AMP(8))""")
         """Test matrix.f for multistage decay chain
         """
 
-        myfortranmodel = helas_call_writers.FortranHelasCallWriter()
-
         # Set up local model
 
         mybasemodel = base_objects.Model()
         mypartlist = base_objects.ParticleList()
         myinterlist = base_objects.InteractionList()
+        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mybasemodel)
 
         # A gluon
         mypartlist.append(base_objects.Particle({'name':'g',
@@ -3042,7 +3042,7 @@ CALL VVVXXX(W(1,2),W(1,26),W(1,39),GG,AMP(216))""")
 
         me = matrix_elements[0]
 
-        myfortranmodel = helas_call_writers.FortranHelasCallWriter()
+        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mymodel)
 
         # This has been checked against v4
         self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
@@ -3093,7 +3093,7 @@ CALL IOSXXX(W(1,14),W(1,2),W(1,12),MGVX350,AMP(2))""")
 
         me = matrix_elements[0]
 
-        myfortranmodel = helas_call_writers.FortranHelasCallWriter()
+        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mymodel)
 
         # This has been checked against v4
         self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
@@ -3361,7 +3361,7 @@ C     Number of configs
       DATA GFORCEBW(-4,8)/.TRUE./
 """)
 
-        fortran_model = helas_call_writers.FortranHelasCallWriter()
+        fortran_model = helas_call_writers.FortranHelasCallWriter(mymodel)
 
         # Test dname.mg
         writer = writers.FortranWriter(self.give_pos('test'))
@@ -3776,10 +3776,10 @@ C     Number of configs
 
         me = matrix_elements[0]
 
-        myfortranmodel = helas_call_writers.FortranHelasCallWriter()
+        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mymodel)
 
-        self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
-                         """CALL VXXXXX(P(0,1),zmass,NHEL(1),-1*IC(1),W(1,1))
+        result = myfortranmodel.get_matrix_element_calls(me)
+        goal = """CALL VXXXXX(P(0,1),zmass,NHEL(1),-1*IC(1),W(1,1))
 CALL OXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
 CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
 CALL IXXXXX(P(0,4),zero,NHEL(4),-1*IC(4),W(1,4))
@@ -3815,7 +3815,10 @@ CALL IOSXXX(W(1,7),W(1,2),W(1,19),GELN2P,AMP(7))
 # Amplitude(s) for diagram number 8
 CALL IOSXXX(W(1,11),W(1,2),W(1,19),GELN2P,AMP(8))
 # Amplitude(s) for diagram number 9
-CALL IOSXXX(W(1,15),W(1,2),W(1,19),GELN2P,AMP(9))""")
+CALL IOSXXX(W(1,15),W(1,2),W(1,19),GELN2P,AMP(9))""".split('\n')
+
+        for i in range(max(len(result), len(goal))):
+            self.assertEqual(result[i], goal[i])
 
         self.assertEqual(export_v4.get_JAMP_lines(me)[0],
                          "JAMP(1)=+AMP(1)-AMP(2)-AMP(3)+AMP(4)-AMP(5)-AMP(6)+AMP(7)-AMP(8)-AMP(9)")

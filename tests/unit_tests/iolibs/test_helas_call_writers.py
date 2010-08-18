@@ -41,7 +41,6 @@ class HelasModelTestSetup(unittest.TestCase):
     mybasemodel = base_objects.Model()
 
     def setUp(self):
-        self.mymodel.set('model_name', 'sm')
 
         # Set up model
 
@@ -442,6 +441,8 @@ class HelasModelTestSetup(unittest.TestCase):
 
         self.mybasemodel.set('particles', mypartlist)
         self.mybasemodel.set('interactions', myinterlist)
+        self.mybasemodel.set('name', 'sm')
+        self.mymodel.set('model', self.mybasemodel)
 
 #===============================================================================
 # HelasModelTest
@@ -452,7 +453,7 @@ class HelasModelTest(HelasModelTestSetup):
     def test_setget_helas_model_correct(self):
         """Test correct HelasModel object get and set"""
 
-        self.assertEqual(self.mymodel.get('model_name'), 'sm')
+        self.assertEqual(self.mymodel.get_model_name(), 'sm')
 
     def test_setget_helas_model_error(self):
         """Test error raising in HelasModel object get and set"""
@@ -757,8 +758,6 @@ class UFOHELASCallWriterTest(unittest.TestCase):
     mybasemodel = base_objects.Model()
 
     def setUp(self):
-        self.mymodel.set('model_name', 'sm')
-
         # Set up model
 
         mypartlist = base_objects.ParticleList()
@@ -844,6 +843,8 @@ class UFOHELASCallWriterTest(unittest.TestCase):
 
         self.mybasemodel.set('particles', mypartlist)
         self.mybasemodel.set('interactions', myinterlist)
+        self.mybasemodel.set('name', 'sm')
+        self.mymodel.set('model', self.mybasemodel)
         
         
         #import madgraph.interface.cmd_interface as cmd

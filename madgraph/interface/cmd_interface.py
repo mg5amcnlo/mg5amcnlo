@@ -1156,7 +1156,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _curr_model = None  #base_objects.Model()
     _curr_amps = diagram_generation.AmplitudeList()
     _curr_matrix_elements = helas_objects.HelasMultiProcess()
-    _curr_fortran_model = helas_call_writers.FortranHelasCallWriter()
+    _curr_fortran_model = None
     _curr_cpp_model = None
 
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams', 
@@ -1913,7 +1913,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self._curr_model.pass_particles_name_in_mg_default()
             self.add_default_multiparticles()
             self._curr_fortran_model = \
-                                  helas_call_writers.FortranUFOHelasCallWriter()
+                  helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
         
         elif args[0] == 'command':
             if not os.path.isfile(args[1]):
@@ -1930,7 +1930,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if '--modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
             self.add_default_multiparticles()
- 
+            self._curr_fortran_model = \
+                  helas_call_writers.FortranHelasCallWriter(self._curr_model)
+
         elif args[0] == 'proc_v4':
             
             if len(args) == 1 and self._export_dir:
@@ -2062,6 +2064,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         cpu_time1 = time.time()
         if args[0] == 'model':
             self._curr_model = save_load_object.load_from_file(args[1])
+            if self._curr_model.get('parameters'):
+                # This is a UFO model
+                self._model_v4 = None
+                self._curr_fortran_model = \
+                  helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
+            else:
+                # This is a v4 model
+                self._model_v4 = self._curr_model
+                self._curr_fortran_model = \
+                  helas_call_writers.FortranHelasCallWriter(self._curr_model)
+                
             #save_model.save_model(args[1], self._curr_model)
             if isinstance(self._curr_model, base_objects.Model):
                 cpu_time2 = time.time()

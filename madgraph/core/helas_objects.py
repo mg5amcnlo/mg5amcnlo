@@ -403,7 +403,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
             #                   lambda p1, p2: p1.get('spin') - p2.get('spin'))
             if particles[1].get_pdg_code() != particles[2].get_pdg_code() \
                    and self.get('pdg_code') == \
-                       particles[1].get_anti_pdg_code():
+                   particles[1].get_anti_pdg_code()\
+                   and self.get('coupling')[0] != '-':
                 # We need a minus sign in front of the coupling
                 self.set('coupling', '-' + self.get('coupling'))
 
@@ -2083,8 +2084,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         # scalars different, we need extra minus sign in front
                         # of coupling for one of the two scalars since the HVS
                         # is asymmetric in the two scalars
-                        if wf.get('spin') == 1:
-                            wf.set_scalar_coupling_sign(model)
                         if inter.get('color'):
                             wf.set('inter_color', inter.get('color')[coupl_key[0]])
                         wf.set('lorentz', inter.get('lorentz')[coupl_key[1]])
