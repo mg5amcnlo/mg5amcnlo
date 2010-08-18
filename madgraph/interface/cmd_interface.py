@@ -1274,6 +1274,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         # Particle names always lowercase
         line = line.lower()
+        # Make sure there are spaces around = and |
+        line = line.replace("=", " = ")
+        line = line.replace("|", " | ")
         args = split_arg(line)
         # check the validity of the arguments
         self.check_define(args)
@@ -1365,9 +1368,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def multiparticle_string(self, key):
         """Returns a nicely formatted string for the multiparticle"""
 
-        return "%s = %s" % (key, " ".join( \
-                    [ self._curr_model.get('particle_dict')[part_id].\
-                      get_name() for part_id in self._multiparticles[key]]))
+        if self._multiparticles[key] and \
+               isinstance(self._multiparticles[key][0], list):
+            return "%s = %s" % (key, "|".join([" ".join([self._curr_model.\
+                                     get('particle_dict')[part_id].get_name() \
+                                                     for part_id in id_list]) \
+                                  for id_list in self._multiparticles[key]]))
+        else:
+            return "%s = %s" % (key, " ".join([self._curr_model.\
+                                    get('particle_dict')[part_id].get_name() \
+                                    for part_id in self._multiparticles[key]]))
 
     def do_tutorial(self, line):
         """Activate/deactivate the tutorial mode."""
@@ -1595,11 +1605,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
 
         # Perform sanity modifications on the lines:
-        # Add a space before any > , $ /
-        space_before = re.compile(r"(?P<carac>\S)(?P<tag>[/\,\\$\\>])")
+        # Add a space before any > , $ / |
+        space_before = re.compile(r"(?P<carac>\S)(?P<tag>[/\,\\$\\>|])")
         line = space_before.sub(r'\g<carac> \g<tag>', line)       
-        # Add a space after any + - ~ > , $ / 
-        space_after = re.compile(r"(?P<tag>[+-/\,\\$\\>~])(?P<carac>[^\s+-])")
+        # Add a space after any + - ~ > , $ / |
+        space_after = re.compile(r"(?P<tag>[+-/\,\\$\\>~|])(?P<carac>[^\s+-])")
         line = space_after.sub(r'\g<tag> \g<carac>', line)
         
         
@@ -1672,6 +1682,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             mylegids = []
             if part_name in self._multiparticles:
+                if isinstance(self._multiparticles[part_name][0], list):
+                    raise MadGraph5Error,\
+                          "Multiparticle %s is or-multiparticle" % part_name + \
+                          " which can be used only for required s-channels"
                 mylegids.extend(self._multiparticles[part_name])
             else:
                 mypart = self._curr_model['particles'].find_name(part_name)
@@ -1690,9 +1704,19 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             # Now extract restrictions
             forbidden_particle_ids = \
-                               self.extract_particle_ids(forbidden_particles)
+                              self.extract_particle_ids(forbidden_particles)
+            if forbidden_particle_ids and \
+               isinstance(forbidden_particle_ids[0], list):
+                raise MadGraph5Error,\
+                      "Multiparticle %s is or-multiparticle" % part_name + \
+                      " which can be used only for required s-channels"
             forbidden_schannel_ids = \
-                               self.extract_particle_ids(forbidden_schannels)
+                              self.extract_particle_ids(forbidden_schannels)
+            if forbidden_schannel_ids and \
+               isinstance(forbidden_schannel_ids[0], list):
+                raise MadGraph5Error,\
+                      "Multiparticle %s is or-multiparticle" % part_name + \
+                      " which can be used only for required s-channels"
             required_schannel_ids = \
                                self.extract_particle_ids(required_schannels)
 
@@ -1703,33 +1727,57 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             return \
                 base_objects.ProcessDefinition({'legs': myleglist,
-                                'model': self._curr_model,
-                                'id': proc_number,
-                                'orders': orders,
-                                'forbidden_particles': forbidden_particle_ids,
-                                'forbidden_s_channels': forbidden_schannel_ids,
-                                'required_s_channels': required_schannel_ids,
-                                'overall_orders': overall_orders
-                                 })
-        #                       'is_decay_chain': decay_process\
+                              'model': self._curr_model,
+                              'id': proc_number,
+                              'orders': orders,
+                              'forbidden_particles': forbidden_particle_ids,
+                              'forbidden_s_channels': forbidden_schannel_ids,
+                              'required_s_channels': required_schannel_ids,
+                              'overall_orders': overall_orders
+                              })
+      #                       'is_decay_chain': decay_process\
 
     def extract_particle_ids(self, args):
-        """Extract particle ids from a list of particle names"""
+        """Extract particle ids from a list of particle names. If
+        there are | in the list, this corresponds to an or-list, which
+        is represented as a list of id lists. An or-list is used to
+        allow multiple required s-channel propagators to be specified
+        (e.g. Z/gamma)."""
 
         if isinstance(args, basestring):
+            args.replace("|", " | ")
             args = split_arg(args)
+        all_ids = []
         ids=[]
         for part_name in args:
             mypart = self._curr_model['particles'].find_name(part_name)
             if mypart:
-                ids.append(mypart.get_pdg_code())
+                ids.append([mypart.get_pdg_code()])
             elif part_name in self._multiparticles:
-                ids += self._multiparticles[part_name]
+                ids.append(self._multiparticles[part_name])
+            elif part_name == "|":
+                # This is an "or-multiparticle"
+                if ids:
+                    all_ids.append(ids)
+                ids = []
             else:
                 raise MadGraph5Error("No particle %s in model" % part_name)
-        # Trick to avoid duplication
-        set_dict = {}
-        return [set_dict.setdefault(i,i) for i in ids if i not in set_dict]
+        all_ids.append(ids)
+        # Flatten id list, to take care of multiparticles and
+        # or-multiparticles
+        res_lists = []
+        for i, id_list in enumerate(all_ids):
+            res_lists.extend(diagram_generation.expand_list_list(id_list))
+        # Trick to avoid duplication while keeping ordering
+        for ilist, idlist in enumerate(res_lists):
+            set_dict = {}
+            res_lists[ilist] = [set_dict.setdefault(i,i) for i in idlist \
+                         if i not in set_dict]
+
+        if len(res_lists) == 1:
+            res_lists = res_lists[0]
+
+        return res_lists
 
     def extract_decay_chain_process(self, line, level_down=False):
         """Recursively extract a decay chain process definition from a

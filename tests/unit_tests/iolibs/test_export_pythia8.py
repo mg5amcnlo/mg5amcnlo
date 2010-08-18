@@ -361,6 +361,11 @@ void Sigma_sm_qqx_qqx::initProc()
   pars = Parameters_sm::getInstance(); 
   pars->setIndependentParameters(particleDataPtr, coupSMPtr); 
   pars->setIndependentCouplings(particleDataPtr, coupSMPtr); 
+  // Set massive/massless matrix elements for c/b/mu/tau
+  mcME = particleDataPtr->m0(4); 
+  mbME = 0.; 
+  mmuME = 0.; 
+  mtauME = 0.; 
   jamp2[0] = new double[2]; 
 }
 
@@ -398,6 +403,14 @@ void Sigma_sm_qqx_qqx::sigmaKin()
   for(int i = 0; i < nprocesses; i++ )
   {
     matrix_element[i] = 0.; 
+  }
+
+  // For now, call setupForME() here
+  id1 = 2; 
+  id2 = -2; 
+  if( !setupForME())
+  {
+    return; 
   }
 
   if (sum_hel == 0 || ntry < 10)
@@ -462,12 +475,12 @@ double Sigma_sm_qqx_qqx::sigmaHat()
   if(id1 == 4 && id2 == -4)
   {
     // Add matrix elements for processes with beams (4, -4)
-    return matrix_element[0] * 1; 
+    return matrix_element[0]; 
   }
   else if(id1 == 2 && id2 == -2)
   {
     // Add matrix elements for processes with beams (2, -2)
-    return matrix_element[0] * 1; 
+    return matrix_element[0]; 
   }
   else
   {

@@ -247,11 +247,15 @@ class Amplitude(base_objects.PhysicsObject):
         # s-channel propagators are taken into account
         failed_crossing = not res
 
-        # Select the diagrams where all required s-channel propagators
-        # are present.
-        # Note that we shouldn't look at the last vertex in each
-        # diagram, since that is the n->0 vertex
-        if process.get('required_s_channels'):
+        # Required s-channels is a list of id-lists. Select the
+        # diagrams where all required s-channel propagators in any of
+        # the lists are present (i.e., the different lists correspond
+        # to "or", while the elements of the list correspond to
+        # "and").
+        if process.get('required_s_channels') and \
+               process.get('required_s_channels')[0]:
+            # We shouldn't look at the last vertex in each diagram,
+            # since that is the n->0 vertex
             lastvx = -1
             # For decay chain processes, there is an "artificial"
             # extra vertex corresponding to particle 1=1, so we need
@@ -259,14 +263,19 @@ class Amplitude(base_objects.PhysicsObject):
             if is_decay_proc: lastvx = -2
             ninitial = len(filter(lambda leg: leg.get('state') == False,
                                   process.get('legs')))
-            res = base_objects.DiagramList(\
-                filter(lambda diagram: \
-                       all([req_s_channel in \
-                            [vertex.get_s_channel_id(\
-                            process.get('model'), ninitial) \
-                            for vertex in diagram.get('vertices')[:lastvx]] \
-                            for req_s_channel in \
-                            process.get('required_s_channels')]), res))
+            # Check required s-channels for each list in required_s_channels
+            old_res = res
+            res = base_objects.DiagramList()
+            for id_list in process.get('required_s_channels'):
+                res_diags = filter(lambda diagram: \
+                          all([req_s_channel in \
+                               [vertex.get_s_channel_id(\
+                               process.get('model'), ninitial) \
+                               for vertex in diagram.get('vertices')[:lastvx]] \
+                               for req_s_channel in \
+                               id_list]), old_res)
+                # Add diagrams only if not already in res
+                res.extend([diag for diag in res_diags if diag not in res])
 
         # Select the diagrams where no forbidden s-channel propagators
         # are present.
@@ -952,6 +961,10 @@ def expand_list_list(mylist):
     """
 
     res = []
+
+    if not mylist or len(mylist) == 1 and not mylist[0]:
+        return [[]]
+
     # Check the first element is at least a list
     assert isinstance(mylist[0], list), \
               "Expand_list_list needs a list of lists and lists of lists"

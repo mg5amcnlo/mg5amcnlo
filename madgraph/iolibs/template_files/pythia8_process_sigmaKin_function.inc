@@ -18,6 +18,13 @@ for(int i = 0; i < nprocesses; i++){
     matrix_element[i] = 0.;
 }
 
+// For now, call setupForME() here
+id1 = %(id1)d;
+id2 = %(id2)d;
+if(!setupForME()){
+    return;
+}
+
 if (sum_hel == 0 || ntry < 10){
 // Calculate the matrix element for all helicities
   for(int ihel = 0; ihel < ncomb; ihel ++){

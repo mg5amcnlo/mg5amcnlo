@@ -518,6 +518,34 @@ class ProcessExporterPythia8(object):
         """Get initProc_lines for function definition for Pythia 8 .cc file"""
 
         initProc_lines = []
+
+        initProc_lines.append("// Set massive/massless matrix elements for c/b/mu/tau")
+        # Add lines to set c/b/tau/mu kinematics massive/massless
+        if not self.model.get_particle(4) or \
+               self.model.get_particle(4).get('mass').lower() == 'zero':
+            cMassiveME = "0."
+        else:
+            cMassiveME = "particleDataPtr->m0(4)"
+        initProc_lines.append("mcME = %s;" % cMassiveME)
+        if not self.model.get_particle(5) or \
+               self.model.get_particle(5).get('mass').lower() == 'zero':
+            bMassiveME = "0."
+        else:
+            bMassiveME = "particleDataPtr->m0(5)"
+        initProc_lines.append("mbME = %s;" % bMassiveME)
+        if not self.model.get_particle(13) or \
+               self.model.get_particle(13).get('mass').lower() == 'zero':
+            muMassiveME = "0."
+        else:
+            muMassiveME = "particleDataPtr->m0(13)"
+        initProc_lines.append("mmuME = %s;" % muMassiveME)
+        if not self.model.get_particle(15) or \
+               self.model.get_particle(15).get('mass').lower() == 'zero':
+            tauMassiveME = "0."
+        else:
+            tauMassiveME = "particleDataPtr->m0(15)"
+        initProc_lines.append("mtauME = %s;" % tauMassiveME)
+            
         for i, me in enumerate(self.matrix_elements):
             initProc_lines.append("jamp2[%d] = new double[%d];" % \
                                   (i, len(color_amplitudes[i])))
@@ -567,6 +595,10 @@ class ProcessExporterPythia8(object):
             # Process name
             replace_dict['process_class_name'] = self.process_name
         
+            # Particle ids for the call to setupForME
+            replace_dict['id1'] = self.processes[0].get('legs')[0].get('id')
+            replace_dict['id2'] = self.processes[0].get('legs')[1].get('id')
+
             # Extract helicity matrix
             replace_dict['helicity_matrix'] = \
                             self.get_helicity_matrix(self.matrix_elements[0])
@@ -735,7 +767,8 @@ class ProcessExporterPythia8(object):
                                          me.get('processes') if beam_parts == \
                                          (proc.get('legs')[0].get('id'),
                                           proc.get('legs')[1].get('id'))])) \
-                                        for (i, me) in beam_processes])))
+                                        for (i, me) in beam_processes]).\
+                              replace('*1', '')))
             res_lines.append("}")
             
 

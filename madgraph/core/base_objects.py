@@ -1254,6 +1254,10 @@ class Process(PhysicsObject):
         self['model'] = Model()
         # Optional number to identify the process
         self['id'] = 0
+        # Required s-channels are given as a list of id lists. Only
+        # diagrams with all s-channels in any of the lists are
+        # allowed. This enables generating e.g. Z/gamma as s-channel
+        # propagators.
         self['required_s_channels'] = []
         self['forbidden_s_channels'] = []
         self['forbidden_particles'] = []
@@ -1282,8 +1286,23 @@ class Process(PhysicsObject):
                 raise self.PhysicsObjectError, \
                     "Process id %s is not an integer" % repr(value)
 
-        if name in ['required_s_channels',
-                    'forbidden_s_channels']:
+        if name == 'required_s_channels':
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list" % str(value)
+            for l in value:
+                if not isinstance(l, list):
+                    raise self.PhysicsObjectError, \
+                          "%s is not a valid list of lists" % str(value)
+                for i in l:
+                    if not isinstance(i, int):
+                        raise self.PhysicsObjectError, \
+                              "%s is not a valid list of integers" % str(l)
+                    if i == 0:
+                        raise self.PhysicsObjectError, \
+                          "Not valid PDG code %d for s-channel particle" % i
+
+        if name == 'forbidden_s_channels':
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list" % str(value)
@@ -1350,11 +1369,13 @@ class Process(PhysicsObject):
                 # Separate initial and final legs by ">"
                 mystr = mystr + '> '
                 # Add required s-channels
-                if self['required_s_channels']:
-                    for req_id in self['required_s_channels']:
-                        reqpart = self['model'].get('particle_dict')[req_id]
-                        mystr = mystr + reqpart.get_name() + ' '
-                    mystr = mystr + '> '
+                if self['required_s_channels'] and \
+                       self['required_s_channels'][0]:
+                    mystr += "|".join([" ".join([self['model'].\
+                                       get('particle_dict')[req_id].get_name() \
+                                                for req_id in id_list]) \
+                                    for id_list in self['required_s_channels']])
+                    mystr = mystr + ' > '
 
             mystr = mystr + mypart.get_name() + ' '
             #mystr = mystr + '(%i) ' % leg['number']
@@ -1410,10 +1431,12 @@ class Process(PhysicsObject):
                 # Separate initial and final legs by ">"
                 mystr = mystr + '> '
                 # Add required s-channels
-                if self['required_s_channels']:
-                    for req_id in self['required_s_channels']:
-                        reqpart = self['model'].get('particle_dict')[req_id]
-                        mystr = mystr + reqpart.get_name() + ' '
+                if self['required_s_channels'] and \
+                       self['required_s_channels'][0]:
+                    mystr += "|".join([" ".join([self['model'].\
+                                       get('particle_dict')[req_id].get_name() \
+                                                for req_id in id_list]) \
+                                    for id_list in self['required_s_channels']])
                     mystr = mystr + '> '
 
             mystr = mystr + mypart.get_name() + ' '
@@ -1494,10 +1517,12 @@ class Process(PhysicsObject):
                 # Separate initial and final legs by ">"
                 mystr = mystr + '_'
                 # Add required s-channels
-                if self['required_s_channels']:
-                    for req_id in self['required_s_channels']:
-                        reqpart = self['model'].get('particle_dict')[req_id]
-                        mystr = mystr + reqpart.get_name()
+                if self['required_s_channels'] and \
+                       self['required_s_channels'][0]:
+                    mystr += "OR".join(["".join([self['model'].\
+                                       get('particle_dict')[req_id].get_name() \
+                                                for req_id in id_list]) \
+                                    for id_list in self['required_s_channels']])
                     mystr = mystr + '_'
             if mypart['is_part']:
                 mystr = mystr + mypart['name']
@@ -1716,10 +1741,12 @@ class ProcessDefinition(Process):
                 # Separate initial and final legs by ">"
                 mystr = mystr + '> '
                 # Add required s-channels
-                if self['required_s_channels']:
-                    for req_id in self['required_s_channels']:
-                        reqpart = self['model'].get('particle_dict')[req_id]
-                        mystr = mystr + reqpart.get_name() + ' '
+                if self['required_s_channels'] and \
+                       self['required_s_channels'][0]:
+                    mystr += "|".join([" ".join([self['model'].\
+                                       get('particle_dict')[req_id].get_name() \
+                                                for req_id in id_list]) \
+                                    for id_list in self['required_s_channels']])
                     mystr = mystr + '> '
 
             mystr = mystr + myparts + ' '
