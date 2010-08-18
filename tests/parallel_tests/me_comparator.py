@@ -117,7 +117,7 @@ class MG4Runner(MERunner):
             i=0
             while os.path.exists(os.path.join(mg4_path, 
                                               "test_%s_%s" % (self.type, i))):
-                i+1
+                i += 1
             temp_dir = "test_%s_%s" % (self.type, i)         
 
         if os.path.exists(os.path.join(mg4_path, temp_dir)):
