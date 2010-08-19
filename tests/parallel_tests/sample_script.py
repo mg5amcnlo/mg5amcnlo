@@ -55,11 +55,11 @@ if '__main__' == __name__:
                                 initial=2, final=2)
 
     # or give one
+    my_proc_list = ['g g > go go']
+    my_proc_list += ['u u~ > go go', 'u u > su2 su2']
     #my_proc_list = ['e+ e- > e+ e-', 'g g> g g', 'g g> g g g', 'g g> g g g g', 'a w+ > a h1 w+/z', 'a w+ > a a w+', 'a w- > a h1 w-', 'a w- > a a w-', 'a h1 > a w+ w-', 'a a > h1 w+ w-', 'a a > a w+ w-']
     #my_proc_list += ['u u~ > d d~', 'ul ul~ > g g' , 'go go > su1 su1~', 'su1 su1~ > g g', 'su1 su1~ > g g g', 'su1 su1~ > su1 su1~' ]
-    #my_proc_list += ['u u~ > g g su1 su1~', 'g g > go go  su1 su1~']
     #my_proc_list = ['su1 su1~ > g g g','su1 su1~ > g g', 'g g > su1 su1~', 'g su1 > g su1']
-    #my_proc_list += ['el sve~ > g g g','el sve~ > g g', 'g g > el sve~', 'g el > g el', 'el sve~ >el sve~']
     #my_proc_list = ['mu+ mu+ > sl4+ sl4+']
     
     
@@ -81,16 +81,16 @@ if '__main__' == __name__:
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                       model=['mssm_mg5','mssm'], orders={'QED':4, 'QCD':4}, energy=10000)
+                       model=['MSSM_MG','mssm'], orders={'QED':4, 'QCD':4}, energy=2000)
 
     # Do some cleanup
     #my_comp.cleanup()
 
     # Print the output
-    my_comp.output_result(filename='sm_result.log')
+    my_comp.output_result(filename='mssm_result.log')
 
     
-    pydoc.pager(file('sm_result.log','r').read())
+    pydoc.pager(file('mssm_result.log','r').read())
 
     # Print a list of non zero processes
     #print my_comp.get_non_zero_processes()

@@ -605,6 +605,13 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     # In call from insert_decay, we want to replace
                     # also identical wavefunctions in the same diagram
                     old_wf_index = diagram_wavefunctions.index(self)
+                    old_wf = diagram_wavefunctions[old_wf_index]
+                    if wavefunctions[wavefunctions.index(self)].get('number') \
+                       == old_wf.get('number'):
+                        # The wavefunction and old_wf are the same -
+                        # need to reset wf_number and new_wf number
+                        wf_number -= 1
+                        new_wf.set('number', old_wf.get('number'))
                     diagram_wavefunctions[old_wf_index] = new_wf
                 except ValueError:
                     diagram_wavefunctions.append(new_wf)
