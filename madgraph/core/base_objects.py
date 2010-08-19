@@ -720,14 +720,23 @@ class Model(PhysicsObject):
         regenerate dictionaries."""
 
         if name == 'particles':
-            self['particle_dict'] = {}
+            # Reset dictionaries
             self['ref_dict_to0'] = {}
+            self['particle_dict'] = {}
             self['got_majoranas'] = None
+            # Generate new dictionaries
+            self.get('particle_dict')
+            self.get('got_majoranas')
 
         if name == 'interactions':
+            # Reset dictionaries
             self['interaction_dict'] = {}
             self['ref_dict_to1'] = {}
             self['ref_dict_to0'] = {}
+            # Generate new dictionaries
+            self.get('interaction_dict')
+            self.get('ref_dict_to1')
+            self.get('ref_dict_to0')
 
         Model.__bases__[0].set(self, name, value) # call the mother routine
 
