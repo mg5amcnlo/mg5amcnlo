@@ -78,6 +78,7 @@ def import_model(model_name):
     parameters, couplings = OrganizeModelExpression(ufo_model).main()
     model.set('parameters', parameters)
     model.set('couplings', couplings)
+    model.set('functions', ufo_model.all_functions)
     
     # save in a pickle files to fasten future usage
     save_load_object.save_to_file(os.path.join(model_path, 'model.pkl'), model) 

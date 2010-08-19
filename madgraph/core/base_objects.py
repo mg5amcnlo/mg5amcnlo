@@ -22,7 +22,6 @@ import logging
 import numbers
 import os
 import re
-
 import madgraph.core.color_algebra as color
 from madgraph import MadGraph5Error, MG5DIR
 
@@ -632,8 +631,9 @@ class Model(PhysicsObject):
 
         self['name'] = ""
         self['particles'] = ParticleList()
-        self['parameters'] = None
         self['interactions'] = InteractionList()
+        self['parameters'] = None
+        self['functions'] = None
         self['couplings'] = None
         self['lorentz'] = None
         self['particle_dict'] = {}
