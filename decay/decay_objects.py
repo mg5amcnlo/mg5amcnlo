@@ -15,21 +15,26 @@
 """Definition for the objects used in the decay module."""
 
 import array
+import cmath
 import copy
-import logging
 import itertools
+import logging
 import math
+import os
+import re
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color
+import madgraph.iolibs.import_ufo as import_ufo
+from madgraph import MadGraph5Error, MG5DIR
 
 #===============================================================================
 # What does logger means...
 #===============================================================================
 
-logger = logging.getLogger('madgraph.decay_objects')
+logger = logging.getLogger('decay')
 
 #===============================================================================
 # DecayParticle
@@ -426,3 +431,176 @@ class DecayModel(base_objects.Model):
         """
 
         pass
+
+    def read_param_card(self, param_card):
+        """Read a param_card and set all parameters and couplings as
+        members of this module"""
+
+        if not os.path.isfile(param_card):
+            raise MadGraph5Error, \
+                  "No such file %s" % param_card
+
+        # Extract external parameters
+        external_parameters = self['parameters'][('external',)]
+
+        # Create a dictionary from LHA block name and code to parameter name
+        parameter_dict = {}
+        for param in external_parameters:
+            try:
+                dict = parameter_dict[param.lhablock.lower()]
+            except KeyError:
+                dict = {}
+                parameter_dict[param.lhablock.lower()] = dict
+            dict[tuple(param.lhacode)] = param.name
+            
+        # Now read parameters from the param_card
+
+        # Read in param_card
+        param_lines = open(param_card, 'r').read().split('\n')
+
+        # Define regular expressions
+        re_block = re.compile(\
+                    "^block\s+(?P<q>\w+\s*=\s*[\d\.e\+-]\s+){0,1}(?P<name>\w+)")
+        re_decay = re.compile("^decay\s+(?P<pid>\d+)\s+(?P<value>[\d\.e\+-]+)")
+        re_single_index = re.compile("^\s*(?P<i1>\d+)\s+(?P<value>[\d\.e\+-]+)")
+        re_double_index = re.compile(\
+                       "^\s*(?P<i1>\d+)\s+(?P<i2>\d+)\s+(?P<value>[\d\.e\+-]+)")
+        block = ""
+        # Go through lines in param_card
+        for line in param_lines:
+            if not line.strip() or line[0] == '#':
+                continue
+            line = line.lower()
+            # Look for blocks
+            block_match = re_block.match(line)
+            if block_match:
+                block = block_match.group('name')
+                continue
+            # Look for single indices
+            single_index_match = re_single_index.match(line)
+            if block and single_index_match:
+                i1 = int(single_index_match.group('i1'))
+                value = single_index_match.group('value')
+                try:
+                    exec("globals()[\'%s\'] = %s" % (parameter_dict[block][(i1,)],
+                                      value))
+                    logger.info("Set parameter %s = %f" % \
+                                (parameter_dict[block][(i1,)],\
+                                 eval(parameter_dict[block][(i1,)])))
+                except KeyError:
+                    logger.warning('No parameter found for block %s index %d' %\
+                                   (block, i1))
+                continue
+            double_index_match = re_double_index.match(line)
+            # Look for double indices
+            if block and double_index_match:
+                i1 = int(double_index_match.group('i1'))
+                i2 = int(double_index_match.group('i2'))
+                try:
+                    exec("globals()[\'%s\'] = %s" % (parameter_dict[block][(i1,i2)],
+                                      double_index_match.group('value')))
+                    logger.info("Set parameter %s = %f" % \
+                                (parameter_dict[block][(i1,i2)],\
+                                 eval(parameter_dict[block][(i1,i2)])))
+                except KeyError:
+                    logger.warning('No parameter found for block %s index %d %d' %\
+                                   (block, i1, i2))
+                continue
+            # Look for decays
+            decay_match = re_decay.match(line)
+            if decay_match:
+                block = ""
+                pid = int(decay_match.group('pid'))
+                value = decay_match.group('value')
+                try:
+                    exec("globals()[\'%s\'] = %s" % \
+                         (parameter_dict['decay'][(pid,)],
+                          value))
+                    logger.info("Set decay width %s = %f" % \
+                                (parameter_dict['decay'][(pid,)],\
+                                 eval(parameter_dict['decay'][(pid,)])))
+                except KeyError:
+                    logger.warning('No decay parameter found for %d' % pid)
+                continue
+
+        # Define all functions used
+        for func in self['functions']:
+            exec("def %s(%s):\n   return %s" % (func.name,
+                                                ",".join(func.arguments),
+                                                func.expr))
+
+        # Extract derived parameters
+        # TO BE IMPLEMENTED allow running alpha_s coupling
+        derived_parameters = []
+        try:
+            derived_parameters += self['parameters'][()]
+        except KeyError:
+            pass
+        try:
+            derived_parameters += self['parameters'][('aEWM1',)]
+        except KeyError:
+            pass
+        try:
+            derived_parameters += self['parameters'][('aS',)]
+        except KeyError:
+            pass
+        try:
+            derived_parameters += self['parameters'][('aS', 'aEWM1')]
+        except KeyError:
+            pass
+        try:
+            derived_parameters += self['parameters'][('aEWM1', 'aS')]
+        except KeyError:
+            pass
+
+        # Now calculate derived parameters
+        # TO BE IMPLEMENTED use running alpha_s for aS-dependent params
+        for param in derived_parameters:
+            exec("globals()[\'%s\'] = %s" % (param.name, param.expr))
+            if not eval(param.name) and eval(param.name) != 0:
+                logger.warning("%s has no expression: %s" % (param.name,
+                                                             param.expr))
+            try:
+                logger.info("Calculated parameter %s = %f" % \
+                            (param.name, eval(param.name)))
+            except TypeError:
+                logger.info("Calculated parameter %s = (%f, %f)" % \
+                            (param.name,\
+                             eval(param.name).real, eval(param.name).imag))
+                
+        
+        # Extract couplings
+        couplings = []
+        try:
+            couplings += self['couplings'][()]
+        except KeyError:
+            pass
+        try:
+            couplings += self['couplings'][('aEWM1',)]
+        except KeyError:
+            pass
+        try:
+            couplings += self['couplings'][('aS',)]
+        except KeyError:
+            pass
+        try:
+            couplings += self['couplings'][('aS', 'aEWM1')]
+        except KeyError:
+            pass
+        try:
+            couplings += self['couplings'][('aEWM1', 'aS')]
+        except KeyError:
+            pass
+
+        # Now calculate all couplings
+        # TO BE IMPLEMENTED use running alpha_s for aS-dependent couplings
+        for coup in couplings:
+            exec("globals()[\'%s\'] = %s" % (coup.name, coup.expr))
+            if not eval(coup.name) and eval(coup.name) != 0:
+                logger.warning("%s has no expression: %s" % (coup.name,
+                                                             coup.expr))
+            logger.info("Calculated coupling %s = (%f, %f)" % \
+                        (coup.name,\
+                         eval(coup.name).real, eval(coup.name).imag))
+                
+        

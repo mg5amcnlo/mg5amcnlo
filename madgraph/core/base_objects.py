@@ -631,8 +631,9 @@ class Model(PhysicsObject):
 
         self['name'] = ""
         self['particles'] = ParticleList()
-        self['parameters'] = None
         self['interactions'] = InteractionList()
+        self['parameters'] = None
+        self['functions'] = None
         self['couplings'] = None
         self['lorentz'] = None
         self['particle_dict'] = {}

@@ -16,12 +16,14 @@
 from __future__ import division
 
 import copy
+import os
 import sys
-sys.path.append('/home/hsien/Documents/HEP.Hou/MadGraph+Event/MG_ME_V4.4.44/UFO_MODEL')
 
 import tests.unit_tests as unittest
 import madgraph.core.base_objects as base_objects
+import madgraph.iolibs.import_ufo as import_ufo
 import decay.decay_objects as decay_objects
+_file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
 #===============================================================================
 # DecayParticleTest
@@ -356,6 +358,32 @@ class Test_DecayParticle(unittest.TestCase):
     def test_find_vertexlist(self):
         pass
 
+#===============================================================================
+# TestDecayModel
+#===============================================================================
+class TestDecayModel(unittest.TestCase):
+    """Test class for the DecayModel object"""
+
+    base_model = import_ufo.import_model('sm')
+
+    def setUp(self):
+        """Set up decay model"""
+        self.decay_model = decay_objects.DecayModel(self.base_model)
+        #import madgraph.iolibs.export_v4 as export_v4
+        #writer = export_v4.UFO_model_to_mg4(self.base_model,'temp')
+        #writer.build()
+
+    def test_read_param_card(self):
+        """Test reading a param card"""
+        param_path = os.path.join(_file_path, '../input_files/param_card_sm.dat')
+        self.decay_model.read_param_card(os.path.join(param_path))
+
+        for param in sum([self.base_model.get('parameters')[key] for key \
+                              in self.base_model.get('parameters')], []):
+            value = eval("decay_objects.%s" % param.name)
+            self.assertTrue(isinstance(value, int) or \
+                            isinstance(value, float) or \
+                            isinstance(value, complex)) 
 
 if __name__ == '__main__':
     unittest.unittest.main()

@@ -71,13 +71,14 @@ def import_model(model_name):
  
     # Load Abstract Helas routine from Aloha
     abstract_model = create_aloha.AbstractALOHAModel(model_name)
-    abstract_model.compute_all(save=False)
+    #abstract_model.compute_all(save=False)
     model.set('lorentz', dict(abstract_model))
     
     # Load the Parameter/Coupling in a convinient format.
     parameters, couplings = OrganizeModelExpression(ufo_model).main()
     model.set('parameters', parameters)
     model.set('couplings', couplings)
+    model.set('functions', ufo_model.all_functions)
     
     # save in a pickle files to fasten future usage
     save_load_object.save_to_file(os.path.join(model_path, 'model.pkl'), model) 
