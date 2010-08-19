@@ -32,7 +32,7 @@ MAKEFILE      = Makefile
 BASIC_OBJS = ixxxxx.o oxxxxx.o vxxxxx.o sxxxxx.o pxxxxx.o txxxxx.o vxxxxx.o \
             momntx.o mom2cx.o boostx.o rotxxx.o
 
-include ./helas_file.inc
+include ./aloha_file.inc
 
 PRINT	      = pr
 
@@ -71,14 +71,14 @@ install-helas_check:
 		export LIBRARY=libdhelas3.a && \
 		$(MAKE) $(MFLAGS) install	
 
-$(LIBRARY):	$(BASIC_OBJS) $(HELASRoutine)
+$(LIBRARY):	$(BASIC_OBJS) $(ALOHARoutine)
 		@echo  "Loading $(LIBRARY) ... "
-		@ar cru $(LIBRARY) $(BASIC_OBJS) $(HELASRoutine)
+		@ar cru $(LIBRARY) $(BASIC_OBJS) $(ALOHARoutine)
 		@echo "done"
 
-clean:;		@rm -f $(BASIC_OBJS) $(HELASRoutine) core
+clean:;		@rm -f $(BASIC_OBJS) $(ALOHARoutine) core
 
-clobber:;	@rm -f $(OBJS) $(HELASRoutine) $(LIBRARY) core tags
+clobber:;	@rm -f $(OBJS) $(ALOHARoutine) $(LIBRARY) core tags
 
 install:	$(LIBRARY)
 	        @echo Installing $(LIBRARY) in $(DEST)

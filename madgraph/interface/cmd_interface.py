@@ -1,4 +1,4 @@
-###############################################################################
+##############################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
 #
@@ -54,7 +54,6 @@ import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.tutorial_text as tutorial_text
 
-import aloha.create_helas as create_helas
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
@@ -70,6 +69,27 @@ class CmdExtended(cmd.Cmd):
     This extensions supports line breaking, history, comments,
     internal call to cmdline,..."""
 
+    #suggested list of command
+    next_possibility = {
+        'mg5_start': ['import model ModelName', 'import command PATH',
+                      'import model_v4 PATH','import proc_v4 PATH', 'tutorial'],
+        'import model_v4': ['generate PROCESS','define MULTIPART = PART1 PART2 ...', 
+                                   'display particles', 'display interactions'],
+        'import model' : ['generate PROCESS','define MULTIPART PART1 PART2 ...', 
+                                   'display particles', 'display interactions'],
+        'define': ['define MULTIPART PART1 PART2 ...', 'generate PROCESS', 
+                                                    'display multiparticles'],
+        'generate': ['add process PROCESS','setup OUTPUT_TYPE PATH','draw .'],
+        'add process':['setup OUTPUT_TYPE PATH', 'display processes'],
+        'setup':['history PATH', 'exit'],
+        'display': ['generate PROCESS', 'add process PROCESS', 'setup OUTPUT_TYPE PATH'],
+        'draw': ['shell CMD'],
+        'export':['finalize'],
+        'finalize': ['history PATH', 'exit'],
+        'import proc_v4' : ['exit'],
+        'tutorial': ['import model_v4 sm','help']
+    }
+        
     def __init__(self, *arg, **opt):
         """Init history and line continuation"""
         
@@ -134,8 +154,7 @@ class CmdExtended(cmd.Cmd):
         # except for useless commands (empty history and help calls)
         if line != "history" and \
             not line.startswith('help') and \
-            not line.startswith('#*') and \
-            not line.startswith('now'):
+            not line.startswith('#*'):
             self.history.append(line)
 
         # Check if we are continuing a line:
@@ -269,6 +288,51 @@ class CmdExtended(cmd.Cmd):
     do_EOF = do_quit
     do_exit = do_quit
 
+    def do_help(self, line):
+        """ propose some usefull possible action """
+        
+        cmd.Cmd.do_help(self,line)
+        
+        # if not basic help -> simple call is enough    
+        if line:
+            return
+        
+        if len(self.history) == 0:
+            last_action_2 = last_action = 'mg5_start'
+        else:
+            last_action_2 = last_action = 'none'
+        
+        pos = 0
+        authorize = self.next_possibility.keys() 
+        while last_action_2  not in authorize and last_action not in authorize:
+            pos += 1
+            if pos > len(self.history):
+                last_action_2 = last_action = 'mg5_start'
+                break
+            
+            args = self.history[-1 * pos].split()
+            last_action = args[0]
+            if len(args)>1: 
+                last_action_2 = '%s %s' % (last_action, args[1])
+            else: 
+                last_action_2 = 'none'
+        
+        print 'Contextual Help'
+        print '==============='
+        if last_action_2 in authorize:
+            options = self.next_possibility[last_action_2]
+        elif last_action in authorize:
+            options = self.next_possibility[last_action]
+        
+        text = 'The following command maybe useful in order to continue.\n'
+        for option in options:
+            text+='\t %s \n' % option      
+        print text
+
+
+
+
+
 #===============================================================================
 # Helper function
 #=============================================================================
@@ -326,6 +390,9 @@ class HelpToCmd(object):
     def help_display(self):
         print "syntax: display " + "|".join(self._display_opts)
         print "-- display a the status of various internal state variables"
+        print "   for particles/interactions you can specify the name of the"
+        print "   particles/interactions to receive more details information."
+        print "   example display particles e+ "
 
     def help_tutorial(self):
         print "syntax: tutorial [" + "|".join(self._tutorial_opts) + "]"
@@ -338,16 +405,16 @@ class HelpToCmd(object):
         print "   with the model and Helas set up appropriately."
         print "   If standalone_v4 is chosen, the directory will be in"
         print "   Standalone format."
-        print "   name is the name of the copy of Template."
+        print "   - name is the name of the copy of Template."
         print "   If you put '.' instead of a name, the code will try to locate"
         print "     a valid copy of the Template under focus."
         print "   If you put 'auto' instead an automatic name will be created."
         print "   If you have generated a process, the process will "
         print "     automatically be exported to the directory."
         print "   options:"
-        print "      -f: force the cleaning of the directory if this one exist"
-        print "      -d PATH: specify the directory where to create name"
-        print "      -noclean: no cleaning perform in name"
+        print "      -d PATH: specify the directory where to create \"name\""
+        print "      -f: force cleaning of the directory if it already exists"
+        print "      -noclean: no cleaning performed in \"name\""
         print "      -nojpeg: no jpeg diagrams will be generated"
         print "   Example:"
         print "       setup madevent_v4 MYRUN"
@@ -355,12 +422,12 @@ class HelpToCmd(object):
         
     def help_generate(self):
 
-        print "syntax: generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2"
+        print "syntax: generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N"
         print "-- generate diagrams for a given process"
         print "   Syntax example: l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1"
         print "Decay chain syntax:"
         print "   core process, decay1, (decay2, (decay2', ...)), ...  etc"
-        print "   Example: p p > t~ t QED=0 @2, (t~ > W- b~, W- > l- vl~), t > j j b"
+        print "   Example: p p > t~ t QED=0, (t~ > W- b~, W- > l- vl~), t > j j b @2"
         print "   Note that identical particles will all be decayed."
         print "To generate a second process use the \"add process\" command"
 
@@ -371,13 +438,13 @@ class HelpToCmd(object):
         print "   Syntax example: l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1"
         print "Decay chain syntax:"
         print "   core process, decay1, (decay2, (decay2', ...)), ...  etc"
-        print "   Example: p p > t~ t QED=0 @2, (t~ > W- b~, W- > l- vl~), t > j j b"
+        print "   Example: p p > t~ t QED=0, (t~ > W- b~, W- > l- vl~), t > j j b @2"
         print "   Note that identical particles will all be decayed."
 
     def help_define(self):
-        print "syntax: define multipart_name [ part_name_list ]"
+        print "syntax: define multipart_name [=] part_name_list"
         print "-- define a multiparticle"
-        print "   Example: define p u u~ c c~ d d~ s s~"
+        print "   Example: define p = g u u~ c c~ d d~ s s~ b b~"
 
     def help_export(self):
         print "syntax: export [" + "|".join(self._export_formats) + \
@@ -451,21 +518,20 @@ class CheckValidForCmd(object):
         """check the validity of line
         syntax: add process PROCESS 
         """
-        
-        if len(self._curr_model['particles']) == 0:
-            raise self.InvalidCmd("No particle list currently active, " + \
-                                              "please create one first!")
-
-        if len(self._curr_model['interactions']) == 0:
-            raise self.InvalidCmd("No interaction list currently active," + \
-            " please create one first!")
-
+    
         if len(args) < 2:
             self.help_add()
             raise self.InvalidCmd('\"add\" requires two arguments')
         
         if args[0] != 'process':
             raise self.InvalidCmd('\"add\" requires the argument \"process\"')
+
+        self.check_process_format(' '.join(args[1:]))
+
+        if not self._curr_model:
+            logger.info('No model currently active. Try with the Standard Model')
+            self.do_import('model sm')
+
     
     def check_define(self, args):
         """check the validity of line
@@ -499,15 +565,16 @@ class CheckValidForCmd(object):
         syntax: display XXXXX
         """
             
-        if len(args) != 1 or args[0] not in self._display_opts:
+        if len(args) not in [1,2] or args[0] not in self._display_opts:
             self.help_display()
             raise self.InvalidCmd
 
-        if not self._curr_model['particles'] or not self._curr_model['interactions']:
+        if not self._curr_model:
             raise self.InvalidCmd("No model currently active, please import a model!")
 
         if args[0] in ['processes', 'diagrams'] and not self._curr_amps:
             raise self.InvalidCmd("No process generated, please generate a process!")
+
 
     def check_draw(self, args):
         """check the validity of line
@@ -539,7 +606,8 @@ class CheckValidForCmd(object):
             if not self._export_format:
                 self.help_export()
                 raise self.InvalidCmd('\"export\" require at least a format of output')
-        elif(len(args) == 1 and not self._export_dir):
+        elif len(args) == 1 and (not self._export_dir or args[0] not in \
+                                 self._setup_opts):
             self.help_export()
             raise self.InvalidCmd(\
         'No output position defined (either explicitely or via a setup command)')
@@ -586,12 +654,54 @@ class CheckValidForCmd(object):
             self.help_generate()
             raise self.InvalidCmd("\"generate\" requires an argument.")
             
-
-        if not self._curr_model['particles'] or not self._curr_model['interactions']:
-            raise self.InvalidCmd("No model currently active, please import a model!")
-
+        self.check_process_format(line)
+        
+        if  not self._curr_model:
+            logger.info('No model currently active. Try with the Standard Model')
+            self.do_import('model sm')
+        
         return True
     
+    def check_process_format(self, process):
+        """ check the validity of the string given to describe a format """
+        
+        #check balance of paranthesis
+        if process.count('(') != process.count(')'):
+            raise self.InvalidCmd('Invalid Format, no balance between open and close parenthesis')
+        #remove parenthesis for fututre introspection
+        process = process.replace('(',' ').replace(')',' ')
+        
+        # split following , (for decay chains)
+        subprocesses = process.split(',')
+        if len(subprocesses) > 1:
+            for subprocess in subprocesses:
+                self.check_process_format(subprocess)
+            return
+        
+        # request that we have one or two > in the process
+        if process.count('>') not in [1,2]:
+            raise self.InvalidCmd(
+               'wrong format for \"%s\" this part requires one or two symbols \'>\', %s found' 
+               % (process, process.count('>')))
+        
+        # we need at least one particles in each pieces
+        particles_parts = process.split('>')
+        for particles in particles_parts:
+            if re.match(r'^\s*$', particles):
+                raise self.InvalidCmd(
+                '\"%s\" is a wrong process format. Please try again' % process)  
+        
+        # '/' and '$' sould be used only after the process definition
+        for particles in particles_parts[:-1]:
+            if re.search('\D/', particles):
+                raise self.InvalidCmd(
+                'wrong process format: restriction should be place after the final states')
+            if re.search('\D\$', particles):
+                raise self.InvalidCmd(
+                'wrong process format: restriction should be place after the final states')
+        
+    
+        
     def check_history(self, args):
         """check the validity of line"""
         
@@ -619,13 +729,23 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd('wrong \"import\" format')
         
         if args[0] != 'proc_v4' and len(args) != 2:
-            self.help_import()
-            raise self.InvalidCmd(' incorrect number of arguments')
+            if len(args) == 3 and '--modelname' in args:
+                if args[-1] != '--modelname':
+                    args.remove('--modelname')
+                    args.append('--modelname')
+            else:
+                self.help_import()
+                raise self.InvalidCmd('incorrect number of arguments')
         
         if args[0] == 'proc_v4' and len(args) != 2 and not self._export_dir:
             self.help_import()
             raise self.InvalidCmd('PATH is mandatory in the current context\n' + \
-                                  'You maybe forget to run \"setup\" command')            
+                                  'Did you forget to run the \"setup\" command')
+                        
+        if '--modelname' in args:
+            if args[-1] != '--modelname':
+                args.remove('--modelname')
+                args.append('--modelname')
         
     def check_load(self, args):
         """ check the validity of the line"""
@@ -691,7 +811,7 @@ class CheckValidForCmd(object):
         if self._model_v4 and not args[0].endswith('_v4'):
             text = " The Model imported (MG4 format) doesn't contain enough information\n "
             text += " in order to create this type of output. In order to create an \n"
-            text += " output for " + agrs[0] + ", you have to use a UFO model."
+            text += " output for " + args[0] + ", you have to use a UFO model."
             text += " those model can be imported with mg5> import model NAME."
 
         if nojpeg:
@@ -790,7 +910,12 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         CheckValidForCmd.check_setup(self, args)
         
         if '/' in args[2]:
-            raise self.WebRestriction('Path can\'t be specify on the web.')
+            logger_stderr.warning('Path specification in setup are forbidden ' +\
+                                  'in web mode. Pass to \"auto\" option')
+            args[2] = 'auto'
+        
+        if '-f' not in args and '-noclean' not in args:
+            args.append('-f')
     
 #===============================================================================
 # CompleteForCmd
@@ -1031,8 +1156,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _curr_model = None  #base_objects.Model()
     _curr_amps = diagram_generation.AmplitudeList()
     _curr_matrix_elements = helas_objects.HelasMultiProcess()
-    _curr_fortran_model = helas_call_writers.FortranHelasCallWriter()
-    _curr_cpp_model = helas_call_writers.CPPUFOHelasCallWriter()
+    _curr_fortran_model = None
+    _curr_cpp_model = None
 
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams', 
                      'multiparticles', 'couplings']
@@ -1103,15 +1228,21 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 else:
                     myprocdef, line = self.extract_decay_chain_process(line)
             except MadGraph5Error, error:
-                raise MadGraph5Error("Empty or wrong format process :\n" + \
+                logger_stderr.warning("Empty or wrong format process :\n" + \
                                      str(error))
+                return
                 
             if myprocdef:
 
                 cpu_time1 = time.time()
-
-                myproc = diagram_generation.MultiProcess(myprocdef)
-
+                
+                try:
+                    myproc = diagram_generation.MultiProcess(myprocdef)
+                except MadGraph5Error, error:
+                    logger_stderr.warning("Empty or wrong format process :\n" + \
+                                     str(error))
+                    return
+                    
                 for amp in myproc.get('amplitudes'):
                     if amp not in self._curr_amps:
                         self._curr_amps.append(amp)
@@ -1143,6 +1274,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         # Particle names always lowercase
         line = line.lower()
+        # Make sure there are spaces around = and |
+        line = line.replace("=", " = ")
+        line = line.replace("|", " | ")
         args = split_arg(line)
         # check the validity of the arguments
         self.check_define(args)
@@ -1163,7 +1297,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         #check the validity of the arguments
         self.check_display(args)
 
-        if args[0] == 'particles':
+        if args[0] == 'particles' and len(args) == 1:
             print "Current model contains %i particles:" % \
                     len(self._curr_model['particles'])
             part_antipart = [part for part in self._curr_model['particles'] \
@@ -1177,7 +1311,18 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 print part['name'],
             print ''
 
-        elif args[0] == 'interactions':
+        elif args[0] == 'particles':
+            if args[1].isdigit() or (args[1][0] == '-' and args[1][1:].isdigit()):
+                particle = self._curr_model.get_particle(abs(int(args[1])))
+            else:
+                particle = self._curr_model['particles'].find_name(args[1])
+            if not particle:
+                raise self.InvalidCmd, 'no particles %s in current model' % args[1]
+            
+            print "Particle %s has the following property:" % particle.get('name')
+            print str(particle)
+            
+        elif args[0] == 'interactions' and len(args) == 1:
             text = "Current model contains %i interactions\n" % \
                     len(self._curr_model['interactions'])
             for inter in self._curr_model['interactions']:
@@ -1193,13 +1338,20 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 text += '\n'
             pydoc.pager(text)
 
+        elif args[0] == 'interactions':
+            if int(args[1]) > len(self._curr_model['interactions']):
+                raise self.InvalidCmd, 'no interaction %s in current model' % args[1]
+            print "Interactions %s has the following property:" % args[1]
+            print self._curr_model['interactions'][int(args[1])]
+
+
         elif args[0] == 'processes':
             for amp in self._curr_amps:
                 print amp.nice_string_processes()
 
         elif args[0] == 'diagrams':
-            for amp in self._curr_amps:
-                print amp.nice_string()
+            text = "\n".join([amp.nice_string() for amp in self._curr_amps])
+            pydoc.pager(text)
 
         elif args[0] == 'multiparticles':
             print 'Multiparticle labels:'
@@ -1216,15 +1368,23 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def multiparticle_string(self, key):
         """Returns a nicely formatted string for the multiparticle"""
 
-        return "%s = %s" % (key, " ".join( \
-                    [ self._curr_model.get('particle_dict')[part_id].\
-                      get_name() for part_id in self._multiparticles[key]]))
+        if self._multiparticles[key] and \
+               isinstance(self._multiparticles[key][0], list):
+            return "%s = %s" % (key, "|".join([" ".join([self._curr_model.\
+                                     get('particle_dict')[part_id].get_name() \
+                                                     for part_id in id_list]) \
+                                  for id_list in self._multiparticles[key]]))
+        else:
+            return "%s = %s" % (key, " ".join([self._curr_model.\
+                                    get('particle_dict')[part_id].get_name() \
+                                    for part_id in self._multiparticles[key]]))
 
     def do_tutorial(self, line):
         """Activate/deactivate the tutorial mode."""
 
         args = split_arg(line)
         if len(args) > 0 and args[0] == "stop":
+            logger_tuto.info("Thanks for using the tutorial!")
             logger_tuto.setLevel(logging.ERROR)
         else:
             logger_tuto.setLevel(logging.INFO)
@@ -1297,7 +1457,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Check the validity of the arguments and return the output path
         path = self.check_export(args)
 
-        if self._done_export == path:
+        if self._done_export == path and (not args or self._export_format == args[0]):
             # We have already done export in this path
             logger.info("Matrix elements already exported")
             return        
@@ -1311,12 +1471,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if not args:
             args = [self._export_format]
 
-        if args[0] in ['standalone_v4', 'madevent_v4']:
+        if args[0] in self._setup_opts:
             self._export_format = args[0]
             self._export_dir = path
             path = os.path.join(path, 'SubProcesses')
 
         if args[0] == 'matrix_v4':
+            self._export_format = None
             for me in self._curr_matrix_elements.get('matrix_elements'):
                 filename = os.path.join(path, 'matrix_' + \
                            me.get('processes')[0].shell_string() + ".f")
@@ -1352,9 +1513,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                             me, self._curr_fortran_model, path)
             
         if args[0] == 'pythia8':
-            for me in self._curr_matrix_elements.get('matrix_elements'):
-                export_pythia8.generate_process_files_pythia8(\
-                            me, self._curr_cpp_model, path)
+            self._curr_cpp_model = \
+                  helas_call_writers.Pythia8UFOHelasCallWriter(self._curr_model)
+            export_pythia8.generate_process_files_pythia8(\
+                            self._curr_matrix_elements, self._curr_cpp_model,
+                            process_string = self._generate_info, path = path)
                 
         self._export_format = args[0]
 
@@ -1379,7 +1542,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Reset _done_finalize, since we now have new subprocesses
         self._done_finalize = False
 
-        if self._export_format:
+        if self._export_format in self._setup_opts:
             # Automatically run finalize
             options = ''
             if nojpeg:
@@ -1412,8 +1575,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         # run the program
         cpu_time1 = time.time()
-        myproc = diagram_generation.MultiProcess(myprocdef)
-        self._curr_amps = myproc.get('amplitudes')
+        try:
+            myproc = diagram_generation.MultiProcess(myprocdef)
+            self._curr_amps = myproc.get('amplitudes')
+        except Exception as error:
+            raise MadGraph5Error(str(error))
         cpu_time2 = time.time()
 
         # Reset _done_export and _done_finalize, since we have new process
@@ -1427,21 +1593,23 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                   (nprocs, ndiags, (cpu_time2 - cpu_time1)))
     
     
-    def extract_process(self, line, proc_number=0):
+    def extract_process(self, line, proc_number = 0, overall_orders = {}):
         """Extract a process definition from a string. Returns
         a ProcessDefinition."""
 
         # Check basic validity of the line
         if not line.count('>') in [1,2]:
+            self.do_help('generate')
+            print
             raise self.InvalidCmd('Wrong use of \">\" special character.')
         
 
         # Perform sanity modifications on the lines:
-        # Add a space before any > , $ /
-        space_before = re.compile(r"(?P<carac>\S)(?P<tag>[/\,\\$\\>])")
+        # Add a space before any > , $ / |
+        space_before = re.compile(r"(?P<carac>\S)(?P<tag>[/\,\\$\\>|])")
         line = space_before.sub(r'\g<carac> \g<tag>', line)       
-        # Add a space after any + - ~ > , $ / 
-        space_after = re.compile(r"(?P<tag>[+-/\,\\$\\>~])(?P<carac>[^\s+-])")
+        # Add a space after any + - ~ > , $ / |
+        space_after = re.compile(r"(?P<tag>[+-/\,\\$\\>~|])(?P<carac>[^\s+-])")
         line = space_after.sub(r'\g<tag> \g<carac>', line)
         
         
@@ -1514,6 +1682,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             mylegids = []
             if part_name in self._multiparticles:
+                if isinstance(self._multiparticles[part_name][0], list):
+                    raise MadGraph5Error,\
+                          "Multiparticle %s is or-multiparticle" % part_name + \
+                          " which can be used only for required s-channels"
                 mylegids.extend(self._multiparticles[part_name])
             else:
                 mypart = self._curr_model['particles'].find_name(part_name)
@@ -1532,9 +1704,19 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             # Now extract restrictions
             forbidden_particle_ids = \
-                               self.extract_particle_ids(forbidden_particles)
+                              self.extract_particle_ids(forbidden_particles)
+            if forbidden_particle_ids and \
+               isinstance(forbidden_particle_ids[0], list):
+                raise MadGraph5Error,\
+                      "Multiparticle %s is or-multiparticle" % part_name + \
+                      " which can be used only for required s-channels"
             forbidden_schannel_ids = \
-                               self.extract_particle_ids(forbidden_schannels)
+                              self.extract_particle_ids(forbidden_schannels)
+            if forbidden_schannel_ids and \
+               isinstance(forbidden_schannel_ids[0], list):
+                raise MadGraph5Error,\
+                      "Multiparticle %s is or-multiparticle" % part_name + \
+                      " which can be used only for required s-channels"
             required_schannel_ids = \
                                self.extract_particle_ids(required_schannels)
 
@@ -1545,46 +1727,79 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             return \
                 base_objects.ProcessDefinition({'legs': myleglist,
-                                'model': self._curr_model,
-                                'id': proc_number,
-                                'orders': orders,
-                                'forbidden_particles': forbidden_particle_ids,
-                                'forbidden_s_channels': forbidden_schannel_ids,
-                                'required_s_channels': required_schannel_ids
-                                 })
-        #                       'is_decay_chain': decay_process\
+                              'model': self._curr_model,
+                              'id': proc_number,
+                              'orders': orders,
+                              'forbidden_particles': forbidden_particle_ids,
+                              'forbidden_s_channels': forbidden_schannel_ids,
+                              'required_s_channels': required_schannel_ids,
+                              'overall_orders': overall_orders
+                              })
+      #                       'is_decay_chain': decay_process\
 
     def extract_particle_ids(self, args):
-        """Extract particle ids from a list of particle names"""
+        """Extract particle ids from a list of particle names. If
+        there are | in the list, this corresponds to an or-list, which
+        is represented as a list of id lists. An or-list is used to
+        allow multiple required s-channel propagators to be specified
+        (e.g. Z/gamma)."""
 
         if isinstance(args, basestring):
+            args.replace("|", " | ")
             args = split_arg(args)
+        all_ids = []
         ids=[]
         for part_name in args:
             mypart = self._curr_model['particles'].find_name(part_name)
             if mypart:
-                ids.append(mypart.get_pdg_code())
+                ids.append([mypart.get_pdg_code()])
             elif part_name in self._multiparticles:
-                ids += self._multiparticles[part_name]
+                ids.append(self._multiparticles[part_name])
+            elif part_name == "|":
+                # This is an "or-multiparticle"
+                if ids:
+                    all_ids.append(ids)
+                ids = []
             else:
                 raise MadGraph5Error("No particle %s in model" % part_name)
-        # Trick to avoid duplication
-        set_dict = {}
-        return [set_dict.setdefault(i,i) for i in ids if i not in set_dict]
+        all_ids.append(ids)
+        # Flatten id list, to take care of multiparticles and
+        # or-multiparticles
+        res_lists = []
+        for i, id_list in enumerate(all_ids):
+            res_lists.extend(diagram_generation.expand_list_list(id_list))
+        # Trick to avoid duplication while keeping ordering
+        for ilist, idlist in enumerate(res_lists):
+            set_dict = {}
+            res_lists[ilist] = [set_dict.setdefault(i,i) for i in idlist \
+                         if i not in set_dict]
+
+        if len(res_lists) == 1:
+            res_lists = res_lists[0]
+
+        return res_lists
 
     def extract_decay_chain_process(self, line, level_down=False):
         """Recursively extract a decay chain process definition from a
         string. Returns a ProcessDefinition."""
 
-        # Start with process number (identified by "@")
-        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*(.*)$")
+        # Start with process number (identified by "@") and overall orders
+        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*((\w+\s*=\s*\d+\s*)*)$")
         proc_number_re = proc_number_pattern.match(line)
         proc_number = 0
+        overall_orders = {}
         if proc_number_re:
             proc_number = int(proc_number_re.group(2))
-            line = proc_number_re.group(1) + \
-                   proc_number_re.group(3)
-            logger.info(line)
+            line = proc_number_re.group(1)
+            if proc_number_re.group(3):
+                order_pattern = re.compile("^(.*?)\s*(\w+)\s*=\s*(\d+)\s*$")
+                order_line = proc_number_re.group(3)
+                order_re = order_pattern.match(order_line)
+                while order_re:
+                    overall_orders[order_re.group(2)] = int(order_re.group(3))
+                    order_line = order_re.group(1)
+                    order_re = order_pattern.match(order_line)
+            logger.info(line)            
             
         index_comma = line.find(",")
         index_par = line.find(")")
@@ -1593,14 +1808,18 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             min_index = index_par
         
         if min_index > -1:
-            core_process = self.extract_process(line[:min_index], proc_number)
+            core_process = self.extract_process(line[:min_index], proc_number,
+                                                overall_orders)
         else:
-            core_process = self.extract_process(line, proc_number)
+            core_process = self.extract_process(line, proc_number,
+                                                overall_orders)
 
         #level_down = False
 
         while index_comma > -1:
             line = line[index_comma + 1:]
+            if not line.strip():
+                break
             index_par = line.find(')')
             if line.lstrip()[0] == '(':
                 # Go down one level in process hierarchy
@@ -1688,10 +1907,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self.check_import(args)
         
         if args[0] == 'model':
+            self._model_v4 = None
             self._curr_model = import_ufo.import_model(args[1])
+            if '--modelname' not in args:
+                self._curr_model.pass_particles_name_in_mg_default()
             self.add_default_multiparticles()
             self._curr_fortran_model = \
-                                  helas_call_writers.FortranUFOHelasCallWriter()
+                  helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
         
         elif args[0] == 'command':
             if not os.path.isfile(args[1]):
@@ -1705,8 +1927,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         elif args[0] == 'model_v4':
             self._curr_model, self._model_v4 = import_v4.import_model(args[1])
+            if '--modelname' not in args:
+                self._curr_model.pass_particles_name_in_mg_default()
             self.add_default_multiparticles()
- 
+            self._curr_fortran_model = \
+                  helas_call_writers.FortranHelasCallWriter(self._curr_model)
+
         elif args[0] == 'proc_v4':
             
             if len(args) == 1 and self._export_dir:
@@ -1744,7 +1970,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # Add comment to history
             self.exec_cmd("# Import the model %s" % reader.model)
             #model_dir = os.path.join(MG4DIR, 'Models')
-            line = self.exec_cmd('import model_v4 %s' % (reader.model))
+            line = self.exec_cmd('import model_v4 %s --modelname' % (reader.model))
         else:
             logging.error('No MG_ME installation detected')
             return    
@@ -1838,6 +2064,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         cpu_time1 = time.time()
         if args[0] == 'model':
             self._curr_model = save_load_object.load_from_file(args[1])
+            if self._curr_model.get('parameters'):
+                # This is a UFO model
+                self._model_v4 = None
+                self._curr_fortran_model = \
+                  helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
+            else:
+                # This is a v4 model
+                self._model_v4 = self._curr_model
+                self._curr_fortran_model = \
+                  helas_call_writers.FortranHelasCallWriter(self._curr_model)
+                
             #save_model.save_model(args[1], self._curr_model)
             if isinstance(self._curr_model, base_objects.Model):
                 cpu_time2 = time.time()
@@ -1989,9 +2226,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 logger.info('convert UFO model to MG4 format')
                 export_v4.convert_model_to_mg4(self._curr_model, 
                                                          os.path.join(dir_path))
-                #create_helas.AbstractHelasModel(self._curr_model['name'],
-                #            write_dir=os.path.join(dir_path,'Source','DHELAS'))
-                #export_v4.make_model_symbolic_link(self._curr_model['path'], dir_path)
         else:
             raise NotImplemented
             
@@ -2011,7 +2245,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 options = '-nojpeg'
 
             self.do_export(options)
-
 
     def do_help(self, line):
         """ propose some usefull possible action """
@@ -2033,9 +2266,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 last_action_2 = 'none'
         
         possibility = {
-        'mg5_start': ['import model ModelName', 'import command PATH',
-                      'import model_v4 PATH','import proc_v4 PATH', 'tutorial'],
-        'import model_v4': ['generate PROCESS','define MULTIPART = PART1 PART2 ...', 
+        'mg5_start': ['import model_v4 PATH', 'import command PATH', 
+                                                 'import proc_v4 PATH', 'tutorial'],
+        'import model_v4': ['generate PROCESS','define MULTIPART PART1 PART2 ...', 
                                    'display particles', 'display interactions'],
         'import model' : ['generate PROCESS','define MULTIPART PART1 PART2 ...', 
                                    'display particles', 'display interactions'],
@@ -2049,7 +2282,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         'export':['finalize'],
         'finalize': ['history PATH', 'exit'],
         'import proc_v4' : ['exit'],
-        'tutorial': ['import model_v4 sm','help']
+        'tutorial': ['import model_v4 sm']
         }
         
         print 'Contextual Help'
@@ -2062,17 +2295,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             print 'No suggestion available for your last command'
             return
         
-        text = 'The following command maybe usefull in order to continue.\n'
+        text = 'The following command(s) may be useful in order to continue.\n'
         for option in options:
             text+='\t %s \n' % option
         #text+='you can use help to have more information on those command'
         
         print text
         
-
-
-
-
 
 #===============================================================================
 # MadGraphCmd
@@ -2197,13 +2426,14 @@ class CmdFile(file):
         return self.lines.__iter__()
   
 #===============================================================================
-# Draw Command Parser
+# Command Parser
 #=============================================================================== 
-_usage = "draw FILEPATH [options]\n" + \
+# DRAW
+_draw_usage = "draw FILEPATH [options]\n" + \
          "-- draw the diagrams in eps format\n" + \
          "   Files will be FILEPATH/diagrams_\"process_string\".eps \n" + \
          "   Example: draw plot_dir . \n"
-_draw_parser = optparse.OptionParser(usage=_usage)
+_draw_parser = optparse.OptionParser(usage=_draw_usage)
 _draw_parser.add_option("", "--horizontal", default=False,
                    action='store_true', help="force S-channel to be horizontal")
 _draw_parser.add_option("", "--external", default=0, type='float',
@@ -2217,7 +2447,7 @@ _draw_parser.add_option("", "--non_propagating", default=True, \
                           help="avoid contractions of non propagating lines") 
 _draw_parser.add_option("", "--add_gap", default=0, type='float', \
                           help="set the x-distance between external particles")  
-  
+
     
     
     

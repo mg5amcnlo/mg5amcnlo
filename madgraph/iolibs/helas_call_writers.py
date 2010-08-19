@@ -34,18 +34,17 @@ class HelasCallWriter(base_objects.PhysicsObject):
 
     def default_setup(self):
 
-        self['name'] = ""
+        self['model'] = base_objects.Model()
         self['wavefunctions'] = {}
         self['amplitudes'] = {}
 
     def filter(self, name, value):
         """Filter for model property values"""
 
-        if name == 'name':
-            if not isinstance(value, str):
+        if name == 'model':
+            if not isinstance(value, base_objects.Model):
                 raise self.PhysicsObjectError, \
-                    "Object of type %s is not a string" % \
-                                                            type(value)
+                    "Object of type %s is not a model" % type(value)
 
         if name == 'wavefunctions':
             # Should be a dictionary of functions returning strings, 
@@ -74,7 +73,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return ['name', 'wavefunctions', 'amplitudes']
+        return ['model', 'wavefunctions', 'amplitudes']
 
     def get_matrix_element_calls(self, matrix_element):
         """Return a list of strings, corresponding to the Helas calls
@@ -88,6 +87,35 @@ class HelasCallWriter(base_objects.PhysicsObject):
         for diagram in matrix_element.get('diagrams'):
             res.extend([ self.get_wavefunction_call(wf) for \
                          wf in diagram.get('wavefunctions') ])
+            res.append("# Amplitude(s) for diagram number %d" % \
+                       diagram.get('number'))
+            for amplitude in diagram.get('amplitudes'):
+                res.append(self.get_amplitude_call(amplitude))
+
+        return res
+
+    def get_wavefunction_calls(self, wavefunctions):
+        """Return a list of strings, corresponding to the Helas calls
+        for the matrix element"""
+
+        assert isinstance(wavefunctions, helas_objects.HelasWavefunctionList), \
+               "%s not valid argument for get_wavefunction_calls" % \
+               repr(wavefunctions)
+
+        res = [self.get_wavefunction_call(wf) for wf in wavefunctions]
+
+        return res
+
+    def get_amplitude_calls(self, matrix_element):
+        """Return a list of strings, corresponding to the Helas calls
+        for the matrix element"""
+        
+        assert isinstance(matrix_element, helas_objects.HelasMatrixElement), \
+               "%s not valid argument for get_matrix_element_calls" % \
+               repr(matrix_element)            
+
+        res = []
+        for diagram in matrix_element.get('diagrams'):
             res.append("# Amplitude(s) for diagram number %d" % \
                        diagram.get('number'))
             for amplitude in diagram.get('amplitudes'):
@@ -143,14 +171,18 @@ class HelasCallWriter(base_objects.PhysicsObject):
         self.get('amplitudes')[key] = function
         return True
 
+    def get_model_name(self):
+        """Return the model name"""
+        return self['model'].get('name')
+
     # Customized constructor
     def __init__(self, argument={}):
-        """Allow generating a HelasModel from a Model
+        """Allow generating a HelasCallWriter from a Model
         """
 
         if isinstance(argument, base_objects.Model):
             super(HelasCallWriter, self).__init__()
-            self.set('name', argument.get('name'))
+            self.set('model', argument)
         else:
             super(HelasCallWriter, self).__init__(argument)
             
@@ -186,7 +218,7 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         # Gluon 4-vertex division tensor calls ggT for the FR sm and mssm
 
-        key = ((3, 3, 5), 'A')
+        key = ((3, 3, 5, 3), 'A')
 
         call = lambda wf: \
                "CALL UVVAXX(W(1,%d),W(1,%d),%s,zero,zero,zero,W(1,%d))" % \
@@ -197,7 +229,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 wf.get('number'))
         self.add_wavefunction(key, call)
 
-        key = ((3, 5, 3), 'A')
+        key = ((3, 5, 3, 1), 'A')
 
         call = lambda wf: \
                "CALL JVTAXX(W(1,%d),W(1,%d),%s,zero,zero,W(1,%d))" % \
@@ -222,7 +254,7 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         # SM gluon 4-vertex components
 
-        key = ((3, 3, 3, 3), 'gggg1')
+        key = ((3, 3, 3, 3, 4), 'gggg1')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
                (wf.get('mothers')[0].get('number'),
@@ -241,7 +273,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('coupling'),
                 amp.get('number'))
         self.add_amplitude(key, call)
-        key = ((3, 3, 3, 3), 'gggg2')
+        key = ((3, 3, 3, 3, 4), 'gggg2')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
                (wf.get('mothers')[2].get('number'),
@@ -260,7 +292,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('coupling'),
                 amp.get('number'))
         self.add_amplitude(key, call)
-        key = ((3, 3, 3, 3), 'gggg3')
+        key = ((3, 3, 3, 3, 4), 'gggg3')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
                (wf.get('mothers')[1].get('number'),
@@ -286,6 +318,11 @@ class FortranHelasCallWriter(HelasCallWriter):
         generate_helas_call is called to automatically create the
         function."""
 
+        if wavefunction.get('spin') == 1 and \
+               wavefunction.get('interaction_id') != 0:
+            # Add necessary minus sign to coupling in HVS-type wavefunctions,
+            # due to non-identical scalars
+            wavefunction.set_scalar_coupling_sign(self['model'])
         val = super(FortranHelasCallWriter, self).get_wavefunction_call(wavefunction)
 
         if val:
@@ -561,21 +598,6 @@ class UFOHelasCallWriter(HelasCallWriter):
     generates the Fortran Helas call based on the Lorentz structure of
     the interaction."""
 
-    def find_outgoing_number(self, wf):
-        "Return the position of the resulting particles in the interactions"
-        # First shot: just the index in the interaction
-        wf_index = wf.get('pdg_codes').index(wf.get_anti_pdg_code())
-        # If fermion, then we need to correct for I/O status
-        spin_state = wf.get_spin_state_number()
-        if spin_state % 2 == 0:
-            if wf_index % 2 == 0 and spin_state < 0:
-                # Outgoing particle at even slot -> increase by 1
-                wf_index += 1
-            elif wf_index % 2 == 1 and spin_state > 0:
-                # Incoming particle at odd slot -> decrease by 1
-                wf_index -= 1
-        
-        return wf_index
 
     def get_wavefunction_call(self, wavefunction):
         """Return the function for writing the wavefunction
@@ -695,18 +717,19 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                                  wf.get('number_external'),
                                  wf.get('number'))
         else:
-            # String is LOR1_1110, FIVXXX, JIOXXX etc.
+            # String is LOR1_0, LOR1_2 etc.
             
             if isinstance(argument, helas_objects.HelasWavefunction):
-                outgoing = self.find_outgoing_number(argument) + 1
-                call = 'CALL %s_%s' % (argument.get('lorentz'), outgoing) 
+                outgoing = argument.find_outgoing_number()
             else:
                 outgoing = 0
-                call = 'CALL %s_%s' % (argument.get('lorentz'), outgoing)
 
             # Check if we need to append a charge conjugation flag
+            c_flag = '' 
             if argument.needs_hermitian_conjugate():
-                call = call + '_C'
+                c_flag = 'C1' # MG5 not configure for 4F vertex
+
+            call = 'CALL %s%s_%s' % (argument.get('lorentz'), c_flag, outgoing) 
 
             # Add the wave function
             call = call + '('
@@ -744,9 +767,9 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
 
 
 #===============================================================================
-# CPPUFOHelasCallWriter
+# Pythia8UFOHelasCallWriter
 #===============================================================================
-class CPPUFOHelasCallWriter(UFOHelasCallWriter):
+class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
     """The class for writing Helas calls in C++, starting from
     HelasWavefunctions and HelasAmplitudes.
 
@@ -796,12 +819,14 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
         if isinstance(argument, helas_objects.HelasWavefunction) and \
                not argument.get('mothers'):
             # String is just ixxxxx, oxxxxx, vxxxxx or sxxxxx
-            call = call + CPPUFOHelasCallWriter.mother_dict[\
+            call = call + Pythia8UFOHelasCallWriter.mother_dict[\
                 argument.get_spin_state_number()]
             # Fill out with X up to 6 positions
             call = call.lower()
             call = call + 'x' * (6 - len(call))
-            call = call + "(pME[%d],"
+            # Specify namespace for Helas calls
+            call = "Pythia8_%s::" % self.get_model_name() + call
+            call = call + "(p[%d],"
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity
                 call = call + "mME[%d],hel[%d],"
@@ -829,31 +854,30 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
                                  - (-1) ** wf.get_with_flow('is_part'),
                                  wf.get('number')-1)
         else:
-            # String is LOR1_1110, FIVXXX, JIOXXX etc.
-            
+            # String is LOR1_0, LOR1_2 etc.
+
             if isinstance(argument, helas_objects.HelasWavefunction):
-                outgoing = self.find_outgoing_number(argument)
-                outgoing = '1' * outgoing + '0' + \
-                            '1' * (len(argument.get('mothers')) - outgoing)
-                call = '%s_%s' % (argument.get('lorentz'), outgoing) 
+                outgoing = argument.find_outgoing_number()
             else:
-                outgoing = '1' * len(argument.get('mothers'))
-                call = '%s_%s' % (argument.get('lorentz'), outgoing)
+                outgoing = 0
 
             # Check if we need to append a charge conjugation flag
+            c_flag = '' 
             if argument.needs_hermitian_conjugate():
-                call = call + '_c'
+                c_flag = 'c1' # MG5 not configure for 4F vertex
+
+            call = '%s%s_%s' % (argument.get('lorentz'), c_flag, outgoing)
 
             # Add the wave function
             call = call + '('
             # Wavefunctions
             call = call + "w[%d]," * len(argument.get('mothers'))
             # Couplings
-            call = call + "%s,"
+            call = call + "pars->%s,"
 
             if isinstance(argument, helas_objects.HelasWavefunction):
                 # Create call for wavefunction
-                call = call + "%s, %s, w[%d]);"
+                call = call + "pars->%s, pars->%s, w[%d]);"
                 #CALL L_4_011(W(1,%d),W(1,%d),%s,%s, %s, W(1,%d))
                 call_function = lambda wf: call % \
                     (tuple([mother.get('number')-1 for mother in wf.get('mothers')]) + \

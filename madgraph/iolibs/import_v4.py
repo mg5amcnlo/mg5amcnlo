@@ -114,6 +114,7 @@ def read_particles_v4(fsock):
                   'w': 'wavy',
                   'c': 'curly'}
 
+    logger.info('load particles')
 
     mypartlist = ParticleList()
 
@@ -185,6 +186,7 @@ def read_interactions_v4(fsock, ref_part_list):
     """Read a list of interactions from stream fsock, using the old v4 format.
     Requires a ParticleList object as an input to recognize particle names."""
 
+    logger.info('load interactions')
     myinterlist = InteractionList()
 
     if not isinstance(ref_part_list, ParticleList):
@@ -729,14 +731,6 @@ class ProcessInfo(object):
         if self.forbid:
             text += '/ ' + ' '.join(self.forbid) + ' '
 
-        if self.couplings:
-            #write the rules associate to the couplings
-            text += self.mg5_couplings_line(model_coupling, len(self.particles))
-        
-        # write the tag
-        if self.tag:
-            text += '@%s ' % self.tag
-
         #treat decay_chains
         for decay in self.decays:
             decay_text = decay.mg5_process_line(model_coupling)
@@ -744,6 +738,16 @@ class ProcessInfo(object):
                 text = text.rstrip() + ', (%s) ' % decay_text.strip()
             else:
                 text = text.rstrip() + ', %s ' % decay_text.strip()
+        
+        # write the tag
+        if self.tag:
+            text += '@%s ' % self.tag
+
+        if self.couplings:
+            if not self.tag:
+                text += '@0 '
+            #write the rules associate to the couplings
+            text += self.mg5_couplings_line(model_coupling, len(self.particles))
         
         return text.rstrip()
     
@@ -753,9 +757,8 @@ class ProcessInfo(object):
         out = ''
         for coupling in model_coupling:
             if self.couplings.has_key(coupling):
-                # if coupling is define check that he is not pointless
-                if self.couplings[coupling] < nb_part - 2:
-                    out += '%s=%s ' % (coupling, self.couplings[coupling])
+                # Need coupling for all cases, since might be decay chain
+                out += '%s=%s ' % (coupling, self.couplings[coupling])
             else:
                 # if not define put to zero (mg4 default)
                 out += '%s=0 ' % coupling

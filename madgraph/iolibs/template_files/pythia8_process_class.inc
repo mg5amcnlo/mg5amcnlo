@@ -31,30 +31,28 @@ public:
   virtual int    code()    const {return %(process_code)s;}
 
   virtual string inFlux()  const {return "%(inFlux)s";}
-
   %(id_masses)s
+  %(resonances)s
   // Tell Pythia that sigmaHat returns the ME^2
-  virtual bool   convertME() const {return true;}
+  virtual bool   convertM2() const {return true;}
 
 private:
 
-  // Private function to calculate the matrix element for given helicities
-  double matrix(const int helicities[]);
-
-  // Private functions to set the couplings and parameters used in this process
-  void set_fixed_parameters();
-  void set_variable_parameters();
+  // Private functions to calculate the matrix element for all subprocesses
+  %(all_sigma_kin_definitions)s
+  %(all_matrix_definitions)s
 
   // Constants for array limits
   static const int nexternal = %(nexternal)d;
-  static const int ncolor = %(ncolor)d;
+  static const int nprocesses = %(nprocesses)d;
 
   // Store the matrix element value from sigmaKin
-  double matrix_element;
+  double matrix_element[nprocesses];
 
   // Color flows, used when selecting color
-  double jamp2[ncolor];
+  double* jamp2[nprocesses];
 
-  // Other process-specific information, e.g. masses and couplings
-%(process_variables)s
+  // Pointer to the model parameters
+  Parameters_%(model_name)s* pars;
+
 };

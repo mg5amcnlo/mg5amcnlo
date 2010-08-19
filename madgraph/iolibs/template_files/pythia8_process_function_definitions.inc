@@ -6,6 +6,10 @@
 // Initialize process. 
   
 void %(process_class_name)s::initProc() {
+// Instantiate the model class and set parameters that stay fixed during run
+    pars = Parameters_%(model_name)s::getInstance();
+    pars->setIndependentParameters(particleDataPtr, coupSMPtr);
+    pars->setIndependentCouplings(particleDataPtr, coupSMPtr);
     %(initProc_lines)s
 } 
 
@@ -13,6 +17,11 @@ void %(process_class_name)s::initProc() {
 // Evaluate |M|^2, part independent of incoming flavour. 
 
 void %(process_class_name)s::sigmaKin() { 
+    // Set the parameters which change event by event
+    pars->setDependentParameters(particleDataPtr, coupSMPtr, alpS);
+    pars->setDependentCouplings(particleDataPtr, coupSMPtr);
+    // Reset color flows
+    %(reset_jamp_lines)s
     %(sigmaKin_lines)s
 }
 
@@ -41,23 +50,6 @@ double %(process_class_name)s::weightDecay(Event& process, int iResBeg, int iRes
 // Private class member functions
 
 //--------------------------------------------------------------------------
-// Evaluate |M|^2 for a given helicity
+// Evaluate |M|^2 for each subprocess
 
-double %(process_class_name)s::matrix(const int hel[]) { 
-    %(matrix_lines)s
-}
-
-//--------------------------------------------------------------------------
-// Set couplings and other parameters that are fixed during the run
-
-void %(process_class_name)s::set_fixed_parameters() { 
-    %(fixed_parameter_lines)s
-}
-
-//--------------------------------------------------------------------------
-// Set couplings and other parameters that vary event by event
-
-void %(process_class_name)s::set_variable_parameters() { 
-    %(variable_parameter_lines)s
-}
-
+%(all_sigmaKin)s

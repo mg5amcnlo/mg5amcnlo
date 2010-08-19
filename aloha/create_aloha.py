@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+import copy
 import cPickle
 import glob
 import logging
@@ -24,15 +25,17 @@ import time
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
-from aloha.helasamp_object import *
-import aloha.WriteHelas as WriteHelas
+from aloha.aloha_object import *
+import aloha.aloha_writers as aloha_writers
 
 
-helas_path = os.path.dirname(os.path.realpath(__file__))
-logger = logging.getLogger('HelasGenerator')
+aloha_path = os.path.dirname(os.path.realpath(__file__))
+logger = logging.getLogger('ALOHA')
 
-class AbstractHelas(object):
-    """ store the result of the computation of Helas Routine
+_conjugate_gap = 50
+
+class AbstractRoutine(object):
+    """ store the result of the computation of Helicity Routine
     this is use for storing and passing to writer """
     
     def __init__(self, expr, outgoing, spins, name, infostr):
@@ -48,22 +51,24 @@ class AbstractHelas(object):
     def add_symmetry(self, outgoing):
         """ add an outgoing """
         
-        self.symmetries.append(outgoing)
+        if not outgoing in self.symmetries:
+            self.symmetries.append(outgoing)
         
     def write(self, output_dir, language='Fortran'):
         """ write the content of the object """
-        getattr(WriteHelas, 'HelasWriterFor%s' % language)(self, output_dir).write()
+
+        getattr(aloha_writers, 'ALOHAWriterFor%s' % language)(self, output_dir).write()
 
 
 
-class AbstractHelasBuilder(object):
-    """ Launch the creation of the Helas Routine"""
+class AbstractRoutineBuilder(object):
+    """ Launch the creation of the Helicity Routine"""
     
-    helas_lib = None
+    aloha_lib = None
     counter = 0
     
-    class AbstractHelasError(Exception):
-        """ An error class for the AbstractHelas class"""
+    class AbstractALOHAError(Exception):
+        """ An error class for ALOHA"""
     
     def __init__(self, lorentz):
         """ initialize the run
@@ -75,44 +80,79 @@ class AbstractHelasBuilder(object):
 
         self.spins = lorentz.spins
         self.name = lorentz.name
+        self.conjg = 0
         self.outgoing = None
         self.lorentz_expr = lorentz.structure        
-        self.helas_kernel = None
+        self.routine_kernel = None
         
     
-    def compute_helas(self, mode):
+    def compute_routine(self, mode):
         """compute the expression and return it"""
         self.outgoing = mode
-        self.expr = self.compute_helas_high_kernel(mode)
+        self.expr = self.compute_aloha_high_kernel(mode)
         return self.define_simple_output()
     
+    def define_all_conjugate_builder(self, pair_list):
+        """ return the full set of AbstractRoutineBuilder linked to fermion 
+        clash"""
+        
+        solution = []
+
+        for i, pair in enumerate(pair_list):
+            new_builder = self.define_conjugate_builder(pair)
+            solution.append(new_builder)
+            solution += new_builder.define_all_conjugate_builder(pair_list[i+1:])
+        return solution
+    
+    def define_conjugate_builder(self, pair=1):
+        """ return a AbstractRoutineBuilder for the conjugate operation.
+        If they are more than one pair of fermion. Then use pair to claim which 
+        one is conjugated"""
+        
+        new_builder = copy.copy(self)
+        
+        old_id = pair
+        new_id = _conjugate_gap + old_id
+        
+        new_builder.routine_kernel = \
+         -1 * C(new_id, old_id) * self.routine_kernel * C(new_id + 1, old_id +1)
+        new_builder.name += 'C'
+        if pair:
+            new_builder.name += str(pair)
+        new_builder.conjg = pair 
+    
+        return new_builder
+    
     def define_simple_output(self):
-        """ define a simple output for this AbstractHelas """
+        """ define a simple output for this AbstractRoutine """
         
         infostr = str(self.lorentz_expr)        
-        return AbstractHelas(self.expr, self.outgoing, self.spins, self.name, \
+        return AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
                                                                         infostr)
         
         
-    def compute_helas_high_kernel(self, mode):
+    def compute_aloha_high_kernel(self, mode):
         """compute the abstract routine associate to this mode """
-        
+
+        # reset tag for particles
+        aloha_lib.USE_TAG=set()
+
         #multiply by the wave functions
         nb_spinor = 0
-        if not self.helas_kernel:
-            AbstractHelasBuilder.counter += 1
-            logger.info('new kernel %s' % self.counter)
+        if not self.routine_kernel:
+            AbstractRoutineBuilder.counter += 1
+            logger.info('aloha creates %s routines' % self.name)
             try:       
                 lorentz = eval(self.lorentz_expr)
             except NameError:
-                print 'unknow type in Lorentz Evaluation'
+                logger.error('unknow type in Lorentz Evaluation')
                 raise
             else:
-                self.helas_kernel = lorentz
-                
+                self.routine_kernel = lorentz
+                self.kernel_tag = set(aloha_lib.USE_TAG)
         else:
-            lorentz = self.helas_kernel
-
+            lorentz = self.routine_kernel
+            aloha_lib.USE_TAG = set(self.kernel_tag) 
         for (i, spin ) in enumerate(self.spins):
             id = i + 1
             
@@ -121,158 +161,103 @@ class AbstractHelasBuilder(object):
                 if spin == 1: 
                     lorentz *= complex(0,1)
                 elif spin == 2:
+                    # shift the tag if we multiply by C matrices
+                    if (id+1) // 2 == self.conjg: 
+                        id += _conjugate_gap
                     nb_spinor += 1
                     if nb_spinor %2:
-                        lorentz *= SpinorPropagator(id, 'I2', id)
+                        lorentz *= SpinorPropagator(id, 'I2', i + 1)
                     else:
-                        lorentz *= SpinorPropagator('I2', id, id) 
+                        lorentz *= SpinorPropagator('I2', id, i + 1) 
                 elif spin == 3 :
                     lorentz *= VectorPropagator(id, 'I2', id)
                 elif spin == 5 :
                     lorentz *= 1 # delayed evaluation (fastenize the code)
                 else:
-                    raise self.AbstractHelasError(
+                    raise self.AbstractALOHAError(
                                 'The spin value %s is not supported yet' % spin)
             else:
                 # This is an incoming particle
                 if spin == 1:
                     lorentz *= Scalar(id)
                 elif spin == 2:
+                    # shift the tag if we multiply by C matrices
+                    if (id+1) // 2 == self.conjg:
+                        id += _conjugate_gap
                     nb_spinor += 1
-                    lorentz *= Spinor(id, id)
+                    lorentz *= Spinor(id, i + 1)
                 elif spin == 3:        
                     lorentz *= Vector(id, id)
                 elif spin == 5:
                     lorentz *= Spin2(10*id+1, 10*id+2, 'I2', 'I3', id)
                 else:
-                    raise self.AbstractHelasError(
+                    raise self.AbstractALOHAError(
                                 'The spin value %s is not supported yet' % spin)                    
 
         # If no particle OffShell
         if self.outgoing:
             lorentz /= DenominatorPropagator(self.outgoing)
-            lorentz.tag.add('OM%s' % self.outgoing )  
-            lorentz.tag.add('P%s' % self.outgoing)  
-            lorentz.tag.add('W%s' % self.outgoing)  
+            #lorentz.tag.add('OM%s' % self.outgoing )  
+            #lorentz.tag.add('P%s' % self.outgoing)  
         else:
             lorentz *= complex(0,-1)
 
           
-        lorentz = lorentz.simplify()
+        #lorentz = lorentz.simplify()
         lorentz = lorentz.expand()
 
         if self.spins[self.outgoing-1] == 5:
-            if not self.helas_lib:
-                AbstractHelasBuilder.load_library()
-            lorentz *= self.helas_lib[('Spin2Prop', id)]
+            if not self.aloha_lib:
+                AbstractRoutineBuilder.load_library()
+            lorentz *= self.aloha_lib[('Spin2Prop', id)]
 
         
         lorentz = lorentz.simplify()
         lorentz = lorentz.factorize()
+        
+        lorentz.tag = set(aloha_lib.USE_TAG)
         return lorentz         
-        
-    def compute_helas_low_kernel(self, mode):
-        """ compute the abstract routine associate to this mode """
-        
-        if not self.helas_kernel:
-            self.helas_kernel = self.define_helas_kernel()
-        
-        if not AbstractHelasBuilder.helas_lib:
-            AbstractHelasBuilder.load_library()
-        
-        #multiply by the wave functions
-        nb_spinor = 0
-        lorentz = self.helas_kernel
-        for (i, spin ) in enumerate(self.spins):
-            id = i + 1
-            
-            #Check if this is the outgoing particle
-            if id == self.outgoing:
-                if spin == 1 : 
-                    lorentz *= self.helas_lib[('ScalarProp', id)]
-                elif spin == 2 :
-                    nb_spinor += 1
-                    lorentz *= self.helas_lib[('SpinorProp', id, nb_spinor %2)]
-                elif spin == 3 :
-                    lorentz *= self.helas_lib[('VectorProp', id)]
-                elif spin == 5 :
-                    lorentz *= self.helas_lib[('Spin2Prop', id)]
-                else:
-                    raise self.AbstractHelasError(
-                                'The spin value %s is not supported yet' % spin)
-            else:
-                # This is an incoming particle
-                if spin == 1:
-                    lorentz *= self.helas_lib[('Scalar', id)]
-                elif spin == 2:
-                    nb_spinor += 1
-                    lorentz *= self.helas_lib[('Spinor', id)]
-                elif spin == 3:        
-                    lorentz *= self.helas_lib[('Vector', id)]
-                elif spin == 5:
-                    lorentz *= self.helas_lib[('Spin2', id)]
-                else:
-                    raise self.AbstractHelasError(
-                                'The spin value %s is not supported yet' % spin)                    
-            
-        # If no particle OffShell
-        if self.outgoing:
-            lorentz /= self.helas_lib[('Denom', id)]
-            lorentz.tag.add('OM%s' % self.outgoing )  
-            lorentz.tag.add('P%s' % self.outgoing)  
-            lorentz.tag.add('W%s' % self.outgoing)  
-        else:
-            lorentz *= complex(0,-1)
-            
-        lorentz = lorentz.simplify()
-        lorentz = lorentz.factorize()
-        return lorentz 
-                
-    def define_helas(self, lorentz_expr):
+                        
+    def define_lorentz_expr(self, lorentz_expr):
         """Define the expression"""
         
         self.expr = lorentz_expr
     
-    def define_helas_kernel(self, lorentz=None):
+    def define_routine_kernel(self, lorentz=None):
         """Define the kernel at low level"""
         
         if not lorentz:
             logger.info('compute kernel %s' % self.counter)
-            AbstractHelasBuilder.counter += 1  
-            try:        
-                lorentz = eval(self.lorentz_expr)
-            except NameError, why:
-                print dir(why)
-                print why.args
-                raise
-                
+            AbstractRoutineBuilder.counter += 1  
+            lorentz = eval(self.lorentz_expr)
+                 
             if isinstance(lorentz, numbers.Number):
-                self.helas_kernel = lorentz
+                self.routine_kernel = lorentz
                 return lorentz
             lorentz = lorentz.simplify()
             lorentz = lorentz.expand()
             lorentz = lorentz.simplify()        
         
-        self.helas_kernel = lorentz
+        self.routine_kernel = lorentz
         return lorentz
 
     
     @staticmethod
-    def gethelasname(name, outgoing):
+    def get_routine_name(name, outgoing):
         """return the name of the """
         
-        helasname = '%s_%s' % (name, outgoing) 
-        return helasname
+        name = '%s_%s' % (name, outgoing) 
+        return name
             
     @classmethod
     def load_library(cls):
     # load the library
-        fsock = open(os.path.join(helas_path, 'HelasLib.pkl'), 'r')
-        cls.helas_lib = cPickle.load(fsock)
+        fsock = open(os.path.join(aloha_path, 'ALOHALib.pkl'), 'r')
+        cls.aloha_lib = cPickle.load(fsock)
         
 
-class AbstractHelasModel(dict):
-    """ A class to build and store the full set of Abstract Helas Routine"""
+class AbstractALOHAModel(dict):
+    """ A class to build and store the full set of Abstract ALOHA Routine"""
 
     files_from_template = ['makefile', 'sxxxxx.f','ixxxxx.f', 'oxxxxx.f',
                            'vxxxxx.f', 'txxxxx.f', 'pxxxxx.f']
@@ -304,7 +289,7 @@ class AbstractHelasModel(dict):
         # Check if a pickle file exists
         if not self.load():
             self.compute_all()
-        logger.info(' %s helas routine' % len(self))
+        logger.info(' %s aloha routine' % len(self))
             
         # Check that output directory exists
         aloha_dir = os.path.join(self.model_pos, format.lower())
@@ -314,14 +299,14 @@ class AbstractHelasModel(dict):
         
         # Check that all routine are generated at default places:
         for (name, outgoing), abstract in self.items():
-            routine_name = AbstractHelasBuilder.gethelasname(name, outgoing)
+            routine_name = AbstractRoutineBuilder.get_routine_name(name, outgoing)
             if not glob.glob(os.path.join(aloha_dir, routine_name) + '.*'):
                 abstract.write(output_dir, format)
         
         # Check that makefile and default file are up-to-date
         self.insertTemplate(output_dir, format)
-        # Check helas_file.inc
-        self.write_helas_file_inc(output_dir)
+        # Check aloha_file.inc
+        self.write_aloha_file_inc(output_dir)
         
         # Copy model_routine in PROC
         
@@ -331,8 +316,9 @@ class AbstractHelasModel(dict):
     def save(self, filepos=None):
         """ save the current model in a pkl file """
         
+        logger.info('save the aloha abstract routine in a pickle file')
         if not filepos:
-            filepos = os.path.join(self.model_pos,'helas.pkl') 
+            filepos = os.path.join(self.model_pos,'aloha.pkl') 
         
         fsock = open(filepos, 'w')
         cPickle.dump(dict(self), fsock)
@@ -340,7 +326,7 @@ class AbstractHelasModel(dict):
     def load(self, filepos=None):
         """ reload the pickle file """
         if not filepos:
-            filepos = os.path.join(self.model_pos,'helas.pkl') 
+            filepos = os.path.join(self.model_pos,'aloha.pkl') 
         if os.path.exists(filepos):
             fsock = open(filepos, 'r')
             self.update(cPickle.load(fsock))        
@@ -349,7 +335,7 @@ class AbstractHelasModel(dict):
             return False
         
     def get(self, lorentzname, outgoing):
-        """ return the AbstractHelas with a given lorentz name, and for a given
+        """ return the AbstractRoutine with a given lorentz name, and for a given
         outgoing particle """
         
         try:
@@ -359,72 +345,80 @@ class AbstractHelasModel(dict):
                                                        (lorentzname, outgoing) )
             return None
     
-    def set(self, lorentzname, outgoing, abstracthelas):
+    def set(self, lorentzname, outgoing, abstract_routine):
         """ add in the dictionary """
     
-        self[(lorentzname, outgoing)] = abstracthelas
+        self[(lorentzname, outgoing)] = abstract_routine
     
-    def compute_all(self):
-        """ define all the AbstractHelas linked to a model """
+    def compute_all(self, save=True):
+        """ define all the AbstractRoutine linked to a model """
 
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
-        self.look_for_symmetries()
+        #self.look_for_symmetries()
+        conjugate_list = self.look_for_conjugate()
         
         for lorentz in self.model.all_lorentz:
             if -1 in lorentz.spins:
-                # No Ghost for HELAS
-                continue
-            self.compute_for_lorentz(lorentz)
-            if self.need_conjugate(lorentz):
-                conjugate_lorentz = -1 * C('c1',1) * lorentz * C(2, 'c2')
-                conjugate_lorentz.name += 'C'
-                self.complex_mode = True
-                self.compute_for_lorentz(conjugate_lorentz)
-                self.complex_mode = False # <- automatic?
+                # No Ghost in ALOHA
+                continue 
+            builder = AbstractRoutineBuilder(lorentz)
+            self.compute_aloha(builder)
+            if lorentz.name in conjugate_list:
+                conjg_builder_list= builder.define_all_conjugate_builder(\
+                                                   conjugate_list[lorentz.name])
+                for conjg_builder in conjg_builder_list:
+                    assert conjg_builder_list.count(conjg_builder) == 1
+                    self.compute_aloha(conjg_builder, lorentz.name)
+                    
+                    
+        if save:
+            self.save()
         
-        self.save()
+    def compute_aloha(self, builder, symetry=None):
+        """convinient alias to choose to use or not the kernel"""
+        self.compute_aloha_with_kernel(builder, symetry)
         
-    def compute_for_lorentz(self, lorentz):
-        """ """
-        self.compute_lorentz_with_kernel(lorentz)
+    def compute_aloha_without_kernel(self, builder, symetry=None):
+        """define all the AbstractRoutine"""
         
-    def compute_lorentz_without_kernel(self, lorentz):
-        """define all the AbstractHelas"""
-        
-        name = lorentz.name
-        for outgoing in range(len(lorentz.spins) + 1 ):
-            builder = AbstractHelasBuilder(lorentz)
-            wavefunction = builder.compute_helas(outgoing)
+        name = builder.name
+            
+        for outgoing in range(len(builder.spins) + 1 ):
+            builder.routine_kernel = None
+            wavefunction = builder.compute_routine(outgoing)
             self.set(name, outgoing, wavefunction)
         
         
-    def compute_lorentz_with_kernel(self, lorentz):
-        """ define all the AbstractHelas linked to a given lorentz structure"""
+    def compute_aloha_with_kernel(self, builder, symetry=None):
+        """ define all the AbstractRoutine linked to a given lorentz structure
+        symetry authorizes to use the symetry of anoter lorentz structure."""
         
-        name = lorentz.name
+        name = builder.name
+        if not symetry:
+            symetry = name
+        
         # first compute the amplitude contribution
-        builder = AbstractHelasBuilder(lorentz)
-        wavefunction = builder.compute_helas(0)
+        wavefunction = builder.compute_routine(0)
         self.set(name, 0, wavefunction)
         
-        # Create the routine associate to an externel particles
-        for outgoing in range(1, len(lorentz.spins) + 1 ):
-            symmetric = self.has_symmetries(lorentz.name, outgoing)
+        # Create the routine associate to an external particles
+        for outgoing in range(1, len(builder.spins) + 1 ):
+            symmetric = self.has_symmetries(symetry, outgoing)
             if symmetric:
-                self.get(lorentz.name, symmetric).add_symmetry(outgoing)
+                self.get(symetry, symmetric).add_symmetry(outgoing)
             else:
-                wavefunction = builder.compute_helas(outgoing)
+                wavefunction = builder.compute_routine(outgoing)
                 #Store the information
                 self.set(name, outgoing, wavefunction)
 
     def write(self, output_dir, language):
-        """ write the full set of Helas Routine in output_dir"""
+        """ write the full set of Helicity Routine in output_dir"""
         
-        for abstract_helas in self.values():
-            abstract_helas.write(output_dir, language)
+        for abstract_routine in self.values():
+            abstract_routine.write(output_dir, language)
         
-        self.write_helas_file_inc(output_dir)
+        #self.write_aloha_file_inc(output_dir)
         
 
     def look_for_symmetries(self):
@@ -436,7 +430,9 @@ class AbstractHelasModel(dict):
             for i, part1 in enumerate(vertex.particles):
                 for j in range(i):
                     part2 = vertex.particles[j]
-                    if part1.name == part2.name:
+                    if part1.name == part2.name and \
+                                        part1.color == part2.color == 1 and\
+                                        part1.spin != 2:
                         for lorentz in vertex.lorentz:
                             if self.symmetries.has_key(lorentz.name):
                                 self.symmetries[lorentz.name][i+1] = j+1
@@ -455,26 +451,66 @@ class AbstractHelasModel(dict):
         else:
             return self.has_symmetries(l_name, equiv, out=equiv)
     
-    def need_conjugate(self, lorentz):
-        return False
+    def look_for_conjugate(self):
+        """ create a list for the routine needing to be conjugate """
+
+        # Check if they are majorana in the model.
+        need = False
+        for particle in self.model.all_particles:
+            if particle.spin == 2 and particle.selfconjugate:
+                need = True
+                break
         
-def write_helas_file_inc(helas_dir,file_ext, comp_ext):
-    """find the list of HELAS routine in the directory and create a list 
+        # No majorana particles    
+        if not need:
+            return {}
+        
+        conjugate_request = {}
+        # Check each vertex if they are fermion and/or majorana
+        for vertex in self.model.all_vertices:
+            for i in range(0, len(vertex.particles),2):
+                part1 = vertex.particles[i]
+                if part1.spin !=2:
+                    # deal only with fermion
+                    break
+                # check if this pair contains a majorana
+                if part1.selfconjugate:
+                    continue
+                part2 = vertex.particles[i + 1]
+                if part2.selfconjugate:
+                    continue
+                
+                # No majorana => add the associate lorentz structure
+                for lorentz in vertex.lorentz:
+                    try:
+                        conjugate_request[lorentz.name].add(i+1)
+                    except:
+                        conjugate_request[lorentz.name] = set([i+1])
+        
+        for elem in conjugate_request:
+            conjugate_request[elem] = list(conjugate_request[elem])
+        
+        return conjugate_request
+            
+        
+            
+def write_aloha_file_inc(aloha_dir,file_ext, comp_ext):
+    """find the list of Helicity routine in the directory and create a list 
     of those files (but with compile extension)"""
 
-    helas_files = []
+    aloha_files = []
     
     # Identify the valid files
-    helasfile_pattern = re.compile(r'''^[STFV]*[_\d]*_\d%s''' % file_ext)
-    for filename in os.listdir(helas_dir):
-        if os.path.isfile(os.path.join(helas_dir, filename)):
-            if helasfile_pattern.match(filename):
-                helas_files.append(filename.replace(file_ext, comp_ext))
+    alohafile_pattern = re.compile(r'''^[STFV]*[_C\d]*_\d%s''' % file_ext)
+    for filename in os.listdir(aloha_dir):
+        if os.path.isfile(os.path.join(aloha_dir, filename)):
+            if alohafile_pattern.match(filename):
+                aloha_files.append(filename.replace(file_ext, comp_ext))
 
-    text="HELASRoutine = "
-    text += ' '.join(helas_files)
+    text="ALOHARoutine = "
+    text += ' '.join(aloha_files)
     text +='\n'
-    file(os.path.join(helas_dir, 'helas_file.inc'), 'w').write(text) 
+    file(os.path.join(aloha_dir, 'aloha_file.inc'), 'w').write(text) 
 
 
             
@@ -503,7 +539,7 @@ def create_library():
         lib[('Spin2Prop',i)] = create( Spin2Propagator(10*i+1, \
                                             10*i+2,'I2','I3', i) )
     logger.info('writing')         
-    fsock = open('./HelasLib.pkl','wb')
+    fsock = open('./ALOHALib.pkl','wb')
     cPickle.dump(lib, fsock, -1)
     logger.info('done')
     
@@ -512,15 +548,18 @@ if '__main__' == __name__:
     #create_library()
     import profile       
     #model 
-    helasgenerator = AbstractHelasModel('sm')   
+      
     start = time.time()
-    def main(helasgenerator):
-        helasgenerator.compute_all()
-    def write(helasgenerator):
-        helasgenerator.write('/tmp/', 'Fortran')
-    #profile.run('main(helasgenerator)')
-    main(helasgenerator)
-    profile.run('write(helasgenerator)')
+    def main():
+        alohagenerator = AbstractALOHAModel('sm') 
+        alohagenerator.compute_all(save=False)
+        return alohagenerator
+    def write(alohagenerator):
+        alohagenerator.write('/tmp/', 'Fortran')
+    alohagenerator = main()
+    write(alohagenerator)
+    #profile.run('main()')
+    #profile.run('write(alohagenerator)')
     stop = time.time()
     logger.info('done in %s s' % (stop-start))
   

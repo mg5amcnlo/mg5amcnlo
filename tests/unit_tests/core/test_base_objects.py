@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+import madgraph
 
 """Unit test library for the various base objects of the core library"""
 
@@ -556,6 +557,22 @@ class ModelTest(unittest.TestCase):
         self.assertEqual(mymodel['interactions'],
                          base_objects.InteractionList())
 
+    def test_get_particle(self):
+        """ test that get_particle is working """
+        
+        obj = self.mymodel.get_particle(6)
+        self.assertEqual(obj['name'], 't')
+        obj = self.mymodel.get_particle(7)
+        self.assertEqual(obj, None)        
+
+    def test_get_interaction(self):
+        """ test that get_particle is working """
+        
+        obj = self.mymodel.get_interaction(1)
+        self.assertEqual(obj['lorentz'], ['L1'])
+        obj = self.mymodel.get_interaction(7)
+        self.assertEqual(obj, None)  
+
     def test_setget_model_correct(self):
         """Test correct Model object get and set"""
 
@@ -614,7 +631,42 @@ class ModelTest(unittest.TestCase):
 
         myinterdict = {1:self.myinterlist[0]}
         self.assertEqual(myinterdict, self.mymodel.get('interaction_dict'))
-
+        
+    def test_pass_in_standard_name(self):
+        """Test if we can overwrite the name of the model following MG 
+        convention"""
+        
+        model_name = [(part.get('name'), part.get('antiname')) \
+                                          for part in self.mymodel['particles']]
+        model2 = copy.copy(self.mymodel)
+        
+        # check that standard name are not modified
+        model2.pass_particles_name_in_mg_default()
+        model2_name = [(part.get('name'), part.get('antiname')) \
+                                                for part in model2['particles']]
+        self.assertEqual(set(model_name),set(model2_name))
+        
+        # add a particle with non conventional name
+        model2['particles'].append(base_objects.Particle({'name':'ee',
+                  'antiname':'eex',
+                  'pdg_code':1}))
+        
+        model2.pass_particles_name_in_mg_default()
+        model2_name = [(part.get('name'), part.get('antiname')) \
+                                                for part in model2['particles']]        
+        self.assertEqual(set(model_name + [('d','d~')]), set(model2_name))
+        
+        # add a particles with non conventional name with the conventional name
+        #associtaed to another particle
+        model2['particles'].append(base_objects.Particle({'name':'u',
+                  'antiname':'d~',
+                  'pdg_code':100}))
+        model2['particles'].append(base_objects.Particle({'name':'ee',
+                  'antiname':'eex',
+                  'pdg_code':2}))
+        
+        self.assertRaises(madgraph.MadGraph5Error, \
+                                       model2.pass_particles_name_in_mg_default)
 #===============================================================================
 # LegTest
 #===============================================================================
@@ -992,7 +1044,8 @@ class DiagramTest(unittest.TestCase):
 
     def setUp(self):
 
-        self.mydict = {'vertices':self.myvertexlist}
+        self.mydict = {'vertices':self.myvertexlist,
+                       'orders':{}}
 
         self.mydiagram = base_objects.Diagram(self.mydict)
 
@@ -1061,8 +1114,9 @@ class DiagramTest(unittest.TestCase):
         """Test diagram object string representation."""
 
         goal = "{\n"
-        goal = goal + "    \'vertices\': %s\n}" % repr(self.myvertexlist)
-
+        goal = goal + "    \'vertices\': %s,\n" % repr(self.myvertexlist)
+        goal = goal + "    'orders': {}\n}"
+        
         self.assertEqual(goal, str(self.mydiagram))
 
     def test_diagram_list(self):
@@ -1087,11 +1141,11 @@ class DiagramTest(unittest.TestCase):
         mydiagramlist = base_objects.DiagramList(mylist)
 
         goal_string1 = "  (" + "(5(3),5(3),5(3),5(3),5(3),5(3),5(3),5(3),5(3)>5(3),id:3),"*10
-        goal_string1 = goal_string1[:-1] + ")\n"
+        goal_string1 = goal_string1[:-1] + ") ()\n"
 
         goal_string = ""
-        for i in range(10):
-            goal_string = goal_string + str(i+1) + goal_string1
+        for i in range(1,11):
+            goal_string = goal_string + str(i) + goal_string1
 
         self.assertEqual(mydiagramlist.nice_string(),
                          "10 diagrams:\n" + goal_string[:-1])
@@ -1135,7 +1189,8 @@ class ProcessTest(unittest.TestCase):
                        'forbidden_s_channels':[],
                        'forbidden_particles':[],
                        'is_decay_chain': False,
-                       'decay_chains': base_objects.ProcessList()}
+                       'decay_chains': base_objects.ProcessList(),
+                       'overall_orders': {}}
 
         self.myprocess = base_objects.Process(self.mydict)
 
@@ -1206,6 +1261,8 @@ class ProcessTest(unittest.TestCase):
         goal = "{\n"
         goal = goal + "    \'legs\': %s,\n" % repr(self.myleglist)
         goal = goal + "    \'orders\': %s,\n" % repr(self.myprocess['orders'])
+        goal = goal + "    \'overall_orders\': %s,\n" % \
+               repr(self.myprocess['overall_orders'])
         goal = goal + "    \'model\': %s,\n" % repr(self.myprocess['model'])
         goal = goal + "    \'id\': 1,\n"
         goal = goal + "    \'required_s_channels\': [],\n"
@@ -1219,9 +1276,25 @@ class ProcessTest(unittest.TestCase):
     def test_nice_string(self):
         """Test Process nice_string representation"""
 
-        goal_str = "Process: c c > c c c QED=1 QCD=5"
+        goal_str = "Process: c c > c c c QED=1 QCD=5 @1"
 
         self.assertEqual(goal_str, self.myprocess.nice_string())
+
+    def test_input_string(self):
+        """Test Process nice_string representation"""
+
+        goal_str = "c c > c c c QED=1 QCD=5, (c > c c c c, c > c c c c)"
+
+        decay = copy.copy(self.myprocess)
+        decay.set('legs', copy.deepcopy(decay.get('legs')))
+        decay.get('legs')[1].set('state', True)
+        decay.set('is_decay_chain', True)
+        decay.set('orders', {})
+        decay2 = copy.copy(decay)
+        self.myprocess.set('decay_chains', base_objects.ProcessList([decay]))
+        decay.set('decay_chains', base_objects.ProcessList([decay2]))
+
+        self.assertEqual(goal_str, self.myprocess.input_string())
 
     def test_shell_string(self):
         """Test Process shell_string representation"""
@@ -1268,7 +1341,8 @@ class ProcessDefinitionTest(unittest.TestCase):
                        'forbidden_s_channels':[],
                        'forbidden_particles':[],
                        'is_decay_chain': False,
-                       'decay_chains': base_objects.ProcessList()}
+                       'decay_chains': base_objects.ProcessList(),
+                       'overall_orders':{}}
 
         self.my_process_definition = base_objects.ProcessDefinition(self.mydict)
 
@@ -1339,6 +1413,7 @@ class ProcessDefinitionTest(unittest.TestCase):
         goal = "{\n"
         goal = goal + "    \'legs\': %s,\n" % repr(self.my_multi_leglist)
         goal = goal + "    \'orders\': %s,\n" % repr(self.my_process_definition['orders'])
+        goal = goal + "    \'overall_orders\': %s,\n" % repr(self.my_process_definition['overall_orders'])
         goal = goal + "    \'model\': %s,\n" % repr(self.my_process_definition['model'])
         goal = goal + "    \'id\': %s,\n" % repr(self.my_process_definition['id'])
         goal = goal + "    \'required_s_channels\': [],\n"

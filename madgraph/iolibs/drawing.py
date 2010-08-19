@@ -74,6 +74,15 @@ class FeynmanLine(base_objects.Leg):
         else:
             return super(FeynmanLine, self).is_valid_prop(name)
 
+    def def_model(self, model):
+        """ 
+        make a link between the  present object and the associate model 
+        """
+        
+        assert isinstance(model, base_objects.Model), ' try to assign a non model obect'
+
+        self.model = model
+
     def def_begin_point(self, vertex):
         """-Re-Define the starting point of the line."""
 
@@ -852,7 +861,7 @@ class FeynmanDiagram:
 
         # Extend the leg to FeynmanLine Object
         line = FeynmanLine(leg.get('id'), base_objects.Leg(leg))
-        line._def_model(self.model)
+        line.def_model(self.model)
 
         # Assign line and leg to the diagram. Storing leg is done in order to be
         #able to check if a leg was already treated or not.

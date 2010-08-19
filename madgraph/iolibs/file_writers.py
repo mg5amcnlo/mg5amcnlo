@@ -344,7 +344,7 @@ class CPPWriter(FileWriter):
     quote_chars = re.compile(r"[^\\][\"\']")
     no_space_comment_patterns = re.compile(r"--|\*\*|==|\+\+")
     line_length = 80
-    max_split = 10
+    max_split = 40
     split_characters = " "
     comment_split_characters = " "
     
@@ -517,7 +517,7 @@ class CPPWriter(FileWriter):
                 if "{" in myline:
                     end_index = myline.index("{")
                 else:
-                    end_index = -1
+                    end_index = len(myline)
                 res_lines.append("\n".join(self.split_line(\
                                       myline[:end_index], \
                                       self.split_characters)) + \

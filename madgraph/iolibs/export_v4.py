@@ -12,8 +12,6 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-from aloha import create_helas
-
 """Methods and classes to export matrix elements to v4 format."""
 
 import fractions
@@ -32,6 +30,8 @@ import madgraph.iolibs.misc as misc
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.template_files as Template
 import madgraph.iolibs.ufo_expression_parsers as parsers
+
+import aloha.create_aloha as create_aloha
 
 import models.sm.write_param_card as write_param_card
 from madgraph import MadGraph5Error, MG5DIR
@@ -564,7 +564,7 @@ def write_dname_file(writer, matrix_element, fortran_model):
     """Write the dname.mg file for MG4"""
 
     line = "DIRNAME=P%s" % \
-           matrix_element.get('processes')[0].shell_string_v4()
+           matrix_element.get('processes')[0].shell_string()
 
     # Write the file
     writer.write(line + "\n")
@@ -823,7 +823,7 @@ def write_subproc(writer, matrix_element, fortran_model):
     """Append this subprocess to the subproc.mg file for MG4"""
 
     line = "P%s" % \
-           matrix_element.get('processes')[0].shell_string_v4()
+           matrix_element.get('processes')[0].shell_string()
 
     # Write line to file
     writer.write(line + "\n")
@@ -898,8 +898,9 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
     cwd = os.getcwd()
 
     # Create the directory PN_xx_xxxxx in the specified path
-    dirpath = os.path.join(path, "P%s" % \
-                         matrix_element.get('processes')[0].shell_string_v4())
+    dirpath = os.path.join(path, \
+                   "P%s" % matrix_element.get('processes')[0].shell_string())
+
     try:
         os.mkdir(dirpath)
     except os.error as error:
@@ -964,7 +965,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     pathdir = os.getcwd()
 
     # Create the directory PN_xx_xxxxx in the specified path
-    subprocdir = "P%s" % matrix_element.get('processes')[0].shell_string_v4()
+    subprocdir = "P%s" % matrix_element.get('processes')[0].shell_string()
     try:
         os.mkdir(subprocdir)
     except os.error as error:
@@ -1380,6 +1381,9 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
     return res_str + '*'
 
 
+#===============================================================================
+# Routines to output UFO models in MG4 format
+#===============================================================================
 
 def convert_model_to_mg4(model, output_dir):
     """ Create a full valid MG4 model from a MG5 model (coming from UFO)"""
@@ -1400,10 +1404,17 @@ def convert_model_to_mg4(model, output_dir):
         if not filename.lower().endswith('.f'):
             continue
         cp((MG5DIR + '/aloha/Template/' + filename), write_dir)
-    create_helas.write_helas_file_inc(write_dir, '.f', '.o')
+    create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
                 
     # Make final link in the Process
     make_model_symbolic_link(output_dir)
+
+#===============================================================================
+# UFO_model_to_mg4
+#===============================================================================
+
+
+python_to_fortran = lambda x: parsers.UFOExpressionParserFortran().parse(x)
 
 class UFO_model_to_mg4(object):
     """ A converter of the UFO-MG5 Model to the MG4 format """
@@ -1421,6 +1432,7 @@ class UFO_model_to_mg4(object):
         self.params_dep = []   # (name, expression, type)
         self.params_indep = [] # (name, expression, type)
         self.params_ext = []   # external parameter
+        self.p_to_f = parsers.UFOExpressionParserFortran()
         
     def build(self):
         """modify the couplings to fit with MG4 convention and creates all the 
@@ -1537,6 +1549,12 @@ class UFO_model_to_mg4(object):
         # Write the Mass definition/ common block
         masses = [param.name for param in self.params_ext \
                                                     if param.lhablock == 'MASS']
+        
+        is_mass = lambda name: name[0].lower() == 'm' and len(name)<4
+        masses += [param.name for param in self.params_dep + 
+                            self.params_indep if param.type == 'real'
+                            and is_mass(param.name)]      
+        
         fsock.writelines('double precision '+','.join(masses)+'\n')
         fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
         
@@ -1572,9 +1590,11 @@ class UFO_model_to_mg4(object):
         
         fsock = self.open('input.inc', format='fortran')
         
+        is_valid = lambda name: name!='G' and not (name[0].lower() == 'm' and len(name)<4)
+        
         real_parameters = [param.name for param in self.params_dep + 
                             self.params_indep if param.type == 'real'
-                            and param.name != 'G']
+                            and is_valid(param.name)]
         
         real_parameters += [param.name for param in self.params_ext 
                             if param.type == 'real'and 
@@ -1602,14 +1622,16 @@ class UFO_model_to_mg4(object):
         fsock.writelines("if(readlha) then\n")
         
         for param in self.params_indep:
-            fsock.writelines("%s = %s\n" % (param.name, python_to_fortran(param.expr) ))
+            fsock.writelines("%s = %s\n" % (param.name,
+                                            self.p_to_f.parse(param.expr)))
         
         fsock.writelines('endif')
         
         fsock.write_comments('\nParameters that should be recomputed at an event by even basis.\n')
         for param in self.params_dep:
-            fsock.writelines("%s = %s\n" % (param.name, python_to_fortran(param.expr) ))
-           
+            fsock.writelines("%s = %s\n" % (param.name,
+                                            self.p_to_f.parse(param.expr)))
+
         fsock.write_comments("\nDefinition of the EW coupling used in the write out of aqed\n")
         fsock.writelines(""" gal(1) = 1d0
                              gal(2) = 1d0
@@ -1687,8 +1709,8 @@ class UFO_model_to_mg4(object):
                         """ % nb_file)
         
         for coupling in data:            
-            fsock.writelines('%s = %s' % (coupling.name, \
-                                             python_to_fortran(coupling.expr)))
+            fsock.writelines('%s = %s' % (coupling.name,
+                                          self.p_to_f.parse(coupling.expr)))
         fsock.writelines('end')
 
 
@@ -1756,8 +1778,8 @@ class UFO_model_to_mg4(object):
             template = \
             """ call LHA_get_real(npara,param,value,'%(name)s',%(name)s,%(value)s)"""
             
-            return template % {'name': parameter.name, \
-                                    'value': python_to_fortran(parameter.value)}
+            return template % {'name': parameter.name,
+                               'value': self.p_to_f.parse(str(parameter.value))}
         
         fsock = self.open('param_read.inc', format='fortran')
         external_param = [format(param) for param in self.params_ext]
@@ -1778,21 +1800,8 @@ class UFO_model_to_mg4(object):
 #                return param.type
 #        
 #        return CompactifyExpression.search_type(self, expr)
-
-    
-class python_to_fortran(str):
-    
-    fortran_parser = parsers.UFOExpressionParserFortran()
-
-    def __new__(cls, input):
-        """ test"""
-        
-        if isinstance(input, str):
-            converted = cls.fortran_parser.parse(input)
-        else:
-            converted = cls.fortran_parser.parse(str(input))
-
-        return super(python_to_fortran, cls).__new__(cls, converted) 
+  
+ 
 
     
     

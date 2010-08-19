@@ -25,10 +25,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color
-import madgraph.iolibs.helas_call_writers
 import madgraph.iolibs.export_v4 as export_v4
-
-import madgraph.iolibs.helas_call_writers as helas_call_writers
 
 #===============================================================================
 # HelasWavefunctionTest
@@ -931,8 +928,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "1  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4))\n"
-        goal = goal + "2  ((2(2),3(21)>2(2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4))"
+        goal = goal + "1  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QED=2,QCD=1)\n"
+        goal = goal + "2  ((2(2),3(21)>2(2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QED=2,QCD=1)"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -1039,8 +1036,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "1  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4))\n"
-        goal = goal + "2  ((2(2),3(21)>2(2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4))"
+        goal = goal + "1  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QED=2,QCD=1)\n"
+        goal = goal + "2  ((2(2),3(21)>2(2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QED=2,QCD=1)"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -1165,8 +1162,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "1  ((1(22),2(-11)>1(-11),id:7),(3(22),4(11)>3(11),id:7),(1(-11),3(11),id:0))\n"
-        goal = goal + "2  ((1(22),4(11)>1(11),id:7),(2(-11),3(22)>2(-11),id:7),(1(11),2(-11),id:0))"
+        goal = goal + "1  ((1(22),2(-11)>1(-11),id:7),(3(22),4(11)>3(11),id:7),(1(-11),3(11),id:0)) (QED=2)\n"
+        goal = goal + "2  ((1(22),4(11)>1(11),id:7),(2(-11),3(22)>2(-11),id:7),(1(11),2(-11),id:0)) (QED=2)"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -1260,8 +1257,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "1  ((1(-11),2(22)>1(-11),id:7),(3(22),4(11)>3(11),id:7),(1(-11),3(11),id:0))\n"
-        goal = goal + "2  ((1(-11),3(22)>1(-11),id:7),(2(22),4(11)>2(11),id:7),(1(-11),2(11),id:0))"
+        goal = goal + "1  ((1(-11),2(22)>1(-11),id:7),(3(22),4(11)>3(11),id:7),(1(-11),3(11),id:0)) (QED=2)\n"
+        goal = goal + "2  ((1(-11),3(22)>1(-11),id:7),(2(22),4(11)>2(11),id:7),(1(-11),2(11),id:0)) (QED=2)"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -1781,6 +1778,122 @@ class HelasMatrixElementTest(unittest.TestCase):
         for i, wf in enumerate(me.get_all_wavefunctions()):
             self.assertEqual(wf.get('number'), i + 1)        
 
+    def test_multi_amp_majorana_process(self):
+        """Test fermion clash process x1+ x1+ > w- w- with multiple amps
+        """
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # x1+ and x1-
+        mypartlist.append(base_objects.Particle({'name':'x1+',
+                      'antiname':'x1-',
+                      'spin':2,
+                      'color':1,
+                      'mass':'Mch1',
+                      'width':'Wch1',
+                      'charge':1.,
+                      'pdg_code':1000024,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        x1plus = mypartlist[len(mypartlist) - 1]
+        x1minus = copy.copy(x1plus)
+        x1minus.set('is_part', False)
+
+        # W+ and W-
+        mypartlist.append(base_objects.Particle({'name':'w+',
+                      'antiname':'w-',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MW',
+                      'width':'WW',
+                      'charge':1.,
+                      'pdg_code':24,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        wplus = mypartlist[len(mypartlist) - 1]
+        wminus = copy.copy(wplus)
+        wminus.set('is_part', False)
+
+        # Neutralinos
+        mypartlist.append(base_objects.Particle({'name':'n1',
+                      'antiname':'n1',
+                      'spin':2,
+                      'color':1,
+                      'mass':'Mneu1',
+                      'width':'Wneu1',
+                      'texname':'\chi_0^1',
+                      'antitexname':'\chi_0^1',
+                      'line':'straight',
+                      'charge':0.,
+                      'pdg_code':1000022,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        n1 = mypartlist[len(mypartlist) - 1]
+
+        # Coupling of n1 to w and x1
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [x1minus, \
+                                             n1, \
+                                             wplus]),
+                      'color': [],
+                      'lorentz':['FFV2', 'FFV3'],
+                      'couplings':{(0, 0):'GC_666', (0, 1):'GC_416'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [n1, \
+                                             x1plus, \
+                                             wminus]),
+                      'color': [],
+                      'lorentz':['FFV2', 'FFV3'],
+                      'couplings':{(0, 0):'GC_424', (0, 1):'GC_630'},
+                      'orders':{'QED':1}}))
+
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1000024,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1000024,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':24,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':24,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                           'model':mymodel})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        self.assertEqual(len(myamplitude.get('diagrams')), 2)
+
+        me = helas_objects.HelasMatrixElement(myamplitude,
+                                              gen_color=False)
+
+        helas_writer = helas_call_writers.FortranUFOHelasCallWriter(mymodel)
+
+        self.assertEqual(len(me.get_all_amplitudes()), 8)
+
+        self.assertEqual(len(me.get_all_wavefunctions()), 8)
+
+        for i, amp in enumerate(me.get_all_amplitudes()):
+            self.assertEqual(amp.get('number'), i + 1)
+
+        for i, wf in enumerate(me.get_all_wavefunctions()):
+            self.assertEqual(wf.get('number'), i + 1)        
+
 #===============================================================================
 # HelasDecayChainProcessTest
 #===============================================================================
@@ -2039,7 +2152,7 @@ class HelasMultiProcessTest(unittest.TestCase):
 
         # 3-Gluon coupling
         myinterlist.append(base_objects.Interaction({
-                      'id': 8,
+                      'id': 5,
                       'particles': base_objects.ParticleList(\
                                             [g, \
                                              g, \
@@ -2152,20 +2265,23 @@ class HelasMultiProcessTest(unittest.TestCase):
                                      goal_number_matrix_elements[nfs - 2])
 
     def test_complete_decay_chain_process(self):
-        """Test a complete decay chain process pp > jj, j > jj
+        """Test a complete decay chain process gp>jg,j>jjj,j>jjj
         """
 
         p = [1, -1, 2, -2, 21]
 
         my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': True});
+        my_gluon_leg = base_objects.MultiLeg({'ids': [21], 'state': True});
 
         # Define the multiprocess
-        my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * 4])
+        my_multi_leglist = base_objects.MultiLegList([copy.copy(my_gluon_leg),
+                                                      copy.copy(my_multi_leg),
+                                                      copy.copy(my_multi_leg),
+                                                      copy.copy(my_gluon_leg)])
+                                                      
         
         my_multi_leglist[0].set('state', False)
         my_multi_leglist[1].set('state', False)
-        my_multi_leglist[0].set('ids', [21])
-        my_multi_leglist[1].set('ids', [21])
         
         my_process_definition = base_objects.ProcessDefinition({\
                                      'legs':my_multi_leglist,
@@ -2173,11 +2289,11 @@ class HelasMultiProcessTest(unittest.TestCase):
         #my_multi_leg = base_objects.MultiLeg({'ids': [1, -1, 21],
         #                                              'state': True});
         my_decay_leglist = base_objects.MultiLegList([copy.copy(leg) \
-                                          for leg in [my_multi_leg] * 4])
+                                          for leg in [my_multi_leg] * 3])
         my_decay_leglist[0].set('state', False)
-        my_multi_leg2 = base_objects.MultiLeg({'ids': [21], 'state': True});
         my_decay_leglist2 = base_objects.MultiLegList([copy.copy(leg) \
-                                          for leg in [my_multi_leg2] * 4])
+                                          for leg in [my_multi_leg] * 3] + \
+                                                     [copy.copy(my_gluon_leg)])
         my_decay_leglist2[0].set('state', False)
         my_decay_processes = base_objects.ProcessDefinitionList(\
             [base_objects.ProcessDefinition({\
@@ -2198,12 +2314,12 @@ class HelasMultiProcessTest(unittest.TestCase):
 
         matrix_elements = my_dc_process.combine_decay_chain_processes()
 
-        self.assertEqual(len(matrix_elements), 16)
+        self.assertEqual(len(matrix_elements), 8)
 
-        num_processes = [2, 1, 2, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1]
-        num_wfs = [21, 18, 24, 18, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27]
-        num_amps = [12, 6, 18, 6, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27]
-        iden_factors = [4, 2, 4, 2, 1, 2, 4, 2, 4, 1, 2, 2, 2, 2, 6, 72]
+        num_processes = [4, 2, 4, 2, 4, 2, 2, 1]
+        num_amps = [9, 9, 9, 9, 9, 9, 9, 9]
+        num_wfs = [19, 19, 19, 19, 19, 19, 19, 19]
+        iden_factors = [1, 6, 1, 6, 1, 6, 2, 12]
 
         for i, me in enumerate(matrix_elements):
             self.assertEqual(len(me.get('processes')), num_processes[i])
@@ -2218,6 +2334,120 @@ class HelasMultiProcessTest(unittest.TestCase):
                 self.assertEqual(me.get('identical_particle_factor'),
                                  iden_factors[i])
 
+            for i, amp in enumerate(sorted(me.get_all_amplitudes(),
+                                       lambda a1,a2: \
+                                       a1.get('number') - a2.get('number'))):
+                self.assertEqual(amp.get('number'), i + 1)
+                  
+            for i, wf in enumerate(sorted(me.get_all_wavefunctions(),
+                                       lambda a1,a2: \
+                                       a1.get('number') - a2.get('number'))):
+                self.assertEqual(wf.get('number'), i + 1)
+
+            for i, wf in enumerate(filter (lambda wf: not wf.get('mothers'),
+                                           me.get_all_wavefunctions())):
+                self.assertEqual(wf.get('number_external'), i + 1)
+
+    def test_decay_chain_process_overall_orders(self):
+        """Test a complete decay chain process pp>jj,j>jj with QED=2, QCD=2
+        """
+
+        mypartlist = self.mymodel.get('particles')
+        myinterlist = self.mymodel.get('interactions')
+
+        # A photon
+        mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':0,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'a',
+                      'antitexname':'a',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        a = mypartlist[len(mypartlist) - 1]
+        u = self.mymodel.get('particle_dict')[2]
+        antiu = self.mymodel.get('particle_dict')[-2]
+        d = self.mymodel.get('particle_dict')[1]
+        antid = self.mymodel.get('particle_dict')[-1]
+
+        # Photon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 6,
+                      'particles': base_objects.ParticleList(\
+                                            [u, \
+                                             antiu, \
+                                             a]),
+                      'color': [color.ColorString([color.T(0, 1)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'UUA'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 7,
+                      'particles': base_objects.ParticleList(\
+                                            [d, \
+                                             antid, \
+                                             a]),
+                      'color': [color.ColorString([color.T(0, 1)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'DDA'},
+                      'orders':{'QED':1}}))
+
+        self.mymodel.set('particles', mypartlist)
+        self.mymodel.set('interactions', myinterlist)
+
+        p = [1, -1, 2, -2, 21]
+
+        my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': True});
+
+        # Define the multiprocess
+        my_multi_leglist = base_objects.MultiLegList([copy.copy(my_multi_leg),
+                                                      copy.copy(my_multi_leg),
+                                                      copy.copy(my_multi_leg),
+                                                      copy.copy(my_multi_leg)])
+                                                      
+        
+        my_multi_leglist[0].set('state', False)
+        my_multi_leglist[1].set('state', False)
+        
+        my_process_definition = base_objects.ProcessDefinition({\
+                                     'legs':my_multi_leglist,
+                                     'model':self.mymodel,
+                                     'overall_orders':{'QED': 2, 'QCD': 2}})
+        #my_multi_leg = base_objects.MultiLeg({'ids': [1, -1, 21],
+        #                                              'state': True});
+        my_decay_leglist = base_objects.MultiLegList([copy.copy(leg) \
+                                          for leg in [my_multi_leg] * 3])
+        my_decay_leglist[0].set('state', False)
+        my_decay_processes = base_objects.ProcessDefinitionList(\
+            [base_objects.ProcessDefinition({\
+                               'legs':my_decay_leglist,
+                               'model':self.mymodel})])
+
+        my_process_definition.set('decay_chains',
+                                  my_decay_processes)
+
+        my_decay_chain_amps = diagram_generation.DecayChainAmplitude(\
+                                                   my_process_definition)
+        
+        my_dc_process = helas_objects.HelasDecayChainProcess(\
+                                       my_decay_chain_amps)
+
+        matrix_elements = my_dc_process.combine_decay_chain_processes()
+
+        self.assertEqual(len(matrix_elements), 20)
+
+        num_processes = [1] * 20
+
+        for i, me in enumerate(matrix_elements):
+            self.assertEqual(len(me.get('processes')), num_processes[i])
             for i, amp in enumerate(sorted(me.get_all_amplitudes(),
                                        lambda a1,a2: \
                                        a1.get('number') - a2.get('number'))):

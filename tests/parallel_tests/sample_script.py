@@ -1,4 +1,4 @@
-#! /usr/bin/env python -O
+#! /usr/bin/env python
 ################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
@@ -50,12 +50,19 @@ if '__main__' == __name__:
     
     logging.basicConfig(level=logging.INFO)
     # Create a list of processes to check automatically
-    #my_proc_list = me_comparator.create_proc_list(['w+', 'w-'],
-    #                                      initial=2, final=2)
+    my_proc_list = me_comparator.create_proc_list(
+                                ['mu+','mu-','sl4+','sl4-','sl1+','sl1-'],
+                                initial=2, final=2)
 
     # or give one
-    my_proc_list = ['g g > g g', 'e+ e- > e+ e-', 'e+ e- > e+ e- a']
-
+    my_proc_list = ['g g > go go']
+    my_proc_list += ['u u~ > go go', 'u u > su2 su2']
+    #my_proc_list = ['e+ e- > e+ e-', 'g g> g g', 'g g> g g g', 'g g> g g g g', 'a w+ > a h1 w+/z', 'a w+ > a a w+', 'a w- > a h1 w-', 'a w- > a a w-', 'a h1 > a w+ w-', 'a a > h1 w+ w-', 'a a > a w+ w-']
+    #my_proc_list += ['u u~ > d d~', 'ul ul~ > g g' , 'go go > su1 su1~', 'su1 su1~ > g g', 'su1 su1~ > g g g', 'su1 su1~ > su1 su1~' ]
+    #my_proc_list = ['su1 su1~ > g g g','su1 su1~ > g g', 'g g > su1 su1~', 'g su1 > g su1']
+    #my_proc_list = ['mu+ mu+ > sl4+ sl4+']
+    
+    
     # Create a MERunner object for MG4
     my_mg4 = me_comparator.MG4Runner()
     my_mg4.setup(mg4_path)
@@ -65,25 +72,25 @@ if '__main__' == __name__:
     #my_mg5.setup(mg5_path, mg4_path)
 
     # Create a MERunner object for UFO-ALOHA-MG5
-    my_mg5 = me_comparator.MG5_UFO_Runner()
-    my_mg5.setup(mg5_path, mg4_path)
+    my_mg5_ufo = me_comparator.MG5_UFO_Runner()
+    my_mg5_ufo.setup(mg5_path, mg4_path)
 
     # Create and setup a comparator
     my_comp = me_comparator.MEComparator()
-    my_comp.set_me_runners(my_mg4, my_mg5)
+    my_comp.set_me_runners(my_mg4, my_mg5_ufo)
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                       model='sm', orders={'QED':4, 'QCD':4}, energy=500)
+                       model=['MSSM_MG','mssm'], orders={'QED':4, 'QCD':4}, energy=2000)
 
     # Do some cleanup
     #my_comp.cleanup()
 
     # Print the output
-    my_comp.output_result(filename='sm_result.log')
+    my_comp.output_result(filename='mssm_result.log')
 
     
-    pydoc.pager(file('sm_result.log','r').read())
+    pydoc.pager(file('mssm_result.log','r').read())
 
     # Print a list of non zero processes
     #print my_comp.get_non_zero_processes()

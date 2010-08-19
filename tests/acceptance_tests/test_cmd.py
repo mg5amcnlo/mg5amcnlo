@@ -24,7 +24,7 @@ import madgraph.interface.cmd_interface as Cmd
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
 
-from madgraph import MG4DIR, MG5DIR
+from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
 #===============================================================================
 # TestCmd
@@ -59,6 +59,24 @@ class TestCmdShell1(unittest.TestCase):
         self.assertEqual(len(self.cmd._curr_amps), 2)
         self.do('add process mu+ mu- > P, Z>mu+mu-')
         self.assertEqual(len(self.cmd._curr_amps), 3)
+        # Test the "or" functionality for propagators
+        self.do('define V z|a')
+        self.do('generate e+ e- > V > e+ e-')
+        self.assertEqual(len(self.cmd._curr_amps), 1)
+        self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 2)
+        self.do('generate e+ e- > z|a > e+ e-')
+        self.assertEqual(len(self.cmd._curr_amps), 1)
+        self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 2)
+        self.assertRaises(MadGraph5Error, self.do, 'generate a V > e+ e-')
+        self.assertRaises(MadGraph5Error, self.do, 'generate e+ e+|e- > e+ e-')
+        self.assertRaises(MadGraph5Error, self.do, 'generate e+ e- > V a')
+        self.assertRaises(MadGraph5Error, self.do, 'generate e+ e- > e+ e- / V')
+        self.do('define V2 = w+ V')
+        self.assertEqual(self.cmd._multiparticles['v2'],
+                         [[24, 23], [24, 22]])
+        
+        self.do('generate e+ ve > V2 > e+ ve mu+ mu-')
+        self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 8)
 
     def test_draw(self):
         """ command 'draw' works """
@@ -67,13 +85,13 @@ class TestCmdShell1(unittest.TestCase):
                                                           'sm.pkl'))
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('draw .')
-        self.assertTrue(os.path.exists('./diagrams_epem_epem.eps'))
-        os.remove('./diagrams_epem_epem.eps')
+        self.assertTrue(os.path.exists('./diagrams_0_epem_epem.eps'))
+        os.remove('./diagrams_0_epem_epem.eps')
         
         self.do('generate g g > g g')
         self.do('draw .')
-        self.assertTrue(os.path.exists('diagrams_gg_gg.eps'))
-        os.remove('diagrams_gg_gg.eps')
+        self.assertTrue(os.path.exists('diagrams_0_gg_gg.eps'))
+        os.remove('diagrams_0_gg_gg.eps')
 
 
 class TestCmdShell2(unittest.TestCase):
@@ -114,17 +132,17 @@ class TestCmdShell2(unittest.TestCase):
         self.do('setup madevent_v4 %s -nojpeg' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                               'SubProcesses', 'P0_e+e-_e+e-')))
+                                               'SubProcesses', 'P0_epem_epem')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                  'Cards', 'proc_card_mg5.dat')))
         self.assertFalse(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P0_e+e-_e+e-',
+                                                    'P0_epem_epem',
                                                     'matrix1.jpg')))
         self.do('finalize')
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P0_e+e-_e+e-',
+                                                    'P0_epem_epem',
                                                     'matrix1.jpg')))
 
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
@@ -143,12 +161,12 @@ class TestCmdShell2(unittest.TestCase):
                                                        'Cards','proc_card.dat'))
 
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                              'SubProcesses', 'P1_e-e+_vevex')))
+                                              'SubProcesses', 'P1_emep_vevex')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                  'Cards', 'proc_card_mg5.dat')))
         self.assertFalse(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P0_e+e-_e+e-',
+                                                    'P0_epem_epem',
                                                     'matrix1.jpg')))
 
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
@@ -163,7 +181,7 @@ class TestCmdShell2(unittest.TestCase):
         self.do('import proc_v4 %s' % self.join_path(_pickle_path, \
                                                      'simple_v4_proc_card.dat'))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                              'SubProcesses', 'P1_e-e+_vevex')))        
+                                              'SubProcesses', 'P1_emep_vevex')))        
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                  'Cards', 'proc_card_mg5.dat')))
 
@@ -178,7 +196,7 @@ class TestCmdShell2(unittest.TestCase):
         self.assertTrue(os.path.isfile(os.path.join(self.out_dir, 'lib', 'libdhelas3.a')))
         self.assertTrue(os.path.isfile(os.path.join(self.out_dir, 'lib', 'libmodel.a')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                               'SubProcesses', 'P0_e+e-_e+e-')))
+                                               'SubProcesses', 'P0_epem_epem')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'Cards', 'proc_card_mg5.dat')))
         
@@ -204,8 +222,6 @@ class TestCmdShell2(unittest.TestCase):
                                                'lib', 'libdhelas3.a')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'lib', 'libmodel.a')))
-        self.assertTrue(os.path.exists(os.path.join(\
-                                           MG5DIR, 'models','sm', 'helas.pkl')))
         
     def test_ufo_standard_sm(self):
         """ check that we can use standard MG4 name """

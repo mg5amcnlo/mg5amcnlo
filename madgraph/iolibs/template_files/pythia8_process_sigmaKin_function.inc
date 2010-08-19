@@ -4,32 +4,40 @@ static bool goodhel[ncomb] = {ncomb * false};
 static int ntry = 0, sum_hel = 0, ngood = 0;
 static int igood[ncomb];
 static int jhel;
-double t;
+complex **wfs;
+double t[nprocesses];
 // Helicities for the process
 %(helicity_matrix)s
-// Denominator: spins, colors and identical particles
-%(den_factor_line)s
+// Denominators: spins, colors and identical particles
+const int denominators[nprocesses] = {%(den_factors)s};
 
 ntry=ntry+1;
 
-// Set the parameters which change event by event
-set_variable_parameters();
+// Reset the matrix elements
+for(int i = 0; i < nprocesses; i++){
+    matrix_element[i] = 0.;
+}
 
-// Reset color flows
-for(int i=0;i < ncolor; i++)
-  jamp2[i]=0.;
-
-// Calculate the matrix element
-matrix_element = 0.;
+// For now, call setupForME() here
+id1 = %(id1)d;
+id2 = %(id2)d;
+if(!setupForME()){
+    return;
+}
 
 if (sum_hel == 0 || ntry < 10){
 // Calculate the matrix element for all helicities
   for(int ihel = 0; ihel < ncomb; ihel ++){
     if (goodhel[ihel] || ntry < 2){
-      t=matrix(helicities[ihel]);            
-      matrix_element+=t;
+      calculate_wavefunctions(helicities[ihel]);
+      %(get_matrix_t_lines)s
+      double tsum = 0;
+      for(int iproc = 0;iproc < nprocesses; iproc++){
+         matrix_element[iproc]+=t[iproc];
+         tsum += t[iproc];
+      }
       // Store which helicities give non-zero result
-      if (t != 0. && !goodhel[ihel]){
+      if (tsum != 0. && !goodhel[ihel]){
 	goodhel[ihel]=true;
 	ngood ++;
 	igood[ngood] = ihel;
@@ -47,8 +55,15 @@ else
     if (jhel >= ngood) jhel=0;
     double hwgt = double(ngood)/double(sum_hel);
     int ihel = igood[jhel];
-    t=matrix(helicities[ihel]);
-    matrix_element += t*hwgt;
+    calculate_wavefunctions(helicities[ihel]);
+    %(get_matrix_t_lines)s
+    for(int iproc = 0;iproc < nprocesses; iproc++){
+      matrix_element[iproc]+=t[iproc]*hwgt;
+    }
   }
-  matrix_element /= denominator;
 }
+
+for (int i=0;i < nprocesses; i++)
+    matrix_element[i] /= denominators[i];
+
+

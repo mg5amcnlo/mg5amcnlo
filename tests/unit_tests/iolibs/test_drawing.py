@@ -96,7 +96,7 @@ class TestFeynmanLine(unittest.TestCase):
                             'from_group':False})
         #extend the leg to FeynmanLine Object
         my_line = drawing.FeynmanLine(leg.get('id'), base_objects.Leg(leg))
-        my_line._def_model(_model)
+        my_line.def_model(_model)
 
         return my_line
 
