@@ -238,40 +238,6 @@ class UFOMG5Converter(object):
             col_obj.replace_indices(new_indices)
         
         return output
-    
-        
-        
-            
-# Helping class
-class ParamExpr(object):
-    """ A convenient class for parameter/coupling """
-    
-    def __init__(self, name, expression, type, depend=()):
-        """store param/coupling information"""
-        self.name = name
-        self.expr = expression # python expression
-        self.type = type
-        self.depend = depend
-    
-    def __eq__(self, other):
-        """ equality"""
-        
-        try:
-            return other.name == self.name
-        except:
-            return other == self.name
-
-class ExternalParamExpr(ParamExpr):
-    """ A convenient class for external couplings"""
-    
-    depend = ('external',)
-    type = 'real'
-    
-    def __init__(self, name, value, lhablock, lhacode):
-        self.name = name
-        self.value = value
-        self.lhablock = lhablock
-        self.lhacode = lhacode
       
 class OrganizeModelExpression:
     """Organize the couplings/parameters of a model"""
@@ -293,9 +259,9 @@ class OrganizeModelExpression:
     def __init__(self, model):
     
         self.model = model  # UFOMODEL
-        self.params = {}     # depend on -> paramexpr
-        self.couplings = {}  # depend on -> paramexpr
-        self.all_expr = {} # variable_name -> paramexpr
+        self.params = {}     # depend on -> ModelVariable
+        self.couplings = {}  # depend on -> ModelVariable
+        self.all_expr = {} # variable_name -> ModelVariable
     
     def main(self):
         """Launch the actual computation and return the associate 
@@ -312,13 +278,13 @@ class OrganizeModelExpression:
         
         for param in self.model.all_parameters:
             if param.nature == 'external':
-                parameter = ExternalParamExpr(param.name, param.value, \
+                parameter = base_objects.ParamCardVariable(param.name, param.value, \
                                                param.lhablock, param.lhacode)
                 
             else:
                 expr = self.shorten_expr(param.value)
                 depend_on = self.find_dependencies(expr)
-                parameter = ParamExpr(param.name, expr, param.type, depend_on)
+                parameter = base_objects.ModelVariable(param.name, expr, param.type, depend_on)
             
             self.add_parameter(parameter)
 
@@ -327,7 +293,7 @@ class OrganizeModelExpression:
         """ add consistently the parameter in params and all_expr.
         avoid duplication """
         
-        assert isinstance(parameter, ParamExpr)
+        assert isinstance(parameter, base_objects.ModelVariable)
         
         if parameter.name in self.all_expr.keys():
             return
@@ -342,7 +308,7 @@ class OrganizeModelExpression:
         """ add consistently the coupling in couplings and all_expr.
         avoid duplication """
         
-        assert isinstance(coupling, ParamExpr)
+        assert isinstance(coupling, base_objects.ModelVariable)
         
         if coupling.name in self.all_expr.keys():
             return
@@ -364,7 +330,7 @@ class OrganizeModelExpression:
             # shorten expression, find dependencies, create short object
             expr = self.shorten_expr(coupling.value)
             depend_on = self.find_dependencies(expr)
-            parameter = ParamExpr(coupling.name, expr, 'complex', depend_on)
+            parameter = base_objects.ModelVariable(coupling.name, expr, 'complex', depend_on)
             
             # Add consistently in the couplings/all_expr
             try:
@@ -419,7 +385,7 @@ class OrganizeModelExpression:
         real = float(matchobj.group('real'))
         imag = float(matchobj.group('imag'))
         if real == 0 and imag ==1:
-            new_param = ParamExpr('complexi', 'complex(0,1)', 'complex')
+            new_param = base_objects.ModelVariable('complexi', 'complex(0,1)', 'complex')
             self.add_parameter(new_param)
             return 'complexi'
         else:
@@ -436,11 +402,11 @@ class OrganizeModelExpression:
 
         if expr.isdigit():
             output = '_' + output #prevent to start with a number
-            new_param = ParamExpr(output, old_expr,'real')
+            new_param = base_objects.ModelVariable(output, old_expr,'real')
         else:
             depend_on = self.find_dependencies(expr)
             type = self.search_type(expr)
-            new_param = ParamExpr(output, old_expr, type, depend_on)
+            new_param = base_objects.ModelVariable(output, old_expr, type, depend_on)
         self.add_parameter(new_param)
         return output
         
@@ -452,11 +418,11 @@ class OrganizeModelExpression:
         output = '%s__%s' % (operation, expr)
         old_expr = ' cmath.%s(%s) ' %  (operation, expr)
         if expr.isdigit():
-            new_param = ParamExpr(output, old_expr , 'real')
+            new_param = base_objects.ModelVariable(output, old_expr , 'real')
         else:
             depend_on = self.find_dependencies(expr)
             type = self.search_type(expr)
-            new_param = ParamExpr(output, old_expr, type, depend_on)
+            new_param = base_objects.ModelVariable(output, old_expr, type, depend_on)
         self.add_parameter(new_param)
         
         return output        
@@ -469,7 +435,7 @@ class OrganizeModelExpression:
         old_expr = ' complexconjugate(%s) ' % expr
         depend_on = self.find_dependencies(expr)
         type = 'complex'
-        new_param = ParamExpr(output, old_expr, type, depend_on)
+        new_param = base_objects.ModelVariable(output, old_expr, type, depend_on)
         self.add_parameter(new_param)  
                     
         return output            

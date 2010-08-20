@@ -842,6 +842,49 @@ class Model(PhysicsObject):
         
         return default
 
+################################################################################
+# Class for Parameter / Coupling
+################################################################################
+class ModelVariable(object):
+    """A Class for storing the information about coupling/ parameter"""
+    
+    def __init__(self, name, expression, type, depend=()):
+        """Initialize a new parameter/coupling"""
+        
+        self.name = name
+        self.expr = expression # python expression
+        self.type = type # real/complex
+        self.depend = depend # depend on some other parameter -tuple-
+    
+    def __eq__(self, other):
+        """Object with same name are identical, If the object is a string we check
+        if the attribute name is equal to this string"""
+        
+        try:
+            return other.name == self.name
+        except:
+            return other == self.name
+
+class ParamCardVariable(ModelVariable):
+    """ A class for storing the information linked to all the parameter 
+    which should be define in the param_card.dat"""
+    
+    depend = ('external',)
+    type = 'real'
+    
+    def __init__(self, name, value, lhablock, lhacode):
+        """Initialize a new ParamCardVariable
+        name: name of the variable
+        value: default numerical value
+        lhablock: name of the block in the param_card.dat
+        lhacode: code associate to the variable
+        """
+        self.name = name
+        self.value = value 
+        self.lhablock = lhablock
+        self.lhacode = lhacode
+
+
 #===============================================================================
 # Classes used in diagram generation and process definition:
 #    Leg, Vertex, Diagram, Process

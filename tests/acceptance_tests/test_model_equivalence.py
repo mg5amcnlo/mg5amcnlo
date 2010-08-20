@@ -122,10 +122,10 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         # import MG4 model
         model = base_objects.Model()
         model.set('particles', files.read_from_file(
-               os.path.join(MG4DIR,'Models','mssm_mg5','particles.dat'),
+               os.path.join(MG4DIR,'Models','mssm_mg','particles.dat'),
                import_v4.read_particles_v4))
         model.set('interactions', files.read_from_file(
-            os.path.join(MG4DIR,'Models','mssm_mg5','interactions.dat'),
+            os.path.join(MG4DIR,'Models','mssm_mg','interactions.dat'),
             import_v4.read_interactions_v4,
             model['particles']))
         model.pass_particles_name_in_mg_default()
@@ -283,15 +283,15 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
                 value=[float(numb) for numb in split[1].split()]
             nb_value +=1
             for i, singlevalue in enumerate(value):
-                try:
+                #try:
                     self.assertAlmostEqual(singlevalue, solutions[variable][i], 7, 'fail to be equal for param %s : %s != %s' % (variable, singlevalue, solutions[variable][i]))
-                except:
-                    print i, singlevalue, [variable]
-                    if i == 0:
-                        solutions[variable] = [singlevalue]
-                    else:
-                        solutions[variable].append(singlevalue)
-        print solutions
+                #except:
+                #    print i, singlevalue, [variable]
+                #    if i == 0:
+                #        solutions[variable] = [singlevalue]
+                #    else:
+                #        solutions[variable].append(singlevalue)
+        #print solutions
         self.assertEqual(nb_value, 123)
         
         
