@@ -2218,7 +2218,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # Special feature: For octet fermions, need an extra minus
             # sign in the FVI (and FSI? right now this is included)
             # wavefunction
-            if len(wf.get('color') == 8 and \
+            if wf.get('color') == 8 and \
                    wf.get_spin_state_number() == -2 and \
                    [m.get('color') for m in wf.get('mothers')] == [8, 8]:
                 wf.set('coupling', '-' + wf.get('coupling'))
