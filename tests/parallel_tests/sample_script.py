@@ -1,8 +1,4 @@
-<<<<<<< TREE
-#! /usr/bin/env python 
-=======
 #! /usr/bin/env python
->>>>>>> MERGE-SOURCE
 ################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors

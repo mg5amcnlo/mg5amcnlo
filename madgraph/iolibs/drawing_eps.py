@@ -41,7 +41,7 @@ from __future__ import division
 
 import os
 
-import madgraph.iolibs.drawing as draw
+import madgraph.core.drawing as draw
 import madgraph.core.base_objects as base_objects
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
@@ -319,16 +319,12 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.npage = 1
         
         limit = self.lower_scale * self.nb_col * self.nb_line
-        print 'limit', limit, len(diagramlist)
         if len(diagramlist) < limit:
-            print (self.nb_col * self.nb_line), len(diagramlist) //(self.nb_col * self.nb_line)
             self.npage += len(diagramlist) // (self.nb_col * self.nb_line)
         else:
-            print (self.nb_col * self.nb_line),len(diagramlist) //(self.nb_col * self.nb_line)
             add = (len(diagramlist) - self.lower_scale) // \
                      (self.second_scale['nb_col'] * self.second_scale['nb_line'])
             self.npage += self.lower_scale + add
-        print 'pages', self.npage
         if diagramlist:
             # diagramlist Argument should be a DiagramList object
             assert(isinstance(diagramlist, base_objects.DiagramList))

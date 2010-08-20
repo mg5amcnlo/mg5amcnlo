@@ -38,9 +38,9 @@ from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.core.drawing as draw_lib
 import madgraph.core.helas_objects as helas_objects
 
-import madgraph.iolibs.drawing as draw_lib
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.export_pythia8 as export_pythia8
 import madgraph.iolibs.export_v4 as export_v4
