@@ -12,3 +12,4 @@ all_vertices = vertices.all_vertices
 all_couplings = couplings.all_couplings
 all_lorentz = lorentz.all_lorentz
 all_parameters = parameters.all_parameters
+all_functions = function_library.all_functions
