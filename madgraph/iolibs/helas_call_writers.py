@@ -34,18 +34,17 @@ class HelasCallWriter(base_objects.PhysicsObject):
 
     def default_setup(self):
 
-        self['model_name'] = ""
+        self['model'] = base_objects.Model()
         self['wavefunctions'] = {}
         self['amplitudes'] = {}
 
     def filter(self, name, value):
         """Filter for model property values"""
 
-        if name == 'model_name':
-            if not isinstance(value, str):
+        if name == 'model':
+            if not isinstance(value, base_objects.Model):
                 raise self.PhysicsObjectError, \
-                    "Object of type %s is not a string" % \
-                                                            type(value)
+                    "Object of type %s is not a model" % type(value)
 
         if name == 'wavefunctions':
             # Should be a dictionary of functions returning strings, 
@@ -74,7 +73,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return ['model_name', 'wavefunctions', 'amplitudes']
+        return ['model', 'wavefunctions', 'amplitudes']
 
     def get_matrix_element_calls(self, matrix_element):
         """Return a list of strings, corresponding to the Helas calls
@@ -88,6 +87,35 @@ class HelasCallWriter(base_objects.PhysicsObject):
         for diagram in matrix_element.get('diagrams'):
             res.extend([ self.get_wavefunction_call(wf) for \
                          wf in diagram.get('wavefunctions') ])
+            res.append("# Amplitude(s) for diagram number %d" % \
+                       diagram.get('number'))
+            for amplitude in diagram.get('amplitudes'):
+                res.append(self.get_amplitude_call(amplitude))
+
+        return res
+
+    def get_wavefunction_calls(self, wavefunctions):
+        """Return a list of strings, corresponding to the Helas calls
+        for the matrix element"""
+
+        assert isinstance(wavefunctions, helas_objects.HelasWavefunctionList), \
+               "%s not valid argument for get_wavefunction_calls" % \
+               repr(wavefunctions)
+
+        res = [self.get_wavefunction_call(wf) for wf in wavefunctions]
+
+        return res
+
+    def get_amplitude_calls(self, matrix_element):
+        """Return a list of strings, corresponding to the Helas calls
+        for the matrix element"""
+        
+        assert isinstance(matrix_element, helas_objects.HelasMatrixElement), \
+               "%s not valid argument for get_matrix_element_calls" % \
+               repr(matrix_element)            
+
+        res = []
+        for diagram in matrix_element.get('diagrams'):
             res.append("# Amplitude(s) for diagram number %d" % \
                        diagram.get('number'))
             for amplitude in diagram.get('amplitudes'):
@@ -143,6 +171,10 @@ class HelasCallWriter(base_objects.PhysicsObject):
         self.get('amplitudes')[key] = function
         return True
 
+    def get_model_name(self):
+        """Return the model name"""
+        return self['model'].get('name')
+
     # Customized constructor
     def __init__(self, argument={}):
         """Allow generating a HelasCallWriter from a Model
@@ -150,7 +182,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
 
         if isinstance(argument, base_objects.Model):
             super(HelasCallWriter, self).__init__()
-            self.set('model_name', argument.get('name'))
+            self.set('model', argument)
         else:
             super(HelasCallWriter, self).__init__(argument)
             
@@ -222,7 +254,7 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         # SM gluon 4-vertex components
 
-        key = ((3, 3, 3, 3, 1), 'gggg1')
+        key = ((3, 3, 3, 3, 4), 'gggg1')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
                (wf.get('mothers')[0].get('number'),
@@ -241,7 +273,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('coupling'),
                 amp.get('number'))
         self.add_amplitude(key, call)
-        key = ((3, 3, 3, 3, 1), 'gggg2')
+        key = ((3, 3, 3, 3, 4), 'gggg2')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
                (wf.get('mothers')[2].get('number'),
@@ -260,7 +292,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('coupling'),
                 amp.get('number'))
         self.add_amplitude(key, call)
-        key = ((3, 3, 3, 3, 1), 'gggg3')
+        key = ((3, 3, 3, 3, 4), 'gggg3')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
                (wf.get('mothers')[1].get('number'),
@@ -286,6 +318,13 @@ class FortranHelasCallWriter(HelasCallWriter):
         generate_helas_call is called to automatically create the
         function."""
 
+        if wavefunction.get('spin') == 1 and \
+               wavefunction.get('interaction_id') != 0:
+            # Special feature: For HVS vertices with the two
+            # scalars different, we need extra minus sign in front
+            # of coupling for one of the two scalars since the HVS
+            # is asymmetric in the two scalars
+            wavefunction.set_scalar_coupling_sign(self['model'])
         val = super(FortranHelasCallWriter, self).get_wavefunction_call(wavefunction)
 
         if val:
@@ -690,7 +729,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             # Check if we need to append a charge conjugation flag
             c_flag = '' 
             if argument.needs_hermitian_conjugate():
-                c_flag = 'C'
+                c_flag = 'C1' # MG5 not configure for 4F vertex
 
             call = 'CALL %s%s_%s' % (argument.get('lorentz'), c_flag, outgoing) 
 
@@ -788,7 +827,7 @@ class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
             call = call.lower()
             call = call + 'x' * (6 - len(call))
             # Specify namespace for Helas calls
-            call = "Pythia8_%s::" % self.get('model_name') + call
+            call = "Pythia8_%s::" % self.get_model_name() + call
             call = call + "(p[%d],"
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity
@@ -827,7 +866,7 @@ class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
             # Check if we need to append a charge conjugation flag
             c_flag = '' 
             if argument.needs_hermitian_conjugate():
-                c_flag = 'c'
+                c_flag = 'c1' # MG5 not configure for 4F vertex
 
             call = '%s%s_%s' % (argument.get('lorentz'), c_flag, outgoing)
 

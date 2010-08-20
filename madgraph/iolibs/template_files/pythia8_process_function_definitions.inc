@@ -17,6 +17,11 @@ void %(process_class_name)s::initProc() {
 // Evaluate |M|^2, part independent of incoming flavour. 
 
 void %(process_class_name)s::sigmaKin() { 
+    // Set the parameters which change event by event
+    pars->setDependentParameters(particleDataPtr, coupSMPtr, alpS);
+    pars->setDependentCouplings(particleDataPtr, coupSMPtr);
+    // Reset color flows
+    %(reset_jamp_lines)s
     %(sigmaKin_lines)s
 }
 
@@ -45,8 +50,6 @@ double %(process_class_name)s::weightDecay(Event& process, int iResBeg, int iRes
 // Private class member functions
 
 //--------------------------------------------------------------------------
-// Evaluate |M|^2 for a given helicity
+// Evaluate |M|^2 for each subprocess
 
-double %(process_class_name)s::matrix(const int hel[]) { 
-    %(matrix_lines)s
-}
+%(all_sigmaKin)s

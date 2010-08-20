@@ -403,7 +403,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
             #                   lambda p1, p2: p1.get('spin') - p2.get('spin'))
             if particles[1].get_pdg_code() != particles[2].get_pdg_code() \
                    and self.get('pdg_code') == \
-                       particles[1].get_anti_pdg_code():
+                   particles[1].get_anti_pdg_code()\
+                   and self.get('coupling')[0] != '-':
                 # We need a minus sign in front of the coupling
                 self.set('coupling', '-' + self.get('coupling'))
 
@@ -604,6 +605,13 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     # In call from insert_decay, we want to replace
                     # also identical wavefunctions in the same diagram
                     old_wf_index = diagram_wavefunctions.index(self)
+                    old_wf = diagram_wavefunctions[old_wf_index]
+                    if wavefunctions[wavefunctions.index(self)].get('number') \
+                       == old_wf.get('number'):
+                        # The wavefunction and old_wf are the same -
+                        # need to reset wf_number and new_wf number
+                        wf_number -= 1
+                        new_wf.set('number', old_wf.get('number'))
                     diagram_wavefunctions[old_wf_index] = new_wf
                 except ValueError:
                     diagram_wavefunctions.append(new_wf)
@@ -753,7 +761,13 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # First shot: just the index in the interaction
         if self.get('interaction_id') == 0:
             return 0
-        wf_index = self.get('pdg_codes').index(self.get_anti_pdg_code())
+        
+        wf_indices = self.get('pdg_codes')
+        # take the last index in case of identical particles
+        wf_indices.reverse() 
+        wf_index = len(wf_indices) - wf_indices.index(self.get_anti_pdg_code()) -1
+        wf_indices.reverse() # restore the ordering
+        #wf_index = self.get('pdg_codes').index(self.get_anti_pdg_code())
         # If fermion, then we need to correct for I/O status
         spin_state = self.get_spin_state_number()
         if spin_state % 2 == 0:
@@ -1018,6 +1032,37 @@ class HelasWavefunction(base_objects.PhysicsObject):
            self.get('spin') != other.get('spin') or \
            self.get('self_antipart') != other.get('self_antipart') or \
            self.get('mass') != other.get('mass') or \
+           self.get('width') != other.get('width') or \
+           self.get('color') != other.get('color') or \
+           self['decay'] != other['decay'] or \
+           self['decay'] and self['particle'] != other['particle']:
+            return False
+
+        # Check that mothers have the same numbers (only relevant info)
+        return sorted([mother['number'] for mother in self['mothers']]) == \
+               sorted([mother['number'] for mother in other['mothers']])
+
+    # Overloaded operators
+
+    def almost_equal(self, other):
+        """Just like the equality operator above, except mass is not
+        taken into account for external wavefunctions.
+        """
+
+        if not isinstance(other, HelasWavefunction):
+            return False
+
+        # Check relevant directly defined properties
+        if self['number_external'] != other['number_external'] or \
+           self['fermionflow'] != other['fermionflow'] or \
+           self['coupl_key'] != other['coupl_key'] or \
+           self['lorentz'] != other['lorentz'] or \
+           self['coupling'] != other['coupling'] or \
+           self['state'] != other['state'] or \
+           self['onshell'] != other['onshell'] or \
+           self.get('spin') != other.get('spin') or \
+           self.get('self_antipart') != other.get('self_antipart') or \
+           (self.get('mothers') and self.get('mass') != other.get('mass')) or \
            self.get('width') != other.get('width') or \
            self.get('color') != other.get('color') or \
            self['decay'] != other['decay'] or \
@@ -2042,12 +2087,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     for coupl_key in sorted(inter.get('couplings').keys()):
                         wf = HelasWavefunction(last_leg, vertex.get('id'), model)
                         wf.set('coupling', inter.get('couplings')[coupl_key])
-                        # Special feature: For HVS vertices with the two
-                        # scalars different, we need extra minus sign in front
-                        # of coupling for one of the two scalars since the HVS
-                        # is asymmetric in the two scalars
-                        if wf.get('spin') == 1:
-                            wf.set_scalar_coupling_sign(model)
                         if inter.get('color'):
                             wf.set('inter_color', inter.get('color')[coupl_key[0]])
                         wf.set('lorentz', inter.get('lorentz')[coupl_key[1]])
@@ -2171,12 +2210,18 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # Append this diagram in the diagram list
             helas_diagrams.append(helas_diagram)
 
-
         self.set('diagrams', helas_diagrams)
-        # Sort all mothers according to the order wanted in Helas calls
 
+        # Sort all mothers according to the order wanted in Helas calls
         for wf in self.get_all_wavefunctions():
             wf.set('mothers', HelasMatrixElement.sorted_mothers(wf))
+            # Special feature: For octet fermions, need an extra minus
+            # sign in the FVI (and FSI? right now this is included)
+            # wavefunction
+            if wf.get('color') == 8 and \
+                   wf.get_spin_state_number() == -2 and \
+                   [m.get('color') for m in wf.get('mothers')] == [8, 8]:
+                wf.set('coupling', '-' + wf.get('coupling'))
         for amp in self.get_all_amplitudes():
             amp.set('mothers', HelasMatrixElement.sorted_mothers(amp))
             amp.set('color_indices', amp.get_color_indices())

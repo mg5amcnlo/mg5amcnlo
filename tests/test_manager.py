@@ -38,11 +38,11 @@ import unittest
 
 
 #Add the ROOT dir to the current PYTHONPATH
+root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
+sys.path.append(root_path)
 # Only for profiling with -m cProfile!
 #root_path = os.path.split(os.path.dirname(os.path.realpath(sys.argv[0])))[0]
 #sys.path.append(root_path)
-root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
-sys.path.append(root_path)
 
 from madgraph import MG4DIR
 
@@ -124,7 +124,6 @@ class TestFinder(list):
         if self.launch_pos == '':
             move = True
             self.go_to_root()
-
 
         for name in os.listdir(os.path.join(root_path,directory)):
             local_check = checking
@@ -350,11 +349,14 @@ if __name__ == "__main__":
     if len(args) == 0:
         args = ''
 
-    logging.config.fileConfig(os.path.join(root_path,'tests','.mg5_logging.conf'))
-    logging.root.setLevel(eval('logging.' + options.logging))
-    logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
-    logging.getLogger('cmdprint').setLevel(eval('logging.' + options.logging))
-    logging.getLogger('tutorial').setLevel('ERROR')
+    try:
+        logging.config.fileConfig(os.path.join(root_path,'tests','.mg5_logging.conf'))
+        logging.root.setLevel(eval('logging.' + options.logging))
+        logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
+        logging.getLogger('cmdprint').setLevel(eval('logging.' + options.logging))
+        logging.getLogger('tutorial').setLevel('ERROR')
+    except:
+        pass
 
     #logging.basicConfig(level=vars(logging)[options.logging])
     run(args, re_opt=options.reopt, verbosity=options.verbose, \

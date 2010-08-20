@@ -1210,7 +1210,7 @@ class DiagramGenerationTest(unittest.TestCase):
 
     def test_forbidden_s_channel_uux_uuxng(self):
         """Test the number of diagrams uu~>uu~+g with different 
-        forbidden s channel particles.
+        forbidden s-channel particles.
         """
 
         goal_no_photon = [3, 14]
@@ -1283,11 +1283,12 @@ class DiagramGenerationTest(unittest.TestCase):
 
     def test_required_s_channel_uux_uuxng(self):
         """Test the number of diagrams uu~>uu~+g with different 
-        required s channel particles.
+        required s-channel particles.
         """
 
         goal_req_photon = [1, 4]
         goal_req_quark = [1, 4]
+        goal_req_photon_or_gluon = [2, 9]
         goal_req_antiquark = [0, 0]
 
         for ngluons in range(2):
@@ -1307,7 +1308,30 @@ class DiagramGenerationTest(unittest.TestCase):
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
-                                           'required_s_channels':[22]})
+                                           'required_s_channels':[[22]]})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.generate_diagrams()
+
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
+                             goal_req_photon[ngluons])
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'required_s_channels':[[21], [22]]})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.generate_diagrams()
+
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
+                             goal_req_photon_or_gluon[ngluons])
+
+            # Just to make sure that diagrams are not double counted
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'required_s_channels':[[22], [22]]})
 
             self.myamplitude.set('process', myproc)
 
@@ -1333,7 +1357,7 @@ class DiagramGenerationTest(unittest.TestCase):
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
-                                           'required_s_channels':[1]})
+                                           'required_s_channels':[[1]]})
 
             self.myamplitude.set('process', myproc)
 
@@ -1344,7 +1368,7 @@ class DiagramGenerationTest(unittest.TestCase):
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
-                                           'required_s_channels':[-1]})
+                                           'required_s_channels':[[-1]]})
 
             self.myamplitude.set('process', myproc)
 
@@ -1355,14 +1379,14 @@ class DiagramGenerationTest(unittest.TestCase):
 
 
     def test_required_s_channel_decay(self):
-        """Test the number of diagrams for decay processes with different 
-        required s channel particles.
+        """Test decay processes d > d u u~ + a with required s-channels.
         """
 
         goal_req_photon = [1, 4]
         goal_req_d = [0, 2]
         goal_req_u = [0, 1]
-        goal_req_antiquark = [0, 0]
+        goal_req_u_or_d = [0, 3]
+        goal_req_antid = [0, 0]
 
         for nphotons in range(2):
 
@@ -1381,7 +1405,7 @@ class DiagramGenerationTest(unittest.TestCase):
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
-                                           'required_s_channels':[22]})
+                                           'required_s_channels':[[22]]})
 
             self.myamplitude.set('process', myproc)
 
@@ -1392,7 +1416,7 @@ class DiagramGenerationTest(unittest.TestCase):
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
-                                           'required_s_channels':[21]})
+                                           'required_s_channels':[[21]]})
 
             self.myamplitude.set('process', myproc)
 
@@ -1403,7 +1427,7 @@ class DiagramGenerationTest(unittest.TestCase):
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
-                                           'required_s_channels':[1, 22]})
+                                           'required_s_channels':[[1, 22]]})
 
             self.myamplitude.set('process', myproc)
 
@@ -1414,7 +1438,7 @@ class DiagramGenerationTest(unittest.TestCase):
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
-                                           'required_s_channels':[2, 22]})
+                                           'required_s_channels':[[2, 22]]})
 
             self.myamplitude.set('process', myproc)
 
@@ -1425,13 +1449,26 @@ class DiagramGenerationTest(unittest.TestCase):
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
-                                           'required_s_channels':[-1]})
+                                           'required_s_channels':[[1, 22],
+                                                                  [2, 22]]})
 
             self.myamplitude.set('process', myproc)
 
             self.myamplitude.generate_diagrams()
 
-            self.assertEqual(len(self.myamplitude.get('diagrams')), 0)
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
+                             goal_req_u_or_d[nphotons])
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'required_s_channels':[[-1]]})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.generate_diagrams()
+
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
+                             goal_req_antid[nphotons])
 
     def test_decay_chain_generation(self):
         """Test the number of diagram generated for uu~>gg (s, t and u channels)
@@ -2389,7 +2426,7 @@ class MultiProcessTest(unittest.TestCase):
 
             my_process_definition = base_objects.ProcessDefinition({'legs':my_multi_leglist,
                                                                     'model':self.mymodel,
-                                                                    'required_s_channels': [22]})
+                                                                    'required_s_channels': [[22]]})
             my_multiprocess = diagram_generation.MultiProcess(\
                 {'process_definitions':\
                  base_objects.ProcessDefinitionList([my_process_definition])})

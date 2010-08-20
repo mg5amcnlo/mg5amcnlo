@@ -24,7 +24,7 @@ import madgraph.interface.cmd_interface as Cmd
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
 
-from madgraph import MG4DIR, MG5DIR
+from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
 #===============================================================================
 # TestCmd
@@ -59,6 +59,24 @@ class TestCmdShell1(unittest.TestCase):
         self.assertEqual(len(self.cmd._curr_amps), 2)
         self.do('add process mu+ mu- > P, Z>mu+mu-')
         self.assertEqual(len(self.cmd._curr_amps), 3)
+        # Test the "or" functionality for propagators
+        self.do('define V z|a')
+        self.do('generate e+ e- > V > e+ e-')
+        self.assertEqual(len(self.cmd._curr_amps), 1)
+        self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 2)
+        self.do('generate e+ e- > z|a > e+ e-')
+        self.assertEqual(len(self.cmd._curr_amps), 1)
+        self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 2)
+        self.assertRaises(MadGraph5Error, self.do, 'generate a V > e+ e-')
+        self.assertRaises(MadGraph5Error, self.do, 'generate e+ e+|e- > e+ e-')
+        self.assertRaises(MadGraph5Error, self.do, 'generate e+ e- > V a')
+        self.assertRaises(MadGraph5Error, self.do, 'generate e+ e- > e+ e- / V')
+        self.do('define V2 = w+ V')
+        self.assertEqual(self.cmd._multiparticles['v2'],
+                         [[24, 23], [24, 22]])
+        
+        self.do('generate e+ ve > V2 > e+ ve mu+ mu-')
+        self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 8)
 
     def test_draw(self):
         """ command 'draw' works """
@@ -72,8 +90,8 @@ class TestCmdShell1(unittest.TestCase):
         
         self.do('generate g g > g g')
         self.do('draw .')
-        self.assertTrue(os.path.exists('diagrams_gg_gg.eps'))
-        os.remove('diagrams_gg_gg.eps')
+        self.assertTrue(os.path.exists('diagrams_0_gg_gg.eps'))
+        os.remove('diagrams_0_gg_gg.eps')
 
 
 class TestCmdShell2(unittest.TestCase):

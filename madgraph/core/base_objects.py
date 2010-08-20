@@ -20,10 +20,10 @@ import copy
 import itertools
 import logging
 import numbers
+import os
 import re
-
 import madgraph.core.color_algebra as color
-from madgraph import MadGraph5Error
+from madgraph import MadGraph5Error, MG5DIR
 
 logger = logging.getLogger('madgraph.base_objects')
 
@@ -630,8 +630,9 @@ class Model(PhysicsObject):
 
         self['name'] = ""
         self['particles'] = ParticleList()
-        self['parameters'] = None
         self['interactions'] = InteractionList()
+        self['parameters'] = None
+        self['functions'] = None
         self['couplings'] = None
         self['lorentz'] = None
         self['particle_dict'] = {}
@@ -718,14 +719,23 @@ class Model(PhysicsObject):
         regenerate dictionaries."""
 
         if name == 'particles':
-            self['particle_dict'] = {}
+            # Reset dictionaries
             self['ref_dict_to0'] = {}
+            self['particle_dict'] = {}
             self['got_majoranas'] = None
+            # Generate new dictionaries
+            self.get('particle_dict')
+            self.get('got_majoranas')
 
         if name == 'interactions':
+            # Reset dictionaries
             self['interaction_dict'] = {}
             self['ref_dict_to1'] = {}
             self['ref_dict_to0'] = {}
+            # Generate new dictionaries
+            self.get('interaction_dict')
+            self.get('ref_dict_to1')
+            self.get('ref_dict_to0')
 
         Model.__bases__[0].set(self, name, value) # call the mother routine
 
@@ -770,6 +780,67 @@ class Model(PhysicsObject):
         self['interaction_dict'] = {}
         self['ref_dict_to1'] = {}
         self['ref_dict_to0'] = {}
+        
+    def pass_particles_name_in_mg_default(self):
+        """Change the name of the particles such that all SM and MSSM particles
+        follows the MG convention"""
+        logger.info('pass particles name in MadGraph convention')
+
+        # Check that default name/antiname is not already use 
+        def check_name_free(self, name):
+            """ check if name is not use for a particle in the model if it is 
+            raise an MadGraph5error"""
+            part = self['particles'].find_name(name)
+            if part: 
+                error_text = \
+                '%s particles with pdg code %s is in conflict with MG ' + \
+                'convention name for particle %s.\n Use --modelname in order ' + \
+                'to use the particles name defined in the model and not the ' + \
+                'MadGraph convention'
+                
+                raise MadGraph5Error, error_text % \
+                                     (part.get_name(), part.get_pdg_code(), pdg)                
+
+        default = self.load_default_name()
+        
+        for particle in self['particles']:
+            pdg = particle.get_pdg_code()
+            if pdg not in default.keys():
+                continue
+            name = particle.get_name()
+            antiname = particle.get('antiname')
+            
+            if name != default[pdg]:
+                check_name_free(self, default[pdg])
+                particle.set('name', default[pdg])
+                if name == antiname:
+                    particle.set('antiname', default[pdg])
+                elif name != default[-1 *pdg]:
+                    check_name_free(self, default[-1 *pdg])
+                    particle.set('antiname', default[-1 *pdg])        
+                continue
+            elif name != antiname and antiname != default[-1 *pdg]:
+                    check_name_free(self, default[-1 *pdg])
+                    particle.set('antiname', default[-1 *pdg])  
+    
+    @ staticmethod
+    def load_default_name():
+        """ load the default for name convention """
+        
+        default = {}
+        for line in open(os.path.join(MG5DIR, 'input', \
+                                                 'particles_name_default.txt')):
+            line = line.lstrip()
+            if line.startswith('#'):
+                continue
+            
+            args = line.split()
+            if len(args) != 2:
+                logger.warning('Invalid syntax in interface/default_name:\n %s' % line)
+                continue
+            default[int(args[0])] = args[1].lower()
+        
+        return default
 
 #===============================================================================
 # Classes used in diagram generation and process definition:
@@ -1191,6 +1262,10 @@ class Process(PhysicsObject):
         self['model'] = Model()
         # Optional number to identify the process
         self['id'] = 0
+        # Required s-channels are given as a list of id lists. Only
+        # diagrams with all s-channels in any of the lists are
+        # allowed. This enables generating e.g. Z/gamma as s-channel
+        # propagators.
         self['required_s_channels'] = []
         self['forbidden_s_channels'] = []
         self['forbidden_particles'] = []
@@ -1219,8 +1294,23 @@ class Process(PhysicsObject):
                 raise self.PhysicsObjectError, \
                     "Process id %s is not an integer" % repr(value)
 
-        if name in ['required_s_channels',
-                    'forbidden_s_channels']:
+        if name == 'required_s_channels':
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list" % str(value)
+            for l in value:
+                if not isinstance(l, list):
+                    raise self.PhysicsObjectError, \
+                          "%s is not a valid list of lists" % str(value)
+                for i in l:
+                    if not isinstance(i, int):
+                        raise self.PhysicsObjectError, \
+                              "%s is not a valid list of integers" % str(l)
+                    if i == 0:
+                        raise self.PhysicsObjectError, \
+                          "Not valid PDG code %d for s-channel particle" % i
+
+        if name == 'forbidden_s_channels':
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list" % str(value)
@@ -1287,11 +1377,13 @@ class Process(PhysicsObject):
                 # Separate initial and final legs by ">"
                 mystr = mystr + '> '
                 # Add required s-channels
-                if self['required_s_channels']:
-                    for req_id in self['required_s_channels']:
-                        reqpart = self['model'].get('particle_dict')[req_id]
-                        mystr = mystr + reqpart.get_name() + ' '
-                    mystr = mystr + '> '
+                if self['required_s_channels'] and \
+                       self['required_s_channels'][0]:
+                    mystr += "|".join([" ".join([self['model'].\
+                                       get('particle_dict')[req_id].get_name() \
+                                                for req_id in id_list]) \
+                                    for id_list in self['required_s_channels']])
+                    mystr = mystr + ' > '
 
             mystr = mystr + mypart.get_name() + ' '
             #mystr = mystr + '(%i) ' % leg['number']
@@ -1347,10 +1439,12 @@ class Process(PhysicsObject):
                 # Separate initial and final legs by ">"
                 mystr = mystr + '> '
                 # Add required s-channels
-                if self['required_s_channels']:
-                    for req_id in self['required_s_channels']:
-                        reqpart = self['model'].get('particle_dict')[req_id]
-                        mystr = mystr + reqpart.get_name() + ' '
+                if self['required_s_channels'] and \
+                       self['required_s_channels'][0]:
+                    mystr += "|".join([" ".join([self['model'].\
+                                       get('particle_dict')[req_id].get_name() \
+                                                for req_id in id_list]) \
+                                    for id_list in self['required_s_channels']])
                     mystr = mystr + '> '
 
             mystr = mystr + mypart.get_name() + ' '
@@ -1431,10 +1525,12 @@ class Process(PhysicsObject):
                 # Separate initial and final legs by ">"
                 mystr = mystr + '_'
                 # Add required s-channels
-                if self['required_s_channels']:
-                    for req_id in self['required_s_channels']:
-                        reqpart = self['model'].get('particle_dict')[req_id]
-                        mystr = mystr + reqpart.get_name()
+                if self['required_s_channels'] and \
+                       self['required_s_channels'][0]:
+                    mystr += "OR".join(["".join([self['model'].\
+                                       get('particle_dict')[req_id].get_name() \
+                                                for req_id in id_list]) \
+                                    for id_list in self['required_s_channels']])
                     mystr = mystr + '_'
             if mypart['is_part']:
                 mystr = mystr + mypart['name']
@@ -1653,10 +1749,12 @@ class ProcessDefinition(Process):
                 # Separate initial and final legs by ">"
                 mystr = mystr + '> '
                 # Add required s-channels
-                if self['required_s_channels']:
-                    for req_id in self['required_s_channels']:
-                        reqpart = self['model'].get('particle_dict')[req_id]
-                        mystr = mystr + reqpart.get_name() + ' '
+                if self['required_s_channels'] and \
+                       self['required_s_channels'][0]:
+                    mystr += "|".join([" ".join([self['model'].\
+                                       get('particle_dict')[req_id].get_name() \
+                                                for req_id in id_list]) \
+                                    for id_list in self['required_s_channels']])
                     mystr = mystr + '> '
 
             mystr = mystr + myparts + ' '

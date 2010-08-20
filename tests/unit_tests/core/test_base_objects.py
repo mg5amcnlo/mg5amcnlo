@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+import madgraph
 
 """Unit test library for the various base objects of the core library"""
 
@@ -630,7 +631,42 @@ class ModelTest(unittest.TestCase):
 
         myinterdict = {1:self.myinterlist[0]}
         self.assertEqual(myinterdict, self.mymodel.get('interaction_dict'))
-
+        
+    def test_pass_in_standard_name(self):
+        """Test if we can overwrite the name of the model following MG 
+        convention"""
+        
+        model_name = [(part.get('name'), part.get('antiname')) \
+                                          for part in self.mymodel['particles']]
+        model2 = copy.copy(self.mymodel)
+        
+        # check that standard name are not modified
+        model2.pass_particles_name_in_mg_default()
+        model2_name = [(part.get('name'), part.get('antiname')) \
+                                                for part in model2['particles']]
+        self.assertEqual(set(model_name),set(model2_name))
+        
+        # add a particle with non conventional name
+        model2['particles'].append(base_objects.Particle({'name':'ee',
+                  'antiname':'eex',
+                  'pdg_code':1}))
+        
+        model2.pass_particles_name_in_mg_default()
+        model2_name = [(part.get('name'), part.get('antiname')) \
+                                                for part in model2['particles']]        
+        self.assertEqual(set(model_name + [('d','d~')]), set(model2_name))
+        
+        # add a particles with non conventional name with the conventional name
+        #associtaed to another particle
+        model2['particles'].append(base_objects.Particle({'name':'u',
+                  'antiname':'d~',
+                  'pdg_code':100}))
+        model2['particles'].append(base_objects.Particle({'name':'ee',
+                  'antiname':'eex',
+                  'pdg_code':2}))
+        
+        self.assertRaises(madgraph.MadGraph5Error, \
+                                       model2.pass_particles_name_in_mg_default)
 #===============================================================================
 # LegTest
 #===============================================================================

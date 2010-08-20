@@ -19,6 +19,7 @@ Lex + Yacc framework"""
 
 import logging
 import os
+import re
 import sys
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
@@ -52,7 +53,7 @@ class UFOExpressionParser:
 
     # List of tokens and literals
     tokens = (
-        'POWER', 'SIN', 'COS', 'TAN', 'CSC', 'SEC', 'ACSC', 'ASEC',
+        'POWER', 'CSC', 'SEC', 'ACSC', 'ASEC',
         'SQRT', 'CONJ', 'RE', 'IM', 'PI', 'COMPLEX', 'FUNCTION',
         'VARIABLE', 'NUMBER'
         )
@@ -60,15 +61,6 @@ class UFOExpressionParser:
 
     # Definition of tokens
 
-    def t_SIN(self, t):
-        r'cmath\.sin'
-        return t
-    def t_COS(self, t):
-        r'cmath\.cos'
-        return t
-    def t_TAN(self, t):
-        r'cmath\.tan'
-        return t
     def t_CSC(self, t):
         r'(?<!\w)csc(?=\()'
         return t
@@ -100,7 +92,7 @@ class UFOExpressionParser:
         r'(?<!\w)complex(?=\()'
         return t
     def t_FUNCTION(self, t):
-        r'[a-zA-Z_][0-9a-zA-Z_]*(?=\()'
+        r'(cmath\.){0,1}[a-zA-Z_][0-9a-zA-Z_]*(?=\()'
         return t
     def t_VARIABLE(self, t):
         r'[a-zA-Z_][0-9a-zA-Z_]*'
@@ -110,6 +102,8 @@ class UFOExpressionParser:
     t_POWER  = r'\*\*'
 
     t_ignore = " \t"
+
+    re_cmath_function = re.compile("cmath\.(?P<name>[0-9a-zA-Z_]+)")
 
     def t_newline(self, t):
         r'\n+'
@@ -132,9 +126,6 @@ class UFOExpressionParser:
         ('left','*','/'),
         ('right','UMINUS'),
         ('left','POWER'),
-        ('right','SIN'),
-        ('right','COS'),
-        ('right','TAN'),
         ('right','CSC'),
         ('right','SEC'),
         ('right','ACSC'),
@@ -174,11 +165,19 @@ class UFOExpressionParser:
 
     def p_expression_function1(self, p):
         "expression : FUNCTION '(' expression ')'"
-        p[0] = p[1] + '(' + p[3] + ')'
+        p1 = p[1]
+        re_groups = self.re_cmath_function.match(p1)
+        if re_groups:
+            p1 = re_groups.group("name")
+        p[0] = p1 + '(' + p[3] + ')'
 
     def p_expression_function2(self, p):
         "expression : FUNCTION '(' expression ',' expression ')'"
-        p[0] = p[1] + '(' + p[3] + ',' + p[5] + ')'
+        p1 = p[1]
+        re_groups = self.re_cmath_function.match(p1)
+        if re_groups:
+            p1 = re_groups.group("name")
+        p[0] = p1 + '(' + p[3] + ',' + p[5] + ')'
 
     def p_error(self, p):
         if p:
@@ -220,10 +219,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         p[0] = '(' + p[3] + ',' + p[5] + ')'
 
     def p_expression_func(self, p):
-        '''expression : SIN group
-                      | COS group
-                      | TAN group
-                      | CSC group
+        '''expression : CSC group
                       | SEC group
                       | ACSC group
                       | ASEC group
@@ -231,10 +227,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
                       | IM group
                       | SQRT group
                       | CONJ group'''
-        if p[1] == 'cmath.sin': p[0] = 'sin' + p[2]
-        elif p[1] == 'cmath.cos': p[0] = 'cos' + p[2]
-        elif p[1] == 'cmath.tan': p[0] = 'tan' + p[2]
-        elif p[1] == 'csc': p[0] = '1d0/cos' + p[2]
+        if p[1] == 'csc': p[0] = '1d0/cos' + p[2]
         elif p[1] == 'sec': p[0] = '1d0/sin' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
         elif p[1] == 'asec': p[0] = 'acos(1./' + p[2] + ')'
@@ -280,10 +273,7 @@ class UFOExpressionParserPythia8(UFOExpressionParser):
         p[0] = 'complex(' + p[3] + ',' + p[5] + ')'
 
     def p_expression_func(self, p):
-        '''expression : SIN group
-                      | COS group
-                      | TAN group
-                      | CSC group
+        '''expression : CSC group
                       | SEC group
                       | ACSC group
                       | ASEC group
@@ -291,10 +281,7 @@ class UFOExpressionParserPythia8(UFOExpressionParser):
                       | IM group
                       | SQRT group
                       | CONJ group'''
-        if p[1] == 'cmath.sin': p[0] = 'sin' + p[2]
-        elif p[1] == 'cmath.cos': p[0] = 'cos' + p[2]
-        elif p[1] == 'cmath.tan': p[0] = 'tan' + p[2]
-        elif p[1] == 'csc': p[0] = '1./cos' + p[2]
+        if p[1] == 'csc': p[0] = '1./cos' + p[2]
         elif p[1] == 'sec': p[0] = '1./sin' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
         elif p[1] == 'asec': p[0] = 'acos(1./' + p[2] + ')'

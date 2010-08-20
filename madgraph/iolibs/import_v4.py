@@ -114,6 +114,7 @@ def read_particles_v4(fsock):
                   'w': 'wavy',
                   'c': 'curly'}
 
+    logger.info('load particles')
 
     mypartlist = ParticleList()
 
@@ -185,6 +186,7 @@ def read_interactions_v4(fsock, ref_part_list):
     """Read a list of interactions from stream fsock, using the old v4 format.
     Requires a ParticleList object as an input to recognize particle names."""
 
+    logger.info('load interactions')
     myinterlist = InteractionList()
 
     if not isinstance(ref_part_list, ParticleList):
@@ -302,11 +304,6 @@ def read_interactions_v4(fsock, ref_part_list):
                 # gggg
                 if pdg_codes == [21, 21, 21, 21]:
                     myinter.set('lorentz', ['gggg1', 'gggg2', 'gggg3'])
-
-                # go-go-g
-                if spin_array == [2, 2, 3] and colors == [8, 8, 8]:
-                    myinter.set('lorentz', ['go'])
-
 
                 # If extra flag, add this to Lorentz    
                 if len(values) > 3 * len(part_list) - 4:
