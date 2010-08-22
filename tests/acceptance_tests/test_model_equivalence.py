@@ -18,6 +18,7 @@ import shutil
 import os
 
 import tests.unit_tests as unittest
+import logging
 
 from madgraph import MG4DIR, MG5DIR
 
@@ -28,6 +29,8 @@ import madgraph.iolibs.files as files
 import madgraph.iolibs.import_v4 as import_v4
 import madgraph.iolibs.ufo_expression_parsers as ufo_expression_parsers
 from madgraph.iolibs import save_load_object
+
+logger = logging.getLogger('madgraph.test.model')
 
 
 class CheckFileCreate():
@@ -122,10 +125,10 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         # import MG4 model
         model = base_objects.Model()
         model.set('particles', files.read_from_file(
-               os.path.join(MG4DIR,'Models','mssm_mg5','particles.dat'),
+               os.path.join(MG4DIR,'Models','mssm_mg','particles.dat'),
                import_v4.read_particles_v4))
         model.set('interactions', files.read_from_file(
-            os.path.join(MG4DIR,'Models','mssm_mg5','interactions.dat'),
+            os.path.join(MG4DIR,'Models','mssm_mg','interactions.dat'),
             import_v4.read_interactions_v4,
             model['particles']))
         model.pass_particles_name_in_mg_default()
@@ -197,12 +200,17 @@ class CompareMG4WithUFOModel(unittest.TestCase):
             self.assertEqual(mg4_color, mg5_color) 
         except AssertionError:
             part_name =[part.get('name') for part in mg4_vertex.get('particles')]
+            log = 'Potential different color structure for %s.\n' % part_name
+            log += '    mg4 color : %s\n' % mg4_color
+            log += '    mg5 color : %s\n' % mg5_color 
+            logger.info(log)
             if part_name == ['g', 'g', 'g', 'g']:
                 pass #too complex
             elif str(mg4_color) == '[]':
                 self.assertEqual('[1 ]',str(mg5_color))
             elif len(part_name) == 3:
                 if 'g' in part_name:
+                    logger.info('and too complex to be tested')
                     pass # too complex
                 else:
                     raise 
@@ -283,15 +291,15 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
                 value=[float(numb) for numb in split[1].split()]
             nb_value +=1
             for i, singlevalue in enumerate(value):
-                try:
+                #try:
                     self.assertAlmostEqual(singlevalue, solutions[variable][i], 7, 'fail to be equal for param %s : %s != %s' % (variable, singlevalue, solutions[variable][i]))
-                except:
-                    print i, singlevalue, [variable]
-                    if i == 0:
-                        solutions[variable] = [singlevalue]
-                    else:
-                        solutions[variable].append(singlevalue)
-        print solutions
+                #except:
+                #    print i, singlevalue, [variable]
+                #    if i == 0:
+                #        solutions[variable] = [singlevalue]
+                #    else:
+                #        solutions[variable].append(singlevalue)
+        
         self.assertEqual(nb_value, 123)
         
         

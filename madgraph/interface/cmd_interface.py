@@ -54,6 +54,7 @@ import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.tutorial_text as tutorial_text
 
+import models as ufomodels
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
@@ -1160,7 +1161,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _curr_cpp_model = None
 
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams', 
-                     'multiparticles', 'couplings']
+                     'multiparticles', 'couplings','lorentz']
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _setup_opts = ['madevent_v4', 'standalone_v4']
@@ -1341,8 +1342,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         elif args[0] == 'interactions':
             if int(args[1]) > len(self._curr_model['interactions']):
                 raise self.InvalidCmd, 'no interaction %s in current model' % args[1]
-            print "Interactions %s has the following property:" % args[1]
-            print self._curr_model['interactions'][int(args[1])]
+            if int(args[1]) == 0:
+                print 'Special interactions which identify two particles'
+            else:
+                print "Interactions %s has the following property:" % args[1]
+                print self._curr_model['interactions'][int(args[1])-1]
 
 
         elif args[0] == 'processes':
@@ -1358,13 +1362,38 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             for key in self._multiparticles:
                 print self.multiparticle_string(key)
         
-        elif args[0] == 'couplings':
+        elif args[0] == 'couplings' and len(args) == 1:
             couplings = set()
             for interaction in self._curr_model['interactions']:
                 for order in interaction['orders'].keys():
                     couplings.add(order)
             print ' / '.join(couplings)
             
+        elif args[0] == 'couplings':
+            if self._model_v4:
+                print 'No couplings information available in V4 model'
+                return
+            try:
+                ufomodel = ufomodels.load_model(self._curr_model.get('name'))
+                print eval('ufomodel.couplings.%s.nice_string()'%args[1])
+            except:
+                raise self.InvalidCmd, 'no couplings %s in current model' % args[1]
+        
+        elif args[0] == 'lorentz':
+            if self._model_v4:
+                print 'No lorentz information available in V4 model'
+                return
+            elif len(args) == 1: 
+                raise self.InvalidCmd,\
+                     'display lorentz require an argument: the name of the lorentz structure.'
+                return
+            try:
+                ufomodel = ufomodels.load_model(self._curr_model.get('name'))
+                print eval('ufomodel.lorentz.%s.nice_string()'%args[1])
+            except:
+                raise self.InvalidCmd, 'no couplings %s in current model' % args[1]
+            
+        
     def multiparticle_string(self, key):
         """Returns a nicely formatted string for the multiparticle"""
 
@@ -1914,7 +1943,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self.add_default_multiparticles()
             self._curr_fortran_model = \
                   helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
-        
         elif args[0] == 'command':
             if not os.path.isfile(args[1]):
                 raise MadGraph5Error("Path %s is not a valid pathname" % args[1])
