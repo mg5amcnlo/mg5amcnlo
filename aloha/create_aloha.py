@@ -350,15 +350,19 @@ class AbstractALOHAModel(dict):
     
         self[(lorentzname, outgoing)] = abstract_routine
     
-    def compute_all(self, save=True):
+    def compute_all(self, save=True, wanted_lorentz = []):
         """ define all the AbstractRoutine linked to a model """
 
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
         #self.look_for_symmetries()
         conjugate_list = self.look_for_conjugate()
-        
+        if not wanted_lorentz:
+            wanted_lorentz = self.model.all_lorentz
         for lorentz in self.model.all_lorentz:
+            if not lorentz.name in wanted_lorentz:
+                # Only include the routines we ask for
+                continue
             if -1 in lorentz.spins:
                 # No Ghost in ALOHA
                 continue 
@@ -375,11 +379,11 @@ class AbstractALOHAModel(dict):
         if save:
             self.save()
         
-    def compute_aloha(self, builder, symetry=None):
+    def compute_aloha(self, builder, symmetry=None):
         """convinient alias to choose to use or not the kernel"""
-        self.compute_aloha_with_kernel(builder, symetry)
+        self.compute_aloha_with_kernel(builder, symmetry)
         
-    def compute_aloha_without_kernel(self, builder, symetry=None):
+    def compute_aloha_without_kernel(self, builder, symmetry=None):
         """define all the AbstractRoutine"""
         
         name = builder.name
@@ -390,13 +394,13 @@ class AbstractALOHAModel(dict):
             self.set(name, outgoing, wavefunction)
         
         
-    def compute_aloha_with_kernel(self, builder, symetry=None):
+    def compute_aloha_with_kernel(self, builder, symmetry=None):
         """ define all the AbstractRoutine linked to a given lorentz structure
-        symetry authorizes to use the symetry of anoter lorentz structure."""
+        symmetry authorizes to use the symmetry of anoter lorentz structure."""
         
         name = builder.name
-        if not symetry:
-            symetry = name
+        if not symmetry:
+            symmetry = name
         
         # first compute the amplitude contribution
         wavefunction = builder.compute_routine(0)
@@ -404,9 +408,9 @@ class AbstractALOHAModel(dict):
         
         # Create the routine associate to an external particles
         for outgoing in range(1, len(builder.spins) + 1 ):
-            symmetric = self.has_symmetries(symetry, outgoing)
+            symmetric = self.has_symmetries(symmetry, outgoing)
             if symmetric:
-                self.get(symetry, symmetric).add_symmetry(outgoing)
+                self.get(symmetry, symmetric).add_symmetry(outgoing)
             else:
                 wavefunction = builder.compute_routine(outgoing)
                 #Store the information

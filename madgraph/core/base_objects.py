@@ -25,7 +25,7 @@ import re
 import madgraph.core.color_algebra as color
 from madgraph import MadGraph5Error, MG5DIR
 
-logger = logging.getLogger('madgraph.base_objects')
+logger = logging.getLogger('base_objects')
 
 #===============================================================================
 # PhysicsObject
@@ -784,7 +784,7 @@ class Model(PhysicsObject):
     def pass_particles_name_in_mg_default(self):
         """Change the name of the particles such that all SM and MSSM particles
         follows the MG convention"""
-        logger.info('pass particles name in MadGraph convention')
+        logger.info('Change particle names to MadGraph convention')
 
         # Check that default name/antiname is not already use 
         def check_name_free(self, name):

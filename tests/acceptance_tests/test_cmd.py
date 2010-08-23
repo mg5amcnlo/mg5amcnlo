@@ -205,19 +205,27 @@ class TestCmdShell2(unittest.TestCase):
         
     def test_ufo_aloha(self):
         """ test the import of models and the export of Helas Routine """
-        try:
-            os.remove(os.path.join(MG5DIR, 'models','sm', 'helas.pkl'))
-        except:
-            pass
-        fortran_pos = os.path.join(MG5DIR,'models','sm','fotran')
-        if os.path.exists(fortran_pos):
-            for filename in os.listdir(fortran_pos):
-                os.remove(os.path.join(fortran_pos, filename))                  
-        
+
         self.do('import model sm')
-        self.do('generate e+e->e+e-')
+        self.do('generate e+e->e+e- / h')
         self.do('setup madevent_v4 %s ' % self.out_dir)
-        self.do('export')
+        # Check that the needed ALOHA subroutines are generated
+        files = ['aloha_file.inc', 'boostx.F',
+                 'FFV1_0.f', 'FFV1_1.f', 'FFV1_2.f', 'FFV1_3.f',
+                 'FFV2_0.f', 'FFV2_1.f', 'FFV2_2.f', 'FFV2_3.f',
+                 'FFV4_0.f', 'FFV4_1.f', 'FFV4_2.f', 'FFV4_3.f',
+                 'ixxxxx.F', 'makefile', 'mom2cx.F', 'momntx.F', 'oxxxxx.F',
+                 'pxxxxx.F', 'rotxxx.F', 'sxxxxx.F', 'txxxxx.f', 'vxxxxx.F']
+        for f in files:
+            self.assertTrue(os.path.isfile(os.path.join(self.out_dir,
+                                                        'Source', 'DHELAS',
+                                                        f)))
+        # Check that unwanted ALOHA subroutines are not generated
+        notfiles = ['VVV1_0.f', 'VVV1_1.f', 'VVV1_2.f', 'VVV1_3.f']
+        for f in notfiles:
+            self.assertFalse(os.path.isfile(os.path.join(self.out_dir,
+                                                        'Source', 'DHELAS',
+                                                        f)))
         devnull = open(os.devnull,'w')
         subprocess.call(['make'], stdout=devnull, stderr=devnull, 
                                     cwd=os.path.join(self.out_dir, 'Source'))

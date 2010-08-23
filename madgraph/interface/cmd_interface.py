@@ -137,11 +137,39 @@ class CmdExtended(cmd.Cmd):
         '#*                                                          *\n' + \
         '#************************************************************\n'
         
+        if info_line:
+            info_line = info_line[1:]
+
+        logger.info(\
+        "************************************************************\n" + \
+        "*                                                          *\n" + \
+        "*           W E L C O M E  to  M A D G R A P H  5          *\n" + \
+        "*                                                          *\n" + \
+        "*                                                          *\n" + \
+        "*                 *                       *                *\n" + \
+        "*                   *        * *        *                  *\n" + \
+        "*                     * * * * 5 * * * *                    *\n" + \
+        "*                   *        * *        *                  *\n" + \
+        "*                 *                       *                *\n" + \
+        "*                                                          *\n" + \
+        info_line + \
+        "*                                                          *\n" + \
+        "*    The MadGraph Development Team - Please visit us at    *\n" + \
+        "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        "*                                                          *\n" + \
+        "*               Type 'help' for in-line help.              *\n" + \
+        "*           Type 'tutorial' to learn how MG5 works         *\n" + \
+        "*                                                          *\n" + \
+        "************************************************************")
+
         self.log = True
         self.history = []
         self.save_line = ''
         cmd.Cmd.__init__(self, *arg, **opt)
         self.__initpos = os.path.abspath(os.getcwd())
+        # By default, load the UFO Standard Model
+        logger.info("Loading default model: sm")
+        self.do_import('model sm')
         
     def precmd(self, line):
         """ A suite of additional function needed for in the cmd
@@ -530,9 +558,8 @@ class CheckValidForCmd(object):
         self.check_process_format(' '.join(args[1:]))
 
         if not self._curr_model:
-            logger.info('No model currently active. Try with the Standard Model')
-            self.do_import('model sm')
-
+            raise MadGraph5Error, \
+                  'No model currently active, please load or import a model.'
     
     def check_define(self, args):
         """check the validity of line
@@ -809,7 +836,7 @@ class CheckValidForCmd(object):
             text += 'for example do : import model_v4 sm'
             raise self.InvalidCmd(text)
 
-        if self._model_v4 and not args[0].endswith('_v4'):
+        if self._model_v4_path and not args[0].endswith('_v4'):
             text = " The Model imported (MG4 format) doesn't contain enough information\n "
             text += " in order to create this type of output. In order to create an \n"
             text += " output for " + args[0] + ", you have to use a UFO model."
@@ -1162,6 +1189,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _curr_matrix_elements = helas_objects.HelasMultiProcess()
     _curr_fortran_model = None
     _curr_cpp_model = None
+    _multiparticles = {}
 
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams', 
                      'multiparticles', 'couplings','lorentz']
@@ -1180,8 +1208,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         CmdExtended.__init__(self, *arg, **opt)
         self._generate_info = "" # store the first generated process
         self._model_format = None
-        self._multiparticles = {}
-        self._model_v4 = None
+        self._model_v4_path = None
         
         # Detect If this script is launched from a valid copy of the Template
         #and if so store this position as standard output directory
@@ -1944,7 +1971,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self.check_import(args)
         
         if args[0] == 'model':
-            self._model_v4 = None
+            self._model_v4_path = None
             self._curr_model = import_ufo.import_model(args[1])
             if '--modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
@@ -1962,7 +1989,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self.import_mg5_proc_card(args[1])    
         
         elif args[0] == 'model_v4':
-            self._curr_model, self._model_v4 = import_v4.import_model(args[1])
+            self._curr_model, self._model_v4_path = import_v4.import_model(args[1])
             if '--modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
             self.add_default_multiparticles()
@@ -2102,14 +2129,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self._curr_model = save_load_object.load_from_file(args[1])
             if self._curr_model.get('parameters'):
                 # This is a UFO model
-                self._model_v4 = None
+                self._model_v4_path = None
                 self._curr_fortran_model = \
                   helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
             else:
                 # This is a v4 model
-                self._model_v4 = self._curr_model
+                self._model_v4_path = self._curr_model
                 self._curr_fortran_model = \
                   helas_call_writers.FortranHelasCallWriter(self._curr_model)
+
+            self.add_default_multiparticles()
                 
             #save_model.save_model(args[1], self._curr_model)
             if isinstance(self._curr_model, base_objects.Model):
@@ -2167,9 +2196,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             dir_path = args[1]
             
         #look if the user ask to bypass the jpeg creation
-        if '-nojpeg' in args:
+        try:
+            args.pop(args.index('-nojpeg'))
             makejpg = False
-        else:
+        except ValueError:
             makejpg = True
 
         if self._done_finalize == (dir_path, makejpg):
@@ -2177,15 +2207,39 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             logger.info("Process directory already finalized")
             return
 
-        if self._export_format and self._export_format == 'madevent_v4' or \
-               not self._export_format and args[0] == 'madevent_v4':
+        if args:
+            self._export_format = args[0]
+
+        # For v4 models, copy the model/HELAS information.
+        if self._model_v4_path:
+            logger.info('Import v4model files %s to directory %s' % \
+                        (os.path.basename(self._model_v4_path), dir_path))
+            export_v4.export_model_files(self._model_v4_path, dir_path)
+            export_v4.export_helas(os.path.join(self._mgme_dir,'HELAS'), dir_path)
+        elif self._export_format.endswith('_v4'):
+            logger.info('Export UFO model to MG4 format')
+            # wanted_lorentz are the lorentz structures which are
+            # actually used in the wavefunctions and amplitudes in
+            # these processes
+            wanted_lorentz = list(set([wa.get('lorentz') for wa in \
+                                       sum([p.get_all_wavefunctions() + \
+                                            p.get_all_amplitudes() for p in \
+                                            self._curr_matrix_elements.\
+                                            get('matrix_elements')], [])]))
+            export_v4.convert_model_to_mg4(self._curr_model,
+                                           os.path.join(dir_path),
+                                           wanted_lorentz)
+
+        if self._export_format == 'standalone_v4':
+            export_v4.make_v4standalone(dir_path)
+
+        if self._export_format and self._export_format == 'madevent_v4':
 
             os.system('touch %s/done' % os.path.join(dir_path,'SubProcesses'))        
             export_v4.finalize_madevent_v4_directory(dir_path, makejpg,
                                                      [self.history_header] + \
                                                      self.history)
-        elif self._export_format and self._export_format == 'standalone_v4' \
-                 or not self._export_format and args[0] == 'standalone_v4':
+        elif self._export_format and self._export_format == 'standalone_v4':
 
             export_v4.finalize_standalone_v4_directory(dir_path,
                                                      [self.history_header] + \
@@ -2251,22 +2305,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             export_v4.copy_v4template(self._mgme_dir, dir_path, not noclean)
         elif self._export_format == 'standalone_v4':
             export_v4.copy_v4standalone(self._mgme_dir, dir_path, not noclean)
-
-        # Import the model/HELAS according to format
-        if self._model_v4:
-                logger.info('import v4model files %s in directory %s' % \
-                       (os.path.basename(self._model_v4), args[1]))        
-                export_v4.export_model_files(self._model_v4, dir_path)
-                export_v4.export_helas(os.path.join(self._mgme_dir,'HELAS'), dir_path)
-        elif args[0].endswith('_v4'):
-                logger.info('convert UFO model to MG4 format')
-                export_v4.convert_model_to_mg4(self._curr_model, 
-                                                         os.path.join(dir_path))
-        else:
-            raise NotImplemented
-            
-        if args[0] == 'standalone_v4':
-            export_v4.make_v4standalone(dir_path)
 
         self._export_dir = dir_path
 
@@ -2382,42 +2420,6 @@ class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
                 pass
             atexit.register(readline.write_history_file, history_file)
 
-        # If possible, build an info line with current version number 
-        # and date, from the VERSION text file
-
-        info = misc.get_pkg_info()
-        info_line = ""
-
-        if info.has_key('version') and  info.has_key('date'):
-            len_version = len(info['version'])
-            len_date = len(info['date'])
-            if len_version + len_date < 30:
-                info_line = "*         VERSION %s %s %s         *\n" % \
-                            (info['version'],
-                            (30 - len_version - len_date) * ' ',
-                            info['date'])
-
-        self.intro = \
-        "************************************************************\n" + \
-        "*                                                          *\n" + \
-        "*           W E L C O M E  to  M A D G R A P H  5          *\n" + \
-        "*                                                          *\n" + \
-        "*                                                          *\n" + \
-        "*                 *                       *                *\n" + \
-        "*                   *        * *        *                  *\n" + \
-        "*                     * * * * 5 * * * *                    *\n" + \
-        "*                   *        * *        *                  *\n" + \
-        "*                 *                       *                *\n" + \
-        "*                                                          *\n" + \
-        info_line + \
-        "*                                                          *\n" + \
-        "*    The MadGraph Development Team - Please visit us at    *\n" + \
-        "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
-        "*                                                          *\n" + \
-        "*               Type 'help' for in-line help.              *\n" + \
-        "*           Type 'tutorial' to learn how MG5 works         *\n" + \
-        "*                                                          *\n" + \
-        "************************************************************"
 
     # Access to shell
     def do_shell(self, line):

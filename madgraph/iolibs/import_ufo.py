@@ -70,9 +70,9 @@ def import_model(model_name):
     model.set('name', os.path.split(model_name)[-1])
  
     # Load Abstract Helas routine from Aloha
-    abstract_model = create_aloha.AbstractALOHAModel(model_name)
-    abstract_model.compute_all(save=False)
-    model.set('lorentz', dict(abstract_model))
+    #abstract_model = create_aloha.AbstractALOHAModel(model_name)
+    #abstract_model.compute_all(save=False)
+    #model.set('lorentz', abstract_model)
     
     # Load the Parameter/Coupling in a convinient format.
     parameters, couplings = OrganizeModelExpression(ufo_model).main()

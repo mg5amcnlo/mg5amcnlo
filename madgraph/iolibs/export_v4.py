@@ -1385,7 +1385,7 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
 # Routines to output UFO models in MG4 format
 #===============================================================================
 
-def convert_model_to_mg4(model, output_dir):
+def convert_model_to_mg4(model, output_dir, wanted_lorentz = []):
     """ Create a full valid MG4 model from a MG5 model (coming from UFO)"""
     
     # create the MODEL
@@ -1393,9 +1393,11 @@ def convert_model_to_mg4(model, output_dir):
     model_builder = UFO_model_to_mg4(model, write_dir)
     model_builder.build()
     
-    # Write Helas Routine
+    # Create and write ALOHA Routine
+    aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
+    aloha_model.compute_all(save=False, wanted_lorentz = wanted_lorentz)
     write_dir=os.path.join(output_dir, 'Source', 'DHELAS')
-    for abstracthelas in model.get('lorentz').values():
+    for abstracthelas in dict(aloha_model).values():
         abstracthelas.write(write_dir, language='Fortran')
     
     #copy Helas Template
