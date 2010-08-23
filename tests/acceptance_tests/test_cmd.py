@@ -59,6 +59,9 @@ class TestCmdShell1(unittest.TestCase):
         self.assertEqual(len(self.cmd._curr_amps), 2)
         self.do('add process mu+ mu- > P, Z>mu+mu-')
         self.assertEqual(len(self.cmd._curr_amps), 3)
+        self.do('generate e+ e- > Z > e+ e-')
+        self.assertEqual(len(self.cmd._curr_amps), 1)
+        self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 1)
         # Test the "or" functionality for propagators
         self.do('define V z|a')
         self.do('generate e+ e- > V > e+ e-')

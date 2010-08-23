@@ -1398,6 +1398,12 @@ class Process(PhysicsObject):
             except:
                 pass
 
+        if name == 'required_s_channels':
+            # Required s-channels need to be a list of lists of ids
+            if value and isinstance(value, list) and \
+               not isinstance(value[0], list):
+                value = [value]
+
         return super(Process, self).set(name, value) # call the mother routine
 
     def get_sorted_keys(self):
@@ -1570,7 +1576,7 @@ class Process(PhysicsObject):
                 # Add required s-channels
                 if self['required_s_channels'] and \
                        self['required_s_channels'][0]:
-                    mystr += "OR".join(["".join([self['model'].\
+                    mystr += "_or_".join(["".join([self['model'].\
                                        get('particle_dict')[req_id].get_name() \
                                                 for req_id in id_list]) \
                                     for id_list in self['required_s_channels']])

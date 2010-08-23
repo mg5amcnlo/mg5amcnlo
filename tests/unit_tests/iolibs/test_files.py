@@ -27,7 +27,7 @@ class TestFilesGestion(unittest.TestCase):
         
         
         filespath = ['/tmp/mg5/0.txt','/tmp/mg5/1.txt']
-        os.system('mkdir /tmp/mg5 &> /dev/null')
+        os.system('mkdir /tmp/mg5 > /dev/null 2>&1')
         for i, path in enumerate(filespath):
             os.system('touch %s' % path)
             if i + 1 != len(filespath):
