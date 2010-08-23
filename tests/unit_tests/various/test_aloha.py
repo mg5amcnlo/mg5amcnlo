@@ -2174,7 +2174,51 @@ class test_aloha_creation(unittest.TestCase):
         # Check expr are different
         self.assertNotEqual(str(amp.expr), str(conjg_amp.expr))
         self.assertNotEqual(amp.name, conjg_amp.name)
+        
+    def test_aloha_expr_FFV2C1(self):
+        from models.sm.object_library import Lorentz
+        FFV = Lorentz(name = 'FFV2',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,2,\'s1\')*ProjM(\'s1\',1)')
+        builder = create_aloha.AbstractRoutineBuilder(FFV)
+        conjg_builder= builder.define_conjugate_builder()
+        amp = conjg_builder.compute_routine(0)
 
+        self.assertEqual(amp.expr.nb_spin, 0)
+        F1_1, F1_2, F1_3, F1_4 = 1,2,3,4
+        F2_1, F2_2, F2_3, F2_4 = 5,5,6,7
+        V3_1, V3_2, V3_3, V3_4 = 8,9,10,11
+        # For V4:
+        cImag = complex(0,1)
+
+        ufo_value = eval(str(amp.expr.get_rep([0])))
+    
+        v4_value = ( (F1_1*F2_3+F1_2*F2_4)*V3_1 \
+                    -(F1_1*F2_4+F1_2*F2_3)*V3_2 \
+                    +(F1_1*F2_4-F1_2*F2_3)*V3_3*cImag \
+                    -(F1_1*F2_3-F1_2*F2_4)*V3_4       )
+
+        self.assertEqual(complex(0,1)*ufo_value, v4_value)
+
+        FFV = Lorentz(name = 'FFV2',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,2,\'s1\')*ProjP(\'s1\',1)')
+        builder = create_aloha.AbstractRoutineBuilder(FFV)
+        conjg_builder= builder.define_conjugate_builder()
+        amp = conjg_builder.compute_routine(0)
+        
+        ufo_value = eval(str(amp.expr.get_rep([0])))
+        self.assertNotEqual(complex(0,1)*ufo_value, v4_value)
+        v4_value = (F1_3*F2_1+F1_4*F2_2)*V3_1 \
+                          +(F1_3*F2_2+F1_4*F2_1)*V3_2 \
+                          -(F1_3*F2_2-F1_4*F2_1)*V3_3*cImag \
+                          +(F1_3*F2_1-F1_4*F2_2)*V3_4
+               
+        self.assertEqual(complex(0,1)*ufo_value, v4_value)
+        
+        
+        
+        
 
 class UFOLorentz(object):
     """ simple UFO LORENTZ OBJECT """

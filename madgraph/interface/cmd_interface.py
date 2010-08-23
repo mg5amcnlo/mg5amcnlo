@@ -1391,7 +1391,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 ufomodel = ufomodels.load_model(self._curr_model.get('name'))
                 print eval('ufomodel.lorentz.%s.nice_string()'%args[1])
             except:
-                raise self.InvalidCmd, 'no couplings %s in current model' % args[1]
+                raise self.InvalidCmd, 'no lorentz %s in current model' % args[1]
             
         
     def multiparticle_string(self, key):
