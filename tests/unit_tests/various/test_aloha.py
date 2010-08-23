@@ -2193,10 +2193,10 @@ class test_aloha_creation(unittest.TestCase):
 
         ufo_value = eval(str(amp.expr.get_rep([0])))
     
-        v4_value = ( (F1_1*F2_3+F1_2*F2_4)*V3_1 \
-                    -(F1_1*F2_4+F1_2*F2_3)*V3_2 \
-                    +(F1_1*F2_4-F1_2*F2_3)*V3_3*cImag \
-                    -(F1_1*F2_3-F1_2*F2_4)*V3_4       )
+        v4_value = ( (F2_1*F1_3+F2_2*F1_4)*V3_1 \
+                    -(F2_1*F1_4+F2_2*F1_3)*V3_2 \
+                    +(F2_1*F1_4-F2_2*F1_3)*V3_3*cImag \
+                    -(F2_1*F1_3-F2_2*F1_4)*V3_4       )
 
         self.assertEqual(complex(0,1)*ufo_value, v4_value)
 
@@ -2209,10 +2209,10 @@ class test_aloha_creation(unittest.TestCase):
         
         ufo_value = eval(str(amp.expr.get_rep([0])))
         self.assertNotEqual(complex(0,1)*ufo_value, v4_value)
-        v4_value = (F1_3*F2_1+F1_4*F2_2)*V3_1 \
-                          +(F1_3*F2_2+F1_4*F2_1)*V3_2 \
-                          -(F1_3*F2_2-F1_4*F2_1)*V3_3*cImag \
-                          +(F1_3*F2_1-F1_4*F2_2)*V3_4
+        v4_value = (F2_3*F1_1+F2_4*F1_2)*V3_1 \
+                          +(F2_3*F1_2+F2_4*F1_1)*V3_2 \
+                          -(F2_3*F1_2-F2_4*F1_1)*V3_3*cImag \
+                          +(F2_3*F1_1-F2_4*F1_2)*V3_4
                
         self.assertEqual(complex(0,1)*ufo_value, v4_value)
         

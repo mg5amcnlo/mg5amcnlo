@@ -56,9 +56,18 @@ if '__main__' == __name__:
     #my_proc_list += me_comparator.create_proc_list(
     #                            ['g','go'],
     #                            initial=2, final=3)
-    my_proc_list = me_comparator.create_proc_list(
-                                ['x1-','x1+','w-','w+'],
-                                initial=2, final=2)
+    #my_proc_list = me_comparator.create_proc_list(
+    ##                            ['x1+','w+'],
+    #                            initial=2, final=2)
+    #my_proc_list += me_comparator.create_proc_list(
+    #                            ['x1-','w-'],
+    #                            initial=2, final=2)
+    #my_proc_list += me_comparator.create_proc_list(
+    #                            ['x1+','h+'],
+    #                            initial=2, final=2)
+    #my_proc_list += me_comparator.create_proc_list(
+    ##                            ['x1-','h-'],
+    #                            initial=2, final=2)
     #my_proc_list += me_comparator.create_proc_list(
     #                            ['x1-','x1+','w-','w+'],
     #                            initial=2, final=3)
@@ -67,7 +76,7 @@ if '__main__' == __name__:
     #my_proc_list += ['u u~ > d d~', 'ul ul~ > g g' , 'go go > su1 su1~', 'su1 su1~ > g g', 'su1 su1~ > g g g', 'su1 su1~ > su1 su1~' ]
     #my_proc_list = ['su1 su1~ > g g g','su1 su1~ > g g', 'g g > su1 su1~', 'g su1 > g su1']
     #my_proc_list = ['mu+ mu+ > sl4+ sl4+']
-    
+    my_proc_list = [' u u > su2 su2', ]
     
     # Create a MERunner object for MG4
     my_mg4 = me_comparator.MG4Runner()
