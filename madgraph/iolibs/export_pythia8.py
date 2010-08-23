@@ -376,6 +376,7 @@ class ProcessExporterPythia8(object):
         process_string = process_string.replace('~', 'x')
         process_string = process_string.replace('/', '_no_')
         process_string = process_string.replace('$', '_nos_')
+        process_string = process_string.replace('|', '_or_')
         if proc_number != 0:
             process_string = "%d_%s" % (proc_number, process_string)
 
@@ -459,7 +460,7 @@ class ProcessExporterPythia8(object):
 
         if self.nfinal == 1:
             return "virtual int resonanceA() const {return %d;}" % \
-                           abs(process.get('legs')[2].get('id'))
+                           abs(self.processes[0].get('legs')[2].get('id'))
         
         res_strings = []
         res_letters = ['A', 'B']
