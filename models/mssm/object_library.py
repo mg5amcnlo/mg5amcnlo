@@ -7,7 +7,7 @@
 ##
 ##
 
-import cmath
+from cmath import cos, sin, acos, asin
 
 
 class FRBaseClass(object):
@@ -36,6 +36,25 @@ class FRBaseClass(object):
 
     def __str__(self):
         return self.name
+    
+    def nice_string(self):
+        """return a nice string of the object"""
+        
+        mystr = '{\n'
+
+        for prop in self.__dict__:
+            if isinstance(getattr(self,prop), str):
+                mystr = mystr + '    \'' + prop + '\': \'' + \
+                        self.__dict__[prop] + '\',\n'
+            elif isinstance(getattr(self,prop), float):
+                mystr = mystr + '    \'' + prop + '\': %.2f,\n' % getattr(self,prop)
+            else:
+                mystr = mystr + '    \'' + prop + '\': ' + \
+                        repr(getattr(self,prop)) + ',\n'
+        mystr = mystr.rstrip(',\n')
+        mystr = mystr + '\n}'
+
+        return mystr
 
 
     def __repr__(self):

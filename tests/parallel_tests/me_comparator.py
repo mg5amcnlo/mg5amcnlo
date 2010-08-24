@@ -529,7 +529,7 @@ class MEComparator(object):
         else:
             return mystr + " " * (length - len(mystr))
 
-    def output_result(self, filename=None, tolerance=1e-06, skip_zero=True):
+    def output_result(self, filename=None, tolerance=3e-06, skip_zero=True):
         """Output result as a nicely formated table. If filename is provided,
         write it to the file, else to the screen. Tolerance can be adjusted."""
 
