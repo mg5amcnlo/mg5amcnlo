@@ -217,7 +217,7 @@ class UFOMG5Converter(object):
                 data_string = p.sub('color.T(\g<first>,\g<second>)', data_string)
         
         # Change convention for summed indices
-        p = re.compile(r'''\'\w(?P<number>\d+)\'''')
+        p = re.compile(r'\'\w(?P<number>\d+)\'')
         data_string = p.sub('-\g<number>', data_string)
          
         # Compute how change indices to match MG5 convention

@@ -30,6 +30,7 @@ import madgraph.core.color_algebra as color
 import madgraph.iolibs.import_ufo as import_ufo
 from madgraph import MadGraph5Error, MG5DIR
 
+ZERO = 0.
 #===============================================================================
 # What does logger means...
 #===============================================================================
@@ -52,7 +53,6 @@ class DecayParticle(base_objects.Particle):
                    '2_body_decay_vertexlist','3_body_decay_vertexlist'
                   ]
 
-    vertexlistwritten = False
 
     def __init__(self, init_dict={}):
         """Creates a new particle object. If a dictionary is given, tries to 
@@ -66,14 +66,19 @@ class DecayParticle(base_objects.Particle):
         assert isinstance(init_dict, dict), \
                             "Argument %s is not a dictionary" % repr(init_dict)
 
-
-        for item in init_dict.keys():
-            self.set(item, init_dict[item])
-
         #To avoid the pdg_code remain 0 and then induce the error when
         #set the vertexlist
+        try:
+            pid = init_dict['pdg_code']
+            self.set('pdg_code', pid)
+        except KeyError:
+            pass
+            
         for item in init_dict.keys():
             self.set(item, init_dict[item])
+
+        #log of the decay_vertexlist_written history
+        self.decay_vertexlist_written = False
 
     def default_setup(self):
         """Default values for all properties"""
@@ -95,9 +100,10 @@ class DecayParticle(base_objects.Particle):
         """Check if the all the vertex in the vertexlist satisfy the following
            conditions. If so, return true; if not, raise error messages.
 
-           1. There is only one initial particle with the id the same as self
-           2. The number of final particles is equal to partnum
-           3. If model is not None, check the onshell condition
+           1. There is an appropriate leg for initial particle.
+           2. The number of final particles equals to partnum.
+           3. If model is not None, check the onshell condition and
+              the initial particle id is the same as calling particle.
         """
 
         #Check if partnum is an integer.
@@ -125,69 +131,80 @@ class DecayParticle(base_objects.Particle):
         if not (isinstance(model, base_objects.Model) or model == {}):
             raise self.PhysicsObjectError, \
                 "%s must be a Model" % str(model)
+        elif model:
+            #Check if the mother particle is in the 'model'
+            if not (self.get_pdg_code() in model.get('particle_dict').keys()):
+                raise self.PhysicsObjectError, \
+                    "The model, %s, does not contain particle %s." \
+                    %(model.get('name'), self.get_name())
 
-        #Determine the number of initial and final particles.
-        #Check the id of initial particle as well.
-
-        #Check if the model is given
-        if not model:
-            #No need to check the on-shell condition
-            for vert in value:
-                #Reset the number of initial/final particles,
-                #initial particle id
-                num_ini = 0
-                num_final = 0
-                ini_part_id = 0
-                
-                for leg in vert['legs']:
-                    if leg['state']:
-                        num_final += 1
-                    else:
-                        num_ini += 1
-                        ini_part_id = leg['id']
-                #Check the number of final particles is the same as partnum
-                if num_final != partnum:
-                    raise self.PhysicsObjectError, \
-                        "The vertex is a %s-body decay, not a %s-body one."\
-                        % (str(num_final), str(partnum))
-
-                #Check if the initial particle number is one.
-                if num_ini != 1:
-                    raise self.PhysicsObjectError, \
-                        "The initial particle number is %s, not 1."\
-                        % str(num_ini)
-                #Check if the initial particle has the same id as the mother.
-                if ini_part_id != self['pdg_code']:
-                    raise self.PhysicsObjectError, \
-                        "The initial particle id is %s, not %s"\
-                        %(str(ini_part_id), str(self['pdg_code']))
         
-        #Model is not None, check the on-shell condition
-        else:
+        #Determine the number of final particles.
+        #Find all the possible initial particle(s).
+        #Check onshell condition if the model is given.
+        if not model:
+            #No need to check the on-shell condition and initial particle id
             for vert in value:
-
                 #Reset the number of initial/final particles,
                 #initial particle id, and total and initial mass
                 num_ini = 0
                 num_final = 0
-                ini_part_id = 0
+                
+                for leg in vert.get('legs'):
+                    #Identify the initial particle
+                    if leg.get('id') == self.get_pdg_code():
+                        #Leg id == self id, the leg is incoming if state==False.
+                        if not leg.get('state'):
+                            num_ini = 1
+
+                    elif leg.get('id') == -self.get_pdg_code():
+                        if leg.get('state'):
+                            num_ini = 1
+                
+                #Calculate the final particle number
+                num_final = len(vert.get('legs'))-num_ini
+                
+                #Check the number of final particles is the same as partnum
+                if num_final != partnum:
+                    raise self.PhysicsObjectError, \
+                        "The vertex is a %s -body decay, not a %s -body one."\
+                        % (str(num_final), str(partnum))
+
+                #Check if there is any appropriate leg as initial particle
+                if num_ini == 0:
+                    raise self.PhysicsObjectError, \
+                        "There is no leg satisfied the mother particle %s"\
+                        % str(self.get_pdg_code())
+                
+        #Model is not None, check the on-shell condition
+        else:
+            for vert in value:
+                #Reset the number of initial/final particles,
+                #initial particle id, and total and initial mass
+                num_ini = 0
+                num_final = 0
                 
                 total_mass = 0
                 ini_mass = 0
 
-                for leg in vert['legs']:
-                    #Calculate the total mass of all the particles
-                    total_mass += model.get_particle(leg['id'])['mass']
-                    
-                    if leg['state']:
-                        num_final += 1
+                for leg in vert.get('legs'):
+                    #Calculate the total mass
+                    total_mass += eval(model.get_particle(leg['id'])['mass'])
 
-                    #Record the particle with 'state' == False (incoming)
-                    #Multi-initial particles vertex will be blocked.
-                    else:
-                        num_ini += 1
-                        ini_part_id = leg['id']
-                        ini_mass = model.get_particle(leg['id'])['mass']
+                    #Identify the initial particle
+                    if leg.get('id') == self.get_pdg_code():
+                        #Leg id == self id, the leg is incoming if state==False.
+                        if not leg.get('state'):
+                            num_ini = 1
+                            ini_mass = eval(model.get_particle(leg['id'])['mass'])
+                    elif leg.get('id') == -self.get_pdg_code():
+                        if leg.get('state'):
+                            num_ini = 1
+                            ini_mass = eval(model.get_particle(leg['id'])['mass'])
+
+                #Calculate the final particle number
+                num_final = len(vert.get('legs'))-num_ini
+
 
                 #Check the number of final particles is the same as partnum
                 if num_final != partnum:
@@ -195,18 +212,14 @@ class DecayParticle(base_objects.Particle):
                         "The vertex is a %s -body decay, not a %s -body one."\
                         % (str(num_final), str(partnum))
 
-                #Check if the initial particle number is one.
-                if num_ini != 1:
+                #Check if there is any appropriate leg as initial particle.
+                if num_ini == 0:
                     raise self.PhysicsObjectError, \
-                        "The initial particle number is %s, not 1." % str(num_ini)
+                        "There is no leg satisfied the mother particle %s"\
+                        % str(self.get_pdg_code())
 
-                #Check if the initial particle has the same id as the mother.
-                if ini_part_id != self['pdg_code']:
-                    raise self.PhysicsObjectError, \
-                        "The initial particle id is %s, not %.s"\
-                        % (str(ini_part_id), str(self['pdg_code']))
-                
-                if (ini_mass > (total_mass - ini_mass)) != onshell:
+                #Check the onshell condition
+                if (ini_mass.real > (total_mass.real - ini_mass.real)) != onshell:
                     raise self.PhysicsObjectError, \
                         "The on-shell condition is not satisfied."
         return True
@@ -238,7 +251,7 @@ class DecayParticle(base_objects.Particle):
 
         return True
 
-    def get_decay_vertexlist(self, partnum ,onshell):
+    def get_vertexlist(self, partnum ,onshell):
         """Return the n-body decay vertexlist.
            partnum = n.
            If onshell=false, return the on-shell list and vice versa.
@@ -262,7 +275,7 @@ class DecayParticle(base_objects.Particle):
         return self.get(str(partnum)+'_body_decay_vertexlist')[onshell]
 
 
-    def set_decay_vertexlist(self, partnum ,onshell, value, model = {}):
+    def set_vertexlist(self, partnum ,onshell, value, model = {}):
         """Set the n_body_decay_vertexlist,
            partnum: n, 
            onshell: True for on-shell decay, and False for off-shell
@@ -285,18 +298,121 @@ class DecayParticle(base_objects.Particle):
         """
         
         #Raise error if self is not in model.
-        if not self.get_pdg_code() in keys(model['particles'].generate_dict()):
+        if not (self.get_pdg_code() in model.get('particle_dict').keys()):
             raise self.PhysicsObjectError, \
-                    "The parent particle is not in the model %s." % str(model)
+                    "The parent particle %s is not in the model %s." \
+                        % (self.get('name'), model.get('name'))
+
+        #Raise error if option is not Boolean value
+        if not isinstance(option, bool):
+            raise self.PhysicsObjectError, \
+                    "The option %s must be True or False." % str(option)
         
         #If 'decay_vertexlist_written' is true and option is false,
         #no action is proceed.
         if self.decay_vertexlist_written and not option:
-            return 'The vertexlist has been setup. No action proceeds because of False option.'
-        else:
-            # pass the find channels program
-            pass
+            return 'The vertexlist has been setup.', \
+                'No action proceeds because of False option.'
+
+        #Reset the decay vertex before finding
+        self['2_body_decay_vertexlist'] = \
+            [base_objects.VertexList(),base_objects.VertexList()]
+        self['3_body_decay_vertexlist'] = \
+            [base_objects.VertexList(),base_objects.VertexList()]
         
+        #Go through each interaction...
+        for temp_int in model.get('interactions'):
+            #Save the particle dictionary (pdg_code & anti_pdg_code to particle)
+            partlist = temp_int.get('particles')
+
+            #Check if the interaction contains mother particle
+            if self.get('pdg_code') in partlist.generate_dict().keys():
+
+                #The final particle number = total particle -1
+                partnum = len(partlist)-1
+                #Allow only 2 and 3 body decay
+                if partnum > 3:
+                    break
+
+                final_mass = 0
+                ini_mass = 0
+                vert = base_objects.Vertex()
+                legs = base_objects.LegList()
+                #ini_found: record whether a appropriate leg is found
+                ini_found = False
+                #ini_index: record the index of initial particle if found
+                ini_index = -1
+
+                #Find valid initial particle
+                for part in partlist:
+                    if ini_found == False:
+                        #Assuming the default for interaction is all outgoing
+                        #particles.
+                        if self.get_pdg_code() == -part.get_pdg_code():
+                            ini_found = True
+                            ini_mass = eval(part.get('mass'))
+                            legs.append(base_objects.Leg({
+                                                     'id':-part.get_pdg_code(),
+                                                     'number': 0,
+                                                     'state': False,
+                                                     'from_group': True})
+                                       )
+
+                        if (self.get_pdg_code() == part.get_pdg_code()) and \
+                           (self['self_antipart'] == True):
+                            ini_found = True
+                            ini_mass = eval(part.get('mass'))
+                            legs.append(base_objects.Leg({
+                                                     'id':part.get_pdg_code(),
+                                                     'number': 0,
+                                                     'state': False,
+                                                     'from_group': True})
+                                       )
+
+                        #particle index is ini_index
+                        ini_index +=1
+                    else:
+                        break
+
+                #The interaction is valid for decay
+                temp_index = 0
+                if ini_found == True:
+                    for part in partlist:
+                        #Check the current index should not be the initial one
+                        if temp_index != ini_index:
+                            final_mass += eval(part.get('mass'))
+                            legs.append(base_objects.Leg({
+                                                     'id': part.get_pdg_code(),
+                                                     'number': 0,
+                                                     'state': True,
+                                                     'from_group': True})
+                                       )
+                        temp_index +=1
+                    
+                    legs.sort(legcmp)
+                    vert.set('id', temp_int.get('id'))
+                    vert.set('legs', legs)
+                    temp_vertlist = base_objects.VertexList([vert])
+                    #Force the mass to be real for safety.
+                    ini_mass, final_mass = ini_mass.real, final_mass.real
+
+                    #Check validity of vertex (removable)
+                    self.check_vertexlist(partnum,
+                                          ini_mass > final_mass,
+                                          temp_vertlist, model)
+
+                    #Append current vert to vertexlist
+                    self.get_vertexlist(partnum, ini_mass > final_mass).\
+                        append(vert)
+
+#Helping function to sort the order of leg
+def legcmp(x, y):
+    mycmp = cmp(x['id'], y['id'])
+    if mycmp == 0:
+        mycmp = cmp(x['state'], y['state'])
+    return mycmp
+
+
 #===============================================================================
 # Channel: Each channel for the decay
 #===============================================================================
@@ -459,8 +575,7 @@ class DecayModel(base_objects.Model):
         param_lines = open(param_card, 'r').read().split('\n')
 
         # Define regular expressions
-        re_block = re.compile(\
-                    "^block\s+(?P<q>\w+\s*=\s*[\d\.e\+-]\s+){0,1}(?P<name>\w+)")
+        re_block = re.compile("^block\s+(?P<name>\w+)")
         re_decay = re.compile("^decay\s+(?P<pid>\d+)\s+(?P<value>[\d\.e\+-]+)")
         re_single_index = re.compile("^\s*(?P<i1>\d+)\s+(?P<value>[\d\.e\+-]+)")
         re_double_index = re.compile(\
@@ -567,7 +682,6 @@ class DecayModel(base_objects.Model):
                 logger.info("Calculated parameter %s = (%f, %f)" % \
                             (param.name,\
                              eval(param.name).real, eval(param.name).imag))
-                
         
         # Extract couplings
         couplings = []
