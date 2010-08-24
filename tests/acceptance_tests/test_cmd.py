@@ -111,9 +111,6 @@ class TestCmdShell2(unittest.TestCase):
             raise Exception, 'NO MG_ME dir for this test'   
         if os.path.exists(self.out_dir):
             shutil.rmtree(self.out_dir)
-
-
-        
         
     def tearDown(self):
         """ basic destruction after have run """
@@ -127,12 +124,11 @@ class TestCmdShell2(unittest.TestCase):
         self.cmd.exec_cmd(line)
     
     
-    def test_setup_madevent_directory(self):
-        """ command 'setup' works with path"""
+    def test_output_madevent_directory(self):
+        """Test outputing a MadEvent directory"""
 
-        self.do('import model_v4 sm')        
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
-        self.do('setup madevent_v4 %s -nojpeg' % self.out_dir)
+        self.do('output %s -nojpeg' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'SubProcesses', 'P0_epem_epem')))
@@ -142,24 +138,63 @@ class TestCmdShell2(unittest.TestCase):
                                                     'SubProcesses',
                                                     'P0_epem_epem',
                                                     'matrix1.jpg')))
-        self.do('finalize')
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'madevent.tar.gz')))        
+        self.do('output')
+        self.assertFalse(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P0_epem_epem',
+                                                    'matrix1.jpg')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'SubProcesses', 'P0_epem_epem')))
+        self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
+        self.do('output -f')
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_epem_epem',
                                                     'matrix1.jpg')))
 
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                                    'madevent.tar.gz')))        
+    def test_invalid_operations_for_add(self):
+        """Test that errors are raised appropriately for add"""
+
+        self.assertRaises(Cmd.CheckValidForCmd.InvalidCmd,
+                          self.do, 'add process')
+        self.assertRaises(Cmd.CheckValidForCmd.InvalidCmd,
+                          self.do, 'add wrong wrong')
+
+    def test_invalid_operations_for_generate(self):
+        """Test that errors are raised appropriately for generate"""
+
+        self.assertRaises(MadGraph5Error,
+                          self.do, 'generate')
+        self.assertRaises(MadGraph5Error,
+                          self.do, 'generate q q > q q')
+        self.assertRaises(MadGraph5Error,
+                          self.do, 'generate u u~ >')
+        self.assertRaises(MadGraph5Error,
+                          self.do, 'generate > u u~')
+        self.assertRaises(MadGraph5Error,
+                          self.do, 'generate a|z > b b~')
+        self.assertRaises(MadGraph5Error,
+                          self.do, 'generate p p > z, (z > e+ e-)')
+
+    def test_invalid_operations_for_output(self):
+        """Test that errors are raised appropriately for output"""
+
+        self.assertRaises(Cmd.CheckValidForCmd.InvalidCmd,
+                          self.do, 'output')
+        self.do("generate e+ e- > e+ e- / h")
+        self.assertRaises(Cmd.CheckValidForCmd.InvalidCmd,
+                          self.do, 'output')
 
     def test_read_madgraph4_proc_card(self):
-        """ command 'setup' works with '.' """
+        """Test reading a madgraph4 proc_card.dat"""
         os.system('cp -rf %s %s' % (os.path.join(MG4DIR,'Template'),
                                     self.out_dir))
         os.system('cp -rf %s %s' % (
                             self.join_path(_pickle_path,'simple_v4_proc_card.dat'),
                             os.path.join(self.out_dir,'Cards','proc_card.dat')))
     
-        self.do('import model_v4 sm')
         self.do('import proc_v4 %s' % os.path.join(self.out_dir,
                                                        'Cards','proc_card.dat'))
 
@@ -176,25 +211,11 @@ class TestCmdShell2(unittest.TestCase):
                                                     'madevent.tar.gz')))
 
 
-    def test_read_madgraph4_proc_card_with_setup(self):
-        """ command 'setup' works with '.' """
-
-        self.do('import model_v4 sm')
-        self.do('setup madevent_v4 %s' % self.out_dir)
-        self.do('import proc_v4 %s' % self.join_path(_pickle_path, \
-                                                     'simple_v4_proc_card.dat'))
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                              'SubProcesses', 'P1_emep_vevex')))        
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                                 'Cards', 'proc_card_mg5.dat')))
-
-
-    def test_setup_standalone_directory(self):
-        """ command 'setup' works with path"""
+    def test_output_standalone_directory(self):
+        """ command 'output' works with path"""
         
-        self.do('import model_v4 sm')
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
-        self.do('setup standalone_v4 %s' % self.out_dir)
+        self.do('output standalone_v4 %s' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
         self.assertTrue(os.path.isfile(os.path.join(self.out_dir, 'lib', 'libdhelas3.a')))
         self.assertTrue(os.path.isfile(os.path.join(self.out_dir, 'lib', 'libmodel.a')))
@@ -208,7 +229,7 @@ class TestCmdShell2(unittest.TestCase):
 
         self.do('import model sm')
         self.do('generate e+e->e+e- / h')
-        self.do('setup madevent_v4 %s ' % self.out_dir)
+        self.do('output %s ' % self.out_dir)
         # Check that the needed ALOHA subroutines are generated
         files = ['aloha_file.inc', 'boostx.F',
                  'FFV1_0.f', 'FFV1_1.f', 'FFV1_2.f', 'FFV1_3.f',

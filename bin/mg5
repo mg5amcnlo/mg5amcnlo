@@ -44,7 +44,9 @@ parser = optparse.OptionParser(usage=usage)
 parser.add_option("-l", "--logging", default='INFO',
                   help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
 parser.add_option("-f", "--file", default='',
-					help="use script file FILE")
+					help="Use script file FILE")
+parser.add_option("-d", "--mgme_dir", default='', dest = 'mgme_dir',
+                  help="Use MG_ME directory DIR")
 parser.add_option("","--web", action="store_true", default=False, dest='web', \
                  help='force to be in secure mode')
 parser.add_option("","--debug", action="store_true", default=False, dest='debug', \
@@ -82,7 +84,7 @@ if options.file or args:
         cmd_line.run_cmd('import command ' + input_file)
         sys.exit()
     else:
-        cmd_line = cmd_interface.MadGraphCmdShell()
+        cmd_line = cmd_interface.MadGraphCmdShell(mgme_dir = options.mgme_dir)
         cmd_line.use_rawinput = False #put it in non interactive mode
         cmd_line.run_cmd('import command ' + input_file)
         sys.exit()
@@ -91,5 +93,5 @@ else:
     if options.web:
         cmd_interface.MadGraphCmdWeb().cmdloop()
     else:
-        cmd_interface.MadGraphCmdShell().cmdloop()
+        cmd_interface.MadGraphCmdShell(mgme_dir = options.mgme_dir).cmdloop()
 

@@ -52,6 +52,7 @@ def copy_v4template(mgme_dir, dir_path, clean):
         logger.info('initialize a new directory: %s' % \
                     os.path.basename(dir_path))
         shutil.copytree(os.path.join(mgme_dir, 'Template'), dir_path, True)
+    shutil.copy(os.path.join(mgme_dir, 'MGMEVersion.txt'), dir_path)
 
     #Ensure that the Template is clean
     if clean:
