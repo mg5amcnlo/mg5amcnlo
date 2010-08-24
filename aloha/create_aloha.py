@@ -80,7 +80,7 @@ class AbstractRoutineBuilder(object):
 
         self.spins = lorentz.spins
         self.name = lorentz.name
-        self.conjg = 0
+        self.conjg = []
         self.outgoing = None
         self.lorentz_expr = lorentz.structure        
         self.routine_kernel = None
@@ -103,25 +103,33 @@ class AbstractRoutineBuilder(object):
             solution.append(new_builder)
             solution += new_builder.define_all_conjugate_builder(pair_list[i+1:])
         return solution
-    
-    def define_conjugate_builder(self, pair=1):
+                   
+    def define_conjugate_builder(self, pairs=1):
         """ return a AbstractRoutineBuilder for the conjugate operation.
         If they are more than one pair of fermion. Then use pair to claim which 
         one is conjugated"""
         
         new_builder = copy.copy(self)
+        try:
+            for index in pairs:
+               new_builder.apply_conjugation(index) 
+        except TypeError:
+            new_builder.apply_conjugation(pairs) 
+        return new_builder
+    
+    def apply_conjugation(self, pair=1):
+        """ apply conjugation on self object"""
         
         old_id = pair
         new_id = _conjugate_gap + old_id
         
-        new_builder.routine_kernel = \
-         -1 * C(new_id, old_id) * self.routine_kernel * C(new_id + 1, old_id +1)
-        new_builder.name += 'C'
+        self.routine_kernel = \
+         -1 * C(new_id, old_id + 1) * self.routine_kernel * C(new_id + 1, old_id)
+        self.name += 'C'
         if pair:
-            new_builder.name += str(pair)
-        new_builder.conjg = pair 
+            self.name += str(pair)
+        self.conjg.append(pair) 
     
-        return new_builder
     
     def define_simple_output(self):
         """ define a simple output for this AbstractRoutine """
@@ -129,7 +137,6 @@ class AbstractRoutineBuilder(object):
         infostr = str(self.lorentz_expr)        
         return AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
                                                                         infostr)
-        
         
     def compute_aloha_high_kernel(self, mode):
         """compute the abstract routine associate to this mode """
@@ -162,7 +169,7 @@ class AbstractRoutineBuilder(object):
                     lorentz *= complex(0,1)
                 elif spin == 2:
                     # shift the tag if we multiply by C matrices
-                    if (id+1) // 2 == self.conjg: 
+                    if (id+1) // 2 in self.conjg: 
                         id += _conjugate_gap
                     nb_spinor += 1
                     if nb_spinor %2:
@@ -182,7 +189,7 @@ class AbstractRoutineBuilder(object):
                     lorentz *= Scalar(id)
                 elif spin == 2:
                     # shift the tag if we multiply by C matrices
-                    if (id+1) // 2 == self.conjg:
+                    if (id+1) // 2 in self.conjg:
                         id += _conjugate_gap
                     nb_spinor += 1
                     lorentz *= Spinor(id, i + 1)
@@ -355,7 +362,7 @@ class AbstractALOHAModel(dict):
 
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
-        #self.look_for_symmetries()
+        self.look_for_symmetries()
         conjugate_list = self.look_for_conjugate()
         if not wanted_lorentz:
             wanted_lorentz = self.model.all_lorentz
@@ -372,49 +379,90 @@ class AbstractALOHAModel(dict):
                 conjg_builder_list= builder.define_all_conjugate_builder(\
                                                    conjugate_list[lorentz.name])
                 for conjg_builder in conjg_builder_list:
+                    # No duplication of conjugation:
                     assert conjg_builder_list.count(conjg_builder) == 1
                     self.compute_aloha(conjg_builder, lorentz.name)
                     
                     
         if save:
             self.save()
-        
-    def compute_aloha(self, builder, symmetry=None):
-        """convinient alias to choose to use or not the kernel"""
-        self.compute_aloha_with_kernel(builder, symmetry)
-        
-    def compute_aloha_without_kernel(self, builder, symmetry=None):
-        """define all the AbstractRoutine"""
-        
-        name = builder.name
             
-        for outgoing in range(len(builder.spins) + 1 ):
-            builder.routine_kernel = None
-            wavefunction = builder.compute_routine(outgoing)
-            self.set(name, outgoing, wavefunction)
+            
+    def compute_subset(self, data):
+        """ create the requested ALOHA routine. 
+        data should be a list of tuple (lorentz, conjugate, outgoing)
+        conjugate should be a tuple with the pair number to conjugate.
+        outgoing a tuple of the requested routines."""
         
+        # Search identical particles in the vertices in order to avoid
+        #to compute identical contribution
+        self.look_for_symmetries()
         
-    def compute_aloha_with_kernel(self, builder, symmetry=None):
+        # reorganize the data (in order to use optimization for a given lorentz
+        #structure
+        request = {}
+        for l_name, conjugate, outgoing in data:
+            try:
+                request[l_name][conjugate].append(outgoing)
+            except:
+                try:
+                    request[l_name][conjugate] = [outgoing]
+                except:
+                    request[l_name] = {conjugate: [outgoing]}
+          
+        # Loop on the structure to build exactly what is request
+        for l_name in request:
+            lorentz = eval('self.model.lorentz.%s' % l_name)
+            builder = AbstractRoutineBuilder(lorentz)
+            for conjg in request[l_name]:
+                if not conjg:
+                    # No need to conjugate -> compute directly
+                    self.compute_aloha(builder, routines=request[l_name][conjg])
+                else:
+                    # Define the high level conjugate routine
+                    conjg_builder = builder.define_conjugate_builder(conjg)
+                    # Compute routines
+                    self.compute_aloha(conjg_builder, symmetry=lorentz.name,
+                                        routines=request[l_name][conjg])
+            
+                        
+    def compute_aloha(self, builder, symmetry=None, routines=None):
         """ define all the AbstractRoutine linked to a given lorentz structure
-        symmetry authorizes to use the symmetry of anoter lorentz structure."""
+        symmetry authorizes to use the symmetry of anoter lorentz structure.
+        routines to define only a subset of the routines."""
         
         name = builder.name
         if not symmetry:
             symmetry = name
-        
-        # first compute the amplitude contribution
-        wavefunction = builder.compute_routine(0)
-        self.set(name, 0, wavefunction)
-        
-        # Create the routine associate to an external particles
-        for outgoing in range(1, len(builder.spins) + 1 ):
-            symmetric = self.has_symmetries(symmetry, outgoing)
+        if not routines:
+            routines = range(len(builder.spins) + 1)
+  
+        # Create the routines
+        for outgoing in routines:
+            symmetric = self.has_symmetries(symmetry, outgoing, valid_output=routines)
             if symmetric:
                 self.get(symmetry, symmetric).add_symmetry(outgoing)
             else:
                 wavefunction = builder.compute_routine(outgoing)
                 #Store the information
                 self.set(name, outgoing, wavefunction)
+
+    def compute_aloha_without_kernel(self, builder, symmetry=None, routines=None):
+        """define all the AbstractRoutine linked to a given lorentz structure
+        symmetry authorizes to use the symmetry of anoter lorentz structure.
+        routines to define only a subset of the routines. 
+        Compare to compute_aloha, each routines are computed independently.
+        """
+
+        name = builder.name
+        if not routines:
+            routines = range(len(builder.spins) + 1 )         
+        
+        for outgoing in routines:
+            builder.routine_kernel = None
+            wavefunction = builder.compute_routine(outgoing)
+            self.set(name, outgoing, wavefunction)
+
 
     def write(self, output_dir, language):
         """ write the full set of Helicity Routine in output_dir"""
@@ -444,17 +492,23 @@ class AbstractALOHAModel(dict):
                                 self.symmetries[lorentz.name] = {i+1:j+1}
                         break
                     
-    def has_symmetries(self, l_name, outgoing, out=None):
+                    
+    def has_symmetries(self, l_name, outgoing, out=None, valid_output=None):
         """ This returns out if no symmetries are available, otherwise it finds 
-        the lowest equivalent outgoing by recursivally calling this function"""
+        the lowest equivalent outgoing by recursivally calling this function.
+        auth is a list of authorize output, if define"""
     
         try:
             equiv = self.symmetries[l_name][outgoing]
         except:
             return out
         else:
-            return self.has_symmetries(l_name, equiv, out=equiv)
+            if not valid_output or equiv in valid_output:
+                return self.has_symmetries(l_name, equiv, out=equiv)
+            else:
+                return self.has_symmetries(l_name, equiv, out=None)              
     
+        
     def look_for_conjugate(self):
         """ create a list for the routine needing to be conjugate """
 

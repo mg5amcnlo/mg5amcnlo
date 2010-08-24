@@ -2147,7 +2147,25 @@ class test_aloha_creation(unittest.TestCase):
             spin_solution = spin_index[helas.spins[output_part -1]]
             self.assertEqual(abstract.expr.numerator.nb_spin, spin_solution, \
                              error % name)
-            
+    
+    def test_mssm_subset_creation(self):
+        """ test the creation of subpart of ALOHA routines 
+        including clash routines """
+        helas_suite = create_aloha.AbstractALOHAModel('mssm')
+        
+        requested_routines=[('FFV1' , (), 0), 
+                            ('FFV1', (), 2),
+                            ('FFV1', (1,), 0),
+                            ('FFV2', (1,), 2),
+                            ('VVV1', (), 3)]
+        
+        helas_suite.compute_subset(requested_routines)
+        lorentz_index = {1:0, 2:0,3:1}
+        spin_index = {1:0, 2:1, 3:0}
+        
+        self.assertEqual(len(helas_suite), 5)
+        
+        
     def find_helas(self, name, model):
         for lorentz in model.all_lorentz:
             if lorentz.name == name:
