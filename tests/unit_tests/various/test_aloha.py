@@ -2119,11 +2119,34 @@ class test_aloha_creation(unittest.TestCase):
         
     def test_aloha_symmetries(self):
         """ test that the symmetries of particles works """
+    
+        # Check that full identification symmetry works
+        helas_suite = create_aloha.AbstractALOHAModel('sm')
+        helas_suite.look_for_symmetries()
+        solution = {'SSSS1': {2: 1, 3: 2, 4: 3}, 'VVS1': {2: 1}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 'VVVV2': {2: 1, 4: 3}} 
+        self.assertEqual(solution, helas_suite.symmetries)
+        
+    def test_has_symmetries(self):
+        """Check that functions returning symmetries works"""
         
         helas_suite = create_aloha.AbstractALOHAModel('sm')
         helas_suite.look_for_symmetries()
-        solution = {'SSSS1': {2: 1, 3: 1, 4: 3}, 'VVS1': {2: 1}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 'VVVV2': {2: 1, 4: 3}} 
-        self.assertEqual(solution, helas_suite.symmetries)
+        
+        base = helas_suite.has_symmetries('SSSS1', 4)
+        self.assertEqual(base, 1)
+
+        base = helas_suite.has_symmetries('SSSS1', 4, valid_output=(1, 2))
+        self.assertEqual(base, 1)
+        
+        base = helas_suite.has_symmetries('SSSS1', 4, valid_output=(2,))
+        self.assertEqual(base, 2)   
+        
+        base = helas_suite.has_symmetries('VVS1', 3, valid_output=(3,))
+        self.assertEqual(base, None)
+        
+        base = helas_suite.has_symmetries('VVS1', 3, valid_output=(1, 2))
+        self.assertEqual(base, None)   
+        
         
     def test_full_sm_aloha(self):
         """test that the full SM seems to work"""
@@ -2205,7 +2228,8 @@ class test_aloha_creation(unittest.TestCase):
         self.assertNotEqual(amp.name, conjg_amp.name)
         
     def test_aloha_expr_FFV2C1(self):
-        from models.sm.object_library import Lorentz
+        """Test analytical expression for fermion clash routine"""
+        from models.mssm.object_library import Lorentz
         FFV = Lorentz(name = 'FFV2',
                  spins = [ 2, 2, 3 ],
                  structure = 'Gamma(3,2,\'s1\')*ProjM(\'s1\',1)')

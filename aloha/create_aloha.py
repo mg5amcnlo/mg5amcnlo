@@ -419,15 +419,17 @@ class AbstractALOHAModel(dict):
             lorentz = eval('self.model.lorentz.%s' % l_name)
             builder = AbstractRoutineBuilder(lorentz)
             for conjg in request[l_name]:
+                #ensure that routines are in rising order (for symetries)
+                routines = sorted(request[l_name][conjg])
                 if not conjg:
                     # No need to conjugate -> compute directly
-                    self.compute_aloha(builder, routines=request[l_name][conjg])
+                    self.compute_aloha(builder, routines=routines)
                 else:
                     # Define the high level conjugate routine
                     conjg_builder = builder.define_conjugate_builder(conjg)
                     # Compute routines
                     self.compute_aloha(conjg_builder, symmetry=lorentz.name,
-                                        routines=request[l_name][conjg])
+                                        routines=routines)
             
                         
     def compute_aloha(self, builder, symmetry=None, routines=None):
@@ -484,14 +486,17 @@ class AbstractALOHAModel(dict):
         
         for vertex in self.model.all_vertices:
             for i, part1 in enumerate(vertex.particles):
-                for j in range(i):
+                for j in range(i-1,-1,-1):
                     part2 = vertex.particles[j]
                     if part1.name == part2.name and \
                                         part1.color == part2.color == 1 and\
                                         part1.spin != 2:
                         for lorentz in vertex.lorentz:
                             if self.symmetries.has_key(lorentz.name):
-                                self.symmetries[lorentz.name][i+1] = j+1
+                                if self.symmetries[lorentz.name].has_key(i+1):
+                                    self.symmetries[lorentz.name][i+1] = max(self.symmetries[lorentz.name][i+1], j+1)
+                                else:
+                                    self.symmetries[lorentz.name][i+1] = j+1
                             else:
                                 self.symmetries[lorentz.name] = {i+1:j+1}
                         break
@@ -501,17 +506,18 @@ class AbstractALOHAModel(dict):
         """ This returns out if no symmetries are available, otherwise it finds 
         the lowest equivalent outgoing by recursivally calling this function.
         auth is a list of authorize output, if define"""
-    
+
         try:
             equiv = self.symmetries[l_name][outgoing]
         except:
             return out
         else:
             if not valid_output or equiv in valid_output:
-                return self.has_symmetries(l_name, equiv, out=equiv)
+                return self.has_symmetries(l_name, equiv, out=equiv, 
+                                                      valid_output=valid_output)
             else:
-                return self.has_symmetries(l_name, equiv, out=None)              
-    
+                return self.has_symmetries(l_name, equiv, out=out,              
+                                                      valid_output=valid_output)
         
     def look_for_conjugate(self):
         """ create a list for the routine needing to be conjugate """
