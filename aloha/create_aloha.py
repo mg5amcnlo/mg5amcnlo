@@ -119,7 +119,7 @@ class AbstractRoutineBuilder(object):
             self.routine_kernel = eval(self.lorentz_expr)
            
         new_builder.routine_kernel = \
-         -1 * C(new_id, old_id + 1) * self.routine_kernel * C(new_id + 1, old_id)
+          C(new_id, old_id + 1) * self.routine_kernel * C(new_id + 1, old_id)
         new_builder.name += 'C'
         if pair:
             new_builder.name += str(pair)
