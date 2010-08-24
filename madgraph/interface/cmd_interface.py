@@ -54,6 +54,7 @@ import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.tutorial_text as tutorial_text
 
+import models as ufomodels
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
@@ -1160,7 +1161,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _curr_cpp_model = None
 
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams', 
-                     'multiparticles', 'couplings']
+                     'multiparticles', 'couplings','lorentz']
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _setup_opts = ['madevent_v4', 'standalone_v4']
@@ -1341,8 +1342,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         elif args[0] == 'interactions':
             if int(args[1]) > len(self._curr_model['interactions']):
                 raise self.InvalidCmd, 'no interaction %s in current model' % args[1]
-            print "Interactions %s has the following property:" % args[1]
-            print self._curr_model['interactions'][int(args[1])]
+            if int(args[1]) == 0:
+                print 'Special interactions which identify two particles'
+            else:
+                print "Interactions %s has the following property:" % args[1]
+                print self._curr_model['interactions'][int(args[1])-1]
 
 
         elif args[0] == 'processes':
@@ -1358,13 +1362,38 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             for key in self._multiparticles:
                 print self.multiparticle_string(key)
         
-        elif args[0] == 'couplings':
+        elif args[0] == 'couplings' and len(args) == 1:
             couplings = set()
             for interaction in self._curr_model['interactions']:
                 for order in interaction['orders'].keys():
                     couplings.add(order)
             print ' / '.join(couplings)
             
+        elif args[0] == 'couplings':
+            if self._model_v4:
+                print 'No couplings information available in V4 model'
+                return
+            try:
+                ufomodel = ufomodels.load_model(self._curr_model.get('name'))
+                print eval('ufomodel.couplings.%s.nice_string()'%args[1])
+            except:
+                raise self.InvalidCmd, 'no couplings %s in current model' % args[1]
+        
+        elif args[0] == 'lorentz':
+            if self._model_v4:
+                print 'No lorentz information available in V4 model'
+                return
+            elif len(args) == 1: 
+                raise self.InvalidCmd,\
+                     'display lorentz require an argument: the name of the lorentz structure.'
+                return
+            try:
+                ufomodel = ufomodels.load_model(self._curr_model.get('name'))
+                print eval('ufomodel.lorentz.%s.nice_string()'%args[1])
+            except:
+                raise self.InvalidCmd, 'no lorentz %s in current model' % args[1]
+            
+        
     def multiparticle_string(self, key):
         """Returns a nicely formatted string for the multiparticle"""
 
@@ -1719,6 +1748,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                       " which can be used only for required s-channels"
             required_schannel_ids = \
                                self.extract_particle_ids(required_schannels)
+            if required_schannel_ids and not \
+                   isinstance(required_schannel_ids[0], list):
+                required_schannel_ids = [required_schannel_ids]
+            
 
             #decay_process = len(filter(lambda leg: \
             #                           leg.get('state') == False,
@@ -1914,7 +1947,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self.add_default_multiparticles()
             self._curr_fortran_model = \
                   helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
-        
         elif args[0] == 'command':
             if not os.path.isfile(args[1]):
                 raise MadGraph5Error("Path %s is not a valid pathname" % args[1])
@@ -2089,7 +2121,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 cpu_time2 = time.time()
                 logger.info("Loaded processes from file in %0.3f s" % \
                       (cpu_time2 - cpu_time1))
-                if self._curr_amps and not self._curr_model.get('name'):
+                if self._curr_amps and not self._curr_model:
                     self._curr_model = self._curr_amps[0].\
                                         get('process').get('model')
                     logger.info("Model set from process.")
@@ -2137,9 +2169,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             makejpg = True
 
         if self._done_finalize == (dir_path, makejpg):
-            # We have already done export in this path
+            # We have already done finalize in this path
             logger.info("Process directory already finalized")
-            return        
+            return
 
         if self._export_format and self._export_format == 'madevent_v4' or \
                not self._export_format and args[0] == 'madevent_v4':
@@ -2171,12 +2203,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     
         dir = '-d' in args
         if dir:
-            mgme_dir = args[args.find('-d') + 1]
+            self._mgme_dir = args[args.find('-d') + 1]
         elif MG4DIR:
-            mgme_dir = MG4DIR
+            self._mgme_dir = MG4DIR
         else:
             raise MadGraph5Error('No installation of  MG_ME (version 4) detected')
-                                
+      
         # Check for special directory treatment
         if args[1] == '.':
                 dir_path = self._export_dir
@@ -2212,16 +2244,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         # Make a Template Copy
         if self._export_format == 'madevent_v4':
-            export_v4.copy_v4template(mgme_dir, dir_path, not noclean)
+            export_v4.copy_v4template(self._mgme_dir, dir_path, not noclean)
         elif self._export_format == 'standalone_v4':
-            export_v4.copy_v4standalone(mgme_dir, dir_path, not noclean)
+            export_v4.copy_v4standalone(self._mgme_dir, dir_path, not noclean)
 
         # Import the model/HELAS according to format
         if self._model_v4:
                 logger.info('import v4model files %s in directory %s' % \
                        (os.path.basename(self._model_v4), args[1]))        
                 export_v4.export_model_files(self._model_v4, dir_path)
-                export_v4.export_helas(os.path.join(mgme_dir,'HELAS'), dir_path)
+                export_v4.export_helas(os.path.join(self._mgme_dir,'HELAS'), dir_path)
         elif args[0].endswith('_v4'):
                 logger.info('convert UFO model to MG4 format')
                 export_v4.convert_model_to_mg4(self._curr_model, 

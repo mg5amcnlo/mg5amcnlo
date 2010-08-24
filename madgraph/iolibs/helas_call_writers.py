@@ -320,8 +320,10 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         if wavefunction.get('spin') == 1 and \
                wavefunction.get('interaction_id') != 0:
-            # Add necessary minus sign to coupling in HVS-type wavefunctions,
-            # due to non-identical scalars
+            # Special feature: For HVS vertices with the two
+            # scalars different, we need extra minus sign in front
+            # of coupling for one of the two scalars since the HVS
+            # is asymmetric in the two scalars
             wavefunction.set_scalar_coupling_sign(self['model'])
         val = super(FortranHelasCallWriter, self).get_wavefunction_call(wavefunction)
 

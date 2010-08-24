@@ -2087,10 +2087,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     for coupl_key in sorted(inter.get('couplings').keys()):
                         wf = HelasWavefunction(last_leg, vertex.get('id'), model)
                         wf.set('coupling', inter.get('couplings')[coupl_key])
-                        # Special feature: For HVS vertices with the two
-                        # scalars different, we need extra minus sign in front
-                        # of coupling for one of the two scalars since the HVS
-                        # is asymmetric in the two scalars
                         if inter.get('color'):
                             wf.set('inter_color', inter.get('color')[coupl_key[0]])
                         wf.set('lorentz', inter.get('lorentz')[coupl_key[1]])
@@ -2214,12 +2210,18 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # Append this diagram in the diagram list
             helas_diagrams.append(helas_diagram)
 
-
         self.set('diagrams', helas_diagrams)
-        # Sort all mothers according to the order wanted in Helas calls
 
+        # Sort all mothers according to the order wanted in Helas calls
         for wf in self.get_all_wavefunctions():
             wf.set('mothers', HelasMatrixElement.sorted_mothers(wf))
+            # Special feature: For octet fermions, need an extra minus
+            # sign in the FVI (and FSI? right now this is included)
+            # wavefunction
+            if wf.get('color') == 8 and \
+                   wf.get_spin_state_number() == -2 and \
+                   [m.get('color') for m in wf.get('mothers')] == [8, 8]:
+                wf.set('coupling', '-' + wf.get('coupling'))
         for amp in self.get_all_amplitudes():
             amp.set('mothers', HelasMatrixElement.sorted_mothers(amp))
             amp.set('color_indices', amp.get_color_indices())

@@ -13,8 +13,8 @@ class ParamCardWriter(object):
         """write a valid param_card.dat"""
         
         if not list_of_parameters:
-            import parameters
-            list_of_parameters = [param for param in list_of_parameters if \
+            from parameters import all_parameters
+            list_of_parameters = [param for param in all_parameters if \
                                                        param.nature=='external']
         
         self.fsock = open(filename, 'w')
@@ -61,4 +61,5 @@ class ParamCardWriter(object):
             
 if '__main__' == __name__:
     ParamCardWriter('./param_card.dat')
+    print 'done'
     
