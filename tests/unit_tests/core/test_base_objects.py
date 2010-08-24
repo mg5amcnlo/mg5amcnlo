@@ -631,6 +631,39 @@ class ModelTest(unittest.TestCase):
 
         myinterdict = {1:self.myinterlist[0]}
         self.assertEqual(myinterdict, self.mymodel.get('interaction_dict'))
+
+        particles = copy.copy(self.mymodel.get('particles'))
+        particles.append(base_objects.Particle({'name':'a',
+                  'antiname':'a',
+                  'spin':3,
+                  'color':0,
+                  'mass':'zero',
+                  'width':'zero',
+                  'texname':'\gamma',
+                  'antitexname':'\gamma',
+                  'line':'wavy',
+                  'charge':0.,
+                  'pdg_code':22,
+                  'propagating':True,
+                  'self_antipart':True}))
+        self.mymodel.set('particles', particles)
+        mypartdict[22] = particles[2]
+        self.assertEqual(mypartdict, self.mymodel['particle_dict'])
+
+        interactions = copy.copy(self.mymodel.get('interactions'))
+        interactions.append(base_objects.Interaction({
+                      'id':2,
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[0], \
+                                             antitop, \
+                                             self.mymodel['particles'][2]]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+        self.mymodel.set('interactions', interactions)
+        myinterdict[2] = interactions[1]
+        self.assertEqual(myinterdict, self.mymodel['interaction_dict'])
         
     def test_pass_in_standard_name(self):
         """Test if we can overwrite the name of the model following MG 
