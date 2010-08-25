@@ -20,7 +20,7 @@ import os
 import tests.unit_tests as unittest
 import logging
 
-from madgraph import MG4DIR, MG5DIR
+from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
 import madgraph.core.base_objects as base_objects
 import madgraph.iolibs.export_v4 as export_v4
@@ -131,8 +131,14 @@ class CompareMG4WithUFOModel(unittest.TestCase):
             os.path.join(MG4DIR,'Models','mssm_mg','interactions.dat'),
             import_v4.read_interactions_v4,
             model['particles']))
-        model.pass_particles_name_in_mg_default()
         
+        #problem due to T1
+        self.assertRaises(MadGraph5Error, model.pass_particles_name_in_mg_default)
+        for particle in model['particles']:
+            if particle['pdg_code']> 8000000:
+                model['particles'].remove(particle)
+        
+        model.pass_particles_name_in_mg_default()
         # Checking the particles
         for particle in model['particles']:
             if particle['pdg_code']> 8000000:

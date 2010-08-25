@@ -1506,13 +1506,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
 
         # Perform sanity modifications on the lines:
-        # Add a space before any > , $ / |
-        space_before = re.compile(r"(?P<carac>\S)(?P<tag>[/\,\\$\\>|])")
-        line = space_before.sub(r'\g<carac> \g<tag>', line)       
-        # Add a space after any + - ~ > , $ / |
-        space_after = re.compile(r"(?P<tag>[+-/\,\\$\\>~|])(?P<carac>[^\s+-])")
-        line = space_after.sub(r'\g<tag> \g<carac>', line)
-        
+        # Add a space before and after any > , $ / |
+        space_before = re.compile(r"(?P<carac>\S)(?P<tag>[/\,\\$\\>|])(?P<carac2>\S)")
+        line = space_before.sub(r'\g<carac> \g<tag> \g<carac2>', line)       
         
         # Use regular expressions to extract s-channel propagators,
         # forbidden s-channel propagators/particles, coupling orders

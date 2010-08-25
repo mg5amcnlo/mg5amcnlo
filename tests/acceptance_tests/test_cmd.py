@@ -58,7 +58,7 @@ class TestCmdShell1(unittest.TestCase):
         self.do('define J P g')
         self.do('add process e+ e- > J')
         self.assertEqual(len(self.cmd._curr_amps), 2)
-        self.do('add process mu+ mu- > P, Z>mu+mu-')
+        self.do('add process mu+ mu- > P, Z>mu+ mu-')
         self.assertEqual(len(self.cmd._curr_amps), 3)
         self.do('generate e+ e- > Z > e+ e-')
         self.assertEqual(len(self.cmd._curr_amps), 1)
@@ -230,8 +230,8 @@ class TestCmdShell2(unittest.TestCase):
 
         self.do('import model sm -modelname')
         #self.do('import model mssm -modelname')
-        self.do('generate e+e->e+e- / h')
-        #self.do('generate e+e+>sl2+sl2+ / h1 h2 h3 n2 n3')
+        self.do('generate e+ e->e+ e- / h')
+        #self.do('generate e+ e+>sl2+ sl2+ / h1 h2 h3 n2 n3')
         self.do('output standalone_v4 %s ' % self.out_dir)
         # Check that the needed ALOHA subroutines are generated
         files = ['aloha_file.inc', 'boostx.F',
@@ -270,9 +270,10 @@ class TestCmdShell2(unittest.TestCase):
                                                'SubProcesses', 'P0_epem_epem_no_h', 'check')))
         # Check that the output of check is correct 
         logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_epem_epem_no_h', 'check.log')
-        subprocess.call(['check'],
-                        stdout=open(logfile, 'w'), stderr=devnull, 
-                        cwd=os.path.join(self.out_dir, 'SubProcesses/P0_epem_epem_no_h'))
+        subprocess.call('./check', 
+                        stdout=open(logfile, 'w'), stderr=devnull,
+                        cwd=os.path.join(self.out_dir, 'SubProcesses', 'P0_epem_epem_no_h'),
+                        shell=True)
         log_output = open(logfile, 'r').read()
         self.assertTrue(re.search('Matrix element\s*=\s*2.156227\d*[Ee]-0*2', log_output))
         #self.assertTrue(re.search('Matrix element\s*=\s*1.836769\d*[Ee]-0*3', log_output))
@@ -280,7 +281,7 @@ class TestCmdShell2(unittest.TestCase):
     def test_ufo_standard_sm(self):
         """ check that we can use standard MG4 name """
         self.do('import model sm')
-        self.do('generate mu+mu->ta+ta-')       
+        self.do('generate mu+ mu- > ta+ ta-')       
         
         
         
