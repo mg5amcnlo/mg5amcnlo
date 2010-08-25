@@ -731,19 +731,24 @@ class Model(PhysicsObject):
             self['ref_dict_to1'] = {}
             self['ref_dict_to0'] = {}
 
-        Model.__bases__[0].set(self, name, value) # call the mother routine
+        # call the mother routine
+        result = Model.__bases__[0].set(self, name, value)
+        
+        if result:
+            if name == 'particles':
+                # Generate new dictionaries
+                self.get('particle_dict')
+                self.get('got_majoranas')
 
-        if name == 'particles':
-            # Generate new dictionaries
-            self.get('particle_dict')
-            self.get('got_majoranas')
+            if name == 'interactions':
+                # Generate new dictionaries
+                self.get('interaction_dict')
+                self.get('ref_dict_to1')
+                self.get('ref_dict_to0')
 
-        if name == 'interactions':
-            # Generate new dictionaries
-            self.get('interaction_dict')
-            self.get('ref_dict_to1')
-            self.get('ref_dict_to0')
-
+            return True
+        else:
+            return False
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 

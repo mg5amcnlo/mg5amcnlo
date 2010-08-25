@@ -417,124 +417,20 @@ def legcmp(x, y):
         mycmp = cmp(x['state'], y['state'])
     return mycmp
 
-
 #===============================================================================
-# Channel: Each channel for the decay
+# DecayParticleList
 #===============================================================================
-class Channel(base_objects.Diagram):
-    """Channel: a diagram that describes a certain on-shell decay channel
-                with apprximated (mean) matrix element, phase space area,
-                and decay width
-                ('apx_matrixelement', 'apx_PSarea', and  'apx_decaywidth')
-                Model must be specified.
-    """
+class DecayParticleList(base_objects.ParticleList):
+    """A class to store list of DecayParticle, Particle is also a valid
+       element, but will automatically convert to DecayParticle"""
 
-    sorted_keys = ['vertices',
-                   'model',
-                   'apx_matrixelement', 'apx_PSarea', 'apx_decaywidth']
+    def append(self, object):
+        """Append DecayParticle, even if object is Particle"""
 
-    def def_setup(self):
-        """Default values for all properties"""
-        
-        self['vertices'] = VertexList()
-        self['model'] = Model()
-        self['apx_matrixelement', 'apx_PSarea', 'apx_decaywidth'] = [0., 0., 0.]
+        assert self.is_valid_element(object), \
+            "Object %s is not a valid object for the current list" %repr(object)
 
-    def filter(self, name, value):
-        """Filter for valid diagram property values."""
-        
-        if name in ['apx_matrixelement', 'apx_PSarea', 'apx_decaywidth']:
-            if not isinstance(value, float):
-                raise self.PhysicsObjectError, \
-                    "Value %s is not a float" % str(value)
-        
-        if name == 'model':
-            if not isinstance(value, Model):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid Model object" % str(value)
-
-        super(Channel, self0).filter(self, name, value)
-
-    def get_sorted_keys(self):
-        """Return particle property names as a nicely sorted list."""
-
-        return self.sorted_keys
-
-    def nice_string(self):
-        pass
-
-    def get_initial_id(self):
-        """ Return the list of the id of initial particle"""
-        pass
-
-    def get_final_ids(self):
-        """ Return the list of the ids of final particles"""
-        pass
-        
-    def get_apx_matrixelement(self):
-        """calculate the apx_matrixelement"""
-        pass
-
-    def get_apx_PSarea(self):
-        """calculate the apx_PSarea"""
-
-        # The initial particle mass
-        M = self['model'].get_particle(self.get_initial_id()[0])['mass']
-
-        if len(self.get_final_ids()) == 2:
-            
-            m_1 = self['model'].get_particle(self.get_final_ids()[0])['mass']
-            m_2 = self['model'].get_particle(self.get_final_ids()[1])['mass']
-
-            apx_PSarea = 1 / (32 * math.pi ) * \
-                         math.sqrt((M-m_1^2-m_2^2)^2-4*m_1^2*m_2^2)
-
-        elif self.get_num_finalparticles() == 3:
-            # Calculate the phase space area for 3 body decay
-            m_1 = self['model'].get_particle(self.get_final_ids()[0])['mass']
-            m_2 = self['model'].get_particle(self.get_final_ids()[1])['mass']
-            m_3 = self['model'].get_particle(self.get_final_ids()[2])['mass']
-            
-            # The middle point value of the m_1, m_2 C.M. mass
-            m_12_mid = (M-m_3+m_1+m_2)/2
-
-            E_2_dag = (m_12^2-m_1^2+m_2^2)/(2*m_12)
-            E_3_dag = (M-m_12^2-m_3^2)/(2*m_12)
-
-            apx_PSarea = 4*math.sqrt((E_2_dag^2-m_2^2)*(E_3_dag^2-m_3^2)) \
-                         * ((1-m_3)^2-(m_1+m_2)^2)
-
-        else:
-            # This version cannot deal with channels with more than 3 final
-            # particles.
-
-            raise self.PhysicsObjectError, \
-                    "Number of final particles larger than three.\n" \
-                        "Not allow in this version."
-
-
-    def get_apx_decaywidth(self):
-        """Calculate the apx_decaywidth"""
-        
-        self.apx_decaywidth = self.get_apx_matrixelment() * self.get_apx_PSarea()
-
-#===============================================================================
-# ChannelList: List of all possible  channels for the decay
-#===============================================================================
-class ChannelList(base_objects.DiagramList):
-    """List of decay Channel
-    """
-
-    def is_valid_element(self, obj):
-        """ Test if the object is a valid Channel for the list. """
-
-        return isinstance(obj, Channel)
-
-    def nice_string(self, indent=0):
-        """Return a nicely formatted string"""
-
-        pass
-
+        list.append(self, DecayParticle(object))
     
 #===============================================================================
 # DecayModel: Model object that is used in this module
@@ -544,6 +440,27 @@ class DecayModel(base_objects.Model):
        for a given particle and a interaction
     """
     
+    def default_setup(self):
+        """The particles is changed to ParticleList"""
+        super(DecayModel, self).default_setup()
+        self['particles'] = DecayParticleList()
+
+    def set(self, name, value):
+        """Change the Particle into DecayParticle"""
+        #Record the validity of set by mother routine
+        return_value = super(DecayModel, self).set(name, value)
+        
+        if return_value:
+            if name == 'particles':
+                #Convert to DecayParticleList
+                self['particles'] = DecayParticleList(value)
+                #Generate new dictionaries with items are DecayParticle
+                self.get('particle_dict')
+                self.get('got_majoranas')
+            return True
+        else:
+            return False
+
     def FindChannel(self, interaction):
         """ Check whether the interaction is able to decay from mother_part.
             Set the '2_body_decay_vertexlist' and 
@@ -723,3 +640,119 @@ class DecayModel(base_objects.Model):
                          eval(coup.name).real, eval(coup.name).imag))
                 
         
+#===============================================================================
+# Channel: Each channel for the decay
+#===============================================================================
+class Channel(base_objects.Diagram):
+    """Channel: a diagram that describes a certain on-shell decay channel
+                with apprximated (mean) matrix element, phase space area,
+                and decay width
+                ('apx_matrixelement', 'apx_PSarea', and  'apx_decaywidth')
+                Model must be specified.
+    """
+
+    sorted_keys = ['vertices',
+                   'model',
+                   'apx_matrixelement', 'apx_PSarea', 'apx_decaywidth']
+
+    def def_setup(self):
+        """Default values for all properties"""
+        
+        self['vertices'] = VertexList()
+        self['model'] = Model()
+        self['apx_matrixelement', 'apx_PSarea', 'apx_decaywidth'] = [0., 0., 0.]
+
+    def filter(self, name, value):
+        """Filter for valid diagram property values."""
+        
+        if name in ['apx_matrixelement', 'apx_PSarea', 'apx_decaywidth']:
+            if not isinstance(value, float):
+                raise self.PhysicsObjectError, \
+                    "Value %s is not a float" % str(value)
+        
+        if name == 'model':
+            if not isinstance(value, Model):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid Model object" % str(value)
+
+        super(Channel, self0).filter(self, name, value)
+
+    def get_sorted_keys(self):
+        """Return particle property names as a nicely sorted list."""
+
+        return self.sorted_keys
+
+    def nice_string(self):
+        pass
+
+    def get_initial_id(self):
+        """ Return the list of the id of initial particle"""
+        pass
+
+    def get_final_ids(self):
+        """ Return the list of the ids of final particles"""
+        pass
+        
+    def get_apx_matrixelement(self):
+        """calculate the apx_matrixelement"""
+        pass
+
+    def get_apx_PSarea(self):
+        """calculate the apx_PSarea"""
+
+        # The initial particle mass
+        M = self['model'].get_particle(self.get_initial_id()[0])['mass']
+
+        if len(self.get_final_ids()) == 2:
+            
+            m_1 = self['model'].get_particle(self.get_final_ids()[0])['mass']
+            m_2 = self['model'].get_particle(self.get_final_ids()[1])['mass']
+
+            apx_PSarea = 1 / (32 * math.pi ) * \
+                         math.sqrt((M-m_1^2-m_2^2)^2-4*m_1^2*m_2^2)
+
+        elif self.get_num_finalparticles() == 3:
+            # Calculate the phase space area for 3 body decay
+            m_1 = self['model'].get_particle(self.get_final_ids()[0])['mass']
+            m_2 = self['model'].get_particle(self.get_final_ids()[1])['mass']
+            m_3 = self['model'].get_particle(self.get_final_ids()[2])['mass']
+            
+            # The middle point value of the m_1, m_2 C.M. mass
+            m_12_mid = (M-m_3+m_1+m_2)/2
+
+            E_2_dag = (m_12^2-m_1^2+m_2^2)/(2*m_12)
+            E_3_dag = (M-m_12^2-m_3^2)/(2*m_12)
+
+            apx_PSarea = 4*math.sqrt((E_2_dag^2-m_2^2)*(E_3_dag^2-m_3^2)) \
+                         * ((1-m_3)^2-(m_1+m_2)^2)
+
+        else:
+            # This version cannot deal with channels with more than 3 final
+            # particles.
+
+            raise self.PhysicsObjectError, \
+                    "Number of final particles larger than three.\n" \
+                        "Not allow in this version."
+
+
+    def get_apx_decaywidth(self):
+        """Calculate the apx_decaywidth"""
+        
+        self.apx_decaywidth = self.get_apx_matrixelment() * self.get_apx_PSarea()
+
+#===============================================================================
+# ChannelList: List of all possible  channels for the decay
+#===============================================================================
+class ChannelList(base_objects.DiagramList):
+    """List of decay Channel
+    """
+
+    def is_valid_element(self, obj):
+        """ Test if the object is a valid Channel for the list. """
+
+        return isinstance(obj, Channel)
+
+    def nice_string(self, indent=0):
+        """Return a nicely formatted string"""
+
+        pass

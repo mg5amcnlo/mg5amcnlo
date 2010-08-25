@@ -362,6 +362,29 @@ class Test_DecayParticle(unittest.TestCase):
 
 
 #===============================================================================
+# TestDecayParticleList
+#===============================================================================
+class TestDecayParticleList(unittest.TestCase):
+    """Test the DecayParticleList"""
+    def setUp(self):
+        self.mg5_part = base_objects.Particle({'pdg_code':6, 'is_part':True})
+        self.mg5_partlist = base_objects.ParticleList([self.mg5_part]*5)
+
+    def test_convert(self):
+        #Test the conversion in __init__
+        decay_partlist = decay_objects.DecayParticleList(self.mg5_partlist)
+        for i in range(0, 5):
+            self.assertTrue(isinstance(decay_partlist[i], 
+                                       decay_objects.DecayParticle))
+
+        #Test the conversion in append
+        decay_partlist.append(self.mg5_part)
+        self.assertTrue(isinstance(decay_partlist[-1], 
+                                   decay_objects.DecayParticle))
+        self.assertTrue(isinstance(decay_partlist,
+                                   decay_objects.DecayParticleList))
+
+#===============================================================================
 # TestDecayModel
 #===============================================================================
 class TestDecayModel(unittest.TestCase):
@@ -387,6 +410,35 @@ class TestDecayModel(unittest.TestCase):
             self.assertTrue(isinstance(value, int) or \
                             isinstance(value, float) or \
                             isinstance(value, complex)) 
+    
+    def test_particles_type(self):
+        """Test if the DecayModel can convert the assign particle into
+           decay particle"""
+
+        #Test the particle is DecayParticle during generator stage
+        #Test the default_setup first
+        temp_model = decay_objects.DecayModel()
+        self.assertTrue(isinstance(temp_model.get('particles'),
+                              decay_objects.DecayParticleList))
+
+        #Test the embeded set in __init__
+        self.assertTrue(isinstance(self.decay_model.get('particles'), 
+                                   decay_objects.DecayParticleList))
+
+        #Test the particle is converted into DecayParticle explicit
+        #using the set function
+        mg5_particlelist = self.base_model['particles']
+
+        result = self.decay_model.set('particles', mg5_particlelist)
+        #Using ParticleList to set should be fine, the result is converted
+        #into DecayParticle
+        self.assertTrue(result)
+        self.assertTrue(isinstance(self.decay_model['particles'],
+                              decay_objects.DecayParticleList))
+
+        #Test if the set function returns correctly when assign a bad value
+        self.assertFalse(self.decay_model.set('particles', 'NotParticleList'))
+
 
 if __name__ == '__main__':
     unittest.unittest.main()
