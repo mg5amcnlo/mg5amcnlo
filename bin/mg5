@@ -46,7 +46,7 @@ parser.add_option("-l", "--logging", default='INFO',
 parser.add_option("-f", "--file", default='',
 					help="Use script file FILE")
 parser.add_option("-d", "--mgme_dir", default='', dest = 'mgme_dir',
-                  help="Use MG_ME directory DIR")
+                  help="Use MG_ME directory MGME_DIR")
 parser.add_option("","--web", action="store_true", default=False, dest='web', \
                  help='force to be in secure mode')
 parser.add_option("","--debug", action="store_true", default=False, dest='debug', \

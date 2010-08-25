@@ -14,8 +14,8 @@
 ################################################################################
 
 tutorial = """
-You have just entered in the tutorial mode. This will introduce you to
-the main syntax options of MadGraph5.
+You have entered tutorial mode. This will introduce you to the main
+syntax options of MadGraph5.
 
 To learn more about the different options for a command, you can use
 mg5>help A_CMD
@@ -45,7 +45,7 @@ write
 mg5>display particles
 mg5>display multiparticles
 
-To add a second process, please use the add process command:
+If you want to add a second process, use the add process command:
 mg5>add process p p > W+ j QED=1, W+ > l+ vl @2
 This adds a decay chain process, with the W+ decaying
 leptonically.
@@ -65,18 +65,6 @@ MadEvent. This is done simply by typing:
 mg5>output MY_FIRST_MG5_RUN
 """
 
-display_model = """
-You have just seen some information about the model, which can help
-you in order to generate a process.
-
-You can now add another process, by running
-mg5>add process p p > W+ j QED=1, W+ > l+ vl @2
-or output your current processes by typing
-mg5>output MY_FIRST_MG5_RUN
-"""
-display_particles = display_model
-display_interactions = display_model
-
 add_process = """
 You have added a process to your process list.
 
@@ -85,7 +73,7 @@ this tutorial, we will explain how to create output for MadEvent.
 This is done simply by typing:
 mg5>output MY_FIRST_MG5_RUN
 """
-output_madevent_v4 = """
+output = """
 If you are following the tutorial, a directory MY_FIRST_MG5_RUN has
 been created which can be used in order to run MadEvent exactly as if
 it was coming from MG4, see MY_FIRST_MG5_RUN/README.

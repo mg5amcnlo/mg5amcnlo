@@ -221,6 +221,8 @@ class CmdExtended(cmd.Cmd):
                 #stop the execution if on a non interactive mode
                 if self.use_rawinput == False:
                     sys.exit()
+            # Remove failed command from history
+            self.history.pop()
             return False
         except Exception as error:
             # Make sure that we are at the initial position
@@ -706,16 +708,12 @@ class CheckValidForCmd(object):
     def check_import(self, args):
         """check the validity of line"""
         
-        if not args or  args[0] not in self._import_formats:
+        if not args or args[0] not in self._import_formats:
             self.help_import()
             raise self.InvalidCmd('wrong \"import\" format')
         
-        if args[0] != 'proc_v4' and len(args) != 2:
-            if len(args) == 3 and '-modelname' in args:
-                if args[-1] != '-modelname':
-                    args.remove('-modelname')
-                    args.append('-modelname')
-            else:
+        if args[0].startswith('model') and len(args) != 2:
+            if not (len(args) == 3 and args[-1] == '-modelname'):
                 self.help_import()
                 raise self.InvalidCmd('incorrect number of arguments')
         
@@ -915,20 +913,23 @@ class CompleteForCmd(CheckValidForCmd):
             completion = [f
                           for f in os.listdir(base_dir)
                           if f.startswith(text) and \
-                          os.path.isdir(os.path.join(base_dir, f))
+                          os.path.isdir(os.path.join(base_dir, f)) and \
+                          (not f.startswith('.') or text.startswith('.'))
                           ]
         else:
             completion = [f
                           for f in os.listdir(base_dir)
                           if f.startswith(text) and \
-                          os.path.isfile(os.path.join(base_dir, f))
+                          os.path.isfile(os.path.join(base_dir, f)) and \
+                          (not f.startswith('.') or text.startswith('.'))
                           ]
 
             completion = completion + \
                          [f + os.path.sep
                           for f in os.listdir(base_dir)
                           if f.startswith(text) and \
-                          os.path.isdir(os.path.join(base_dir, f))
+                          os.path.isdir(os.path.join(base_dir, f)) and \
+                          (not f.startswith('.') or text.startswith('.'))
                           ]
 
         completion += [f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
@@ -945,13 +946,15 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_history(self, text, line, begidx, endidx):
         "Complete the add command"
 
+        args = split_arg(line[0:begidx])
+
         # Directory continuation
         if args[-1].endswith(os.path.sep):
             return self.path_completion(text,
-                                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
-                                        only_dirs = True)
+                                        os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))
 
-        if len(split_arg(line[0:begidx])) == 1:
+        if len(args) == 1:
             return self.path_completion(text)
         
     def complete_add(self, text, line, begidx, endidx):
@@ -978,18 +981,20 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_draw(self, text, line, begidx, endidx):
         "Complete the import command"
 
+        args = split_arg(line[0:begidx])
+
         # Directory continuation
         if args[-1].endswith(os.path.sep):
             return self.path_completion(text,
                                         os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
                                         only_dirs = True)
         # Format
-        if len(split_arg(line[0:begidx])) == 1:
-            return self.path_completion(text)
+        if len(args) == 1:
+            return self.path_completion(text, '.', only_dirs = True)
 
 
         #option
-        if len(split_arg(line[0:begidx])) >= 2:
+        if len(args) >= 2:
             opt = ['horizontal', 'external=', 'max_size=', 'add_gap=',
                                 'non_propagating', '--']
             return self.list_completion(text, opt)
@@ -1054,7 +1059,10 @@ class CompleteForCmd(CheckValidForCmd):
                 return self.list_completion(text, possible_options_full)                
             # Formats
             if len(args) == 1:
-                return self.list_completion(text, possible_format)
+                if any([p.startswith(text) for p in possible_format]):
+                    return self.list_completion(text, possible_format) + \
+                           ['./', '../']
+
             # directory names
             content = [name for name in self.path_completion(text, '.', only_dirs = True) \
                        if name not in forbidden_names]
@@ -1088,9 +1096,15 @@ class CompleteForCmd(CheckValidForCmd):
 
         # Directory continuation
         if args[-1].endswith(os.path.sep):
-            return self.path_completion(text,
-                                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
-                                        only_dirs = True)
+            if args[1].startswith('model'):
+                return self.path_completion(text,
+                                    os.path.join('.',*[a for a in args if \
+                                                      a.endswith(os.path.sep)]),
+                                    only_dirs = True)
+            else:
+                return self.path_completion(text,
+                                    os.path.join('.',*[a for a in args if \
+                                                      a.endswith(os.path.sep)]))
         # Filename if directory is not given
         if len(split_arg(line[0:begidx])) == 2:
             if args[1] == 'model':
@@ -1111,11 +1125,10 @@ class CompleteForCmd(CheckValidForCmd):
             return out
 
         # Options
-        if len(args) > 2 and args[1].startswith('model'):
-            if args[-1][0] == '-':
-                return ['modelname']
-            else:
+        if len(args) > 2 and args[1].startswith('model') and args[-1][0] != '-':
                 return ['-modelname']
+        if len(args) > 3 and args[1].startswith('model') and args[-1][0] == '-':
+                return ['modelname']
 
   
 
@@ -1393,18 +1406,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         args = split_arg(line)
         if len(args) > 0 and args[0] == "stop":
-            logger_tuto.info("Thanks for using the tutorial!")
+            logger_tuto.info("\n\tThanks for using the tutorial!")
             logger_tuto.setLevel(logging.ERROR)
         else:
             logger_tuto.setLevel(logging.INFO)
 
-        if not MG4DIR:
+        if not self._mgme_dir:
             logger_tuto.info(\
-        "  Warning: This tutorial should preferably be run " + \
-        "from a valid MG_ME directory.")
+                       "\n\tWarning: To use all features in this tutorial, " + \
+                       "please run from a" + \
+                       "\n\t         valid MG_ME directory.")
 
-        
-    
     def do_draw(self, line):
         """ draw the Feynman diagram for the given process """
 
@@ -1514,7 +1526,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             line = proc_number_re.group(1) + \
                    proc_number_re.group(3)
 
-        # Start with coupling orders (identified by "=")
+        # Then take coupling orders (identified by "=")
         order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
         order_re = order_pattern.match(line)
         orders = {}
@@ -1844,7 +1856,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
  
             #convert and excecute the card
-            self.import_mg4_proc_card(proc_card)   
+            self.import_mg4_proc_card(proc_card)
                                      
 
     
@@ -1859,11 +1871,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if not reader:
             raise MadGraph5Error('\"%s\" is not a valid path' % filepath)
         
-        if MG4DIR:
+        if self._mgme_dir:
             # Add comment to history
             self.exec_cmd("# Import the model %s" % reader.model)
-            #model_dir = os.path.join(MG4DIR, 'Models')
-            line = self.exec_cmd('import model_v4 %s -modelname' % (reader.model))
+            line = self.exec_cmd('import model_v4 %s -modelname' % \
+                                 (reader.model))
         else:
             logging.error('No MG_ME installation detected')
             return    
@@ -2218,6 +2230,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                      self.history)
 
         logger.info('Output to directory ' + self._export_dir + ' done.')
+        if self._export_format == 'madevent_v4':
+            logger.info('Please see ' + self._export_dir + '/README')
+            logger.info('for information about how to generate events from this process.')
 
     def do_help(self, line):
         """ propose some usefull possible action """
