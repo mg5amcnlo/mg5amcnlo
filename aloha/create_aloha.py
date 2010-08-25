@@ -127,9 +127,15 @@ class AbstractRoutineBuilder(object):
             self.kernel_tag = set()
             self.routine_kernel = eval(self.lorentz_expr)
            
+<<<<<<< TREE
         self.routine_kernel = \
          -1 * C(new_id, old_id + 1) * self.routine_kernel * C(new_id + 1, old_id)
         self.name += 'C'
+=======
+        new_builder.routine_kernel = \
+          C(new_id, old_id + 1) * self.routine_kernel * C(new_id + 1, old_id)
+        new_builder.name += 'C'
+>>>>>>> MERGE-SOURCE
         if pair:
             self.name += str(pair)
         self.conjg.append(pair) 
