@@ -1008,6 +1008,23 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return schannels, tchannels
 
+    def get_conjugate_index(self):
+        """Return the index of the particle that should be conjugated."""
+
+        if self.needs_hermitian_conjugate():
+            parts = [wf for wf in self.get('mothers') if \
+                     wf.get('fermionflow') < 0]
+            indices = []
+            self_index = self.find_outgoing_number() - 1
+            for wf in parts:
+                if self.get('mothers').index(wf) < self_index:
+                    indices.append(self.get('mothers').index(wf)/2 + 1)
+                else:
+                    indices.append((self.get('mothers').index(wf) + 1)/2 + 1)
+            return tuple(indices)
+        else:
+            return ()
+
     # Overloaded operators
 
     def __eq__(self, other):
@@ -1704,6 +1721,22 @@ class HelasAmplitude(base_objects.PhysicsObject):
             color_indices.append(self.get('coupl_key')[0])
 
         return color_indices
+
+    def find_outgoing_number(self):
+        """Return 0. Needed to treat HelasAmplitudes and
+        HelasWavefunctions on same footing."""
+
+        return 0
+
+    def get_conjugate_index(self):
+        """Return the index of the particle that should be conjugated."""
+
+        if self.needs_hermitian_conjugate():
+            parts = [wf for wf in self.get('mothers') if \
+                     wf.get('fermionflow') < 0]
+            return [self.get('mothers').index(wf)/2 + 1 for wf in parts]
+        else:
+            return ()
 
     # Comparison between different amplitudes, to allow check for
     # identical processes. Note that we are then not interested in
@@ -3149,6 +3182,16 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         return col_amp_list
 
+    def get_used_lorentz(self):
+        """Return a list of (lorentz_name, conjugate, outgoing) with
+        all lorentz structures used by this HelasMatrixElement."""
+
+        return [(wa.get('lorentz'), wa.get_conjugate_index(),
+                 wa.find_outgoing_number()) for wa in \
+                self.get_all_wavefunctions() + self.get_all_amplitudes() \
+                if wa.get('interaction_id') != 0]
+        
+
     @staticmethod
     def check_equal_decay_processes(decay1, decay2):
         """Check if two single-sided decay processes
@@ -3791,4 +3834,13 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             
 
 
+    def get_used_lorentz(self):
+        """Return a list of (lorentz_name, conjugate, outgoing) with
+        all lorentz structures used by this HelasMultiProcess."""
 
+        helas_list = []
+
+        for me in self.get('matrix_elements'):
+            helas_list.extend(me.get_used_lorentz())
+
+        return list(set(helas_list))

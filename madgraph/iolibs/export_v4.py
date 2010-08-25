@@ -52,6 +52,7 @@ def copy_v4template(mgme_dir, dir_path, clean):
         logger.info('initialize a new directory: %s' % \
                     os.path.basename(dir_path))
         shutil.copytree(os.path.join(mgme_dir, 'Template'), dir_path, True)
+    shutil.copy(os.path.join(mgme_dir, 'MGMEVersion.txt'), dir_path)
 
     #Ensure that the Template is clean
     if clean:
@@ -1395,7 +1396,10 @@ def convert_model_to_mg4(model, output_dir, wanted_lorentz = []):
     
     # Create and write ALOHA Routine
     aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
-    aloha_model.compute_all(save=False, wanted_lorentz = wanted_lorentz)
+    if wanted_lorentz:
+        aloha_model.compute_subset(wanted_lorentz)
+    else:
+        aloha_model.compute_all(save=False)
     write_dir=os.path.join(output_dir, 'Source', 'DHELAS')
     for abstracthelas in dict(aloha_model).values():
         abstracthelas.write(write_dir, language='Fortran')

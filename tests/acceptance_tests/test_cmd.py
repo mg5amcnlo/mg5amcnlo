@@ -15,6 +15,7 @@
 import subprocess
 import unittest
 import os
+import re
 import shutil
 import logging
 
@@ -111,9 +112,6 @@ class TestCmdShell2(unittest.TestCase):
             raise Exception, 'NO MG_ME dir for this test'   
         if os.path.exists(self.out_dir):
             shutil.rmtree(self.out_dir)
-
-
-        
         
     def tearDown(self):
         """ basic destruction after have run """
@@ -127,12 +125,11 @@ class TestCmdShell2(unittest.TestCase):
         self.cmd.exec_cmd(line)
     
     
-    def test_setup_madevent_directory(self):
-        """ command 'setup' works with path"""
+    def test_output_madevent_directory(self):
+        """Test outputing a MadEvent directory"""
 
-        self.do('import model_v4 sm')        
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
-        self.do('setup madevent_v4 %s -nojpeg' % self.out_dir)
+        self.do('output %s -nojpeg' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'SubProcesses', 'P0_epem_epem')))
@@ -142,24 +139,63 @@ class TestCmdShell2(unittest.TestCase):
                                                     'SubProcesses',
                                                     'P0_epem_epem',
                                                     'matrix1.jpg')))
-        self.do('finalize')
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'madevent.tar.gz')))        
+        self.do('output')
+        self.assertFalse(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P0_epem_epem',
+                                                    'matrix1.jpg')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'SubProcesses', 'P0_epem_epem')))
+        self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
+        self.do('output -f')
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_epem_epem',
                                                     'matrix1.jpg')))
 
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                                    'madevent.tar.gz')))        
+    def test_invalid_operations_for_add(self):
+        """Test that errors are raised appropriately for add"""
+
+        self.assertRaises(Cmd.CheckValidForCmd.InvalidCmd,
+                          self.do, 'add process')
+        self.assertRaises(Cmd.CheckValidForCmd.InvalidCmd,
+                          self.do, 'add wrong wrong')
+
+    def test_invalid_operations_for_generate(self):
+        """Test that errors are raised appropriately for generate"""
+
+        self.assertRaises(MadGraph5Error,
+                          self.do, 'generate')
+        self.assertRaises(MadGraph5Error,
+                          self.do, 'generate q q > q q')
+        self.assertRaises(MadGraph5Error,
+                          self.do, 'generate u u~ >')
+        self.assertRaises(MadGraph5Error,
+                          self.do, 'generate > u u~')
+        self.assertRaises(MadGraph5Error,
+                          self.do, 'generate a|z > b b~')
+        self.assertRaises(MadGraph5Error,
+                          self.do, 'generate p p > z, (z > e+ e-)')
+
+    def test_invalid_operations_for_output(self):
+        """Test that errors are raised appropriately for output"""
+
+        self.assertRaises(Cmd.CheckValidForCmd.InvalidCmd,
+                          self.do, 'output')
+        self.do("generate e+ e- > e+ e- / h")
+        self.assertRaises(Cmd.CheckValidForCmd.InvalidCmd,
+                          self.do, 'output')
 
     def test_read_madgraph4_proc_card(self):
-        """ command 'setup' works with '.' """
+        """Test reading a madgraph4 proc_card.dat"""
         os.system('cp -rf %s %s' % (os.path.join(MG4DIR,'Template'),
                                     self.out_dir))
         os.system('cp -rf %s %s' % (
                             self.join_path(_pickle_path,'simple_v4_proc_card.dat'),
                             os.path.join(self.out_dir,'Cards','proc_card.dat')))
     
-        self.do('import model_v4 sm')
         self.do('import proc_v4 %s' % os.path.join(self.out_dir,
                                                        'Cards','proc_card.dat'))
 
@@ -176,25 +212,11 @@ class TestCmdShell2(unittest.TestCase):
                                                     'madevent.tar.gz')))
 
 
-    def test_read_madgraph4_proc_card_with_setup(self):
-        """ command 'setup' works with '.' """
-
-        self.do('import model_v4 sm')
-        self.do('setup madevent_v4 %s' % self.out_dir)
-        self.do('import proc_v4 %s' % self.join_path(_pickle_path, \
-                                                     'simple_v4_proc_card.dat'))
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                              'SubProcesses', 'P1_emep_vevex')))        
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                                 'Cards', 'proc_card_mg5.dat')))
-
-
-    def test_setup_standalone_directory(self):
-        """ command 'setup' works with path"""
+    def test_output_standalone_directory(self):
+        """ command 'output' works with path"""
         
-        self.do('import model_v4 sm')
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
-        self.do('setup standalone_v4 %s' % self.out_dir)
+        self.do('output standalone_v4 %s' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
         self.assertTrue(os.path.isfile(os.path.join(self.out_dir, 'lib', 'libdhelas3.a')))
         self.assertTrue(os.path.isfile(os.path.join(self.out_dir, 'lib', 'libmodel.a')))
@@ -206,14 +228,17 @@ class TestCmdShell2(unittest.TestCase):
     def test_ufo_aloha(self):
         """ test the import of models and the export of Helas Routine """
 
-        self.do('import model sm')
+        self.do('import model sm -modelname')
+        #self.do('import model mssm -modelname')
         self.do('generate e+e->e+e- / h')
-        self.do('setup madevent_v4 %s ' % self.out_dir)
+        #self.do('generate e+e+>sl2+sl2+ / h1 h2 h3 n2 n3')
+        self.do('output standalone_v4 %s ' % self.out_dir)
         # Check that the needed ALOHA subroutines are generated
         files = ['aloha_file.inc', 'boostx.F',
-                 'FFV1_0.f', 'FFV1_1.f', 'FFV1_2.f', 'FFV1_3.f',
-                 'FFV2_0.f', 'FFV2_1.f', 'FFV2_2.f', 'FFV2_3.f',
-                 'FFV4_0.f', 'FFV4_1.f', 'FFV4_2.f', 'FFV4_3.f',
+                 #'FFS1C1_2.f', 'FFS1_0.f',
+                 'FFV1_0.f', 'FFV1_3.f',
+                 'FFV2_0.f', 'FFV2_3.f',
+                 'FFV4_0.f', 'FFV4_3.f',
                  'ixxxxx.F', 'makefile', 'mom2cx.F', 'momntx.F', 'oxxxxx.F',
                  'pxxxxx.F', 'rotxxx.F', 'sxxxxx.F', 'txxxxx.f', 'vxxxxx.F']
         for f in files:
@@ -221,18 +246,36 @@ class TestCmdShell2(unittest.TestCase):
                                                         'Source', 'DHELAS',
                                                         f)))
         # Check that unwanted ALOHA subroutines are not generated
-        notfiles = ['VVV1_0.f', 'VVV1_1.f', 'VVV1_2.f', 'VVV1_3.f']
+        notfiles = ['FFV1_1.f', 'FFV1_2.f', 'FFV2_1.f', 'FFV2_2.f',
+                    'FFV4_1.f', 'FFV4_2.f', 
+                    'VVV1_0.f', 'VVV1_1.f', 'VVV1_2.f', 'VVV1_3.f']
         for f in notfiles:
             self.assertFalse(os.path.isfile(os.path.join(self.out_dir,
                                                         'Source', 'DHELAS',
                                                         f)))
         devnull = open(os.devnull,'w')
-        subprocess.call(['make'], stdout=devnull, stderr=devnull, 
-                                    cwd=os.path.join(self.out_dir, 'Source'))
+        # Check that the Model and Aloha output compile
+        subprocess.call(['make'],
+                        stdout=devnull, stderr=devnull, 
+                        cwd=os.path.join(self.out_dir, 'Source'))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'lib', 'libdhelas3.a')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'lib', 'libmodel.a')))
+        # Check that check_sa.f compiles
+        subprocess.call(['make', 'check'],
+                        stdout=devnull, stderr=devnull, 
+                        cwd=os.path.join(self.out_dir, 'SubProcesses', 'P0_epem_epem_no_h'))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'SubProcesses', 'P0_epem_epem_no_h', 'check')))
+        # Check that the output of check is correct 
+        logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_epem_epem_no_h', 'check.log')
+        subprocess.call(['check'],
+                        stdout=open(logfile, 'w'), stderr=devnull, 
+                        cwd=os.path.join(self.out_dir, 'SubProcesses/P0_epem_epem_no_h'))
+        log_output = open(logfile, 'r').read()
+        self.assertTrue(re.search('Matrix element\s*=\s*2.156227\d*[Ee]-0*2', log_output))
+        #self.assertTrue(re.search('Matrix element\s*=\s*1.836769\d*[Ee]-0*3', log_output))
         
     def test_ufo_standard_sm(self):
         """ check that we can use standard MG4 name """

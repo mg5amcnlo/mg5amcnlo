@@ -455,7 +455,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             for ind in numerator.listindices():
                 string = '%s(%d)= C*denom*' % (OffShellParticle, counter)
                 string += self.write_obj(numerator.get_rep(ind))
-                string = string.replace('\+-', '-')
+                string = string.replace('+-', '-')
                 string = re.sub('\((?P<num>[+-][0-9])\+(?P<num2>[+-][0-9])[Jj]\)\.', '(\g<num>d0,\g<num2>d0)', string)
                 string = re.sub('(?P<num>[0-9])[Jj]\.', '\g<num>*(0d0,1d0)', string)
                 OutString = OutString + string + '\n' 

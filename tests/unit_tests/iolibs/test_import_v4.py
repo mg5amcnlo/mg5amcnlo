@@ -294,8 +294,8 @@ class ProcCardV4ReaderTest(unittest.TestCase):
                    'add process p p > z z $ a / g, (z > w+ w- $ a / g, w- > mu- vm $ a / g), z > w+ w- $ a / g @4 QED=1 QCD=99',
                    'add process p p > Z Z, Z > W+ W- $a /g @4',
                    'add process p p > Z Z QCD=2 @4',
-                   '# Set up MadEvent directory',
-                   'setup madevent_v4 . -f'] 
+                   '# Output processes to MadEvent directory',
+                   'output -f'] 
         self.assertEqual(len(lines),len(solution))
         for i,command in enumerate(lines):
             self.assertEqual(command,solution[i])

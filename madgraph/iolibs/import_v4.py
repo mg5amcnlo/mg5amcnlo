@@ -37,21 +37,11 @@ logger = logging.getLogger('madgraph.import_v4')
 #===============================================================================
 # import_v4model
 #===============================================================================
-def import_model(model_path):
+def import_model(model_path, mgme_dir = MG4DIR):
     """create a model from a MG4 model directory."""
 
     # Check for a valid directory
-    if os.path.isdir(model_path):
-        pass
-    elif MG4DIR and os.path.isdir(os.path.join(MG4DIR, 'Models', model_path)):
-        model_path = os.path.join(MG4DIR, 'Models', model_path)
-    elif not MG4DIR:
-        error_text = "Path %s is not a valid pathname\n" % model_path
-        error_text += "and no MG_ME installation detected in order to search in Models"
-        raise MadGraph5Error(error_text)
-    else:
-        raise MadGraph5Error("Path %s is not a valid pathname" % model_path)
-
+    model_path = find_model_path(model_path, mgme_dir)
 
     files_list = [os.path.join(model_path, 'particles.dat'),\
                   os.path.join(model_path, 'interactions.dat')]
@@ -85,14 +75,21 @@ def import_model(model_path):
     return model, model_path  
 
     
+def find_model_path(model_path, mgme_dir):
+    """Find the path to the model, starting with path model_path."""
 
-    
-    
-    
-    
+    if os.path.isdir(model_path):
+        pass
+    elif mgme_dir and os.path.isdir(os.path.join(mgme_dir, 'Models', model_path)):
+        model_path = os.path.join(mgme_dir, 'Models', model_path)
+    elif not mgme_dir:
+        error_text = "Path %s is not a valid pathname\n" % model_path
+        error_text += "and no MG_ME installation detected in order to search in Models"
+        raise MadGraph5Error(error_text)
+    else:
+        raise MadGraph5Error("Path %s is not a valid pathname" % model_path)
 
-
-
+    return model_path
 
 #===============================================================================
 # read_particles_v4
@@ -486,8 +483,8 @@ class ProcCardv4Reader(object):
     
     def extract_command_lines(self, model):
         """Return the MG5 command line corresponding to this proc_card 
-        the MG5 command import model is skyped (since the model should be 
-        loaded -he is one of the argument-)"""
+        the MG5 command import model is skipped (since the model should be 
+        loaded -it is one of the argument-)"""
          
         # extract useful information of the model
         self.extract_info_from_model(model)
@@ -518,8 +515,8 @@ class ProcCardv4Reader(object):
                                   process.mg5_process_line(self.couplings_name))
         
         #finally export the madevent output
-        lines.append('# Set up MadEvent directory')
-        lines.append('setup madevent_v4 . -f')
+        lines.append('# Output processes to MadEvent directory')
+        lines.append('output -f')
         
         return lines
         
