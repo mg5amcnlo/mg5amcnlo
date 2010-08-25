@@ -402,13 +402,21 @@ class HelpToCmd(object):
               " FILENAME")
         logger.info("-- imports file(s) in various formats")
         logger.info("")
-        logger.info("   import model_v4 MODEL_info :")
-        logger.info("      Import a MG4 Model in MG5 Model""")
-        logger.info("      Model_info could be the name of the model""")
-        logger.info("                 or the path to MG4_Model directory""")
+        logger.info("   import model MODEL [-modelname]:")
+        logger.info("      Import a UFO model.")
+        logger.info("      MODEL should be a valid UFO model name")
+        logger.info("      -modelname keeps the original")
+        logger.info("             particle names for the model")
+        logger.info("")
+        logger.info("   import model_v4 MODEL [-modelname] :")
+        logger.info("      Import an MG4 model.")
+        logger.info("      Model should be the name of the model")
+        logger.info("      or the path to theMG4 model directory")
+        logger.info("      -modelname keeps the original")
+        logger.info("             particle names for the model")
         logger.info("")
         logger.info("   import proc_v4 [PATH] :"  )
-        logger.info("      Execute MG5 based on a proc_card.dat in MG4 format.""")
+        logger.info("      Execute MG5 based on a proc_card.dat in MG4 format.")
         logger.info("      Path to the proc_card is optional if you are in a")
         logger.info("      madevent directory")
         logger.info("")
@@ -703,10 +711,10 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd('wrong \"import\" format')
         
         if args[0] != 'proc_v4' and len(args) != 2:
-            if len(args) == 3 and '--modelname' in args:
-                if args[-1] != '--modelname':
-                    args.remove('--modelname')
-                    args.append('--modelname')
+            if len(args) == 3 and '-modelname' in args:
+                if args[-1] != '-modelname':
+                    args.remove('-modelname')
+                    args.append('-modelname')
             else:
                 self.help_import()
                 raise self.InvalidCmd('incorrect number of arguments')
@@ -716,10 +724,10 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd('PATH is mandatory in the current context\n' + \
                                   'Did you forget to run the \"output\" command')
                         
-        if '--modelname' in args:
-            if args[-1] != '--modelname':
-                args.remove('--modelname')
-                args.append('--modelname')
+        if '-modelname' in args:
+            if args[-1] != '-modelname':
+                args.remove('-modelname')
+                args.append('-modelname')
         
     def check_load(self, args):
         """ check the validity of the line"""
@@ -897,24 +905,34 @@ class CompleteForCmd(CheckValidForCmd):
                             ]
         return completions
 
-    def path_completion(self, text, base_dir=None):
+    def path_completion(self, text, base_dir = None, only_dirs = False):
         """Propose completions of text to compose a valid path"""
 
         if base_dir is None:
             base_dir = os.getcwd()
 
-        completion = [f
-                       for f in os.listdir(base_dir)
-                       if f.startswith(text) and \
-                            os.path.isfile(os.path.join(base_dir, f))
-                       ]
+        if only_dirs:
+            completion = [f
+                          for f in os.listdir(base_dir)
+                          if f.startswith(text) and \
+                          os.path.isdir(os.path.join(base_dir, f))
+                          ]
+        else:
+            completion = [f
+                          for f in os.listdir(base_dir)
+                          if f.startswith(text) and \
+                          os.path.isfile(os.path.join(base_dir, f))
+                          ]
 
-        completion = completion + \
-                     [f + '/'
-                       for f in os.listdir(base_dir)
-                       if f.startswith(text) and \
-                            os.path.isdir(os.path.join(base_dir, f))
-                     ]
+            completion = completion + \
+                         [f + os.path.sep
+                          for f in os.listdir(base_dir)
+                          if f.startswith(text) and \
+                          os.path.isdir(os.path.join(base_dir, f))
+                          ]
+
+        completion += [f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
+                       f.startswith(text)]
 
         return completion      
     
@@ -922,24 +940,17 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_export(self, text, line, begidx, endidx):
         "Complete the export command"
 
-        # Format
-        if len(split_arg(line[0:begidx])) == 1:
-            return self.list_completion(text, self._export_formats)
-
-        # Filename if directory is not given
-        if len(split_arg(line[0:begidx])) == 2:
-            return self.path_completion(text)
-
-        # Filename if directory is given
-        if len(split_arg(line[0:begidx])) == 3:
-            return self.path_completion(text,
-                                        base_dir=\
-                                          split_arg(line[0:begidx])[2])
+        return self.complete_output(text, line, begidx, endidx, ['nojpeg'], ['-nojpeg'])
 
     def complete_history(self, text, line, begidx, endidx):
         "Complete the add command"
 
-        # Format
+        # Directory continuation
+        if args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
+                                        only_dirs = True)
+
         if len(split_arg(line[0:begidx])) == 1:
             return self.path_completion(text)
         
@@ -967,6 +978,11 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_draw(self, text, line, begidx, endidx):
         "Complete the import command"
 
+        # Directory continuation
+        if args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
+                                        only_dirs = True)
         # Format
         if len(split_arg(line[0:begidx])) == 1:
             return self.path_completion(text)
@@ -985,15 +1001,15 @@ class CompleteForCmd(CheckValidForCmd):
         if len(split_arg(line[0:begidx])) == 1:
             return self.list_completion(text, self._save_opts)
 
+        # Directory continuation
+        if args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
+                                        only_dirs = True)
+
         # Filename if directory is not given
         if len(split_arg(line[0:begidx])) == 2:
             return self.path_completion(text)
-
-        # Filename if directory is given
-        if len(split_arg(line[0:begidx])) == 3:
-            return self.path_completion(text,
-                                        base_dir=\
-                                          split_arg(line[0:begidx])[2])
 
     def complete_save(self, text, line, begidx, endidx):
         "Complete the save command"
@@ -1002,50 +1018,49 @@ class CompleteForCmd(CheckValidForCmd):
         if len(split_arg(line[0:begidx])) == 1:
             return self.list_completion(text, self._save_opts)
 
+        # Directory continuation
+        if args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
+                                        only_dirs = True)
+
         # Filename if directory is not given
         if len(split_arg(line[0:begidx])) == 2:
             return self.path_completion(text)
 
-        # Filename if directory is given
-        if len(split_arg(line[0:begidx])) == 3:
-            return self.path_completion(text,
-                                        base_dir=\
-                                          split_arg(line[0:begidx])[2])
-
-    def complete_output(self, text, line, begidx, endidx):
+    def complete_output(self, text, line, begidx, endidx,
+                        possible_options = ['f', 'noclean', 'nojpeg'],
+                        possible_options_full = ['-f', '-noclean', '-nojpeg']):
         "Complete the output command"
 
-        possible_option = ['-d ', '-f', '-noclean']
-        possible_option2 = ['d ', 'f', 'noclean']
         possible_format = self._export_formats
         #don't propose directory use by MG_ME
-        forbidden_name = ['MadGraphII', 'Template', 'pythia-pgs', 'CVS',
+        forbidden_names = ['MadGraphII', 'Template', 'pythia-pgs', 'CVS',
                             'Calculators', 'MadAnalysis', 'SimpleAnalysis',
                             'mg5', 'DECAY', 'EventConverter', 'Models',
                             'ExRootAnalysis', 'HELAS', 'Transfer_Fct']
-        # Format
-        if len(split_arg(line[0:begidx])) == 1:
-            return self.list_completion(text, possible_format)
-        
         #name of the run =>proposes old run name
-        if len(split_arg(line[0:begidx])) == 2: 
-            content = [name for name in os.listdir(MG4DIR) if \
-                                    name not in forbidden_name and \
-                                    os.path.isdir(os.path.join(MG4DIR, name))]
-            content += ['.', 'auto']
+        args = split_arg(line[0:begidx])
+        if len(args) >= 1: 
+            # Directory continuation
+            if args[-1].endswith(os.path.sep):
+                return [name for name in self.path_completion(text,
+                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
+                        only_dirs = True) if name not in forbidden_names]
+            # options
+            if args[-1][0] == '-' or len(args) > 1 and args[-2] == '-':
+                return self.list_completion(text, possible_options)
+            if len(args) > 2:
+                return self.list_completion(text, possible_options_full)                
+            # Formats
+            if len(args) == 1:
+                return self.list_completion(text, possible_format)
+            # directory names
+            content = [name for name in self.path_completion(text, '.', only_dirs = True) \
+                       if name not in forbidden_names]
+            content += ['auto']
             return self.list_completion(text, content)
 
-        # Returning options
-        if len(split_arg(line[0:begidx])) > 2:
-            if split_arg(line[0:begidx])[-1] == '-d':
-                return self.path_completion(text)
-            elif  split_arg(line[0:begidx])[-2] == '-d' and line[-1] != ' ':
-                return self.path_completion(text, \
-                                             split_arg(line[0:begidx])[-1])
-            elif split_arg(line[0:begidx])[-1] == '-':
-                return self.list_completion(text, possible_option2)
-            else:
-                return self.list_completion(text, possible_option)
 
     def complete_shell(self, text, line, begidx, endidx):
         """ add path for shell """
@@ -1065,29 +1080,42 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_import(self, text, line, begidx, endidx):
         "Complete the import command"
 
+        args=split_arg(line[0:begidx])
+
         # Format
-        if len(split_arg(line[0:begidx])) == 1:
+        if len(args) == 1:
             return self.list_completion(text, self._import_formats)
 
-        splitline= line.split()
+        # Directory continuation
+        if args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
+                                        only_dirs = True)
         # Filename if directory is not given
         if len(split_arg(line[0:begidx])) == 2:
-            if splitline[1] == 'model':
-                out = self.path_completion(text, os.path.join(MG5DIR,'models'))
-            elif MG4DIR:
-                out = self.path_completion(text, os.path.join(MG4DIR,'Models'))
+            if args[1] == 'model':
+                out = [name for name in \
+                        self.path_completion(text,
+                                             os.path.join(MG5DIR,'models'),
+                                             only_dirs = True) \
+                        if name not in ['Template']]
+            elif args[1] == 'model_v4' and self._mgme_dir:
+                out = [name for name in \
+                        self.path_completion(text,
+                                             os.path.join(self._mgme_dir,
+                                                          'Models'),
+                                             only_dirs = True) \
+                        if name not in ['CVS']]
             else:
-                out = []
-            for i, value in enumerate(out):
-                if value.endswith('/'):
-                    out[i] = value[:-1]
-            return out + self.path_completion(text)
+                out = self.path_completion(text)
+            return out
 
-        # Filename if directory is given
-        if len(split_arg(line[0:begidx])) == 3:
-            return self.path_completion(text,
-                                        base_dir=\
-                                          split_arg(line[0:begidx])[2])
+        # Options
+        if len(args) > 2 and args[1].startswith('model'):
+            if args[-1][0] == '-':
+                return ['modelname']
+            else:
+                return ['-modelname']
 
   
 
@@ -1774,7 +1802,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if args[0] == 'model':
             self._model_v4_path = None
             self._curr_model = import_ufo.import_model(args[1])
-            if '--modelname' not in args:
+            if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
             self.add_default_multiparticles()
             self._curr_fortran_model = \
@@ -1792,7 +1820,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         elif args[0] == 'model_v4':
             self._curr_model, self._model_v4_path = \
                               import_v4.import_model(args[1], self._mgme_dir)
-            if '--modelname' not in args:
+            if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
             self.add_default_multiparticles()
             self._curr_fortran_model = \
@@ -1835,7 +1863,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # Add comment to history
             self.exec_cmd("# Import the model %s" % reader.model)
             #model_dir = os.path.join(MG4DIR, 'Models')
-            line = self.exec_cmd('import model_v4 %s --modelname' % (reader.model))
+            line = self.exec_cmd('import model_v4 %s -modelname' % (reader.model))
         else:
             logging.error('No MG_ME installation detected')
             return    
@@ -2172,11 +2200,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # wanted_lorentz are the lorentz structures which are
             # actually used in the wavefunctions and amplitudes in
             # these processes
-            wanted_lorentz = list(set([wa.get('lorentz') for wa in \
-                                       sum([p.get_all_wavefunctions() + \
-                                            p.get_all_amplitudes() for p in \
-                                            self._curr_matrix_elements.\
-                                            get('matrix_elements')], [])]))
+            wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
             export_v4.convert_model_to_mg4(self._curr_model,
                                            os.path.join(self._export_dir),
                                            wanted_lorentz)

@@ -1126,6 +1126,28 @@ CALL HIOXXX(W(1,15),W(1,1),MGVX350,Msl2,Wsl2,W(1,24))
 # Amplitude(s) for diagram number 8
 CALL IOSXXX(W(1,2),W(1,19),W(1,24),MGVX494,AMP(8))""")
 
+        # Test find_outgoing_number
+        goal_numbers = [1, 2, 3, 2, 3, 1, 2, 3, 1, 1, 3, 2, 3, 3]
+
+        i = 0
+        for wf in matrix_element.get_all_wavefunctions():
+            if not wf.get('interaction_id'):
+                continue
+            self.assertEqual(wf.find_outgoing_number(), goal_numbers[i])
+            i += 1
+
+        # Test get_used_lorentz
+        # Wavefunctions
+        goal_lorentz_list = [('', (), 1), ('', (), 2), ('', (), 3),
+                             ('', (1,), 2),('', (), 3), ('', (1,), 1),
+                             ('', (), 2), ('', (), 3),('', (1,), 1),
+                             ('', (), 1), ('', (), 3),('', (1,), 2),
+                             ('', (), 3), ('', (), 3)]
+        # Amplitudes
+        goal_lorentz_list += [('', (), 0)] * 8
+        self.assertEqual(matrix_element.get_used_lorentz(),
+                         goal_lorentz_list)
+
 
     def test_generate_helas_diagrams_uu_susug(self):
         """Testing the helas diagram generation u u > su su with t-channel n1
