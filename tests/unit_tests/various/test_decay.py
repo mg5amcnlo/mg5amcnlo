@@ -287,8 +287,8 @@ class Test_DecayParticle(unittest.TestCase):
 
         for item in Wrong_vertexlist:
             for partnum in [2,3]:
-                print partnum
-                self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError, self.mypart.set_vertexlist, partnum, False, item)
+                self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError
+                             , self.mypart.set_vertexlist, partnum, False, item)
         
     def test_find_vertexlist(self):
         #undefine object: my_testmodel, mypart, extra_part

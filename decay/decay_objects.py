@@ -229,7 +229,7 @@ class DecayParticle(base_objects.Particle):
                         % str(self.get_pdg_code())
 
                 #Check the onshell condition
-                if (ini_mass.real > (total_mass.real - ini_mass.real)) != onshell:
+                if (ini_mass.real > (total_mass.real - ini_mass.real))!=onshell:
                     raise self.PhysicsObjectError, \
                         "The on-shell condition is not satisfied."
         return True
