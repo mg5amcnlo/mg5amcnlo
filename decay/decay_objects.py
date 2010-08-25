@@ -95,16 +95,14 @@ class DecayParticle(base_objects.Particle):
         self['3_body_decay_vertexlist'] =[base_objects.VertexList(),
                                           base_objects.VertexList()]
 
-
-    def check_vertexlist(self, partnum, onshell, value, model = {}):
-        """Check if the all the vertex in the vertexlist satisfy the following
-           conditions. If so, return true; if not, raise error messages.
-
-           1. There is an appropriate leg for initial particle.
-           2. The number of final particles equals to partnum.
-           3. If model is not None, check the onshell condition and
-              the initial particle id is the same as calling particle.
-        """
+    
+    def check_decay_condition(self, partnum, onshell, 
+                              value = base_objects.VertexList(), model = {}):
+        """Check the validity of decay condition, including,
+           partnum: final state particle number,
+           onshell: on-shell condition,
+           value  : the assign vertexlist
+           model  : the specific model"""
 
         #Check if partnum is an integer.
         if not isinstance(partnum, int):
@@ -137,8 +135,20 @@ class DecayParticle(base_objects.Particle):
                 raise self.PhysicsObjectError, \
                     "The model, %s, does not contain particle %s." \
                     %(model.get('name'), self.get_name())
-
         
+
+    def check_vertexlist(self, partnum, onshell, value, model = {}):
+        """Check if the all the vertex in the vertexlist satisfy the following
+           conditions. If so, return true; if not, raise error messages.
+
+           1. There is an appropriate leg for initial particle.
+           2. The number of final particles equals to partnum.
+           3. If model is not None, check the onshell condition and
+              the initial particle id is the same as calling particle.
+        """
+        #Check the validity of arguments first
+        self.check_decay_condition(partnum, onshell, value, model)
+       
         #Determine the number of final particles.
         #Find all the possible initial particle(s).
         #Check onshell condition if the model is given.
@@ -256,21 +266,8 @@ class DecayParticle(base_objects.Particle):
            partnum = n.
            If onshell=false, return the on-shell list and vice versa.
         """
-        #Check if partnum is an integer.
-        if not isinstance(partnum, int):
-            raise self.PhysicsObjectError, \
-                "Final particle number %s must be an integer." % str(partnum)
-
-        #Check if partnum is 2 or 3.
-        #If so, return the vertexlist with the on-shell condition.
-        if partnum not in [2 ,3]:
-            raise self.PhysicsObjectError, \
-                "Final particle number %s must be 2 or 3." % str(partnum)
-        
-        #Check if onshell condition is Boolean number.
-        if not isinstance(onshell, bool):
-            raise self.PhysicsObjectError, \
-                "%s must be a Boolean number" % str(onshell)
+        #check the validity of arguments
+        self.check_decay_condition(partnum, onshell)
 
         return self.get(str(partnum)+'_body_decay_vertexlist')[onshell]
 
@@ -389,7 +386,9 @@ class DecayParticle(base_objects.Particle):
                                        )
                         temp_index +=1
                     
+                    #Sort the leglist for comparison sake (removable!)
                     legs.sort(legcmp)
+
                     vert.set('id', temp_int.get('id'))
                     vert.set('legs', legs)
                     temp_vertlist = base_objects.VertexList([vert])
@@ -397,16 +396,22 @@ class DecayParticle(base_objects.Particle):
                     ini_mass, final_mass = ini_mass.real, final_mass.real
 
                     #Check validity of vertex (removable)
-                    self.check_vertexlist(partnum,
+                    """self.check_vertexlist(partnum,
                                           ini_mass > final_mass,
-                                          temp_vertlist, model)
+                                          temp_vertlist, model)"""
 
                     #Append current vert to vertexlist
                     self.get_vertexlist(partnum, ini_mass > final_mass).\
                         append(vert)
 
-#Helping function to sort the order of leg
+        #Set the decay_vertexlist_written at the end
+        self.decay_vertexlist_written = True
+
+
+
+#Helping function
 def legcmp(x, y):
+    """Define the leg comparison, useful when testEqual is execute"""
     mycmp = cmp(x['id'], y['id'])
     if mycmp == 0:
         mycmp = cmp(x['state'], y['state'])

@@ -36,69 +36,50 @@ class Test_DecayParticle(unittest.TestCase):
     mydict = {}
     mypart = None
     my_testmodel_base = import_ufo.import_model('my_smallsm')
-
-    my2leglist = base_objects.LegList([base_objects.Leg({'id':6,
-                                                       'number': 4,
-                                                       'state': False,
-                                                       'from_group': False})]+ \
-                                      [base_objects.Leg({'id':5,
-                                                       'number': 4,
-                                                       'state': True,
-                                                       'from_group': False})] *2
-                                     )
-    my_2bodyvertexlist = base_objects.VertexList( 
-                           [base_objects.Vertex({'id':1, 'legs':my2leglist})]*5)
-
-    my3leglist = base_objects.LegList([base_objects.Leg({'id':6,
-                                                       'number': 4,
-                                                       'state': False,
-                                                       'from_group': False})] +\
-                                      [base_objects.Leg({'id':5,
-                                                       'number': 4,
-                                                       'state': True,
-                                                       'from_group': False})]* 3
-                                      )
-    my_3bodyvertexlist = base_objects.VertexList(
-                           [base_objects.Vertex({'id':1, 'legs':my3leglist})]*5)
-
-    my_2bodyvertexlist_2ini = base_objects.VertexList()
+    my_2bodyvertexlist = base_objects.VertexList()
+    my_3bodyvertexlist = base_objects.VertexList()
     my_2bodyvertexlist_wrongini = base_objects.VertexList()
-    my_3bodyvertexlist_2ini = base_objects.VertexList()
     my_3bodyvertexlist_wrongini = base_objects.VertexList()
-
-    #Add one more initial particle to the leglist.
-    my2leglist_2ini = base_objects.LegList(my2leglist + [my2leglist[0]])
-    my3leglist_2ini = base_objects.LegList(my3leglist + [my3leglist[0]])
-
-    #Vertex with more than one initial particles.
-    my_2bodyvertexlist_2ini = base_objects.VertexList(my_2bodyvertexlist + \
-        base_objects.VertexList([base_objects.Vertex({'id':1, 'legs':my2leglist_2ini})]))
-    my_3bodyvertexlist_2ini = base_objects.VertexList(my_3bodyvertexlist + \
-        base_objects.VertexList([base_objects.Vertex({'id':1, 'legs':my3leglist_2ini})]))
-
-
-    #Initial particle of Vertex is not the same as the parent one.
-    my_2bodyvertexlist_wrongini = copy.deepcopy(my_2bodyvertexlist)
-    my_2bodyvertexlist_wrongini[0]['legs'][0]['id'] = 5
-    my_3bodyvertexlist_wrongini = copy.deepcopy(my_3bodyvertexlist)
-    my_3bodyvertexlist_wrongini[0]['legs'][0]['id'] = 5
 
     def setUp(self):
 
-        self.mydict = {'name':'t',
-                      'antiname':'t~',
-                      'spin':2,
-                      'color':3,
-                      'mass':'mt',
-                      'width':'wt',
-                      'texname':'t',
-                      'antitexname':'\\overline{t}',
-                      'line':'straight',
-                      'charge':2. / 3.,
-                      'pdg_code':6,
+        #Import a model from my_testmodel
+        self.my_testmodel = decay_objects.DecayModel(self.my_testmodel_base)
+        param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')
+        self.my_testmodel.read_param_card(param_path)
+
+        #Setup the vertexlist for my_testmodel
+        import_vertexlist.make_vertexlist(self.my_testmodel)
+        
+        #Setup vertexlist for test
+        full_vertexlist = import_vertexlist.full_vertexlist
+
+        self.my_2bodyvertexlist = base_objects.VertexList([
+                full_vertexlist[(1, -24)], full_vertexlist[(7, -24)]])
+        self.my_3bodyvertexlist = base_objects.VertexList([
+                full_vertexlist[(2, -24)], full_vertexlist[(3, -24)]])
+
+        self.my_2bodyvertexlist_wrongini = base_objects.VertexList([
+                full_vertexlist[(1, -24)], full_vertexlist[(6, -6)]])
+        fake_vertex = copy.deepcopy(full_vertexlist[(2, 22)])
+        fake_vertex['legs'][0]['id'] = 24
+        self.my_3bodyvertexlist_wrongini = base_objects.VertexList([
+                fake_vertex, full_vertexlist[(2, 22)]])
+        
+        self.mydict = {'name':'w+',
+                      'antiname':'w-',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MW',
+                      'width':'WW',
+                      'texname':'W+',
+                      'antitexname':'W-',
+                      'line':'wavy',
+                      'charge': 1.00,
+                      'pdg_code': 24,
                       'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False,
+                      'is_part': True,
+                      'self_antipart': False,
                        # decay_vertexlist must have two lists, one for on-shell,
                        # one for off-shell
                       '2_body_decay_vertexlist':[self.my_2bodyvertexlist] *2,
@@ -106,12 +87,7 @@ class Test_DecayParticle(unittest.TestCase):
 
         self.mypart = decay_objects.DecayParticle(self.mydict)
         
-        #Import a model from my_testmodel
-        self.my_testmodel = decay_objects.DecayModel(self.my_testmodel_base)
-        param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')
-        self.my_testmodel.read_param_card(param_path)
-        #Setup the vertexlist for my_testmodel
-        import_vertexlist.make_vertexlist(self.my_testmodel)
+
 
     def test_setgetinit_correct(self):
         """Test __init__, get, and set functions of DecayParticle
@@ -143,32 +119,23 @@ class Test_DecayParticle(unittest.TestCase):
         myNondict = 1.
         myWrongdict = self.mydict
         myWrongdict['Wrongkey'] = 'wrongvalue'
-        
+
         #Test __init__
-        self.assertRaises(AssertionError,
-                          decay_objects.DecayParticle,
-                          myNondict)
+        self.assertRaises(AssertionError, decay_objects.DecayParticle,myNondict)
         self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
-                          decay_objects.DecayParticle,
-                          myWrongdict)
+                          decay_objects.DecayParticle, myWrongdict)
                           
         #Test get
-        self.assertRaises(AssertionError,
-                          self.mypart.get,
-                          myNondict)
+        self.assertRaises(AssertionError, self.mypart.get, myNondict)
 
         self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
-                          self.mypart.get,
-                          'WrongParameter')
+                          self.mypart.get, 'WrongParameter')
                           
         #Test set
-        self.assertRaises(AssertionError,
-                          self.mypart.set,
-                          myNondict, 1)
+        self.assertRaises(AssertionError, self.mypart.set, myNondict, 1)
 
         self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
-                          self.mypart.set,
-                          'WrongParameter', 1)
+                          self.mypart.set, 'WrongParameter', 1)
 
     def test_values_for_prop(self):
         """Test filters for DecayParticle properties."""
@@ -191,7 +158,7 @@ class Test_DecayParticle(unittest.TestCase):
                        {'prop':'pdg_code',
                         #The last pdg_code must be 6 to be consistent with
                         #vertexlist
-                        'right_list':[1, 12, 80000000, -1, 6],
+                        'right_list':[1, 12, 80000000, -1, 24],
                         'wrong_list':[1.2, 'a']},
                        {'prop':'line',
                         'right_list':['straight', 'wavy', 'curly', 'dashed'],
@@ -216,26 +183,18 @@ class Test_DecayParticle(unittest.TestCase):
                                       ['hey'] *2,
                                       [self.my_2bodyvertexlist, 
                                        self.my_3bodyvertexlist],
-                                      [self.my_2bodyvertexlist_2ini,
-                                       self.my_2bodyvertexlist],
-                                      [self.my_2bodyvertexlist,
-                                       self.my_2bodyvertexlist_2ini],
                                       [self.my_2bodyvertexlist_wrongini,
                                        self.my_2bodyvertexlist],
                                       [self.my_2bodyvertexlist,
                                        self.my_2bodyvertexlist_wrongini]
                                      ]},
                        {'prop':'3_body_decay_vertexlist',
-                        'right_list':[[self.my_3bodyvertexlist] *2],
+                        'right_list':[[self.my_3bodyvertexlist] * 2],
                          'wrong_list':[1, [self.my_3bodyvertexlist] * 3,
                                       ['hey', self.my_3bodyvertexlist],
                                       ['hey'] *2,
                                       [self.my_2bodyvertexlist, 
                                        self.my_3bodyvertexlist],
-                                      [self.my_3bodyvertexlist_2ini,
-                                       self.my_3bodyvertexlist],
-                                      [self.my_3bodyvertexlist,
-                                       self.my_3bodyvertexlist_2ini],
                                       [self.my_3bodyvertexlist_wrongini,
                                        self.my_3bodyvertexlist],
                                       [self.my_3bodyvertexlist,
@@ -287,51 +246,23 @@ class Test_DecayParticle(unittest.TestCase):
     def test_getsetvertexlist_exceptions(self):
         """Test for the exceptions raised by the get_ or set_vertexlist"""
 
-        #Test of get_vertexlist
-        #Test the exceptions raised from partnum
-        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
-                          self.mypart.get_vertexlist,
-                          'string', True)
+        #Test of get_ and set_vertexlist
+        #Test the exceptions raised from partnum and onshell
+        for wrongpartnum in ['string', 1.5, 5]:
+            self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                              self.mypart.get_vertexlist, wrongpartnum, True)
+            self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                              self.mypart.set_vertexlist, wrongpartnum, True,
+                              self.my_2bodyvertexlist, self.my_testmodel)
+
+        for wrongbool in [15, 'NotBool']:           
+            self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                              self.mypart.get_vertexlist, 2, wrongbool)
+            self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                              self.mypart.set_vertexlist, 3, wrongbool,
+                              self.my_3bodyvertexlist, self.my_testmodel)
+
         
-        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
-                          self.mypart.get_vertexlist,
-                          1.5, True)
-
-        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
-                          self.mypart.get_vertexlist,
-                          5, True)
-        #Test the exceptions raised from the onshell
-        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
-                          self.mypart.get_vertexlist,
-                          2, 15)
-
-        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
-                          self.mypart.get_vertexlist,
-                          2, 'Notbool')
-
-
-        #Test of set_vertexlist
-        #Test the exceptions raised from partnum
-        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
-                          self.mypart.set_vertexlist,
-                          'string', True, self.my_2bodyvertexlist, self.my_testmodel)
-        
-        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
-                          self.mypart.set_vertexlist,
-                          1.5, True, self.my_2bodyvertexlist, self.my_testmodel)
-
-        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
-                          self.mypart.set_vertexlist,
-                          5, True, self.my_2bodyvertexlist, self.my_testmodel)
-
-        #Test the exceptions raised from the onshell
-        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
-                          self.mypart.set_vertexlist,
-                          2, 15, self.my_2bodyvertexlist, self.my_testmodel)
-
-        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
-                          self.mypart.set_vertexlist,
-                          2, 'Notbool', self.my_2bodyvertexlist, self.my_testmodel)
 
         #Test the exceptions raised from value in set_vertexlist
         #Test for non vertexlist objects
@@ -352,15 +283,12 @@ class Test_DecayParticle(unittest.TestCase):
         #Use the vertexlist from test_getsetvertexlist_exceptions
 
         Wrong_vertexlist = [self.my_2bodyvertexlist_wrongini,
-                            self.my_2bodyvertexlist_2ini,
-                            self.my_3bodyvertexlist_wrongini,
-                            self.my_3bodyvertexlist_2ini]
+                            self.my_3bodyvertexlist_wrongini]
 
         for item in Wrong_vertexlist:
             for partnum in [2,3]:
-                self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
-                                  self.mypart.set_vertexlist,
-                                  partnum, False, item)
+                print partnum
+                self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError, self.mypart.set_vertexlist, partnum, False, item)
         
     def test_find_vertexlist(self):
         #undefine object: my_testmodel, mypart, extra_part
@@ -383,9 +311,11 @@ class Test_DecayParticle(unittest.TestCase):
 
         #Import the vertexlist from import_vertexlist
         full_vertexlist = import_vertexlist.full_vertexlist
-        #Test the correctness of vertexlist by mypart (t quark)
-        self.mypart.find_vertexlist(self.my_testmodel)
-        
+
+        #Test the correctness of vertexlist by t quark
+        tquark = decay_objects.DecayParticle(self.my_testmodel.get_particle(6))
+        tquark.find_vertexlist(self.my_testmodel)
+        #Name convention: 'pdg_code'+'particle #'+'on-shell'
         my_vertexlist620 = base_objects.VertexList([full_vertexlist[(6, -6)]])
         my_vertexlist621 = base_objects.VertexList([full_vertexlist[(8, -6)]])
         my_vertexlist630 = base_objects.VertexList()
@@ -422,7 +352,7 @@ class Test_DecayParticle(unittest.TestCase):
         i=0
         for partnum in [2,3]:
             for onshell in [False, True]:
-                self.assertEqual(self.mypart.get_vertexlist(partnum, onshell),
+                self.assertEqual(tquark.get_vertexlist(partnum, onshell),
                                  rightlist6[i])
                 self.assertEqual(wboson_p.get_vertexlist(partnum, onshell),
                                  rightlist24[i])
