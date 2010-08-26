@@ -2321,7 +2321,7 @@ class TestAlohaWriter(unittest.TestCase):
         #vertex_3 receives UWA with label 134
         #vertex_2 expects UAW => need label 143 
         new_call = writer.reorder_call_list(call_list, 2, 3)
-        #self.assertEqual(['F1', 'V4', 'V3'], new_call)
+        self.assertEqual(['F1', 'V4', 'V3'], new_call)
         
         #vertex UAWA
         #vertex_4 receives UAW with label 134 
@@ -2407,5 +2407,26 @@ class TestAlohaWriter(unittest.TestCase):
         
         new_call = writer.reorder_call_list(call_list, 2, 3)
         self.assertEqual(['F1', 'V3', 'S4'], new_call)        
+    
+    
+    def test_change_number_format_fortran(self):
+        """ Check that the number are correctly written in fortranwriter """
         
+        SSS = UFOLorentz(name = 'SSS',
+               spins = [ 1, 1, 1])
+    
+        
+        abstract = AbstractRoutineBuilder(SSS).compute_routine(0)
+        writer = aloha_writers.ALOHAWriterForFortran(abstract, '/tmp')
+        
+        numbers = [complex(0,1), complex(0,1/2), 3*complex(1.0,3), complex(1,0)]
+        numbers +=[0, 1, 2, -3, 3.0, 3.00, 1.00001, 2000, 24300.1, 1/3, 1/4, 3/4]
+ 
+        solution = ['(0, 1)', '(0, 0.5)', '(3, 9)', '1', '0', '1', '2', '-3', '3', '3', '1.00001', '2000', '24300.1', '0.333333333', '0.25', '0.75']
+        converted = [writer.change_number_format(number) for number in numbers]
+        map(self.assertEqual, converted, solution)
+ 
+ 
+    
+    
         
