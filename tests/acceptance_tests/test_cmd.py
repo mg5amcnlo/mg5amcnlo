@@ -128,6 +128,9 @@ class TestCmdShell2(unittest.TestCase):
     def test_output_madevent_directory(self):
         """Test outputing a MadEvent directory"""
 
+        if os.path.isdir(self.out_dir):
+            shutil.rmdir(self.out_dir)
+
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('output %s -nojpeg' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
@@ -185,8 +188,6 @@ class TestCmdShell2(unittest.TestCase):
         self.assertRaises(Cmd.CheckValidForCmd.InvalidCmd,
                           self.do, 'output')
         self.do("generate e+ e- > e+ e- / h")
-        self.assertRaises(Cmd.CheckValidForCmd.InvalidCmd,
-                          self.do, 'output')
 
     def test_read_madgraph4_proc_card(self):
         """Test reading a madgraph4 proc_card.dat"""
@@ -215,6 +216,9 @@ class TestCmdShell2(unittest.TestCase):
     def test_output_standalone_directory(self):
         """ command 'output' works with path"""
         
+        if os.path.isdir(self.out_dir):
+            shutil.rmdir(self.out_dir)
+
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('output standalone_v4 %s' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
@@ -227,6 +231,9 @@ class TestCmdShell2(unittest.TestCase):
         
     def test_ufo_aloha(self):
         """ test the import of models and the export of Helas Routine """
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmdir(self.out_dir)
 
         self.do('import model sm -modelname')
         #self.do('import model mssm -modelname')

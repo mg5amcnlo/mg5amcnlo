@@ -166,9 +166,6 @@ class CmdExtended(cmd.Cmd):
         self.save_line = ''
         cmd.Cmd.__init__(self, *arg, **opt)
         self.__initpos = os.path.abspath(os.getcwd())
-        # By default, load the UFO Standard Model
-        logger.info("Loading default model: sm")
-        self.do_import('model sm')
         
     def precmd(self, line):
         """ A suite of additional function needed for in the cmd
@@ -769,33 +766,44 @@ class CheckValidForCmd(object):
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
                      ['madevent_v4', 'standalone_v4']:
-                if self._export_format == 'madevent_v4':
-                    name_dir = lambda i: 'PROC_%s_%s' % \
-                                            (self._curr_model['name'], i)
-                    auto_path = lambda i: os.path.join(self.writing_dir,
-                                                       name_dir(i))
-                elif self._export_format == 'standalone_v4':
-                    name_dir = lambda i: 'PROC_SA_%s_%s' % \
-                                            (self._curr_model['name'], i)
-                    auto_path = lambda i: os.path.join(self.writing_dir,
-                                                       name_dir(i))                
-                for i in range(500):
-                    if os.path.isdir(auto_path(i)):
-                        continue
-                    else:
-                        self._export_dir = auto_path(i) 
-                        break
-                if not self._export_dir:
-                    raise self.InvalidCmd('Can\'t use auto path,' + \
-                                          'more than 500 dirs already')    
+                self.get_default_path()
             else:
                 self._export_dir = path
 
         if not self._export_dir:
             # No valid path
-            raise self.InvalidCmd('No valid path found, please supply a path')
+            self.get_default_path()
+
+        if self._export_format in ['madevent_v4', 'standalone_v4'] and \
+           not self._mgme_dir and \
+           os.path.realpath(self._export_dir) != os.path.realpath('.'):
+            raise MadGraph5Error, \
+                  "To generate a new MG4 directory, you need a valid MG_ME path"
 
         self._export_dir = os.path.realpath(self._export_dir)
+
+    def get_default_path(self):
+        """Set self._export_dir to the default (\'auto\') path"""
+        if self._export_format == 'madevent_v4':
+            name_dir = lambda i: 'PROC_%s_%s' % \
+                                    (self._curr_model['name'], i)
+            auto_path = lambda i: os.path.join(self.writing_dir,
+                                               name_dir(i))
+        elif self._export_format == 'standalone_v4':
+            name_dir = lambda i: 'PROC_SA_%s_%s' % \
+                                    (self._curr_model['name'], i)
+            auto_path = lambda i: os.path.join(self.writing_dir,
+                                               name_dir(i))                
+        for i in range(500):
+            if os.path.isdir(auto_path(i)):
+                continue
+            else:
+                self._export_dir = auto_path(i) 
+                break
+        if not self._export_dir:
+            raise self.InvalidCmd('Can\'t use auto path,' + \
+                                  'more than 500 dirs already')    
+            
         
 #===============================================================================
 # CheckValidForCmdWeb
@@ -1056,12 +1064,14 @@ class CompleteForCmd(CheckValidForCmd):
             if args[-1][0] == '-' or len(args) > 1 and args[-2] == '-':
                 return self.list_completion(text, possible_options)
             if len(args) > 2:
-                return self.list_completion(text, possible_options_full)                
+                return self.list_completion(text, possible_options_full)
             # Formats
             if len(args) == 1:
                 if any([p.startswith(text) for p in possible_format]):
-                    return self.list_completion(text, possible_format) + \
-                           ['./', '../']
+                    return [name for name in \
+                            self.list_completion(text, possible_format) + \
+                            ['.' + os.path.sep, '..' + os.path.sep, 'auto'] \
+                            if name.startswith(text)]
 
             # directory names
             content = [name for name in self.path_completion(text, '.', only_dirs = True) \
@@ -1175,7 +1185,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self._mgme_dir = mgme_dir
                 logger.info('Setting MG/ME directory to %s' % mgme_dir)
             else:
-                logger.warning('Directory %s not valid MG/ME directory' % \
+                logger.warning('Warning: Directory %s not valid MG/ME directory' % \
                              mgme_dir)
                 self._mgme_dir = MG4DIR
 
@@ -1998,9 +2008,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     if not model.get('parameters'):
                         # This is a v4 model.  Look for path.
                         self._model_v4_path = import_v4.find_model_path(\
-                                   self._curr_model.get('name'), self._mgme_dir)
+                                   model.get('name'), self._mgme_dir)
+                        self._curr_fortran_model = \
+                                helas_call_writers.FortranHelasCallWriter(\
+                                                              model)
                     else:
                         self._model_v4_path = None
+                        self._curr_fortran_model = \
+                                helas_call_writers.FortranUFOHelasCallWriter(\
+                                                              model)
                     # If not exceptions from previous steps, set
                     # _curr_amps and _curr_model
                     self._curr_amps = amps                    
@@ -2266,7 +2282,7 @@ class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
                                os.environ['REMOTE_USER'])
         
         #standard initialization
-        MadGraphCmd.__init__(self, *arg, **opt)
+        MadGraphCmd.__init__(self, mgme_dir = '', *arg, **opt)
 
 #===============================================================================
 # MadGraphCmd
@@ -2292,6 +2308,10 @@ class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
             except IOError:
                 pass
             atexit.register(readline.write_history_file, history_file)
+
+        # By default, load the UFO Standard Model
+        logger.info("Loading default model: sm")
+        self.do_import('model sm')
 
 
     # Access to shell

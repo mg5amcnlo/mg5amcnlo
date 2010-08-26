@@ -49,11 +49,19 @@ def copy_v4template(mgme_dir, dir_path, clean):
     
     #First copy the full template tree if dir_path doesn't exit
     if not os.path.isdir(dir_path):
+        if not mgme_dir:
+            raise MadGraph5Error, \
+                  "No valid MG_ME path given for MG4 run directory creation."
         logger.info('initialize a new directory: %s' % \
                     os.path.basename(dir_path))
         shutil.copytree(os.path.join(mgme_dir, 'Template'), dir_path, True)
-    shutil.copy(os.path.join(mgme_dir, 'MGMEVersion.txt'), dir_path)
-
+        shutil.copy(os.path.join(mgme_dir, 'MGMEVersion.txt'), dir_path)
+    elif not os.path.isfile(os.path.join(dir_path, 'MGMEVersion.txt')):
+        if not mgme_dir:
+            raise MadGraph5Error, \
+                  "No valid MG_ME path given for MG4 run directory creation."
+        shutil.copy(os.path.join(mgme_dir, 'MGMEVersion.txt'), dir_path)
+    
     #Ensure that the Template is clean
     if clean:
         logger.info('remove old information in %s' % os.path.basename(dir_path))
