@@ -417,7 +417,7 @@ class ParticleList(PhysicsObjectList):
         for particle in self:
             particle_dict[particle.get('pdg_code')] = particle
             if not particle.get('self_antipart'):
-                antipart = copy.copy(particle)
+                antipart = copy.deepcopy(particle)
                 antipart.set('is_part', False)
                 particle_dict[antipart.get_pdg_code()] = antipart
 
@@ -746,9 +746,8 @@ class Model(PhysicsObject):
                 self.get('ref_dict_to1')
                 self.get('ref_dict_to0')
 
-            return True
-        else:
-            return False
+        return result
+
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
