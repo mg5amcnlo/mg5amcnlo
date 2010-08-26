@@ -62,12 +62,12 @@ class WriteALOHA:
         """Prototype for language specific body""" 
         pass
     
-    def define_foote (self):
+    def define_foot(self):
         """Prototype for language specific footer"""
         pass
     
     def write_indices_part(self, indices, obj): 
-        """Routine for making a string out of indice objects"""
+        """Routine for making a string out of indices objects"""
         
         text = 'output(%s)' % indices
         return text                 
@@ -421,13 +421,28 @@ class ALOHAWriterForFortran(WriteALOHA):
             name = name.replace('_', '(', 1) + ')'
         #name = re.sub('\_(?P<num>\d+)$', '(\g<num>)', name)
         return name
-    
+  
+    zero_pattern = re.compile(r'''0+$''')
     def change_number_format(self, number):
         """Formating the number"""
-        if isinstance(number, complex):
-            out = '(%.9fd0, %.9fd0)' % (number.real, number.imag)
+
+        def isinteger(x):
+            try:
+                return int(x) == x
+            except TypeError:
+                return False
+
+        if isinteger(number):
+            out = str(int(number))
+        elif isinstance(number, complex):
+            if number.imag:
+                out = '(%s, %s)' % (self.change_number_format(number.real) , \
+                                    self.change_number_format(number.imag))
+            else:
+                out = self.change_number_format(number.real)
         else:
             out = '%.9f' % number
+            out = self.zero_pattern.sub('', out)
         return out
     
     def define_expression(self):

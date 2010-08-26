@@ -359,7 +359,7 @@ class AbstractALOHAModel(dict):
 
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
-        #self.look_for_symmetries()
+        self.look_for_symmetries()
         conjugate_list = self.look_for_conjugate()
         
         for lorentz in self.model.all_lorentz:
