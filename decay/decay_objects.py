@@ -30,7 +30,7 @@ import madgraph.core.color_algebra as color
 import madgraph.iolibs.import_ufo as import_ufo
 from madgraph import MadGraph5Error, MG5DIR
 
-ZERO = 0.
+ZERO = 0
 #===============================================================================
 # What does logger means...
 #===============================================================================
@@ -431,6 +431,22 @@ class DecayParticleList(base_objects.ParticleList):
             "Object %s is not a valid object for the current list" %repr(object)
 
         list.append(self, DecayParticle(object))
+
+    def generate_dict(self):
+        """Generate a dictionary from particle id to particle.
+        Include antiparticles.
+        """
+
+        particle_dict = {}
+
+        for particle in self:
+            particle_dict[particle.get('pdg_code')] = particle
+            if not particle.get('self_antipart'):
+                antipart = copy.deepcopy(particle)
+                antipart.set('is_part', False)
+                particle_dict[antipart.get_pdg_code()] = antipart
+
+        return particle_dict
     
 #===============================================================================
 # DecayModel: Model object that is used in this module
@@ -439,7 +455,15 @@ class DecayModel(base_objects.Model):
     """Model object with an attribute to construct the decay vertex list
        for a given particle and a interaction
     """
-    
+
+    def __init__(self, ini_dict = {}):
+        """Reset the particle_dict so that items in it is 
+           of DecayParitcle type"""
+        super(DecayModel, self).__init__(ini_dict)
+
+        self['particle_dict'] = {}
+        self.get('particle_dict')
+        
     def default_setup(self):
         """The particles is changed to ParticleList"""
         super(DecayModel, self).default_setup()
@@ -449,26 +473,109 @@ class DecayModel(base_objects.Model):
         """Change the Particle into DecayParticle"""
         #Record the validity of set by mother routine
         return_value = super(DecayModel, self).set(name, value)
-        
+        #Reset the dictionaries
+
         if return_value:
             if name == 'particles':
+                #Reset dictionaries
+                self['particle_dict'] = {}
+                self['got_majoranas'] = None
                 #Convert to DecayParticleList
                 self['particles'] = DecayParticleList(value)
                 #Generate new dictionaries with items are DecayParticle
                 self.get('particle_dict')
                 self.get('got_majoranas')
-            return True
-        else:
-            return False
+            if name == 'interactions':
+                # Reset dictionaries
+                self['interaction_dict'] = {}
+                self['ref_dict_to1'] = {}
+                self['ref_dict_to0'] = {}
+                #Generate interactions with particles are DecayParticleLis
+                for inter in self['interactions']:
+                    inter['particles']=DecayParticleList([part for part in \
+                                                          inter['particles']])
+                # Generate new dictionaries
+                self.get('interaction_dict')
+                self.get('ref_dict_to1')
+                self.get('ref_dict_to0')
 
-    def FindChannel(self, interaction):
+        return return_value
+
+    def find_vertexlist(self):
         """ Check whether the interaction is able to decay from mother_part.
             Set the '2_body_decay_vertexlist' and 
             '3_body_decay_vertexlist' of the corresponding particles.
             Utilize in finding all the decay table of the whole model
         """
+        #Expand the particlelist to contain anti-particle so as to record
+        #the vertexlist of anti-particle.
+    
+        leg_dict = {}
+        vertexlist_dict = {}
+        particle_dict = self.get('particle_dict')
+        #Prepare the leg_dict
+        for  pid in particle_dict.keys():
+            #Create the leg_dict
+            leg_dict[pid] = base_objects.Leg({'id' : pid})
+            #Expand the particles to include anti-particle
+            if pid < 0:
+                self['particles'].append(copy.deepcopy(particle_dict[pid]))
+            for partnum in [2, 3]:
+                for onshell in [True, False]:
+                    vertexlist_dict[(pid, partnum,onshell)]= \
+                        base_objects.VertexList()
 
-        pass
+        #Prepare the vertexlist
+        for inter in self['interactions']:
+            #Calculate the particle number, total mass
+            partnum = len(inter['particles']) - 1
+            if partnum > 3:
+                pass
+            temp_legs = base_objects.LegList()
+            total_mass = 0
+            for part in inter['particles']:
+                total_mass += eval(part.get('mass')).real
+                #Create the original legs
+                temp_legs.append(copy.deepcopy(leg_dict[part.get_pdg_code()]))
+            
+            for num, part in enumerate(inter['particles']):
+                #Set each leg as incoming particle
+                #Make the change on a new legs
+                temp_legs_new = copy.deepcopy(temp_legs)
+                temp_legs_new[num].set('state', False)
+                ini_mass = eval(part.get('mass')).real
+                onshell = ini_mass > (total_mass - ini_mass)
+                #For later assignment
+                if onshell:
+                    index = 1
+                else:
+                    index = 0
+
+                #If part is not self-conjugate,
+                #change the particle into anti-particle (Use get_anti_pdg_code)
+                pid = part.get_anti_pdg_code()
+                temp_legs_new[num].set('id', pid)
+                
+                #Sort the legs for comparison
+                temp_legs_new.sort(legcmp)
+                temp_vertex = base_objects.Vertex({'id': inter.get('id'),
+                                                   'legs':temp_legs_new})
+
+                #Record the vertex with key = (interaction_id, part_id)
+                if temp_vertex not in vertexlist_dict[(pid, partnum, onshell )]:
+                    vertexlist_dict[(pid, partnum, onshell)].append(temp_vertex)
+                    #Assign temp_vertex to antiparticle of part
+                    #print pid, partnum, onshell, temp_vertex
+                    #particle_dict[pid].check_vertexlist(partnum, onshell, 
+                    #             base_objects.VertexList([temp_vertex]), self)
+                    particle_dict[pid][str(partnum) + '_body_decay_vertexlist'][index].append(temp_vertex)
+
+
+        fdata = open(os.path.join(MG5DIR, 'models', self['name'], 'vertexlist_dict.dat'), 'w')
+        fdata.write(str(vertexlist_dict))
+        fdata.close()
+
+
 
     def read_param_card(self, param_card):
         """Read a param_card and set all parameters and couplings as

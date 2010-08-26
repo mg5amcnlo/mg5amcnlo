@@ -55,12 +55,12 @@ class Test_DecayParticle(unittest.TestCase):
         full_vertexlist = import_vertexlist.full_vertexlist
 
         self.my_2bodyvertexlist = base_objects.VertexList([
-                full_vertexlist[(1, -24)], full_vertexlist[(7, -24)]])
+                full_vertexlist[(1, 24)], full_vertexlist[(7, 24)]])
         self.my_3bodyvertexlist = base_objects.VertexList([
-                full_vertexlist[(2, -24)], full_vertexlist[(3, -24)]])
+                full_vertexlist[(2, 24)], full_vertexlist[(3, 24)]])
 
         self.my_2bodyvertexlist_wrongini = base_objects.VertexList([
-                full_vertexlist[(1, -24)], full_vertexlist[(6, -6)]])
+                full_vertexlist[(1, 24)], full_vertexlist[(6, -6)]])
         fake_vertex = copy.deepcopy(full_vertexlist[(2, 22)])
         fake_vertex['legs'][0]['id'] = 24
         self.my_3bodyvertexlist_wrongini = base_objects.VertexList([
@@ -316,8 +316,8 @@ class Test_DecayParticle(unittest.TestCase):
         tquark = decay_objects.DecayParticle(self.my_testmodel.get_particle(6))
         tquark.find_vertexlist(self.my_testmodel)
         #Name convention: 'pdg_code'+'particle #'+'on-shell'
-        my_vertexlist620 = base_objects.VertexList([full_vertexlist[(6, -6)]])
-        my_vertexlist621 = base_objects.VertexList([full_vertexlist[(8, -6)]])
+        my_vertexlist620 = base_objects.VertexList([full_vertexlist[(6, 6)]])
+        my_vertexlist621 = base_objects.VertexList([full_vertexlist[(8, 6)]])
         my_vertexlist630 = base_objects.VertexList()
         my_vertexlist631 = base_objects.VertexList()
         rightlist6 = [my_vertexlist620, my_vertexlist621, my_vertexlist630, my_vertexlist631]
@@ -327,11 +327,11 @@ class Test_DecayParticle(unittest.TestCase):
         wboson_p.find_vertexlist(self.my_testmodel)
         #List must follow the order of interaction id so as to be consistent
         #with the find_vertexlist function
-        my_vertexlist2420 = base_objects.VertexList([full_vertexlist[(1, -24)],
-                                                     full_vertexlist[(7, -24)]])
-        my_vertexlist2421 = base_objects.VertexList([full_vertexlist[(9, -24)]])
-        my_vertexlist2430 = base_objects.VertexList([full_vertexlist[(2, -24)],
-                                                     full_vertexlist[(3, -24)]])
+        my_vertexlist2420 = base_objects.VertexList([full_vertexlist[(1, 24)],
+                                                     full_vertexlist[(7, 24)]])
+        my_vertexlist2421 = base_objects.VertexList([full_vertexlist[(9, 24)]])
+        my_vertexlist2430 = base_objects.VertexList([full_vertexlist[(2, 24)],
+                                                     full_vertexlist[(3, 24)]])
         my_vertexlist2431 = base_objects.VertexList()
         #List of the total decay vertex list for W+
         rightlist24 =[my_vertexlist2420, my_vertexlist2421, my_vertexlist2430, my_vertexlist2431]
@@ -340,7 +340,7 @@ class Test_DecayParticle(unittest.TestCase):
         photon = decay_objects.DecayParticle(self.my_testmodel.get_particle(22))
         photon.find_vertexlist(self.my_testmodel)
         #vertex is in the order of interaction id
-        my_vertexlist2220 = base_objects.VertexList([full_vertexlist[(1,  22)],
+        my_vertexlist2220 = base_objects.VertexList([full_vertexlist[(1, 22)],
                                                      full_vertexlist[(4, 22)],
                                                      full_vertexlist[(5, 22)],                                                       full_vertexlist[(6, 22)]])
         my_vertexlist2221 = base_objects.VertexList()
@@ -383,7 +383,10 @@ class TestDecayParticleList(unittest.TestCase):
                                    decay_objects.DecayParticle))
         self.assertTrue(isinstance(decay_partlist,
                                    decay_objects.DecayParticleList))
-
+        
+        #Test the conversion in generate_dict
+        for num, part in decay_partlist.generate_dict().items():
+            self.assertTrue(isinstance(part, decay_objects.DecayParticle))
 #===============================================================================
 # TestDecayModel
 #===============================================================================
@@ -391,10 +394,18 @@ class TestDecayModel(unittest.TestCase):
     """Test class for the DecayModel object"""
 
     base_model = import_ufo.import_model('sm')
-
+    my_testmodel_base = import_ufo.import_model('my_smallsm')
     def setUp(self):
         """Set up decay model"""
+        #Full SM DecayModel
         self.decay_model = decay_objects.DecayModel(self.base_model)
+
+        #My_small sm DecayModel
+        self.my_testmodel = decay_objects.DecayModel(self.my_testmodel_base)
+        param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')
+        self.my_testmodel.read_param_card(param_path)
+        import_vertexlist.make_vertexlist(self.my_testmodel)
+
         #import madgraph.iolibs.export_v4 as export_v4
         #writer = export_v4.UFO_model_to_mg4(self.base_model,'temp')
         #writer.build()
@@ -425,20 +436,43 @@ class TestDecayModel(unittest.TestCase):
         self.assertTrue(isinstance(self.decay_model.get('particles'), 
                                    decay_objects.DecayParticleList))
 
-        #Test the particle is converted into DecayParticle explicit
-        #using the set function
+        #Test the conversion into DecayParticle explicitly
+        #by the set function
         mg5_particlelist = self.base_model['particles']
 
         result = self.decay_model.set('particles', mg5_particlelist)
+
         #Using ParticleList to set should be fine, the result is converted
-        #into DecayParticle
+        #into DecayParticleList.
         self.assertTrue(result)
         self.assertTrue(isinstance(self.decay_model['particles'],
                               decay_objects.DecayParticleList))
 
+        #particle_dict should contain DecayParticle
+        self.assertTrue(isinstance(self.decay_model.get('particle_dict')[6],
+                                   decay_objects.DecayParticle))
+
         #Test if the set function returns correctly when assign a bad value
         self.assertFalse(self.decay_model.set('particles', 'NotParticleList'))
 
+        #Test if the particls in interaction is converted to DecayParticle
+        self.assertTrue(isinstance(self.decay_model['interactions'][-1]['particles'], decay_objects.DecayParticleList))
+                        
+
+    def test_find_vertexlist(self):
+        """Test of the find_vertexlist"""
+            
+        self.my_testmodel.find_vertexlist()
+        self.my_testmodel.get('particle_dict')[5]['charge'] = 8
+        full_vertexlist = import_vertexlist.full_vertexlist_newindex
+
+        for id, part in self.my_testmodel.get('particle_dict').items():
+            for partnum in [2, 3]:
+                for onshell in [True, False]:
+                    #print part.get_pdg_code(), partnum, onshell
+                    self.assertEqual(part.get_vertexlist(partnum, onshell),
+                                     full_vertexlist[(part.get_pdg_code(),
+                                                      partnum, onshell)])
 
 if __name__ == '__main__':
     unittest.unittest.main()
