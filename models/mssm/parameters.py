@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 216 $
-# Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
-# Date: Wed 11 Aug 2010 14:22:45
+# This file was automatically created by FeynRules $Revision: 294 $
+# Mathematica version: 7.0 for Linux x86 (64-bit) (February 18, 2009)
+# Date: Tue 24 Aug 2010 12:44:50
 
 
 
@@ -12,7 +12,7 @@ from function_library import complexconjugate, re, im, csc, sec, acsc, asec
 RRd11 = Parameter(name = 'RRd11',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 1.,
                   texname = '\\text{RRd11}',
                   lhablock = 'DSQMIX',
                   lhacode = [ 1, 1 ])
@@ -28,7 +28,7 @@ RRd12 = Parameter(name = 'RRd12',
 RRd13 = Parameter(name = 'RRd13',
                   nature = 'external',
                   type = 'real',
-                  value = 0.938737896,
+                  value = 0.,
                   texname = '\\text{RRd13}',
                   lhablock = 'DSQMIX',
                   lhacode = [ 1, 3 ])
@@ -52,7 +52,7 @@ RRd15 = Parameter(name = 'RRd15',
 RRd16 = Parameter(name = 'RRd16',
                   nature = 'external',
                   type = 'real',
-                  value = 0.344631925,
+                  value = 0.,
                   texname = '\\text{RRd16}',
                   lhablock = 'DSQMIX',
                   lhacode = [ 1, 6 ])
@@ -68,7 +68,7 @@ RRd21 = Parameter(name = 'RRd21',
 RRd22 = Parameter(name = 'RRd22',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 1.,
                   texname = '\\text{RRd22}',
                   lhablock = 'DSQMIX',
                   lhacode = [ 2, 2 ])
@@ -76,7 +76,7 @@ RRd22 = Parameter(name = 'RRd22',
 RRd23 = Parameter(name = 'RRd23',
                   nature = 'external',
                   type = 'real',
-                  value = -0.344631925,
+                  value = 0.,
                   texname = '\\text{RRd23}',
                   lhablock = 'DSQMIX',
                   lhacode = [ 2, 3 ])
@@ -100,7 +100,7 @@ RRd25 = Parameter(name = 'RRd25',
 RRd26 = Parameter(name = 'RRd26',
                   nature = 'external',
                   type = 'real',
-                  value = 0.938737896,
+                  value = 0.,
                   texname = '\\text{RRd26}',
                   lhablock = 'DSQMIX',
                   lhacode = [ 2, 6 ])
@@ -124,7 +124,7 @@ RRd32 = Parameter(name = 'RRd32',
 RRd33 = Parameter(name = 'RRd33',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 0.938737896,
                   texname = '\\text{RRd33}',
                   lhablock = 'DSQMIX',
                   lhacode = [ 3, 3 ])
@@ -140,7 +140,7 @@ RRd34 = Parameter(name = 'RRd34',
 RRd35 = Parameter(name = 'RRd35',
                   nature = 'external',
                   type = 'real',
-                  value = 1.,
+                  value = 0.,
                   texname = '\\text{RRd35}',
                   lhablock = 'DSQMIX',
                   lhacode = [ 3, 5 ])
@@ -148,7 +148,7 @@ RRd35 = Parameter(name = 'RRd35',
 RRd36 = Parameter(name = 'RRd36',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 0.344631925,
                   texname = '\\text{RRd36}',
                   lhablock = 'DSQMIX',
                   lhacode = [ 3, 6 ])
@@ -204,7 +204,7 @@ RRd46 = Parameter(name = 'RRd46',
 RRd51 = Parameter(name = 'RRd51',
                   nature = 'external',
                   type = 'real',
-                  value = 1.,
+                  value = 0.,
                   texname = '\\text{RRd51}',
                   lhablock = 'DSQMIX',
                   lhacode = [ 5, 1 ])
@@ -236,7 +236,7 @@ RRd54 = Parameter(name = 'RRd54',
 RRd55 = Parameter(name = 'RRd55',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 1.,
                   texname = '\\text{RRd55}',
                   lhablock = 'DSQMIX',
                   lhacode = [ 5, 5 ])
@@ -260,7 +260,7 @@ RRd61 = Parameter(name = 'RRd61',
 RRd62 = Parameter(name = 'RRd62',
                   nature = 'external',
                   type = 'real',
-                  value = 1.,
+                  value = 0.,
                   texname = '\\text{RRd62}',
                   lhablock = 'DSQMIX',
                   lhacode = [ 6, 2 ])
@@ -268,7 +268,7 @@ RRd62 = Parameter(name = 'RRd62',
 RRd63 = Parameter(name = 'RRd63',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = -0.344631925,
                   texname = '\\text{RRd63}',
                   lhablock = 'DSQMIX',
                   lhacode = [ 6, 3 ])
@@ -292,7 +292,7 @@ RRd65 = Parameter(name = 'RRd65',
 RRd66 = Parameter(name = 'RRd66',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 0.938737896,
                   texname = '\\text{RRd66}',
                   lhablock = 'DSQMIX',
                   lhacode = [ 6, 6 ])
@@ -1108,7 +1108,7 @@ INN24 = Parameter(name = 'INN24',
 INN31 = Parameter(name = 'INN31',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = -0.0603388002,
                   texname = '\\text{INN31}',
                   lhablock = 'IMNMIX',
                   lhacode = [ 3, 1 ])
@@ -1116,7 +1116,7 @@ INN31 = Parameter(name = 'INN31',
 INN32 = Parameter(name = 'INN32',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 0.0877004854,
                   texname = '\\text{INN32}',
                   lhablock = 'IMNMIX',
                   lhacode = [ 3, 2 ])
@@ -1124,7 +1124,7 @@ INN32 = Parameter(name = 'INN32',
 INN33 = Parameter(name = 'INN33',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 0.695877493,
                   texname = '\\text{INN33}',
                   lhablock = 'IMNMIX',
                   lhacode = [ 3, 3 ])
@@ -1132,7 +1132,7 @@ INN33 = Parameter(name = 'INN33',
 INN34 = Parameter(name = 'INN34',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 0.710226984,
                   texname = '\\text{INN34}',
                   lhablock = 'IMNMIX',
                   lhacode = [ 3, 4 ])
@@ -2924,7 +2924,7 @@ RNN24 = Parameter(name = 'RNN24',
 RNN31 = Parameter(name = 'RNN31',
                   nature = 'external',
                   type = 'real',
-                  value = -0.0603388002,
+                  value = 0.,
                   texname = '\\text{RNN31}',
                   lhablock = 'NMIX',
                   lhacode = [ 3, 1 ])
@@ -2932,7 +2932,7 @@ RNN31 = Parameter(name = 'RNN31',
 RNN32 = Parameter(name = 'RNN32',
                   nature = 'external',
                   type = 'real',
-                  value = 0.0877004854,
+                  value = 0.,
                   texname = '\\text{RNN32}',
                   lhablock = 'NMIX',
                   lhacode = [ 3, 2 ])
@@ -2940,7 +2940,7 @@ RNN32 = Parameter(name = 'RNN32',
 RNN33 = Parameter(name = 'RNN33',
                   nature = 'external',
                   type = 'real',
-                  value = 0.695877493,
+                  value = 0.,
                   texname = '\\text{RNN33}',
                   lhablock = 'NMIX',
                   lhacode = [ 3, 3 ])
@@ -2948,7 +2948,7 @@ RNN33 = Parameter(name = 'RNN33',
 RNN34 = Parameter(name = 'RNN34',
                   nature = 'external',
                   type = 'real',
-                  value = 0.710226984,
+                  value = 0.,
                   texname = '\\text{RNN34}',
                   lhablock = 'NMIX',
                   lhacode = [ 3, 4 ])
@@ -2988,7 +2988,7 @@ RNN44 = Parameter(name = 'RNN44',
 RRl11 = Parameter(name = 'RRl11',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 1.,
                   texname = '\\text{RRl11}',
                   lhablock = 'SELMIX',
                   lhacode = [ 1, 1 ])
@@ -3004,7 +3004,7 @@ RRl12 = Parameter(name = 'RRl12',
 RRl13 = Parameter(name = 'RRl13',
                   nature = 'external',
                   type = 'real',
-                  value = 0.28248719,
+                  value = 0.,
                   texname = '\\text{RRl13}',
                   lhablock = 'SELMIX',
                   lhacode = [ 1, 3 ])
@@ -3028,7 +3028,7 @@ RRl15 = Parameter(name = 'RRl15',
 RRl16 = Parameter(name = 'RRl16',
                   nature = 'external',
                   type = 'real',
-                  value = 0.959271071,
+                  value = 0.,
                   texname = '\\text{RRl16}',
                   lhablock = 'SELMIX',
                   lhacode = [ 1, 6 ])
@@ -3044,7 +3044,7 @@ RRl21 = Parameter(name = 'RRl21',
 RRl22 = Parameter(name = 'RRl22',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 1.,
                   texname = '\\text{RRl22}',
                   lhablock = 'SELMIX',
                   lhacode = [ 2, 2 ])
@@ -3060,7 +3060,7 @@ RRl23 = Parameter(name = 'RRl23',
 RRl24 = Parameter(name = 'RRl24',
                   nature = 'external',
                   type = 'real',
-                  value = 1.,
+                  value = 0.,
                   texname = '\\text{RRl24}',
                   lhablock = 'SELMIX',
                   lhacode = [ 2, 4 ])
@@ -3100,7 +3100,7 @@ RRl32 = Parameter(name = 'RRl32',
 RRl33 = Parameter(name = 'RRl33',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 0.28248719,
                   texname = '\\text{RRl33}',
                   lhablock = 'SELMIX',
                   lhacode = [ 3, 3 ])
@@ -3116,7 +3116,7 @@ RRl34 = Parameter(name = 'RRl34',
 RRl35 = Parameter(name = 'RRl35',
                   nature = 'external',
                   type = 'real',
-                  value = 1.,
+                  value = 0.,
                   texname = '\\text{RRl35}',
                   lhablock = 'SELMIX',
                   lhacode = [ 3, 5 ])
@@ -3124,7 +3124,7 @@ RRl35 = Parameter(name = 'RRl35',
 RRl36 = Parameter(name = 'RRl36',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 0.959271071,
                   texname = '\\text{RRl36}',
                   lhablock = 'SELMIX',
                   lhacode = [ 3, 6 ])
@@ -3140,7 +3140,7 @@ RRl41 = Parameter(name = 'RRl41',
 RRl42 = Parameter(name = 'RRl42',
                   nature = 'external',
                   type = 'real',
-                  value = 1.,
+                  value = 0.,
                   texname = '\\text{RRl42}',
                   lhablock = 'SELMIX',
                   lhacode = [ 4, 2 ])
@@ -3156,7 +3156,7 @@ RRl43 = Parameter(name = 'RRl43',
 RRl44 = Parameter(name = 'RRl44',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 1.,
                   texname = '\\text{RRl44}',
                   lhablock = 'SELMIX',
                   lhacode = [ 4, 4 ])
@@ -3180,7 +3180,7 @@ RRl46 = Parameter(name = 'RRl46',
 RRl51 = Parameter(name = 'RRl51',
                   nature = 'external',
                   type = 'real',
-                  value = 1.,
+                  value = 0.,
                   texname = '\\text{RRl51}',
                   lhablock = 'SELMIX',
                   lhacode = [ 5, 1 ])
@@ -3212,7 +3212,7 @@ RRl54 = Parameter(name = 'RRl54',
 RRl55 = Parameter(name = 'RRl55',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 1.,
                   texname = '\\text{RRl55}',
                   lhablock = 'SELMIX',
                   lhacode = [ 5, 5 ])
@@ -3308,7 +3308,7 @@ MMZ = Parameter(name = 'MMZ',
 RRn11 = Parameter(name = 'RRn11',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 1.,
                   texname = '\\text{RRn11}',
                   lhablock = 'SNUMIX',
                   lhacode = [ 1, 1 ])
@@ -3324,7 +3324,7 @@ RRn12 = Parameter(name = 'RRn12',
 RRn13 = Parameter(name = 'RRn13',
                   nature = 'external',
                   type = 'real',
-                  value = 1.,
+                  value = 0.,
                   texname = '\\text{RRn13}',
                   lhablock = 'SNUMIX',
                   lhacode = [ 1, 3 ])
@@ -3356,7 +3356,7 @@ RRn23 = Parameter(name = 'RRn23',
 RRn31 = Parameter(name = 'RRn31',
                   nature = 'external',
                   type = 'real',
-                  value = 1.,
+                  value = 0.,
                   texname = '\\text{RRn31}',
                   lhablock = 'SNUMIX',
                   lhacode = [ 3, 1 ])
@@ -3372,7 +3372,7 @@ RRn32 = Parameter(name = 'RRn32',
 RRn33 = Parameter(name = 'RRn33',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 1.,
                   texname = '\\text{RRn33}',
                   lhablock = 'SNUMIX',
                   lhacode = [ 3, 3 ])
@@ -3700,7 +3700,7 @@ RMNS33 = Parameter(name = 'RMNS33',
 RRu11 = Parameter(name = 'RRu11',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 1.,
                   texname = '\\text{RRu11}',
                   lhablock = 'USQMIX',
                   lhacode = [ 1, 1 ])
@@ -3716,7 +3716,7 @@ RRu12 = Parameter(name = 'RRu12',
 RRu13 = Parameter(name = 'RRu13',
                   nature = 'external',
                   type = 'real',
-                  value = 0.55364496,
+                  value = 0.,
                   texname = '\\text{RRu13}',
                   lhablock = 'USQMIX',
                   lhacode = [ 1, 3 ])
@@ -3740,7 +3740,7 @@ RRu15 = Parameter(name = 'RRu15',
 RRu16 = Parameter(name = 'RRu16',
                   nature = 'external',
                   type = 'real',
-                  value = 0.83275282,
+                  value = 0.,
                   texname = '\\text{RRu16}',
                   lhablock = 'USQMIX',
                   lhacode = [ 1, 6 ])
@@ -3756,7 +3756,7 @@ RRu21 = Parameter(name = 'RRu21',
 RRu22 = Parameter(name = 'RRu22',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 1.,
                   texname = '\\text{RRu22}',
                   lhablock = 'USQMIX',
                   lhacode = [ 2, 2 ])
@@ -3772,7 +3772,7 @@ RRu23 = Parameter(name = 'RRu23',
 RRu24 = Parameter(name = 'RRu24',
                   nature = 'external',
                   type = 'real',
-                  value = 1.,
+                  value = 0.,
                   texname = '\\text{RRu24}',
                   lhablock = 'USQMIX',
                   lhacode = [ 2, 4 ])
@@ -3812,7 +3812,7 @@ RRu32 = Parameter(name = 'RRu32',
 RRu33 = Parameter(name = 'RRu33',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 0.55364496,
                   texname = '\\text{RRu33}',
                   lhablock = 'USQMIX',
                   lhacode = [ 3, 3 ])
@@ -3828,7 +3828,7 @@ RRu34 = Parameter(name = 'RRu34',
 RRu35 = Parameter(name = 'RRu35',
                   nature = 'external',
                   type = 'real',
-                  value = 1.,
+                  value = 0.,
                   texname = '\\text{RRu35}',
                   lhablock = 'USQMIX',
                   lhacode = [ 3, 5 ])
@@ -3836,7 +3836,7 @@ RRu35 = Parameter(name = 'RRu35',
 RRu36 = Parameter(name = 'RRu36',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 0.83275282,
                   texname = '\\text{RRu36}',
                   lhablock = 'USQMIX',
                   lhacode = [ 3, 6 ])
@@ -3852,7 +3852,7 @@ RRu41 = Parameter(name = 'RRu41',
 RRu42 = Parameter(name = 'RRu42',
                   nature = 'external',
                   type = 'real',
-                  value = 1.,
+                  value = 0.,
                   texname = '\\text{RRu42}',
                   lhablock = 'USQMIX',
                   lhacode = [ 4, 2 ])
@@ -3868,7 +3868,7 @@ RRu43 = Parameter(name = 'RRu43',
 RRu44 = Parameter(name = 'RRu44',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 1.,
                   texname = '\\text{RRu44}',
                   lhablock = 'USQMIX',
                   lhacode = [ 4, 4 ])
@@ -3892,7 +3892,7 @@ RRu46 = Parameter(name = 'RRu46',
 RRu51 = Parameter(name = 'RRu51',
                   nature = 'external',
                   type = 'real',
-                  value = 1.,
+                  value = 0.,
                   texname = '\\text{RRu51}',
                   lhablock = 'USQMIX',
                   lhacode = [ 5, 1 ])
@@ -3924,7 +3924,7 @@ RRu54 = Parameter(name = 'RRu54',
 RRu55 = Parameter(name = 'RRu55',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 1.,
                   texname = '\\text{RRu55}',
                   lhablock = 'USQMIX',
                   lhacode = [ 5, 5 ])
@@ -4420,7 +4420,7 @@ Mneu2 = Parameter(name = 'Mneu2',
 Mneu3 = Parameter(name = 'Mneu3',
                   nature = 'external',
                   type = 'real',
-                  value = -363.756027,
+                  value = 363.756027,
                   texname = '\\text{Mneu3}',
                   lhablock = 'MASS',
                   lhacode = [ 1000025 ])
@@ -4460,7 +4460,7 @@ Mglu = Parameter(name = 'Mglu',
 Msn1 = Parameter(name = 'Msn1',
                  nature = 'external',
                  type = 'real',
-                 value = 184.708464,
+                 value = 185.258326,
                  texname = '\\text{Msn1}',
                  lhablock = 'MASS',
                  lhacode = [ 1000012 ])
@@ -4476,7 +4476,7 @@ Msn2 = Parameter(name = 'Msn2',
 Msn3 = Parameter(name = 'Msn3',
                  nature = 'external',
                  type = 'real',
-                 value = 185.258326,
+                 value = 184.708464,
                  texname = '\\text{Msn3}',
                  lhablock = 'MASS',
                  lhacode = [ 1000016 ])
@@ -4484,7 +4484,7 @@ Msn3 = Parameter(name = 'Msn3',
 Msl1 = Parameter(name = 'Msl1',
                  nature = 'external',
                  type = 'real',
-                 value = 134.490864,
+                 value = 202.91569,
                  texname = '\\text{Msl1}',
                  lhablock = 'MASS',
                  lhacode = [ -1000011 ])
@@ -4492,7 +4492,7 @@ Msl1 = Parameter(name = 'Msl1',
 Msl2 = Parameter(name = 'Msl2',
                  nature = 'external',
                  type = 'real',
-                 value = 144.102799,
+                 value = 202.91569,
                  texname = '\\text{Msl2}',
                  lhablock = 'MASS',
                  lhacode = [ -1000013 ])
@@ -4500,7 +4500,7 @@ Msl2 = Parameter(name = 'Msl2',
 Msl3 = Parameter(name = 'Msl3',
                  nature = 'external',
                  type = 'real',
-                 value = 144.102799,
+                 value = 134.490864,
                  texname = '\\text{Msl3}',
                  lhablock = 'MASS',
                  lhacode = [ -1000015 ])
@@ -4508,7 +4508,7 @@ Msl3 = Parameter(name = 'Msl3',
 Msl4 = Parameter(name = 'Msl4',
                  nature = 'external',
                  type = 'real',
-                 value = 202.91569,
+                 value = 144.102799,
                  texname = '\\text{Msl4}',
                  lhablock = 'MASS',
                  lhacode = [ -2000011 ])
@@ -4516,7 +4516,7 @@ Msl4 = Parameter(name = 'Msl4',
 Msl5 = Parameter(name = 'Msl5',
                  nature = 'external',
                  type = 'real',
-                 value = 202.91569,
+                 value = 144.102799,
                  texname = '\\text{Msl5}',
                  lhablock = 'MASS',
                  lhacode = [ -2000013 ])
@@ -4532,7 +4532,7 @@ Msl6 = Parameter(name = 'Msl6',
 Musq1 = Parameter(name = 'Musq1',
                   nature = 'external',
                   type = 'real',
-                  value = 399.668493,
+                  value = 561.119014,
                   texname = '\\text{Musq1}',
                   lhablock = 'MASS',
                   lhacode = [ 1000002 ])
@@ -4540,7 +4540,7 @@ Musq1 = Parameter(name = 'Musq1',
 Musq2 = Parameter(name = 'Musq2',
                   nature = 'external',
                   type = 'real',
-                  value = 549.259265,
+                  value = 561.119014,
                   texname = '\\text{Musq2}',
                   lhablock = 'MASS',
                   lhacode = [ 1000004 ])
@@ -4548,7 +4548,7 @@ Musq2 = Parameter(name = 'Musq2',
 Musq3 = Parameter(name = 'Musq3',
                   nature = 'external',
                   type = 'real',
-                  value = 549.259265,
+                  value = 399.668493,
                   texname = '\\text{Musq3}',
                   lhablock = 'MASS',
                   lhacode = [ 1000006 ])
@@ -4556,7 +4556,7 @@ Musq3 = Parameter(name = 'Musq3',
 Musq4 = Parameter(name = 'Musq4',
                   nature = 'external',
                   type = 'real',
-                  value = 561.119014,
+                  value = 549.259265,
                   texname = '\\text{Musq4}',
                   lhablock = 'MASS',
                   lhacode = [ 2000002 ])
@@ -4564,7 +4564,7 @@ Musq4 = Parameter(name = 'Musq4',
 Musq5 = Parameter(name = 'Musq5',
                   nature = 'external',
                   type = 'real',
-                  value = 561.119014,
+                  value = 549.259265,
                   texname = '\\text{Musq5}',
                   lhablock = 'MASS',
                   lhacode = [ 2000004 ])
@@ -4580,7 +4580,7 @@ Musq6 = Parameter(name = 'Musq6',
 Mdsq1 = Parameter(name = 'Mdsq1',
                   nature = 'external',
                   type = 'real',
-                  value = 513.065179,
+                  value = 568.441109,
                   texname = '\\text{Mdsq1}',
                   lhablock = 'MASS',
                   lhacode = [ 1000001 ])
@@ -4588,7 +4588,7 @@ Mdsq1 = Parameter(name = 'Mdsq1',
 Mdsq2 = Parameter(name = 'Mdsq2',
                   nature = 'external',
                   type = 'real',
-                  value = 543.726676,
+                  value = 568.441109,
                   texname = '\\text{Mdsq2}',
                   lhablock = 'MASS',
                   lhacode = [ 1000003 ])
@@ -4596,7 +4596,7 @@ Mdsq2 = Parameter(name = 'Mdsq2',
 Mdsq3 = Parameter(name = 'Mdsq3',
                   nature = 'external',
                   type = 'real',
-                  value = 545.228462,
+                  value = 513.065179,
                   texname = '\\text{Mdsq3}',
                   lhablock = 'MASS',
                   lhacode = [ 1000005 ])
@@ -4612,7 +4612,7 @@ Mdsq4 = Parameter(name = 'Mdsq4',
 Mdsq5 = Parameter(name = 'Mdsq5',
                   nature = 'external',
                   type = 'real',
-                  value = 568.441109,
+                  value = 545.228462,
                   texname = '\\text{Mdsq5}',
                   lhablock = 'MASS',
                   lhacode = [ 2000003 ])
@@ -4620,7 +4620,7 @@ Mdsq5 = Parameter(name = 'Mdsq5',
 Mdsq6 = Parameter(name = 'Mdsq6',
                   nature = 'external',
                   type = 'real',
-                  value = 568.441109,
+                  value = 543.726676,
                   texname = '\\text{Mdsq6}',
                   lhablock = 'MASS',
                   lhacode = [ 2000005 ])
@@ -4676,7 +4676,7 @@ Wneu1 = Parameter(name = 'Wneu1',
 Wneu2 = Parameter(name = 'Wneu2',
                   nature = 'external',
                   type = 'real',
-                  value = 0.574801389,
+                  value = 0.0207770048,
                   texname = '\\text{Wneu2}',
                   lhablock = 'DECAY',
                   lhacode = [ 1000023 ])
@@ -4684,7 +4684,7 @@ Wneu2 = Parameter(name = 'Wneu2',
 Wneu3 = Parameter(name = 'Wneu3',
                   nature = 'external',
                   type = 'real',
-                  value = 2.00282196,
+                  value = 1.91598495,
                   texname = '\\text{Wneu3}',
                   lhablock = 'DECAY',
                   lhacode = [ 1000025 ])
@@ -4692,7 +4692,7 @@ Wneu3 = Parameter(name = 'Wneu3',
 Wneu4 = Parameter(name = 'Wneu4',
                   nature = 'external',
                   type = 'real',
-                  value = 0.00198610799,
+                  value = 2.58585079,
                   texname = '\\text{Wneu4}',
                   lhablock = 'DECAY',
                   lhacode = [ 1000035 ])
@@ -4700,7 +4700,7 @@ Wneu4 = Parameter(name = 'Wneu4',
 Wch1 = Parameter(name = 'Wch1',
                  nature = 'external',
                  type = 'real',
-                 value = 2.41143316,
+                 value = 0.0170414503,
                  texname = '\\text{Wch1}',
                  lhablock = 'DECAY',
                  lhacode = [ 1000024 ])
@@ -4748,7 +4748,7 @@ Wsn3 = Parameter(name = 'Wsn3',
 Wsl1 = Parameter(name = 'Wsl1',
                  nature = 'external',
                  type = 'real',
-                 value = 0.148327268,
+                 value = 0.213682161,
                  texname = '\\text{Wsl1}',
                  lhablock = 'DECAY',
                  lhacode = [ -1000011 ])
@@ -4756,7 +4756,7 @@ Wsl1 = Parameter(name = 'Wsl1',
 Wsl2 = Parameter(name = 'Wsl2',
                  nature = 'external',
                  type = 'real',
-                 value = 0.216121626,
+                 value = 0.213682161,
                  texname = '\\text{Wsl2}',
                  lhablock = 'DECAY',
                  lhacode = [ -1000013 ])
@@ -4764,7 +4764,7 @@ Wsl2 = Parameter(name = 'Wsl2',
 Wsl3 = Parameter(name = 'Wsl3',
                  nature = 'external',
                  type = 'real',
-                 value = 0.216121626,
+                 value = 0.148327268,
                  texname = '\\text{Wsl3}',
                  lhablock = 'DECAY',
                  lhacode = [ -1000015 ])
@@ -4772,7 +4772,7 @@ Wsl3 = Parameter(name = 'Wsl3',
 Wsl4 = Parameter(name = 'Wsl4',
                  nature = 'external',
                  type = 'real',
-                 value = 0.213682161,
+                 value = 0.216121626,
                  texname = '\\text{Wsl4}',
                  lhablock = 'DECAY',
                  lhacode = [ -2000011 ])
@@ -4780,7 +4780,7 @@ Wsl4 = Parameter(name = 'Wsl4',
 Wsl5 = Parameter(name = 'Wsl5',
                  nature = 'external',
                  type = 'real',
-                 value = 0.213682161,
+                 value = 0.216121626,
                  texname = '\\text{Wsl5}',
                  lhablock = 'DECAY',
                  lhacode = [ -2000013 ])
@@ -4796,7 +4796,7 @@ Wsl6 = Parameter(name = 'Wsl6',
 Wusq1 = Parameter(name = 'Wusq1',
                   nature = 'external',
                   type = 'real',
-                  value = 2.02159578,
+                  value = 5.47719539,
                   texname = '\\text{Wusq1}',
                   lhablock = 'DECAY',
                   lhacode = [ 1000002 ])
@@ -4812,7 +4812,7 @@ Wusq2 = Parameter(name = 'Wusq2',
 Wusq3 = Parameter(name = 'Wusq3',
                   nature = 'external',
                   type = 'real',
-                  value = 5.47719539,
+                  value = 2.02159578,
                   texname = '\\text{Wusq3}',
                   lhablock = 'DECAY',
                   lhacode = [ 1000006 ])
@@ -4892,7 +4892,7 @@ Wdsq6 = Parameter(name = 'Wdsq6',
 Wh01 = Parameter(name = 'Wh01',
                  nature = 'external',
                  type = 'real',
-                 value = 2.58585079,
+                 value = 0.00198610799,
                  texname = '\\text{Wh01}',
                  lhablock = 'DECAY',
                  lhacode = [ 25 ])
@@ -4900,7 +4900,7 @@ Wh01 = Parameter(name = 'Wh01',
 Wh02 = Parameter(name = 'Wh02',
                  nature = 'external',
                  type = 'real',
-                 value = 0.0207770048,
+                 value = 0.574801389,
                  texname = '\\text{Wh02}',
                  lhablock = 'DECAY',
                  lhacode = [ 35 ])
@@ -4908,7 +4908,7 @@ Wh02 = Parameter(name = 'Wh02',
 WA0 = Parameter(name = 'WA0',
                 nature = 'external',
                 type = 'real',
-                value = 0.0170414503,
+                value = 0.632178488,
                 texname = '\\text{WA0}',
                 lhablock = 'DECAY',
                 lhacode = [ 36 ])
@@ -4916,7 +4916,7 @@ WA0 = Parameter(name = 'WA0',
 WH = Parameter(name = 'WH',
                nature = 'external',
                type = 'real',
-               value = 1.91598495,
+               value = 0.546962813,
                texname = '\\text{WH}',
                lhablock = 'DECAY',
                lhacode = [ 37 ])
@@ -4924,7 +4924,7 @@ WH = Parameter(name = 'WH',
 WZ = Parameter(name = 'WZ',
                nature = 'external',
                type = 'real',
-               value = 0.632178488,
+               value = 2.41143316,
                texname = '\\text{WZ}',
                lhablock = 'DECAY',
                lhacode = [ 23 ])
@@ -4932,7 +4932,7 @@ WZ = Parameter(name = 'WZ',
 WW = Parameter(name = 'WW',
                nature = 'external',
                type = 'real',
-               value = 0.546962813,
+               value = 2.00282196,
                texname = '\\text{WW}',
                lhablock = 'DECAY',
                lhacode = [ 24 ])
@@ -5162,25 +5162,25 @@ NN24 = Parameter(name = 'NN24',
 NN31 = Parameter(name = 'NN31',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RNN31',
+                 value = 'complex(0,1)*INN31',
                  texname = '\\text{NN31}')
 
 NN32 = Parameter(name = 'NN32',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RNN32',
+                 value = 'complex(0,1)*INN32',
                  texname = '\\text{NN32}')
 
 NN33 = Parameter(name = 'NN33',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RNN33',
+                 value = 'complex(0,1)*INN33',
                  texname = '\\text{NN33}')
 
 NN34 = Parameter(name = 'NN34',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RNN34',
+                 value = 'complex(0,1)*INN34',
                  texname = '\\text{NN34}')
 
 NN41 = Parameter(name = 'NN41',
@@ -5255,41 +5255,41 @@ VV22 = Parameter(name = 'VV22',
                  value = 'RVV22',
                  texname = '\\text{VV22}')
 
-Ru13 = Parameter(name = 'Ru13',
+Ru11 = Parameter(name = 'Ru11',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RRu13',
-                 texname = '\\text{Ru13}')
+                 value = 'RRu11',
+                 texname = '\\text{Ru11}')
 
-Ru16 = Parameter(name = 'Ru16',
+Ru22 = Parameter(name = 'Ru22',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RRu16',
-                 texname = '\\text{Ru16}')
+                 value = 'RRu22',
+                 texname = '\\text{Ru22}')
 
-Ru24 = Parameter(name = 'Ru24',
+Ru33 = Parameter(name = 'Ru33',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RRu24',
-                 texname = '\\text{Ru24}')
+                 value = 'RRu33',
+                 texname = '\\text{Ru33}')
 
-Ru35 = Parameter(name = 'Ru35',
+Ru36 = Parameter(name = 'Ru36',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RRu35',
-                 texname = '\\text{Ru35}')
+                 value = 'RRu36',
+                 texname = '\\text{Ru36}')
 
-Ru42 = Parameter(name = 'Ru42',
+Ru44 = Parameter(name = 'Ru44',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RRu42',
-                 texname = '\\text{Ru42}')
+                 value = 'RRu44',
+                 texname = '\\text{Ru44}')
 
-Ru51 = Parameter(name = 'Ru51',
+Ru55 = Parameter(name = 'Ru55',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RRu51',
-                 texname = '\\text{Ru51}')
+                 value = 'RRu55',
+                 texname = '\\text{Ru55}')
 
 Ru63 = Parameter(name = 'Ru63',
                  nature = 'internal',
@@ -5303,35 +5303,29 @@ Ru66 = Parameter(name = 'Ru66',
                  value = 'RRu66',
                  texname = '\\text{Ru66}')
 
-Rd13 = Parameter(name = 'Rd13',
+Rd11 = Parameter(name = 'Rd11',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RRd13',
-                 texname = '\\text{Rd13}')
+                 value = 'RRd11',
+                 texname = '\\text{Rd11}')
 
-Rd16 = Parameter(name = 'Rd16',
+Rd22 = Parameter(name = 'Rd22',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RRd16',
-                 texname = '\\text{Rd16}')
+                 value = 'RRd22',
+                 texname = '\\text{Rd22}')
 
-Rd23 = Parameter(name = 'Rd23',
+Rd33 = Parameter(name = 'Rd33',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RRd23',
-                 texname = '\\text{Rd23}')
+                 value = 'RRd33',
+                 texname = '\\text{Rd33}')
 
-Rd26 = Parameter(name = 'Rd26',
+Rd36 = Parameter(name = 'Rd36',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RRd26',
-                 texname = '\\text{Rd26}')
-
-Rd35 = Parameter(name = 'Rd35',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'RRd35',
-                 texname = '\\text{Rd35}')
+                 value = 'RRd36',
+                 texname = '\\text{Rd36}')
 
 Rd44 = Parameter(name = 'Rd44',
                  nature = 'internal',
@@ -5339,53 +5333,59 @@ Rd44 = Parameter(name = 'Rd44',
                  value = 'RRd44',
                  texname = '\\text{Rd44}')
 
-Rd51 = Parameter(name = 'Rd51',
+Rd55 = Parameter(name = 'Rd55',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RRd51',
-                 texname = '\\text{Rd51}')
+                 value = 'RRd55',
+                 texname = '\\text{Rd55}')
 
-Rd62 = Parameter(name = 'Rd62',
+Rd63 = Parameter(name = 'Rd63',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RRd62',
-                 texname = '\\text{Rd62}')
+                 value = 'RRd63',
+                 texname = '\\text{Rd63}')
 
-Rl13 = Parameter(name = 'Rl13',
+Rd66 = Parameter(name = 'Rd66',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RRl13',
-                 texname = '\\text{Rl13}')
+                 value = 'RRd66',
+                 texname = '\\text{Rd66}')
 
-Rl16 = Parameter(name = 'Rl16',
+Rl11 = Parameter(name = 'Rl11',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RRl16',
-                 texname = '\\text{Rl16}')
+                 value = 'RRl11',
+                 texname = '\\text{Rl11}')
 
-Rl24 = Parameter(name = 'Rl24',
+Rl22 = Parameter(name = 'Rl22',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RRl24',
-                 texname = '\\text{Rl24}')
+                 value = 'RRl22',
+                 texname = '\\text{Rl22}')
 
-Rl35 = Parameter(name = 'Rl35',
+Rl33 = Parameter(name = 'Rl33',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RRl35',
-                 texname = '\\text{Rl35}')
+                 value = 'RRl33',
+                 texname = '\\text{Rl33}')
 
-Rl42 = Parameter(name = 'Rl42',
+Rl36 = Parameter(name = 'Rl36',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RRl42',
-                 texname = '\\text{Rl42}')
+                 value = 'RRl36',
+                 texname = '\\text{Rl36}')
 
-Rl51 = Parameter(name = 'Rl51',
+Rl44 = Parameter(name = 'Rl44',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'RRl51',
-                 texname = '\\text{Rl51}')
+                 value = 'RRl44',
+                 texname = '\\text{Rl44}')
+
+Rl55 = Parameter(name = 'Rl55',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'RRl55',
+                 texname = '\\text{Rl55}')
 
 Rl63 = Parameter(name = 'Rl63',
                  nature = 'internal',
@@ -5399,11 +5399,11 @@ Rl66 = Parameter(name = 'Rl66',
                  value = 'RRl66',
                  texname = '\\text{Rl66}')
 
-RLn13 = Parameter(name = 'RLn13',
+RLn11 = Parameter(name = 'RLn11',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'RRn13',
-                  texname = '\\text{RLn13}')
+                  value = 'RRn11',
+                  texname = '\\text{RLn11}')
 
 RLn22 = Parameter(name = 'RLn22',
                   nature = 'internal',
@@ -5411,11 +5411,11 @@ RLn22 = Parameter(name = 'RLn22',
                   value = 'RRn22',
                   texname = '\\text{RLn22}')
 
-RLn31 = Parameter(name = 'RLn31',
+RLn33 = Parameter(name = 'RLn33',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'RRn31',
-                  texname = '\\text{RLn31}')
+                  value = 'RRn33',
+                  texname = '\\text{RLn33}')
 
 bb = Parameter(name = 'bb',
                nature = 'internal',
@@ -5474,68 +5474,50 @@ vu = Parameter(name = 'vu',
 I111 = Parameter(name = 'I111',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rd13*complexconjugate(Rd13)',
+                 value = 'Rd11*complexconjugate(Rd11)',
                  texname = '\\text{I111}')
-
-I112 = Parameter(name = 'I112',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rd23*complexconjugate(Rd13)',
-                 texname = '\\text{I112}')
-
-I121 = Parameter(name = 'I121',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rd13*complexconjugate(Rd23)',
-                 texname = '\\text{I121}')
 
 I122 = Parameter(name = 'I122',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rd23*complexconjugate(Rd23)',
+                 value = 'Rd22*complexconjugate(Rd22)',
                  texname = '\\text{I122}')
 
-I155 = Parameter(name = 'I155',
+I133 = Parameter(name = 'I133',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rd51*complexconjugate(Rd51)',
-                 texname = '\\text{I155}')
+                 value = 'Rd33*complexconjugate(Rd33)',
+                 texname = '\\text{I133}')
+
+I136 = Parameter(name = 'I136',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rd63*complexconjugate(Rd33)',
+                 texname = '\\text{I136}')
+
+I163 = Parameter(name = 'I163',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rd33*complexconjugate(Rd63)',
+                 texname = '\\text{I163}')
 
 I166 = Parameter(name = 'I166',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rd62*complexconjugate(Rd62)',
+                 value = 'Rd63*complexconjugate(Rd63)',
                  texname = '\\text{I166}')
-
-I1011 = Parameter(name = 'I1011',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'Rd16*complexconjugate(Rd16)',
-                  texname = '\\text{I1011}')
-
-I1012 = Parameter(name = 'I1012',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'Rd26*complexconjugate(Rd16)',
-                  texname = '\\text{I1012}')
-
-I1021 = Parameter(name = 'I1021',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'Rd16*complexconjugate(Rd26)',
-                  texname = '\\text{I1021}')
-
-I1022 = Parameter(name = 'I1022',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'Rd26*complexconjugate(Rd26)',
-                  texname = '\\text{I1022}')
 
 I1033 = Parameter(name = 'I1033',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd35*complexconjugate(Rd35)',
+                  value = 'Rd36*complexconjugate(Rd36)',
                   texname = '\\text{I1033}')
+
+I1036 = Parameter(name = 'I1036',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'Rd66*complexconjugate(Rd36)',
+                  texname = '\\text{I1036}')
 
 I1044 = Parameter(name = 'I1044',
                   nature = 'internal',
@@ -5543,23 +5525,41 @@ I1044 = Parameter(name = 'I1044',
                   value = 'Rd44*complexconjugate(Rd44)',
                   texname = '\\text{I1044}')
 
-I10011 = Parameter(name = 'I10011',
-                   nature = 'internal',
-                   type = 'complex',
-                   value = 'Ru13*complexconjugate(Ru16)*complexconjugate(yu33)',
-                   texname = '\\text{I10011}')
+I1055 = Parameter(name = 'I1055',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'Rd55*complexconjugate(Rd55)',
+                  texname = '\\text{I1055}')
 
-I10016 = Parameter(name = 'I10016',
-                   nature = 'internal',
-                   type = 'complex',
-                   value = 'Ru63*complexconjugate(Ru16)*complexconjugate(yu33)',
-                   texname = '\\text{I10016}')
+I1063 = Parameter(name = 'I1063',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'Rd36*complexconjugate(Rd66)',
+                  texname = '\\text{I1063}')
 
-I10061 = Parameter(name = 'I10061',
+I1066 = Parameter(name = 'I1066',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'Rd66*complexconjugate(Rd66)',
+                  texname = '\\text{I1066}')
+
+I10033 = Parameter(name = 'I10033',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Ru13*complexconjugate(Ru66)*complexconjugate(yu33)',
-                   texname = '\\text{I10061}')
+                   value = 'Ru33*complexconjugate(Ru36)*complexconjugate(yu33)',
+                   texname = '\\text{I10033}')
+
+I10036 = Parameter(name = 'I10036',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'Ru63*complexconjugate(Ru36)*complexconjugate(yu33)',
+                   texname = '\\text{I10036}')
+
+I10063 = Parameter(name = 'I10063',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'Ru33*complexconjugate(Ru66)*complexconjugate(yu33)',
+                   texname = '\\text{I10063}')
 
 I10066 = Parameter(name = 'I10066',
                    nature = 'internal',
@@ -5567,23 +5567,23 @@ I10066 = Parameter(name = 'I10066',
                    value = 'Ru63*complexconjugate(Ru66)*complexconjugate(yu33)',
                    texname = '\\text{I10066}')
 
-I10111 = Parameter(name = 'I10111',
+I10133 = Parameter(name = 'I10133',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Ru13*complexconjugate(Ru16)*complexconjugate(tu33)',
-                   texname = '\\text{I10111}')
+                   value = 'Ru33*complexconjugate(Ru36)*complexconjugate(tu33)',
+                   texname = '\\text{I10133}')
 
-I10116 = Parameter(name = 'I10116',
+I10136 = Parameter(name = 'I10136',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Ru63*complexconjugate(Ru16)*complexconjugate(tu33)',
-                   texname = '\\text{I10116}')
+                   value = 'Ru63*complexconjugate(Ru36)*complexconjugate(tu33)',
+                   texname = '\\text{I10136}')
 
-I10161 = Parameter(name = 'I10161',
+I10163 = Parameter(name = 'I10163',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Ru13*complexconjugate(Ru66)*complexconjugate(tu33)',
-                   texname = '\\text{I10161}')
+                   value = 'Ru33*complexconjugate(Ru66)*complexconjugate(tu33)',
+                   texname = '\\text{I10163}')
 
 I10166 = Parameter(name = 'I10166',
                    nature = 'internal',
@@ -5591,23 +5591,23 @@ I10166 = Parameter(name = 'I10166',
                    value = 'Ru63*complexconjugate(Ru66)*complexconjugate(tu33)',
                    texname = '\\text{I10166}')
 
-I10211 = Parameter(name = 'I10211',
+I10233 = Parameter(name = 'I10233',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Ru16*tu33*complexconjugate(Ru13)',
-                   texname = '\\text{I10211}')
+                   value = 'Ru36*tu33*complexconjugate(Ru33)',
+                   texname = '\\text{I10233}')
 
-I10216 = Parameter(name = 'I10216',
+I10236 = Parameter(name = 'I10236',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Ru66*tu33*complexconjugate(Ru13)',
-                   texname = '\\text{I10216}')
+                   value = 'Ru66*tu33*complexconjugate(Ru33)',
+                   texname = '\\text{I10236}')
 
-I10261 = Parameter(name = 'I10261',
+I10263 = Parameter(name = 'I10263',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Ru16*tu33*complexconjugate(Ru63)',
-                   texname = '\\text{I10261}')
+                   value = 'Ru36*tu33*complexconjugate(Ru63)',
+                   texname = '\\text{I10263}')
 
 I10266 = Parameter(name = 'I10266',
                    nature = 'internal',
@@ -5615,23 +5615,23 @@ I10266 = Parameter(name = 'I10266',
                    value = 'Ru66*tu33*complexconjugate(Ru63)',
                    texname = '\\text{I10266}')
 
-I10311 = Parameter(name = 'I10311',
+I10333 = Parameter(name = 'I10333',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Ru13*yu33*complexconjugate(Ru13)*complexconjugate(yu33)',
-                   texname = '\\text{I10311}')
+                   value = 'Ru33*yu33*complexconjugate(Ru33)*complexconjugate(yu33)',
+                   texname = '\\text{I10333}')
 
-I10316 = Parameter(name = 'I10316',
+I10336 = Parameter(name = 'I10336',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Ru63*yu33*complexconjugate(Ru13)*complexconjugate(yu33)',
-                   texname = '\\text{I10316}')
+                   value = 'Ru63*yu33*complexconjugate(Ru33)*complexconjugate(yu33)',
+                   texname = '\\text{I10336}')
 
-I10361 = Parameter(name = 'I10361',
+I10363 = Parameter(name = 'I10363',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Ru13*yu33*complexconjugate(Ru63)*complexconjugate(yu33)',
-                   texname = '\\text{I10361}')
+                   value = 'Ru33*yu33*complexconjugate(Ru63)*complexconjugate(yu33)',
+                   texname = '\\text{I10363}')
 
 I10366 = Parameter(name = 'I10366',
                    nature = 'internal',
@@ -5639,23 +5639,23 @@ I10366 = Parameter(name = 'I10366',
                    value = 'Ru63*yu33*complexconjugate(Ru63)*complexconjugate(yu33)',
                    texname = '\\text{I10366}')
 
-I10411 = Parameter(name = 'I10411',
+I10433 = Parameter(name = 'I10433',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Ru16*yu33*complexconjugate(Ru16)*complexconjugate(yu33)',
-                   texname = '\\text{I10411}')
+                   value = 'Ru36*yu33*complexconjugate(Ru36)*complexconjugate(yu33)',
+                   texname = '\\text{I10433}')
 
-I10416 = Parameter(name = 'I10416',
+I10436 = Parameter(name = 'I10436',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Ru66*yu33*complexconjugate(Ru16)*complexconjugate(yu33)',
-                   texname = '\\text{I10416}')
+                   value = 'Ru66*yu33*complexconjugate(Ru36)*complexconjugate(yu33)',
+                   texname = '\\text{I10436}')
 
-I10461 = Parameter(name = 'I10461',
+I10463 = Parameter(name = 'I10463',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Ru16*yu33*complexconjugate(Ru66)*complexconjugate(yu33)',
-                   texname = '\\text{I10461}')
+                   value = 'Ru36*yu33*complexconjugate(Ru66)*complexconjugate(yu33)',
+                   texname = '\\text{I10463}')
 
 I10466 = Parameter(name = 'I10466',
                    nature = 'internal',
@@ -5663,23 +5663,23 @@ I10466 = Parameter(name = 'I10466',
                    value = 'Ru66*yu33*complexconjugate(Ru66)*complexconjugate(yu33)',
                    texname = '\\text{I10466}')
 
-I10511 = Parameter(name = 'I10511',
+I10533 = Parameter(name = 'I10533',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Ru16*yu33*complexconjugate(Ru13)',
-                   texname = '\\text{I10511}')
+                   value = 'Ru36*yu33*complexconjugate(Ru33)',
+                   texname = '\\text{I10533}')
 
-I10516 = Parameter(name = 'I10516',
+I10536 = Parameter(name = 'I10536',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Ru66*yu33*complexconjugate(Ru13)',
-                   texname = '\\text{I10516}')
+                   value = 'Ru66*yu33*complexconjugate(Ru33)',
+                   texname = '\\text{I10536}')
 
-I10561 = Parameter(name = 'I10561',
+I10563 = Parameter(name = 'I10563',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Ru16*yu33*complexconjugate(Ru63)',
-                   texname = '\\text{I10561}')
+                   value = 'Ru36*yu33*complexconjugate(Ru63)',
+                   texname = '\\text{I10563}')
 
 I10566 = Parameter(name = 'I10566',
                    nature = 'internal',
@@ -5699,59 +5699,59 @@ I10733 = Parameter(name = 'I10733',
                    value = 'ye33',
                    texname = '\\text{I10733}')
 
-I10811 = Parameter(name = 'I10811',
+I10833 = Parameter(name = 'I10833',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Rl16*te33*complexconjugate(RLn13)',
-                   texname = '\\text{I10811}')
+                   value = 'Rl36*te33*complexconjugate(RLn33)',
+                   texname = '\\text{I10833}')
 
-I10816 = Parameter(name = 'I10816',
+I10836 = Parameter(name = 'I10836',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Rl66*te33*complexconjugate(RLn13)',
-                   texname = '\\text{I10816}')
+                   value = 'Rl66*te33*complexconjugate(RLn33)',
+                   texname = '\\text{I10836}')
 
-I10911 = Parameter(name = 'I10911',
+I10933 = Parameter(name = 'I10933',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Rl13*ye33*complexconjugate(RLn13)*complexconjugate(ye33)',
-                   texname = '\\text{I10911}')
+                   value = 'Rl33*ye33*complexconjugate(RLn33)*complexconjugate(ye33)',
+                   texname = '\\text{I10933}')
 
-I10916 = Parameter(name = 'I10916',
+I10936 = Parameter(name = 'I10936',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Rl63*ye33*complexconjugate(RLn13)*complexconjugate(ye33)',
-                   texname = '\\text{I10916}')
+                   value = 'Rl63*ye33*complexconjugate(RLn33)*complexconjugate(ye33)',
+                   texname = '\\text{I10936}')
 
 I1111 = Parameter(name = 'I1111',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*complexconjugate(Ru13)',
+                  value = 'Ru11*complexconjugate(Ru11)',
                   texname = '\\text{I1111}')
 
-I1116 = Parameter(name = 'I1116',
+I1122 = Parameter(name = 'I1122',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru63*complexconjugate(Ru13)',
-                  texname = '\\text{I1116}')
+                  value = 'Ru22*complexconjugate(Ru22)',
+                  texname = '\\text{I1122}')
 
-I1144 = Parameter(name = 'I1144',
+I1133 = Parameter(name = 'I1133',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru42*complexconjugate(Ru42)',
-                  texname = '\\text{I1144}')
+                  value = 'Ru33*complexconjugate(Ru33)',
+                  texname = '\\text{I1133}')
 
-I1155 = Parameter(name = 'I1155',
+I1136 = Parameter(name = 'I1136',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru51*complexconjugate(Ru51)',
-                  texname = '\\text{I1155}')
+                  value = 'Ru63*complexconjugate(Ru33)',
+                  texname = '\\text{I1136}')
 
-I1161 = Parameter(name = 'I1161',
+I1163 = Parameter(name = 'I1163',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*complexconjugate(Ru63)',
-                  texname = '\\text{I1161}')
+                  value = 'Ru33*complexconjugate(Ru63)',
+                  texname = '\\text{I1163}')
 
 I1166 = Parameter(name = 'I1166',
                   nature = 'internal',
@@ -5759,47 +5759,47 @@ I1166 = Parameter(name = 'I1166',
                   value = 'Ru63*complexconjugate(Ru63)',
                   texname = '\\text{I1166}')
 
-I11011 = Parameter(name = 'I11011',
+I11033 = Parameter(name = 'I11033',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Rl16*ye33*complexconjugate(RLn13)',
-                   texname = '\\text{I11011}')
+                   value = 'Rl36*ye33*complexconjugate(RLn33)',
+                   texname = '\\text{I11033}')
 
-I11016 = Parameter(name = 'I11016',
+I11036 = Parameter(name = 'I11036',
                    nature = 'internal',
                    type = 'complex',
-                   value = 'Rl66*ye33*complexconjugate(RLn13)',
-                   texname = '\\text{I11016}')
-
-I1211 = Parameter(name = 'I1211',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'Ru16*complexconjugate(Ru16)',
-                  texname = '\\text{I1211}')
-
-I1216 = Parameter(name = 'I1216',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'Ru66*complexconjugate(Ru16)',
-                  texname = '\\text{I1216}')
-
-I1222 = Parameter(name = 'I1222',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'Ru24*complexconjugate(Ru24)',
-                  texname = '\\text{I1222}')
+                   value = 'Rl66*ye33*complexconjugate(RLn33)',
+                   texname = '\\text{I11036}')
 
 I1233 = Parameter(name = 'I1233',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru35*complexconjugate(Ru35)',
+                  value = 'Ru36*complexconjugate(Ru36)',
                   texname = '\\text{I1233}')
 
-I1261 = Parameter(name = 'I1261',
+I1236 = Parameter(name = 'I1236',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru16*complexconjugate(Ru66)',
-                  texname = '\\text{I1261}')
+                  value = 'Ru66*complexconjugate(Ru36)',
+                  texname = '\\text{I1236}')
+
+I1244 = Parameter(name = 'I1244',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'Ru44*complexconjugate(Ru44)',
+                  texname = '\\text{I1244}')
+
+I1255 = Parameter(name = 'I1255',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'Ru55*complexconjugate(Ru55)',
+                  texname = '\\text{I1255}')
+
+I1263 = Parameter(name = 'I1263',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'Ru36*complexconjugate(Ru66)',
+                  texname = '\\text{I1263}')
 
 I1266 = Parameter(name = 'I1266',
                   nature = 'internal',
@@ -5810,32 +5810,32 @@ I1266 = Parameter(name = 'I1266',
 I1311 = Parameter(name = 'I1311',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*complexconjugate(Ru13)',
+                  value = 'Ru11*complexconjugate(Ru11)',
                   texname = '\\text{I1311}')
 
-I1316 = Parameter(name = 'I1316',
+I1322 = Parameter(name = 'I1322',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru63*complexconjugate(Ru13)',
-                  texname = '\\text{I1316}')
+                  value = 'Ru22*complexconjugate(Ru22)',
+                  texname = '\\text{I1322}')
 
-I1344 = Parameter(name = 'I1344',
+I1333 = Parameter(name = 'I1333',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru42*complexconjugate(Ru42)',
-                  texname = '\\text{I1344}')
+                  value = 'Ru33*complexconjugate(Ru33)',
+                  texname = '\\text{I1333}')
 
-I1355 = Parameter(name = 'I1355',
+I1336 = Parameter(name = 'I1336',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru51*complexconjugate(Ru51)',
-                  texname = '\\text{I1355}')
+                  value = 'Ru63*complexconjugate(Ru33)',
+                  texname = '\\text{I1336}')
 
-I1361 = Parameter(name = 'I1361',
+I1363 = Parameter(name = 'I1363',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*complexconjugate(Ru63)',
-                  texname = '\\text{I1361}')
+                  value = 'Ru33*complexconjugate(Ru63)',
+                  texname = '\\text{I1363}')
 
 I1366 = Parameter(name = 'I1366',
                   nature = 'internal',
@@ -5843,35 +5843,35 @@ I1366 = Parameter(name = 'I1366',
                   value = 'Ru63*complexconjugate(Ru63)',
                   texname = '\\text{I1366}')
 
-I1411 = Parameter(name = 'I1411',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'Ru16*complexconjugate(Ru16)',
-                  texname = '\\text{I1411}')
-
-I1416 = Parameter(name = 'I1416',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'Ru66*complexconjugate(Ru16)',
-                  texname = '\\text{I1416}')
-
-I1422 = Parameter(name = 'I1422',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'Ru24*complexconjugate(Ru24)',
-                  texname = '\\text{I1422}')
-
 I1433 = Parameter(name = 'I1433',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru35*complexconjugate(Ru35)',
+                  value = 'Ru36*complexconjugate(Ru36)',
                   texname = '\\text{I1433}')
 
-I1461 = Parameter(name = 'I1461',
+I1436 = Parameter(name = 'I1436',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru16*complexconjugate(Ru66)',
-                  texname = '\\text{I1461}')
+                  value = 'Ru66*complexconjugate(Ru36)',
+                  texname = '\\text{I1436}')
+
+I1444 = Parameter(name = 'I1444',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'Ru44*complexconjugate(Ru44)',
+                  texname = '\\text{I1444}')
+
+I1455 = Parameter(name = 'I1455',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'Ru55*complexconjugate(Ru55)',
+                  texname = '\\text{I1455}')
+
+I1463 = Parameter(name = 'I1463',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'Ru36*complexconjugate(Ru66)',
+                  texname = '\\text{I1463}')
 
 I1466 = Parameter(name = 'I1466',
                   nature = 'internal',
@@ -5882,176 +5882,158 @@ I1466 = Parameter(name = 'I1466',
 I1511 = Parameter(name = 'I1511',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*complexconjugate(Ru13)',
+                  value = 'Rd11*complexconjugate(Ru11)',
                   texname = '\\text{I1511}')
 
-I1516 = Parameter(name = 'I1516',
+I1522 = Parameter(name = 'I1522',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*complexconjugate(Ru63)',
-                  texname = '\\text{I1516}')
+                  value = 'Rd22*complexconjugate(Ru22)',
+                  texname = '\\text{I1522}')
 
-I1521 = Parameter(name = 'I1521',
+I1533 = Parameter(name = 'I1533',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*complexconjugate(Ru13)',
-                  texname = '\\text{I1521}')
+                  value = 'Rd33*complexconjugate(Ru33)',
+                  texname = '\\text{I1533}')
 
-I1526 = Parameter(name = 'I1526',
+I1536 = Parameter(name = 'I1536',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*complexconjugate(Ru63)',
-                  texname = '\\text{I1526}')
+                  value = 'Rd33*complexconjugate(Ru63)',
+                  texname = '\\text{I1536}')
 
-I1555 = Parameter(name = 'I1555',
+I1563 = Parameter(name = 'I1563',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd51*complexconjugate(Ru51)',
-                  texname = '\\text{I1555}')
+                  value = 'Rd63*complexconjugate(Ru33)',
+                  texname = '\\text{I1563}')
 
-I1564 = Parameter(name = 'I1564',
+I1566 = Parameter(name = 'I1566',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd62*complexconjugate(Ru42)',
-                  texname = '\\text{I1564}')
+                  value = 'Rd63*complexconjugate(Ru63)',
+                  texname = '\\text{I1566}')
 
 I1611 = Parameter(name = 'I1611',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*complexconjugate(Rd13)',
+                  value = 'Ru11*complexconjugate(Rd11)',
                   texname = '\\text{I1611}')
 
-I1616 = Parameter(name = 'I1616',
+I1622 = Parameter(name = 'I1622',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru63*complexconjugate(Rd13)',
-                  texname = '\\text{I1616}')
+                  value = 'Ru22*complexconjugate(Rd22)',
+                  texname = '\\text{I1622}')
 
-I1621 = Parameter(name = 'I1621',
+I1633 = Parameter(name = 'I1633',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*complexconjugate(Rd23)',
-                  texname = '\\text{I1621}')
+                  value = 'Ru33*complexconjugate(Rd33)',
+                  texname = '\\text{I1633}')
 
-I1626 = Parameter(name = 'I1626',
+I1636 = Parameter(name = 'I1636',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru63*complexconjugate(Rd23)',
-                  texname = '\\text{I1626}')
+                  value = 'Ru63*complexconjugate(Rd33)',
+                  texname = '\\text{I1636}')
 
-I1655 = Parameter(name = 'I1655',
+I1663 = Parameter(name = 'I1663',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru51*complexconjugate(Rd51)',
-                  texname = '\\text{I1655}')
+                  value = 'Ru33*complexconjugate(Rd63)',
+                  texname = '\\text{I1663}')
 
-I1664 = Parameter(name = 'I1664',
+I1666 = Parameter(name = 'I1666',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru42*complexconjugate(Rd62)',
-                  texname = '\\text{I1664}')
+                  value = 'Ru63*complexconjugate(Rd63)',
+                  texname = '\\text{I1666}')
 
 I1711 = Parameter(name = 'I1711',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'RLn13*complexconjugate(Rl13)',
+                  value = 'RLn11*complexconjugate(Rl11)',
                   texname = '\\text{I1711}')
 
-I1716 = Parameter(name = 'I1716',
+I1722 = Parameter(name = 'I1722',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'RLn13*complexconjugate(Rl63)',
-                  texname = '\\text{I1716}')
+                  value = 'RLn22*complexconjugate(Rl22)',
+                  texname = '\\text{I1722}')
 
-I1724 = Parameter(name = 'I1724',
+I1733 = Parameter(name = 'I1733',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'RLn22*complexconjugate(Rl42)',
-                  texname = '\\text{I1724}')
+                  value = 'RLn33*complexconjugate(Rl33)',
+                  texname = '\\text{I1733}')
 
-I1735 = Parameter(name = 'I1735',
+I1736 = Parameter(name = 'I1736',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'RLn31*complexconjugate(Rl51)',
-                  texname = '\\text{I1735}')
+                  value = 'RLn33*complexconjugate(Rl63)',
+                  texname = '\\text{I1736}')
 
 I1811 = Parameter(name = 'I1811',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl13*complexconjugate(RLn13)',
+                  value = 'Rl11*complexconjugate(RLn11)',
                   texname = '\\text{I1811}')
 
-I1816 = Parameter(name = 'I1816',
+I1822 = Parameter(name = 'I1822',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl63*complexconjugate(RLn13)',
-                  texname = '\\text{I1816}')
+                  value = 'Rl22*complexconjugate(RLn22)',
+                  texname = '\\text{I1822}')
 
-I1824 = Parameter(name = 'I1824',
+I1833 = Parameter(name = 'I1833',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl42*complexconjugate(RLn22)',
-                  texname = '\\text{I1824}')
+                  value = 'Rl33*complexconjugate(RLn33)',
+                  texname = '\\text{I1833}')
 
-I1835 = Parameter(name = 'I1835',
+I1836 = Parameter(name = 'I1836',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl51*complexconjugate(RLn31)',
-                  texname = '\\text{I1835}')
+                  value = 'Rl63*complexconjugate(RLn33)',
+                  texname = '\\text{I1836}')
 
 I1911 = Parameter(name = 'I1911',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl13*complexconjugate(RLn13)',
+                  value = 'Rl11*complexconjugate(RLn11)',
                   texname = '\\text{I1911}')
 
-I1916 = Parameter(name = 'I1916',
+I1922 = Parameter(name = 'I1922',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl63*complexconjugate(RLn13)',
-                  texname = '\\text{I1916}')
+                  value = 'Rl22*complexconjugate(RLn22)',
+                  texname = '\\text{I1922}')
 
-I1924 = Parameter(name = 'I1924',
+I1933 = Parameter(name = 'I1933',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl42*complexconjugate(RLn22)',
-                  texname = '\\text{I1924}')
+                  value = 'Rl33*complexconjugate(RLn33)',
+                  texname = '\\text{I1933}')
 
-I1935 = Parameter(name = 'I1935',
+I1936 = Parameter(name = 'I1936',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl51*complexconjugate(RLn31)',
-                  texname = '\\text{I1935}')
-
-I211 = Parameter(name = 'I211',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rd16*complexconjugate(Rd16)',
-                 texname = '\\text{I211}')
-
-I212 = Parameter(name = 'I212',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rd26*complexconjugate(Rd16)',
-                 texname = '\\text{I212}')
-
-I221 = Parameter(name = 'I221',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rd16*complexconjugate(Rd26)',
-                 texname = '\\text{I221}')
-
-I222 = Parameter(name = 'I222',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rd26*complexconjugate(Rd26)',
-                 texname = '\\text{I222}')
+                  value = 'Rl63*complexconjugate(RLn33)',
+                  texname = '\\text{I1936}')
 
 I233 = Parameter(name = 'I233',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rd35*complexconjugate(Rd35)',
+                 value = 'Rd36*complexconjugate(Rd36)',
                  texname = '\\text{I233}')
+
+I236 = Parameter(name = 'I236',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rd66*complexconjugate(Rd36)',
+                 texname = '\\text{I236}')
 
 I244 = Parameter(name = 'I244',
                  nature = 'internal',
@@ -6059,203 +6041,221 @@ I244 = Parameter(name = 'I244',
                  value = 'Rd44*complexconjugate(Rd44)',
                  texname = '\\text{I244}')
 
+I255 = Parameter(name = 'I255',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rd55*complexconjugate(Rd55)',
+                 texname = '\\text{I255}')
+
+I263 = Parameter(name = 'I263',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rd36*complexconjugate(Rd66)',
+                 texname = '\\text{I263}')
+
+I266 = Parameter(name = 'I266',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rd66*complexconjugate(Rd66)',
+                 texname = '\\text{I266}')
+
 I2011 = Parameter(name = 'I2011',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'RLn13*complexconjugate(Rl13)',
+                  value = 'RLn11*complexconjugate(Rl11)',
                   texname = '\\text{I2011}')
 
-I2016 = Parameter(name = 'I2016',
+I2022 = Parameter(name = 'I2022',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'RLn13*complexconjugate(Rl63)',
-                  texname = '\\text{I2016}')
+                  value = 'RLn22*complexconjugate(Rl22)',
+                  texname = '\\text{I2022}')
 
-I2024 = Parameter(name = 'I2024',
+I2033 = Parameter(name = 'I2033',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'RLn22*complexconjugate(Rl42)',
-                  texname = '\\text{I2024}')
+                  value = 'RLn33*complexconjugate(Rl33)',
+                  texname = '\\text{I2033}')
 
-I2035 = Parameter(name = 'I2035',
+I2036 = Parameter(name = 'I2036',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'RLn31*complexconjugate(Rl51)',
-                  texname = '\\text{I2035}')
+                  value = 'RLn33*complexconjugate(Rl63)',
+                  texname = '\\text{I2036}')
 
 I2111 = Parameter(name = 'I2111',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*complexconjugate(Ru13)',
+                  value = 'Rd11*complexconjugate(Ru11)',
                   texname = '\\text{I2111}')
 
-I2116 = Parameter(name = 'I2116',
+I2122 = Parameter(name = 'I2122',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*complexconjugate(Ru63)',
-                  texname = '\\text{I2116}')
+                  value = 'Rd22*complexconjugate(Ru22)',
+                  texname = '\\text{I2122}')
 
-I2121 = Parameter(name = 'I2121',
+I2133 = Parameter(name = 'I2133',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*complexconjugate(Ru13)',
-                  texname = '\\text{I2121}')
+                  value = 'Rd33*complexconjugate(Ru33)',
+                  texname = '\\text{I2133}')
 
-I2126 = Parameter(name = 'I2126',
+I2136 = Parameter(name = 'I2136',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*complexconjugate(Ru63)',
-                  texname = '\\text{I2126}')
+                  value = 'Rd33*complexconjugate(Ru63)',
+                  texname = '\\text{I2136}')
 
-I2155 = Parameter(name = 'I2155',
+I2163 = Parameter(name = 'I2163',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd51*complexconjugate(Ru51)',
-                  texname = '\\text{I2155}')
+                  value = 'Rd63*complexconjugate(Ru33)',
+                  texname = '\\text{I2163}')
 
-I2164 = Parameter(name = 'I2164',
+I2166 = Parameter(name = 'I2166',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd62*complexconjugate(Ru42)',
-                  texname = '\\text{I2164}')
+                  value = 'Rd63*complexconjugate(Ru63)',
+                  texname = '\\text{I2166}')
 
 I2211 = Parameter(name = 'I2211',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*complexconjugate(Ru13)',
+                  value = 'Rd11*complexconjugate(Ru11)',
                   texname = '\\text{I2211}')
 
-I2216 = Parameter(name = 'I2216',
+I2222 = Parameter(name = 'I2222',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*complexconjugate(Ru63)',
-                  texname = '\\text{I2216}')
+                  value = 'Rd22*complexconjugate(Ru22)',
+                  texname = '\\text{I2222}')
 
-I2221 = Parameter(name = 'I2221',
+I2233 = Parameter(name = 'I2233',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*complexconjugate(Ru13)',
-                  texname = '\\text{I2221}')
+                  value = 'Rd33*complexconjugate(Ru33)',
+                  texname = '\\text{I2233}')
 
-I2226 = Parameter(name = 'I2226',
+I2236 = Parameter(name = 'I2236',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*complexconjugate(Ru63)',
-                  texname = '\\text{I2226}')
+                  value = 'Rd33*complexconjugate(Ru63)',
+                  texname = '\\text{I2236}')
 
-I2255 = Parameter(name = 'I2255',
+I2263 = Parameter(name = 'I2263',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd51*complexconjugate(Ru51)',
-                  texname = '\\text{I2255}')
+                  value = 'Rd63*complexconjugate(Ru33)',
+                  texname = '\\text{I2263}')
 
-I2264 = Parameter(name = 'I2264',
+I2266 = Parameter(name = 'I2266',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd62*complexconjugate(Ru42)',
-                  texname = '\\text{I2264}')
+                  value = 'Rd63*complexconjugate(Ru63)',
+                  texname = '\\text{I2266}')
 
 I2311 = Parameter(name = 'I2311',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*complexconjugate(Rd13)',
+                  value = 'Ru11*complexconjugate(Rd11)',
                   texname = '\\text{I2311}')
 
-I2316 = Parameter(name = 'I2316',
+I2322 = Parameter(name = 'I2322',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru63*complexconjugate(Rd13)',
-                  texname = '\\text{I2316}')
+                  value = 'Ru22*complexconjugate(Rd22)',
+                  texname = '\\text{I2322}')
 
-I2321 = Parameter(name = 'I2321',
+I2333 = Parameter(name = 'I2333',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*complexconjugate(Rd23)',
-                  texname = '\\text{I2321}')
+                  value = 'Ru33*complexconjugate(Rd33)',
+                  texname = '\\text{I2333}')
 
-I2326 = Parameter(name = 'I2326',
+I2336 = Parameter(name = 'I2336',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru63*complexconjugate(Rd23)',
-                  texname = '\\text{I2326}')
+                  value = 'Ru63*complexconjugate(Rd33)',
+                  texname = '\\text{I2336}')
 
-I2355 = Parameter(name = 'I2355',
+I2363 = Parameter(name = 'I2363',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru51*complexconjugate(Rd51)',
-                  texname = '\\text{I2355}')
+                  value = 'Ru33*complexconjugate(Rd63)',
+                  texname = '\\text{I2363}')
 
-I2364 = Parameter(name = 'I2364',
+I2366 = Parameter(name = 'I2366',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru42*complexconjugate(Rd62)',
-                  texname = '\\text{I2364}')
+                  value = 'Ru63*complexconjugate(Rd63)',
+                  texname = '\\text{I2366}')
 
 I2411 = Parameter(name = 'I2411',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*complexconjugate(Rd13)',
+                  value = 'Ru11*complexconjugate(Rd11)',
                   texname = '\\text{I2411}')
 
-I2416 = Parameter(name = 'I2416',
+I2422 = Parameter(name = 'I2422',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru63*complexconjugate(Rd13)',
-                  texname = '\\text{I2416}')
+                  value = 'Ru22*complexconjugate(Rd22)',
+                  texname = '\\text{I2422}')
 
-I2421 = Parameter(name = 'I2421',
+I2433 = Parameter(name = 'I2433',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*complexconjugate(Rd23)',
-                  texname = '\\text{I2421}')
+                  value = 'Ru33*complexconjugate(Rd33)',
+                  texname = '\\text{I2433}')
 
-I2426 = Parameter(name = 'I2426',
+I2436 = Parameter(name = 'I2436',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru63*complexconjugate(Rd23)',
-                  texname = '\\text{I2426}')
+                  value = 'Ru63*complexconjugate(Rd33)',
+                  texname = '\\text{I2436}')
 
-I2455 = Parameter(name = 'I2455',
+I2463 = Parameter(name = 'I2463',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru51*complexconjugate(Rd51)',
-                  texname = '\\text{I2455}')
+                  value = 'Ru33*complexconjugate(Rd63)',
+                  texname = '\\text{I2463}')
 
-I2464 = Parameter(name = 'I2464',
+I2466 = Parameter(name = 'I2466',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru42*complexconjugate(Rd62)',
-                  texname = '\\text{I2464}')
+                  value = 'Ru63*complexconjugate(Rd63)',
+                  texname = '\\text{I2466}')
 
 I2511 = Parameter(name = 'I2511',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl13*complexconjugate(Rl13)',
+                  value = 'Rl11*complexconjugate(Rl11)',
                   texname = '\\text{I2511}')
 
-I2516 = Parameter(name = 'I2516',
+I2522 = Parameter(name = 'I2522',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl63*complexconjugate(Rl13)',
-                  texname = '\\text{I2516}')
+                  value = 'Rl22*complexconjugate(Rl22)',
+                  texname = '\\text{I2522}')
 
-I2544 = Parameter(name = 'I2544',
+I2533 = Parameter(name = 'I2533',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl42*complexconjugate(Rl42)',
-                  texname = '\\text{I2544}')
+                  value = 'Rl33*complexconjugate(Rl33)',
+                  texname = '\\text{I2533}')
 
-I2555 = Parameter(name = 'I2555',
+I2536 = Parameter(name = 'I2536',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl51*complexconjugate(Rl51)',
-                  texname = '\\text{I2555}')
+                  value = 'Rl63*complexconjugate(Rl33)',
+                  texname = '\\text{I2536}')
 
-I2561 = Parameter(name = 'I2561',
+I2563 = Parameter(name = 'I2563',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl13*complexconjugate(Rl63)',
-                  texname = '\\text{I2561}')
+                  value = 'Rl33*complexconjugate(Rl63)',
+                  texname = '\\text{I2563}')
 
 I2566 = Parameter(name = 'I2566',
                   nature = 'internal',
@@ -6266,32 +6266,32 @@ I2566 = Parameter(name = 'I2566',
 I2611 = Parameter(name = 'I2611',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*complexconjugate(Ru13)',
+                  value = 'Ru11*complexconjugate(Ru11)',
                   texname = '\\text{I2611}')
 
-I2616 = Parameter(name = 'I2616',
+I2622 = Parameter(name = 'I2622',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru63*complexconjugate(Ru13)',
-                  texname = '\\text{I2616}')
+                  value = 'Ru22*complexconjugate(Ru22)',
+                  texname = '\\text{I2622}')
 
-I2644 = Parameter(name = 'I2644',
+I2633 = Parameter(name = 'I2633',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru42*complexconjugate(Ru42)',
-                  texname = '\\text{I2644}')
+                  value = 'Ru33*complexconjugate(Ru33)',
+                  texname = '\\text{I2633}')
 
-I2655 = Parameter(name = 'I2655',
+I2636 = Parameter(name = 'I2636',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru51*complexconjugate(Ru51)',
-                  texname = '\\text{I2655}')
+                  value = 'Ru63*complexconjugate(Ru33)',
+                  texname = '\\text{I2636}')
 
-I2661 = Parameter(name = 'I2661',
+I2663 = Parameter(name = 'I2663',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*complexconjugate(Ru63)',
-                  texname = '\\text{I2661}')
+                  value = 'Ru33*complexconjugate(Ru63)',
+                  texname = '\\text{I2663}')
 
 I2666 = Parameter(name = 'I2666',
                   nature = 'internal',
@@ -6299,35 +6299,35 @@ I2666 = Parameter(name = 'I2666',
                   value = 'Ru63*complexconjugate(Ru63)',
                   texname = '\\text{I2666}')
 
-I2711 = Parameter(name = 'I2711',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'Rl16*complexconjugate(Rl16)',
-                  texname = '\\text{I2711}')
-
-I2716 = Parameter(name = 'I2716',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'Rl66*complexconjugate(Rl16)',
-                  texname = '\\text{I2716}')
-
-I2722 = Parameter(name = 'I2722',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'Rl24*complexconjugate(Rl24)',
-                  texname = '\\text{I2722}')
-
 I2733 = Parameter(name = 'I2733',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl35*complexconjugate(Rl35)',
+                  value = 'Rl36*complexconjugate(Rl36)',
                   texname = '\\text{I2733}')
 
-I2761 = Parameter(name = 'I2761',
+I2736 = Parameter(name = 'I2736',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl16*complexconjugate(Rl66)',
-                  texname = '\\text{I2761}')
+                  value = 'Rl66*complexconjugate(Rl36)',
+                  texname = '\\text{I2736}')
+
+I2744 = Parameter(name = 'I2744',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'Rl44*complexconjugate(Rl44)',
+                  texname = '\\text{I2744}')
+
+I2755 = Parameter(name = 'I2755',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'Rl55*complexconjugate(Rl55)',
+                  texname = '\\text{I2755}')
+
+I2763 = Parameter(name = 'I2763',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'Rl36*complexconjugate(Rl66)',
+                  texname = '\\text{I2763}')
 
 I2766 = Parameter(name = 'I2766',
                   nature = 'internal',
@@ -6335,35 +6335,35 @@ I2766 = Parameter(name = 'I2766',
                   value = 'Rl66*complexconjugate(Rl66)',
                   texname = '\\text{I2766}')
 
-I2811 = Parameter(name = 'I2811',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'Ru16*complexconjugate(Ru16)',
-                  texname = '\\text{I2811}')
-
-I2816 = Parameter(name = 'I2816',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'Ru66*complexconjugate(Ru16)',
-                  texname = '\\text{I2816}')
-
-I2822 = Parameter(name = 'I2822',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'Ru24*complexconjugate(Ru24)',
-                  texname = '\\text{I2822}')
-
 I2833 = Parameter(name = 'I2833',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru35*complexconjugate(Ru35)',
+                  value = 'Ru36*complexconjugate(Ru36)',
                   texname = '\\text{I2833}')
 
-I2861 = Parameter(name = 'I2861',
+I2836 = Parameter(name = 'I2836',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru16*complexconjugate(Ru66)',
-                  texname = '\\text{I2861}')
+                  value = 'Ru66*complexconjugate(Ru36)',
+                  texname = '\\text{I2836}')
+
+I2844 = Parameter(name = 'I2844',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'Ru44*complexconjugate(Ru44)',
+                  texname = '\\text{I2844}')
+
+I2855 = Parameter(name = 'I2855',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'Ru55*complexconjugate(Ru55)',
+                  texname = '\\text{I2855}')
+
+I2863 = Parameter(name = 'I2863',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'Ru36*complexconjugate(Ru66)',
+                  texname = '\\text{I2863}')
 
 I2866 = Parameter(name = 'I2866',
                   nature = 'internal',
@@ -6371,143 +6371,143 @@ I2866 = Parameter(name = 'I2866',
                   value = 'Ru66*complexconjugate(Ru66)',
                   texname = '\\text{I2866}')
 
-I2931 = Parameter(name = 'I2931',
+I2933 = Parameter(name = 'I2933',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'complexconjugate(Rd16)*complexconjugate(yd33)',
-                  texname = '\\text{I2931}')
+                  value = 'complexconjugate(Rd36)*complexconjugate(yd33)',
+                  texname = '\\text{I2933}')
 
-I2932 = Parameter(name = 'I2932',
+I2936 = Parameter(name = 'I2936',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'complexconjugate(Rd26)*complexconjugate(yd33)',
-                  texname = '\\text{I2932}')
+                  value = 'complexconjugate(Rd66)*complexconjugate(yd33)',
+                  texname = '\\text{I2936}')
 
 I311 = Parameter(name = 'I311',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rd13*complexconjugate(Rd13)',
+                 value = 'Rd11*complexconjugate(Rd11)',
                  texname = '\\text{I311}')
-
-I312 = Parameter(name = 'I312',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rd23*complexconjugate(Rd13)',
-                 texname = '\\text{I312}')
-
-I321 = Parameter(name = 'I321',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rd13*complexconjugate(Rd23)',
-                 texname = '\\text{I321}')
 
 I322 = Parameter(name = 'I322',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rd23*complexconjugate(Rd23)',
+                 value = 'Rd22*complexconjugate(Rd22)',
                  texname = '\\text{I322}')
 
-I355 = Parameter(name = 'I355',
+I333 = Parameter(name = 'I333',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rd51*complexconjugate(Rd51)',
-                 texname = '\\text{I355}')
+                 value = 'Rd33*complexconjugate(Rd33)',
+                 texname = '\\text{I333}')
+
+I336 = Parameter(name = 'I336',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rd63*complexconjugate(Rd33)',
+                 texname = '\\text{I336}')
+
+I363 = Parameter(name = 'I363',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rd33*complexconjugate(Rd63)',
+                 texname = '\\text{I363}')
 
 I366 = Parameter(name = 'I366',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rd62*complexconjugate(Rd62)',
+                 value = 'Rd63*complexconjugate(Rd63)',
                  texname = '\\text{I366}')
 
-I3031 = Parameter(name = 'I3031',
+I3033 = Parameter(name = 'I3033',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'yd33*complexconjugate(Rd13)',
-                  texname = '\\text{I3031}')
+                  value = 'yd33*complexconjugate(Rd33)',
+                  texname = '\\text{I3033}')
 
-I3032 = Parameter(name = 'I3032',
+I3036 = Parameter(name = 'I3036',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'yd33*complexconjugate(Rd23)',
-                  texname = '\\text{I3032}')
+                  value = 'yd33*complexconjugate(Rd63)',
+                  texname = '\\text{I3036}')
 
-I3131 = Parameter(name = 'I3131',
+I3133 = Parameter(name = 'I3133',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*complexconjugate(yd33)',
-                  texname = '\\text{I3131}')
+                  value = 'Rd33*complexconjugate(yd33)',
+                  texname = '\\text{I3133}')
 
-I3132 = Parameter(name = 'I3132',
+I3136 = Parameter(name = 'I3136',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*complexconjugate(yd33)',
-                  texname = '\\text{I3132}')
+                  value = 'Rd63*complexconjugate(yd33)',
+                  texname = '\\text{I3136}')
 
-I3231 = Parameter(name = 'I3231',
+I3233 = Parameter(name = 'I3233',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd16*yd33',
-                  texname = '\\text{I3231}')
+                  value = 'Rd36*yd33',
+                  texname = '\\text{I3233}')
 
-I3232 = Parameter(name = 'I3232',
+I3236 = Parameter(name = 'I3236',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd26*yd33',
-                  texname = '\\text{I3232}')
+                  value = 'Rd66*yd33',
+                  texname = '\\text{I3236}')
 
-I3315 = Parameter(name = 'I3315',
+I3311 = Parameter(name = 'I3311',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd51',
-                  texname = '\\text{I3315}')
+                  value = 'Rd11',
+                  texname = '\\text{I3311}')
 
-I3326 = Parameter(name = 'I3326',
+I3322 = Parameter(name = 'I3322',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd62',
-                  texname = '\\text{I3326}')
+                  value = 'Rd22',
+                  texname = '\\text{I3322}')
 
-I3331 = Parameter(name = 'I3331',
+I3333 = Parameter(name = 'I3333',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13',
-                  texname = '\\text{I3331}')
+                  value = 'Rd33',
+                  texname = '\\text{I3333}')
 
-I3332 = Parameter(name = 'I3332',
+I3336 = Parameter(name = 'I3336',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23',
-                  texname = '\\text{I3332}')
+                  value = 'Rd63',
+                  texname = '\\text{I3336}')
 
-I3431 = Parameter(name = 'I3431',
+I3433 = Parameter(name = 'I3433',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*complexconjugate(yu33)',
-                  texname = '\\text{I3431}')
+                  value = 'Rd33*complexconjugate(yu33)',
+                  texname = '\\text{I3433}')
 
-I3432 = Parameter(name = 'I3432',
+I3436 = Parameter(name = 'I3436',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*complexconjugate(yu33)',
-                  texname = '\\text{I3432}')
+                  value = 'Rd63*complexconjugate(yu33)',
+                  texname = '\\text{I3436}')
 
-I3531 = Parameter(name = 'I3531',
+I3533 = Parameter(name = 'I3533',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd16*yd33',
-                  texname = '\\text{I3531}')
+                  value = 'Rd36*yd33',
+                  texname = '\\text{I3533}')
 
-I3532 = Parameter(name = 'I3532',
+I3536 = Parameter(name = 'I3536',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd26*yd33',
-                  texname = '\\text{I3532}')
+                  value = 'Rd66*yd33',
+                  texname = '\\text{I3536}')
 
-I3631 = Parameter(name = 'I3631',
+I3633 = Parameter(name = 'I3633',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'complexconjugate(Rl16)*complexconjugate(ye33)',
-                  texname = '\\text{I3631}')
+                  value = 'complexconjugate(Rl36)*complexconjugate(ye33)',
+                  texname = '\\text{I3633}')
 
 I3636 = Parameter(name = 'I3636',
                   nature = 'internal',
@@ -6515,11 +6515,11 @@ I3636 = Parameter(name = 'I3636',
                   value = 'complexconjugate(Rl66)*complexconjugate(ye33)',
                   texname = '\\text{I3636}')
 
-I3731 = Parameter(name = 'I3731',
+I3733 = Parameter(name = 'I3733',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'ye33*complexconjugate(Rl13)',
-                  texname = '\\text{I3731}')
+                  value = 'ye33*complexconjugate(Rl33)',
+                  texname = '\\text{I3733}')
 
 I3736 = Parameter(name = 'I3736',
                   nature = 'internal',
@@ -6527,11 +6527,11 @@ I3736 = Parameter(name = 'I3736',
                   value = 'ye33*complexconjugate(Rl63)',
                   texname = '\\text{I3736}')
 
-I3831 = Parameter(name = 'I3831',
+I3833 = Parameter(name = 'I3833',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl13*complexconjugate(ye33)',
-                  texname = '\\text{I3831}')
+                  value = 'Rl33*complexconjugate(ye33)',
+                  texname = '\\text{I3833}')
 
 I3836 = Parameter(name = 'I3836',
                   nature = 'internal',
@@ -6539,11 +6539,11 @@ I3836 = Parameter(name = 'I3836',
                   value = 'Rl63*complexconjugate(ye33)',
                   texname = '\\text{I3836}')
 
-I3931 = Parameter(name = 'I3931',
+I3933 = Parameter(name = 'I3933',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl16*ye33',
-                  texname = '\\text{I3931}')
+                  value = 'Rl36*ye33',
+                  texname = '\\text{I3933}')
 
 I3936 = Parameter(name = 'I3936',
                   nature = 'internal',
@@ -6551,35 +6551,17 @@ I3936 = Parameter(name = 'I3936',
                   value = 'Rl66*ye33',
                   texname = '\\text{I3936}')
 
-I411 = Parameter(name = 'I411',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rd16*complexconjugate(Rd16)',
-                 texname = '\\text{I411}')
-
-I412 = Parameter(name = 'I412',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rd26*complexconjugate(Rd16)',
-                 texname = '\\text{I412}')
-
-I421 = Parameter(name = 'I421',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rd16*complexconjugate(Rd26)',
-                 texname = '\\text{I421}')
-
-I422 = Parameter(name = 'I422',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rd26*complexconjugate(Rd26)',
-                 texname = '\\text{I422}')
-
 I433 = Parameter(name = 'I433',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rd35*complexconjugate(Rd35)',
+                 value = 'Rd36*complexconjugate(Rd36)',
                  texname = '\\text{I433}')
+
+I436 = Parameter(name = 'I436',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rd66*complexconjugate(Rd36)',
+                 texname = '\\text{I436}')
 
 I444 = Parameter(name = 'I444',
                  nature = 'internal',
@@ -6587,23 +6569,41 @@ I444 = Parameter(name = 'I444',
                  value = 'Rd44*complexconjugate(Rd44)',
                  texname = '\\text{I444}')
 
-I4015 = Parameter(name = 'I4015',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'Rl51',
-                  texname = '\\text{I4015}')
+I455 = Parameter(name = 'I455',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rd55*complexconjugate(Rd55)',
+                 texname = '\\text{I455}')
 
-I4024 = Parameter(name = 'I4024',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'Rl42',
-                  texname = '\\text{I4024}')
+I463 = Parameter(name = 'I463',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rd36*complexconjugate(Rd66)',
+                 texname = '\\text{I463}')
 
-I4031 = Parameter(name = 'I4031',
+I466 = Parameter(name = 'I466',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rd66*complexconjugate(Rd66)',
+                 texname = '\\text{I466}')
+
+I4011 = Parameter(name = 'I4011',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl13',
-                  texname = '\\text{I4031}')
+                  value = 'Rl11',
+                  texname = '\\text{I4011}')
+
+I4022 = Parameter(name = 'I4022',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'Rl22',
+                  texname = '\\text{I4022}')
+
+I4033 = Parameter(name = 'I4033',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'Rl33',
+                  texname = '\\text{I4033}')
 
 I4036 = Parameter(name = 'I4036',
                   nature = 'internal',
@@ -6611,11 +6611,11 @@ I4036 = Parameter(name = 'I4036',
                   value = 'Rl63',
                   texname = '\\text{I4036}')
 
-I4131 = Parameter(name = 'I4131',
+I4133 = Parameter(name = 'I4133',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl16*ye33',
-                  texname = '\\text{I4131}')
+                  value = 'Rl36*ye33',
+                  texname = '\\text{I4133}')
 
 I4136 = Parameter(name = 'I4136',
                   nature = 'internal',
@@ -6623,11 +6623,11 @@ I4136 = Parameter(name = 'I4136',
                   value = 'Rl66*ye33',
                   texname = '\\text{I4136}')
 
-I4213 = Parameter(name = 'I4213',
+I4211 = Parameter(name = 'I4211',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'RLn31',
-                  texname = '\\text{I4213}')
+                  value = 'RLn11',
+                  texname = '\\text{I4211}')
 
 I4222 = Parameter(name = 'I4222',
                   nature = 'internal',
@@ -6635,23 +6635,23 @@ I4222 = Parameter(name = 'I4222',
                   value = 'RLn22',
                   texname = '\\text{I4222}')
 
-I4231 = Parameter(name = 'I4231',
+I4233 = Parameter(name = 'I4233',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'RLn13',
-                  texname = '\\text{I4231}')
+                  value = 'RLn33',
+                  texname = '\\text{I4233}')
 
-I4331 = Parameter(name = 'I4331',
+I4333 = Parameter(name = 'I4333',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'RLn13*complexconjugate(ye33)',
-                  texname = '\\text{I4331}')
+                  value = 'RLn33*complexconjugate(ye33)',
+                  texname = '\\text{I4333}')
 
-I4431 = Parameter(name = 'I4431',
+I4433 = Parameter(name = 'I4433',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'complexconjugate(Ru16)*complexconjugate(yu33)',
-                  texname = '\\text{I4431}')
+                  value = 'complexconjugate(Ru36)*complexconjugate(yu33)',
+                  texname = '\\text{I4433}')
 
 I4436 = Parameter(name = 'I4436',
                   nature = 'internal',
@@ -6659,11 +6659,11 @@ I4436 = Parameter(name = 'I4436',
                   value = 'complexconjugate(Ru66)*complexconjugate(yu33)',
                   texname = '\\text{I4436}')
 
-I4531 = Parameter(name = 'I4531',
+I4533 = Parameter(name = 'I4533',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'yu33*complexconjugate(Ru13)',
-                  texname = '\\text{I4531}')
+                  value = 'yu33*complexconjugate(Ru33)',
+                  texname = '\\text{I4533}')
 
 I4536 = Parameter(name = 'I4536',
                   nature = 'internal',
@@ -6671,23 +6671,23 @@ I4536 = Parameter(name = 'I4536',
                   value = 'yu33*complexconjugate(Ru63)',
                   texname = '\\text{I4536}')
 
-I4615 = Parameter(name = 'I4615',
+I4611 = Parameter(name = 'I4611',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru51',
-                  texname = '\\text{I4615}')
+                  value = 'Ru11',
+                  texname = '\\text{I4611}')
 
-I4624 = Parameter(name = 'I4624',
+I4622 = Parameter(name = 'I4622',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru42',
-                  texname = '\\text{I4624}')
+                  value = 'Ru22',
+                  texname = '\\text{I4622}')
 
-I4631 = Parameter(name = 'I4631',
+I4633 = Parameter(name = 'I4633',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13',
-                  texname = '\\text{I4631}')
+                  value = 'Ru33',
+                  texname = '\\text{I4633}')
 
 I4636 = Parameter(name = 'I4636',
                   nature = 'internal',
@@ -6695,11 +6695,11 @@ I4636 = Parameter(name = 'I4636',
                   value = 'Ru63',
                   texname = '\\text{I4636}')
 
-I4731 = Parameter(name = 'I4731',
+I4733 = Parameter(name = 'I4733',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*complexconjugate(yd33)',
-                  texname = '\\text{I4731}')
+                  value = 'Ru33*complexconjugate(yd33)',
+                  texname = '\\text{I4733}')
 
 I4736 = Parameter(name = 'I4736',
                   nature = 'internal',
@@ -6707,11 +6707,11 @@ I4736 = Parameter(name = 'I4736',
                   value = 'Ru63*complexconjugate(yd33)',
                   texname = '\\text{I4736}')
 
-I4831 = Parameter(name = 'I4831',
+I4833 = Parameter(name = 'I4833',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru16*yu33',
-                  texname = '\\text{I4831}')
+                  value = 'Ru36*yu33',
+                  texname = '\\text{I4833}')
 
 I4836 = Parameter(name = 'I4836',
                   nature = 'internal',
@@ -6719,11 +6719,11 @@ I4836 = Parameter(name = 'I4836',
                   value = 'Ru66*yu33',
                   texname = '\\text{I4836}')
 
-I4931 = Parameter(name = 'I4931',
+I4933 = Parameter(name = 'I4933',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*complexconjugate(yu33)',
-                  texname = '\\text{I4931}')
+                  value = 'Ru33*complexconjugate(yu33)',
+                  texname = '\\text{I4933}')
 
 I4936 = Parameter(name = 'I4936',
                   nature = 'internal',
@@ -6734,32 +6734,32 @@ I4936 = Parameter(name = 'I4936',
 I511 = Parameter(name = 'I511',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rl13*complexconjugate(Rl13)',
+                 value = 'Rl11*complexconjugate(Rl11)',
                  texname = '\\text{I511}')
 
-I516 = Parameter(name = 'I516',
+I522 = Parameter(name = 'I522',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rl63*complexconjugate(Rl13)',
-                 texname = '\\text{I516}')
+                 value = 'Rl22*complexconjugate(Rl22)',
+                 texname = '\\text{I522}')
 
-I544 = Parameter(name = 'I544',
+I533 = Parameter(name = 'I533',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rl42*complexconjugate(Rl42)',
-                 texname = '\\text{I544}')
+                 value = 'Rl33*complexconjugate(Rl33)',
+                 texname = '\\text{I533}')
 
-I555 = Parameter(name = 'I555',
+I536 = Parameter(name = 'I536',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rl51*complexconjugate(Rl51)',
-                 texname = '\\text{I555}')
+                 value = 'Rl63*complexconjugate(Rl33)',
+                 texname = '\\text{I536}')
 
-I561 = Parameter(name = 'I561',
+I563 = Parameter(name = 'I563',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rl13*complexconjugate(Rl63)',
-                 texname = '\\text{I561}')
+                 value = 'Rl33*complexconjugate(Rl63)',
+                 texname = '\\text{I563}')
 
 I566 = Parameter(name = 'I566',
                  nature = 'internal',
@@ -6767,11 +6767,11 @@ I566 = Parameter(name = 'I566',
                  value = 'Rl63*complexconjugate(Rl63)',
                  texname = '\\text{I566}')
 
-I5031 = Parameter(name = 'I5031',
+I5033 = Parameter(name = 'I5033',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru16*yu33',
-                  texname = '\\text{I5031}')
+                  value = 'Ru36*yu33',
+                  texname = '\\text{I5033}')
 
 I5036 = Parameter(name = 'I5036',
                   nature = 'internal',
@@ -6779,71 +6779,71 @@ I5036 = Parameter(name = 'I5036',
                   value = 'Ru66*yu33',
                   texname = '\\text{I5036}')
 
-I5115 = Parameter(name = 'I5115',
+I5111 = Parameter(name = 'I5111',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'complexconjugate(Rd51)',
-                  texname = '\\text{I5115}')
+                  value = 'complexconjugate(Rd11)',
+                  texname = '\\text{I5111}')
 
-I5126 = Parameter(name = 'I5126',
+I5122 = Parameter(name = 'I5122',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'complexconjugate(Rd62)',
-                  texname = '\\text{I5126}')
+                  value = 'complexconjugate(Rd22)',
+                  texname = '\\text{I5122}')
 
-I5131 = Parameter(name = 'I5131',
+I5133 = Parameter(name = 'I5133',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'complexconjugate(Rd13)',
-                  texname = '\\text{I5131}')
+                  value = 'complexconjugate(Rd33)',
+                  texname = '\\text{I5133}')
 
-I5132 = Parameter(name = 'I5132',
+I5136 = Parameter(name = 'I5136',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'complexconjugate(Rd23)',
-                  texname = '\\text{I5132}')
+                  value = 'complexconjugate(Rd63)',
+                  texname = '\\text{I5136}')
 
-I5231 = Parameter(name = 'I5231',
+I5233 = Parameter(name = 'I5233',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'complexconjugate(Rd16)*complexconjugate(yd33)',
-                  texname = '\\text{I5231}')
+                  value = 'complexconjugate(Rd36)*complexconjugate(yd33)',
+                  texname = '\\text{I5233}')
 
-I5232 = Parameter(name = 'I5232',
+I5236 = Parameter(name = 'I5236',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'complexconjugate(Rd26)*complexconjugate(yd33)',
-                  texname = '\\text{I5232}')
+                  value = 'complexconjugate(Rd66)*complexconjugate(yd33)',
+                  texname = '\\text{I5236}')
 
-I5331 = Parameter(name = 'I5331',
+I5333 = Parameter(name = 'I5333',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'yu33*complexconjugate(Rd13)',
-                  texname = '\\text{I5331}')
+                  value = 'yu33*complexconjugate(Rd33)',
+                  texname = '\\text{I5333}')
 
-I5332 = Parameter(name = 'I5332',
+I5336 = Parameter(name = 'I5336',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'yu33*complexconjugate(Rd23)',
-                  texname = '\\text{I5332}')
+                  value = 'yu33*complexconjugate(Rd63)',
+                  texname = '\\text{I5336}')
 
-I5415 = Parameter(name = 'I5415',
+I5411 = Parameter(name = 'I5411',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'complexconjugate(Rl51)',
-                  texname = '\\text{I5415}')
+                  value = 'complexconjugate(Rl11)',
+                  texname = '\\text{I5411}')
 
-I5424 = Parameter(name = 'I5424',
+I5422 = Parameter(name = 'I5422',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'complexconjugate(Rl42)',
-                  texname = '\\text{I5424}')
+                  value = 'complexconjugate(Rl22)',
+                  texname = '\\text{I5422}')
 
-I5431 = Parameter(name = 'I5431',
+I5433 = Parameter(name = 'I5433',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'complexconjugate(Rl13)',
-                  texname = '\\text{I5431}')
+                  value = 'complexconjugate(Rl33)',
+                  texname = '\\text{I5433}')
 
 I5436 = Parameter(name = 'I5436',
                   nature = 'internal',
@@ -6851,11 +6851,11 @@ I5436 = Parameter(name = 'I5436',
                   value = 'complexconjugate(Rl63)',
                   texname = '\\text{I5436}')
 
-I5531 = Parameter(name = 'I5531',
+I5533 = Parameter(name = 'I5533',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'complexconjugate(Rl16)*complexconjugate(ye33)',
-                  texname = '\\text{I5531}')
+                  value = 'complexconjugate(Rl36)*complexconjugate(ye33)',
+                  texname = '\\text{I5533}')
 
 I5536 = Parameter(name = 'I5536',
                   nature = 'internal',
@@ -6863,11 +6863,11 @@ I5536 = Parameter(name = 'I5536',
                   value = 'complexconjugate(Rl66)*complexconjugate(ye33)',
                   texname = '\\text{I5536}')
 
-I5613 = Parameter(name = 'I5613',
+I5611 = Parameter(name = 'I5611',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'complexconjugate(RLn31)',
-                  texname = '\\text{I5613}')
+                  value = 'complexconjugate(RLn11)',
+                  texname = '\\text{I5611}')
 
 I5622 = Parameter(name = 'I5622',
                   nature = 'internal',
@@ -6875,29 +6875,29 @@ I5622 = Parameter(name = 'I5622',
                   value = 'complexconjugate(RLn22)',
                   texname = '\\text{I5622}')
 
-I5631 = Parameter(name = 'I5631',
+I5633 = Parameter(name = 'I5633',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'complexconjugate(RLn13)',
-                  texname = '\\text{I5631}')
+                  value = 'complexconjugate(RLn33)',
+                  texname = '\\text{I5633}')
 
-I5715 = Parameter(name = 'I5715',
+I5711 = Parameter(name = 'I5711',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'complexconjugate(Ru51)',
-                  texname = '\\text{I5715}')
+                  value = 'complexconjugate(Ru11)',
+                  texname = '\\text{I5711}')
 
-I5724 = Parameter(name = 'I5724',
+I5722 = Parameter(name = 'I5722',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'complexconjugate(Ru42)',
-                  texname = '\\text{I5724}')
+                  value = 'complexconjugate(Ru22)',
+                  texname = '\\text{I5722}')
 
-I5731 = Parameter(name = 'I5731',
+I5733 = Parameter(name = 'I5733',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'complexconjugate(Ru13)',
-                  texname = '\\text{I5731}')
+                  value = 'complexconjugate(Ru33)',
+                  texname = '\\text{I5733}')
 
 I5736 = Parameter(name = 'I5736',
                   nature = 'internal',
@@ -6905,17 +6905,17 @@ I5736 = Parameter(name = 'I5736',
                   value = 'complexconjugate(Ru63)',
                   texname = '\\text{I5736}')
 
-I5831 = Parameter(name = 'I5831',
+I5833 = Parameter(name = 'I5833',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'ye33*complexconjugate(RLn13)',
-                  texname = '\\text{I5831}')
+                  value = 'ye33*complexconjugate(RLn33)',
+                  texname = '\\text{I5833}')
 
-I5931 = Parameter(name = 'I5931',
+I5933 = Parameter(name = 'I5933',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'complexconjugate(Ru16)*complexconjugate(yu33)',
-                  texname = '\\text{I5931}')
+                  value = 'complexconjugate(Ru36)*complexconjugate(yu33)',
+                  texname = '\\text{I5933}')
 
 I5936 = Parameter(name = 'I5936',
                   nature = 'internal',
@@ -6923,35 +6923,35 @@ I5936 = Parameter(name = 'I5936',
                   value = 'complexconjugate(Ru66)*complexconjugate(yu33)',
                   texname = '\\text{I5936}')
 
-I611 = Parameter(name = 'I611',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rl16*complexconjugate(Rl16)',
-                 texname = '\\text{I611}')
-
-I616 = Parameter(name = 'I616',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rl66*complexconjugate(Rl16)',
-                 texname = '\\text{I616}')
-
-I622 = Parameter(name = 'I622',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rl24*complexconjugate(Rl24)',
-                 texname = '\\text{I622}')
-
 I633 = Parameter(name = 'I633',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rl35*complexconjugate(Rl35)',
+                 value = 'Rl36*complexconjugate(Rl36)',
                  texname = '\\text{I633}')
 
-I661 = Parameter(name = 'I661',
+I636 = Parameter(name = 'I636',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rl16*complexconjugate(Rl66)',
-                 texname = '\\text{I661}')
+                 value = 'Rl66*complexconjugate(Rl36)',
+                 texname = '\\text{I636}')
+
+I644 = Parameter(name = 'I644',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rl44*complexconjugate(Rl44)',
+                 texname = '\\text{I644}')
+
+I655 = Parameter(name = 'I655',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rl55*complexconjugate(Rl55)',
+                 texname = '\\text{I655}')
+
+I663 = Parameter(name = 'I663',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rl36*complexconjugate(Rl66)',
+                 texname = '\\text{I663}')
 
 I666 = Parameter(name = 'I666',
                  nature = 'internal',
@@ -6959,11 +6959,11 @@ I666 = Parameter(name = 'I666',
                  value = 'Rl66*complexconjugate(Rl66)',
                  texname = '\\text{I666}')
 
-I6031 = Parameter(name = 'I6031',
+I6033 = Parameter(name = 'I6033',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'yd33*complexconjugate(Ru13)',
-                  texname = '\\text{I6031}')
+                  value = 'yd33*complexconjugate(Ru33)',
+                  texname = '\\text{I6033}')
 
 I6036 = Parameter(name = 'I6036',
                   nature = 'internal',
@@ -7001,131 +7001,131 @@ I6533 = Parameter(name = 'I6533',
                   value = 'yd33',
                   texname = '\\text{I6533}')
 
-I6611 = Parameter(name = 'I6611',
+I6633 = Parameter(name = 'I6633',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*complexconjugate(Rd16)*complexconjugate(yd33)',
-                  texname = '\\text{I6611}')
+                  value = 'Rd33*complexconjugate(Rd36)*complexconjugate(yd33)',
+                  texname = '\\text{I6633}')
 
-I6612 = Parameter(name = 'I6612',
+I6636 = Parameter(name = 'I6636',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*complexconjugate(Rd16)*complexconjugate(yd33)',
-                  texname = '\\text{I6612}')
+                  value = 'Rd63*complexconjugate(Rd36)*complexconjugate(yd33)',
+                  texname = '\\text{I6636}')
 
-I6621 = Parameter(name = 'I6621',
+I6663 = Parameter(name = 'I6663',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*complexconjugate(Rd26)*complexconjugate(yd33)',
-                  texname = '\\text{I6621}')
+                  value = 'Rd33*complexconjugate(Rd66)*complexconjugate(yd33)',
+                  texname = '\\text{I6663}')
 
-I6622 = Parameter(name = 'I6622',
+I6666 = Parameter(name = 'I6666',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*complexconjugate(Rd26)*complexconjugate(yd33)',
-                  texname = '\\text{I6622}')
+                  value = 'Rd63*complexconjugate(Rd66)*complexconjugate(yd33)',
+                  texname = '\\text{I6666}')
 
-I6711 = Parameter(name = 'I6711',
+I6733 = Parameter(name = 'I6733',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*complexconjugate(Rd16)*complexconjugate(td33)',
-                  texname = '\\text{I6711}')
+                  value = 'Rd33*complexconjugate(Rd36)*complexconjugate(td33)',
+                  texname = '\\text{I6733}')
 
-I6712 = Parameter(name = 'I6712',
+I6736 = Parameter(name = 'I6736',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*complexconjugate(Rd16)*complexconjugate(td33)',
-                  texname = '\\text{I6712}')
+                  value = 'Rd63*complexconjugate(Rd36)*complexconjugate(td33)',
+                  texname = '\\text{I6736}')
 
-I6721 = Parameter(name = 'I6721',
+I6763 = Parameter(name = 'I6763',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*complexconjugate(Rd26)*complexconjugate(td33)',
-                  texname = '\\text{I6721}')
+                  value = 'Rd33*complexconjugate(Rd66)*complexconjugate(td33)',
+                  texname = '\\text{I6763}')
 
-I6722 = Parameter(name = 'I6722',
+I6766 = Parameter(name = 'I6766',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*complexconjugate(Rd26)*complexconjugate(td33)',
-                  texname = '\\text{I6722}')
+                  value = 'Rd63*complexconjugate(Rd66)*complexconjugate(td33)',
+                  texname = '\\text{I6766}')
 
-I6811 = Parameter(name = 'I6811',
+I6833 = Parameter(name = 'I6833',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd16*td33*complexconjugate(Rd13)',
-                  texname = '\\text{I6811}')
+                  value = 'Rd36*td33*complexconjugate(Rd33)',
+                  texname = '\\text{I6833}')
 
-I6812 = Parameter(name = 'I6812',
+I6836 = Parameter(name = 'I6836',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd26*td33*complexconjugate(Rd13)',
-                  texname = '\\text{I6812}')
+                  value = 'Rd66*td33*complexconjugate(Rd33)',
+                  texname = '\\text{I6836}')
 
-I6821 = Parameter(name = 'I6821',
+I6863 = Parameter(name = 'I6863',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd16*td33*complexconjugate(Rd23)',
-                  texname = '\\text{I6821}')
+                  value = 'Rd36*td33*complexconjugate(Rd63)',
+                  texname = '\\text{I6863}')
 
-I6822 = Parameter(name = 'I6822',
+I6866 = Parameter(name = 'I6866',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd26*td33*complexconjugate(Rd23)',
-                  texname = '\\text{I6822}')
+                  value = 'Rd66*td33*complexconjugate(Rd63)',
+                  texname = '\\text{I6866}')
 
-I6911 = Parameter(name = 'I6911',
+I6933 = Parameter(name = 'I6933',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*yd33*complexconjugate(Rd13)*complexconjugate(yd33)',
-                  texname = '\\text{I6911}')
+                  value = 'Rd33*yd33*complexconjugate(Rd33)*complexconjugate(yd33)',
+                  texname = '\\text{I6933}')
 
-I6912 = Parameter(name = 'I6912',
+I6936 = Parameter(name = 'I6936',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*yd33*complexconjugate(Rd13)*complexconjugate(yd33)',
-                  texname = '\\text{I6912}')
+                  value = 'Rd63*yd33*complexconjugate(Rd33)*complexconjugate(yd33)',
+                  texname = '\\text{I6936}')
 
-I6921 = Parameter(name = 'I6921',
+I6963 = Parameter(name = 'I6963',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*yd33*complexconjugate(Rd23)*complexconjugate(yd33)',
-                  texname = '\\text{I6921}')
+                  value = 'Rd33*yd33*complexconjugate(Rd63)*complexconjugate(yd33)',
+                  texname = '\\text{I6963}')
 
-I6922 = Parameter(name = 'I6922',
+I6966 = Parameter(name = 'I6966',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*yd33*complexconjugate(Rd23)*complexconjugate(yd33)',
-                  texname = '\\text{I6922}')
+                  value = 'Rd63*yd33*complexconjugate(Rd63)*complexconjugate(yd33)',
+                  texname = '\\text{I6966}')
 
 I711 = Parameter(name = 'I711',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rl13*complexconjugate(Rl13)',
+                 value = 'Rl11*complexconjugate(Rl11)',
                  texname = '\\text{I711}')
 
-I716 = Parameter(name = 'I716',
+I722 = Parameter(name = 'I722',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rl63*complexconjugate(Rl13)',
-                 texname = '\\text{I716}')
+                 value = 'Rl22*complexconjugate(Rl22)',
+                 texname = '\\text{I722}')
 
-I744 = Parameter(name = 'I744',
+I733 = Parameter(name = 'I733',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rl42*complexconjugate(Rl42)',
-                 texname = '\\text{I744}')
+                 value = 'Rl33*complexconjugate(Rl33)',
+                 texname = '\\text{I733}')
 
-I755 = Parameter(name = 'I755',
+I736 = Parameter(name = 'I736',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rl51*complexconjugate(Rl51)',
-                 texname = '\\text{I755}')
+                 value = 'Rl63*complexconjugate(Rl33)',
+                 texname = '\\text{I736}')
 
-I761 = Parameter(name = 'I761',
+I763 = Parameter(name = 'I763',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rl13*complexconjugate(Rl63)',
-                 texname = '\\text{I761}')
+                 value = 'Rl33*complexconjugate(Rl63)',
+                 texname = '\\text{I763}')
 
 I766 = Parameter(name = 'I766',
                  nature = 'internal',
@@ -7133,149 +7133,149 @@ I766 = Parameter(name = 'I766',
                  value = 'Rl63*complexconjugate(Rl63)',
                  texname = '\\text{I766}')
 
-I7011 = Parameter(name = 'I7011',
+I7033 = Parameter(name = 'I7033',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd16*yd33*complexconjugate(Rd16)*complexconjugate(yd33)',
-                  texname = '\\text{I7011}')
+                  value = 'Rd36*yd33*complexconjugate(Rd36)*complexconjugate(yd33)',
+                  texname = '\\text{I7033}')
 
-I7012 = Parameter(name = 'I7012',
+I7036 = Parameter(name = 'I7036',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd26*yd33*complexconjugate(Rd16)*complexconjugate(yd33)',
-                  texname = '\\text{I7012}')
+                  value = 'Rd66*yd33*complexconjugate(Rd36)*complexconjugate(yd33)',
+                  texname = '\\text{I7036}')
 
-I7021 = Parameter(name = 'I7021',
+I7063 = Parameter(name = 'I7063',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd16*yd33*complexconjugate(Rd26)*complexconjugate(yd33)',
-                  texname = '\\text{I7021}')
+                  value = 'Rd36*yd33*complexconjugate(Rd66)*complexconjugate(yd33)',
+                  texname = '\\text{I7063}')
 
-I7022 = Parameter(name = 'I7022',
+I7066 = Parameter(name = 'I7066',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd26*yd33*complexconjugate(Rd26)*complexconjugate(yd33)',
-                  texname = '\\text{I7022}')
+                  value = 'Rd66*yd33*complexconjugate(Rd66)*complexconjugate(yd33)',
+                  texname = '\\text{I7066}')
 
-I7111 = Parameter(name = 'I7111',
+I7133 = Parameter(name = 'I7133',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd16*yd33*complexconjugate(Rd13)',
-                  texname = '\\text{I7111}')
+                  value = 'Rd36*yd33*complexconjugate(Rd33)',
+                  texname = '\\text{I7133}')
 
-I7112 = Parameter(name = 'I7112',
+I7136 = Parameter(name = 'I7136',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd26*yd33*complexconjugate(Rd13)',
-                  texname = '\\text{I7112}')
+                  value = 'Rd66*yd33*complexconjugate(Rd33)',
+                  texname = '\\text{I7136}')
 
-I7121 = Parameter(name = 'I7121',
+I7163 = Parameter(name = 'I7163',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd16*yd33*complexconjugate(Rd23)',
-                  texname = '\\text{I7121}')
+                  value = 'Rd36*yd33*complexconjugate(Rd63)',
+                  texname = '\\text{I7163}')
 
-I7122 = Parameter(name = 'I7122',
+I7166 = Parameter(name = 'I7166',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd26*yd33*complexconjugate(Rd23)',
-                  texname = '\\text{I7122}')
+                  value = 'Rd66*yd33*complexconjugate(Rd63)',
+                  texname = '\\text{I7166}')
 
-I7211 = Parameter(name = 'I7211',
+I7233 = Parameter(name = 'I7233',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*complexconjugate(Rd16)*complexconjugate(yd33)',
-                  texname = '\\text{I7211}')
+                  value = 'Rd33*complexconjugate(Rd36)*complexconjugate(yd33)',
+                  texname = '\\text{I7233}')
 
-I7212 = Parameter(name = 'I7212',
+I7236 = Parameter(name = 'I7236',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*complexconjugate(Rd16)*complexconjugate(yd33)',
-                  texname = '\\text{I7212}')
+                  value = 'Rd63*complexconjugate(Rd36)*complexconjugate(yd33)',
+                  texname = '\\text{I7236}')
 
-I7221 = Parameter(name = 'I7221',
+I7263 = Parameter(name = 'I7263',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*complexconjugate(Rd26)*complexconjugate(yd33)',
-                  texname = '\\text{I7221}')
+                  value = 'Rd33*complexconjugate(Rd66)*complexconjugate(yd33)',
+                  texname = '\\text{I7263}')
 
-I7222 = Parameter(name = 'I7222',
+I7266 = Parameter(name = 'I7266',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*complexconjugate(Rd26)*complexconjugate(yd33)',
-                  texname = '\\text{I7222}')
+                  value = 'Rd63*complexconjugate(Rd66)*complexconjugate(yd33)',
+                  texname = '\\text{I7266}')
 
-I7311 = Parameter(name = 'I7311',
+I7333 = Parameter(name = 'I7333',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*complexconjugate(Rd16)*complexconjugate(td33)',
-                  texname = '\\text{I7311}')
+                  value = 'Rd33*complexconjugate(Rd36)*complexconjugate(td33)',
+                  texname = '\\text{I7333}')
 
-I7312 = Parameter(name = 'I7312',
+I7336 = Parameter(name = 'I7336',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*complexconjugate(Rd16)*complexconjugate(td33)',
-                  texname = '\\text{I7312}')
+                  value = 'Rd63*complexconjugate(Rd36)*complexconjugate(td33)',
+                  texname = '\\text{I7336}')
 
-I7321 = Parameter(name = 'I7321',
+I7363 = Parameter(name = 'I7363',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*complexconjugate(Rd26)*complexconjugate(td33)',
-                  texname = '\\text{I7321}')
+                  value = 'Rd33*complexconjugate(Rd66)*complexconjugate(td33)',
+                  texname = '\\text{I7363}')
 
-I7322 = Parameter(name = 'I7322',
+I7366 = Parameter(name = 'I7366',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*complexconjugate(Rd26)*complexconjugate(td33)',
-                  texname = '\\text{I7322}')
+                  value = 'Rd63*complexconjugate(Rd66)*complexconjugate(td33)',
+                  texname = '\\text{I7366}')
 
-I7411 = Parameter(name = 'I7411',
+I7433 = Parameter(name = 'I7433',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd16*td33*complexconjugate(Rd13)',
-                  texname = '\\text{I7411}')
+                  value = 'Rd36*td33*complexconjugate(Rd33)',
+                  texname = '\\text{I7433}')
 
-I7412 = Parameter(name = 'I7412',
+I7436 = Parameter(name = 'I7436',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd26*td33*complexconjugate(Rd13)',
-                  texname = '\\text{I7412}')
+                  value = 'Rd66*td33*complexconjugate(Rd33)',
+                  texname = '\\text{I7436}')
 
-I7421 = Parameter(name = 'I7421',
+I7463 = Parameter(name = 'I7463',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd16*td33*complexconjugate(Rd23)',
-                  texname = '\\text{I7421}')
+                  value = 'Rd36*td33*complexconjugate(Rd63)',
+                  texname = '\\text{I7463}')
 
-I7422 = Parameter(name = 'I7422',
+I7466 = Parameter(name = 'I7466',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd26*td33*complexconjugate(Rd23)',
-                  texname = '\\text{I7422}')
+                  value = 'Rd66*td33*complexconjugate(Rd63)',
+                  texname = '\\text{I7466}')
 
-I7511 = Parameter(name = 'I7511',
+I7533 = Parameter(name = 'I7533',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd16*yd33*complexconjugate(Rd13)',
-                  texname = '\\text{I7511}')
+                  value = 'Rd36*yd33*complexconjugate(Rd33)',
+                  texname = '\\text{I7533}')
 
-I7512 = Parameter(name = 'I7512',
+I7536 = Parameter(name = 'I7536',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd26*yd33*complexconjugate(Rd13)',
-                  texname = '\\text{I7512}')
+                  value = 'Rd66*yd33*complexconjugate(Rd33)',
+                  texname = '\\text{I7536}')
 
-I7521 = Parameter(name = 'I7521',
+I7563 = Parameter(name = 'I7563',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd16*yd33*complexconjugate(Rd23)',
-                  texname = '\\text{I7521}')
+                  value = 'Rd36*yd33*complexconjugate(Rd63)',
+                  texname = '\\text{I7563}')
 
-I7522 = Parameter(name = 'I7522',
+I7566 = Parameter(name = 'I7566',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd26*yd33*complexconjugate(Rd23)',
-                  texname = '\\text{I7522}')
+                  value = 'Rd66*yd33*complexconjugate(Rd63)',
+                  texname = '\\text{I7566}')
 
 I7633 = Parameter(name = 'I7633',
                   nature = 'internal',
@@ -7283,23 +7283,23 @@ I7633 = Parameter(name = 'I7633',
                   value = 'complexconjugate(ye33)',
                   texname = '\\text{I7633}')
 
-I7711 = Parameter(name = 'I7711',
+I7733 = Parameter(name = 'I7733',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl13*complexconjugate(Rl16)*complexconjugate(ye33)',
-                  texname = '\\text{I7711}')
+                  value = 'Rl33*complexconjugate(Rl36)*complexconjugate(ye33)',
+                  texname = '\\text{I7733}')
 
-I7716 = Parameter(name = 'I7716',
+I7736 = Parameter(name = 'I7736',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl63*complexconjugate(Rl16)*complexconjugate(ye33)',
-                  texname = '\\text{I7716}')
+                  value = 'Rl63*complexconjugate(Rl36)*complexconjugate(ye33)',
+                  texname = '\\text{I7736}')
 
-I7761 = Parameter(name = 'I7761',
+I7763 = Parameter(name = 'I7763',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl13*complexconjugate(Rl66)*complexconjugate(ye33)',
-                  texname = '\\text{I7761}')
+                  value = 'Rl33*complexconjugate(Rl66)*complexconjugate(ye33)',
+                  texname = '\\text{I7763}')
 
 I7766 = Parameter(name = 'I7766',
                   nature = 'internal',
@@ -7307,23 +7307,23 @@ I7766 = Parameter(name = 'I7766',
                   value = 'Rl63*complexconjugate(Rl66)*complexconjugate(ye33)',
                   texname = '\\text{I7766}')
 
-I7811 = Parameter(name = 'I7811',
+I7833 = Parameter(name = 'I7833',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl13*complexconjugate(Rl16)*complexconjugate(te33)',
-                  texname = '\\text{I7811}')
+                  value = 'Rl33*complexconjugate(Rl36)*complexconjugate(te33)',
+                  texname = '\\text{I7833}')
 
-I7816 = Parameter(name = 'I7816',
+I7836 = Parameter(name = 'I7836',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl63*complexconjugate(Rl16)*complexconjugate(te33)',
-                  texname = '\\text{I7816}')
+                  value = 'Rl63*complexconjugate(Rl36)*complexconjugate(te33)',
+                  texname = '\\text{I7836}')
 
-I7861 = Parameter(name = 'I7861',
+I7863 = Parameter(name = 'I7863',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl13*complexconjugate(Rl66)*complexconjugate(te33)',
-                  texname = '\\text{I7861}')
+                  value = 'Rl33*complexconjugate(Rl66)*complexconjugate(te33)',
+                  texname = '\\text{I7863}')
 
 I7866 = Parameter(name = 'I7866',
                   nature = 'internal',
@@ -7331,23 +7331,23 @@ I7866 = Parameter(name = 'I7866',
                   value = 'Rl63*complexconjugate(Rl66)*complexconjugate(te33)',
                   texname = '\\text{I7866}')
 
-I7911 = Parameter(name = 'I7911',
+I7933 = Parameter(name = 'I7933',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl16*te33*complexconjugate(Rl13)',
-                  texname = '\\text{I7911}')
+                  value = 'Rl36*te33*complexconjugate(Rl33)',
+                  texname = '\\text{I7933}')
 
-I7916 = Parameter(name = 'I7916',
+I7936 = Parameter(name = 'I7936',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl66*te33*complexconjugate(Rl13)',
-                  texname = '\\text{I7916}')
+                  value = 'Rl66*te33*complexconjugate(Rl33)',
+                  texname = '\\text{I7936}')
 
-I7961 = Parameter(name = 'I7961',
+I7963 = Parameter(name = 'I7963',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl16*te33*complexconjugate(Rl63)',
-                  texname = '\\text{I7961}')
+                  value = 'Rl36*te33*complexconjugate(Rl63)',
+                  texname = '\\text{I7963}')
 
 I7966 = Parameter(name = 'I7966',
                   nature = 'internal',
@@ -7355,35 +7355,35 @@ I7966 = Parameter(name = 'I7966',
                   value = 'Rl66*te33*complexconjugate(Rl63)',
                   texname = '\\text{I7966}')
 
-I811 = Parameter(name = 'I811',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rl16*complexconjugate(Rl16)',
-                 texname = '\\text{I811}')
-
-I816 = Parameter(name = 'I816',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rl66*complexconjugate(Rl16)',
-                 texname = '\\text{I816}')
-
-I822 = Parameter(name = 'I822',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rl24*complexconjugate(Rl24)',
-                 texname = '\\text{I822}')
-
 I833 = Parameter(name = 'I833',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rl35*complexconjugate(Rl35)',
+                 value = 'Rl36*complexconjugate(Rl36)',
                  texname = '\\text{I833}')
 
-I861 = Parameter(name = 'I861',
+I836 = Parameter(name = 'I836',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rl16*complexconjugate(Rl66)',
-                 texname = '\\text{I861}')
+                 value = 'Rl66*complexconjugate(Rl36)',
+                 texname = '\\text{I836}')
+
+I844 = Parameter(name = 'I844',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rl44*complexconjugate(Rl44)',
+                 texname = '\\text{I844}')
+
+I855 = Parameter(name = 'I855',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rl55*complexconjugate(Rl55)',
+                 texname = '\\text{I855}')
+
+I863 = Parameter(name = 'I863',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rl36*complexconjugate(Rl66)',
+                 texname = '\\text{I863}')
 
 I866 = Parameter(name = 'I866',
                  nature = 'internal',
@@ -7391,23 +7391,23 @@ I866 = Parameter(name = 'I866',
                  value = 'Rl66*complexconjugate(Rl66)',
                  texname = '\\text{I866}')
 
-I8011 = Parameter(name = 'I8011',
+I8033 = Parameter(name = 'I8033',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl13*ye33*complexconjugate(Rl13)*complexconjugate(ye33)',
-                  texname = '\\text{I8011}')
+                  value = 'Rl33*ye33*complexconjugate(Rl33)*complexconjugate(ye33)',
+                  texname = '\\text{I8033}')
 
-I8016 = Parameter(name = 'I8016',
+I8036 = Parameter(name = 'I8036',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl63*ye33*complexconjugate(Rl13)*complexconjugate(ye33)',
-                  texname = '\\text{I8016}')
+                  value = 'Rl63*ye33*complexconjugate(Rl33)*complexconjugate(ye33)',
+                  texname = '\\text{I8036}')
 
-I8061 = Parameter(name = 'I8061',
+I8063 = Parameter(name = 'I8063',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl13*ye33*complexconjugate(Rl63)*complexconjugate(ye33)',
-                  texname = '\\text{I8061}')
+                  value = 'Rl33*ye33*complexconjugate(Rl63)*complexconjugate(ye33)',
+                  texname = '\\text{I8063}')
 
 I8066 = Parameter(name = 'I8066',
                   nature = 'internal',
@@ -7415,23 +7415,23 @@ I8066 = Parameter(name = 'I8066',
                   value = 'Rl63*ye33*complexconjugate(Rl63)*complexconjugate(ye33)',
                   texname = '\\text{I8066}')
 
-I8111 = Parameter(name = 'I8111',
+I8133 = Parameter(name = 'I8133',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl16*ye33*complexconjugate(Rl16)*complexconjugate(ye33)',
-                  texname = '\\text{I8111}')
+                  value = 'Rl36*ye33*complexconjugate(Rl36)*complexconjugate(ye33)',
+                  texname = '\\text{I8133}')
 
-I8116 = Parameter(name = 'I8116',
+I8136 = Parameter(name = 'I8136',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl66*ye33*complexconjugate(Rl16)*complexconjugate(ye33)',
-                  texname = '\\text{I8116}')
+                  value = 'Rl66*ye33*complexconjugate(Rl36)*complexconjugate(ye33)',
+                  texname = '\\text{I8136}')
 
-I8161 = Parameter(name = 'I8161',
+I8163 = Parameter(name = 'I8163',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl16*ye33*complexconjugate(Rl66)*complexconjugate(ye33)',
-                  texname = '\\text{I8161}')
+                  value = 'Rl36*ye33*complexconjugate(Rl66)*complexconjugate(ye33)',
+                  texname = '\\text{I8163}')
 
 I8166 = Parameter(name = 'I8166',
                   nature = 'internal',
@@ -7439,23 +7439,23 @@ I8166 = Parameter(name = 'I8166',
                   value = 'Rl66*ye33*complexconjugate(Rl66)*complexconjugate(ye33)',
                   texname = '\\text{I8166}')
 
-I8211 = Parameter(name = 'I8211',
+I8233 = Parameter(name = 'I8233',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl16*ye33*complexconjugate(Rl13)',
-                  texname = '\\text{I8211}')
+                  value = 'Rl36*ye33*complexconjugate(Rl33)',
+                  texname = '\\text{I8233}')
 
-I8216 = Parameter(name = 'I8216',
+I8236 = Parameter(name = 'I8236',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl66*ye33*complexconjugate(Rl13)',
-                  texname = '\\text{I8216}')
+                  value = 'Rl66*ye33*complexconjugate(Rl33)',
+                  texname = '\\text{I8236}')
 
-I8261 = Parameter(name = 'I8261',
+I8263 = Parameter(name = 'I8263',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rl16*ye33*complexconjugate(Rl63)',
-                  texname = '\\text{I8261}')
+                  value = 'Rl36*ye33*complexconjugate(Rl63)',
+                  texname = '\\text{I8263}')
 
 I8266 = Parameter(name = 'I8266',
                   nature = 'internal',
@@ -7463,411 +7463,411 @@ I8266 = Parameter(name = 'I8266',
                   value = 'Rl66*ye33*complexconjugate(Rl63)',
                   texname = '\\text{I8266}')
 
-I8311 = Parameter(name = 'I8311',
+I8333 = Parameter(name = 'I8333',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'RLn13*complexconjugate(Rl16)*complexconjugate(ye33)',
-                  texname = '\\text{I8311}')
+                  value = 'RLn33*complexconjugate(Rl36)*complexconjugate(ye33)',
+                  texname = '\\text{I8333}')
 
-I8316 = Parameter(name = 'I8316',
+I8336 = Parameter(name = 'I8336',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'RLn13*complexconjugate(Rl66)*complexconjugate(ye33)',
-                  texname = '\\text{I8316}')
+                  value = 'RLn33*complexconjugate(Rl66)*complexconjugate(ye33)',
+                  texname = '\\text{I8336}')
 
-I8411 = Parameter(name = 'I8411',
+I8433 = Parameter(name = 'I8433',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'RLn13*complexconjugate(Rl16)*complexconjugate(te33)',
-                  texname = '\\text{I8411}')
+                  value = 'RLn33*complexconjugate(Rl36)*complexconjugate(te33)',
+                  texname = '\\text{I8433}')
 
-I8416 = Parameter(name = 'I8416',
+I8436 = Parameter(name = 'I8436',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'RLn13*complexconjugate(Rl66)*complexconjugate(te33)',
-                  texname = '\\text{I8416}')
+                  value = 'RLn33*complexconjugate(Rl66)*complexconjugate(te33)',
+                  texname = '\\text{I8436}')
 
-I8511 = Parameter(name = 'I8511',
+I8533 = Parameter(name = 'I8533',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'RLn13*ye33*complexconjugate(Rl13)*complexconjugate(ye33)',
-                  texname = '\\text{I8511}')
+                  value = 'RLn33*ye33*complexconjugate(Rl33)*complexconjugate(ye33)',
+                  texname = '\\text{I8533}')
 
-I8516 = Parameter(name = 'I8516',
+I8536 = Parameter(name = 'I8536',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'RLn13*ye33*complexconjugate(Rl63)*complexconjugate(ye33)',
-                  texname = '\\text{I8516}')
+                  value = 'RLn33*ye33*complexconjugate(Rl63)*complexconjugate(ye33)',
+                  texname = '\\text{I8536}')
 
-I8611 = Parameter(name = 'I8611',
+I8633 = Parameter(name = 'I8633',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*complexconjugate(Ru16)*complexconjugate(yu33)',
-                  texname = '\\text{I8611}')
+                  value = 'Rd33*complexconjugate(Ru36)*complexconjugate(yu33)',
+                  texname = '\\text{I8633}')
 
-I8616 = Parameter(name = 'I8616',
+I8636 = Parameter(name = 'I8636',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*complexconjugate(Ru66)*complexconjugate(yu33)',
-                  texname = '\\text{I8616}')
+                  value = 'Rd33*complexconjugate(Ru66)*complexconjugate(yu33)',
+                  texname = '\\text{I8636}')
 
-I8621 = Parameter(name = 'I8621',
+I8663 = Parameter(name = 'I8663',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*complexconjugate(Ru16)*complexconjugate(yu33)',
-                  texname = '\\text{I8621}')
+                  value = 'Rd63*complexconjugate(Ru36)*complexconjugate(yu33)',
+                  texname = '\\text{I8663}')
 
-I8626 = Parameter(name = 'I8626',
+I8666 = Parameter(name = 'I8666',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*complexconjugate(Ru66)*complexconjugate(yu33)',
-                  texname = '\\text{I8626}')
+                  value = 'Rd63*complexconjugate(Ru66)*complexconjugate(yu33)',
+                  texname = '\\text{I8666}')
 
-I8711 = Parameter(name = 'I8711',
+I8733 = Parameter(name = 'I8733',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*complexconjugate(Ru16)*complexconjugate(tu33)',
-                  texname = '\\text{I8711}')
+                  value = 'Rd33*complexconjugate(Ru36)*complexconjugate(tu33)',
+                  texname = '\\text{I8733}')
 
-I8716 = Parameter(name = 'I8716',
+I8736 = Parameter(name = 'I8736',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*complexconjugate(Ru66)*complexconjugate(tu33)',
-                  texname = '\\text{I8716}')
+                  value = 'Rd33*complexconjugate(Ru66)*complexconjugate(tu33)',
+                  texname = '\\text{I8736}')
 
-I8721 = Parameter(name = 'I8721',
+I8763 = Parameter(name = 'I8763',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*complexconjugate(Ru16)*complexconjugate(tu33)',
-                  texname = '\\text{I8721}')
+                  value = 'Rd63*complexconjugate(Ru36)*complexconjugate(tu33)',
+                  texname = '\\text{I8763}')
 
-I8726 = Parameter(name = 'I8726',
+I8766 = Parameter(name = 'I8766',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*complexconjugate(Ru66)*complexconjugate(tu33)',
-                  texname = '\\text{I8726}')
+                  value = 'Rd63*complexconjugate(Ru66)*complexconjugate(tu33)',
+                  texname = '\\text{I8766}')
 
-I8811 = Parameter(name = 'I8811',
+I8833 = Parameter(name = 'I8833',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd16*td33*complexconjugate(Ru13)',
-                  texname = '\\text{I8811}')
+                  value = 'Rd36*td33*complexconjugate(Ru33)',
+                  texname = '\\text{I8833}')
 
-I8816 = Parameter(name = 'I8816',
+I8836 = Parameter(name = 'I8836',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd16*td33*complexconjugate(Ru63)',
-                  texname = '\\text{I8816}')
+                  value = 'Rd36*td33*complexconjugate(Ru63)',
+                  texname = '\\text{I8836}')
 
-I8821 = Parameter(name = 'I8821',
+I8863 = Parameter(name = 'I8863',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd26*td33*complexconjugate(Ru13)',
-                  texname = '\\text{I8821}')
+                  value = 'Rd66*td33*complexconjugate(Ru33)',
+                  texname = '\\text{I8863}')
 
-I8826 = Parameter(name = 'I8826',
+I8866 = Parameter(name = 'I8866',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd26*td33*complexconjugate(Ru63)',
-                  texname = '\\text{I8826}')
+                  value = 'Rd66*td33*complexconjugate(Ru63)',
+                  texname = '\\text{I8866}')
 
-I8911 = Parameter(name = 'I8911',
+I8933 = Parameter(name = 'I8933',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*yd33*complexconjugate(Ru13)*complexconjugate(yd33)',
-                  texname = '\\text{I8911}')
+                  value = 'Rd33*yd33*complexconjugate(Ru33)*complexconjugate(yd33)',
+                  texname = '\\text{I8933}')
 
-I8916 = Parameter(name = 'I8916',
+I8936 = Parameter(name = 'I8936',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*yd33*complexconjugate(Ru63)*complexconjugate(yd33)',
-                  texname = '\\text{I8916}')
+                  value = 'Rd33*yd33*complexconjugate(Ru63)*complexconjugate(yd33)',
+                  texname = '\\text{I8936}')
 
-I8921 = Parameter(name = 'I8921',
+I8963 = Parameter(name = 'I8963',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*yd33*complexconjugate(Ru13)*complexconjugate(yd33)',
-                  texname = '\\text{I8921}')
+                  value = 'Rd63*yd33*complexconjugate(Ru33)*complexconjugate(yd33)',
+                  texname = '\\text{I8963}')
 
-I8926 = Parameter(name = 'I8926',
+I8966 = Parameter(name = 'I8966',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*yd33*complexconjugate(Ru63)*complexconjugate(yd33)',
-                  texname = '\\text{I8926}')
+                  value = 'Rd63*yd33*complexconjugate(Ru63)*complexconjugate(yd33)',
+                  texname = '\\text{I8966}')
 
 I911 = Parameter(name = 'I911',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rd13*complexconjugate(Rd13)',
+                 value = 'Rd11*complexconjugate(Rd11)',
                  texname = '\\text{I911}')
-
-I912 = Parameter(name = 'I912',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rd23*complexconjugate(Rd13)',
-                 texname = '\\text{I912}')
-
-I921 = Parameter(name = 'I921',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rd13*complexconjugate(Rd23)',
-                 texname = '\\text{I921}')
 
 I922 = Parameter(name = 'I922',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rd23*complexconjugate(Rd23)',
+                 value = 'Rd22*complexconjugate(Rd22)',
                  texname = '\\text{I922}')
 
-I955 = Parameter(name = 'I955',
+I933 = Parameter(name = 'I933',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rd51*complexconjugate(Rd51)',
-                 texname = '\\text{I955}')
+                 value = 'Rd33*complexconjugate(Rd33)',
+                 texname = '\\text{I933}')
+
+I936 = Parameter(name = 'I936',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rd63*complexconjugate(Rd33)',
+                 texname = '\\text{I936}')
+
+I963 = Parameter(name = 'I963',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rd33*complexconjugate(Rd63)',
+                 texname = '\\text{I963}')
 
 I966 = Parameter(name = 'I966',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'Rd62*complexconjugate(Rd62)',
+                 value = 'Rd63*complexconjugate(Rd63)',
                  texname = '\\text{I966}')
 
-I9011 = Parameter(name = 'I9011',
+I9033 = Parameter(name = 'I9033',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd16*yd33*complexconjugate(Ru16)*complexconjugate(yu33)',
-                  texname = '\\text{I9011}')
+                  value = 'Rd36*yd33*complexconjugate(Ru36)*complexconjugate(yu33)',
+                  texname = '\\text{I9033}')
 
-I9016 = Parameter(name = 'I9016',
+I9036 = Parameter(name = 'I9036',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd16*yd33*complexconjugate(Ru66)*complexconjugate(yu33)',
-                  texname = '\\text{I9016}')
+                  value = 'Rd36*yd33*complexconjugate(Ru66)*complexconjugate(yu33)',
+                  texname = '\\text{I9036}')
 
-I9021 = Parameter(name = 'I9021',
+I9063 = Parameter(name = 'I9063',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd26*yd33*complexconjugate(Ru16)*complexconjugate(yu33)',
-                  texname = '\\text{I9021}')
+                  value = 'Rd66*yd33*complexconjugate(Ru36)*complexconjugate(yu33)',
+                  texname = '\\text{I9063}')
 
-I9026 = Parameter(name = 'I9026',
+I9066 = Parameter(name = 'I9066',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd26*yd33*complexconjugate(Ru66)*complexconjugate(yu33)',
-                  texname = '\\text{I9026}')
+                  value = 'Rd66*yd33*complexconjugate(Ru66)*complexconjugate(yu33)',
+                  texname = '\\text{I9066}')
 
-I9111 = Parameter(name = 'I9111',
+I9133 = Parameter(name = 'I9133',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd16*yd33*complexconjugate(Ru13)',
-                  texname = '\\text{I9111}')
+                  value = 'Rd36*yd33*complexconjugate(Ru33)',
+                  texname = '\\text{I9133}')
 
-I9116 = Parameter(name = 'I9116',
+I9136 = Parameter(name = 'I9136',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd16*yd33*complexconjugate(Ru63)',
-                  texname = '\\text{I9116}')
+                  value = 'Rd36*yd33*complexconjugate(Ru63)',
+                  texname = '\\text{I9136}')
 
-I9121 = Parameter(name = 'I9121',
+I9163 = Parameter(name = 'I9163',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd26*yd33*complexconjugate(Ru13)',
-                  texname = '\\text{I9121}')
+                  value = 'Rd66*yd33*complexconjugate(Ru33)',
+                  texname = '\\text{I9163}')
 
-I9126 = Parameter(name = 'I9126',
+I9166 = Parameter(name = 'I9166',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd26*yd33*complexconjugate(Ru63)',
-                  texname = '\\text{I9126}')
+                  value = 'Rd66*yd33*complexconjugate(Ru63)',
+                  texname = '\\text{I9166}')
 
-I9211 = Parameter(name = 'I9211',
+I9233 = Parameter(name = 'I9233',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*yu33*complexconjugate(Ru13)*complexconjugate(yu33)',
-                  texname = '\\text{I9211}')
+                  value = 'Rd33*yu33*complexconjugate(Ru33)*complexconjugate(yu33)',
+                  texname = '\\text{I9233}')
 
-I9216 = Parameter(name = 'I9216',
+I9236 = Parameter(name = 'I9236',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd13*yu33*complexconjugate(Ru63)*complexconjugate(yu33)',
-                  texname = '\\text{I9216}')
+                  value = 'Rd33*yu33*complexconjugate(Ru63)*complexconjugate(yu33)',
+                  texname = '\\text{I9236}')
 
-I9221 = Parameter(name = 'I9221',
+I9263 = Parameter(name = 'I9263',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*yu33*complexconjugate(Ru13)*complexconjugate(yu33)',
-                  texname = '\\text{I9221}')
+                  value = 'Rd63*yu33*complexconjugate(Ru33)*complexconjugate(yu33)',
+                  texname = '\\text{I9263}')
 
-I9226 = Parameter(name = 'I9226',
+I9266 = Parameter(name = 'I9266',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Rd23*yu33*complexconjugate(Ru63)*complexconjugate(yu33)',
-                  texname = '\\text{I9226}')
+                  value = 'Rd63*yu33*complexconjugate(Ru63)*complexconjugate(yu33)',
+                  texname = '\\text{I9266}')
 
-I9311 = Parameter(name = 'I9311',
+I9333 = Parameter(name = 'I9333',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*complexconjugate(Rd16)*complexconjugate(yd33)',
-                  texname = '\\text{I9311}')
+                  value = 'Ru33*complexconjugate(Rd36)*complexconjugate(yd33)',
+                  texname = '\\text{I9333}')
 
-I9316 = Parameter(name = 'I9316',
+I9336 = Parameter(name = 'I9336',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru63*complexconjugate(Rd16)*complexconjugate(yd33)',
-                  texname = '\\text{I9316}')
+                  value = 'Ru63*complexconjugate(Rd36)*complexconjugate(yd33)',
+                  texname = '\\text{I9336}')
 
-I9321 = Parameter(name = 'I9321',
+I9363 = Parameter(name = 'I9363',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*complexconjugate(Rd26)*complexconjugate(yd33)',
-                  texname = '\\text{I9321}')
+                  value = 'Ru33*complexconjugate(Rd66)*complexconjugate(yd33)',
+                  texname = '\\text{I9363}')
 
-I9326 = Parameter(name = 'I9326',
+I9366 = Parameter(name = 'I9366',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru63*complexconjugate(Rd26)*complexconjugate(yd33)',
-                  texname = '\\text{I9326}')
+                  value = 'Ru63*complexconjugate(Rd66)*complexconjugate(yd33)',
+                  texname = '\\text{I9366}')
 
-I9411 = Parameter(name = 'I9411',
+I9433 = Parameter(name = 'I9433',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*complexconjugate(Rd16)*complexconjugate(td33)',
-                  texname = '\\text{I9411}')
+                  value = 'Ru33*complexconjugate(Rd36)*complexconjugate(td33)',
+                  texname = '\\text{I9433}')
 
-I9416 = Parameter(name = 'I9416',
+I9436 = Parameter(name = 'I9436',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru63*complexconjugate(Rd16)*complexconjugate(td33)',
-                  texname = '\\text{I9416}')
+                  value = 'Ru63*complexconjugate(Rd36)*complexconjugate(td33)',
+                  texname = '\\text{I9436}')
 
-I9421 = Parameter(name = 'I9421',
+I9463 = Parameter(name = 'I9463',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*complexconjugate(Rd26)*complexconjugate(td33)',
-                  texname = '\\text{I9421}')
+                  value = 'Ru33*complexconjugate(Rd66)*complexconjugate(td33)',
+                  texname = '\\text{I9463}')
 
-I9426 = Parameter(name = 'I9426',
+I9466 = Parameter(name = 'I9466',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru63*complexconjugate(Rd26)*complexconjugate(td33)',
-                  texname = '\\text{I9426}')
+                  value = 'Ru63*complexconjugate(Rd66)*complexconjugate(td33)',
+                  texname = '\\text{I9466}')
 
-I9511 = Parameter(name = 'I9511',
+I9533 = Parameter(name = 'I9533',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru16*tu33*complexconjugate(Rd13)',
-                  texname = '\\text{I9511}')
+                  value = 'Ru36*tu33*complexconjugate(Rd33)',
+                  texname = '\\text{I9533}')
 
-I9516 = Parameter(name = 'I9516',
+I9536 = Parameter(name = 'I9536',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru66*tu33*complexconjugate(Rd13)',
-                  texname = '\\text{I9516}')
+                  value = 'Ru66*tu33*complexconjugate(Rd33)',
+                  texname = '\\text{I9536}')
 
-I9521 = Parameter(name = 'I9521',
+I9563 = Parameter(name = 'I9563',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru16*tu33*complexconjugate(Rd23)',
-                  texname = '\\text{I9521}')
+                  value = 'Ru36*tu33*complexconjugate(Rd63)',
+                  texname = '\\text{I9563}')
 
-I9526 = Parameter(name = 'I9526',
+I9566 = Parameter(name = 'I9566',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru66*tu33*complexconjugate(Rd23)',
-                  texname = '\\text{I9526}')
+                  value = 'Ru66*tu33*complexconjugate(Rd63)',
+                  texname = '\\text{I9566}')
 
-I9611 = Parameter(name = 'I9611',
+I9633 = Parameter(name = 'I9633',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*yd33*complexconjugate(Rd13)*complexconjugate(yd33)',
-                  texname = '\\text{I9611}')
+                  value = 'Ru33*yd33*complexconjugate(Rd33)*complexconjugate(yd33)',
+                  texname = '\\text{I9633}')
 
-I9616 = Parameter(name = 'I9616',
+I9636 = Parameter(name = 'I9636',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru63*yd33*complexconjugate(Rd13)*complexconjugate(yd33)',
-                  texname = '\\text{I9616}')
+                  value = 'Ru63*yd33*complexconjugate(Rd33)*complexconjugate(yd33)',
+                  texname = '\\text{I9636}')
 
-I9621 = Parameter(name = 'I9621',
+I9663 = Parameter(name = 'I9663',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*yd33*complexconjugate(Rd23)*complexconjugate(yd33)',
-                  texname = '\\text{I9621}')
+                  value = 'Ru33*yd33*complexconjugate(Rd63)*complexconjugate(yd33)',
+                  texname = '\\text{I9663}')
 
-I9626 = Parameter(name = 'I9626',
+I9666 = Parameter(name = 'I9666',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru63*yd33*complexconjugate(Rd23)*complexconjugate(yd33)',
-                  texname = '\\text{I9626}')
+                  value = 'Ru63*yd33*complexconjugate(Rd63)*complexconjugate(yd33)',
+                  texname = '\\text{I9666}')
 
-I9711 = Parameter(name = 'I9711',
+I9733 = Parameter(name = 'I9733',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*yu33*complexconjugate(Rd13)*complexconjugate(yu33)',
-                  texname = '\\text{I9711}')
+                  value = 'Ru33*yu33*complexconjugate(Rd33)*complexconjugate(yu33)',
+                  texname = '\\text{I9733}')
 
-I9716 = Parameter(name = 'I9716',
+I9736 = Parameter(name = 'I9736',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru63*yu33*complexconjugate(Rd13)*complexconjugate(yu33)',
-                  texname = '\\text{I9716}')
+                  value = 'Ru63*yu33*complexconjugate(Rd33)*complexconjugate(yu33)',
+                  texname = '\\text{I9736}')
 
-I9721 = Parameter(name = 'I9721',
+I9763 = Parameter(name = 'I9763',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru13*yu33*complexconjugate(Rd23)*complexconjugate(yu33)',
-                  texname = '\\text{I9721}')
+                  value = 'Ru33*yu33*complexconjugate(Rd63)*complexconjugate(yu33)',
+                  texname = '\\text{I9763}')
 
-I9726 = Parameter(name = 'I9726',
+I9766 = Parameter(name = 'I9766',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru63*yu33*complexconjugate(Rd23)*complexconjugate(yu33)',
-                  texname = '\\text{I9726}')
+                  value = 'Ru63*yu33*complexconjugate(Rd63)*complexconjugate(yu33)',
+                  texname = '\\text{I9766}')
 
-I9811 = Parameter(name = 'I9811',
+I9833 = Parameter(name = 'I9833',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru16*yu33*complexconjugate(Rd16)*complexconjugate(yd33)',
-                  texname = '\\text{I9811}')
+                  value = 'Ru36*yu33*complexconjugate(Rd36)*complexconjugate(yd33)',
+                  texname = '\\text{I9833}')
 
-I9816 = Parameter(name = 'I9816',
+I9836 = Parameter(name = 'I9836',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru66*yu33*complexconjugate(Rd16)*complexconjugate(yd33)',
-                  texname = '\\text{I9816}')
+                  value = 'Ru66*yu33*complexconjugate(Rd36)*complexconjugate(yd33)',
+                  texname = '\\text{I9836}')
 
-I9821 = Parameter(name = 'I9821',
+I9863 = Parameter(name = 'I9863',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru16*yu33*complexconjugate(Rd26)*complexconjugate(yd33)',
-                  texname = '\\text{I9821}')
+                  value = 'Ru36*yu33*complexconjugate(Rd66)*complexconjugate(yd33)',
+                  texname = '\\text{I9863}')
 
-I9826 = Parameter(name = 'I9826',
+I9866 = Parameter(name = 'I9866',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru66*yu33*complexconjugate(Rd26)*complexconjugate(yd33)',
-                  texname = '\\text{I9826}')
+                  value = 'Ru66*yu33*complexconjugate(Rd66)*complexconjugate(yd33)',
+                  texname = '\\text{I9866}')
 
-I9911 = Parameter(name = 'I9911',
+I9933 = Parameter(name = 'I9933',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru16*yu33*complexconjugate(Rd13)',
-                  texname = '\\text{I9911}')
+                  value = 'Ru36*yu33*complexconjugate(Rd33)',
+                  texname = '\\text{I9933}')
 
-I9916 = Parameter(name = 'I9916',
+I9936 = Parameter(name = 'I9936',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru66*yu33*complexconjugate(Rd13)',
-                  texname = '\\text{I9916}')
+                  value = 'Ru66*yu33*complexconjugate(Rd33)',
+                  texname = '\\text{I9936}')
 
-I9921 = Parameter(name = 'I9921',
+I9963 = Parameter(name = 'I9963',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru16*yu33*complexconjugate(Rd23)',
-                  texname = '\\text{I9921}')
+                  value = 'Ru36*yu33*complexconjugate(Rd63)',
+                  texname = '\\text{I9963}')
 
-I9926 = Parameter(name = 'I9926',
+I9966 = Parameter(name = 'I9966',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'Ru66*yu33*complexconjugate(Rd23)',
-                  texname = '\\text{I9926}')
+                  value = 'Ru66*yu33*complexconjugate(Rd63)',
+                  texname = '\\text{I9966}')
 

@@ -355,7 +355,7 @@ class MG5Runner(MG4Runner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = "import model_v4 %s --modelname\n" % os.path.join(self.mg4_path,
+        v5_string = "import model_v4 %s\n" % os.path.join(self.mg4_path,
                                                           'Models', model)
 
         v5_string += "setup standalone_v4 %s -f\n" % \
@@ -378,7 +378,7 @@ class MG5_UFO_Runner(MG5Runner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = "import model %s --modelname \n" % model
+        v5_string = "import model %s \n" % model
 
         v5_string += "setup standalone_v4 %s -f\n" % \
                      os.path.join(self.mg4_path, self.temp_dir_name)

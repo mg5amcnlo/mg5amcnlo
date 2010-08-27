@@ -44,42 +44,22 @@ if '__main__' == __name__:
     logging.getLogger('madgraph').setLevel(logging.INFO)
     logging.getLogger('cmdprint').setLevel(logging.INFO)
     logging.getLogger('tutorial').setLevel(logging.ERROR)
-    
-    
-    
-    
+        
     logging.basicConfig(level=logging.INFO)
     # Create a list of processes to check automatically
-    my_proc_list = me_comparator.create_proc_list(
-                                ['g','go'],
-                                initial=2, final=2)
-    my_proc_list += me_comparator.create_proc_list(
-                                ['g','go'],
-                                initial=2, final=3)
-    #my_proc_list = me_comparator.create_proc_list(
-    ##                            ['x1+','w+'],
-    #                            initial=2, final=2)
-    #my_proc_list += me_comparator.create_proc_list(
-    #                            ['x1-','w-'],
-    #                            initial=2, final=2)
-    my_proc_list = me_comparator.create_proc_list(
-                                ['x1+','e-','e+'],
-                                initial=2, final=2)
-    my_proc_list += me_comparator.create_proc_list(
-                                ['x1-','h-','h+'],
-                                initial=2, final=2)
-    my_proc_list += me_comparator.create_proc_list(
-                                ['x1-','w-','w+'],
-                                initial=2, final=3)
-    # or give one
-    #my_proc_list = ['e+ e- > e+ e-', 'g g> g g', 'g g> g g g', 'g g> g g g g', 'a w+ > a h1 w+/z', 'a w+ > a a w+', 'a w- > a h1 w-', 'a w- > a a w-', 'a h1 > a w+ w-', 'a a > h1 w+ w-', 'a a > a w+ w-']
-    #my_proc_list += ['u u~ > d d~', 'ul ul~ > g g' , 'go go > su1 su1~', 'su1 su1~ > g g', 'su1 su1~ > g g g', 'su1 su1~ > su1 su1~' ]
-    #my_proc_list = ['su1 su1~ > g g g','su1 su1~ > g g', 'g g > su1 su1~', 'g su1 > g su1']
-    #my_proc_list = ['mu+ mu+ > sl4+ sl4+']
-    my_proc_list += [' u u > su2 su2',' u u~ > su2 su2' ]
+    #my_proc_list = me_comparator.create_proc_list_enhanced(
+    #    ['u','u~', 'd', 'd~', 's', 's~', 'c', 'c~', 'b', 'b~', 'g'],
+    #    ['ul','ul~', 'dl', 'dl~', 'sl', 'sl~', 'cl', 'cl~', 'b1', 'b1~',
+    #     'ur','ur~', 'dr', 'dr~', 'sr', 'sr~', 'cr', 'cr~', 'b2', 'b2~',
+    #     't1', 't1~', 't2', 't2~'],
+    #    initial=2, final_1=2)
+    my_proc_list = me_comparator.create_proc_list_enhanced(
+        ['w+', 'w-', 'z'],
+        ['h1', 'h2', 'h3', 'h+', 'h-'],
+        initial=2, final_1=2)
     # Create a MERunner object for MG4
-    my_mg4 = me_comparator.MG4Runner()
-    my_mg4.setup(mg4_path)
+    #my_mg4 = me_comparator.MG4Runner()
+    #my_mg4.setup(mg4_path)
 
     # Create a MERunner object for MG5
     my_mg5 = me_comparator.MG5Runner()
@@ -95,16 +75,16 @@ if '__main__' == __name__:
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                       model=['MSSM_MG','mssm'], orders={'QED':4, 'QCD':4}, energy=2000)
+                       model=['mssm','mssm'], orders={'QED':4, 'QCD':4}, energy=2000)
 
     # Do some cleanup
     #my_comp.cleanup()
 
     # Print the output
-    my_comp.output_result(filename='mssm_result.log')
+    my_comp.output_result(filename='mssm_result-higgs-new_ufo_mssm.log')
 
     
-    pydoc.pager(file('mssm_result.log','r').read())
+    pydoc.pager(file('mssm_result-higgs-new_ufo_mssm.log','r').read())
 
     # Print a list of non zero processes
     #print my_comp.get_non_zero_processes()
