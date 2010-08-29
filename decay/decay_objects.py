@@ -50,7 +50,7 @@ class DecayParticle(base_objects.Particle):
                    'charge', 'mass', 'width', 'pdg_code',
                    'texname', 'antitexname', 'line', 'propagating',
                    'is_part', 'self_antipart', 
-                   '2_body_decay_vertexlist','3_body_decay_vertexlist'
+                   'decay_vertexlist'
                   ]
 
 
@@ -90,10 +90,11 @@ class DecayParticle(base_objects.Particle):
         # n_body_decay_vertexlist[0](or [False]): off-shell decay;
         # n_body_decay_vertexlist[1](or [True] ):on-shell decay.
 
-        self['2_body_decay_vertexlist'] =[base_objects.VertexList(),
-                                          base_objects.VertexList()]
-        self['3_body_decay_vertexlist'] =[base_objects.VertexList(),
-                                          base_objects.VertexList()]
+        self['decay_vertexlist'] = {(2, False) : base_objects.VertexList(),
+                                    (2, True)  : base_objects.VertexList(),
+                                    (3, False) : base_objects.VertexList(),
+                                    (3, True)  : base_objects.VertexList()}
+
 
     
     def check_decay_condition(self, partnum, onshell, 
@@ -120,11 +121,11 @@ class DecayParticle(base_objects.Particle):
             raise self.PhysicsObjectError, \
                 "%s must be a Boolean number" % str(onshell)
                 
-        #Check if the value is a vertexlist
+        #Check if the value is a Vertexlist(in base_objects) or a list of vertex
         if not isinstance(value, base_objects.VertexList):
             raise self.PhysicsObjectError, \
-                "%s must be a VertexList" % str(value)
-        
+                "%s must be VertexList type." % str(value)
+                    
         #Check if the model is a valid object.
         if not (isinstance(model, base_objects.Model) or model == {}):
             raise self.PhysicsObjectError, \
@@ -236,26 +237,25 @@ class DecayParticle(base_objects.Particle):
 
 
     def filter(self, name, value):
-        """Filter for valid decay particle property values."""
+        """Filter for valid DecayParticle vertexlist."""
         
-        if name in ['2_body_decay_vertexlist', '3_body_decay_vertexlist']:
+        if name == 'decay_vertexlist':
 
             #Value must be a list of 2 elements.
-            if not isinstance(value, list):
+            if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
-                    "Decay_vertexlist %s is not a list of vertexlist." % str(value)
-            elif not len(value) == 2:
-                raise self.PhysicsObjectError, \
-                    "Decay_vertexlist %s must be 2-element list." % str(value)
+                    "Decay_vertexlist %s is not a dictionary." % str(value)
 
-            #Use the check_vertexlist to check
-            elif name == '2_body_decay_vertexlist':
-                self.check_vertexlist(2, False, value[0])
-                self.check_vertexlist(2, True, value[1])
-            else:
-                self.check_vertexlist(3, False, value[0])
-                self.check_vertexlist(3, True, value[1])
-
+            for key, item in value.items():
+                if not isinstance(key, tuple):
+                    raise self.PhysicsObjectError,\
+                        "Key %s must be a tuple." % str(key)
+                
+                if len(key) != 2:
+                    raise self.PhysicsObjectError,\
+                        "Key %s must have two elements." % str(key)
+                
+                self.check_vertexlist(key[0], key[1], item)
             
         super(DecayParticle, self).filter(name, value)
 
@@ -268,8 +268,8 @@ class DecayParticle(base_objects.Particle):
         """
         #check the validity of arguments
         self.check_decay_condition(partnum, onshell)
-
-        return self.get(str(partnum)+'_body_decay_vertexlist')[onshell]
+        
+        return self.get('decay_vertexlist')[(partnum, onshell)]
 
 
     def set_vertexlist(self, partnum ,onshell, value, model = {}):
@@ -282,10 +282,9 @@ class DecayParticle(base_objects.Particle):
         """
         #Check the vertexlist by check_vertexlist
         #Error is raised (by check_vertexlist) if value is not valid
-        if self.check_vertexlist(partnum, onshell, value, model):            
-            self[str(partnum)+'_body_decay_vertexlist'][onshell] = \
-                copy.copy(value)
-
+        if self.check_vertexlist(partnum, onshell, value, model):
+            self['decay_vertexlist'][(partnum, onshell)] = value
+              
     def find_vertexlist(self, model, option=False):
         """Find the possible decay channel to decay,
            for both on-shell and off-shell.
@@ -312,10 +311,10 @@ class DecayParticle(base_objects.Particle):
                 'No action proceeds because of False option.'
 
         #Reset the decay vertex before finding
-        self['2_body_decay_vertexlist'] = \
-            [base_objects.VertexList(),base_objects.VertexList()]
-        self['3_body_decay_vertexlist'] = \
-            [base_objects.VertexList(),base_objects.VertexList()]
+        self['decay_vertexlist'] = {(2, False) : base_objects.VertexList(),
+                                    (2, True)  : base_objects.VertexList(),
+                                    (3, False) : base_objects.VertexList(),
+                                    (3, True)  : base_objects.VertexList()}
         
         #Go through each interaction...
         for temp_int in model.get('interactions'):
@@ -401,7 +400,7 @@ class DecayParticle(base_objects.Particle):
                                           temp_vertlist, model)"""
 
                     #Append current vert to vertexlist
-                    self.get_vertexlist(partnum, ini_mass > final_mass).\
+                    self['decay_vertexlist'][(partnum, ini_mass > final_mass)].\
                         append(vert)
 
         #Set the decay_vertexlist_written at the end
@@ -430,7 +429,10 @@ class DecayParticleList(base_objects.ParticleList):
         assert self.is_valid_element(object), \
             "Object %s is not a valid object for the current list" %repr(object)
 
-        list.append(self, DecayParticle(object))
+        if isinstance(object, DecayParticle):
+            list.append(self, object)
+        else:
+            list.append(self, DecayParticle(object))
 
     def generate_dict(self):
         """Generate a dictionary from particle id to particle.
@@ -545,11 +547,6 @@ class DecayModel(base_objects.Model):
                 temp_legs_new[num].set('state', False)
                 ini_mass = eval(part.get('mass')).real
                 onshell = ini_mass > (total_mass - ini_mass)
-                #For later assignment
-                if onshell:
-                    index = 1
-                else:
-                    index = 0
 
                 #If part is not self-conjugate,
                 #change the particle into anti-particle (Use get_anti_pdg_code)
@@ -565,10 +562,9 @@ class DecayModel(base_objects.Model):
                 if temp_vertex not in vertexlist_dict[(pid, partnum, onshell )]:
                     vertexlist_dict[(pid, partnum, onshell)].append(temp_vertex)
                     #Assign temp_vertex to antiparticle of part
-                    #print pid, partnum, onshell, temp_vertex
                     #particle_dict[pid].check_vertexlist(partnum, onshell, 
                     #             base_objects.VertexList([temp_vertex]), self)
-                    particle_dict[pid][str(partnum) + '_body_decay_vertexlist'][index].append(temp_vertex)
+                    particle_dict[pid]['decay_vertexlist'][(partnum, onshell)].append(temp_vertex)
 
 
         fdata = open(os.path.join(MG5DIR, 'models', self['name'], 'vertexlist_dict.dat'), 'w')

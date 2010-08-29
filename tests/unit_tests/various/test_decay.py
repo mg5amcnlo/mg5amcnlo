@@ -82,8 +82,12 @@ class Test_DecayParticle(unittest.TestCase):
                       'self_antipart': False,
                        # decay_vertexlist must have two lists, one for on-shell,
                        # one for off-shell
-                      '2_body_decay_vertexlist':[self.my_2bodyvertexlist] *2,
-                      '3_body_decay_vertexlist':[self.my_3bodyvertexlist] *2}
+                      'decay_vertexlist': {\
+                           (2, False): self.my_2bodyvertexlist,
+                           (2, True) : self.my_2bodyvertexlist,
+                           (3, False): self.my_3bodyvertexlist,
+                           (3, True) : self.my_3bodyvertexlist}
+                       }
 
         self.mypart = decay_objects.DecayParticle(self.mydict)
         
@@ -176,30 +180,29 @@ class Test_DecayParticle(unittest.TestCase):
                        {'prop':'self_antipart',
                         'right_list':[True, False],
                         'wrong_list':[1, 'a', 'true', None]},
-                      {'prop':'2_body_decay_vertexlist',
-                        'right_list':[[self.my_2bodyvertexlist] * 2],
-                        'wrong_list':[1, [self.my_2bodyvertexlist] * 3,
-                                      ['hey', self.my_2bodyvertexlist],
-                                      ['hey'] *2,
-                                      [self.my_2bodyvertexlist, 
-                                       self.my_3bodyvertexlist],
-                                      [self.my_2bodyvertexlist_wrongini,
-                                       self.my_2bodyvertexlist],
-                                      [self.my_2bodyvertexlist,
-                                       self.my_2bodyvertexlist_wrongini]
+                      {'prop':'decay_vertexlist',
+                        'right_list':[{(2, False):self.my_2bodyvertexlist,
+                                       (2, True) :self.my_2bodyvertexlist,
+                                       (3, False):self.my_3bodyvertexlist,
+                                       (3, True) :self.my_3bodyvertexlist}],
+                        'wrong_list':[1, 
+                                      {'a': self.my_2bodyvertexlist},
+                                      {(24, 2, False): self.my_2bodyvertexlist},
+                                      {(5, True):self.my_2bodyvertexlist,
+                                       (5, False):self.my_3bodyvertexlist},
+                                      {(2, 'a'):self.my_2bodyvertexlist},
+                                      {(2, False): 'hey'},
+                                      {(2, False): self.my_2bodyvertexlist, 
+                                       (2, True) : self.my_3bodyvertexlist},
+                                      {(2, False):self.my_2bodyvertexlist_wrongini, 
+                                       (2, True): self.my_2bodyvertexlist,
+                                       (3, False):self.my_3bodyvertexlist,
+                                       (3, True): self.my_3bodyvertexlist},
+                                      {(2, False):self.my_2bodyvertexlist, 
+                                       (2, True): self.my_2bodyvertexlist,
+                                       (3, False):self.my_3bodyvertexlist_wrongini,
+                                       (3, True): self.my_3bodyvertexlist}
                                      ]},
-                       {'prop':'3_body_decay_vertexlist',
-                        'right_list':[[self.my_3bodyvertexlist] * 2],
-                         'wrong_list':[1, [self.my_3bodyvertexlist] * 3,
-                                      ['hey', self.my_3bodyvertexlist],
-                                      ['hey'] *2,
-                                      [self.my_2bodyvertexlist, 
-                                       self.my_3bodyvertexlist],
-                                      [self.my_3bodyvertexlist_wrongini,
-                                       self.my_3bodyvertexlist],
-                                      [self.my_3bodyvertexlist,
-                                       self.my_3bodyvertexlist_wrongini]
-                                     ]}
                        ]
 
         temp_part = self.mypart
