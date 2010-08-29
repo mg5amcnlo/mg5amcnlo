@@ -316,6 +316,9 @@ class DecayParticle(base_objects.Particle):
                                     (3, False) : base_objects.VertexList(),
                                     (3, True)  : base_objects.VertexList()}
         
+        if self.get('mass') == 'ZERO':
+            return
+
         #Go through each interaction...
         for temp_int in model.get('interactions'):
             #Save the particle dictionary (pdg_code & anti_pdg_code to particle)
@@ -512,16 +515,18 @@ class DecayModel(base_objects.Model):
         #Expand the particlelist to contain anti-particle so as to record
         #the vertexlist of anti-particle.
     
-        leg_dict = {}
+        #All valid initial particles:
+        #1. mass != 0
+        #2. is_part = True
+        ini_list = []
+        #Dict to store all the vertexlist
         vertexlist_dict = {}
         particle_dict = self.get('particle_dict')
+
         #Prepare the leg_dict
-        for  pid in particle_dict.keys():
-            #Create the leg_dict
-            leg_dict[pid] = base_objects.Leg({'id' : pid})
-            #Expand the particles to include anti-particle
-            if pid < 0:
-                self['particles'].append(copy.deepcopy(particle_dict[pid]))
+        for  part in self.get('particles'):
+            if part.get('mass') != 'ZERO':
+                ini_list.append(part.get_anti_pdg_code)
             for partnum in [2, 3]:
                 for onshell in [True, False]:
                     vertexlist_dict[(pid, partnum,onshell)]= \
@@ -532,26 +537,47 @@ class DecayModel(base_objects.Model):
             #Calculate the particle number, total mass
             partnum = len(inter['particles']) - 1
             if partnum > 3:
-                pass
+                continue
+            
             temp_legs = base_objects.LegList()
             total_mass = 0
-            for part in inter['particles']:
-                total_mass += eval(part.get('mass')).real
-                #Create the original legs
-                temp_legs.append(copy.deepcopy(leg_dict[part.get_pdg_code()]))
-            
+            nonzero_list = []
+            partlist = {}
+            validity = False
             for num, part in enumerate(inter['particles']):
-                #Set each leg as incoming particle
-                #Make the change on a new legs
+                #Check if the interaction contains valid initial particle
+                if part.get_anti_pdg_code() in ini_list:
+                    validity = True
+                    partlist[num] = part
+
+                #Check if it is a radiation  interaction 
+                if part.get('mass') != 'ZERO':
+                    nonzero_list.append(part.get_pdg_code())
+
+                #Create the original legs
+                temp_legs.append(base_objects.Leg{'id':part.get_pdg_code()})
+                total_mass += eval(part.get('mass')).real
+
+            
+            #Exclude interaction without valid initial particle
+            if not validity:
+                continue
+            #Exclude radiation
+            elif (sum(nonzero_list) == 0) and (len(nonzero_list) == 2):
+                continue
+
+            for num, part in partlist.items():
+                #Create new legs for the sort later
                 temp_legs_new = copy.deepcopy(temp_legs)
-                temp_legs_new[num].set('state', False)
+                #Set each leg as incoming particle
+                temp_legs[num].set('state', False)
                 ini_mass = eval(part.get('mass')).real
                 onshell = ini_mass > (total_mass - ini_mass)
 
-                #If part is not self-conjugate,
-                #change the particle into anti-particle (Use get_anti_pdg_code)
+                #Change particle id into anti_id 
+                #(Note that the self_anti particle is not changed)
                 pid = part.get_anti_pdg_code()
-                temp_legs_new[num].set('id', pid)
+                temp_legs[num].set('id', pid)
                 
                 #Sort the legs for comparison
                 temp_legs_new.sort(legcmp)
