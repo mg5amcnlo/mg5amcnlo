@@ -55,16 +55,25 @@ class Test_DecayParticle(unittest.TestCase):
         full_vertexlist = import_vertexlist.full_vertexlist
 
         self.my_2bodyvertexlist = base_objects.VertexList([
-                full_vertexlist[(1, 24)], full_vertexlist[(7, 24)]])
+                full_vertexlist[(9, 24)], full_vertexlist[(7, 24)]])
+        fake_vertex = copy.deepcopy(full_vertexlist[(9, 24)])
+        fake_vertex['legs'].append(base_objects.Leg({'id':22}))
+        fake_vertex2 = copy.deepcopy(full_vertexlist[(7, 24)])
+        fake_vertex2['legs'].append(base_objects.Leg({'id': 11}))
         self.my_3bodyvertexlist = base_objects.VertexList([
-                full_vertexlist[(2, 24)], full_vertexlist[(3, 24)]])
+                fake_vertex, fake_vertex2])
 
         self.my_2bodyvertexlist_wrongini = base_objects.VertexList([
-                full_vertexlist[(1, 24)], full_vertexlist[(6, -6)]])
-        fake_vertex = copy.deepcopy(full_vertexlist[(2, 22)])
-        fake_vertex['legs'][0]['id'] = 24
+                full_vertexlist[(8, -24)], full_vertexlist[(7, 5)]])
+        fake_vertex3 = copy.deepcopy(full_vertexlist[(8, -24 )])
+        fake_vertex3['legs'].append(base_objects.Leg({'id':12}))
         self.my_3bodyvertexlist_wrongini = base_objects.VertexList([
-                fake_vertex, full_vertexlist[(2, 22)]])
+                fake_vertex3])
+
+        fake_vertex4 = copy.deepcopy(full_vertexlist[(9, 24 )])
+        fake_vertex4['legs'].append(base_objects.Leg({'id':24}))
+        self.my_3bodyvertexlist_radiactive = base_objects.VertexList([
+                fake_vertex4])
         
         self.mydict = {'name':'w+',
                       'antiname':'w-',
@@ -190,7 +199,7 @@ class Test_DecayParticle(unittest.TestCase):
                                       {(24, 2, False): self.my_2bodyvertexlist},
                                       {(5, True):self.my_2bodyvertexlist,
                                        (5, False):self.my_3bodyvertexlist},
-                                      {(2, 'a'):self.my_2bodyvertexlist},
+                                      {(2, 'Not bool'):self.my_2bodyvertexlist},
                                       {(2, False): 'hey'},
                                       {(2, False): self.my_2bodyvertexlist, 
                                        (2, True) : self.my_3bodyvertexlist},
@@ -201,7 +210,12 @@ class Test_DecayParticle(unittest.TestCase):
                                       {(2, False):self.my_2bodyvertexlist, 
                                        (2, True): self.my_2bodyvertexlist,
                                        (3, False):self.my_3bodyvertexlist_wrongini,
-                                       (3, True): self.my_3bodyvertexlist}
+                                       (3, True): self.my_3bodyvertexlist},
+                                      {(2, False):self.my_2bodyvertexlist, 
+                                       (2, True): self.my_2bodyvertexlist,
+                                       (3, False):self.my_3bodyvertexlist,
+                                       (3, True): self.my_3bodyvertexlist_radiactive}
+                                      
                                      ]},
                        ]
 
@@ -286,12 +300,14 @@ class Test_DecayParticle(unittest.TestCase):
         #Use the vertexlist from test_getsetvertexlist_exceptions
 
         Wrong_vertexlist = [self.my_2bodyvertexlist_wrongini,
-                            self.my_3bodyvertexlist_wrongini]
+                            self.my_3bodyvertexlist_wrongini,
+                            self.my_3bodyvertexlist_radiactive]
 
         for item in Wrong_vertexlist:
             for partnum in [2,3]:
                 self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError
                              , self.mypart.set_vertexlist, partnum, False, item)
+                
         
     def test_find_vertexlist(self):
         #undefine object: my_testmodel, mypart, extra_part
@@ -319,7 +335,7 @@ class Test_DecayParticle(unittest.TestCase):
         tquark = decay_objects.DecayParticle(self.my_testmodel.get_particle(6))
         tquark.find_vertexlist(self.my_testmodel)
         #Name convention: 'pdg_code'+'particle #'+'on-shell'
-        my_vertexlist620 = base_objects.VertexList([full_vertexlist[(6, 6)]])
+        my_vertexlist620 = base_objects.VertexList()
         my_vertexlist621 = base_objects.VertexList([full_vertexlist[(8, 6)]])
         my_vertexlist630 = base_objects.VertexList()
         my_vertexlist631 = base_objects.VertexList()
@@ -330,11 +346,9 @@ class Test_DecayParticle(unittest.TestCase):
         wboson_p.find_vertexlist(self.my_testmodel)
         #List must follow the order of interaction id so as to be consistent
         #with the find_vertexlist function
-        my_vertexlist2420 = base_objects.VertexList([full_vertexlist[(1, 24)],
-                                                     full_vertexlist[(7, 24)]])
+        my_vertexlist2420 = base_objects.VertexList([full_vertexlist[(7, 24)]])
         my_vertexlist2421 = base_objects.VertexList([full_vertexlist[(9, 24)]])
-        my_vertexlist2430 = base_objects.VertexList([full_vertexlist[(2, 24)],
-                                                     full_vertexlist[(3, 24)]])
+        my_vertexlist2430 = base_objects.VertexList()
         my_vertexlist2431 = base_objects.VertexList()
         #List of the total decay vertex list for W+
         rightlist24 =[my_vertexlist2420, my_vertexlist2421, my_vertexlist2430, my_vertexlist2431]
@@ -343,11 +357,9 @@ class Test_DecayParticle(unittest.TestCase):
         photon = decay_objects.DecayParticle(self.my_testmodel.get_particle(22))
         photon.find_vertexlist(self.my_testmodel)
         #vertex is in the order of interaction id
-        my_vertexlist2220 = base_objects.VertexList([full_vertexlist[(1, 22)],
-                                                     full_vertexlist[(4, 22)],
-                                                     full_vertexlist[(5, 22)],                                                       full_vertexlist[(6, 22)]])
+        my_vertexlist2220 = base_objects.VertexList()
         my_vertexlist2221 = base_objects.VertexList()
-        my_vertexlist2230 = base_objects.VertexList([full_vertexlist[(2, 22)]])
+        my_vertexlist2230 = base_objects.VertexList()
         my_vertexlist2231 = base_objects.VertexList()
         #List of the total decay vertex list for photon
         rightlist22 =[my_vertexlist2220, my_vertexlist2221, my_vertexlist2230, my_vertexlist2231]
@@ -469,7 +481,7 @@ class TestDecayModel(unittest.TestCase):
         self.my_testmodel.get('particle_dict')[5]['charge'] = 8
         full_vertexlist = import_vertexlist.full_vertexlist_newindex
 
-        for id, part in self.my_testmodel.get('particle_dict').items():
+        for part in self.my_testmodel.get('particles'):
             for partnum in [2, 3]:
                 for onshell in [True, False]:
                     #print part.get_pdg_code(), partnum, onshell

@@ -28,17 +28,35 @@ def make_vertexlist(model):
     for inter in model['interactions']:
         #Calculate the particle number, total mass
         partnum = len(inter['particles']) - 1
+        if partnum > 3:
+            continue
+
         total_mass = math.fsum([eval('decay_objects.' + part.get('mass')).real\
                                 for part in inter['particles']])
         #Create the original legs
         temp_legs = base_objects.LegList([copy.copy(full_leglist[part2.get_pdg_code()]) for part2 in inter['particles']])
+        
 
         for num, part in enumerate(inter['particles']):
-            #Set each leg as incoming particle
-            temp_legs[num].set('state', False)
-            ini_mass = eval('decay_objects.' + part.get('mass')).real
-            #If part is not self-conjugate, change the particle into anti-part
+            #Ignore massless incoming particle
+            if part.get('mass') == 'ZERO':
+                continue
+
             pid = part.get_anti_pdg_code()
+            radiation = False
+            for num2, other in enumerate(inter['particles']):
+                if (num2 != num) and (other.get_pdg_code() == pid):
+                    radiation = True
+                    break
+
+            if radiation:
+                continue
+
+            ini_mass = eval('decay_objects.' + part.get('mass')).real
+
+            #Set each leg as incoming particle            
+            temp_legs[num].set('state', False)
+            #If part is not self-conjugate, change the particle into anti-part
             temp_legs[num].set('id', pid)
             
             temp_legs_new = copy.deepcopy(temp_legs)
@@ -60,10 +78,22 @@ def make_vertexlist(model):
             temp_legs[num].set('state', True)
             temp_legs[num].set('id', part.get_pdg_code())
 
-    fdata = open(os.path.join(MG5DIR, 'models', model['name'], 'vertices_sort.dat'), 'w')
-    fdata.write(str(full_vertexlist))
-    fdata.close()
+    path_1 = os.path.join(MG5DIR, 'models', model['name'])
+    path_2 = os.path.join(MG5DIR, 'tests/input_files', model['name'])
 
-    fdata2 = open(os.path.join(MG5DIR, 'models', model['name'], 'vertices_decaycondition.dat'), 'w')
-    fdata2.write(str(full_vertexlist_newindex))
-    fdata2.close()
+    if os.path.isdir(path_1):
+        fdata = open(os.path.join(path_1, 'vertices_decaycondition.dat'), 'w')
+        fdata.write(str(full_vertexlist_newindex))
+        fdata.close()
+
+        fdata2 = open(os.path.join(path_1, 'vertices_sort.dat'), 'w')
+        fdata2.write(str(full_vertexlist))
+        fdata2.close()
+    elif os.path.isdir(path_2):
+        fdata = open(os.path.join(path_2, 'vertices_decaycondition.dat'), 'w')
+        fdata.write(str(full_vertexlist_newindex))
+        fdata.close()
+
+        fdata2 = open(os.path.join(path_2, 'vertices_sort.dat'), 'w')
+        fdata2.write(str(full_vertexlist))
+        fdata2.close()
