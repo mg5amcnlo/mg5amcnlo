@@ -623,7 +623,7 @@ class MEComparator(object):
 
         test_object.assertEqual(fail_str, "Failed for processes:")
 
-def create_proc_list(part_list, initial=2, final=2):
+def create_proc_list(part_list, initial=2, final=2, charge_conservation=True):
     """Helper function to automatically create process lists starting from 
     a particle list."""
 
@@ -635,6 +635,14 @@ def create_proc_list(part_list, initial=2, final=2):
             proc_list.append(sorted_product)
 
     for proc in proc_list:
+        #check charge conservation
+        if charge_conservation:
+            init_plus= ''.join(proc[:initial]).count('+')
+            init_minus=''.join(proc[:initial]).count('-')
+            final_plus=''.join(proc[initial:]).count('+')
+            final_minus=''.join(proc[initial:]).count('-')
+            if init_plus-init_minus-final_plus+final_minus:
+                continue
         proc.insert(initial, '>')
         res_list.append(' '.join(proc))
 
@@ -642,7 +650,7 @@ def create_proc_list(part_list, initial=2, final=2):
 
 def create_proc_list_enhanced(init_part_list, final_part_list_1,
                               final_part_list_2 = [], initial=2, final_1=2,
-                              final_2=1):
+                              final_2=1, charge_conservation=True):
     """Helper function to automatically create process lists starting from 
     a particle list."""
 
@@ -661,6 +669,14 @@ def create_proc_list_enhanced(init_part_list, final_part_list_1,
                 proc_list.append(sorted_product)
 
     for proc in proc_list:
+        #check charge conservation
+        if charge_conservation:
+            init_plus= ''.join(proc[:initial]).count('+')
+            init_minus=''.join(proc[:initial]).count('-')
+            final_plus=''.join(proc[initial:]).count('+')
+            final_minus=''.join(proc[initial:]).count('-')
+            if init_plus-init_minus-final_plus+final_minus:
+                continue
         proc.insert(initial, '>')
         res_list.append(' '.join(proc))
 
