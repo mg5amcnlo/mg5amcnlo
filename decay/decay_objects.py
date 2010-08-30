@@ -780,7 +780,207 @@ class DecayModel(base_objects.Model):
                         (coup.name,\
                          eval(coup.name).real, eval(coup.name).imag))
                 
+
+
+    def find_decay_groups(self):
+        """Find groups of particles which can decay into each other,
+        keeping Standard Model particles outside for now. This allows
+        to find particles which are absolutely stable based on their
+        interactions.
+
+        Algorithm:
+
+        1. Start with any non-SM particle. Look for all
+        interactions which has this particle in them.
+
+        2. Any particles with single-particle interactions with this
+        particle and with any number of SM particles are in the same
+        decay group.
+
+        3. Find all such particles using recursion.
+
+        4. If any of these particles have decay to only SM
+        particles, the complete decay group becomes "sm"
         
+        5. Go through particles to see if any are missing from the
+        decay group - in that case repeat from 1) starting from this
+        particle.
+        """
+
+        self.sm_ids = [1,2,3,4,5,6,11,12,13,14,15,16,21,22,23,24]
+        self.decay_groups = [[]]
+
+        particles = [p for p in self.get('particles') if \
+                     p.get('pdg_code') not in self.sm_ids]
+
+        for particle in particles:
+            # Check if particles is already in a decay group
+            if particle not in sum(self.decay_groups, []):
+                # Insert particle in new decay group
+                self.decay_groups.append([particle])
+            self.find_decay_groups_for_particle(particle)
+
+    def find_decay_groups_for_particle(self, particle):
+        """Recursive routine to find decay groups starting from a
+        given particle.
+
+        Algorithm:
+
+        1. Pick out all interactions with this particle
+
+        2. For any interaction which is not a radiation (i.e., has
+        this particle twice): If there is a single non-sm particle in
+        the decay, add particle to this decay group. Otherwise, add to
+        SM decay group or new decay group.
+
+        3. If particles previously not in any decay group, run
+        find_decay_groups_for_particle for it."""
+
+        # interactions with this particle which are not radiation
+        interactions = [i for i in self.get('interactions') if \
+                        particle in i.get('particles') and \
+                        i.get('particles').count(particle) == 1 and \
+                        (particle.get('self_antipart') or
+                         not self.get_particle(particle.get_anti_pdg_code()) \
+                         in i.get('particles'))]
+
+        while interactions:
+            interaction = interactions.pop(0)
+            non_sm_particles = [p for p in interaction.get('particles') \
+                                if p != particle and \
+                                not p.get('pdg_code') in self.sm_ids and \
+                                not (p.get('is_part') and p in \
+                                     self.decay_groups[0] or \
+                                     not p.get('is_part') and \
+                                     self.get_particle(p.get('pdg_code')) in \
+                                     self.decay_groups[0])]
+            group_index = [i for (i, g) in enumerate(self.decay_groups) \
+                           if particle in g][0]
+
+            if len(non_sm_particles) == 0:
+                # The decay group of this particle is the SM group
+                if group_index > 0:
+                    group = self.decay_groups.pop(group_index)
+                    self.decay_groups[0].extend(group)
+                    
+            elif len(non_sm_particles) == 1:
+                # The other particle should be in my decay group
+                particle2 = non_sm_particles[0]
+                if not particle2.get('is_part'):
+                    particle2 = self.get_particle(particle2.get_anti_pdg_code())
+                if particle2 in self.decay_groups[group_index]:
+                    # This particle is already in this decay group,
+                    # and has been treated.
+                    continue
+                elif particle2 in sum(self.decay_groups, []):
+                    # This particle is in a different decay group - merge
+                    group_index2 = [i for (i, g) in \
+                                    enumerate(self.decay_groups) \
+                                    if particle2 in g][0]
+                    group = self.decay_groups.pop(max(group_index,
+                                                      group_index2))
+                    self.decay_groups[min(group_index, group_index2)].\
+                                                        extend(group)
+                else:
+                    # Add particle2 to this decay group
+                    self.decay_groups[group_index].append(particle2)
+
+            elif len(non_sm_particles) > 1:
+                # Check if any of the particles are not already in any
+                # decay group. If there are any, let another particle
+                # take care of this interaction instead, later on.
+
+                non_checked_particles = [p for p in non_sm_particles if \
+                                         (p.get('is_part') and not p in \
+                                          sum(self.decay_groups, []) or \
+                                          not p.get('is_part') and not \
+                                          self.get_particle(\
+                                                     p.get_anti_pdg_code()) in \
+                                          sum(self.decay_groups, []))
+                                         ]
+
+                if not non_checked_particles:
+                    # All particles have been checked. Analyze interaction.
+
+                    if len(non_sm_particles) == 2:
+                        # Are any of the particles in my decay group already?
+                        this_group_particles = [p for p in non_sm_particles \
+                                                if p in self.decay_groups[\
+                                                                   group_index]]
+                        if len(this_group_particles) == 2:
+                            # There can't be any conserved quantum
+                            # number! Should be SM group!
+                            group = self.decay_groups.pop(group_index)
+                            self.decay_groups[0].extend(group)
+                            continue
+
+                        # Unfortunately we can't draw any more
+                        # conclusions in other cases - either, the
+                        # other particles are from the same group, or
+                        # different groups - in neither case can we
+                        # draw any conclusions.
+                        
+                    if len(non_sm_particles) == 3:
+                        # Are any of the particles in my decay group already?
+                        this_group_particles = [p for p in non_sm_particles \
+                                                if p in self.decay_groups[\
+                                                                   group_index]]
+                        if len(this_group_particles) == 2:
+                            # Also the 3rd particle has to be in this group.
+                            # Merge.
+                            particle2 = [p for p in non_sm_particles if p not \
+                                         in this_group_particles][0]
+                            if not particle2.get('is_part'):
+                                particle2 = self.get_particle(\
+                                                  particle2.get_anti_pdg_code())
+                            group_index2 = [i for (i, g) in \
+                                            enumerate(self.decay_groups) \
+                                            if particle2 in g][0]
+                            group = self.decay_groups.pop(max(group_index,
+                                                              group_index2))
+                            self.decay_groups[min(group_index, group_index2)].\
+                                                                extend(group)
+                        if len(this_group_particles) == 1:
+                            # The other two particles have to be in
+                            # the same group
+                            other_group_particles = [p for p in \
+                                                     non_sm_particles if p not \
+                                                     in this_group_particles]
+                            particle1 = other_group_particles[0]
+                            if not particle1.get('is_part'):
+                                particle1 = self.get_particle(\
+                                                  particle1.get_anti_pdg_code())
+                            group_index1 = [i for (i, g) in \
+                                            enumerate(self.decay_groups) \
+                                            if particle1 in g][0]
+                            particle2 = other_group_particles[0]
+                            if not particle2.get('is_part'):
+                                particle2 = self.get_particle(\
+                                                  particle2.get_anti_pdg_code())
+                            group_index2 = [i for (i, g) in \
+                                            enumerate(self.decay_groups) \
+                                            if particle2 in g][0]
+
+                            if group_index1 != group_index2:
+                                # Merge groups
+                                group = self.decay_groups.pop(max(group_index1,
+                                                                  group_index2))
+                                self.decay_groups[min(group_index1,
+                                                      group_index2)].\
+                                                                   extend(group)
+
+                        # One more case possible to say something
+                        # about: When two of the three particles are
+                        # in the same group, the third particle has to
+                        # be in the present particle's group. I'm not
+                        # doing this case now though.
+
+                    # For cases with number of non-sm particles > 3,
+                    # There are also possibilities to say something in
+                    # particular situations. Don't implement this now
+                    # however.
+
+                    
 #===============================================================================
 # Channel: Each channel for the decay
 #===============================================================================
