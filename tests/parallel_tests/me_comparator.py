@@ -228,10 +228,10 @@ class MG4Runner(MERunner):
         working_dir = os.path.join(self.mg4_path, self.temp_dir_name)
          
         shell_name = None
-        for filename in os.listdir(os.path.join(working_dir, 'SubProcesses')):
-            dir_name = os.path.join(working_dir, 'SubProcesses', filename)
-            if os.path.isdir(dir_name) and filename.startswith('P%i_' % proc_id):
-                shell_name = filename 
+        directories = glob.glob(os.path.join(working_dir, 'SubProcesses',
+                                  'P%i_*' % proc_id))
+        if directories and os.path.isdir(directories[0]):
+            shell_name = os.path.basename(directories[0])
 
         # If directory doesn't exist, skip and return 0
         if not shell_name:
