@@ -47,7 +47,13 @@
      23     z
      24     w+
     -24     w-
-     25     h
+# Note that we can't give a name to 25 here,
+# since it is different in SM and MSSM.
+# MSSM Higgs
+     35     h2
+     36     h3
+     37     h+
+    -37     h-
 # MSSM squarks
  1000001     dl
 -1000001     dl~
