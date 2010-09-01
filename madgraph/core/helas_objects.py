@@ -765,7 +765,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         wf_indices = self.get('pdg_codes')
         # take the last index in case of identical particles
         wf_indices.reverse() 
-        wf_index = len(wf_indices) - wf_indices.index(self.get_anti_pdg_code()) -1
+        wf_index = len(wf_indices) - wf_indices.index(self.get_anti_pdg_code()) - 1
         wf_indices.reverse() # restore the ordering
         #wf_index = self.get('pdg_codes').index(self.get_anti_pdg_code())
         # If fermion, then we need to correct for I/O status
@@ -2248,11 +2248,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # Sort all mothers according to the order wanted in Helas calls
         for wf in self.get_all_wavefunctions():
             wf.set('mothers', HelasMatrixElement.sorted_mothers(wf))
-            # Special feature: For octet fermions, need an extra minus
-            # sign in the FVI (and FSI? right now this is included)
-            # wavefunction
+            # Special feature: For octet Majorana fermions, need
+            # an extra minus sign in the FVI (and FSI?) wavefunction
             if wf.get('color') == 8 and \
                    wf.get_spin_state_number() == -2 and \
+                   wf.get('self_antipart') and \
                    [m.get('color') for m in wf.get('mothers')] == [8, 8]:
                 wf.set('coupling', '-' + wf.get('coupling'))
         for amp in self.get_all_amplitudes():
@@ -3334,7 +3334,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         if isinstance(arg, HelasWavefunction):
             my_spin = arg.get_spin_state_number()
-            my_index = pdg_codes.index(arg.get_anti_pdg_code())
+            # Find the last index instead of the first, to work with UFO models
+            pdg_codes.reverse()
+            my_index = len(pdg_codes) - pdg_codes.index(arg.get_anti_pdg_code()) - 1
+            pdg_codes.reverse()
             pdg_codes.pop(my_index)
         
         mothers = copy.copy(arg.get('mothers'))
