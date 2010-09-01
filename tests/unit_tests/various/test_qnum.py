@@ -128,3 +128,52 @@ class Test_QNumber_Add (unittest.TestCase):
         #self.assertEqual(quantum_number.reduced_interactions[0], 
         for num, qnumber in enumerate(parity_list):
             self.assertEqual(qnumber.conservation_measure(mssm), 0)
+
+    def test_find_qnum_parity_modified_mssm(self):
+        mssm = import_ufo.import_model('mssm')
+        
+        #Test the Monte Carlo find several times and see the percentage
+        #that catch the correct quantum number
+        iteration_times = 1
+        total_num = []
+        for i in range(1, iteration_times+1):
+            parity_list = quantum_number.find_QNumber_Parity(mssm)
+            total_num.append(len(parity_list))
+
+        print '\n Number of quantum numbers found: \n ', total_num,\
+            '\n Successful rate (for running %d times):' % iteration_times, \
+            ((sum(total_num)-iteration_times)/iteration_times)
+
+        parity = quantum_number.QNumber_Parity(mssm)
+        #print parity, parity[6], parity[-6]
+        self.assertEqual(parity[24], parity[-24])
+
+        self.assertFalse(len(parity_list) == 0)
+        print '\n Parity finding ends here! \n'
+        print '\n Total number of parity quantum number types:',\
+            len(parity_list)
+        #self.assertEqual(quantum_number.reduced_interactions[0], 
+        for num, qnumber in enumerate(parity_list):
+            self.assertEqual(qnumber.conservation_measure(mssm), 0)
+
+    def test_find_qnum_parity_old(self):
+        mssm = import_ufo.import_model('mssm')
+        #Test the Monte Carlo find several times and see the percentage
+        #that catch the correct quantum number
+        iteration_times = 1
+        total_num = []
+        for i in range(1, iteration_times+1):
+            parity_list = quantum_number.find_QNumber_Parity_old(mssm)
+            total_num.append(len(parity_list))
+
+        print '\n Number of quantum numbers found: \n ', total_num,\
+            '\n Successful rate (for running %d times):' % iteration_times, \
+            ((sum(total_num)-iteration_times)/iteration_times)
+
+        self.assertFalse(len(parity_list) == 0)
+        print '\n Parity finding ends here! \n'
+        print '\n Total number of parity quantum number types:',\
+            len(parity_list)
+        #self.assertEqual(quantum_number.reduced_interactions[0], 
+        for num, qnumber in enumerate(parity_list):
+            self.assertEqual(qnumber.conservation_measure(mssm), 0)

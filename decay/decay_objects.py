@@ -818,7 +818,7 @@ class DecayModel(base_objects.Model):
             if particle not in sum(self.decay_groups, []):
                 # Insert particle in new decay group
                 self.decay_groups.append([particle])
-            self.find_decay_groups_for_particle(particle)
+                self.find_decay_groups_for_particle(particle)
 
     def find_decay_groups_for_particle(self, particle):
         """Recursive routine to find decay groups starting from a
@@ -835,15 +835,15 @@ class DecayModel(base_objects.Model):
 
         3. If particles previously not in any decay group, run
         find_decay_groups_for_particle for it."""
-
+        
         # interactions with this particle which are not radiation
         interactions = [i for i in self.get('interactions') if \
-                        particle in i.get('particles') and \
-                        i.get('particles').count(particle) == 1 and \
-                        (particle.get('self_antipart') or
-                         not self.get_particle(particle.get_anti_pdg_code()) \
-                         in i.get('particles'))]
-
+                            particle in i.get('particles') and \
+                            i.get('particles').count(particle) == 1 and \
+                            (particle.get('self_antipart') or
+                             not self.get_particle(particle.get_anti_pdg_code()) \
+                                 in i.get('particles'))]
+                             
         while interactions:
             interaction = interactions.pop(0)
             non_sm_particles = [p for p in interaction.get('particles') \
@@ -980,7 +980,6 @@ class DecayModel(base_objects.Model):
                     # particular situations. Don't implement this now
                     # however.
 
-                    
 #===============================================================================
 # Channel: Each channel for the decay
 #===============================================================================

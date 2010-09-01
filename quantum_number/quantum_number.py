@@ -54,6 +54,16 @@ import madgraph.iolibs.import_ufo as import_ufo
 from madgraph import MadGraph5Error, MG5DIR
 
 #===============================================================================
+# Logger
+#===============================================================================
+logger = logging.getLogger('quantum_number')
+#logger.setLevel(logging.INFO)
+h = logging.StreamHandler()
+f = logging.Formatter("%(levelname)s: %(message)s")
+h.setFormatter(f)
+logger.addHandler(h)
+
+#===============================================================================
 # QNumber
 #===============================================================================
 class QNumber(dict):
@@ -286,7 +296,8 @@ class QNumber_Parity(QNumber):
                 for part in inter['particles']:
                     #if part.get('pdg_code') in parity_free_ids:
                         reduced_interactions[i].append(part.get('pdg_code'))
-
+        
+        #Calculate the measure
         value = 0
         for inter in reduced_interactions:
             #Total quantum number in this interaction
@@ -298,6 +309,24 @@ class QNumber_Parity(QNumber):
                 value += 1
 
         return value
+
+    def conservation_measure_old(self, model):
+        """Calculate the conservation of quantum number in all interactions.
+           Return the measure of conservation.
+           Use the result of interaction_reduction."""
+
+        value = 0
+        for inter in model['interactions']:
+            #Total quantum number in this interaction
+            value_int = 1
+            for part in inter['particles']:
+                value_int *= self[part.get('pdg_code')]
+            #If parity is failed increase the value
+            if value_int == -1:
+                value += 1
+
+        return value
+
     
 
 def interaction_reduction(model):
@@ -398,11 +427,17 @@ def find_QNumber_Parity(model):
     qnumber = QNumber_Parity(model)
     measure = qnumber.conservation_measure(model)
     
-    print '\nNumber of interaction used %d' % len(reduced_interactions)
-    print '\nParticle with free parity after reduction:\n', parity_free_ids
-    print '\nParticle with fix parity after reduction:\n', parity_fix_ids
+    logger.info('\nNumber of interaction used %d'\
+                            % len(reduced_interactions))
+    logger.info('\nParticle with free parity after reduction:\n %s'\
+                            % str(parity_free_ids))
+    logger.info('\nParticle with fix parity after reduction:\n %s' \
+                            % str(parity_fix_ids))
+    
+    #print '\nParticle with free parity after reduction:\n', parity_free_ids
+    #print '\nParticle with fix parity after reduction:\n', parity_fix_ids
     #Large loop: test globally different qnumber
-    for i in range(0, 3):
+    for i in range(0, 10):
 
         #Test if initial measure is zero; 
         #if so, record it and generate a new one
@@ -414,7 +449,7 @@ def find_QNumber_Parity(model):
                qnumber.generate_global()
 
         #Search locally near the given qnumber (1st local loop)
-        for j in range(0, 3):
+        for j in range(0, 5):
             #Change locally one by one (2nd local loop)
             for part in parity_free_ids:
                 qnumber_old = copy.copy(qnumber)
@@ -441,6 +476,66 @@ def find_QNumber_Parity(model):
         #No conserved qnumber is found, generate a new one.
         qnumber.generate_global()
         measure = qnumber.conservation_measure(model)
+    
+    #Record the result
+    #path = os.path.join(MG5DIR, 'quantum_number', model['name'])
+    #fdata = open(os.path.join(path, 'qnumber_list_parity.dat'), 'w')
+    #fdata.write(str(qnumber_list))
+    #fdata.close()
+
+    return qnumber_list
+
+def find_QNumber_Parity_old(model):
+    """Main function of finding quantum numbers. 
+       Results are stored in qnumber_list. Monte Carlo method is applied"""
+
+    qnumber_list = []
+    qnumber = QNumber_Parity(model)
+    measure = qnumber.conservation_measure_old(model)
+    
+    print '\nNumber of interaction used %d' % len(model['interactions'])
+    print '\nParticle with free parity after reduction:\n', parity_free_ids
+    print '\nParticle with fix parity after reduction:\n', parity_fix_ids
+    #Large loop: test globally different qnumber
+    for i in range(0, 6):
+
+        #Test if initial measure is zero; 
+        #if so, record it and generate a new one
+        if measure == 0:
+           if not qnumber in qnumber_list:
+               qnumber_list.append(copy.copy(qnumber))
+               print 'Quantum number found!!! \n', qnumber
+               #Generate a qnumber for new search
+               qnumber.generate_global()
+
+        #Search locally near the given qnumber (1st local loop)
+        for j in range(0, 5):
+            #Change locally one by one (2nd local loop)
+            for part in parity_free_ids:
+                qnumber_old = copy.copy(qnumber)
+                qnumber.generate_local(part)
+                measure_new = qnumber.conservation_measure_old(model)
+                #If new qnumber is conserved, 
+                #record it and break the local search
+                if measure_new == 0:
+                    if not qnumber in qnumber_list:
+                        qnumber_list.append(copy.copy(qnumber))
+                        print 'Quantum number is found!!! \n', qnumber
+                        break
+                #Move to new qnumber if new measure is closer to zero
+                elif measure_new < measure:
+                    measure = measure_new
+                    #print 'Qnumber renew in (%s , %s)!' % (i, j)
+                else:
+                    qnumber = qnumber_old
+            
+            #Break the 1st local search loop if qnumber conserved.
+            if measure == 0:
+                break
+
+        #No conserved qnumber is found, generate a new one.
+        qnumber.generate_global()
+        measure = qnumber.conservation_measure_old(model)
     
     #Record the result
     #path = os.path.join(MG5DIR, 'quantum_number', model['name'])
