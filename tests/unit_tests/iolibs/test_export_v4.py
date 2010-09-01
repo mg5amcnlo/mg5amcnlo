@@ -1861,22 +1861,22 @@ CALL VVVXXX(W(1,1),W(1,7),W(1,15),MGVX5,AMP(19))
 CALL VVVXXX(W(1,11),W(1,1),W(1,16),MGVX3,AMP(20))
 # Amplitude(s) for diagram number 21
 CALL VVVXXX(W(1,1),W(1,11),W(1,17),MGVX5,AMP(21))
-CALL JW3WNX(W(1,3),W(1,1),W(1,2),MGVX6,DUM0,MW,WW,W(1,18))
+CALL JW3WNX(W(1,2),W(1,1),W(1,3),MGVX6,DUM0,MW,WW,W(1,18))
 # Amplitude(s) for diagram number 22
 CALL VVVXXX(W(1,18),W(1,4),W(1,5),MGVX3,AMP(22))
-CALL JW3WNX(W(1,1),W(1,2),W(1,4),MGVX6,DUM0,MW,WW,W(1,19))
+CALL JW3WNX(W(1,4),W(1,2),W(1,1),MGVX6,DUM0,MW,WW,W(1,19))
 # Amplitude(s) for diagram number 23
 CALL VVVXXX(W(1,3),W(1,19),W(1,5),MGVX3,AMP(23))
-CALL JW3WNX(W(1,1),W(1,5),W(1,2),MGVX4,DUM0,zero,zero,W(1,20))
+CALL JW3WNX(W(1,2),W(1,5),W(1,1),MGVX4,DUM0,zero,zero,W(1,20))
 # Amplitude(s) for diagram number 24
 CALL VVVXXX(W(1,3),W(1,4),W(1,20),MGVX3,AMP(24))
 CALL JW3WNX(W(1,2),W(1,5),W(1,1),MGVX7,DUM0,MZ,WZ,W(1,21))
 # Amplitude(s) for diagram number 25
 CALL VVVXXX(W(1,4),W(1,3),W(1,21),MGVX5,AMP(25))
-CALL JW3WNX(W(1,1),W(1,3),W(1,4),MGVX6,DUM0,MW,WW,W(1,22))
+CALL JW3WNX(W(1,4),W(1,3),W(1,1),MGVX6,DUM0,MW,WW,W(1,22))
 # Amplitude(s) for diagram number 26
 CALL VVVXXX(W(1,2),W(1,22),W(1,5),MGVX3,AMP(26))
-CALL JW3WNX(W(1,1),W(1,5),W(1,3),MGVX4,DUM0,zero,zero,W(1,23))
+CALL JW3WNX(W(1,3),W(1,5),W(1,1),MGVX4,DUM0,zero,zero,W(1,23))
 # Amplitude(s) for diagram number 27
 CALL VVVXXX(W(1,2),W(1,4),W(1,23),MGVX3,AMP(27))
 CALL JW3WNX(W(1,3),W(1,5),W(1,1),MGVX7,DUM0,MZ,WZ,W(1,24))
