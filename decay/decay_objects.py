@@ -32,7 +32,7 @@ from madgraph import MadGraph5Error, MG5DIR
 
 ZERO = 0
 #===============================================================================
-# What does logger means...
+# Logger for decay_module
 #===============================================================================
 
 logger = logging.getLogger('decay')
@@ -922,6 +922,40 @@ class DecayModel(base_objects.Model):
                             group = self.decay_groups.pop(group_index)
                             self.decay_groups[0].extend(group)
                             continue
+                        elif len(this_group_particles) == 1:
+                            # One particle is in the same group as this particle
+                            # The other (still non_sm yet) must be SM group.
+                            particle2 = [p for p in non_sm_particles \
+                                             if p != this_group_particles[0]][0]
+                            if not particle2.get('is_part'):
+                                particle2 = self.get_particle(particle2.get_anti_pdg_code())
+
+                            group_index2 = [i for (i, g) in \
+                                                enumerate(self.decay_groups)\
+                                                if particle2 in g][0]
+                            group_2 = self.decay_groups.pop(group_index2)
+                            self.decay_groups[0].extend(group_2)
+
+                        else:
+                            # If the two particles are in another same group,
+                            # this particle must be the SM particle.
+                            # Transform the 1st non_sm_particle into particle
+                            particle1 = non_sm_particles[0]
+                            if not particle1.get('is_part'):
+                                particle1 = self.get_particle(\
+                                    particle1.get_anti_pdg_code())
+                            # Find the group of particle1
+                            group_index1 = [i for (i, g) in \
+                                            enumerate(self.decay_groups) \
+                                            if particle1 in g][0]
+
+                            # If the other non_sm_particle is in the same group
+                            # as particle1, try to merge this particle to SM
+                            if non_sm_particles[1] in \
+                                    self.decay_groups[group_index1]:
+                                if group_index > 0:
+                                    group = self.decay_groups.pop(group_index)
+                                    self.decay_groups[0].extend(group)
 
                     if len(non_sm_particles) == 3:
                         # Are any of the particles in my decay group already?
