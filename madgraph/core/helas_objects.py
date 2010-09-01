@@ -3291,7 +3291,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         if isinstance(arg, HelasWavefunction):
             my_spin = arg.get_spin_state_number()
-            my_index = pdg_codes.index(arg.get_anti_pdg_code())
+            my_index = arg.find_outgoing_number() - 1
             pdg_codes.pop(my_index)
         
         mothers = copy.copy(arg.get('mothers'))
