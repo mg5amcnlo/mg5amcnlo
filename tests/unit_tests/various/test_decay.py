@@ -500,10 +500,8 @@ class TestDecayModel(unittest.TestCase):
         no_want_particles = [p for p in particles if p.get('pdg_code') in \
                                  no_want_particle_codes]
 
-        print "no_want_particles: ",[p.get('pdg_code') for p in no_want_particles]
         for particle in no_want_particles:
             particles.remove(particle)
-            print "removing particle ", particle.get('pdg_code')
 
         interactions = mssm.get('interactions')
         inter_list = copy.copy(interactions)
@@ -511,7 +509,6 @@ class TestDecayModel(unittest.TestCase):
             if any([p.get('pdg_code') in no_want_particle_codes for p in \
                         interaction.get('particles')]):
                 interactions.remove(interaction)
-                print "removing interaction ", interaction.get('id')
         
         mssm.set('particles', particles)
         mssm.set('interactions', interactions)

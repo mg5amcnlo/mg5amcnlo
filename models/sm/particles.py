@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 216 $
+# This file was automatically created by FeynRules $Revision: 302 $
 # Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
-# Date: Thu 22 Jul 2010 16:38:04
+# Date: Tue 31 Aug 2010 16:54:46
 
 
 from __future__ import division
@@ -123,7 +123,7 @@ c = Particle(pdg_code = 4,
              antiname = 'c~',
              spin = 2,
              color = 3,
-             mass = 'MC',
+             mass = 'ZERO',
              width = 'ZERO',
              texname = 'c',
              antitexname = 'c',

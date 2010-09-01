@@ -131,6 +131,24 @@ class Test_QNumber_Add (unittest.TestCase):
 
     def test_find_qnum_parity_modified_mssm(self):
         mssm = import_ufo.import_model('mssm')
+        particles = mssm.get('particles')
+        no_want_particle_codes = [1000022, 1000023, 1000024, -1000024, 
+                                  1000025, 1000035, 1000037, -1000037]
+        no_want_particles = [p for p in particles if p.get('pdg_code') in \
+                                 no_want_particle_codes]
+
+        for particle in no_want_particles:
+            particles.remove(particle)
+
+        interactions = mssm.get('interactions')
+        inter_list = copy.copy(interactions)
+        for interaction in inter_list:
+            if any([p.get('pdg_code') in no_want_particle_codes for p in \
+                        interaction.get('particles')]):
+                interactions.remove(interaction)
+        
+        mssm.set('particles', particles)
+        mssm.set('interactions', interactions)
         
         #Test the Monte Carlo find several times and see the percentage
         #that catch the correct quantum number

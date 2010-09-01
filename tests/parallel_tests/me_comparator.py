@@ -228,10 +228,10 @@ class MG4Runner(MERunner):
         working_dir = os.path.join(self.mg4_path, self.temp_dir_name)
          
         shell_name = None
-        for filename in os.listdir(os.path.join(working_dir, 'SubProcesses')):
-            dir_name = os.path.join(working_dir, 'SubProcesses', filename)
-            if os.path.isdir(dir_name) and filename.startswith('P%i_' % proc_id):
-                shell_name = filename 
+        directories = glob.glob(os.path.join(working_dir, 'SubProcesses',
+                                  'P%i_*' % proc_id))
+        if directories and os.path.isdir(directories[0]):
+            shell_name = os.path.basename(directories[0])
 
         # If directory doesn't exist, skip and return 0
         if not shell_name:
@@ -355,7 +355,7 @@ class MG5Runner(MG4Runner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = "import model_v4 %s --modelname\n" % os.path.join(self.mg4_path,
+        v5_string = "import model_v4 %s\n" % os.path.join(self.mg4_path,
                                                           'Models', model)
 
         v5_string += "setup standalone_v4 %s -f\n" % \
@@ -378,7 +378,7 @@ class MG5_UFO_Runner(MG5Runner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = "import model %s --modelname \n" % model
+        v5_string = "import model %s \n" % model
 
         v5_string += "setup standalone_v4 %s -f\n" % \
                      os.path.join(self.mg4_path, self.temp_dir_name)
@@ -623,7 +623,7 @@ class MEComparator(object):
 
         test_object.assertEqual(fail_str, "Failed for processes:")
 
-def create_proc_list(part_list, initial=2, final=2):
+def create_proc_list(part_list, initial=2, final=2, charge_conservation=True):
     """Helper function to automatically create process lists starting from 
     a particle list."""
 
@@ -635,6 +635,14 @@ def create_proc_list(part_list, initial=2, final=2):
             proc_list.append(sorted_product)
 
     for proc in proc_list:
+        #check charge conservation
+        if charge_conservation:
+            init_plus= ''.join(proc[:initial]).count('+')
+            init_minus=''.join(proc[:initial]).count('-')
+            final_plus=''.join(proc[initial:]).count('+')
+            final_minus=''.join(proc[initial:]).count('-')
+            if init_plus-init_minus-final_plus+final_minus:
+                continue
         proc.insert(initial, '>')
         res_list.append(' '.join(proc))
 
@@ -642,7 +650,7 @@ def create_proc_list(part_list, initial=2, final=2):
 
 def create_proc_list_enhanced(init_part_list, final_part_list_1,
                               final_part_list_2 = [], initial=2, final_1=2,
-                              final_2=1):
+                              final_2=1, charge_conservation=True):
     """Helper function to automatically create process lists starting from 
     a particle list."""
 
@@ -661,6 +669,14 @@ def create_proc_list_enhanced(init_part_list, final_part_list_1,
                 proc_list.append(sorted_product)
 
     for proc in proc_list:
+        #check charge conservation
+        if charge_conservation:
+            init_plus= ''.join(proc[:initial]).count('+')
+            init_minus=''.join(proc[:initial]).count('-')
+            final_plus=''.join(proc[initial:]).count('+')
+            final_minus=''.join(proc[initial:]).count('-')
+            if init_plus-init_minus-final_plus+final_minus:
+                continue
         proc.insert(initial, '>')
         res_list.append(' '.join(proc))
 

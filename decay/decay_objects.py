@@ -797,14 +797,11 @@ class DecayModel(base_objects.Model):
         particle and with any number of SM particles are in the same
         decay group.
 
-        3. Find all such particles using recursion.
-
-        4. If any of these particles have decay to only SM
+        3. If any of these particles have decay to only SM
         particles, the complete decay group becomes "sm"
         
-        5. Go through particles to see if any are missing from the
-        decay group - in that case repeat from 1) starting from this
-        particle.
+        5. Iterate through all particles, to cover all particles and
+        interactions.
         """
 
         self.sm_ids = [1,2,3,4,5,6,11,12,13,14,15,16,21,22,23,24]
@@ -829,12 +826,24 @@ class DecayModel(base_objects.Model):
         1. Pick out all interactions with this particle
 
         2. For any interaction which is not a radiation (i.e., has
-        this particle twice): If there is a single non-sm particle in
+        this particle twice): 
+
+        a. If there is a single non-sm particle in
         the decay, add particle to this decay group. Otherwise, add to
         SM decay group or new decay group.
 
-        3. If particles previously not in any decay group, run
-        find_decay_groups_for_particle for it."""
+        b. If there are more than 1 non-sm particles: if all particles
+        in decay groups, merge decay groups according to different
+        cases:
+        2 non-sm particles: either both are in this group, which means
+        this is SM, or one is in this group, so the other has to be
+        SM, or both are in the same decay group, then this group is SM.
+        3 non-sm particles: either 1 is in this group, then the other
+        two must be in same group or 2 is in this group, then third
+        must also be in this group, or 2 is in the same group, then
+        third must be in this group (not yet implemented). No other
+        cases can be dealt with.
+        4 or more: Not implemented (not phenomenologically interesting)."""
         
         # interactions with this particle which are not radiation
         interactions = [i for i in self.get('interactions') if \
@@ -914,12 +923,6 @@ class DecayModel(base_objects.Model):
                             self.decay_groups[0].extend(group)
                             continue
 
-                        # Unfortunately we can't draw any more
-                        # conclusions in other cases - either, the
-                        # other particles are from the same group, or
-                        # different groups - in neither case can we
-                        # draw any conclusions.
-                        
                     if len(non_sm_particles) == 3:
                         # Are any of the particles in my decay group already?
                         this_group_particles = [p for p in non_sm_particles \

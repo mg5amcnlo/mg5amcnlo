@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 216 $
-# Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
-# Date: Wed 11 Aug 2010 14:09:56
+# This file was automatically created by FeynRules $Revision: 294 $
+# Mathematica version: 7.0 for Linux x86 (64-bit) (February 18, 2009)
+# Date: Tue 24 Aug 2010 12:32:13
 
 
 # 
@@ -40,6 +40,7 @@
    * Calling FeynmanRules for 12 Lagrangians.
    * Number of classes vertices: 301
    * Number of flavored vertices: 964
+   - Saved vertices in InterfaceRun[ 1 ].
    * Checked QNumber conservation.
    * particles.py written.
    * parameters.py written.
