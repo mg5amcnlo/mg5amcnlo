@@ -441,33 +441,19 @@ class HelasWavefunction(base_objects.PhysicsObject):
                       Please decompose your vertex into 2-fermion
                       vertices to get fermion flow correct."""
 
-            if len(filter(lambda wf: wf.get_with_flow('state') == 'incoming',
-                          self.get('mothers'))) > \
-                          len(filter(lambda wf: \
-                                     wf.get_with_flow('state') == 'outgoing',
-                          self.get('mothers'))):
-                # If more incoming than outgoing mothers,
-                # Pick one with incoming state as mother and set flow
-                # Note that this needs to be done more properly if we have
-                # 4-fermion vertices
-                mother = filter(lambda wf: \
-                                wf.get_with_flow('state') == 'incoming',
-                                self.get('mothers'))[0]
-            else:
-                # If more outgoing than incoming mothers,
-                # Pick one with outgoing state as mother and set flow
-                # Note that this needs to be done more properly if we have
-                # 4-fermion vertices
-                mother = filter(lambda wf: \
-                                wf.get_with_flow('state') == 'outgoing',
-                                self.get('mothers'))[0]
-            if not self.get('self_antipart'):
-                self.set('state', mother.get('state'))
-                self.set('fermionflow', mother.get('fermionflow'))
-            else:
+            mother = mother_fermions[0]
+            if self.get('self_antipart'):
                 self.set('state', mother.get_with_flow('state'))
                 self.set('is_part', mother.get_with_flow('is_part'))
-
+            else:
+                self.set('state', mother.get('state'))
+                self.set('fermionflow', mother.get('fermionflow'))
+                # Check that the state is compatible with particle/antiparticle
+                if self.get('is_part') and self.get('state') == 'incoming' or \
+                   not self.get('is_part') and self.get('state') == 'outgoing':
+                    self.set('state', {'incoming':'outgoing',
+                                      'outgoing':'incoming'}[self.get('state')])
+                    self.set('fermionflow', -self.get('fermionflow'))
         return True
 
     def check_and_fix_fermion_flow(self,
@@ -588,6 +574,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         self.get('fermionflow') and \
                         self.get('self_antipart') or \
                         new_mother.get('state') != self.get('state')
+            flip_sign = new_mother.get_with_flow('state') != \
+                        self.get_with_flow('state') and \
+                        self.get('self_antipart')
+            flip_flow = new_mother.get_with_flow('state') != \
+                        self.get_with_flow('state') and \
+                        not self.get('self_antipart')
 
             # Replace old mother with new mother
             mothers[mothers.index(fermion_mother[0])] = new_mother
@@ -728,7 +720,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         fermionflow"""
 
         return any([wf.get('fermionflow') < 0 for wf in \
-                    self.get('mothers')])
+                    self.get('mothers')]) or \
+                    (self.get('interaction_id') and self.get('fermionflow') < 0)
 
     def get_with_flow(self, name):
         """Generate the is_part and state needed for writing out
@@ -1142,12 +1135,15 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                       Please decompose your vertex into 2-fermion
                       vertices to get fermion flow correct."""
 
-        # Note that the order of mothers is given by the external
-        # number meaning that the order will in general be different
-        # for t- and s-channel diagrams, hence giving duplication of
-        # wave functions. I don't think there's anything to do about
-        # this.
-        for mother in fermion_mothers:
+        # If any of the mothers have negative fermionflow, we need to
+        # take this mother first.
+        neg_fermionflow_mothers = [mother for mother in fermion_mothers if \
+                                    mother.get('fermionflow') < 0]
+
+        if not neg_fermionflow_mothers:
+            neg_fermionflow_mothers = fermion_mothers
+
+        for mother in neg_fermionflow_mothers:
             if Nincoming > Noutgoing and \
                mother.get_with_flow('state') == 'outgoing' or \
                Nincoming < Noutgoing and \

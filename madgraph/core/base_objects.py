@@ -549,12 +549,10 @@ class Interaction(PhysicsObject):
 
         for part in self['particles']:
 
-            # Create a list w/o part
-            short_part_list = copy.copy(self['particles'])
-            short_part_list.remove(part)
-
             # We are interested in the unordered list, so use sorted()
-            pdg_tuple = tuple(sorted([p.get_pdg_code() for p in short_part_list]))
+            pdg_tuple = tuple(sorted([p.get_pdg_code() for (i, p) in \
+                                      enumerate(self['particles']) if \
+                                      i != self['particles'].index(part)]))
             pdg_part = part.get_anti_pdg_code()
             if pdg_tuple in ref_dict_to1.keys():
                 if (pdg_part, self['id']) not in  ref_dict_to1[pdg_tuple]:
@@ -601,6 +599,8 @@ class InteractionList(PhysicsObjectList):
         """Generate the reference dictionaries from interaction list.
         Return a list where the first element is the n>0 dictionary and
         the second one is n-1>1."""
+
+        logger.info("Generate reference dictionaries for diagram generation")
 
         ref_dict_to0 = {}
         ref_dict_to1 = {}
