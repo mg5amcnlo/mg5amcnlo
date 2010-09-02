@@ -235,10 +235,8 @@ class TestCmdShell2(unittest.TestCase):
         if os.path.isdir(self.out_dir):
             shutil.rmdir(self.out_dir)
 
-        self.do('import model sm -modelname')
-        #self.do('import model mssm -modelname')
-        self.do('generate e+ e->e+ e- / h')
-        #self.do('generate e+ e+>sl2+ sl2+ / h1 h2 h3 n2 n3')
+        self.do('import model sm')
+        self.do('generate e+ e->e+ e-')
         self.do('output standalone_v4 %s ' % self.out_dir)
         # Check that the needed ALOHA subroutines are generated
         files = ['aloha_file.inc', 'boostx.F',
@@ -272,18 +270,21 @@ class TestCmdShell2(unittest.TestCase):
         # Check that check_sa.f compiles
         subprocess.call(['make', 'check'],
                         stdout=devnull, stderr=devnull, 
-                        cwd=os.path.join(self.out_dir, 'SubProcesses', 'P0_epem_epem_no_h'))
+                        cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                         'P0_epem_epem'))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                               'SubProcesses', 'P0_epem_epem_no_h', 'check')))
+                                                    'SubProcesses', 'P0_epem_epem',
+                                                    'check')))
         # Check that the output of check is correct 
-        logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_epem_epem_no_h', 'check.log')
+        logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_epem_epem',
+                               'check.log')
         subprocess.call('./check', 
                         stdout=open(logfile, 'w'), stderr=devnull,
-                        cwd=os.path.join(self.out_dir, 'SubProcesses', 'P0_epem_epem_no_h'),
-                        shell=True)
+                        cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                         'P0_epem_epem'), shell=True)
         log_output = open(logfile, 'r').read()
-        self.assertTrue(re.search('Matrix element\s*=\s*2.156227\d*[Ee]-0*2', log_output))
-        #self.assertTrue(re.search('Matrix element\s*=\s*1.836769\d*[Ee]-0*3', log_output))
+        self.assertTrue(re.search('Matrix element\s*=\s*1.953735\d*[Ee]-0*2',
+                                  log_output))
         
     def test_ufo_standard_sm(self):
         """ check that we can use standard MG4 name """
