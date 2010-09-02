@@ -544,6 +544,59 @@ class TestDecayModel(unittest.TestCase):
             self.assertEqual(sorted([p.get('pdg_code') for p in group]),
                              goal_groups[i])
 
+    def test_find_mssm_decay_groups_general(self):
+        """Test finding the decay groups of the MSSM"""
+
+        mssm = import_ufo.import_model('mssm')
+        decay_mssm = decay_objects.DecayModel(mssm)
+
+        decay_mssm.find_decay_groups_general()
+        goal_groups = [[25, 35, 36, 37],
+                       [1000001, 1000002, 1000003, 1000004, 1000005, 1000006, 1000011, 1000012, 1000013, 1000014, 1000015, 1000016, 1000021, 1000022, 1000023, 1000024, 1000025, 1000035, 1000037, 2000001, 2000002, 2000003, 2000004, 2000005, 2000006, 2000011, 2000013, 2000015]]
+
+        for i, group in enumerate(decay_mssm.decay_groups):
+            self.assertEqual(sorted([p.get('pdg_code') for p in group]),
+                             goal_groups[i])
+
+    def test_find_mssm_decay_groups_modified_mssm_general(self):
+        """Test finding the decay groups of the MSSM"""
+
+        mssm = import_ufo.import_model('mssm')
+        particles = mssm.get('particles')
+        no_want_particle_codes = [1000022, 1000023, 1000024, -1000024, 
+                                  1000025, 1000035, 1000037, -1000037]
+        no_want_particles = [p for p in particles if p.get('pdg_code') in \
+                                 no_want_particle_codes]
+
+        for particle in no_want_particles:
+            particles.remove(particle)
+
+        interactions = mssm.get('interactions')
+        inter_list = copy.copy(interactions)
+        for interaction in inter_list:
+            if any([p.get('pdg_code') in no_want_particle_codes for p in \
+                        interaction.get('particles')]):
+                interactions.remove(interaction)
+        
+        mssm.set('particles', particles)
+        mssm.set('interactions', interactions)
+        decay_mssm = decay_objects.DecayModel(mssm)
+
+        decay_mssm.find_decay_groups_general()
+        goal_groups = set([(25, 35, 36, 37),
+                           (1000001, 1000002, 1000003, 1000004, 1000005, 
+                            1000006, 1000021, 2000001, 2000002, 2000003, 
+                            2000004, 2000005, 2000006), 
+                           (1000011, 1000012), 
+                           (1000013, 1000014), 
+                           (1000015, 1000016, 2000015), 
+                           (2000011,), 
+                           (2000013,)])
+
+        self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in \
+                                                group])) \
+                                  for group in decay_mssm.decay_groups]),
+                         goal_groups)
 
 if __name__ == '__main__':
     unittest.unittest.main()

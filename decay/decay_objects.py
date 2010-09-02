@@ -1017,6 +1017,194 @@ class DecayModel(base_objects.Model):
                     # particular situations. Don't implement this now
                     # however.
 
+    def find_decay_groups_general(self):
+        """Iteratively find decay groups, suitable to vertex in all orders
+           Algrorithm:
+           1. Establish the reduced_interactions
+              a. Read non-sm particles only
+                 (not in sm_ids and not in decay_groups[0])
+              b. If the particle appears in this interaction before, 
+                 not only stop read it but also remove the existing one.
+              c. If the interaction has only one particle,
+                 move this particle to SM-like group and void this interaction.
+           2. Recursively reduce the interaction
+              a. If there are two particles in this interaction,
+                 they must be in the same group. 
+                 And we can delete this interaction since we cannot draw more
+                 conclusion from it.
+              b. If there are only one particle in this interaction,
+                 this particle must be SM-like group
+                 And we can delete this interaction since we cannot draw more
+                 conclusion from it.
+              c. If any two particles in this interaction already belong to the 
+                 same group, remove the two particles.
+              d. If the iteration does not change the reduced_interaction at all
+                 stop the iteration. All the remaining reduced_interaction must
+                 contain more than three non SM-like particles. And each of 
+                 them belongs to different groups.
+           3. If there is any particle that has not been classified,
+              this particle is lonely i.e. it does not related to 
+              other particles. Add this particle to decay_groups.
+        """
+        
+
+        #Setup the SM particles and initial decay_groups, reduced_interactions
+        self.sm_ids = [1,2,3,4,5,6,11,12,13,14,15,16,21,22,23,24]
+        self.decay_groups = [[]]
+        self.reduced_interactions = []
+
+        #Read the interaction information and setup
+        for i, inter in enumerate(self.get('interactions')):
+            self.reduced_interactions.append([])
+            for part in inter['particles']:
+                #If this particle is anti-particle, convert it.
+                if not part.get('is_part'):
+                    part = self.get_particle(part.get_anti_pdg_code())
+                
+                  
+                #Read this particle if it is not in SM
+                if not part.get('pdg_code') in self.sm_ids and \
+                   not part in self.decay_groups[0]:
+                    #If pid is not in the interaction yet, append it
+                    if not part in self.reduced_interactions[i]:
+                        self.reduced_interactions[i].append(part)
+                    #If pid is there already, remove it since double particles
+                    #is equivalent to none.
+                    else:
+                        self.reduced_interactions[i].remove(part)
+
+            # If there is only one particle in this interaction, this must in SM
+            if len(self.reduced_interactions[i]) == 1:
+                # Remove this particle and add to decay_groups
+                part = self.reduced_interactions[i].pop(0)
+                self.decay_groups[0].append(part)
+
+        # Now start the recursively interaction reduction
+        change = True
+        while change:
+            change = False
+            for inter in self.reduced_interactions:
+                #If only two particles in inter, they are in the same group
+                if len(inter) == 2:
+                    #If they are in different groups, merge them.
+                    #Interaction is useless.
+
+                    # Case for the particle is in decay_groups
+                    if inter[0] in sum(self.decay_groups, []):
+                        group_index_0 =[i for (i,g) in\
+                                        enumerate(self.decay_groups)\
+                                        if inter[0] in g][0]
+
+                        # If the second one is also in decay_groups, merge them.
+                        if inter[1] in sum(self.decay_groups, []):
+                            if not inter[1] in self.decay_groups[group_index_0]:
+                                group_index_1 =[i for (i,g) in \
+                                                enumerate(self.decay_groups)\
+                                                if inter[1] in g][0]
+                                # Remove the outer group
+                                group_1 = self.decay_groups.pop(max(\
+                                          group_index_0, group_index_1))
+                                # Merge with the inner one
+                                self.decay_groups[min(group_index_0, \
+                                                 group_index_1)].extend(group_1)
+                        # The other one is no in decay_groups yet
+                        # Add inter[1] to the group of inter[0]
+                        else:
+                            self.decay_groups[group_index_0].append(inter[1])
+                    # Case for inter[0] is not in decay_groups yet.
+                    else:
+                        # If only inter[1] is in decay_groups instead, 
+                        # add inter[0] to its group.
+                        if inter[1] in sum(self.decay_groups, []):
+                            group_index_1 =[i for (i,g) in \
+                                            enumerate(self.decay_groups)\
+                                            if inter[1] in g][0]
+                            # Add inter[0]
+                            self.decay_groups[group_index_1].append(inter[0])
+
+                        # Both are not in decay_groups
+                        # Add both particles to decay_groups
+                        else:
+                            self.decay_groups.append(inter)
+
+                    # No matter merging or not the interaction is useless now. 
+                    # Kill it.
+                    self.reduced_interactions.remove(inter)
+                    change = True
+
+                # If only one particle in this interaction,
+                # this particle must be SM-like group.
+                elif len(inter) == 1:
+                    if inter[0] in sum(self.decay_groups, []):
+                        group_index_1 =[i for (i,g) in \
+                                        enumerate(self.decay_groups)\
+                                        if inter[0] in g][0]
+                        # If it is not, merge it with SM.
+                        if group_index_1 > 0:
+                            self.decay_groups[0].extend(self.decay_groups.pop(\
+                                                                 group_index_1))
+
+                    # Inter[0] not in decay_groups yet, add it to SM-like group
+                    else:
+                        self.decay_groups[0].extend(inter)
+
+                    # The interaction is useless now. Kill it.
+                    self.reduced_interactions.remove(inter)
+                    change = True
+                
+                # Case for more than two particles in this interaction.
+                # Remove particles with the same group.
+                else:
+                    #List to store the id of each particle's decay group
+                    group_ids = []
+                    # This list is to prevent removing elements during the 
+                    # for loop to create errors.
+                    # If the value is normal int, the particle in this position 
+                    # is valid. Else, it is already removed. 
+                    ref_list = range(len(inter))
+                    for i, part in enumerate(inter):
+                        try:
+                            group_ids.append([n for (n,g) in \
+                                              enumerate(self.decay_groups) \
+                                              if part in g][0])
+                        # No group_ids if this particle is not in decay_groups
+                        except IndexError:
+                            group_ids.append(None)
+                            continue
+
+                        # See if any valid previous particle has the same group.
+                        # If so, both the current one and the previous one
+                        # is void
+                        for j in range(i):
+                            if group_ids[i] == group_ids[j] and \
+                               ref_list[j] != None:
+                                # Both of the particles is useless for 
+                                # the determination of parity
+                                ref_list[i] = None
+                                ref_list[j] = None
+                                change = True
+                                break
+                
+                    # Remove the particles label with None in ref_list
+                    # Remove from the end to prevent errors in list index.
+                    for i in range(len(inter)-1, -1, -1):
+                        if not ref_list[i]:
+                            inter.pop(i)
+
+                    # Remove the interaction if it is empty.
+                    if not len(inter):
+                        self.reduced_interactions.remove(inter)
+
+                    # Start a new iteration...
+
+        # Check if there is any particle that cannot be classified.
+        # Such particle is in the group of its own.
+        for part in self.get('particles'):
+            if not part in sum(self.decay_groups, []) and \
+                    not part.get('pdg_code') in self.sm_ids:
+                self.decay_groups.append([part])
+
+
 #===============================================================================
 # Channel: Each channel for the decay
 #===============================================================================
