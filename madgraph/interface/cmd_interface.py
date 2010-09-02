@@ -23,6 +23,7 @@ import optparse
 import os
 import pydoc
 import re
+import signal
 import subprocess
 import sys
 import traceback
@@ -355,6 +356,29 @@ class CmdExtended(cmd.Cmd):
         for option in options:
             text+='\t %s \n' % option      
         print text
+
+
+    def timed_input(self, question, default, timeout=None):
+        """ a question with a maximal time to answer take default otherwise"""
+        class TimeOutError(Exception):
+            """Class for run-time error"""
+            pass
+        def handle_alarm(signum, frame): 
+            raise TimeOutError
+        if timeout is None:
+            timeout = self.timeout
+        signal.signal(signal.SIGALRM, handle_alarm)
+        signal.alarm(timeout)
+        if timeout:
+            question += '[%ss to answer] ' % timeout
+        try:
+            result = raw_input(question)
+        except TimeOutError:
+            print default
+            return default
+        finally:
+            signal.alarm(0)
+        return result
 
 
 
@@ -1898,6 +1922,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def import_mg5_proc_card(self, filepath):
         # remove this call from history
         self.history.pop()
+        self.timeout, old_time_out = 20, self.timeout
         
         # Read the lines of the file and execute them
         for line in CmdFile(filepath):
@@ -1906,7 +1931,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # execute the line
             if line:
                 self.exec_cmd(line)
-
+        self.timeout = old_time_out
         return
     
     def add_default_multiparticles(self):
@@ -2069,7 +2094,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % self._export_dir)
             logger.info('If you continue this directory will be cleaned')
-            answer = raw_input('Do you want to continue? [y/n]')
+            answer = self.timed_input('Do you want to continue? [y/n]', 'y')
             if answer != 'y':
                 raise MadGraph5Error('Stopped by user request')
 
@@ -2272,6 +2297,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
     """The command line processor of MadGraph"""
  
+    timeout = 1 # time authorize to answer question [0 is no time limit]
     def __init__(self, *arg, **opt):
     
         if os.environ.has_key('_CONDOR_SCRATCH_DIR'):
@@ -2291,6 +2317,7 @@ class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
     """The command line processor of MadGraph""" 
     
     writing_dir = '.'
+    timeout = 0 # time authorize to answer question [0 is no time limit]
     
     def preloop(self):
         """Initializing before starting the main loop"""

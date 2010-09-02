@@ -55,7 +55,7 @@ parser.add_option("","--debug", action="store_true", default=False, dest='debug'
 if len(args) == 0:
     args = ''
 
-# Check if debug mode is (and should be) activated
+# Check if optimize mode is (and should be) activated
 if __debug__ and not options.debug:
     subprocess.call([sys.executable] + ['-O'] + sys.argv)
     sys.exit()
@@ -80,12 +80,10 @@ if options.file or args:
         input_file = options.file
     if options.web:
         cmd_line = cmd_interface.MadGraphCmdWeb()
-        cmd_line.use_rawinput = False #put it in non interactive mode
         cmd_line.run_cmd('import command ' + input_file)
         sys.exit()
     else:
         cmd_line = cmd_interface.MadGraphCmdShell(mgme_dir = options.mgme_dir)
-        cmd_line.use_rawinput = False #put it in non interactive mode
         cmd_line.run_cmd('import command ' + input_file)
         sys.exit()
 else:
