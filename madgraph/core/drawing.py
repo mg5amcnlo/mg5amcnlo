@@ -175,15 +175,10 @@ class FeynmanLine(object):
 
         pid = self.pid
         model_info = self.model.get_particle(pid)
-
-        if pid > 0:
-            return model_info.get(name)
-        elif model_info:
-            return model_info.get('anti' + name)
-        else:
-            # particle is self anti particle
-            return self.model.get_particle(-1 * pid).get(name)
-        
+        if model_info is None:
+            model_info = self.model.get_particle(-pid)
+        return model_info.get_name()
+            
     def get_length(self):
         """ return the length of the line """
         
@@ -854,7 +849,7 @@ class FeynmanDiagram:
         #doing this modification only if the vertex is the type 1 X....Z>1
         #since in this case either the last particles will be a T-channel 
         #and will be resolve latter (so we don't care) or we have to flip
-        #particle to antioarticle.
+        #particle to antiparticle.
         if line.number == 1:
             line.inverse_part_antipart()
 
@@ -872,10 +867,6 @@ class FeynmanDiagram:
         self._treated_legs.append(leg)
         self.lineList.append(line)
 
-        # General inversion of pid for spin one particles. It's a bit too much 
-        #of flip (not need for initial particles) but those one will be reflip 
-        #later anyway.
-        line.inverse_pid_for_type(inversetype='wavy')
         return line
 
     def deal_special_vertex(self, last_vertex):

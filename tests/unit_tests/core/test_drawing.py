@@ -167,7 +167,7 @@ class TestFeynmanLine(unittest.TestCase):
             self.assertEquals(my_line.get_info('line'), 'curly')
 
         id = [21, 22, 23, 24, -23, -24]
-        solution = ['g', 'a', 'z', 'w-', 'z', 'w+']
+        solution = ['g', 'a', 'z', 'w+', 'z', 'w-']
         for i in range(0, len(id)):
             my_line = drawing.FeynmanLine(id[i])
             my_line.def_model(_model)
