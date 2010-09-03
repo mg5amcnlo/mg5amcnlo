@@ -271,9 +271,6 @@ class AbstractRoutineBuilder(object):
 class AbstractALOHAModel(dict):
     """ A class to build and store the full set of Abstract ALOHA Routine"""
 
-    files_from_template = ['makefile', 'sxxxxx.f','ixxxxx.f', 'oxxxxx.f',
-                           'vxxxxx.f', 'txxxxx.f', 'pxxxxx.f']
-
     def __init__(self, model_name, write_dir=None):
         """ load the UFO model and init the dictionary """
         

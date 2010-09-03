@@ -239,7 +239,7 @@ class TestCmdShell2(unittest.TestCase):
         self.do('generate e+ e->e+ e-')
         self.do('output standalone_v4 %s ' % self.out_dir)
         # Check that the needed ALOHA subroutines are generated
-        files = ['aloha_file.inc', 'boostx.F',
+        files = ['aloha_file.inc', 
                  #'FFS1C1_2.f', 'FFS1_0.f',
                  'FFV1_0.f', 'FFV1_3.f',
                  'FFV2_0.f', 'FFV2_3.f',
@@ -248,7 +248,8 @@ class TestCmdShell2(unittest.TestCase):
         for f in files:
             self.assertTrue(os.path.isfile(os.path.join(self.out_dir,
                                                         'Source', 'DHELAS',
-                                                        f)))
+                                                        f)), 
+                            '%s file is not in aloha directory' % f)
         # Check that unwanted ALOHA subroutines are not generated
         notfiles = ['FFV1_1.f', 'FFV1_2.f', 'FFV2_1.f', 'FFV2_2.f',
                     'FFV4_1.f', 'FFV4_2.f', 

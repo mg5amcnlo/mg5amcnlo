@@ -349,6 +349,14 @@ if __name__ == "__main__":
     if len(args) == 0:
         args = ''
 
+    if options.path == 'U':
+        options.path = 'tests/unit_tests'
+    elif options.path == 'P':
+        options.path = 'tests/parallel_tests'
+    elif options.path == 'A':
+        options.path = 'tests/acceptance_tests'
+
+
     try:
         logging.config.fileConfig(os.path.join(root_path,'tests','.mg5_logging.conf'))
         logging.root.setLevel(eval('logging.' + options.logging))
