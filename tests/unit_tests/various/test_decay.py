@@ -558,6 +558,11 @@ class TestDecayModel(unittest.TestCase):
             self.assertEqual(sorted([p.get('pdg_code') for p in group]),
                              goal_groups[i])
 
+        # Test if all useless interactions are deleted.
+        for inter in decay_mssm.reduced_interactions:
+            self.assertTrue(len(inter['particles']))
+
+
     def test_find_mssm_decay_groups_modified_mssm_general(self):
         """Test finding the decay groups of the MSSM"""
 
@@ -573,6 +578,23 @@ class TestDecayModel(unittest.TestCase):
 
         interactions = mssm.get('interactions')
         inter_list = copy.copy(interactions)
+        new_interaction = base_objects.Interaction({\
+                'id': len(mssm.get('interactions'))+1,
+                'particles': base_objects.ParticleList(
+                             [mssm.get_particle(1000001),
+                              mssm.get_particle(1000011),
+                              mssm.get_particle(1000003),
+                              mssm.get_particle(1000013),
+                              # This new SM particle should be removed
+                              # In the reduction level
+                              mssm.get_particle(2000013),
+                              mssm.get_particle(1000015)])})
+        new_interaction_add_sm = base_objects.Interaction({\
+                'id': len(mssm.get('interactions'))+2,
+                'particles': base_objects.ParticleList(
+                             [mssm.get_particle(25),
+                              mssm.get_particle(2000013)])})
+
         for interaction in inter_list:
             if any([p.get('pdg_code') in no_want_particle_codes for p in \
                         interaction.get('particles')]):
@@ -580,10 +602,13 @@ class TestDecayModel(unittest.TestCase):
         
         mssm.set('particles', particles)
         mssm.set('interactions', interactions)
+
+        mssm.get('interactions').append(new_interaction)
+        mssm.get('interactions').append(new_interaction_add_sm)
         decay_mssm = decay_objects.DecayModel(mssm)
 
         decay_mssm.find_decay_groups_general()
-        goal_groups = set([(25, 35, 36, 37),
+        goal_groups = set([(25, 35, 36, 37, 2000013),
                            (1000001, 1000002, 1000003, 1000004, 1000005, 
                             1000006, 1000021, 2000001, 2000002, 2000003, 
                             2000004, 2000005, 2000006), 
@@ -591,12 +616,15 @@ class TestDecayModel(unittest.TestCase):
                            (1000013, 1000014), 
                            (1000015, 1000016, 2000015), 
                            (2000011,), 
-                           (2000013,)])
+                           ])
 
         self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in \
                                                 group])) \
                                   for group in decay_mssm.decay_groups]),
                          goal_groups)
+        # Test if all useless interactions are deleted.
+        for inter in decay_mssm.reduced_interactions:
+            self.assertTrue(len(inter['particles']))
 
 if __name__ == '__main__':
     unittest.unittest.main()

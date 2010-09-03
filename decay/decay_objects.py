@@ -1017,7 +1017,8 @@ class DecayModel(base_objects.Model):
                     # particular situations. Don't implement this now
                     # however.
 
-    def find_decay_groups_general(self):
+    def find_decay_groups_general(self, sm_ids = \
+                                  [1,2,3,4,5,6,11,12,13,14,15,16,21,22,23,24]):
         """Iteratively find decay groups, suitable to vertex in all orders
            Algrorithm:
            1. Establish the reduced_interactions
@@ -1047,37 +1048,42 @@ class DecayModel(base_objects.Model):
               other particles. Add this particle to decay_groups.
         """
         
-
         #Setup the SM particles and initial decay_groups, reduced_interactions
-        self.sm_ids = [1,2,3,4,5,6,11,12,13,14,15,16,21,22,23,24]
         self.decay_groups = [[]]
         self.reduced_interactions = []
 
         #Read the interaction information and setup
-        for i, inter in enumerate(self.get('interactions')):
-            self.reduced_interactions.append([])
+        for inter in self.get('interactions'):
+            temp_int = {'id':inter.get('id'), 'particles':[]}
             for part in inter['particles']:
                 #If this particle is anti-particle, convert it.
                 if not part.get('is_part'):
                     part = self.get_particle(part.get_anti_pdg_code())
-                
-                  
+                                  
                 #Read this particle if it is not in SM
-                if not part.get('pdg_code') in self.sm_ids and \
+                if not part.get('pdg_code') in sm_ids and \
                    not part in self.decay_groups[0]:
                     #If pid is not in the interaction yet, append it
-                    if not part in self.reduced_interactions[i]:
-                        self.reduced_interactions[i].append(part)
+                    if not part in temp_int['particles']:
+                        temp_int['particles'].append(part)
                     #If pid is there already, remove it since double particles
                     #is equivalent to none.
                     else:
-                        self.reduced_interactions[i].remove(part)
+                        temp_int['particles'].remove(part)
 
             # If there is only one particle in this interaction, this must in SM
-            if len(self.reduced_interactions[i]) == 1:
+            if len(temp_int['particles']) == 1:
                 # Remove this particle and add to decay_groups
-                part = self.reduced_interactions[i].pop(0)
+                part = temp_int['particles'].pop(0)
                 self.decay_groups[0].append(part)
+
+            # Finally, append only interaction with nonzero particles
+            # to reduced_interactions.
+            if len(temp_int['particles']):
+                self.reduced_interactions.append(temp_int)
+            # So interactions in reduced_interactions are all 
+            # with non-zero particles in this stage
+
 
         # Now start the recursively interaction reduction
         change = True
@@ -1085,22 +1091,24 @@ class DecayModel(base_objects.Model):
             change = False
             for inter in self.reduced_interactions:
                 #If only two particles in inter, they are in the same group
-                if len(inter) == 2:
+                if len(inter['particles']) == 2:
                     #If they are in different groups, merge them.
                     #Interaction is useless.
 
                     # Case for the particle is in decay_groups
-                    if inter[0] in sum(self.decay_groups, []):
+                    if inter['particles'][0] in sum(self.decay_groups, []):
                         group_index_0 =[i for (i,g) in\
                                         enumerate(self.decay_groups)\
-                                        if inter[0] in g][0]
+                                        if inter['particles'][0] in g][0]
 
                         # If the second one is also in decay_groups, merge them.
-                        if inter[1] in sum(self.decay_groups, []):
-                            if not inter[1] in self.decay_groups[group_index_0]:
+                        if inter['particles'][1] in sum(self.decay_groups, []):
+                            if not inter['particles'][1] in \
+                                    self.decay_groups[group_index_0]:
                                 group_index_1 =[i for (i,g) in \
                                                 enumerate(self.decay_groups)\
-                                                if inter[1] in g][0]
+                                                if inter['particles'][1] 
+                                                in g][0]
                                 # Remove the outer group
                                 group_1 = self.decay_groups.pop(max(\
                                           group_index_0, group_index_1))
@@ -1108,24 +1116,27 @@ class DecayModel(base_objects.Model):
                                 self.decay_groups[min(group_index_0, \
                                                  group_index_1)].extend(group_1)
                         # The other one is no in decay_groups yet
-                        # Add inter[1] to the group of inter[0]
+                        # Add inter['particles'][1] to the group of 
+                        # inter['particles'][0]
                         else:
-                            self.decay_groups[group_index_0].append(inter[1])
-                    # Case for inter[0] is not in decay_groups yet.
+                            self.decay_groups[group_index_0].append(
+                                inter['particles'][1])
+                    # Case for inter['particles'][0] is not in decay_groups yet.
                     else:
                         # If only inter[1] is in decay_groups instead, 
-                        # add inter[0] to its group.
-                        if inter[1] in sum(self.decay_groups, []):
+                        # add inter['particles'][0] to its group.
+                        if inter['particles'][1] in sum(self.decay_groups, []):
                             group_index_1 =[i for (i,g) in \
                                             enumerate(self.decay_groups)\
-                                            if inter[1] in g][0]
-                            # Add inter[0]
-                            self.decay_groups[group_index_1].append(inter[0])
+                                            if inter['particles'][1] in g][0]
+                            # Add inter['particles'][0]
+                            self.decay_groups[group_index_1].append(
+                                inter['particles'][0])
 
                         # Both are not in decay_groups
                         # Add both particles to decay_groups
                         else:
-                            self.decay_groups.append(inter)
+                            self.decay_groups.append(inter['particles'])
 
                     # No matter merging or not the interaction is useless now. 
                     # Kill it.
@@ -1134,19 +1145,20 @@ class DecayModel(base_objects.Model):
 
                 # If only one particle in this interaction,
                 # this particle must be SM-like group.
-                elif len(inter) == 1:
-                    if inter[0] in sum(self.decay_groups, []):
+                elif len(inter['particles']) == 1:
+                    if inter['particles'][0] in sum(self.decay_groups, []):
                         group_index_1 =[i for (i,g) in \
                                         enumerate(self.decay_groups)\
-                                        if inter[0] in g][0]
+                                        if inter['particles'][0] in g][0]
                         # If it is not, merge it with SM.
                         if group_index_1 > 0:
                             self.decay_groups[0].extend(self.decay_groups.pop(\
                                                                  group_index_1))
 
-                    # Inter[0] not in decay_groups yet, add it to SM-like group
+                    # Inter['Particles'][0] not in decay_groups yet, 
+                    # add it to SM-like group
                     else:
-                        self.decay_groups[0].extend(inter)
+                        self.decay_groups[0].extend(inter['particles'])
 
                     # The interaction is useless now. Kill it.
                     self.reduced_interactions.remove(inter)
@@ -1154,15 +1166,15 @@ class DecayModel(base_objects.Model):
                 
                 # Case for more than two particles in this interaction.
                 # Remove particles with the same group.
-                else:
+                elif len(inter['particles']) > 2:
                     #List to store the id of each particle's decay group
                     group_ids = []
                     # This list is to prevent removing elements during the 
                     # for loop to create errors.
                     # If the value is normal int, the particle in this position 
                     # is valid. Else, it is already removed. 
-                    ref_list = range(len(inter))
-                    for i, part in enumerate(inter):
+                    ref_list = range(len(inter['particles']))
+                    for i, part in enumerate(inter['particles']):
                         try:
                             group_ids.append([n for (n,g) in \
                                               enumerate(self.decay_groups) \
@@ -1171,37 +1183,46 @@ class DecayModel(base_objects.Model):
                         except IndexError:
                             group_ids.append(None)
                             continue
+                        
+                        # If a particle is SM-like, remove it!
+                        # (necessary if some particles turn to SM-like during
+                        # the loop then we could reduce the number and decide
+                        # groups of the rest particle
+                        if group_ids[i] == 0:
+                            ref_list[i] = None
+                            change = True
 
                         # See if any valid previous particle has the same group.
                         # If so, both the current one and the previous one
                         # is void
                         for j in range(i):
-                            if group_ids[i] == group_ids[j] and \
-                               ref_list[j] != None:
+                            if (group_ids[i] == group_ids[j] and \
+                                group_ids[i] != None) and ref_list[j] != None:
                                 # Both of the particles is useless for 
                                 # the determination of parity
                                 ref_list[i] = None
                                 ref_list[j] = None
                                 change = True
                                 break
-                
+                    
                     # Remove the particles label with None in ref_list
                     # Remove from the end to prevent errors in list index.
-                    for i in range(len(inter)-1, -1, -1):
-                        if not ref_list[i]:
-                            inter.pop(i)
+                    for i in range(len(inter['particles'])-1, -1, -1):
+                        if ref_list[i] == None:
+                            inter['particles'].pop(i)
 
-                    # Remove the interaction if it is empty.
-                    if not len(inter):
+                    # Remove the interaction if there is no particle in it
+                    if not len(inter['particles']):
                         self.reduced_interactions.remove(inter)
 
-                    # Start a new iteration...
+                # Start a new iteration...
+
 
         # Check if there is any particle that cannot be classified.
         # Such particle is in the group of its own.
         for part in self.get('particles'):
             if not part in sum(self.decay_groups, []) and \
-                    not part.get('pdg_code') in self.sm_ids:
+                    not part.get('pdg_code') in sm_ids:
                 self.decay_groups.append([part])
 
 

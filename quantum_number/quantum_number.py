@@ -176,7 +176,7 @@ def find_QNumber_Add(model):
     measure = qnumber.conservation_measure(model)
     
     #Large loop: test globally different qnumber
-    for i in range(0, 3):
+    for i in range(0, 10):
 
         #Test if initial measure is zero; 
         #if so, record it and generate a new one
@@ -188,7 +188,7 @@ def find_QNumber_Add(model):
                qnumber.generate_global()
 
         #Search locally near the given qnumber (1st local loop)
-        for j in range(0, 3):
+        for j in range(0, 5):
             #Change locally one by one (2nd local loop)
             for part in model['particles']:
                 qnumber_old = copy.copy(qnumber)
