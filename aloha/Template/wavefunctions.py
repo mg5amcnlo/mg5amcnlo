@@ -1,7 +1,26 @@
 import cmath 
 import math
-def ixxxxx(p,fmass,nhel,nsf,fi):
+
+class WaveFunction(list):
+	"""a objet for a WaveFunction"""
+	
+	spin_to_size={0:1,
+				  1:3,
+				  2:6,
+				  3:6}
+	
+	def __init__(self, spin):
+		"""Init the list with zero value"""
+		
+		self.spin = spin
+		list.__init__(self, [0]*spin_to_size[spin])
+		
+
+def ixxxxx(p,fmass,nhel,nsf):
 	"""Defines an inflow fermion."""
+	
+	fi = WaveFunction(2)
+	
 	fi[4] = complex(p[0]*nsf,p[3]*nsf)
 	fi[5] = complex(p[1]*nsf,p[2]*nsf) 
 	
@@ -55,10 +74,14 @@ def ixxxxx(p,fmass,nhel,nsf,fi):
 			fi[1] = chi[0]
 			fi[2] = complex(0.,0.)
 			fi[3] = complex(0.,0.) 
-	return 
+	
+	return fi 
 
-def oxxxxx(p,fmass,nhel,nsf,fo):
-	""" initialize an outgoing fermion""" 	
+def oxxxxx(p,fmass,nhel,nsf):
+	""" initialize an outgoing fermion"""
+	
+	fo = WaveFunction(2)
+	 	
 	fo[4] = complex(p[0]*nsf,p[3]*nsf)
 	fo[5] = complex(p[1]*nsf,p[2]*nsf)
 
@@ -112,10 +135,14 @@ def oxxxxx(p,fmass,nhel,nsf,fo):
 			fo[1] = complex(0.,0.)
 			fo[2] = chi[1]
 			fo[3] = chi[0] 
-	return
+	
+	return fo
 
-def vxxxxx(p,vmass,nhel,nsv,vc):
+def vxxxxx(p,vmass,nhel,nsv):
 	""" initialize a vector wavefunction. nhel=4 is for checking BRST"""
+	
+	vc = WaveFunction(3)
+	
 	sqh = math.sqrt(0.5)
 	nsvahl = nsv*abs(nhel)
 	pt2 = math.pow(p[1],2)+math.pow(p[2],2)
@@ -136,7 +163,8 @@ def vxxxxx(p,vmass,nhel,nsv,vc):
 			vc[1] = p[1]/vmass
 			vc[2] = p[2]/vmass
 			vc[3] = p[3]/vmass
-		return 
+		
+		return vc 
 
 	if (vmass != 0.):
 		hel0 = 1.-abs(nhel) 
@@ -172,7 +200,8 @@ def vxxxxx(p,vmass,nhel,nsv,vc):
 		else:
 			vc[1] = complex(-nhel*sqh,0.)
 			vc[2] = complex(0.,nsv*sign(sqh,p[3]))
-	return 
+	
+	return vc
 
 def sign(x,y):
 	"""Fortran's sign transfer function"""
@@ -182,10 +211,13 @@ def sign(x,y):
 		return abs(x) 
 	
 
-def sxxxxx(p,nss,sc):
+def sxxxxx(p,nss):
 	"""initialize a scalar wavefunction"""
+	
+	sc = WaveFunction(1)
+	
 	sc[0] = complex(1.,0.)
 	sc[1] = complex(p[0]*nss,p[3]*nss)
 	sc[2] = complex(p[1]*nss,p[2]*nss)
-	return 
+	return sc
 
