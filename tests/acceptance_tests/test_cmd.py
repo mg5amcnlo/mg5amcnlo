@@ -244,8 +244,7 @@ class TestCmdShell2(unittest.TestCase):
                  'FFV1_0.f', 'FFV1_3.f',
                  'FFV2_0.f', 'FFV2_3.f',
                  'FFV4_0.f', 'FFV4_3.f',
-                 'ixxxxx.F', 'makefile', 'mom2cx.F', 'momntx.F', 'oxxxxx.F',
-                 'pxxxxx.F', 'rotxxx.F', 'sxxxxx.F', 'txxxxx.f', 'vxxxxx.F']
+                 'makefile', 'aloha_functions.f']
         for f in files:
             self.assertTrue(os.path.isfile(os.path.join(self.out_dir,
                                                         'Source', 'DHELAS',
