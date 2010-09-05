@@ -56,8 +56,8 @@ class AbstractRoutine(object):
         
     def write(self, output_dir, language='Fortran'):
         """ write the content of the object """
-
-        getattr(aloha_writers, 'ALOHAWriterFor%s' % language)(self, output_dir).write()
+        
+        return getattr(aloha_writers, 'ALOHAWriterFor%s' % language)(self, output_dir).write()
 
 
 
@@ -367,7 +367,7 @@ class AbstractALOHAModel(dict):
         self.look_for_symmetries()
         conjugate_list = self.look_for_conjugate()
         if not wanted_lorentz:
-            wanted_lorentz = self.model.all_lorentz
+            wanted_lorentz = [l.name for l in self.model.all_lorentz]
         for lorentz in self.model.all_lorentz:
             if not lorentz.name in wanted_lorentz:
                 # Only include the routines we ask for
@@ -621,8 +621,9 @@ if '__main__' == __name__:
         alohagenerator.compute_all(save=False)
         return alohagenerator
     def write(alohagenerator):
-        alohagenerator.write('/tmp/', 'Fortran')
+        alohagenerator.write('/tmp/', 'Python')
     alohagenerator = main()
+    logger.info('done in %s s' % (time.time()-start))
     write(alohagenerator)
     #profile.run('main()')
     #profile.run('write(alohagenerator)')

@@ -759,4 +759,193 @@ class ALOHAWriterForCPP(WriteALOHA):
         header = self.define_header()
         writer_h.writelines(self.write_h(header))
         writer_cc.writelines(self.write_cc(header))
+ 
+class ALOHAWriterForPython(WriteALOHA):
+    """ A class for returning a file/a string for python evaluation """
+    
+    extension = '.py'
+    
+    def __init__(self, abstract_routine, dirpath=None):
+        """ standard init but if dirpath is None the write routine will
+        return a string (which can be evaluated by an exec"""
         
+        if dirpath:
+            WriteALOHA.__init__(self, abstract_routine, dirpath)
+        else:
+            WriteALOHA.__init__(self, abstract_routine, '')
+            self.out_path = None
+            self.dir_out = None
+        
+        self.outname = '%s%s' % (self.particles[self.offshell -1], \
+                                                               self.offshell)
+    
+    
+    
+    
+    def change_var_format(self, name): 
+        """Formatting the variable name to Python format
+        start to count at zero"""
+        
+        def shift_indices(match):
+            """shift the indices for non impulsion object"""
+            if match.group('var').startswith('P'):
+                shift = 0
+            else: 
+                shift = -1
+            
+            return '%s[%s]' % (match.group('var'), \
+                                                int(match.group('num')) + shift)
+            
+        
+        name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', shift_indices , name)
+        return name
+    
+    def define_expression(self):
+        """Define the functions in a 100% way """
+        
+        OutString = ''
+        if not self.offshell:
+            for ind in self.obj.listindices():
+                string = 'vertex = C*' + self.write_obj(self.obj.get_rep(ind))
+                string = string.replace('+-', '-')
+                OutString = OutString + string + '\n'
+        else:
+            OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
+                                                                  self.offshell)
+            numerator = self.obj.numerator
+            denominator = self.obj.denominator
+            for ind in denominator.listindices():
+                denom = self.write_obj(denominator.get_rep(ind))
+            string = 'denom =' + '1.0/(' + denom + ')'
+            string = string.replace('+-', '-')
+            OutString += string + '\n'
+            counter = 0
+            for ind in numerator.listindices():
+                string = '%s[%d]= C*denom*' % (self.outname, counter)
+                string += self.write_obj(numerator.get_rep(ind))
+                string = string.replace('+-', '-')
+                OutString += string + '\n' 
+                counter += 1
+        return OutString 
+    
+    def define_foot(self):
+        if not self.offshell:
+            return 'return vertex \n'
+        else:
+            return 'return %s \n' % (self.outname)
+            
+    
+    def define_header(self):
+        """Define the Header of the fortran file. This include
+            - function tag
+            - definition of variable
+        """
+            
+        Momenta = self.collected['momenta']
+        OverM = self.collected['om']
+        
+        CallList = self.calllist['CallList']
+
+        str_out = ''
+        # define the type of function and argument        
+        if not self.offshell:
+            str_out += 'def %(name)s(%(args)s):\n' % \
+                {'name': self.namestring,
+                 'args': ','.join(CallList+ ['C']) }
+        else:
+            str_out += 'def %(name)s(%(args)s, C, M%(id)d, W%(id)d):\n' % \
+                {'name': self.namestring,
+                 'args': ', '.join(CallList), 
+                     'id': self.offshell}            
+        return str_out     
+
+    def make_declaration_list(self):
+        """ make the list of declaration nedded by the header """
+        return []
+
+    def define_momenta(self):
+        """Define the Header of the fortran file. This include
+            - momentum conservation
+            -definition of the impulsion"""
+            
+        # Definition of the Momenta
+        momenta = self.collected['momenta']
+        overm = self.collected['om']
+        momentum_conservation = self.calllist['Momentum']
+        
+        str_out = ''
+        
+        # Definition of the output
+        if self.offshell:
+            offshelltype = self.particles[self.offshell -1]
+            offshell_size = self.type_to_size[offshelltype]            
+            str_out += '%s = wavefunctions.WaveFunction(size=%s)\n' % \
+                                                (self.outname, offshell_size)
+        # Conservation of Energy Impulsion
+        if self.offshell:     
+            #Implement the conservation of Energy Impulsion
+            for i in range(-2,0):
+                str_out += '%s[%d] = ' % (self.outname, offshell_size + i)
+                
+                pat=re.compile(r'^[-+]?(?P<spin>\w)')
+                for elem in momentum_conservation:
+                    spin = pat.search(elem).group('spin') 
+                    str_out += '%s[%d]' % (elem, self.type_to_size[spin] + i)  
+                str_out += '\n'  
+                    
+        # Momentum
+        for mom in momenta:
+            #Mom is in format PX with X the number of the particle
+            index = int(mom[1:])
+            
+            type = self.particles[index - 1]
+            energy_pos = self.type_to_size[type] -2
+            sign = ''
+            if self.offshell == index and (type == 'V' or type == 'S'):
+                sign = '-'
+            
+            str_out += '%s = [%scomplex(%s%d[%d]).real, \\\n' % (mom, sign, type, index, energy_pos)
+            str_out += '        %s complex(%s%d[%d]).real, \\\n' % ( sign, type, index, energy_pos + 1)
+            str_out += '        %s complex(%s%d[%d]).imag, \\\n' % ( sign, type, index, energy_pos + 1)
+            str_out += '        %s complex(%s%d[%d]).imag]\n' % ( sign, type, index, energy_pos) 
+                   
+        # Definition for the One Over Mass**2 terms
+        for elem in overm:
+            #Mom is in format OMX with X the number of the particle
+            index = int(elem[2:])
+            str_out += 'om%d = 0.0\n' % (index)
+            str_out += 'if (m%d): om%d' % (index, index) + '=1.0/complex(m%d**2,-w%d*m%d)\n' % (index, index, index) 
+        
+        # Returning result
+        return str_out    
+
+    def define_symmetry(self, new_nb):
+        number = self.offshell 
+        calls = self.reorder_call_list(self.calllist['CallList'], self.offshell,
+                                                                        new_nb)
+        Outstring = 'return '+self.namestring+'('+','.join(calls)+',C,M%s,W%s)\n' \
+                         %(number,number)
+        return Outstring        
+
+    def write(self):
+                         
+        # write head - momenta - body - foot
+        text = 'import wavefunctions\n'
+        text += self.define_header()
+        content = self.define_momenta()
+        content += self.define_expression()
+        content += self.define_foot()
+        
+        # correct identation
+        text += '    ' +content.replace('\n','\n    ')
+        
+        for elem in self.symmetries:
+            text +='\n' + self.define_header().replace( \
+                             self.namestring,self.namestring[0:-1]+'%s' %(elem))
+            text += '    ' +self.define_symmetry(elem)
+            
+            
+        if self.out_path:
+            ff = open(self.out_path,'w').write(text)
+        else:
+            return text

@@ -2430,6 +2430,41 @@ class TestAlohaWriter(unittest.TestCase):
         map(self.assertEqual, converted, solution)
  
  
-    
-    
+    def test_pythonwriter(self):
+        """ test that python writer works """
         
+        solution ="""import wavefunctions
+def SSS1_1(S2, S3, C, M1, W1):
+    S1 = wavefunctions.WaveFunction(size=3)
+    S1[1] = S2[1]+S3[1]
+    S1[2] = S2[2]+S3[2]
+    P1 = [-complex(S1[1]).real, \\
+            - complex(S1[2]).real, \\
+            - complex(S1[2]).imag, \\
+            - complex(S1[1]).imag]
+    denom =1.0/(( (M1*( -M1+1j*W1))+( (P1[0]**2)-(P1[1]**2)-(P1[2]**2)-(P1[3]**2))))
+    S1[0]= C*denom*1j*(S3[0]*S2[0])
+    return S1 
+    
+def SSS1_2(S2, S3, C, M1, W1):
+    return SSS1_1(S3,S2,C,M1,W1)
+
+def SSS1_3(S2, S3, C, M1, W1):
+    return SSS1_1(S3,S2,C,M1,W1)
+"""
+        
+        SSS = UFOLorentz(name = 'SSS1',
+                 spins = [ 1, 1, 1 ],
+                 structure = '1')        
+        builder = create_aloha.AbstractRoutineBuilder(SSS)
+        amp = builder.compute_routine(1)
+        amp.add_symmetry(2)
+        amp.add_symmetry(3)
+        
+        routine = amp.write(output_dir=None, language='Python')
+        
+        split_solution = solution.split('\n')
+        split_routine = routine.split('\n')
+        for i,line in enumerate(split_routine):
+            self.assertEqual(split_solution[i],line)
+        self.assertEqual(len(split_routine), len(split_solution))
