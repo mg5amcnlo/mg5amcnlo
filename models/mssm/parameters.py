@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 294 $
+# This file was automatically created by FeynRules $Revision: 302 $
 # Mathematica version: 7.0 for Linux x86 (64-bit) (February 18, 2009)
-# Date: Tue 24 Aug 2010 12:44:50
+# Date: Wed 1 Sep 2010 14:11:13
 
 
 
@@ -17,54 +17,6 @@ RRd11 = Parameter(name = 'RRd11',
                   lhablock = 'DSQMIX',
                   lhacode = [ 1, 1 ])
 
-RRd12 = Parameter(name = 'RRd12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd12}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 1, 2 ])
-
-RRd13 = Parameter(name = 'RRd13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd13}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 1, 3 ])
-
-RRd14 = Parameter(name = 'RRd14',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd14}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 1, 4 ])
-
-RRd15 = Parameter(name = 'RRd15',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd15}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 1, 5 ])
-
-RRd16 = Parameter(name = 'RRd16',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd16}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 1, 6 ])
-
-RRd21 = Parameter(name = 'RRd21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd21}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 2, 1 ])
-
 RRd22 = Parameter(name = 'RRd22',
                   nature = 'external',
                   type = 'real',
@@ -72,54 +24,6 @@ RRd22 = Parameter(name = 'RRd22',
                   texname = '\\text{RRd22}',
                   lhablock = 'DSQMIX',
                   lhacode = [ 2, 2 ])
-
-RRd23 = Parameter(name = 'RRd23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd23}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 2, 3 ])
-
-RRd24 = Parameter(name = 'RRd24',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd24}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 2, 4 ])
-
-RRd25 = Parameter(name = 'RRd25',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd25}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 2, 5 ])
-
-RRd26 = Parameter(name = 'RRd26',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd26}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 2, 6 ])
-
-RRd31 = Parameter(name = 'RRd31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd31}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 3, 1 ])
-
-RRd32 = Parameter(name = 'RRd32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd32}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 3, 2 ])
 
 RRd33 = Parameter(name = 'RRd33',
                   nature = 'external',
@@ -129,22 +33,6 @@ RRd33 = Parameter(name = 'RRd33',
                   lhablock = 'DSQMIX',
                   lhacode = [ 3, 3 ])
 
-RRd34 = Parameter(name = 'RRd34',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd34}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 3, 4 ])
-
-RRd35 = Parameter(name = 'RRd35',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd35}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 3, 5 ])
-
 RRd36 = Parameter(name = 'RRd36',
                   nature = 'external',
                   type = 'real',
@@ -152,30 +40,6 @@ RRd36 = Parameter(name = 'RRd36',
                   texname = '\\text{RRd36}',
                   lhablock = 'DSQMIX',
                   lhacode = [ 3, 6 ])
-
-RRd41 = Parameter(name = 'RRd41',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd41}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 4, 1 ])
-
-RRd42 = Parameter(name = 'RRd42',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd42}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 4, 2 ])
-
-RRd43 = Parameter(name = 'RRd43',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd43}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 4, 3 ])
 
 RRd44 = Parameter(name = 'RRd44',
                   nature = 'external',
@@ -185,54 +49,6 @@ RRd44 = Parameter(name = 'RRd44',
                   lhablock = 'DSQMIX',
                   lhacode = [ 4, 4 ])
 
-RRd45 = Parameter(name = 'RRd45',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd45}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 4, 5 ])
-
-RRd46 = Parameter(name = 'RRd46',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd46}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 4, 6 ])
-
-RRd51 = Parameter(name = 'RRd51',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd51}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 5, 1 ])
-
-RRd52 = Parameter(name = 'RRd52',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd52}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 5, 2 ])
-
-RRd53 = Parameter(name = 'RRd53',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd53}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 5, 3 ])
-
-RRd54 = Parameter(name = 'RRd54',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd54}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 5, 4 ])
-
 RRd55 = Parameter(name = 'RRd55',
                   nature = 'external',
                   type = 'real',
@@ -241,30 +57,6 @@ RRd55 = Parameter(name = 'RRd55',
                   lhablock = 'DSQMIX',
                   lhacode = [ 5, 5 ])
 
-RRd56 = Parameter(name = 'RRd56',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd56}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 5, 6 ])
-
-RRd61 = Parameter(name = 'RRd61',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd61}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 6, 1 ])
-
-RRd62 = Parameter(name = 'RRd62',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd62}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 6, 2 ])
-
 RRd63 = Parameter(name = 'RRd63',
                   nature = 'external',
                   type = 'real',
@@ -272,22 +64,6 @@ RRd63 = Parameter(name = 'RRd63',
                   texname = '\\text{RRd63}',
                   lhablock = 'DSQMIX',
                   lhacode = [ 6, 3 ])
-
-RRd64 = Parameter(name = 'RRd64',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd64}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 6, 4 ])
-
-RRd65 = Parameter(name = 'RRd65',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRd65}',
-                  lhablock = 'DSQMIX',
-                  lhacode = [ 6, 5 ])
 
 RRd66 = Parameter(name = 'RRd66',
                   nature = 'external',
@@ -361,2102 +137,6 @@ MA2 = Parameter(name = 'MA2',
                 lhablock = 'HMIX',
                 lhacode = [ 4 ])
 
-IRd11 = Parameter(name = 'IRd11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd11}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 1, 1 ])
-
-IRd12 = Parameter(name = 'IRd12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd12}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 1, 2 ])
-
-IRd13 = Parameter(name = 'IRd13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd13}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 1, 3 ])
-
-IRd14 = Parameter(name = 'IRd14',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd14}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 1, 4 ])
-
-IRd15 = Parameter(name = 'IRd15',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd15}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 1, 5 ])
-
-IRd16 = Parameter(name = 'IRd16',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd16}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 1, 6 ])
-
-IRd21 = Parameter(name = 'IRd21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd21}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 2, 1 ])
-
-IRd22 = Parameter(name = 'IRd22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd22}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 2, 2 ])
-
-IRd23 = Parameter(name = 'IRd23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd23}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 2, 3 ])
-
-IRd24 = Parameter(name = 'IRd24',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd24}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 2, 4 ])
-
-IRd25 = Parameter(name = 'IRd25',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd25}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 2, 5 ])
-
-IRd26 = Parameter(name = 'IRd26',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd26}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 2, 6 ])
-
-IRd31 = Parameter(name = 'IRd31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd31}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 3, 1 ])
-
-IRd32 = Parameter(name = 'IRd32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd32}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 3, 2 ])
-
-IRd33 = Parameter(name = 'IRd33',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd33}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 3, 3 ])
-
-IRd34 = Parameter(name = 'IRd34',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd34}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 3, 4 ])
-
-IRd35 = Parameter(name = 'IRd35',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd35}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 3, 5 ])
-
-IRd36 = Parameter(name = 'IRd36',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd36}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 3, 6 ])
-
-IRd41 = Parameter(name = 'IRd41',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd41}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 4, 1 ])
-
-IRd42 = Parameter(name = 'IRd42',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd42}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 4, 2 ])
-
-IRd43 = Parameter(name = 'IRd43',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd43}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 4, 3 ])
-
-IRd44 = Parameter(name = 'IRd44',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd44}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 4, 4 ])
-
-IRd45 = Parameter(name = 'IRd45',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd45}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 4, 5 ])
-
-IRd46 = Parameter(name = 'IRd46',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd46}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 4, 6 ])
-
-IRd51 = Parameter(name = 'IRd51',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd51}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 5, 1 ])
-
-IRd52 = Parameter(name = 'IRd52',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd52}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 5, 2 ])
-
-IRd53 = Parameter(name = 'IRd53',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd53}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 5, 3 ])
-
-IRd54 = Parameter(name = 'IRd54',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd54}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 5, 4 ])
-
-IRd55 = Parameter(name = 'IRd55',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd55}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 5, 5 ])
-
-IRd56 = Parameter(name = 'IRd56',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd56}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 5, 6 ])
-
-IRd61 = Parameter(name = 'IRd61',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd61}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 6, 1 ])
-
-IRd62 = Parameter(name = 'IRd62',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd62}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 6, 2 ])
-
-IRd63 = Parameter(name = 'IRd63',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd63}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 6, 3 ])
-
-IRd64 = Parameter(name = 'IRd64',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd64}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 6, 4 ])
-
-IRd65 = Parameter(name = 'IRd65',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd65}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 6, 5 ])
-
-IRd66 = Parameter(name = 'IRd66',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRd66}',
-                  lhablock = 'IMDSQMIX',
-                  lhacode = [ 6, 6 ])
-
-IMU = Parameter(name = 'IMU',
-                nature = 'external',
-                type = 'real',
-                value = 0.,
-                texname = '\\text{IMU}',
-                lhablock = 'IMHMIX',
-                lhacode = [ 1 ])
-
-ImDR11 = Parameter(name = 'ImDR11',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImDR11}',
-                   lhablock = 'IMMSD2',
-                   lhacode = [ 1, 1 ])
-
-ImDR12 = Parameter(name = 'ImDR12',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImDR12}',
-                   lhablock = 'IMMSD2',
-                   lhacode = [ 1, 2 ])
-
-ImDR13 = Parameter(name = 'ImDR13',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImDR13}',
-                   lhablock = 'IMMSD2',
-                   lhacode = [ 1, 3 ])
-
-ImDR21 = Parameter(name = 'ImDR21',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImDR21}',
-                   lhablock = 'IMMSD2',
-                   lhacode = [ 2, 1 ])
-
-ImDR22 = Parameter(name = 'ImDR22',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImDR22}',
-                   lhablock = 'IMMSD2',
-                   lhacode = [ 2, 2 ])
-
-ImDR23 = Parameter(name = 'ImDR23',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImDR23}',
-                   lhablock = 'IMMSD2',
-                   lhacode = [ 2, 3 ])
-
-ImDR31 = Parameter(name = 'ImDR31',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImDR31}',
-                   lhablock = 'IMMSD2',
-                   lhacode = [ 3, 1 ])
-
-ImDR32 = Parameter(name = 'ImDR32',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImDR32}',
-                   lhablock = 'IMMSD2',
-                   lhacode = [ 3, 2 ])
-
-ImDR33 = Parameter(name = 'ImDR33',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImDR33}',
-                   lhablock = 'IMMSD2',
-                   lhacode = [ 3, 3 ])
-
-ImER11 = Parameter(name = 'ImER11',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImER11}',
-                   lhablock = 'IMMSE2',
-                   lhacode = [ 1, 1 ])
-
-ImER12 = Parameter(name = 'ImER12',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImER12}',
-                   lhablock = 'IMMSE2',
-                   lhacode = [ 1, 2 ])
-
-ImER13 = Parameter(name = 'ImER13',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImER13}',
-                   lhablock = 'IMMSE2',
-                   lhacode = [ 1, 3 ])
-
-ImER21 = Parameter(name = 'ImER21',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImER21}',
-                   lhablock = 'IMMSE2',
-                   lhacode = [ 2, 1 ])
-
-ImER22 = Parameter(name = 'ImER22',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImER22}',
-                   lhablock = 'IMMSE2',
-                   lhacode = [ 2, 2 ])
-
-ImER23 = Parameter(name = 'ImER23',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImER23}',
-                   lhablock = 'IMMSE2',
-                   lhacode = [ 2, 3 ])
-
-ImER31 = Parameter(name = 'ImER31',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImER31}',
-                   lhablock = 'IMMSE2',
-                   lhacode = [ 3, 1 ])
-
-ImER32 = Parameter(name = 'ImER32',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImER32}',
-                   lhablock = 'IMMSE2',
-                   lhacode = [ 3, 2 ])
-
-ImER33 = Parameter(name = 'ImER33',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImER33}',
-                   lhablock = 'IMMSE2',
-                   lhacode = [ 3, 3 ])
-
-ImLL11 = Parameter(name = 'ImLL11',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImLL11}',
-                   lhablock = 'IMMSL2',
-                   lhacode = [ 1, 1 ])
-
-ImLL12 = Parameter(name = 'ImLL12',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImLL12}',
-                   lhablock = 'IMMSL2',
-                   lhacode = [ 1, 2 ])
-
-ImLL13 = Parameter(name = 'ImLL13',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImLL13}',
-                   lhablock = 'IMMSL2',
-                   lhacode = [ 1, 3 ])
-
-ImLL21 = Parameter(name = 'ImLL21',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImLL21}',
-                   lhablock = 'IMMSL2',
-                   lhacode = [ 2, 1 ])
-
-ImLL22 = Parameter(name = 'ImLL22',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImLL22}',
-                   lhablock = 'IMMSL2',
-                   lhacode = [ 2, 2 ])
-
-ImLL23 = Parameter(name = 'ImLL23',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImLL23}',
-                   lhablock = 'IMMSL2',
-                   lhacode = [ 2, 3 ])
-
-ImLL31 = Parameter(name = 'ImLL31',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImLL31}',
-                   lhablock = 'IMMSL2',
-                   lhacode = [ 3, 1 ])
-
-ImLL32 = Parameter(name = 'ImLL32',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImLL32}',
-                   lhablock = 'IMMSL2',
-                   lhacode = [ 3, 2 ])
-
-ImLL33 = Parameter(name = 'ImLL33',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImLL33}',
-                   lhablock = 'IMMSL2',
-                   lhacode = [ 3, 3 ])
-
-IMx1 = Parameter(name = 'IMx1',
-                 nature = 'external',
-                 type = 'real',
-                 value = 0.,
-                 texname = 'M_1',
-                 lhablock = 'IMMSOFT',
-                 lhacode = [ 1 ])
-
-IMx2 = Parameter(name = 'IMx2',
-                 nature = 'external',
-                 type = 'real',
-                 value = 0.,
-                 texname = 'M_2',
-                 lhablock = 'IMMSOFT',
-                 lhacode = [ 2 ])
-
-IMx3 = Parameter(name = 'IMx3',
-                 nature = 'external',
-                 type = 'real',
-                 value = 0.,
-                 texname = 'M_3',
-                 lhablock = 'IMMSOFT',
-                 lhacode = [ 3 ])
-
-ImQL11 = Parameter(name = 'ImQL11',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImQL11}',
-                   lhablock = 'IMMSQ2',
-                   lhacode = [ 1, 1 ])
-
-ImQL12 = Parameter(name = 'ImQL12',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImQL12}',
-                   lhablock = 'IMMSQ2',
-                   lhacode = [ 1, 2 ])
-
-ImQL13 = Parameter(name = 'ImQL13',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImQL13}',
-                   lhablock = 'IMMSQ2',
-                   lhacode = [ 1, 3 ])
-
-ImQL21 = Parameter(name = 'ImQL21',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImQL21}',
-                   lhablock = 'IMMSQ2',
-                   lhacode = [ 2, 1 ])
-
-ImQL22 = Parameter(name = 'ImQL22',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImQL22}',
-                   lhablock = 'IMMSQ2',
-                   lhacode = [ 2, 2 ])
-
-ImQL23 = Parameter(name = 'ImQL23',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImQL23}',
-                   lhablock = 'IMMSQ2',
-                   lhacode = [ 2, 3 ])
-
-ImQL31 = Parameter(name = 'ImQL31',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImQL31}',
-                   lhablock = 'IMMSQ2',
-                   lhacode = [ 3, 1 ])
-
-ImQL32 = Parameter(name = 'ImQL32',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImQL32}',
-                   lhablock = 'IMMSQ2',
-                   lhacode = [ 3, 2 ])
-
-ImQL33 = Parameter(name = 'ImQL33',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImQL33}',
-                   lhablock = 'IMMSQ2',
-                   lhacode = [ 3, 3 ])
-
-ImUR11 = Parameter(name = 'ImUR11',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImUR11}',
-                   lhablock = 'IMMSU2',
-                   lhacode = [ 1, 1 ])
-
-ImUR12 = Parameter(name = 'ImUR12',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImUR12}',
-                   lhablock = 'IMMSU2',
-                   lhacode = [ 1, 2 ])
-
-ImUR13 = Parameter(name = 'ImUR13',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImUR13}',
-                   lhablock = 'IMMSU2',
-                   lhacode = [ 1, 3 ])
-
-ImUR21 = Parameter(name = 'ImUR21',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImUR21}',
-                   lhablock = 'IMMSU2',
-                   lhacode = [ 2, 1 ])
-
-ImUR22 = Parameter(name = 'ImUR22',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImUR22}',
-                   lhablock = 'IMMSU2',
-                   lhacode = [ 2, 2 ])
-
-ImUR23 = Parameter(name = 'ImUR23',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImUR23}',
-                   lhablock = 'IMMSU2',
-                   lhacode = [ 2, 3 ])
-
-ImUR31 = Parameter(name = 'ImUR31',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImUR31}',
-                   lhablock = 'IMMSU2',
-                   lhacode = [ 3, 1 ])
-
-ImUR32 = Parameter(name = 'ImUR32',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImUR32}',
-                   lhablock = 'IMMSU2',
-                   lhacode = [ 3, 2 ])
-
-ImUR33 = Parameter(name = 'ImUR33',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ImUR33}',
-                   lhablock = 'IMMSU2',
-                   lhacode = [ 3, 3 ])
-
-INN11 = Parameter(name = 'INN11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{INN11}',
-                  lhablock = 'IMNMIX',
-                  lhacode = [ 1, 1 ])
-
-INN12 = Parameter(name = 'INN12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{INN12}',
-                  lhablock = 'IMNMIX',
-                  lhacode = [ 1, 2 ])
-
-INN13 = Parameter(name = 'INN13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{INN13}',
-                  lhablock = 'IMNMIX',
-                  lhacode = [ 1, 3 ])
-
-INN14 = Parameter(name = 'INN14',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{INN14}',
-                  lhablock = 'IMNMIX',
-                  lhacode = [ 1, 4 ])
-
-INN21 = Parameter(name = 'INN21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{INN21}',
-                  lhablock = 'IMNMIX',
-                  lhacode = [ 2, 1 ])
-
-INN22 = Parameter(name = 'INN22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{INN22}',
-                  lhablock = 'IMNMIX',
-                  lhacode = [ 2, 2 ])
-
-INN23 = Parameter(name = 'INN23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{INN23}',
-                  lhablock = 'IMNMIX',
-                  lhacode = [ 2, 3 ])
-
-INN24 = Parameter(name = 'INN24',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{INN24}',
-                  lhablock = 'IMNMIX',
-                  lhacode = [ 2, 4 ])
-
-INN31 = Parameter(name = 'INN31',
-                  nature = 'external',
-                  type = 'real',
-                  value = -0.0603388002,
-                  texname = '\\text{INN31}',
-                  lhablock = 'IMNMIX',
-                  lhacode = [ 3, 1 ])
-
-INN32 = Parameter(name = 'INN32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.0877004854,
-                  texname = '\\text{INN32}',
-                  lhablock = 'IMNMIX',
-                  lhacode = [ 3, 2 ])
-
-INN33 = Parameter(name = 'INN33',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.695877493,
-                  texname = '\\text{INN33}',
-                  lhablock = 'IMNMIX',
-                  lhacode = [ 3, 3 ])
-
-INN34 = Parameter(name = 'INN34',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.710226984,
-                  texname = '\\text{INN34}',
-                  lhablock = 'IMNMIX',
-                  lhacode = [ 3, 4 ])
-
-INN41 = Parameter(name = 'INN41',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{INN41}',
-                  lhablock = 'IMNMIX',
-                  lhacode = [ 4, 1 ])
-
-INN42 = Parameter(name = 'INN42',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{INN42}',
-                  lhablock = 'IMNMIX',
-                  lhacode = [ 4, 2 ])
-
-INN43 = Parameter(name = 'INN43',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{INN43}',
-                  lhablock = 'IMNMIX',
-                  lhacode = [ 4, 3 ])
-
-INN44 = Parameter(name = 'INN44',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{INN44}',
-                  lhablock = 'IMNMIX',
-                  lhacode = [ 4, 4 ])
-
-IRl11 = Parameter(name = 'IRl11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl11}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 1, 1 ])
-
-IRl12 = Parameter(name = 'IRl12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl12}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 1, 2 ])
-
-IRl13 = Parameter(name = 'IRl13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl13}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 1, 3 ])
-
-IRl14 = Parameter(name = 'IRl14',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl14}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 1, 4 ])
-
-IRl15 = Parameter(name = 'IRl15',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl15}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 1, 5 ])
-
-IRl16 = Parameter(name = 'IRl16',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl16}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 1, 6 ])
-
-IRl21 = Parameter(name = 'IRl21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl21}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 2, 1 ])
-
-IRl22 = Parameter(name = 'IRl22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl22}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 2, 2 ])
-
-IRl23 = Parameter(name = 'IRl23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl23}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 2, 3 ])
-
-IRl24 = Parameter(name = 'IRl24',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl24}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 2, 4 ])
-
-IRl25 = Parameter(name = 'IRl25',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl25}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 2, 5 ])
-
-IRl26 = Parameter(name = 'IRl26',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl26}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 2, 6 ])
-
-IRl31 = Parameter(name = 'IRl31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl31}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 3, 1 ])
-
-IRl32 = Parameter(name = 'IRl32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl32}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 3, 2 ])
-
-IRl33 = Parameter(name = 'IRl33',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl33}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 3, 3 ])
-
-IRl34 = Parameter(name = 'IRl34',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl34}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 3, 4 ])
-
-IRl35 = Parameter(name = 'IRl35',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl35}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 3, 5 ])
-
-IRl36 = Parameter(name = 'IRl36',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl36}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 3, 6 ])
-
-IRl41 = Parameter(name = 'IRl41',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl41}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 4, 1 ])
-
-IRl42 = Parameter(name = 'IRl42',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl42}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 4, 2 ])
-
-IRl43 = Parameter(name = 'IRl43',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl43}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 4, 3 ])
-
-IRl44 = Parameter(name = 'IRl44',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl44}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 4, 4 ])
-
-IRl45 = Parameter(name = 'IRl45',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl45}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 4, 5 ])
-
-IRl46 = Parameter(name = 'IRl46',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl46}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 4, 6 ])
-
-IRl51 = Parameter(name = 'IRl51',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl51}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 5, 1 ])
-
-IRl52 = Parameter(name = 'IRl52',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl52}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 5, 2 ])
-
-IRl53 = Parameter(name = 'IRl53',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl53}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 5, 3 ])
-
-IRl54 = Parameter(name = 'IRl54',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl54}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 5, 4 ])
-
-IRl55 = Parameter(name = 'IRl55',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl55}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 5, 5 ])
-
-IRl56 = Parameter(name = 'IRl56',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl56}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 5, 6 ])
-
-IRl61 = Parameter(name = 'IRl61',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl61}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 6, 1 ])
-
-IRl62 = Parameter(name = 'IRl62',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl62}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 6, 2 ])
-
-IRl63 = Parameter(name = 'IRl63',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl63}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 6, 3 ])
-
-IRl64 = Parameter(name = 'IRl64',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl64}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 6, 4 ])
-
-IRl65 = Parameter(name = 'IRl65',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl65}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 6, 5 ])
-
-IRl66 = Parameter(name = 'IRl66',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRl66}',
-                  lhablock = 'IMSELMIX',
-                  lhacode = [ 6, 6 ])
-
-IRn11 = Parameter(name = 'IRn11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRn11}',
-                  lhablock = 'IMSNUMIX',
-                  lhacode = [ 1, 1 ])
-
-IRn12 = Parameter(name = 'IRn12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRn12}',
-                  lhablock = 'IMSNUMIX',
-                  lhacode = [ 1, 2 ])
-
-IRn13 = Parameter(name = 'IRn13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRn13}',
-                  lhablock = 'IMSNUMIX',
-                  lhacode = [ 1, 3 ])
-
-IRn21 = Parameter(name = 'IRn21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRn21}',
-                  lhablock = 'IMSNUMIX',
-                  lhacode = [ 2, 1 ])
-
-IRn22 = Parameter(name = 'IRn22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRn22}',
-                  lhablock = 'IMSNUMIX',
-                  lhacode = [ 2, 2 ])
-
-IRn23 = Parameter(name = 'IRn23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRn23}',
-                  lhablock = 'IMSNUMIX',
-                  lhacode = [ 2, 3 ])
-
-IRn31 = Parameter(name = 'IRn31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRn31}',
-                  lhablock = 'IMSNUMIX',
-                  lhacode = [ 3, 1 ])
-
-IRn32 = Parameter(name = 'IRn32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRn32}',
-                  lhablock = 'IMSNUMIX',
-                  lhacode = [ 3, 2 ])
-
-IRn33 = Parameter(name = 'IRn33',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRn33}',
-                  lhablock = 'IMSNUMIX',
-                  lhacode = [ 3, 3 ])
-
-Itd11 = Parameter(name = 'Itd11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Itd11}',
-                  lhablock = 'IMTD',
-                  lhacode = [ 1, 1 ])
-
-Itd12 = Parameter(name = 'Itd12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Itd12}',
-                  lhablock = 'IMTD',
-                  lhacode = [ 1, 2 ])
-
-Itd13 = Parameter(name = 'Itd13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Itd13}',
-                  lhablock = 'IMTD',
-                  lhacode = [ 1, 3 ])
-
-Itd21 = Parameter(name = 'Itd21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Itd21}',
-                  lhablock = 'IMTD',
-                  lhacode = [ 2, 1 ])
-
-Itd22 = Parameter(name = 'Itd22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Itd22}',
-                  lhablock = 'IMTD',
-                  lhacode = [ 2, 2 ])
-
-Itd23 = Parameter(name = 'Itd23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Itd23}',
-                  lhablock = 'IMTD',
-                  lhacode = [ 2, 3 ])
-
-Itd31 = Parameter(name = 'Itd31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Itd31}',
-                  lhablock = 'IMTD',
-                  lhacode = [ 3, 1 ])
-
-Itd32 = Parameter(name = 'Itd32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Itd32}',
-                  lhablock = 'IMTD',
-                  lhacode = [ 3, 2 ])
-
-Itd33 = Parameter(name = 'Itd33',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Itd33}',
-                  lhablock = 'IMTD',
-                  lhacode = [ 3, 3 ])
-
-Ite11 = Parameter(name = 'Ite11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ite11}',
-                  lhablock = 'IMTE',
-                  lhacode = [ 1, 1 ])
-
-Ite12 = Parameter(name = 'Ite12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ite12}',
-                  lhablock = 'IMTE',
-                  lhacode = [ 1, 2 ])
-
-Ite13 = Parameter(name = 'Ite13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ite13}',
-                  lhablock = 'IMTE',
-                  lhacode = [ 1, 3 ])
-
-Ite21 = Parameter(name = 'Ite21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ite21}',
-                  lhablock = 'IMTE',
-                  lhacode = [ 2, 1 ])
-
-Ite22 = Parameter(name = 'Ite22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ite22}',
-                  lhablock = 'IMTE',
-                  lhacode = [ 2, 2 ])
-
-Ite23 = Parameter(name = 'Ite23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ite23}',
-                  lhablock = 'IMTE',
-                  lhacode = [ 2, 3 ])
-
-Ite31 = Parameter(name = 'Ite31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ite31}',
-                  lhablock = 'IMTE',
-                  lhacode = [ 3, 1 ])
-
-Ite32 = Parameter(name = 'Ite32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ite32}',
-                  lhablock = 'IMTE',
-                  lhacode = [ 3, 2 ])
-
-Ite33 = Parameter(name = 'Ite33',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ite33}',
-                  lhablock = 'IMTE',
-                  lhacode = [ 3, 3 ])
-
-Itu11 = Parameter(name = 'Itu11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Itu11}',
-                  lhablock = 'IMTU',
-                  lhacode = [ 1, 1 ])
-
-Itu12 = Parameter(name = 'Itu12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Itu12}',
-                  lhablock = 'IMTU',
-                  lhacode = [ 1, 2 ])
-
-Itu13 = Parameter(name = 'Itu13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Itu13}',
-                  lhablock = 'IMTU',
-                  lhacode = [ 1, 3 ])
-
-Itu21 = Parameter(name = 'Itu21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Itu21}',
-                  lhablock = 'IMTU',
-                  lhacode = [ 2, 1 ])
-
-Itu22 = Parameter(name = 'Itu22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Itu22}',
-                  lhablock = 'IMTU',
-                  lhacode = [ 2, 2 ])
-
-Itu23 = Parameter(name = 'Itu23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Itu23}',
-                  lhablock = 'IMTU',
-                  lhacode = [ 2, 3 ])
-
-Itu31 = Parameter(name = 'Itu31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Itu31}',
-                  lhablock = 'IMTU',
-                  lhacode = [ 3, 1 ])
-
-Itu32 = Parameter(name = 'Itu32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Itu32}',
-                  lhablock = 'IMTU',
-                  lhacode = [ 3, 2 ])
-
-Itu33 = Parameter(name = 'Itu33',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Itu33}',
-                  lhablock = 'IMTU',
-                  lhacode = [ 3, 3 ])
-
-IUU11 = Parameter(name = 'IUU11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IUU11}',
-                  lhablock = 'IMUMIX',
-                  lhacode = [ 1, 1 ])
-
-IUU12 = Parameter(name = 'IUU12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IUU12}',
-                  lhablock = 'IMUMIX',
-                  lhacode = [ 1, 2 ])
-
-IUU21 = Parameter(name = 'IUU21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IUU21}',
-                  lhablock = 'IMUMIX',
-                  lhacode = [ 2, 1 ])
-
-IUU22 = Parameter(name = 'IUU22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IUU22}',
-                  lhablock = 'IMUMIX',
-                  lhacode = [ 2, 2 ])
-
-IMNS11 = Parameter(name = 'IMNS11',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{IMNS11}',
-                   lhablock = 'IMUPMNS',
-                   lhacode = [ 1, 1 ])
-
-IMNS12 = Parameter(name = 'IMNS12',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{IMNS12}',
-                   lhablock = 'IMUPMNS',
-                   lhacode = [ 1, 2 ])
-
-IMNS13 = Parameter(name = 'IMNS13',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{IMNS13}',
-                   lhablock = 'IMUPMNS',
-                   lhacode = [ 1, 3 ])
-
-IMNS21 = Parameter(name = 'IMNS21',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{IMNS21}',
-                   lhablock = 'IMUPMNS',
-                   lhacode = [ 2, 1 ])
-
-IMNS22 = Parameter(name = 'IMNS22',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{IMNS22}',
-                   lhablock = 'IMUPMNS',
-                   lhacode = [ 2, 2 ])
-
-IMNS23 = Parameter(name = 'IMNS23',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{IMNS23}',
-                   lhablock = 'IMUPMNS',
-                   lhacode = [ 2, 3 ])
-
-IMNS31 = Parameter(name = 'IMNS31',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{IMNS31}',
-                   lhablock = 'IMUPMNS',
-                   lhacode = [ 3, 1 ])
-
-IMNS32 = Parameter(name = 'IMNS32',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{IMNS32}',
-                   lhablock = 'IMUPMNS',
-                   lhacode = [ 3, 2 ])
-
-IMNS33 = Parameter(name = 'IMNS33',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{IMNS33}',
-                   lhablock = 'IMUPMNS',
-                   lhacode = [ 3, 3 ])
-
-IRu11 = Parameter(name = 'IRu11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu11}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 1, 1 ])
-
-IRu12 = Parameter(name = 'IRu12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu12}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 1, 2 ])
-
-IRu13 = Parameter(name = 'IRu13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu13}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 1, 3 ])
-
-IRu14 = Parameter(name = 'IRu14',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu14}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 1, 4 ])
-
-IRu15 = Parameter(name = 'IRu15',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu15}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 1, 5 ])
-
-IRu16 = Parameter(name = 'IRu16',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu16}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 1, 6 ])
-
-IRu21 = Parameter(name = 'IRu21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu21}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 2, 1 ])
-
-IRu22 = Parameter(name = 'IRu22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu22}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 2, 2 ])
-
-IRu23 = Parameter(name = 'IRu23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu23}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 2, 3 ])
-
-IRu24 = Parameter(name = 'IRu24',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu24}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 2, 4 ])
-
-IRu25 = Parameter(name = 'IRu25',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu25}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 2, 5 ])
-
-IRu26 = Parameter(name = 'IRu26',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu26}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 2, 6 ])
-
-IRu31 = Parameter(name = 'IRu31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu31}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 3, 1 ])
-
-IRu32 = Parameter(name = 'IRu32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu32}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 3, 2 ])
-
-IRu33 = Parameter(name = 'IRu33',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu33}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 3, 3 ])
-
-IRu34 = Parameter(name = 'IRu34',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu34}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 3, 4 ])
-
-IRu35 = Parameter(name = 'IRu35',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu35}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 3, 5 ])
-
-IRu36 = Parameter(name = 'IRu36',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu36}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 3, 6 ])
-
-IRu41 = Parameter(name = 'IRu41',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu41}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 4, 1 ])
-
-IRu42 = Parameter(name = 'IRu42',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu42}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 4, 2 ])
-
-IRu43 = Parameter(name = 'IRu43',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu43}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 4, 3 ])
-
-IRu44 = Parameter(name = 'IRu44',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu44}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 4, 4 ])
-
-IRu45 = Parameter(name = 'IRu45',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu45}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 4, 5 ])
-
-IRu46 = Parameter(name = 'IRu46',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu46}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 4, 6 ])
-
-IRu51 = Parameter(name = 'IRu51',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu51}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 5, 1 ])
-
-IRu52 = Parameter(name = 'IRu52',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu52}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 5, 2 ])
-
-IRu53 = Parameter(name = 'IRu53',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu53}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 5, 3 ])
-
-IRu54 = Parameter(name = 'IRu54',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu54}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 5, 4 ])
-
-IRu55 = Parameter(name = 'IRu55',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu55}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 5, 5 ])
-
-IRu56 = Parameter(name = 'IRu56',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu56}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 5, 6 ])
-
-IRu61 = Parameter(name = 'IRu61',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu61}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 6, 1 ])
-
-IRu62 = Parameter(name = 'IRu62',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu62}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 6, 2 ])
-
-IRu63 = Parameter(name = 'IRu63',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu63}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 6, 3 ])
-
-IRu64 = Parameter(name = 'IRu64',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu64}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 6, 4 ])
-
-IRu65 = Parameter(name = 'IRu65',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu65}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 6, 5 ])
-
-IRu66 = Parameter(name = 'IRu66',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IRu66}',
-                  lhablock = 'IMUSQMIX',
-                  lhacode = [ 6, 6 ])
-
-ICKM11 = Parameter(name = 'ICKM11',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ICKM11}',
-                   lhablock = 'IMVCKM',
-                   lhacode = [ 1, 1 ])
-
-ICKM12 = Parameter(name = 'ICKM12',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ICKM12}',
-                   lhablock = 'IMVCKM',
-                   lhacode = [ 1, 2 ])
-
-ICKM13 = Parameter(name = 'ICKM13',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ICKM13}',
-                   lhablock = 'IMVCKM',
-                   lhacode = [ 1, 3 ])
-
-ICKM21 = Parameter(name = 'ICKM21',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ICKM21}',
-                   lhablock = 'IMVCKM',
-                   lhacode = [ 2, 1 ])
-
-ICKM22 = Parameter(name = 'ICKM22',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ICKM22}',
-                   lhablock = 'IMVCKM',
-                   lhacode = [ 2, 2 ])
-
-ICKM23 = Parameter(name = 'ICKM23',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ICKM23}',
-                   lhablock = 'IMVCKM',
-                   lhacode = [ 2, 3 ])
-
-ICKM31 = Parameter(name = 'ICKM31',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ICKM31}',
-                   lhablock = 'IMVCKM',
-                   lhacode = [ 3, 1 ])
-
-ICKM32 = Parameter(name = 'ICKM32',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ICKM32}',
-                   lhablock = 'IMVCKM',
-                   lhacode = [ 3, 2 ])
-
-ICKM33 = Parameter(name = 'ICKM33',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{ICKM33}',
-                   lhablock = 'IMVCKM',
-                   lhacode = [ 3, 3 ])
-
-IVV11 = Parameter(name = 'IVV11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IVV11}',
-                  lhablock = 'IMVMIX',
-                  lhacode = [ 1, 1 ])
-
-IVV12 = Parameter(name = 'IVV12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IVV12}',
-                  lhablock = 'IMVMIX',
-                  lhacode = [ 1, 2 ])
-
-IVV21 = Parameter(name = 'IVV21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IVV21}',
-                  lhablock = 'IMVMIX',
-                  lhacode = [ 2, 1 ])
-
-IVV22 = Parameter(name = 'IVV22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{IVV22}',
-                  lhablock = 'IMVMIX',
-                  lhacode = [ 2, 2 ])
-
-Iyd11 = Parameter(name = 'Iyd11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iyd11}',
-                  lhablock = 'IMYD',
-                  lhacode = [ 1, 1 ])
-
-Iyd12 = Parameter(name = 'Iyd12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iyd12}',
-                  lhablock = 'IMYD',
-                  lhacode = [ 1, 2 ])
-
-Iyd13 = Parameter(name = 'Iyd13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iyd13}',
-                  lhablock = 'IMYD',
-                  lhacode = [ 1, 3 ])
-
-Iyd21 = Parameter(name = 'Iyd21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iyd21}',
-                  lhablock = 'IMYD',
-                  lhacode = [ 2, 1 ])
-
-Iyd22 = Parameter(name = 'Iyd22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iyd22}',
-                  lhablock = 'IMYD',
-                  lhacode = [ 2, 2 ])
-
-Iyd23 = Parameter(name = 'Iyd23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iyd23}',
-                  lhablock = 'IMYD',
-                  lhacode = [ 2, 3 ])
-
-Iyd31 = Parameter(name = 'Iyd31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iyd31}',
-                  lhablock = 'IMYD',
-                  lhacode = [ 3, 1 ])
-
-Iyd32 = Parameter(name = 'Iyd32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iyd32}',
-                  lhablock = 'IMYD',
-                  lhacode = [ 3, 2 ])
-
-Iyd33 = Parameter(name = 'Iyd33',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iyd33}',
-                  lhablock = 'IMYD',
-                  lhacode = [ 3, 3 ])
-
-Iye11 = Parameter(name = 'Iye11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iye11}',
-                  lhablock = 'IMYE',
-                  lhacode = [ 1, 1 ])
-
-Iye12 = Parameter(name = 'Iye12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iye12}',
-                  lhablock = 'IMYE',
-                  lhacode = [ 1, 2 ])
-
-Iye13 = Parameter(name = 'Iye13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iye13}',
-                  lhablock = 'IMYE',
-                  lhacode = [ 1, 3 ])
-
-Iye21 = Parameter(name = 'Iye21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iye21}',
-                  lhablock = 'IMYE',
-                  lhacode = [ 2, 1 ])
-
-Iye22 = Parameter(name = 'Iye22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iye22}',
-                  lhablock = 'IMYE',
-                  lhacode = [ 2, 2 ])
-
-Iye23 = Parameter(name = 'Iye23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iye23}',
-                  lhablock = 'IMYE',
-                  lhacode = [ 2, 3 ])
-
-Iye31 = Parameter(name = 'Iye31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iye31}',
-                  lhablock = 'IMYE',
-                  lhacode = [ 3, 1 ])
-
-Iye32 = Parameter(name = 'Iye32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iye32}',
-                  lhablock = 'IMYE',
-                  lhacode = [ 3, 2 ])
-
-Iye33 = Parameter(name = 'Iye33',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iye33}',
-                  lhablock = 'IMYE',
-                  lhacode = [ 3, 3 ])
-
-Iyu11 = Parameter(name = 'Iyu11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iyu11}',
-                  lhablock = 'IMYU',
-                  lhacode = [ 1, 1 ])
-
-Iyu12 = Parameter(name = 'Iyu12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iyu12}',
-                  lhablock = 'IMYU',
-                  lhacode = [ 1, 2 ])
-
-Iyu13 = Parameter(name = 'Iyu13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iyu13}',
-                  lhablock = 'IMYU',
-                  lhacode = [ 1, 3 ])
-
-Iyu21 = Parameter(name = 'Iyu21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iyu21}',
-                  lhablock = 'IMYU',
-                  lhacode = [ 2, 1 ])
-
-Iyu22 = Parameter(name = 'Iyu22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iyu22}',
-                  lhablock = 'IMYU',
-                  lhacode = [ 2, 2 ])
-
-Iyu23 = Parameter(name = 'Iyu23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iyu23}',
-                  lhablock = 'IMYU',
-                  lhacode = [ 2, 3 ])
-
-Iyu31 = Parameter(name = 'Iyu31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iyu31}',
-                  lhablock = 'IMYU',
-                  lhacode = [ 3, 1 ])
-
-Iyu32 = Parameter(name = 'Iyu32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iyu32}',
-                  lhablock = 'IMYU',
-                  lhacode = [ 3, 2 ])
-
-Iyu33 = Parameter(name = 'Iyu33',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Iyu33}',
-                  lhablock = 'IMYU',
-                  lhacode = [ 3, 3 ])
-
 RmDR11 = Parameter(name = 'RmDR11',
                    nature = 'external',
                    type = 'real',
@@ -2465,30 +145,6 @@ RmDR11 = Parameter(name = 'RmDR11',
                    lhablock = 'MSD2',
                    lhacode = [ 1, 1 ])
 
-RmDR12 = Parameter(name = 'RmDR12',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmDR12}',
-                   lhablock = 'MSD2',
-                   lhacode = [ 1, 2 ])
-
-RmDR13 = Parameter(name = 'RmDR13',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmDR13}',
-                   lhablock = 'MSD2',
-                   lhacode = [ 1, 3 ])
-
-RmDR21 = Parameter(name = 'RmDR21',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmDR21}',
-                   lhablock = 'MSD2',
-                   lhacode = [ 2, 1 ])
-
 RmDR22 = Parameter(name = 'RmDR22',
                    nature = 'external',
                    type = 'real',
@@ -2496,30 +152,6 @@ RmDR22 = Parameter(name = 'RmDR22',
                    texname = '\\text{RmDR22}',
                    lhablock = 'MSD2',
                    lhacode = [ 2, 2 ])
-
-RmDR23 = Parameter(name = 'RmDR23',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmDR23}',
-                   lhablock = 'MSD2',
-                   lhacode = [ 2, 3 ])
-
-RmDR31 = Parameter(name = 'RmDR31',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmDR31}',
-                   lhablock = 'MSD2',
-                   lhacode = [ 3, 1 ])
-
-RmDR32 = Parameter(name = 'RmDR32',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmDR32}',
-                   lhablock = 'MSD2',
-                   lhacode = [ 3, 2 ])
 
 RmDR33 = Parameter(name = 'RmDR33',
                    nature = 'external',
@@ -2537,30 +169,6 @@ RmER11 = Parameter(name = 'RmER11',
                    lhablock = 'MSE2',
                    lhacode = [ 1, 1 ])
 
-RmER12 = Parameter(name = 'RmER12',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmER12}',
-                   lhablock = 'MSE2',
-                   lhacode = [ 1, 2 ])
-
-RmER13 = Parameter(name = 'RmER13',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmER13}',
-                   lhablock = 'MSE2',
-                   lhacode = [ 1, 3 ])
-
-RmER21 = Parameter(name = 'RmER21',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmER21}',
-                   lhablock = 'MSE2',
-                   lhacode = [ 2, 1 ])
-
 RmER22 = Parameter(name = 'RmER22',
                    nature = 'external',
                    type = 'real',
@@ -2568,30 +176,6 @@ RmER22 = Parameter(name = 'RmER22',
                    texname = '\\text{RmER22}',
                    lhablock = 'MSE2',
                    lhacode = [ 2, 2 ])
-
-RmER23 = Parameter(name = 'RmER23',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmER23}',
-                   lhablock = 'MSE2',
-                   lhacode = [ 2, 3 ])
-
-RmER31 = Parameter(name = 'RmER31',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmER31}',
-                   lhablock = 'MSE2',
-                   lhacode = [ 3, 1 ])
-
-RmER32 = Parameter(name = 'RmER32',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmER32}',
-                   lhablock = 'MSE2',
-                   lhacode = [ 3, 2 ])
 
 RmER33 = Parameter(name = 'RmER33',
                    nature = 'external',
@@ -2609,30 +193,6 @@ RmLL11 = Parameter(name = 'RmLL11',
                    lhablock = 'MSL2',
                    lhacode = [ 1, 1 ])
 
-RmLL12 = Parameter(name = 'RmLL12',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmLL12}',
-                   lhablock = 'MSL2',
-                   lhacode = [ 1, 2 ])
-
-RmLL13 = Parameter(name = 'RmLL13',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmLL13}',
-                   lhablock = 'MSL2',
-                   lhacode = [ 1, 3 ])
-
-RmLL21 = Parameter(name = 'RmLL21',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmLL21}',
-                   lhablock = 'MSL2',
-                   lhacode = [ 2, 1 ])
-
 RmLL22 = Parameter(name = 'RmLL22',
                    nature = 'external',
                    type = 'real',
@@ -2640,30 +200,6 @@ RmLL22 = Parameter(name = 'RmLL22',
                    texname = '\\text{RmLL22}',
                    lhablock = 'MSL2',
                    lhacode = [ 2, 2 ])
-
-RmLL23 = Parameter(name = 'RmLL23',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmLL23}',
-                   lhablock = 'MSL2',
-                   lhacode = [ 2, 3 ])
-
-RmLL31 = Parameter(name = 'RmLL31',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmLL31}',
-                   lhablock = 'MSL2',
-                   lhacode = [ 3, 1 ])
-
-RmLL32 = Parameter(name = 'RmLL32',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmLL32}',
-                   lhablock = 'MSL2',
-                   lhacode = [ 3, 2 ])
 
 RmLL33 = Parameter(name = 'RmLL33',
                    nature = 'external',
@@ -2721,30 +257,6 @@ RmQL11 = Parameter(name = 'RmQL11',
                    lhablock = 'MSQ2',
                    lhacode = [ 1, 1 ])
 
-RmQL12 = Parameter(name = 'RmQL12',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmQL12}',
-                   lhablock = 'MSQ2',
-                   lhacode = [ 1, 2 ])
-
-RmQL13 = Parameter(name = 'RmQL13',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmQL13}',
-                   lhablock = 'MSQ2',
-                   lhacode = [ 1, 3 ])
-
-RmQL21 = Parameter(name = 'RmQL21',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmQL21}',
-                   lhablock = 'MSQ2',
-                   lhacode = [ 2, 1 ])
-
 RmQL22 = Parameter(name = 'RmQL22',
                    nature = 'external',
                    type = 'real',
@@ -2752,30 +264,6 @@ RmQL22 = Parameter(name = 'RmQL22',
                    texname = '\\text{RmQL22}',
                    lhablock = 'MSQ2',
                    lhacode = [ 2, 2 ])
-
-RmQL23 = Parameter(name = 'RmQL23',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmQL23}',
-                   lhablock = 'MSQ2',
-                   lhacode = [ 2, 3 ])
-
-RmQL31 = Parameter(name = 'RmQL31',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmQL31}',
-                   lhablock = 'MSQ2',
-                   lhacode = [ 3, 1 ])
-
-RmQL32 = Parameter(name = 'RmQL32',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmQL32}',
-                   lhablock = 'MSQ2',
-                   lhacode = [ 3, 2 ])
 
 RmQL33 = Parameter(name = 'RmQL33',
                    nature = 'external',
@@ -2793,30 +281,6 @@ RmUR11 = Parameter(name = 'RmUR11',
                    lhablock = 'MSU2',
                    lhacode = [ 1, 1 ])
 
-RmUR12 = Parameter(name = 'RmUR12',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmUR12}',
-                   lhablock = 'MSU2',
-                   lhacode = [ 1, 2 ])
-
-RmUR13 = Parameter(name = 'RmUR13',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmUR13}',
-                   lhablock = 'MSU2',
-                   lhacode = [ 1, 3 ])
-
-RmUR21 = Parameter(name = 'RmUR21',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmUR21}',
-                   lhablock = 'MSU2',
-                   lhacode = [ 2, 1 ])
-
 RmUR22 = Parameter(name = 'RmUR22',
                    nature = 'external',
                    type = 'real',
@@ -2824,30 +288,6 @@ RmUR22 = Parameter(name = 'RmUR22',
                    texname = '\\text{RmUR22}',
                    lhablock = 'MSU2',
                    lhacode = [ 2, 2 ])
-
-RmUR23 = Parameter(name = 'RmUR23',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmUR23}',
-                   lhablock = 'MSU2',
-                   lhacode = [ 2, 3 ])
-
-RmUR31 = Parameter(name = 'RmUR31',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmUR31}',
-                   lhablock = 'MSU2',
-                   lhacode = [ 3, 1 ])
-
-RmUR32 = Parameter(name = 'RmUR32',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RmUR32}',
-                   lhablock = 'MSU2',
-                   lhacode = [ 3, 2 ])
 
 RmUR33 = Parameter(name = 'RmUR33',
                    nature = 'external',
@@ -2924,7 +364,7 @@ RNN24 = Parameter(name = 'RNN24',
 RNN31 = Parameter(name = 'RNN31',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = -0.0603388002,
                   texname = '\\text{RNN31}',
                   lhablock = 'NMIX',
                   lhacode = [ 3, 1 ])
@@ -2932,7 +372,7 @@ RNN31 = Parameter(name = 'RNN31',
 RNN32 = Parameter(name = 'RNN32',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 0.0877004854,
                   texname = '\\text{RNN32}',
                   lhablock = 'NMIX',
                   lhacode = [ 3, 2 ])
@@ -2940,7 +380,7 @@ RNN32 = Parameter(name = 'RNN32',
 RNN33 = Parameter(name = 'RNN33',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 0.695877493,
                   texname = '\\text{RNN33}',
                   lhablock = 'NMIX',
                   lhacode = [ 3, 3 ])
@@ -2948,7 +388,7 @@ RNN33 = Parameter(name = 'RNN33',
 RNN34 = Parameter(name = 'RNN34',
                   nature = 'external',
                   type = 'real',
-                  value = 0.,
+                  value = 0.710226984,
                   texname = '\\text{RNN34}',
                   lhablock = 'NMIX',
                   lhacode = [ 3, 4 ])
@@ -2993,54 +433,6 @@ RRl11 = Parameter(name = 'RRl11',
                   lhablock = 'SELMIX',
                   lhacode = [ 1, 1 ])
 
-RRl12 = Parameter(name = 'RRl12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl12}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 1, 2 ])
-
-RRl13 = Parameter(name = 'RRl13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl13}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 1, 3 ])
-
-RRl14 = Parameter(name = 'RRl14',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl14}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 1, 4 ])
-
-RRl15 = Parameter(name = 'RRl15',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl15}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 1, 5 ])
-
-RRl16 = Parameter(name = 'RRl16',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl16}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 1, 6 ])
-
-RRl21 = Parameter(name = 'RRl21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl21}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 2, 1 ])
-
 RRl22 = Parameter(name = 'RRl22',
                   nature = 'external',
                   type = 'real',
@@ -3048,54 +440,6 @@ RRl22 = Parameter(name = 'RRl22',
                   texname = '\\text{RRl22}',
                   lhablock = 'SELMIX',
                   lhacode = [ 2, 2 ])
-
-RRl23 = Parameter(name = 'RRl23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl23}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 2, 3 ])
-
-RRl24 = Parameter(name = 'RRl24',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl24}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 2, 4 ])
-
-RRl25 = Parameter(name = 'RRl25',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl25}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 2, 5 ])
-
-RRl26 = Parameter(name = 'RRl26',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl26}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 2, 6 ])
-
-RRl31 = Parameter(name = 'RRl31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl31}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 3, 1 ])
-
-RRl32 = Parameter(name = 'RRl32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl32}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 3, 2 ])
 
 RRl33 = Parameter(name = 'RRl33',
                   nature = 'external',
@@ -3105,22 +449,6 @@ RRl33 = Parameter(name = 'RRl33',
                   lhablock = 'SELMIX',
                   lhacode = [ 3, 3 ])
 
-RRl34 = Parameter(name = 'RRl34',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl34}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 3, 4 ])
-
-RRl35 = Parameter(name = 'RRl35',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl35}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 3, 5 ])
-
 RRl36 = Parameter(name = 'RRl36',
                   nature = 'external',
                   type = 'real',
@@ -3128,30 +456,6 @@ RRl36 = Parameter(name = 'RRl36',
                   texname = '\\text{RRl36}',
                   lhablock = 'SELMIX',
                   lhacode = [ 3, 6 ])
-
-RRl41 = Parameter(name = 'RRl41',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl41}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 4, 1 ])
-
-RRl42 = Parameter(name = 'RRl42',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl42}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 4, 2 ])
-
-RRl43 = Parameter(name = 'RRl43',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl43}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 4, 3 ])
 
 RRl44 = Parameter(name = 'RRl44',
                   nature = 'external',
@@ -3161,54 +465,6 @@ RRl44 = Parameter(name = 'RRl44',
                   lhablock = 'SELMIX',
                   lhacode = [ 4, 4 ])
 
-RRl45 = Parameter(name = 'RRl45',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl45}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 4, 5 ])
-
-RRl46 = Parameter(name = 'RRl46',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl46}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 4, 6 ])
-
-RRl51 = Parameter(name = 'RRl51',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl51}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 5, 1 ])
-
-RRl52 = Parameter(name = 'RRl52',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl52}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 5, 2 ])
-
-RRl53 = Parameter(name = 'RRl53',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl53}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 5, 3 ])
-
-RRl54 = Parameter(name = 'RRl54',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl54}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 5, 4 ])
-
 RRl55 = Parameter(name = 'RRl55',
                   nature = 'external',
                   type = 'real',
@@ -3217,30 +473,6 @@ RRl55 = Parameter(name = 'RRl55',
                   lhablock = 'SELMIX',
                   lhacode = [ 5, 5 ])
 
-RRl56 = Parameter(name = 'RRl56',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl56}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 5, 6 ])
-
-RRl61 = Parameter(name = 'RRl61',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl61}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 6, 1 ])
-
-RRl62 = Parameter(name = 'RRl62',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl62}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 6, 2 ])
-
 RRl63 = Parameter(name = 'RRl63',
                   nature = 'external',
                   type = 'real',
@@ -3248,22 +480,6 @@ RRl63 = Parameter(name = 'RRl63',
                   texname = '\\text{RRl63}',
                   lhablock = 'SELMIX',
                   lhacode = [ 6, 3 ])
-
-RRl64 = Parameter(name = 'RRl64',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl64}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 6, 4 ])
-
-RRl65 = Parameter(name = 'RRl65',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRl65}',
-                  lhablock = 'SELMIX',
-                  lhacode = [ 6, 5 ])
 
 RRl66 = Parameter(name = 'RRl66',
                   nature = 'external',
@@ -3313,30 +529,6 @@ RRn11 = Parameter(name = 'RRn11',
                   lhablock = 'SNUMIX',
                   lhacode = [ 1, 1 ])
 
-RRn12 = Parameter(name = 'RRn12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRn12}',
-                  lhablock = 'SNUMIX',
-                  lhacode = [ 1, 2 ])
-
-RRn13 = Parameter(name = 'RRn13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRn13}',
-                  lhablock = 'SNUMIX',
-                  lhacode = [ 1, 3 ])
-
-RRn21 = Parameter(name = 'RRn21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRn21}',
-                  lhablock = 'SNUMIX',
-                  lhacode = [ 2, 1 ])
-
 RRn22 = Parameter(name = 'RRn22',
                   nature = 'external',
                   type = 'real',
@@ -3344,30 +536,6 @@ RRn22 = Parameter(name = 'RRn22',
                   texname = '\\text{RRn22}',
                   lhablock = 'SNUMIX',
                   lhacode = [ 2, 2 ])
-
-RRn23 = Parameter(name = 'RRn23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRn23}',
-                  lhablock = 'SNUMIX',
-                  lhacode = [ 2, 3 ])
-
-RRn31 = Parameter(name = 'RRn31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRn31}',
-                  lhablock = 'SNUMIX',
-                  lhacode = [ 3, 1 ])
-
-RRn32 = Parameter(name = 'RRn32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRn32}',
-                  lhablock = 'SNUMIX',
-                  lhacode = [ 3, 2 ])
 
 RRn33 = Parameter(name = 'RRn33',
                   nature = 'external',
@@ -3377,70 +545,6 @@ RRn33 = Parameter(name = 'RRn33',
                   lhablock = 'SNUMIX',
                   lhacode = [ 3, 3 ])
 
-Rtd11 = Parameter(name = 'Rtd11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rtd11}',
-                  lhablock = 'TD',
-                  lhacode = [ 1, 1 ])
-
-Rtd12 = Parameter(name = 'Rtd12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rtd12}',
-                  lhablock = 'TD',
-                  lhacode = [ 1, 2 ])
-
-Rtd13 = Parameter(name = 'Rtd13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rtd13}',
-                  lhablock = 'TD',
-                  lhacode = [ 1, 3 ])
-
-Rtd21 = Parameter(name = 'Rtd21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rtd21}',
-                  lhablock = 'TD',
-                  lhacode = [ 2, 1 ])
-
-Rtd22 = Parameter(name = 'Rtd22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rtd22}',
-                  lhablock = 'TD',
-                  lhacode = [ 2, 2 ])
-
-Rtd23 = Parameter(name = 'Rtd23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rtd23}',
-                  lhablock = 'TD',
-                  lhacode = [ 2, 3 ])
-
-Rtd31 = Parameter(name = 'Rtd31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rtd31}',
-                  lhablock = 'TD',
-                  lhacode = [ 3, 1 ])
-
-Rtd32 = Parameter(name = 'Rtd32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rtd32}',
-                  lhablock = 'TD',
-                  lhacode = [ 3, 2 ])
-
 Rtd33 = Parameter(name = 'Rtd33',
                   nature = 'external',
                   type = 'real',
@@ -3449,70 +553,6 @@ Rtd33 = Parameter(name = 'Rtd33',
                   lhablock = 'TD',
                   lhacode = [ 3, 3 ])
 
-Rte11 = Parameter(name = 'Rte11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rte11}',
-                  lhablock = 'TE',
-                  lhacode = [ 1, 1 ])
-
-Rte12 = Parameter(name = 'Rte12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rte12}',
-                  lhablock = 'TE',
-                  lhacode = [ 1, 2 ])
-
-Rte13 = Parameter(name = 'Rte13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rte13}',
-                  lhablock = 'TE',
-                  lhacode = [ 1, 3 ])
-
-Rte21 = Parameter(name = 'Rte21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rte21}',
-                  lhablock = 'TE',
-                  lhacode = [ 2, 1 ])
-
-Rte22 = Parameter(name = 'Rte22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rte22}',
-                  lhablock = 'TE',
-                  lhacode = [ 2, 2 ])
-
-Rte23 = Parameter(name = 'Rte23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rte23}',
-                  lhablock = 'TE',
-                  lhacode = [ 2, 3 ])
-
-Rte31 = Parameter(name = 'Rte31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rte31}',
-                  lhablock = 'TE',
-                  lhacode = [ 3, 1 ])
-
-Rte32 = Parameter(name = 'Rte32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rte32}',
-                  lhablock = 'TE',
-                  lhacode = [ 3, 2 ])
-
 Rte33 = Parameter(name = 'Rte33',
                   nature = 'external',
                   type = 'real',
@@ -3520,70 +560,6 @@ Rte33 = Parameter(name = 'Rte33',
                   texname = '\\text{Rte33}',
                   lhablock = 'TE',
                   lhacode = [ 3, 3 ])
-
-Rtu11 = Parameter(name = 'Rtu11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rtu11}',
-                  lhablock = 'TU',
-                  lhacode = [ 1, 1 ])
-
-Rtu12 = Parameter(name = 'Rtu12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rtu12}',
-                  lhablock = 'TU',
-                  lhacode = [ 1, 2 ])
-
-Rtu13 = Parameter(name = 'Rtu13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rtu13}',
-                  lhablock = 'TU',
-                  lhacode = [ 1, 3 ])
-
-Rtu21 = Parameter(name = 'Rtu21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rtu21}',
-                  lhablock = 'TU',
-                  lhacode = [ 2, 1 ])
-
-Rtu22 = Parameter(name = 'Rtu22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rtu22}',
-                  lhablock = 'TU',
-                  lhacode = [ 2, 2 ])
-
-Rtu23 = Parameter(name = 'Rtu23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rtu23}',
-                  lhablock = 'TU',
-                  lhacode = [ 2, 3 ])
-
-Rtu31 = Parameter(name = 'Rtu31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rtu31}',
-                  lhablock = 'TU',
-                  lhacode = [ 3, 1 ])
-
-Rtu32 = Parameter(name = 'Rtu32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rtu32}',
-                  lhablock = 'TU',
-                  lhacode = [ 3, 2 ])
 
 Rtu33 = Parameter(name = 'Rtu33',
                   nature = 'external',
@@ -3633,30 +609,6 @@ RMNS11 = Parameter(name = 'RMNS11',
                    lhablock = 'UPMNS',
                    lhacode = [ 1, 1 ])
 
-RMNS12 = Parameter(name = 'RMNS12',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RMNS12}',
-                   lhablock = 'UPMNS',
-                   lhacode = [ 1, 2 ])
-
-RMNS13 = Parameter(name = 'RMNS13',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RMNS13}',
-                   lhablock = 'UPMNS',
-                   lhacode = [ 1, 3 ])
-
-RMNS21 = Parameter(name = 'RMNS21',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RMNS21}',
-                   lhablock = 'UPMNS',
-                   lhacode = [ 2, 1 ])
-
 RMNS22 = Parameter(name = 'RMNS22',
                    nature = 'external',
                    type = 'real',
@@ -3664,30 +616,6 @@ RMNS22 = Parameter(name = 'RMNS22',
                    texname = '\\text{RMNS22}',
                    lhablock = 'UPMNS',
                    lhacode = [ 2, 2 ])
-
-RMNS23 = Parameter(name = 'RMNS23',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RMNS23}',
-                   lhablock = 'UPMNS',
-                   lhacode = [ 2, 3 ])
-
-RMNS31 = Parameter(name = 'RMNS31',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RMNS31}',
-                   lhablock = 'UPMNS',
-                   lhacode = [ 3, 1 ])
-
-RMNS32 = Parameter(name = 'RMNS32',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RMNS32}',
-                   lhablock = 'UPMNS',
-                   lhacode = [ 3, 2 ])
 
 RMNS33 = Parameter(name = 'RMNS33',
                    nature = 'external',
@@ -3705,54 +633,6 @@ RRu11 = Parameter(name = 'RRu11',
                   lhablock = 'USQMIX',
                   lhacode = [ 1, 1 ])
 
-RRu12 = Parameter(name = 'RRu12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu12}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 1, 2 ])
-
-RRu13 = Parameter(name = 'RRu13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu13}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 1, 3 ])
-
-RRu14 = Parameter(name = 'RRu14',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu14}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 1, 4 ])
-
-RRu15 = Parameter(name = 'RRu15',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu15}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 1, 5 ])
-
-RRu16 = Parameter(name = 'RRu16',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu16}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 1, 6 ])
-
-RRu21 = Parameter(name = 'RRu21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu21}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 2, 1 ])
-
 RRu22 = Parameter(name = 'RRu22',
                   nature = 'external',
                   type = 'real',
@@ -3760,54 +640,6 @@ RRu22 = Parameter(name = 'RRu22',
                   texname = '\\text{RRu22}',
                   lhablock = 'USQMIX',
                   lhacode = [ 2, 2 ])
-
-RRu23 = Parameter(name = 'RRu23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu23}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 2, 3 ])
-
-RRu24 = Parameter(name = 'RRu24',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu24}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 2, 4 ])
-
-RRu25 = Parameter(name = 'RRu25',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu25}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 2, 5 ])
-
-RRu26 = Parameter(name = 'RRu26',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu26}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 2, 6 ])
-
-RRu31 = Parameter(name = 'RRu31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu31}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 3, 1 ])
-
-RRu32 = Parameter(name = 'RRu32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu32}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 3, 2 ])
 
 RRu33 = Parameter(name = 'RRu33',
                   nature = 'external',
@@ -3817,22 +649,6 @@ RRu33 = Parameter(name = 'RRu33',
                   lhablock = 'USQMIX',
                   lhacode = [ 3, 3 ])
 
-RRu34 = Parameter(name = 'RRu34',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu34}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 3, 4 ])
-
-RRu35 = Parameter(name = 'RRu35',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu35}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 3, 5 ])
-
 RRu36 = Parameter(name = 'RRu36',
                   nature = 'external',
                   type = 'real',
@@ -3840,30 +656,6 @@ RRu36 = Parameter(name = 'RRu36',
                   texname = '\\text{RRu36}',
                   lhablock = 'USQMIX',
                   lhacode = [ 3, 6 ])
-
-RRu41 = Parameter(name = 'RRu41',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu41}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 4, 1 ])
-
-RRu42 = Parameter(name = 'RRu42',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu42}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 4, 2 ])
-
-RRu43 = Parameter(name = 'RRu43',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu43}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 4, 3 ])
 
 RRu44 = Parameter(name = 'RRu44',
                   nature = 'external',
@@ -3873,54 +665,6 @@ RRu44 = Parameter(name = 'RRu44',
                   lhablock = 'USQMIX',
                   lhacode = [ 4, 4 ])
 
-RRu45 = Parameter(name = 'RRu45',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu45}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 4, 5 ])
-
-RRu46 = Parameter(name = 'RRu46',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu46}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 4, 6 ])
-
-RRu51 = Parameter(name = 'RRu51',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu51}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 5, 1 ])
-
-RRu52 = Parameter(name = 'RRu52',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu52}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 5, 2 ])
-
-RRu53 = Parameter(name = 'RRu53',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu53}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 5, 3 ])
-
-RRu54 = Parameter(name = 'RRu54',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu54}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 5, 4 ])
-
 RRu55 = Parameter(name = 'RRu55',
                   nature = 'external',
                   type = 'real',
@@ -3929,30 +673,6 @@ RRu55 = Parameter(name = 'RRu55',
                   lhablock = 'USQMIX',
                   lhacode = [ 5, 5 ])
 
-RRu56 = Parameter(name = 'RRu56',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu56}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 5, 6 ])
-
-RRu61 = Parameter(name = 'RRu61',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu61}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 6, 1 ])
-
-RRu62 = Parameter(name = 'RRu62',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu62}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 6, 2 ])
-
 RRu63 = Parameter(name = 'RRu63',
                   nature = 'external',
                   type = 'real',
@@ -3960,22 +680,6 @@ RRu63 = Parameter(name = 'RRu63',
                   texname = '\\text{RRu63}',
                   lhablock = 'USQMIX',
                   lhacode = [ 6, 3 ])
-
-RRu64 = Parameter(name = 'RRu64',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu64}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 6, 4 ])
-
-RRu65 = Parameter(name = 'RRu65',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{RRu65}',
-                  lhablock = 'USQMIX',
-                  lhacode = [ 6, 5 ])
 
 RRu66 = Parameter(name = 'RRu66',
                   nature = 'external',
@@ -3993,30 +697,6 @@ RCKM11 = Parameter(name = 'RCKM11',
                    lhablock = 'VCKM',
                    lhacode = [ 1, 1 ])
 
-RCKM12 = Parameter(name = 'RCKM12',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RCKM12}',
-                   lhablock = 'VCKM',
-                   lhacode = [ 1, 2 ])
-
-RCKM13 = Parameter(name = 'RCKM13',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RCKM13}',
-                   lhablock = 'VCKM',
-                   lhacode = [ 1, 3 ])
-
-RCKM21 = Parameter(name = 'RCKM21',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RCKM21}',
-                   lhablock = 'VCKM',
-                   lhacode = [ 2, 1 ])
-
 RCKM22 = Parameter(name = 'RCKM22',
                    nature = 'external',
                    type = 'real',
@@ -4024,30 +704,6 @@ RCKM22 = Parameter(name = 'RCKM22',
                    texname = '\\text{RCKM22}',
                    lhablock = 'VCKM',
                    lhacode = [ 2, 2 ])
-
-RCKM23 = Parameter(name = 'RCKM23',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RCKM23}',
-                   lhablock = 'VCKM',
-                   lhacode = [ 2, 3 ])
-
-RCKM31 = Parameter(name = 'RCKM31',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RCKM31}',
-                   lhablock = 'VCKM',
-                   lhacode = [ 3, 1 ])
-
-RCKM32 = Parameter(name = 'RCKM32',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{RCKM32}',
-                   lhablock = 'VCKM',
-                   lhacode = [ 3, 2 ])
 
 RCKM33 = Parameter(name = 'RCKM33',
                    nature = 'external',
@@ -4089,70 +745,6 @@ RVV22 = Parameter(name = 'RVV22',
                   lhablock = 'VMIX',
                   lhacode = [ 2, 2 ])
 
-Ryd11 = Parameter(name = 'Ryd11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ryd11}',
-                  lhablock = 'YD',
-                  lhacode = [ 1, 1 ])
-
-Ryd12 = Parameter(name = 'Ryd12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ryd12}',
-                  lhablock = 'YD',
-                  lhacode = [ 1, 2 ])
-
-Ryd13 = Parameter(name = 'Ryd13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ryd13}',
-                  lhablock = 'YD',
-                  lhacode = [ 1, 3 ])
-
-Ryd21 = Parameter(name = 'Ryd21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ryd21}',
-                  lhablock = 'YD',
-                  lhacode = [ 2, 1 ])
-
-Ryd22 = Parameter(name = 'Ryd22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ryd22}',
-                  lhablock = 'YD',
-                  lhacode = [ 2, 2 ])
-
-Ryd23 = Parameter(name = 'Ryd23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ryd23}',
-                  lhablock = 'YD',
-                  lhacode = [ 2, 3 ])
-
-Ryd31 = Parameter(name = 'Ryd31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ryd31}',
-                  lhablock = 'YD',
-                  lhacode = [ 3, 1 ])
-
-Ryd32 = Parameter(name = 'Ryd32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ryd32}',
-                  lhablock = 'YD',
-                  lhacode = [ 3, 2 ])
-
 Ryd33 = Parameter(name = 'Ryd33',
                   nature = 'external',
                   type = 'real',
@@ -4161,70 +753,6 @@ Ryd33 = Parameter(name = 'Ryd33',
                   lhablock = 'YD',
                   lhacode = [ 3, 3 ])
 
-Rye11 = Parameter(name = 'Rye11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rye11}',
-                  lhablock = 'YE',
-                  lhacode = [ 1, 1 ])
-
-Rye12 = Parameter(name = 'Rye12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rye12}',
-                  lhablock = 'YE',
-                  lhacode = [ 1, 2 ])
-
-Rye13 = Parameter(name = 'Rye13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rye13}',
-                  lhablock = 'YE',
-                  lhacode = [ 1, 3 ])
-
-Rye21 = Parameter(name = 'Rye21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rye21}',
-                  lhablock = 'YE',
-                  lhacode = [ 2, 1 ])
-
-Rye22 = Parameter(name = 'Rye22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rye22}',
-                  lhablock = 'YE',
-                  lhacode = [ 2, 2 ])
-
-Rye23 = Parameter(name = 'Rye23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rye23}',
-                  lhablock = 'YE',
-                  lhacode = [ 2, 3 ])
-
-Rye31 = Parameter(name = 'Rye31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rye31}',
-                  lhablock = 'YE',
-                  lhacode = [ 3, 1 ])
-
-Rye32 = Parameter(name = 'Rye32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Rye32}',
-                  lhablock = 'YE',
-                  lhacode = [ 3, 2 ])
-
 Rye33 = Parameter(name = 'Rye33',
                   nature = 'external',
                   type = 'real',
@@ -4232,70 +760,6 @@ Rye33 = Parameter(name = 'Rye33',
                   texname = '\\text{Rye33}',
                   lhablock = 'YE',
                   lhacode = [ 3, 3 ])
-
-Ryu11 = Parameter(name = 'Ryu11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ryu11}',
-                  lhablock = 'YU',
-                  lhacode = [ 1, 1 ])
-
-Ryu12 = Parameter(name = 'Ryu12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ryu12}',
-                  lhablock = 'YU',
-                  lhacode = [ 1, 2 ])
-
-Ryu13 = Parameter(name = 'Ryu13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ryu13}',
-                  lhablock = 'YU',
-                  lhacode = [ 1, 3 ])
-
-Ryu21 = Parameter(name = 'Ryu21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ryu21}',
-                  lhablock = 'YU',
-                  lhacode = [ 2, 1 ])
-
-Ryu22 = Parameter(name = 'Ryu22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ryu22}',
-                  lhablock = 'YU',
-                  lhacode = [ 2, 2 ])
-
-Ryu23 = Parameter(name = 'Ryu23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ryu23}',
-                  lhablock = 'YU',
-                  lhacode = [ 2, 3 ])
-
-Ryu31 = Parameter(name = 'Ryu31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ryu31}',
-                  lhablock = 'YU',
-                  lhacode = [ 3, 1 ])
-
-Ryu32 = Parameter(name = 'Ryu32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{Ryu32}',
-                  lhablock = 'YU',
-                  lhacode = [ 3, 2 ])
 
 Ryu33 = Parameter(name = 'Ryu33',
                   nature = 'external',
@@ -4420,7 +884,7 @@ Mneu2 = Parameter(name = 'Mneu2',
 Mneu3 = Parameter(name = 'Mneu3',
                   nature = 'external',
                   type = 'real',
-                  value = 363.756027,
+                  value = -363.756027,
                   texname = '\\text{Mneu3}',
                   lhablock = 'MASS',
                   lhacode = [ 1000025 ])
@@ -4487,7 +951,7 @@ Msl1 = Parameter(name = 'Msl1',
                  value = 202.91569,
                  texname = '\\text{Msl1}',
                  lhablock = 'MASS',
-                 lhacode = [ -1000011 ])
+                 lhacode = [ 1000011 ])
 
 Msl2 = Parameter(name = 'Msl2',
                  nature = 'external',
@@ -4495,7 +959,7 @@ Msl2 = Parameter(name = 'Msl2',
                  value = 202.91569,
                  texname = '\\text{Msl2}',
                  lhablock = 'MASS',
-                 lhacode = [ -1000013 ])
+                 lhacode = [ 1000013 ])
 
 Msl3 = Parameter(name = 'Msl3',
                  nature = 'external',
@@ -4503,7 +967,7 @@ Msl3 = Parameter(name = 'Msl3',
                  value = 134.490864,
                  texname = '\\text{Msl3}',
                  lhablock = 'MASS',
-                 lhacode = [ -1000015 ])
+                 lhacode = [ 1000015 ])
 
 Msl4 = Parameter(name = 'Msl4',
                  nature = 'external',
@@ -4511,7 +975,7 @@ Msl4 = Parameter(name = 'Msl4',
                  value = 144.102799,
                  texname = '\\text{Msl4}',
                  lhablock = 'MASS',
-                 lhacode = [ -2000011 ])
+                 lhacode = [ 2000011 ])
 
 Msl5 = Parameter(name = 'Msl5',
                  nature = 'external',
@@ -4519,7 +983,7 @@ Msl5 = Parameter(name = 'Msl5',
                  value = 144.102799,
                  texname = '\\text{Msl5}',
                  lhablock = 'MASS',
-                 lhacode = [ -2000013 ])
+                 lhacode = [ 2000013 ])
 
 Msl6 = Parameter(name = 'Msl6',
                  nature = 'external',
@@ -4527,7 +991,7 @@ Msl6 = Parameter(name = 'Msl6',
                  value = 206.867805,
                  texname = '\\text{Msl6}',
                  lhablock = 'MASS',
-                 lhacode = [ -2000015 ])
+                 lhacode = [ 2000015 ])
 
 Musq1 = Parameter(name = 'Musq1',
                   nature = 'external',
@@ -4751,7 +1215,7 @@ Wsl1 = Parameter(name = 'Wsl1',
                  value = 0.213682161,
                  texname = '\\text{Wsl1}',
                  lhablock = 'DECAY',
-                 lhacode = [ -1000011 ])
+                 lhacode = [ 1000011 ])
 
 Wsl2 = Parameter(name = 'Wsl2',
                  nature = 'external',
@@ -4759,7 +1223,7 @@ Wsl2 = Parameter(name = 'Wsl2',
                  value = 0.213682161,
                  texname = '\\text{Wsl2}',
                  lhablock = 'DECAY',
-                 lhacode = [ -1000013 ])
+                 lhacode = [ 1000013 ])
 
 Wsl3 = Parameter(name = 'Wsl3',
                  nature = 'external',
@@ -4767,7 +1231,7 @@ Wsl3 = Parameter(name = 'Wsl3',
                  value = 0.148327268,
                  texname = '\\text{Wsl3}',
                  lhablock = 'DECAY',
-                 lhacode = [ -1000015 ])
+                 lhacode = [ 1000015 ])
 
 Wsl4 = Parameter(name = 'Wsl4',
                  nature = 'external',
@@ -4775,7 +1239,7 @@ Wsl4 = Parameter(name = 'Wsl4',
                  value = 0.216121626,
                  texname = '\\text{Wsl4}',
                  lhablock = 'DECAY',
-                 lhacode = [ -2000011 ])
+                 lhacode = [ 2000011 ])
 
 Wsl5 = Parameter(name = 'Wsl5',
                  nature = 'external',
@@ -4783,7 +1247,7 @@ Wsl5 = Parameter(name = 'Wsl5',
                  value = 0.216121626,
                  texname = '\\text{Wsl5}',
                  lhablock = 'DECAY',
-                 lhacode = [ -2000013 ])
+                 lhacode = [ 2000013 ])
 
 Wsl6 = Parameter(name = 'Wsl6',
                  nature = 'external',
@@ -4791,7 +1255,7 @@ Wsl6 = Parameter(name = 'Wsl6',
                  value = 0.269906096,
                  texname = '\\text{Wsl6}',
                  lhablock = 'DECAY',
-                 lhacode = [ -2000015 ])
+                 lhacode = [ 2000015 ])
 
 Wusq1 = Parameter(name = 'Wusq1',
                   nature = 'external',
@@ -4937,71 +1401,47 @@ WW = Parameter(name = 'WW',
                lhablock = 'DECAY',
                lhacode = [ 24 ])
 
-MZ = Parameter(name = 'MZ',
-               nature = 'internal',
-               type = 'real',
-               value = 'MMZ',
-               texname = 'm_Z')
-
-ee = Parameter(name = 'ee',
-               nature = 'internal',
-               type = 'real',
-               value = '2*cmath.sqrt(1/aEWM1)*cmath.sqrt(cmath.pi)',
-               texname = 'e')
-
-G = Parameter(name = 'G',
-              nature = 'internal',
-              type = 'real',
-              value = '2*cmath.sqrt(aS)*cmath.sqrt(cmath.pi)',
-              texname = 'G')
-
 bet = Parameter(name = 'bet',
                 nature = 'internal',
                 type = 'real',
                 value = 'cmath.atan(tb)',
                 texname = '\\beta ')
 
-MMMU = Parameter(name = 'MMMU',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'RMU',
-                 texname = '\\mu ')
+mDR11 = Parameter(name = 'mDR11',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'RmDR11',
+                  texname = '\\text{mDR11}')
 
-yu33 = Parameter(name = 'yu33',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Ryu33',
-                 texname = '\\text{yu33}')
+mDR22 = Parameter(name = 'mDR22',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'RmDR22',
+                  texname = '\\text{mDR22}')
 
-yd33 = Parameter(name = 'yd33',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Ryd33',
-                 texname = '\\text{yd33}')
+mDR33 = Parameter(name = 'mDR33',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'RmDR33',
+                  texname = '\\text{mDR33}')
 
-ye33 = Parameter(name = 'ye33',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rye33',
-                 texname = '\\text{ye33}')
+mER11 = Parameter(name = 'mER11',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'RmER11',
+                  texname = '\\text{mER11}')
 
-Mx1 = Parameter(name = 'Mx1',
-                nature = 'internal',
-                type = 'complex',
-                value = 'RMx1',
-                texname = 'M_1')
+mER22 = Parameter(name = 'mER22',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'RmER22',
+                  texname = '\\text{mER22}')
 
-Mx2 = Parameter(name = 'Mx2',
-                nature = 'internal',
-                type = 'complex',
-                value = 'RMx2',
-                texname = 'M_2')
-
-Mx3 = Parameter(name = 'Mx3',
-                nature = 'internal',
-                type = 'complex',
-                value = 'RMx3',
-                texname = 'M_3')
+mER33 = Parameter(name = 'mER33',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'RmER33',
+                  texname = '\\text{mER33}')
 
 mLL11 = Parameter(name = 'mLL11',
                   nature = 'internal',
@@ -5021,23 +1461,11 @@ mLL33 = Parameter(name = 'mLL33',
                   value = 'RmLL33',
                   texname = '\\text{mLL33}')
 
-mER11 = Parameter(name = 'mER11',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'RmER11',
-                  texname = '\\text{mER11}')
-
-mER22 = Parameter(name = 'mER22',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'RmER22',
-                  texname = '\\text{mER22}')
-
-mER33 = Parameter(name = 'mER33',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'RmER33',
-                  texname = '\\text{mER33}')
+MMMU = Parameter(name = 'MMMU',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'RMU',
+                 texname = '\\mu ')
 
 mQL11 = Parameter(name = 'mQL11',
                   nature = 'internal',
@@ -5075,41 +1503,29 @@ mUR33 = Parameter(name = 'mUR33',
                   value = 'RmUR33',
                   texname = '\\text{mUR33}')
 
-mDR11 = Parameter(name = 'mDR11',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'RmDR11',
-                  texname = '\\text{mDR11}')
+Mx1 = Parameter(name = 'Mx1',
+                nature = 'internal',
+                type = 'complex',
+                value = 'RMx1',
+                texname = 'M_1')
 
-mDR22 = Parameter(name = 'mDR22',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'RmDR22',
-                  texname = '\\text{mDR22}')
+Mx2 = Parameter(name = 'Mx2',
+                nature = 'internal',
+                type = 'complex',
+                value = 'RMx2',
+                texname = 'M_2')
 
-mDR33 = Parameter(name = 'mDR33',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'RmDR33',
-                  texname = '\\text{mDR33}')
+Mx3 = Parameter(name = 'Mx3',
+                nature = 'internal',
+                type = 'complex',
+                value = 'RMx3',
+                texname = 'M_3')
 
-tu33 = Parameter(name = 'tu33',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rtu33',
-                 texname = '\\text{tu33}')
-
-td33 = Parameter(name = 'td33',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rtd33',
-                 texname = '\\text{td33}')
-
-te33 = Parameter(name = 'te33',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'Rte33',
-                 texname = '\\text{te33}')
+MZ = Parameter(name = 'MZ',
+               nature = 'internal',
+               type = 'real',
+               value = 'MMZ',
+               texname = 'm_Z')
 
 NN11 = Parameter(name = 'NN11',
                  nature = 'internal',
@@ -5162,25 +1578,25 @@ NN24 = Parameter(name = 'NN24',
 NN31 = Parameter(name = 'NN31',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'complex(0,1)*INN31',
+                 value = 'RNN31',
                  texname = '\\text{NN31}')
 
 NN32 = Parameter(name = 'NN32',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'complex(0,1)*INN32',
+                 value = 'RNN32',
                  texname = '\\text{NN32}')
 
 NN33 = Parameter(name = 'NN33',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'complex(0,1)*INN33',
+                 value = 'RNN33',
                  texname = '\\text{NN33}')
 
 NN34 = Parameter(name = 'NN34',
                  nature = 'internal',
                  type = 'complex',
-                 value = 'complex(0,1)*INN34',
+                 value = 'RNN34',
                  texname = '\\text{NN34}')
 
 NN41 = Parameter(name = 'NN41',
@@ -5206,102 +1622,6 @@ NN44 = Parameter(name = 'NN44',
                  type = 'complex',
                  value = 'RNN44',
                  texname = '\\text{NN44}')
-
-UU11 = Parameter(name = 'UU11',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'RUU11',
-                 texname = '\\text{UU11}')
-
-UU12 = Parameter(name = 'UU12',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'RUU12',
-                 texname = '\\text{UU12}')
-
-UU21 = Parameter(name = 'UU21',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'RUU21',
-                 texname = '\\text{UU21}')
-
-UU22 = Parameter(name = 'UU22',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'RUU22',
-                 texname = '\\text{UU22}')
-
-VV11 = Parameter(name = 'VV11',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'RVV11',
-                 texname = '\\text{VV11}')
-
-VV12 = Parameter(name = 'VV12',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'RVV12',
-                 texname = '\\text{VV12}')
-
-VV21 = Parameter(name = 'VV21',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'RVV21',
-                 texname = '\\text{VV21}')
-
-VV22 = Parameter(name = 'VV22',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'RVV22',
-                 texname = '\\text{VV22}')
-
-Ru11 = Parameter(name = 'Ru11',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'RRu11',
-                 texname = '\\text{Ru11}')
-
-Ru22 = Parameter(name = 'Ru22',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'RRu22',
-                 texname = '\\text{Ru22}')
-
-Ru33 = Parameter(name = 'Ru33',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'RRu33',
-                 texname = '\\text{Ru33}')
-
-Ru36 = Parameter(name = 'Ru36',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'RRu36',
-                 texname = '\\text{Ru36}')
-
-Ru44 = Parameter(name = 'Ru44',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'RRu44',
-                 texname = '\\text{Ru44}')
-
-Ru55 = Parameter(name = 'Ru55',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'RRu55',
-                 texname = '\\text{Ru55}')
-
-Ru63 = Parameter(name = 'Ru63',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'RRu63',
-                 texname = '\\text{Ru63}')
-
-Ru66 = Parameter(name = 'Ru66',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'RRu66',
-                 texname = '\\text{Ru66}')
 
 Rd11 = Parameter(name = 'Rd11',
                  nature = 'internal',
@@ -5416,6 +1736,150 @@ RLn33 = Parameter(name = 'RLn33',
                   type = 'complex',
                   value = 'RRn33',
                   texname = '\\text{RLn33}')
+
+Ru11 = Parameter(name = 'Ru11',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'RRu11',
+                 texname = '\\text{Ru11}')
+
+Ru22 = Parameter(name = 'Ru22',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'RRu22',
+                 texname = '\\text{Ru22}')
+
+Ru33 = Parameter(name = 'Ru33',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'RRu33',
+                 texname = '\\text{Ru33}')
+
+Ru36 = Parameter(name = 'Ru36',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'RRu36',
+                 texname = '\\text{Ru36}')
+
+Ru44 = Parameter(name = 'Ru44',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'RRu44',
+                 texname = '\\text{Ru44}')
+
+Ru55 = Parameter(name = 'Ru55',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'RRu55',
+                 texname = '\\text{Ru55}')
+
+Ru63 = Parameter(name = 'Ru63',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'RRu63',
+                 texname = '\\text{Ru63}')
+
+Ru66 = Parameter(name = 'Ru66',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'RRu66',
+                 texname = '\\text{Ru66}')
+
+UU11 = Parameter(name = 'UU11',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'RUU11',
+                 texname = '\\text{UU11}')
+
+UU12 = Parameter(name = 'UU12',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'RUU12',
+                 texname = '\\text{UU12}')
+
+UU21 = Parameter(name = 'UU21',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'RUU21',
+                 texname = '\\text{UU21}')
+
+UU22 = Parameter(name = 'UU22',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'RUU22',
+                 texname = '\\text{UU22}')
+
+VV11 = Parameter(name = 'VV11',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'RVV11',
+                 texname = '\\text{VV11}')
+
+VV12 = Parameter(name = 'VV12',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'RVV12',
+                 texname = '\\text{VV12}')
+
+VV21 = Parameter(name = 'VV21',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'RVV21',
+                 texname = '\\text{VV21}')
+
+VV22 = Parameter(name = 'VV22',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'RVV22',
+                 texname = '\\text{VV22}')
+
+ee = Parameter(name = 'ee',
+               nature = 'internal',
+               type = 'real',
+               value = '2*cmath.sqrt(1/aEWM1)*cmath.sqrt(cmath.pi)',
+               texname = 'e')
+
+G = Parameter(name = 'G',
+              nature = 'internal',
+              type = 'real',
+              value = '2*cmath.sqrt(aS)*cmath.sqrt(cmath.pi)',
+              texname = 'G')
+
+td33 = Parameter(name = 'td33',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rtd33',
+                 texname = '\\text{td33}')
+
+te33 = Parameter(name = 'te33',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rte33',
+                 texname = '\\text{te33}')
+
+tu33 = Parameter(name = 'tu33',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rtu33',
+                 texname = '\\text{tu33}')
+
+yd33 = Parameter(name = 'yd33',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Ryd33',
+                 texname = '\\text{yd33}')
+
+ye33 = Parameter(name = 'ye33',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Rye33',
+                 texname = '\\text{ye33}')
+
+yu33 = Parameter(name = 'yu33',
+                 nature = 'internal',
+                 type = 'complex',
+                 value = 'Ryu33',
+                 texname = '\\text{yu33}')
 
 bb = Parameter(name = 'bb',
                nature = 'internal',
