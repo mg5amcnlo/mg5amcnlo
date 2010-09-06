@@ -618,7 +618,7 @@ class CheckValidForCmd(object):
         syntax: display XXXXX
         """
             
-        if len(args) not in [1,2] or args[0] not in self._display_opts:
+        if len(args) < 1 or args[0] not in self._display_opts:
             self.help_display()
             raise self.InvalidCmd
 
@@ -1340,15 +1340,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             print ''
 
         elif args[0] == 'particles':
-            if args[1].isdigit() or (args[1][0] == '-' and args[1][1:].isdigit()):
-                particle = self._curr_model.get_particle(abs(int(args[1])))
-            else:
-                particle = self._curr_model['particles'].find_name(args[1])
-            if not particle:
-                raise self.InvalidCmd, 'no particles %s in current model' % args[1]
-            
-            print "Particle %s has the following property:" % particle.get('name')
-            print str(particle)
+            for arg in args[1:]:
+                if arg.isdigit() or (arg[0] == '-' and arg[1:].isdigit()):
+                    particle = self._curr_model.get_particle(abs(int(arg)))
+                else:
+                    particle = self._curr_model['particles'].find_name(arg)
+                if not particle:
+                    raise self.InvalidCmd, 'no particle %s in current model' % arg
+
+                print "Particle %s has the following properties:" % particle.get_name()
+                print str(particle)
             
         elif args[0] == 'interactions' and len(args) == 1:
             text = "Current model contains %i interactions\n" % \
@@ -1367,13 +1368,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             pydoc.pager(text)
 
         elif args[0] == 'interactions':
-            if int(args[1]) > len(self._curr_model['interactions']):
-                raise self.InvalidCmd, 'no interaction %s in current model' % args[1]
-            if int(args[1]) == 0:
-                print 'Special interactions which identify two particles'
-            else:
-                print "Interactions %s has the following property:" % args[1]
-                print self._curr_model['interactions'][int(args[1])-1]
+            for arg in args[1:]:
+                if int(arg) > len(self._curr_model['interactions']):
+                    raise self.InvalidCmd, 'no interaction %s in current model' % arg
+                if int(arg) == 0:
+                    print 'Special interactions which identify two particles'
+                else:
+                    print "Interactions %s has the following property:" % arg
+                    print self._curr_model['interactions'][int(arg)-1]
 
 
         elif args[0] == 'processes':

@@ -858,6 +858,7 @@ class ModelVariable(object):
         self.expr = expression # python expression
         self.type = type # real/complex
         self.depend = depend # depend on some other parameter -tuple-
+        self.value = None
     
     def __eq__(self, other):
         """Object with same name are identical, If the object is a string we check
