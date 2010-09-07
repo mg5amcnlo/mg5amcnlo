@@ -31,7 +31,7 @@ import aloha.create_aloha as create_aloha
 
 import models as ufomodels
 
-logger = logging.getLogger('madgraph.import_ufo')
+logger = logging.getLogger('models.import_ufo')
 
 
 

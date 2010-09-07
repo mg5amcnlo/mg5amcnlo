@@ -401,7 +401,7 @@ class FortranHelasCallWriter(HelasCallWriter):
         if isinstance(argument, helas_objects.HelasWavefunction) and \
                not argument.get('mothers'):
             # String is just IXXXXX, OXXXXX, VXXXXX or SXXXXX
-            call = call + FortranHelasCallWriter.mother_dict[\
+            call = call + HelasCallWriter.mother_dict[\
                 argument.get_spin_state_number()]
             # Fill out with X up to 6 positions
             call = call + 'X' * (11 - len(call))
@@ -576,14 +576,14 @@ class FortranHelasCallWriter(HelasCallWriter):
         the order of letters in the Fortran Helas calls"""
 
         if isinstance(arg, helas_objects.HelasWavefunction):
-            return "".join(sorted([FortranHelasCallWriter.mother_dict[\
+            return "".join(sorted([HelasCallWriter.mother_dict[\
             wf.get_spin_state_number()] for wf in arg.get('mothers')],
                           lambda l1, l2: \
                           FortranHelasCallWriter.sort_wf[l2] - \
                           FortranHelasCallWriter.sort_wf[l1]))
 
         if isinstance(arg, helas_objects.HelasAmplitude):
-            return "".join(sorted([FortranHelasCallWriter.mother_dict[\
+            return "".join(sorted([HelasCallWriter.mother_dict[\
             wf.get_spin_state_number()] for wf in arg.get('mothers')],
                           lambda l1, l2: \
                           FortranHelasCallWriter.sort_amp[l2] - \
@@ -646,23 +646,6 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
     def generate_helas_call(self, argument):
         """Routine for automatic generation of Fortran Helas calls
         according to just the spin structure of the interaction.
-
-        First the call string is generated, using a dictionary to go
-        from the spin state of the calling wavefunction and its
-        mothers, or the mothers of the amplitude, to difenrentiate wich call is
-        done.
-
-        Then the call function is generated, as a lambda which fills
-        the call string with the information of the calling
-        wavefunction or amplitude. The call has different structure,
-        depending on the spin of the wavefunction and the number of
-        mothers (multiplicity of the vertex). The mother
-        wavefunctions, when entering the call, must be sorted in the
-        correct way - this is done by the sorted_mothers routine.
-
-        Finally the call function is stored in the relevant
-        dictionary, in order to be able to reuse the function the next
-        time a wavefunction with the same Lorentz structure is needed.
         """
 
         if not isinstance(argument, helas_objects.HelasWavefunction) and \
@@ -684,7 +667,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         if isinstance(argument, helas_objects.HelasWavefunction) and \
                not argument.get('mothers'):
             # String is just IXXXXX, OXXXXX, VXXXXX or SXXXXX
-            call = call + FortranHelasCallWriter.mother_dict[\
+            call = call + HelasCallWriter.mother_dict[\
                 argument.get_spin_state_number()]
             # Fill out with X up to 6 positions
             call = call + 'X' * (11 - len(call))
@@ -778,7 +761,6 @@ class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
     Includes the function generate_helas_call, which automatically
     generates the C++ Helas call based on the Lorentz structure of
     the interaction."""
-    mother_dict = {1: 's', 2: 'o', -2: 'i', 3: 'v', 5: 't'}
     
     def generate_helas_call(self, argument):
         """Routine for automatic generation of C++ Helas calls
@@ -821,10 +803,9 @@ class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
         if isinstance(argument, helas_objects.HelasWavefunction) and \
                not argument.get('mothers'):
             # String is just ixxxxx, oxxxxx, vxxxxx or sxxxxx
-            call = call + Pythia8UFOHelasCallWriter.mother_dict[\
-                argument.get_spin_state_number()]
+            call = call + HelasCallWriter.mother_dict[\
+                argument.get_spin_state_number()].lower()
             # Fill out with X up to 6 positions
-            call = call.lower()
             call = call + 'x' * (6 - len(call))
             # Specify namespace for Helas calls
             call = "Pythia8_%s::" % self.get_model_name() + call
@@ -903,7 +884,122 @@ class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
             self.add_amplitude(argument.get_call_key(), call_function)
 
 
+#===============================================================================
+# PythonUFOHelasCallWriter
+#===============================================================================
+class PythonUFOHelasCallWriter(UFOHelasCallWriter):
+    """The class for writing Helas calls in Python, starting from
+    HelasWavefunctions and HelasAmplitudes.
 
+    Includes the function generate_helas_call, which automatically
+    generates the Python Helas call based on the Lorentz structure of
+    the interaction."""
 
+    def generate_helas_call(self, argument):
+        """Routine for automatic generation of Python Helas calls
+        according to just the spin structure of the interaction.
+        """
+
+        if not isinstance(argument, helas_objects.HelasWavefunction) and \
+           not isinstance(argument, helas_objects.HelasAmplitude):
+            raise self.PhysicsObjectError, \
+                  "get_helas_call must be called with wavefunction or amplitude"
+        
+        call_function = None
+
+        if isinstance(argument, helas_objects.HelasAmplitude) and \
+           argument.get('interaction_id') == 0:
+            call = "#"
+            call_function = lambda amp: call
+            self.add_amplitude(argument.get_call_key(), call_function)
+            return
+
+        if isinstance(argument, helas_objects.HelasWavefunction) and \
+               not argument.get('mothers'):
+            # String is just IXXXXX, OXXXXX, VXXXXX or SXXXXX
+            call = "w[%d] = "
+
+            call = call + HelasCallWriter.mother_dict[\
+                argument.get_spin_state_number()].lower()
+            # Fill out with X up to 6 positions
+            call = call + 'x' * (14 - len(call))
+            call = call + "(p[%d],"
+            if argument.get('spin') != 1:
+                # For non-scalars, need mass and helicity
+                call = call + "%s,hel[%d],"
+            call = call + "%+d)"
+            if argument.get('spin') == 1:
+                call_function = lambda wf: call % \
+                                (wf.get('number')-1,
+                                 wf.get('number_external')-1,
+                                 # For boson, need initial/final here
+                                 (-1)**(wf.get('state') == 'initial'))
+            elif argument.is_boson():
+                call_function = lambda wf: call % \
+                                (wf.get('number')-1,
+                                 wf.get('number_external')-1,
+                                 wf.get('mass'),
+                                 wf.get('number_external')-1,
+                                 # For boson, need initial/final here
+                                 (-1)**(wf.get('state') == 'initial'))
+            else:
+                call_function = lambda wf: call % \
+                                (wf.get('number')-1,
+                                 wf.get('number_external')-1,
+                                 wf.get('mass'),
+                                 wf.get('number_external')-1,
+                                 # For fermions, need particle/antiparticle
+                                 -(-1)**wf.get_with_flow('is_part'))
+        else:
+            # String is LOR1_0, LOR1_2 etc.
+            
+            if isinstance(argument, helas_objects.HelasWavefunction):
+                outgoing = argument.find_outgoing_number()
+            else:
+                outgoing = 0
+
+            # Check if we need to append a charge conjugation flag
+            c_flag = '' 
+            if argument.needs_hermitian_conjugate():
+                c_flag = 'C1' # MG5 not configure for 4F vertex
+
+            if isinstance(argument, helas_objects.HelasWavefunction):
+                call = 'w[%d] = '
+            else:
+                call = 'amp[%d] = '
+            call += '%s%s_%s' % (argument.get('lorentz'), c_flag, outgoing) 
+
+            # Add the wave function
+            call = call + '('
+            # Wavefunctions
+            call = call + "w[%d]," * len(argument.get('mothers'))
+            # Couplings
+            call = call + "%s"
+
+            if isinstance(argument, helas_objects.HelasWavefunction):
+                # Create call for wavefunction
+                call = call + ",%s, %s)"
+                #CALL L_4_011(W(1,%d),W(1,%d),%s,%s, %s, W(1,%d))
+                call_function = lambda wf: call % \
+                                ((wf.get('number')-1,) + \
+                                 tuple([mother.get('number')-1 for mother in \
+                                        wf.get('mothers')]) + \
+                                 (wf.get_with_flow('coupling'),
+                                  wf.get('mass'),
+                                  wf.get('width')))
+            else:
+                call = call + ")"
+                # Amplitude
+                call_function = lambda amp: call % \
+                                ((amp.get('number')-1,) + \
+                                 tuple([mother.get('number')-1 
+                                        for mother in amp.get('mothers')]) + \
+                                 (amp.get('coupling'),))
+        
+        # Add the constructed function to wavefunction or amplitude dictionary
+        if isinstance(argument, helas_objects.HelasWavefunction):
+            self.add_wavefunction(argument.get_call_key(), call_function)
+        else:
+            self.add_amplitude(argument.get_call_key(), call_function)
 
 

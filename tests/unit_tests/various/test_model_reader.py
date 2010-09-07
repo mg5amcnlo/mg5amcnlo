@@ -31,13 +31,13 @@ _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 # TestModelReader
 #===============================================================================
 class TestModelReader(unittest.TestCase):
-    """Test class for the DecayModel object"""
+    """Test class for the ModelReader object"""
 
     base_model = import_ufo.import_model('sm')
 
     def setUp(self):
         """Set up decay model"""
-        #Full SM DecayModel
+        #Read the full SM
         self.model_reader = model_reader.ModelReader(self.base_model)
 
     def test_read_param_card(self):
@@ -47,18 +47,19 @@ class TestModelReader(unittest.TestCase):
 
         for param in sum([self.base_model.get('parameters')[key] for key \
                               in self.base_model.get('parameters')], []):
-            print param.name, ": ",param.value
             value = param.value
-            self.assertTrue(isinstance(value, int) or \
-                            isinstance(value, float) or \
-                            isinstance(value, complex),
-                            "value is %s and type %s" % (value, type(value))) 
+            self.assertTrue(isinstance(value, complex)) 
+            self.assertTrue(isinstance(self.model_reader.get('parameter_dict')[\
+                param.name], complex))
             
         for coupl in sum([self.base_model.get('couplings')[key] for key \
                               in self.base_model.get('couplings')], []):
             value = coupl.value
-            print coupl.name, ": ",coupl.value
             self.assertTrue(isinstance(value, complex))     
+
+            self.assertTrue(isinstance(self.model_reader.get('coupling_dict')[\
+                coupl.name], complex))
+            
 
 if __name__ == '__main__':
     unittest.unittest.main()

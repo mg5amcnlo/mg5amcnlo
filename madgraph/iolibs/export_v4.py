@@ -28,7 +28,7 @@ import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.file_writers as writers
-import madgraph.iolibs.template_files as Template
+import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
 
 import aloha.create_aloha as create_aloha
@@ -151,8 +151,8 @@ def write_procdef_mg5(file_pos, modelname, process_str):
     """ write an equivalent of the MG4 proc_card in order that all the Madevent
     Perl script of MadEvent4 are still working properly for pure MG5 run."""
     
-    proc_card_template = Template.mg4_proc_card.mg4_template
-    process_template = Template.mg4_proc_card.process_template
+    proc_card_template = template_files.mg4_proc_card.mg4_template
+    process_template = template_files.mg4_proc_card.process_template
     process_text = ''
     coupling = ''
     new_process_content = []
@@ -1413,11 +1413,11 @@ def convert_model_to_mg4(model, output_dir, wanted_lorentz = []):
         abstracthelas.write(write_dir, language='Fortran')
     
     #copy Helas Template
-    cp(MG5DIR + '/aloha/Template/Makefile_F', write_dir+'/makefile')
-    for filename in os.listdir(os.path.join(MG5DIR,'aloha','Template')):
+    cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
+    for filename in os.listdir(os.path.join(MG5DIR,'aloha','template_files')):
         if not filename.lower().endswith('.f'):
             continue
-        cp((MG5DIR + '/aloha/Template/' + filename), write_dir)
+        cp((MG5DIR + '/aloha/template_files/' + filename), write_dir)
     create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
                 
     # Make final link in the Process
@@ -1538,7 +1538,7 @@ class UFO_model_to_mg4(object):
                         'rw_para.f', 'testprog.f', 'rw_para.f']
     
         for filename in file_to_link:
-            cp( MG5DIR + '/models/Template/fortran/' + filename, self.dir_path)
+            cp( MG5DIR + '/models/template_files/fortran/' + filename, self.dir_path)
 
     def create_coupl_inc(self):
         """ write coupling.inc """

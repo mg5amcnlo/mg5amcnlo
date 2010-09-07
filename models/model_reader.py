@@ -25,7 +25,6 @@ import os
 import re
 
 import madgraph.core.base_objects as base_objects
-import madgraph.iolibs.import_ufo as import_ufo
 from madgraph import MadGraph5Error, MG5DIR
 
 ZERO = 0
@@ -34,7 +33,7 @@ ZERO = 0
 # Logger for model_reader
 #===============================================================================
 
-logger = logging.getLogger('model_reader')
+logger = logging.getLogger('models.model_reader')
 
 #===============================================================================
 # ModelReader: Used to read a param_card and calculate parameters and
@@ -44,9 +43,17 @@ class ModelReader(base_objects.Model):
     """Object to read all parameters and couplings of a model
     """
 
+    def default_setup(self):
+        """The particles is changed to ParticleList"""
+        self['coupling_dict'] = {}
+        self['parameter_dict'] = {}
+        super(ModelReader, self).default_setup()
+
     def read_param_card(self, param_card):
-        """Read a param_card and set all parameters and couplings as
-        members of this module"""
+        """Read a param_card and calculate all parameters and
+        couplings. Set values directly in the parameters and
+        couplings, plus add new dictionary coupling_dict from
+        parameter name to value."""
 
         if not os.path.isfile(param_card):
             raise MadGraph5Error, \
@@ -59,11 +66,11 @@ class ModelReader(base_objects.Model):
         parameter_dict = {}
         for param in external_parameters:
             try:
-                dict = parameter_dict[param.lhablock.lower()]
+                dictionary = parameter_dict[param.lhablock.lower()]
             except KeyError:
-                dict = {}
-                parameter_dict[param.lhablock.lower()] = dict
-            dict[tuple(param.lhacode)] = param
+                dictionary = {}
+                parameter_dict[param.lhablock.lower()] = dictionary
+            dictionary[tuple(param.lhacode)] = param
             
         # Now read parameters from the param_card
 
@@ -96,7 +103,6 @@ class ModelReader(base_objects.Model):
                     exec("locals()[\'%s\'] = %s" % (parameter_dict[block][(i1,)].name,
                                       value))
                     parameter_dict[block][(i1,)].value = complex(value)
-                    
                     logger.info("Set parameter %s = %f" % \
                                 (parameter_dict[block][(i1,)].name,\
                                  eval(parameter_dict[block][(i1,)].name)))
@@ -146,7 +152,6 @@ class ModelReader(base_objects.Model):
                                                 func.expr))
 
         # Extract derived parameters
-        # TO BE IMPLEMENTED allow running alpha_s coupling
         derived_parameters = []
         try:
             derived_parameters += self['parameters'][()]
@@ -170,7 +175,6 @@ class ModelReader(base_objects.Model):
             pass
 
         # Now calculate derived parameters
-        # TO BE IMPLEMENTED use running alpha_s for aS-dependent params
         for param in derived_parameters:
             exec("locals()[\'%s\'] = %s" % (param.name, param.expr))
             param.value = complex(eval(param.name))
@@ -209,7 +213,6 @@ class ModelReader(base_objects.Model):
             pass
 
         # Now calculate all couplings
-        # TO BE IMPLEMENTED use running alpha_s for aS-dependent couplings
         for coup in couplings:
             exec("locals()[\'%s\'] = %s" % (coup.name, coup.expr))
             coup.value = complex(eval(coup.name))
@@ -219,6 +222,13 @@ class ModelReader(base_objects.Model):
             logger.info("Calculated coupling %s = (%f, %f)" % \
                         (coup.name,\
                          eval(coup.name).real, eval(coup.name).imag))
-                
 
 
+        # Set parameter and coupling dictionaries
+
+        self.set('parameter_dict', dict([(param.name, param.value) \
+                                        for param in external_parameters + \
+                                         derived_parameters]))
+
+        self.set('coupling_dict', dict([(coup.name, coup.value) \
+                                        for coup in couplings]))

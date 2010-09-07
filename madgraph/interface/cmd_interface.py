@@ -48,10 +48,11 @@ import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.files as files
-import madgraph.iolibs.import_ufo as import_ufo
 import madgraph.iolibs.import_v4 as import_v4
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
+
+import models.import_ufo as import_ufo
 
 import madgraph.interface.tutorial_text as tutorial_text
 

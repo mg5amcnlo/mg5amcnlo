@@ -687,8 +687,13 @@ class ALOHAWriterForCPP(WriteALOHA):
     remove_double = re.compile('complex<double> (?P<name>[\w]+)\[\]')
     def define_symmetry(self, new_nb):
         """Write the call for symmetric routines"""
-        calls = self.reorder_call_list(self.calllist['CallList'], self.offshell,
-                                                                        new_nb)
+        calls = self.reorder_call_list(self.calllist['CallList'],
+                                       self.offshell, new_nb)
+        
+        for i, call in enumerate(calls):
+            if self.remove_double.match(call):
+                calls[i] = self.remove_double.match(call).group('name')
+                
         # For the call, need to remove the type specification
         #calls = [self.remove_double.match(call).group('name') for call in \
         #         calls]
