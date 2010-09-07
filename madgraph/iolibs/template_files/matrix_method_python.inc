@@ -29,9 +29,7 @@ class Matrix_%(process_string)s(object):
         for hel in helicities:
             t = self.matrix(p, hel, model)
             ans = ans + t
-
         ans = ans / denominator
-
         return ans
 
     def matrix(self, p, hel, model):

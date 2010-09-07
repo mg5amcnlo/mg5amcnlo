@@ -218,135 +218,135 @@ class IOExportPythonTest(unittest.TestCase):
         """Test getting the matrix methods for Python for a matrix element."""
         
         goal_method = (\
-"""def smatrix_0_uux_uux(p, model):
-    #  
-    #  MadGraph 5 v. %(version)s, %(date)s
-    #  By the MadGraph Development Team
-    #  Please visit us at https://launchpad.net/madgraph5
-    # 
-    # MadGraph StandAlone Version
-    # 
-    # Returns amplitude squared summed/avg over colors
-    # and helicities
-    # for the point in phase space P(0:3,NEXTERNAL)
-    #  
-    # Process: u u~ > u u~
-    # Process: c c~ > c c~
-    #  
-    #  
-    # CONSTANTS
-    #  
-    nexternal = 4
-    ncomb = 16
-    #  
-    # LOCAL VARIABLES 
-    #  
-    helicities = [ \\
-    [-1,-1,-1,-1],
-    [-1,-1,-1,1],
-    [-1,-1,1,-1],
-    [-1,-1,1,1],
-    [-1,1,-1,-1],
-    [-1,1,-1,1],
-    [-1,1,1,-1],
-    [-1,1,1,1],
-    [1,-1,-1,-1],
-    [1,-1,-1,1],
-    [1,-1,1,-1],
-    [1,-1,1,1],
-    [1,1,-1,-1],
-    [1,1,-1,1],
-    [1,1,1,-1],
-    [1,1,1,1]]
-    denominator = 36
-    # ----------
-    # BEGIN CODE
-    # ----------
-    ans = 0.
-    for hel in nhel:
-        t = matrix(p, hel, model)
-        ans = ans + t
+"""class Matrix_0_uux_uux(object):
 
-    ans = ans / denominator
+    def smatrix(self,p, model):
+        #  
+        #  MadGraph 5 v. %(version)s, %(date)s
+        #  By the MadGraph Development Team
+        #  Please visit us at https://launchpad.net/madgraph5
+        # 
+        # MadGraph StandAlone Version
+        # 
+        # Returns amplitude squared summed/avg over colors
+        # and helicities
+        # for the point in phase space P(0:3,NEXTERNAL)
+        #  
+        # Process: u u~ > u u~
+        # Process: c c~ > c c~
+        #  
+        #  
+        # CONSTANTS
+        #  
+        nexternal = 4
+        ncomb = 16
+        #  
+        # LOCAL VARIABLES 
+        #  
+        helicities = [ \\
+        [-1,-1,-1,-1],
+        [-1,-1,-1,1],
+        [-1,-1,1,-1],
+        [-1,-1,1,1],
+        [-1,1,-1,-1],
+        [-1,1,-1,1],
+        [-1,1,1,-1],
+        [-1,1,1,1],
+        [1,-1,-1,-1],
+        [1,-1,-1,1],
+        [1,-1,1,-1],
+        [1,-1,1,1],
+        [1,1,-1,-1],
+        [1,1,-1,1],
+        [1,1,1,-1],
+        [1,1,1,1]]
+        denominator = 36
+        # ----------
+        # BEGIN CODE
+        # ----------
+        ans = 0.
+        for hel in helicities:
+            t = self.matrix(p, hel, model)
+            ans = ans + t
+        ans = ans / denominator
+        return ans
 
-    return ans
-       
-def matrix_0_uux_uux(p, hel, model):
-    #  
-    #  MadGraph 5 v. %(version)s, %(date)s
-    #  By the MadGraph Development Team
-    #  Please visit us at https://launchpad.net/madgraph5
-    #
-    # Returns amplitude squared summed/avg over colors
-    # for the point with external lines W(0:6,NEXTERNAL)
-    #  
-    # Process: u u~ > u u~
-    # Process: c c~ > c c~
-    #  
-    #  
-    # Process parameters
-    #  
-    ngraphs = 10
-    nexternal = 4
-    nwavefuncs = 10
-    ncolor = 2
-    ZERO = 0.
-    #  
-    # Color matrix
-    #  
-    denom = [1,1];
-    cf = [[9,3],
-    [3,9]];
-    #
-    # Model parameters
-    #
-    WZ = model.get('parameter_dict')[WZ]
-    MZ = model.get('parameter_dict')[MZ]
-    GC_47 = model.get('coupling_dict')[GC_47]
-    GC_35 = model.get('coupling_dict')[GC_35]
-    GC_10 = model.get('coupling_dict')[GC_10]
-    # ----------
-    # Begin code
-    # ----------
-    amp = []
-    w = []
-    w[0] = ixxxxx(p[0],ZERO,hel[0],+1)
-    w[1] = oxxxxx(p[1],ZERO,hel[1],-1)
-    w[2] = oxxxxx(p[2],ZERO,hel[2],+1)
-    w[3] = ixxxxx(p[3],ZERO,hel[3],-1)
-    w[4] = FFV1_3(w[0],w[1],GC_10,ZERO, ZERO)
-    # Amplitude(s) for diagram number 1
-    amp[0] = FFV1_0(w[3],w[2],w[4],GC_10)
-    w[5] = FFV2_3(w[0],w[1],GC_35,MZ, WZ)
-    w[6] = FFV5_3(w[0],w[1],GC_47,MZ, WZ)
-    # Amplitude(s) for diagram number 2
-    amp[1] = FFV2_0(w[3],w[2],w[5],GC_35)
-    amp[2] = FFV5_0(w[3],w[2],w[5],GC_47)
-    amp[3] = FFV2_0(w[3],w[2],w[6],GC_35)
-    amp[4] = FFV5_0(w[3],w[2],w[6],GC_47)
-    w[7] = FFV1_3(w[0],w[2],GC_10,ZERO, ZERO)
-    # Amplitude(s) for diagram number 3
-    amp[5] = FFV1_0(w[3],w[1],w[7],GC_10)
-    w[8] = FFV2_3(w[0],w[2],GC_35,MZ, WZ)
-    w[9] = FFV5_3(w[0],w[2],GC_47,MZ, WZ)
-    # Amplitude(s) for diagram number 4
-    amp[6] = FFV2_0(w[3],w[1],w[8],GC_35)
-    amp[7] = FFV5_0(w[3],w[1],w[8],GC_47)
-    amp[8] = FFV2_0(w[3],w[1],w[9],GC_35)
-    amp[9] = FFV5_0(w[3],w[1],w[9],GC_47)
+    def matrix(self, p, hel, model):
+        #  
+        #  MadGraph 5 v. 0.4.3, 2010-07-21
+        #  By the MadGraph Development Team
+        #  Please visit us at https://launchpad.net/madgraph5
+        #
+        # Returns amplitude squared summed/avg over colors
+        # for the point with external lines W(0:6,NEXTERNAL)
+        #  
+        # Process: u u~ > u u~
+        # Process: c c~ > c c~
+        #  
+        #  
+        # Process parameters
+        #  
+        ngraphs = 10
+        nexternal = 4
+        nwavefuncs = 10
+        ncolor = 2
+        ZERO = 0.
+        #  
+        # Color matrix
+        #  
+        denom = [1,1];
+        cf = [[9,3],
+        [3,9]];
+        #
+        # Model parameters
+        #
+        WZ = model.get('parameter_dict')["WZ"]
+        MZ = model.get('parameter_dict')["MZ"]
+        GC_47 = model.get('coupling_dict')["GC_47"]
+        GC_35 = model.get('coupling_dict')["GC_35"]
+        GC_10 = model.get('coupling_dict')["GC_10"]
+        # ----------
+        # Begin code
+        # ----------
+        amp = [None] * ngraphs
+        w = [None] * nwavefuncs
+        w[0] = ixxxxx(p[0],ZERO,hel[0],+1)
+        w[1] = oxxxxx(p[1],ZERO,hel[1],-1)
+        w[2] = oxxxxx(p[2],ZERO,hel[2],+1)
+        w[3] = ixxxxx(p[3],ZERO,hel[3],-1)
+        w[4] = FFV1_3(w[0],w[1],GC_10,ZERO, ZERO)
+        # Amplitude(s) for diagram number 1
+        amp[0] = FFV1_0(w[3],w[2],w[4],GC_10)
+        w[5] = FFV2_3(w[0],w[1],GC_35,MZ, WZ)
+        w[6] = FFV5_3(w[0],w[1],GC_47,MZ, WZ)
+        # Amplitude(s) for diagram number 2
+        amp[1] = FFV2_0(w[3],w[2],w[5],GC_35)
+        amp[2] = FFV5_0(w[3],w[2],w[5],GC_47)
+        amp[3] = FFV2_0(w[3],w[2],w[6],GC_35)
+        amp[4] = FFV5_0(w[3],w[2],w[6],GC_47)
+        w[7] = FFV1_3(w[0],w[2],GC_10,ZERO, ZERO)
+        # Amplitude(s) for diagram number 3
+        amp[5] = FFV1_0(w[3],w[1],w[7],GC_10)
+        w[8] = FFV2_3(w[0],w[2],GC_35,MZ, WZ)
+        w[9] = FFV5_3(w[0],w[2],GC_47,MZ, WZ)
+        # Amplitude(s) for diagram number 4
+        amp[6] = FFV2_0(w[3],w[1],w[8],GC_35)
+        amp[7] = FFV5_0(w[3],w[1],w[8],GC_47)
+        amp[8] = FFV2_0(w[3],w[1],w[9],GC_35)
+        amp[9] = FFV5_0(w[3],w[1],w[9],GC_47)
 
-    jamp = []
-    jamp.append(+1./6.*amp[0]-amp[1]-amp[2]-amp[3]-amp[4]+1./2.*amp[5])
-    jamp.append(-1./2.*amp[0]-1./6.*amp[5]+amp[6]+amp[7]+amp[8]+amp[9])
-    
-    matrix = 0.
-    for i in range(ncolor):
-        ztemp = 0
-        for j in range(ncolor):
-            ztemp = ztemp + cf[i][j]*jamp[j]
-        matrix = matrix + ztemp * jamp[i].conjugate()/denom[i]   
+        jamp = [None] * ncolor
+        jamp[0] = +1./6.*amp[0]-amp[1]-amp[2]-amp[3]-amp[4]+1./2.*amp[5]
+        jamp[1] = -1./2.*amp[0]-1./6.*amp[5]+amp[6]+amp[7]+amp[8]+amp[9]
 
-    return matrix
+        matrix = 0.
+        for i in range(ncolor):
+            ztemp = 0
+            for j in range(ncolor):
+                ztemp = ztemp + cf[i][j]*jamp[j]
+            matrix = matrix + ztemp * jamp[i].conjugate()/denom[i]   
+
+        return matrix
 """ % misc.get_pkg_info()).split('\n')
 
         exporter = export_python.ProcessExporterPython(self.mymatrixelement,
@@ -388,22 +388,24 @@ def matrix_0_uux_uux(p, hel, model):
 
         mymatrixelement = helas_objects.HelasMatrixElement(myamplitude)
 
+        # Create only the needed aloha routines
         wanted_lorentz = mymatrixelement.get_used_lorentz()
 
         aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
         aloha_model.compute_subset(wanted_lorentz)
 
+        # Write out the routines in Python
         aloha_routines = []
         for routine in aloha_model.values():
             aloha_routines.append(routine.write(output_dir = None,
                                                 language = 'Python').\
                                   replace('import wavefunctions',
                                           'import aloha.template_files.wavefunctions as wavefunctions'))
-
+        # Define the routines to be available globally
         for routine in aloha_routines:
-            print "\n".join(routine.split("\n")[:-1])
-            exec("\n".join(routine.split("\n")[:-1]))
+            exec("\n".join(routine.split("\n")[:-1]), globals())
 
+        # Write the matrix element(s) in Python
         mypythonmodel = helas_call_writer.PythonUFOHelasCallWriter(\
                                                              model)
         exporter = export_python.ProcessExporterPython(\
@@ -411,8 +413,8 @@ def matrix_0_uux_uux(p, hel, model):
                                                      mypythonmodel)
         matrix_methods = exporter.get_python_matrix_methods()
 
+        # Define the routines (locally is enough)
         for matrix_method in matrix_methods.values():
-            print matrix_method
             exec(matrix_method)
 
         # Read a param_card and calculate couplings
@@ -423,16 +425,18 @@ def matrix_0_uux_uux(p, hel, model):
         
         full_model.read_param_card(param_path)
 
-        print full_model.get('coupling_dict').keys()
-
+        # Define a momentum
         p = [[0.5000000e+03, 0.0000000e+00,  0.0000000e+00,  0.5000000e+03,  0.0000000e+00],
              [0.5000000e+03,  0.0000000e+00,  0.0000000e+00, -0.5000000e+03,  0.0000000e+00],
              [0.4585788e+03,  0.1694532e+03,  0.3796537e+03, -0.1935025e+03,  0.6607249e-05],
              [0.3640666e+03, -0.1832987e+02, -0.3477043e+03,  0.1063496e+03,  0.7979012e-05],
              [0.1773546e+03, -0.1511234e+03, -0.3194936e+02,  0.8715287e+02,  0.1348699e-05]]
 
-        answer = 1.39189717257175028e-007
+        # Evaluate the matrix element for the given momenta
 
+        answer = 1.39189717257175028e-007
         for process in matrix_methods.keys():
             value = eval("Matrix_%s().smatrix(p, full_model)" % process)
-            print value
+            self.assertTrue(abs(value-answer)/answer < 1e-6,
+                            "Value is: %.9e should be %.9e" % \
+                            (abs(value), answer))

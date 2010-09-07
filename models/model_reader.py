@@ -103,9 +103,6 @@ class ModelReader(base_objects.Model):
                     exec("locals()[\'%s\'] = %s" % (parameter_dict[block][(i1,)].name,
                                       value))
                     parameter_dict[block][(i1,)].value = complex(value)
-                    logger.info("Set parameter %s = %f" % \
-                                (parameter_dict[block][(i1,)].name,\
-                                 eval(parameter_dict[block][(i1,)].name)))
                 except KeyError:
                     logger.warning('No parameter found for block %s index %d' %\
                                    (block, i1))
@@ -120,9 +117,6 @@ class ModelReader(base_objects.Model):
                                       double_index_match.group('value')))
                     parameter_dict[block][(i1,i2)].value = complex(value)
 
-                    logger.info("Set parameter %s = %f" % \
-                                (parameter_dict[block][(i1,i2)].name,\
-                                 eval(parameter_dict[block][(i1,i2)].name)))
                 except KeyError:
                     logger.warning('No parameter found for block %s index %d %d' %\
                                    (block, i1, i2))
@@ -138,9 +132,6 @@ class ModelReader(base_objects.Model):
                          (parameter_dict['decay'][(pid,)].name,
                           value))
                     parameter_dict['decay'][(pid,)].value = complex(value)
-                    logger.info("Set decay width %s = %f" % \
-                                (parameter_dict['decay'][(pid,)].name,\
-                                 eval(parameter_dict['decay'][(pid,)].name)))
                 except KeyError:
                     logger.warning('No decay parameter found for %d' % pid)
                 continue
@@ -181,13 +172,6 @@ class ModelReader(base_objects.Model):
             if not eval(param.name) and eval(param.name) != 0:
                 logger.warning("%s has no expression: %s" % (param.name,
                                                              param.expr))
-            try:
-                logger.info("Calculated parameter %s = %f" % \
-                            (param.name, eval(param.name)))
-            except TypeError:
-                logger.info("Calculated parameter %s = (%f, %f)" % \
-                            (param.name,\
-                             eval(param.name).real, eval(param.name).imag))
         
         # Extract couplings
         couplings = sum(self['couplings'].values(), [])
@@ -199,10 +183,6 @@ class ModelReader(base_objects.Model):
             if not eval(coup.name) and eval(coup.name) != 0:
                 logger.warning("%s has no expression: %s" % (coup.name,
                                                              coup.expr))
-            logger.info("Calculated coupling %s = (%f, %f)" % \
-                        (coup.name,\
-                         eval(coup.name).real, eval(coup.name).imag))
-
 
         # Set parameter and coupling dictionaries
 
