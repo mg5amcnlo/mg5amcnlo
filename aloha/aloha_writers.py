@@ -932,10 +932,13 @@ class ALOHAWriterForPython(WriteALOHA):
                          %(number,number)
         return Outstring        
 
-    def write(self):
+    def write(self,mode='self'):
                          
         # write head - momenta - body - foot
-        text = 'import wavefunctions\n'
+        if mode == 'mg5':
+            text = 'import aloha.templates_files.wavefunctions as wavefunctions\n'
+        else:
+            text = 'import wavefunctions\n'
         text += self.define_header()
         content = self.define_momenta()
         content += self.define_expression()
