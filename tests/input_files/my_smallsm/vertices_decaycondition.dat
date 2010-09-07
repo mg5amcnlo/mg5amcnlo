@@ -1,0 +1,145 @@
+{(22, 2, True): [], (5, 2, False): [{
+    'id': 32,
+    'legs': [{
+    'id': -24,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 6,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 5,
+    'number': 0,
+    'state': False,
+    'from_group': True
+}]
+}], (-6, 2, True): [{
+    'id': 32,
+    'legs': [{
+    'id': -24,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': -5,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': -6,
+    'number': 0,
+    'state': False,
+    'from_group': True
+}]
+}], (-24, 2, True): [{
+    'id': 47,
+    'legs': [{
+    'id': -12,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 11,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': -24,
+    'number': 0,
+    'state': False,
+    'from_group': True
+}]
+}], (5, 2, True): [], (-6, 2, False): [], (11, 2, False): [], (-24, 2, False): [{
+    'id': 35,
+    'legs': [{
+    'id': -6,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 5,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': -24,
+    'number': 0,
+    'state': False,
+    'from_group': True
+}]
+}], (22, 3, False): [], (11, 2, True): [], (22, 3, True): [], (24, 2, True): [{
+    'id': 44,
+    'legs': [{
+    'id': -11,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 12,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 24,
+    'number': 0,
+    'state': False,
+    'from_group': True
+}]
+}], (6, 3, True): [], (24, 2, False): [{
+    'id': 32,
+    'legs': [{
+    'id': -5,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 6,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 24,
+    'number': 0,
+    'state': False,
+    'from_group': True
+}]
+}], (-6, 3, True): [], (-11, 3, True): [], (22, 2, False): [], (-11, 3, False): [], (-5, 3, True): [], (6, 2, True): [{
+    'id': 35,
+    'legs': [{
+    'id': 5,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 24,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 6,
+    'number': 0,
+    'state': False,
+    'from_group': True
+}]
+}], (-12, 2, True): [], (-24, 3, False): [], (-5, 3, False): [], (6, 2, False): [], (-12, 2, False): [], (12, 2, True): [], (-24, 3, True): [], (12, 2, False): [], (24, 3, False): [], (24, 3, True): [], (-11, 2, False): [], (5, 3, True): [], (-11, 2, True): [], (5, 3, False): [], (-5, 2, False): [{
+    'id': 35,
+    'legs': [{
+    'id': -6,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 24,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': -5,
+    'number': 0,
+    'state': False,
+    'from_group': True
+}]
+}], (6, 3, False): [], (-12, 3, False): [], (-5, 2, True): [], (11, 3, False): [], (-12, 3, True): [], (12, 3, False): [], (-6, 3, False): [], (12, 3, True): [], (11, 3, True): []}

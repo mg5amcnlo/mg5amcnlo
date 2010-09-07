@@ -58,10 +58,14 @@ def make_vertexlist(model):
             temp_legs[num].set('state', False)
             #If part is not self-conjugate, change the particle into anti-part
             temp_legs[num].set('id', pid)
-            
+
             temp_legs_new = copy.deepcopy(temp_legs)
-            #Sort the legs for comparison
+            # Initial leg should be in the last
+            ini_leg = temp_legs_new.pop(num)
+            #Sort other legs for comparison
             temp_legs_new.sort(decay_objects.legcmp)
+            temp_legs_new.append(ini_leg)
+
             temp_vertex = base_objects.Vertex({'id': inter.get('id'),
                                                'legs':temp_legs_new})
             #Record the vertex with key = (interaction_id, part_id)
@@ -81,19 +85,20 @@ def make_vertexlist(model):
     path_1 = os.path.join(MG5DIR, 'models', model['name'])
     path_2 = os.path.join(MG5DIR, 'tests/input_files', model['name'])
 
-    if os.path.isdir(path_1):
-        fdata = open(os.path.join(path_1, 'vertices_decaycondition.dat'), 'w')
-        fdata.write(str(full_vertexlist_newindex))
-        fdata.close()
-
-        fdata2 = open(os.path.join(path_1, 'vertices_sort.dat'), 'w')
-        fdata2.write(str(full_vertexlist))
-        fdata2.close()
-    elif os.path.isdir(path_2):
+    if os.path.isdir(path_2):
         fdata = open(os.path.join(path_2, 'vertices_decaycondition.dat'), 'w')
         fdata.write(str(full_vertexlist_newindex))
         fdata.close()
 
         fdata2 = open(os.path.join(path_2, 'vertices_sort.dat'), 'w')
+        fdata2.write(str(full_vertexlist))
+        fdata2.close()
+
+    elif os.path.isdir(path_1):
+        fdata = open(os.path.join(path_1, 'vertices_decaycondition.dat'), 'w')
+        fdata.write(str(full_vertexlist_newindex))
+        fdata.close()
+
+        fdata2 = open(os.path.join(path_1, 'vertices_sort.dat'), 'w')
         fdata2.write(str(full_vertexlist))
         fdata2.close()

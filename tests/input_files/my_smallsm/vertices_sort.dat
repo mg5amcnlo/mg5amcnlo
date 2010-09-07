@@ -1,25 +1,12 @@
-{(10, -24): {
-    'id': 10,
+{(32, -6): {
+    'id': 32,
     'legs': [{
     'id': -24,
-    'number': 0,
-    'state': False,
-    'from_group': True
-}, {
-    'id': -12,
     'number': 0,
     'state': True,
     'from_group': True
 }, {
-    'id': 11,
-    'number': 0,
-    'state': True,
-    'from_group': True
-}]
-}, (7, -6): {
-    'id': 7,
-    'legs': [{
-    'id': -24,
+    'id': -5,
     'number': 0,
     'state': True,
     'from_group': True
@@ -28,14 +15,9 @@
     'number': 0,
     'state': False,
     'from_group': True
-}, {
-    'id': -5,
-    'number': 0,
-    'state': True,
-    'from_group': True
 }]
-}, (7, 24): {
-    'id': 7,
+}, (32, 24): {
+    'id': 32,
     'legs': [{
     'id': -5,
     'number': 0,
@@ -52,80 +34,8 @@
     'state': False,
     'from_group': True
 }]
-}, (8, -24): {
-    'id': 8,
-    'legs': [{
-    'id': -24,
-    'number': 0,
-    'state': False,
-    'from_group': True
-}, {
-    'id': -6,
-    'number': 0,
-    'state': True,
-    'from_group': True
-}, {
-    'id': 5,
-    'number': 0,
-    'state': True,
-    'from_group': True
-}]
-}, (7, 5): {
-    'id': 7,
-    'legs': [{
-    'id': -24,
-    'number': 0,
-    'state': True,
-    'from_group': True
-}, {
-    'id': 5,
-    'number': 0,
-    'state': False,
-    'from_group': True
-}, {
-    'id': 6,
-    'number': 0,
-    'state': True,
-    'from_group': True
-}]
-}, (8, 6): {
-    'id': 8,
-    'legs': [{
-    'id': 5,
-    'number': 0,
-    'state': True,
-    'from_group': True
-}, {
-    'id': 6,
-    'number': 0,
-    'state': False,
-    'from_group': True
-}, {
-    'id': 24,
-    'number': 0,
-    'state': True,
-    'from_group': True
-}]
-}, (8, -5): {
-    'id': 8,
-    'legs': [{
-    'id': -6,
-    'number': 0,
-    'state': True,
-    'from_group': True
-}, {
-    'id': -5,
-    'number': 0,
-    'state': False,
-    'from_group': True
-}, {
-    'id': 24,
-    'number': 0,
-    'state': True,
-    'from_group': True
-}]
-}, (9, 24): {
-    'id': 9,
+}, (44, 24): {
+    'id': 44,
     'legs': [{
     'id': -11,
     'number': 0,
@@ -138,6 +48,96 @@
     'from_group': True
 }, {
     'id': 24,
+    'number': 0,
+    'state': False,
+    'from_group': True
+}]
+}, (35, -24): {
+    'id': 35,
+    'legs': [{
+    'id': -6,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 5,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': -24,
+    'number': 0,
+    'state': False,
+    'from_group': True
+}]
+}, (32, 5): {
+    'id': 32,
+    'legs': [{
+    'id': -24,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 6,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 5,
+    'number': 0,
+    'state': False,
+    'from_group': True
+}]
+}, (35, 6): {
+    'id': 35,
+    'legs': [{
+    'id': 5,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 24,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 6,
+    'number': 0,
+    'state': False,
+    'from_group': True
+}]
+}, (47, -24): {
+    'id': 47,
+    'legs': [{
+    'id': -12,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 11,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': -24,
+    'number': 0,
+    'state': False,
+    'from_group': True
+}]
+}, (35, -5): {
+    'id': 35,
+    'legs': [{
+    'id': -6,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 24,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': -5,
     'number': 0,
     'state': False,
     'from_group': True

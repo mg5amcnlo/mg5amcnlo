@@ -36,7 +36,7 @@ class Test_DecayParticle(unittest.TestCase):
 
     mydict = {}
     mypart = None
-    my_testmodel_base = import_ufo.import_model('my_smallsm')
+    my_testmodel_base = import_ufo.import_model('sm')
     my_2bodyvertexlist = base_objects.VertexList()
     my_3bodyvertexlist = base_objects.VertexList()
     my_2bodyvertexlist_wrongini = base_objects.VertexList()
@@ -48,30 +48,50 @@ class Test_DecayParticle(unittest.TestCase):
         self.my_testmodel = decay_objects.DecayModel(self.my_testmodel_base)
         param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')
         self.my_testmodel.read_param_card(param_path)
+        #print len(self.my_testmodel_base.get('interactions')), len(self.my_testmodel.get('interactions'))
+
+        # Simplify the model
+        particles = self.my_testmodel.get('particles')
+        interactions = self.my_testmodel.get('interactions')
+        inter_list = copy.copy(interactions)
+        no_want_pid = [1, 2, 3, 4, 13, 14, 15, 16, 21, 23, 25]
+        for pid in no_want_pid:
+            particles.remove(self.my_testmodel.get_particle(pid))
+
+        for inter in inter_list:
+            if any([p.get('pdg_code') in no_want_pid for p in \
+                        inter.get('particles')]):
+                interactions.remove(inter)
+
+        # Set a new name
+        self.my_testmodel.set('name', 'my_smallsm')
+        self.my_testmodel.set('particles', particles)
+        self.my_testmodel.set('interactions', interactions)
 
         #Setup the vertexlist for my_testmodel
+        #print self.my_testmodel.get('interactions')
         import_vertexlist.make_vertexlist(self.my_testmodel)
         
-        #Setup vertexlist for test
+        # Setup vertexlist for test
         full_vertexlist = import_vertexlist.full_vertexlist
 
         self.my_2bodyvertexlist = base_objects.VertexList([
-                full_vertexlist[(9, 24)], full_vertexlist[(7, 24)]])
-        fake_vertex = copy.deepcopy(full_vertexlist[(9, 24)])
+                full_vertexlist[(32, 24)], full_vertexlist[(44, 24)]])
+        fake_vertex = copy.deepcopy(full_vertexlist[(44, 24)])
         fake_vertex['legs'].append(base_objects.Leg({'id':22}))
-        fake_vertex2 = copy.deepcopy(full_vertexlist[(7, 24)])
+        fake_vertex2 = copy.deepcopy(full_vertexlist[(32, 24)])
         fake_vertex2['legs'].append(base_objects.Leg({'id': 11}))
         self.my_3bodyvertexlist = base_objects.VertexList([
                 fake_vertex, fake_vertex2])
 
         self.my_2bodyvertexlist_wrongini = base_objects.VertexList([
-                full_vertexlist[(8, -24)], full_vertexlist[(7, 5)]])
-        fake_vertex3 = copy.deepcopy(full_vertexlist[(8, -24 )])
+                full_vertexlist[(35, -24)], full_vertexlist[(32, -6)]])
+        fake_vertex3 = copy.deepcopy(full_vertexlist[(35, -24 )])
         fake_vertex3['legs'].append(base_objects.Leg({'id':12}))
         self.my_3bodyvertexlist_wrongini = base_objects.VertexList([
                 fake_vertex3])
 
-        fake_vertex4 = copy.deepcopy(full_vertexlist[(9, 24 )])
+        fake_vertex4 = copy.deepcopy(full_vertexlist[(44, 24 )])
         fake_vertex4['legs'].append(base_objects.Leg({'id':24}))
         self.my_3bodyvertexlist_radiactive = base_objects.VertexList([
                 fake_vertex4])
@@ -309,10 +329,11 @@ class Test_DecayParticle(unittest.TestCase):
                 self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError
                              , self.mypart.set_vertexlist, partnum, False, item)
                 
-        
+
+
     def test_find_vertexlist(self):
         #undefine object: my_testmodel, mypart, extra_part
-
+        
         #Test validity of arguments
         #Test if the calling particle is in the model
         extra_part = copy.copy(self.mypart)
@@ -337,7 +358,7 @@ class Test_DecayParticle(unittest.TestCase):
         tquark.find_vertexlist(self.my_testmodel)
         #Name convention: 'pdg_code'+'particle #'+'on-shell'
         my_vertexlist620 = base_objects.VertexList()
-        my_vertexlist621 = base_objects.VertexList([full_vertexlist[(8, 6)]])
+        my_vertexlist621 = base_objects.VertexList([full_vertexlist[(35, 6)]])
         my_vertexlist630 = base_objects.VertexList()
         my_vertexlist631 = base_objects.VertexList()
         rightlist6 = [my_vertexlist620, my_vertexlist621, my_vertexlist630, my_vertexlist631]
@@ -347,8 +368,8 @@ class Test_DecayParticle(unittest.TestCase):
         wboson_p.find_vertexlist(self.my_testmodel)
         #List must follow the order of interaction id so as to be consistent
         #with the find_vertexlist function
-        my_vertexlist2420 = base_objects.VertexList([full_vertexlist[(7, 24)]])
-        my_vertexlist2421 = base_objects.VertexList([full_vertexlist[(9, 24)]])
+        my_vertexlist2420 = base_objects.VertexList([full_vertexlist[(32, 24)]])
+        my_vertexlist2421 = base_objects.VertexList([full_vertexlist[(44, 24)]])
         my_vertexlist2430 = base_objects.VertexList()
         my_vertexlist2431 = base_objects.VertexList()
         #List of the total decay vertex list for W+
@@ -376,7 +397,14 @@ class Test_DecayParticle(unittest.TestCase):
                                  rightlist22[i])
                 i +=1
 
+        # Test if the find_max_vertexorder can return the correct order
+        self.assertEqual(self.mypart.find_max_vertexorder(), None)
+        self.mypart.decay_vertexlist_written = True
+        self.assertEqual(self.mypart.find_max_vertexorder(), 3)
 
+    def test_find_channel(self): 
+        pass
+        
 #===============================================================================
 # TestDecayParticleList
 #===============================================================================
@@ -410,7 +438,7 @@ class TestDecayModel(unittest.TestCase):
     """Test class for the DecayModel object"""
 
     base_model = import_ufo.import_model('sm')
-    my_testmodel_base = import_ufo.import_model('my_smallsm')
+    my_testmodel_base = import_ufo.import_model('sm')
     def setUp(self):
         """Set up decay model"""
         #Full SM DecayModel
@@ -420,6 +448,25 @@ class TestDecayModel(unittest.TestCase):
         self.my_testmodel = decay_objects.DecayModel(self.my_testmodel_base)
         param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')
         self.my_testmodel.read_param_card(param_path)
+
+        # Simplify the model
+        particles = self.my_testmodel.get('particles')
+        interactions = self.my_testmodel.get('interactions')
+        inter_list = copy.copy(interactions)
+        no_want_pid = [1, 2, 3, 4, 13, 14, 15, 16, 21, 23, 25]
+        for pid in no_want_pid:
+            particles.remove(self.my_testmodel.get_particle(pid))
+
+        for inter in inter_list:
+            if any([p.get('pdg_code') in no_want_pid for p in \
+                        inter.get('particles')]):
+                interactions.remove(inter)
+
+        # Set a new name
+        self.my_testmodel.set('name', 'my_smallsm')
+        self.my_testmodel.set('particles', particles)
+        self.my_testmodel.set('interactions', interactions)
+
         import_vertexlist.make_vertexlist(self.my_testmodel)
 
         #import madgraph.iolibs.export_v4 as export_v4
@@ -600,8 +647,8 @@ class TestDecayModel(unittest.TestCase):
                         interaction.get('particles')]):
                 interactions.remove(interaction)
         
-        mssm.set('particles', particles)
-        mssm.set('interactions', interactions)
+        #mssm.set('particles', particles)
+        #mssm.set('interactions', interactions)
 
         mssm.get('interactions').append(new_interaction)
         mssm.get('interactions').append(new_interaction_add_sm)
@@ -625,6 +672,13 @@ class TestDecayModel(unittest.TestCase):
         # Test if all useless interactions are deleted.
         for inter in decay_mssm.reduced_interactions:
             self.assertTrue(len(inter['particles']))
+
+        #decay_mssm.find_stable_particles()
+        #stable_particles = [
+
+class TestChannel(unittest.TestCase):
+    """ Test for the channel object"""
+    
 
 if __name__ == '__main__':
     unittest.unittest.main()
