@@ -190,27 +190,7 @@ class ModelReader(base_objects.Model):
                              eval(param.name).real, eval(param.name).imag))
         
         # Extract couplings
-        couplings = []
-        try:
-            couplings += self['couplings'][()]
-        except KeyError:
-            pass
-        try:
-            couplings += self['couplings'][('aEWM1',)]
-        except KeyError:
-            pass
-        try:
-            couplings += self['couplings'][('aS',)]
-        except KeyError:
-            pass
-        try:
-            couplings += self['couplings'][('aS', 'aEWM1')]
-        except KeyError:
-            pass
-        try:
-            couplings += self['couplings'][('aEWM1', 'aS')]
-        except KeyError:
-            pass
+        couplings = sum(self['couplings'].values(), [])
 
         # Now calculate all couplings
         for coup in couplings:

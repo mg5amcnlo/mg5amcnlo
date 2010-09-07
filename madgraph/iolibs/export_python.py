@@ -52,12 +52,19 @@ class ProcessExporterPython(object):
     class ProcessExporterPythonError(Exception):
         pass
     
-    def __init__(self, multi_matrix_element, python_helas_call_writer):
+    def __init__(self, matrix_elements, python_helas_call_writer):
         """Initiate with matrix elements, helas call writer.
         Generate the process matrix element functions as strings."""
 
-        self.matrix_elements = multi_matrix_element.get('matrix_elements')
-
+        if isinstance(matrix_elements, helas_objects.HelasMultiProcess):
+            self.matrix_elements = matrix_elements.get('matrix_elements')
+        elif isinstance(matrix_elements,
+                        helas_objects.HelasMatrixElementList):
+            self.matrix_elements = matrix_elements
+        elif isinstance(matrix_elements,
+                        helas_objects.HelasMatrixElement):
+            self.matrix_elements = helas_objects.HelasMatrixElementList(\
+                                                     [matrix_elements])
         if not self.matrix_elements:
             raise MadGraph5Error("No matrix elements to export")
 
@@ -133,16 +140,16 @@ class ProcessExporterPython(object):
             # Extract color data lines
             color_matrix_lines = self.get_color_matrix_lines(matrix_element)
             replace_dict['color_matrix_lines'] = \
-                                               "\n    ".join(color_matrix_lines)
+                                               "\n        ".join(color_matrix_lines)
 
             # Extract helas calls
             helas_calls = self.helas_call_writer.get_matrix_element_calls(\
                                                                 matrix_element)
-            replace_dict['helas_calls'] = "\n    ".join(helas_calls)
+            replace_dict['helas_calls'] = "\n        ".join(helas_calls)
 
             # Extract JAMP lines
             jamp_lines = self.get_jamp_lines(matrix_element)
-            replace_dict['jamp_lines'] = "\n    ".join(jamp_lines)
+            replace_dict['jamp_lines'] = "\n        ".join(jamp_lines)
 
             method_file = open(os.path.join(_file_path, \
                        'iolibs/template_files/matrix_method_python.inc')).read()
@@ -155,14 +162,14 @@ class ProcessExporterPython(object):
     def get_helicity_matrix(self, matrix_element):
         """Return the Helicity matrix definition lines for this matrix element"""
 
-        helicity_line = "helicities = [ \\\n    "
+        helicity_line = "helicities = [ \\\n        "
         helicity_line_list = []
 
         for helicities in matrix_element.get_helicity_matrix():
             helicity_line_list.append("[" + ",".join(['%d'] * len(helicities)) % \
                                       tuple(helicities) + "]")
             
-        return helicity_line + ",\n    ".join(helicity_line_list) + "]"
+        return helicity_line + ",\n        ".join(helicity_line_list) + "]"
 
 
     def get_den_factor_line(self, matrix_element):
@@ -193,7 +200,7 @@ class ProcessExporterPython(object):
                 matrix_strings.append("%s" % \
                                      ",".join(["%d" % i for i in num_list]))
             matrix_string = "cf = [[" + \
-                            "],\n    [".join(matrix_strings) + "]];"
+                            "],\n        [".join(matrix_strings) + "]];"
             return [denom_string, matrix_string]
 
     def get_jamp_lines(self, matrix_element):
@@ -203,7 +210,7 @@ class ProcessExporterPython(object):
 
         for i, coeff_list in enumerate(matrix_element.get_color_amplitudes()):
 
-            res = "jamp.append("
+            res = "jamp[%d] = " % i
 
             # Optimization: if all contributions to that color basis element have
             # the same coefficient (up to a sign), put it in front
@@ -232,8 +239,6 @@ class ProcessExporterPython(object):
             if common_factor:
                 res = res + ')'
 
-            res += ')'
-
             res_list.append(res)
 
         return res_list
@@ -248,19 +253,19 @@ class ProcessExporterPython(object):
             info_lines = "#  MadGraph 5 v. %s, %s\n" % \
                          (info['version'], info['date'])
             info_lines = info_lines + \
-                         "    #  By the MadGraph Development Team\n" + \
-                         "    #  Please visit us at https://launchpad.net/madgraph5"
+                         "        #  By the MadGraph Development Team\n" + \
+                         "        #  Please visit us at https://launchpad.net/madgraph5"
         else:
-            info_lines = "    #  by MadGraph 5\n" + \
-                         "    #  By the MadGraph Development Team\n" + \
-                         "    #  Please visit us at https://launchpad.net/madgraph5"        
+            info_lines = "        #  by MadGraph 5\n" + \
+                         "        #  By the MadGraph Development Team\n" + \
+                         "        #  Please visit us at https://launchpad.net/madgraph5"        
 
         return info_lines
 
     def get_process_info_lines(self, matrix_element):
         """Return info lines describing the processes for this matrix element"""
 
-        return"\n    ".join([ "# " + process.nice_string().replace('\n', '\n# * ') \
+        return"\n        ".join([ "# " + process.nice_string().replace('\n', '\n# * ') \
                          for process in matrix_element.get('processes')])
 
 
@@ -282,11 +287,11 @@ class ProcessExporterPython(object):
                               matrix_element.get_all_amplitudes()
                               if func.get('mothers')]))
         
-        return "\n    ".join([\
-                         "%(param)s = model.get(\'parameter_dict\')[%(param)s]"\
+        return "\n        ".join([\
+                         "%(param)s = model.get(\'parameter_dict\')[\"%(param)s\"]"\
                          % {"param": param} for param in parameters]) + \
-               "\n    " + "\n    ".join([\
-                         "%(coup)s = model.get(\'coupling_dict\')[%(coup)s]"\
+               "\n        " + "\n        ".join([\
+                         "%(coup)s = model.get(\'coupling_dict\')[\"%(coup)s\"]"\
                               % {"coup": coup} for coup in couplings])
 
 #===============================================================================

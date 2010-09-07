@@ -39,8 +39,14 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 from madgraph import MG5DIR
 
+import models.model_reader as model_reader
+import aloha.template_files.wavefunctions as wavefunctions
+from aloha.template_files.wavefunctions import \
+     ixxxxx, oxxxxx, vxxxxx, sxxxxx
+
 import tests.unit_tests.core.test_helas_objects as test_helas_objects
-import tests.unit_tests.iolibs.test_file_writers as test_file_writers
+
+_file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
 #===============================================================================
 # IOExportPythonTest
@@ -353,3 +359,80 @@ def matrix_0_uux_uux(p, hel, model):
             self.assertEqual(matrix_methods[iline],
                              goal_method[iline])
         
+
+
+    def test_run_python_matrix_element(self):
+        """Test a complete running of a Python matrix element without
+        writing any files"""
+
+        # Import the SM
+        model = import_ufo.import_model('sm')
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':model})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        mymatrixelement = helas_objects.HelasMatrixElement(myamplitude)
+
+        wanted_lorentz = mymatrixelement.get_used_lorentz()
+
+        aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
+        aloha_model.compute_subset(wanted_lorentz)
+
+        aloha_routines = []
+        for routine in aloha_model.values():
+            aloha_routines.append(routine.write(output_dir = None,
+                                                language = 'Python').\
+                                  replace('import wavefunctions',
+                                          'import aloha.template_files.wavefunctions as wavefunctions'))
+
+        for routine in aloha_routines:
+            print "\n".join(routine.split("\n")[:-1])
+            exec("\n".join(routine.split("\n")[:-1]))
+
+        mypythonmodel = helas_call_writer.PythonUFOHelasCallWriter(\
+                                                             model)
+        exporter = export_python.ProcessExporterPython(\
+                                                     mymatrixelement,
+                                                     mypythonmodel)
+        matrix_methods = exporter.get_python_matrix_methods()
+
+        for matrix_method in matrix_methods.values():
+            print matrix_method
+            exec(matrix_method)
+
+        # Read a param_card and calculate couplings
+        param_path = os.path.join(_file_path,
+                                  '../input_files/param_card_sm.dat')
+        
+        full_model = model_reader.ModelReader(model)
+        
+        full_model.read_param_card(param_path)
+
+        print full_model.get('coupling_dict').keys()
+
+        p = [[0.5000000e+03, 0.0000000e+00,  0.0000000e+00,  0.5000000e+03,  0.0000000e+00],
+             [0.5000000e+03,  0.0000000e+00,  0.0000000e+00, -0.5000000e+03,  0.0000000e+00],
+             [0.4585788e+03,  0.1694532e+03,  0.3796537e+03, -0.1935025e+03,  0.6607249e-05],
+             [0.3640666e+03, -0.1832987e+02, -0.3477043e+03,  0.1063496e+03,  0.7979012e-05],
+             [0.1773546e+03, -0.1511234e+03, -0.3194936e+02,  0.8715287e+02,  0.1348699e-05]]
+
+        answer = 1.39189717257175028e-007
+
+        for process in matrix_methods.keys():
+            value = eval("Matrix_%s().smatrix(p, full_model)" % process)
+            print value
