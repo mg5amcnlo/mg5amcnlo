@@ -3,6 +3,7 @@ import os
 import math
 import madgraph.core.base_objects as base_objects
 import decay.decay_objects as decay_objects
+import madgraph.iolibs.save_model as save_model
 from madgraph import  MG5DIR
 
 full_leglist = {}
@@ -23,7 +24,6 @@ def make_legs(model):
 
 def make_vertexlist(model):
     make_legs(model)
-
     #Prepare the vertexlist
     for inter in model['interactions']:
         #Calculate the particle number, total mass
@@ -45,7 +45,7 @@ def make_vertexlist(model):
             pid = part.get_anti_pdg_code()
             radiation = False
             for num2, other in enumerate(inter['particles']):
-                if (num2 != num) and (other.get_pdg_code() == pid):
+                if (num2 != num) and (other.get('pdg_code') == abs(pid)):
                     radiation = True
                     break
 
@@ -54,10 +54,8 @@ def make_vertexlist(model):
 
             ini_mass = eval('decay_objects.' + part.get('mass')).real
 
-            #Set each leg as incoming particle            
-            temp_legs[num].set('state', False)
             #If part is not self-conjugate, change the particle into anti-part
-            temp_legs[num].set('id', pid)
+            #temp_legs[num].set('id', pid)
 
             temp_legs_new = copy.deepcopy(temp_legs)
             # Initial leg should be in the last
@@ -85,20 +83,10 @@ def make_vertexlist(model):
     path_1 = os.path.join(MG5DIR, 'models', model['name'])
     path_2 = os.path.join(MG5DIR, 'tests/input_files', model['name'])
 
-    if os.path.isdir(path_2):
-        fdata = open(os.path.join(path_2, 'vertices_decaycondition.dat'), 'w')
-        fdata.write(str(full_vertexlist_newindex))
-        fdata.close()
-
-        fdata2 = open(os.path.join(path_2, 'vertices_sort.dat'), 'w')
-        fdata2.write(str(full_vertexlist))
-        fdata2.close()
-
-    elif os.path.isdir(path_1):
-        fdata = open(os.path.join(path_1, 'vertices_decaycondition.dat'), 'w')
-        fdata.write(str(full_vertexlist_newindex))
-        fdata.close()
-
-        fdata2 = open(os.path.join(path_1, 'vertices_sort.dat'), 'w')
-        fdata2.write(str(full_vertexlist))
-        fdata2.close()
+    fdata = open(os.path.join(path_2, 'vertices_decaycondition.dat'), 'w')
+    fdata.write(str(full_vertexlist_newindex))
+    fdata.close()
+    
+    fdata2 = open(os.path.join(path_2, 'vertices_sort.dat'), 'w')
+    fdata2.write(str(full_vertexlist))
+    fdata2.close()

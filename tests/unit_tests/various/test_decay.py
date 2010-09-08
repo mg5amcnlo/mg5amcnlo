@@ -23,6 +23,9 @@ import time
 import tests.unit_tests as unittest
 import madgraph.core.base_objects as base_objects
 import madgraph.iolibs.import_ufo as import_ufo
+import madgraph.iolibs.save_model as save_model
+import madgraph.iolibs.drawing_eps as drawing_eps
+from madgraph import MG5DIR
 import decay.decay_objects as decay_objects
 import tests.input_files.import_vertexlist as import_vertexlist
 
@@ -54,7 +57,7 @@ class Test_DecayParticle(unittest.TestCase):
         particles = self.my_testmodel.get('particles')
         interactions = self.my_testmodel.get('interactions')
         inter_list = copy.copy(interactions)
-        no_want_pid = [1, 2, 3, 4, 13, 14, 15, 16, 21, 23, 25]
+        no_want_pid = [1, 2, 3, 4, 13, 14, 15, 16, 21, 23]
         for pid in no_want_pid:
             particles.remove(self.my_testmodel.get_particle(pid))
 
@@ -68,10 +71,10 @@ class Test_DecayParticle(unittest.TestCase):
         self.my_testmodel.set('particles', particles)
         self.my_testmodel.set('interactions', interactions)
 
-        #Setup the vertexlist for my_testmodel
-        #print self.my_testmodel.get('interactions')
+        #Setup the vertexlist for my_testmodel and save this model
         import_vertexlist.make_vertexlist(self.my_testmodel)
-        
+        #save_model.save_model(os.path.join(MG5DIR, 'tests/input_files', self.my_testmodel['name']), self.my_testmodel)
+
         # Setup vertexlist for test
         full_vertexlist = import_vertexlist.full_vertexlist
 
@@ -647,8 +650,8 @@ class TestDecayModel(unittest.TestCase):
                         interaction.get('particles')]):
                 interactions.remove(interaction)
         
-        #mssm.set('particles', particles)
-        #mssm.set('interactions', interactions)
+        mssm.set('particles', particles)
+        mssm.set('interactions', interactions)
 
         mssm.get('interactions').append(new_interaction)
         mssm.get('interactions').append(new_interaction_add_sm)
@@ -673,12 +676,119 @@ class TestDecayModel(unittest.TestCase):
         for inter in decay_mssm.reduced_interactions:
             self.assertTrue(len(inter['particles']))
 
+        """param_path = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
+        self.my_testmodel.read_param_card(param_path)
+
+        for p in decay_mssm.get('particles'):
+            print '(%s, %d)' % (p.get('pdg_code'), eval(p.get('mass')))"""
         #decay_mssm.find_stable_particles()
         #stable_particles = [
 
-class TestChannel(unittest.TestCase):
+class Test_Channel(unittest.TestCase):
     """ Test for the channel object"""
+
+    my_testmodel_base = import_ufo.import_model('sm')
+    my_channel = decay_objects.Channel()
+    h_tt_bbmmvv = decay_objects.Channel()
+
+    def setUp(self):
+        """ Set up necessary objects for the test"""
+        #Import a model from my_testmodel
+        self.my_testmodel = decay_objects.DecayModel(self.my_testmodel_base)
+        param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')
+        self.my_testmodel.read_param_card(param_path)
+
+        # Simplify the model
+        particles = self.my_testmodel.get('particles')
+        interactions = self.my_testmodel.get('interactions')
+        inter_list = copy.copy(interactions)
+        # Pids that will be removed
+        no_want_pid = [1, 2, 3, 4, 13, 14, 15, 16, 21, 23]
+        for pid in no_want_pid:
+            particles.remove(self.my_testmodel.get_particle(pid))
+
+        for inter in inter_list:
+            if any([p.get('pdg_code') in no_want_pid for p in \
+                        inter.get('particles')]):
+                interactions.remove(inter)
+
+        # Set a new name
+        self.my_testmodel.set('name', 'my_smallsm')
+        self.my_testmodel.set('particles', particles)
+        self.my_testmodel.set('interactions', interactions)
+
+        #Setup the vertexlist for my_testmodel and save this model (optional)
+        import_vertexlist.make_vertexlist(self.my_testmodel)
+        #save_model.save_model(os.path.join(MG5DIR, 'tests/input_files', 
+        #self.my_testmodel['name']), self.my_testmodel)
     
+        full_vertexlist = import_vertexlist.full_vertexlist
+        vert_0 = base_objects.Vertex({'id': 0, 'legs': base_objects.LegList([\
+                    base_objects.Leg({'id':25, 'number':2}), \
+                    base_objects.Leg({'id':25, 'number':1, 'state': False})])})
+        vert_1 = copy.deepcopy(full_vertexlist[(40, 25)])
+        vert_1['legs'][0]['number'] = 2
+        vert_1['legs'][1]['number'] = 3
+        vert_1['legs'][2]['number'] = 2
+        vert_1['legs'][2]['state'] = False
+        vert_2 = copy.deepcopy(full_vertexlist[(32, -6)])
+        vert_2['legs'][0]['number'] = 2
+        vert_2['legs'][1]['number'] = 4
+        vert_2['legs'][2]['number'] = 2
+        vert_3 = copy.deepcopy(full_vertexlist[(35, 6)])
+        vert_3['legs'][0]['number'] = 3
+        vert_3['legs'][1]['number'] = 5
+        vert_3['legs'][2]['number'] = 3
+        vert_4 = copy.deepcopy(full_vertexlist[(47, -24)])
+        vert_4['legs'][0]['number'] = 2
+        vert_4['legs'][1]['number'] = 6
+        vert_4['legs'][2]['number'] = 2
+        vert_5 = copy.deepcopy(full_vertexlist[(44, 24)])
+        vert_5['legs'][0]['number'] = 5
+        vert_5['legs'][1]['number'] = 7
+        vert_5['legs'][2]['number'] = 5
+
+        #temp_vertices = base_objects.VertexList
+        self.h_tt_bbmmvv = decay_objects.Channel({'vertices': \
+                                             base_objects.VertexList([
+                                             vert_5, vert_4, vert_3, vert_2, \
+                                             vert_1, vert_0])})
+
+        #print self.h_tt_bbmmvv.nice_string(), 'and\n', vert_1
+        pic = drawing_eps.EpsDiagramDrawer(self.h_tt_bbmmvv, 'h_tt_bbmmvv', self.my_testmodel)
+        #pic.draw()
+
+    def test_get_initialfinal(self):
+        """ test the get_initial_id and get_final_legs"""
+        # Test the get_initial_id
+        self.assertEqual(self.h_tt_bbmmvv.get_initial_id(), 25)
+        
+        # Test the get_final_legs
+        vertexlist = self.h_tt_bbmmvv.get('vertices')
+        goal_final_legs = base_objects.LegList([vertexlist[0]['legs'][0],
+                                                vertexlist[0]['legs'][1],
+                                                vertexlist[1]['legs'][0],
+                                                vertexlist[1]['legs'][1],
+                                                vertexlist[2]['legs'][0],
+                                                vertexlist[3]['legs'][1]])
+        self.assertEqual(self.h_tt_bbmmvv.get_final_legs(), goal_final_legs)
+
+    def test_get_onshell(self):
+        """ test the get_onshell function"""
+        vertexlist = self.h_tt_bbmmvv.get('vertices')
+        h_tt_bbww = decay_objects.Channel({'vertices': \
+                                           base_objects.VertexList(\
+                                           vertexlist[2:])})
+        # Test for on shell decay ( h > b b~ mu+ mu- vm vm~)
+        self.assertTrue(self.h_tt_bbmmvv.get_onshell(self.my_testmodel))
+
+        # Test for off-shell decay (h > b b~ w+ w-)
+        # Raise the mass of higgs
+        decay_objects.MH = 220
+        self.assertTrue(h_tt_bbww.get_onshell(self.my_testmodel))
+        
+                                           
+
 
 if __name__ == '__main__':
     unittest.unittest.main()

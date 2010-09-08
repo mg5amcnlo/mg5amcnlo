@@ -159,31 +159,30 @@ class DecayParticle(base_objects.Particle):
                 #Reset the number of initial/final particles,
                 #initial particle id, and total and initial mass
                 num_ini = 0
-                num_radiation = 0
+                radiation = False
                 num_final = 0
                 
                 for leg in vert.get('legs'):
+                    # Check if all legs are label by true
+                    if not leg.get('state'):
+                        raise self.PhysicsObjectError, \
+                            "The state of leg should all be true"
+
                     #Identify the initial particle
                     if leg.get('id') == self.get_pdg_code():
-                        #Leg id == self id, the leg is incoming if state==False.
-                        if not leg.get('state'):
-                            num_ini = 1
-                        #state = True is fine for self_antipart
-                        elif self['self_antipart']:
-                            num_ini = 1
-                            if num_ini ==1:
-                                num_radiation = 1                
-                        #state == True, id == pdg_code, not self_antipart:
-                        #candidate for radiation final state
+                        if not self.get('self_antipart'):
+                            # Leg id == self id, then it is a radiation
+                            radiation = True
                         else:
-                            num_radiation = 1
+                            if num_ini == 1:
+                                radiation = True
+                            num_ini = 1
                     elif leg.get('id') == -self.get_pdg_code():
-                        if leg.get('state'):
-                            num_ini = 1
-                        #Incoming anti_particle, candidate for radiation final
-                        #state
-                        else:
-                            num_radiation = 1
+                        # Double anti particle is radiation
+                        if num_ini == 1:
+                            radiation = True
+                        num_ini = 1
+
                 #Calculate the final particle number
                 num_final = len(vert.get('legs'))-num_ini
                 
@@ -198,8 +197,9 @@ class DecayParticle(base_objects.Particle):
                     raise self.PhysicsObjectError, \
                         "There is no leg satisfied the mother particle %s"\
                         % str(self.get_pdg_code())
+
                 #Check if the vertex is radiation
-                if num_radiation != 0:
+                if radiation:
                     raise self.PhysicsObjectError, \
                         "The vertex %s is radiactive for mother particle %s"\
                         % (str(vert), str(self.get_pdg_code()))
@@ -209,43 +209,40 @@ class DecayParticle(base_objects.Particle):
             if (self.get('mass') == 'ZERO') and (len(value) != 0):
                 raise self.PhysicsObjectError, \
                     "Massless particle %s cannot decay." % self['name']
+
             for vert in value:
                 #Reset the number of initial/final particles,
                 #initial particle id, and total and initial mass
                 num_ini = 0
-                num_radiation = 0
+                radiation = 0
                 num_final = 0
                 
                 total_mass = 0
-                ini_mass = 0
+                ini_mass = eval(self.get('mass')).real
 
                 for leg in vert.get('legs'):
                     #Calculate the total mass
                     total_mass += eval(model.get_particle(leg['id'])['mass'])
 
+                    # Check if all legs are label by true
+                    if not leg.get('state'):
+                        raise self.PhysicsObjectError, \
+                            "The state of leg should all be true"
+
                     #Identify the initial particle
                     if leg.get('id') == self.get_pdg_code():
-                        #Leg id == self id, the leg is incoming if state==False.
-                        if not leg.get('state'):
-                            num_ini = 1
-                            ini_mass = eval(model.get_particle(leg['id'])['mass'])
-                        #state = True is fine for self_antipart
-                        elif self['self_antipart']:
-                            num_ini = 1
-                            if num_ini:
-                                num_radiation = 1                
-                        #state == True, id == pdg_code, not self_antipart:
-                        #candidate for radiation final state
+                        if not self.get('self_antipart'):
+                            # Leg id == self id, then it is a radiation
+                            radiation = True
                         else:
-                            num_radiation = 1
+                            if num_ini == 1:
+                                radiation = True
+                            num_ini = 1
                     elif leg.get('id') == -self.get_pdg_code():
-                        if leg.get('state'):
-                            num_ini = 1
-                            ini_mass = eval(model.get_particle(leg['id'])['mass'])
-                        #Incoming anti_particle, candidate for radiation final
-                        #state
-                        else:
-                            num_radiation = 1
+                        # Double anti particle is radiation
+                        if num_ini == 1:
+                            radiation = True
+                        num_ini = 1
 
                 #Calculate the final particle number
                 num_final = len(vert.get('legs'))-num_ini
@@ -269,7 +266,7 @@ class DecayParticle(base_objects.Particle):
                         "The on-shell condition is not satisfied."
 
                 #Check if the vertex is radiation
-                if num_radiation != 0:
+                if radiation:
                     raise self.PhysicsObjectError, \
                         "The vertex is radiactive for mother particle %s"\
                         % str(self.get_pdg_code())
@@ -384,48 +381,31 @@ class DecayParticle(base_objects.Particle):
             #Check if the interaction contains mother particle
             if model.get_particle(self.get_anti_pdg_code()) in partlist:
                 #Exclude radiation
-                if self in partlist:
+                part_id_list = [p.get('pdg_code') for p in partlist]
+                if (part_id_list.count(self.get('pdg_code'))) > 1:
                     continue
 
-                final_mass = 0
-                ini_mass = eval(self.get('mass'))
+                total_mass = 0
+                ini_mass = eval(self.get('mass')).real
                 vert = base_objects.Vertex()
                 legs = base_objects.LegList()
 
-                #ini_index: record the index of initial particle if found
-                ini_found = False
-
-                #Setup all the legs and find final_mass
+                # Setup all the legs and find final_mass
                 for part in partlist:
-                    #Not initial particle or initial particle has been setup.
-                    if (part != model.get_particle(self.get_anti_pdg_code())) or ini_found:
-                        legs.append(base_objects.Leg({
-                                    'id': part.get_pdg_code(),
-                                    'number': 0,
-                                    'state': True,
-                                    'from_group': True})
-                                    )
-                        final_mass += eval(part.get('mass'))
+                    legs.append(base_objects.Leg({'id': part.get_pdg_code()}))
+                    total_mass += eval(part.get('mass')).real
                     #Initial particle has not been found: ini_found = True
-                    if (part == model.get_particle(self.get_anti_pdg_code())) and (not ini_found):
-                        
-                        ini_found = True
+                    if (part == model.get_particle(self.get_anti_pdg_code())):
+                        ini_leg = legs.pop()
                     
                 #Sort the outgoing leglist for comparison sake (removable!)
                 legs.sort(legcmp)
                 # Append the initial leg
-                legs.append(base_objects.Leg({
-                            'id':self.get_pdg_code(),
-                            'number': 0,
-                            'state': False,
-                            'from_group': True})
-                            )
+                legs.append(ini_leg)
 
                 vert.set('id', temp_int.get('id'))
                 vert.set('legs', legs)
                 temp_vertlist = base_objects.VertexList([vert])
-                #Force the mass to be real for safety.
-                ini_mass, final_mass = ini_mass.real, final_mass.real
 
                 #Check validity of vertex (removable)
                 """self.check_vertexlist(partnum,
@@ -433,16 +413,18 @@ class DecayParticle(base_objects.Particle):
                 temp_vertlist, model)"""
 
                 #Append current vert to vertexlist
-                self['decay_vertexlist'][(partnum, ini_mass > final_mass)].\
-                    append(vert)
+                self['decay_vertexlist'][(partnum, \
+                                          ini_mass > (total_mass-ini_mass))].\
+                                             append(vert)
 
         #Set the decay_vertexlist_written at the end
         self.decay_vertexlist_written = True
         
     def find_channel(self, max_partnum, model):
-        """ Function for finding decay channels, with the max final particle
-            number given by max_partnum"""
-        pass
+        """ Function for finding decay channels up to the final particle
+            number given by max_partnum."""
+        
+
         """for clevel in range(2, max_partnum+1):
             for """
 
@@ -571,7 +553,7 @@ class DecayModel(base_objects.Model):
         """
     
         ini_list = []
-        #Dict to store all the vertexlist (for convenient removable!)
+        #Dict to store all the vertexlist (for conveniece only, removable!)
         vertexlist_dict = {}
         for part in self.get('particles'):
             if part['mass'] != 'ZERO':
@@ -609,25 +591,21 @@ class DecayModel(base_objects.Model):
                 #Get anti_pdg_code (pid for incoming particle)
                 pid = part.get_anti_pdg_code()
                 #Exclude invalid initial particle
-                if pid not in ini_list:
+                if not pid in ini_list:
                     continue
 
                 #Exclude initial particle appears in final particles
                 #i.e. radiation is excluded.
-                if self.get_particle(pid) in (inter['particles'][:num] + \
-                                                  inter['particles'][num+1:]):
+                #count the number of abs(pdg_code)
+                pid_list = [p.get('pdg_code') for p in inter.get('particles')]
+                if pid_list.count(abs(pid)) > 1:
                     continue
-
-                #Create new legs for the sort later
-                temp_legs_new = copy.deepcopy(temp_legs)
-
-                #Set each leg as incoming particle
-                temp_legs_new[num].set('state', False)
-                temp_legs_new[num].set('id', pid)
 
                 ini_mass = eval(part.get('mass')).real
                 onshell = ini_mass > (total_mass - ini_mass)
 
+                #Create new legs for the sort later
+                temp_legs_new = copy.deepcopy(temp_legs)
                 
                 # Put initial leg in the last 
                 # and sort other legs for comparison
@@ -648,9 +626,9 @@ class DecayModel(base_objects.Model):
                             partnum, onshell)].append(temp_vertex)
 
 
-        fdata = open(os.path.join(MG5DIR, 'models', self['name'], 'vertexlist_dict.dat'), 'w')
-        fdata.write(str(vertexlist_dict))
-        fdata.close()
+        #fdata = open(os.path.join(MG5DIR, 'models', self['name'], 'vertexlist_dict.dat'), 'w')
+        #fdata.write(str(vertexlist_dict))
+        #fdata.close()
 
 
 
@@ -1391,12 +1369,16 @@ class Channel(base_objects.Diagram):
                    'onshell',
                    'apx_matrixelement', 'apx_PSarea', 'apx_decaywidth']
 
-    def def_setup(self):
+    def default_setup(self):
         """Default values for all properties"""
+        self['vertices'] = base_objects.VertexList()
+        self['orders'] = {}
         
-        self['vertices'] = VertexList()
-        self['onshell'] = True
-        self['apx_matrixelement', 'apx_PSarea', 'apx_decaywidth'] = [0., 0., 0.]
+        # New properties
+        self['onshell'] = False
+        self['apx_matrixelement'] = 0.
+        self['apx_PSarea'] = 0.
+        self['apx_decaywidth'] = 0.
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
@@ -1411,16 +1393,23 @@ class Channel(base_objects.Diagram):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid onshell condition." % str(value)
 
-        super(Channel, self0).filter(self, name, value)
+        return super(Channel, self).filter(name, value)
+    
+    def get(self, name):
+        """ Check the onshell condition before the user get it. """
+        
+        if name == 'onshell':
+            print "It is suggested to get onshell property from get_onshell function"
+
+        return super(Channel, self).get(name)
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
-
         return self.sorted_keys
 
     def get_initial_id(self):
-        """ Return the list of the id of initial particle"""
-        pass
+        """ Return the id of initial particle"""
+        return self.get('vertices')[-1].get('legs')[-1].get('id')
 
     def get_final_legs(self):
         """ Return a list of the final state legs."""
@@ -1429,12 +1418,25 @@ class Channel(base_objects.Diagram):
         for vert in self.get('vertices'):
             for leg in vert.get('legs'):
                 if not leg.get('number') in [l.get('number') \
-                                                 for l in temp_legs]\
-                                                 and leg.get('number') != 1:
+                                                 for l in temp_legs] and \
+                                                 leg.get('number') != 1:
                     temp_legs.append(leg)
 
         return temp_legs
         
+    def get_onshell(self, model):
+        """ Evaluate the onshell condition with the aid of get_final_legs"""
+        if not isinstance(model, base_objects.Model):
+            raise self.PhysicsObjectError, \
+                "The second argument %s must be a model." % str(model)
+
+        final_mass = sum([eval(model.get_particle(l.get('id')).get('mass')) \
+                              for l in self.get_final_legs()])
+        final_mass = final_mass.real
+        ini_mass = eval(model.get_particle(self.get_initial_id()).get('mass')).real
+        
+        return (ini_mass > final_mass)
+
     def get_apx_matrixelement(self):
         """calculate the apx_matrixelement"""
         pass
