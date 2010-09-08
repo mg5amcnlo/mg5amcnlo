@@ -49,93 +49,98 @@ class ModelReader(base_objects.Model):
         self['parameter_dict'] = {}
         super(ModelReader, self).default_setup()
 
-    def read_param_card(self, param_card):
+    def set_parameters_and_couplings(self, param_card = None):
         """Read a param_card and calculate all parameters and
         couplings. Set values directly in the parameters and
         couplings, plus add new dictionary coupling_dict from
         parameter name to value."""
 
-        if not os.path.isfile(param_card):
-            raise MadGraph5Error, \
-                  "No such file %s" % param_card
-
         # Extract external parameters
         external_parameters = self['parameters'][('external',)]
 
-        # Create a dictionary from LHA block name and code to parameter name
-        parameter_dict = {}
-        for param in external_parameters:
-            try:
-                dictionary = parameter_dict[param.lhablock.lower()]
-            except KeyError:
-                dictionary = {}
-                parameter_dict[param.lhablock.lower()] = dictionary
-            dictionary[tuple(param.lhacode)] = param
-            
-        # Now read parameters from the param_card
-
         # Read in param_card
-        param_lines = open(param_card, 'r').read().split('\n')
+        if param_card:
+            # Check that param_card exists
+            if not os.path.isfile(param_card):
+                raise MadGraph5Error, \
+                      "No such file %s" % param_card
 
-        # Define regular expressions
-        re_block = re.compile("^block\s+(?P<name>\w+)")
-        re_decay = re.compile("^decay\s+(?P<pid>\d+)\s+(?P<value>[\d\.e\+-]+)")
-        re_single_index = re.compile("^\s*(?P<i1>\d+)\s+(?P<value>[\d\.e\+-]+)")
-        re_double_index = re.compile(\
-                       "^\s*(?P<i1>\d+)\s+(?P<i2>\d+)\s+(?P<value>[\d\.e\+-]+)")
-        block = ""
-        # Go through lines in param_card
-        for line in param_lines:
-            if not line.strip() or line[0] == '#':
-                continue
-            line = line.lower()
-            # Look for blocks
-            block_match = re_block.match(line)
-            if block_match:
-                block = block_match.group('name')
-                continue
-            # Look for single indices
-            single_index_match = re_single_index.match(line)
-            if block and single_index_match:
-                i1 = int(single_index_match.group('i1'))
-                value = single_index_match.group('value')
+            # Create a dictionary from LHA block name and code to parameter name
+            parameter_dict = {}
+            for param in external_parameters:
                 try:
-                    exec("locals()[\'%s\'] = %s" % (parameter_dict[block][(i1,)].name,
-                                      value))
-                    parameter_dict[block][(i1,)].value = complex(value)
+                    dictionary = parameter_dict[param.lhablock.lower()]
                 except KeyError:
-                    logger.warning('No parameter found for block %s index %d' %\
-                                   (block, i1))
-                continue
-            double_index_match = re_double_index.match(line)
-            # Look for double indices
-            if block and double_index_match:
-                i1 = int(double_index_match.group('i1'))
-                i2 = int(double_index_match.group('i2'))
-                try:
-                    exec("locals()[\'%s\'] = %s" % (parameter_dict[block][(i1,i2)].name,
-                                      double_index_match.group('value')))
-                    parameter_dict[block][(i1,i2)].value = complex(value)
+                    dictionary = {}
+                    parameter_dict[param.lhablock.lower()] = dictionary
+                dictionary[tuple(param.lhacode)] = param
 
-                except KeyError:
-                    logger.warning('No parameter found for block %s index %d %d' %\
-                                   (block, i1, i2))
-                continue
-            # Look for decays
-            decay_match = re_decay.match(line)
-            if decay_match:
-                block = ""
-                pid = int(decay_match.group('pid'))
-                value = decay_match.group('value')
-                try:
-                    exec("locals()[\'%s\'] = %s" % \
-                         (parameter_dict['decay'][(pid,)].name,
-                          value))
-                    parameter_dict['decay'][(pid,)].value = complex(value)
-                except KeyError:
-                    logger.warning('No decay parameter found for %d' % pid)
-                continue
+            # Now read parameters from the param_card
+            param_lines = open(param_card, 'r').read().split('\n')
 
+            # Define regular expressions
+            re_block = re.compile("^block\s+(?P<name>\w+)")
+            re_decay = re.compile("^decay\s+(?P<pid>\d+)\s+(?P<value>[\d\.e\+-]+)")
+            re_single_index = re.compile("^\s*(?P<i1>\d+)\s+(?P<value>[\d\.e\+-]+)")
+            re_double_index = re.compile(\
+                           "^\s*(?P<i1>\d+)\s+(?P<i2>\d+)\s+(?P<value>[\d\.e\+-]+)")
+            block = ""
+            # Go through lines in param_card
+            for line in param_lines:
+                if not line.strip() or line[0] == '#':
+                    continue
+                line = line.lower()
+                # Look for blocks
+                block_match = re_block.match(line)
+                if block_match:
+                    block = block_match.group('name')
+                    continue
+                # Look for single indices
+                single_index_match = re_single_index.match(line)
+                if block and single_index_match:
+                    i1 = int(single_index_match.group('i1'))
+                    value = single_index_match.group('value')
+                    try:
+                        exec("locals()[\'%s\'] = %s" % (parameter_dict[block][(i1,)].name,
+                                          value))
+                        parameter_dict[block][(i1,)].value = complex(value)
+                    except KeyError:
+                        logger.warning('No parameter found for block %s index %d' %\
+                                       (block, i1))
+                    continue
+                double_index_match = re_double_index.match(line)
+                # Look for double indices
+                if block and double_index_match:
+                    i1 = int(double_index_match.group('i1'))
+                    i2 = int(double_index_match.group('i2'))
+                    try:
+                        exec("locals()[\'%s\'] = %s" % (parameter_dict[block][(i1,i2)].name,
+                                          double_index_match.group('value')))
+                        parameter_dict[block][(i1,i2)].value = complex(value)
+
+                    except KeyError:
+                        logger.warning('No parameter found for block %s index %d %d' %\
+                                       (block, i1, i2))
+                    continue
+                # Look for decays
+                decay_match = re_decay.match(line)
+                if decay_match:
+                    block = ""
+                    pid = int(decay_match.group('pid'))
+                    value = decay_match.group('value')
+                    try:
+                        exec("locals()[\'%s\'] = %s" % \
+                             (parameter_dict['decay'][(pid,)].name,
+                              value))
+                        parameter_dict['decay'][(pid,)].value = complex(value)
+                    except KeyError:
+                        logger.warning('No decay parameter found for %d' % pid)
+                    continue
+        else:
+            # No param_card, use default values
+            for param in external_parameters:
+                exec("locals()[\'%s\'] = %s" % (param.name, param.value))
+                    
         # Define all functions used
         for func in self['functions']:
             exec("def %s(%s):\n   return %s" % (func.name,
@@ -189,6 +194,9 @@ class ModelReader(base_objects.Model):
         self.set('parameter_dict', dict([(param.name, param.value) \
                                         for param in external_parameters + \
                                          derived_parameters]))
+
+        # Add "zero"
+        self.get('parameter_dict')['ZERO'] = 0.
 
         self.set('coupling_dict', dict([(coup.name, coup.value) \
                                         for coup in couplings]))

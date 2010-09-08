@@ -269,7 +269,7 @@ class IOExportPythonTest(unittest.TestCase):
             t = self.matrix(p, hel, model)
             ans = ans + t
         ans = ans / denominator
-        return ans
+        return ans.real
 
     def matrix(self, p, hel, model):
         #  
@@ -360,7 +360,6 @@ class IOExportPythonTest(unittest.TestCase):
                              goal_method[iline])
         
 
-
     def test_run_python_matrix_element(self):
         """Test a complete running of a Python matrix element without
         writing any files"""
@@ -371,15 +370,20 @@ class IOExportPythonTest(unittest.TestCase):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':False}))
+                                           'state':False,
+                                           'number': 1}))
         myleglist.append(base_objects.Leg({'id':11,
-                                         'state':False}))
+                                           'state':False,
+                                           'number': 2}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':True}))
+                                           'state':True,
+                                           'number': 3}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':True}))
+                                           'state':True,
+                                           'number': 4}))
         myleglist.append(base_objects.Leg({'id':22,
-                                         'state':True}))
+                                           'state':True,
+                                           'number': 5}))
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':model})
@@ -417,13 +421,10 @@ class IOExportPythonTest(unittest.TestCase):
         for matrix_method in matrix_methods.values():
             exec(matrix_method)
 
-        # Read a param_card and calculate couplings
-        param_path = os.path.join(_file_path,
-                                  '../input_files/param_card_sm.dat')
-        
+        # Calculate parameters and couplings
         full_model = model_reader.ModelReader(model)
         
-        full_model.read_param_card(param_path)
+        full_model.set_parameters_and_couplings()
 
         # Define a momentum
         p = [[0.5000000e+03, 0.0000000e+00,  0.0000000e+00,  0.5000000e+03,  0.0000000e+00],
@@ -440,3 +441,4 @@ class IOExportPythonTest(unittest.TestCase):
             self.assertTrue(abs(value-answer)/answer < 1e-6,
                             "Value is: %.9e should be %.9e" % \
                             (abs(value), answer))
+

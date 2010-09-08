@@ -40,10 +40,10 @@ class TestModelReader(unittest.TestCase):
         #Read the full SM
         self.model_reader = model_reader.ModelReader(self.base_model)
 
-    def test_read_param_card(self):
+    def test_set_parameters_and_couplings(self):
         """Test reading a param card"""
         param_path = os.path.join(_file_path, '../input_files/param_card_sm.dat')
-        self.model_reader.read_param_card(os.path.join(param_path))
+        self.model_reader.set_parameters_and_couplings(os.path.join(param_path))
 
         for param in sum([self.base_model.get('parameters')[key] for key \
                               in self.base_model.get('parameters')], []):

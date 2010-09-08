@@ -30,7 +30,7 @@ class Matrix_%(process_string)s(object):
             t = self.matrix(p, hel, model)
             ans = ans + t
         ans = ans / denominator
-        return ans
+        return ans.real
 
     def matrix(self, p, hel, model):
         #  

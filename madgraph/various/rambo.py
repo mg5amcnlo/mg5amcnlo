@@ -54,24 +54,24 @@ class RAMBOError(Exception):
     """ A Error class for RAMBO routine """
     pass
 
-
 def RAMBO(N,ET,XM):
-    """**********************************************************************                                                                    
-*                       RAMBO                                         *                                                                    
-*    RA(NDOM)  M(OMENTA)  B(EAUTIFULLY)  O(RGANIZED)                  *                                                                    
-*                                                                     *                                                                    
-*    A DEMOCRATIC MULTI-PARTICLE PHASE SPACE GENERATOR                *                                                                    
-*    AUTHORS:  S.D. ELLIS,  R. KLEISS,  W.J. STIRLING                 *                                                                    
-*    THIS IS VERSION 1.0 -  WRITTEN BY O. MATTELAER                   *                                                                    
-*    -- ADJUSTED BY HANS KUIJF, WEIGHTS ARE LOGARITHMIC (20-08-90)    *                                                                    
-*                                                                     *                                                                    
-*    N  = NUMBER OF PARTICLES                                         *                                                                    
-*    ET = TOTAL CENTRE-OF-MASS ENERGY                                 *
-*    XM = PARTICLE MASSES ( DIM=NEXTERNAL-nincoming )                 *
-*  RETURN                                                                    
-*    P  = PARTICLE MOMENTA ( DIM=(4,NEXTERNAL-nincoming) )            *                                                                    
-*    WT = WEIGHT OF THE EVENT                                         *                                                                    
-***********************************************************************"""
+    """***********************************************************************
+    *                       RAMBO                                         *
+    *    RA(NDOM)  M(OMENTA)  B(EAUTIFULLY)  O(RGANIZED)                  *
+    *                                                                     *
+    *    A DEMOCRATIC MULTI-PARTICLE PHASE SPACE GENERATOR                *
+    *    AUTHORS:  S.D. ELLIS,  R. KLEISS,  W.J. STIRLING                 *
+    *    THIS IS VERSION 1.0 -  WRITTEN BY O. MATTELAER                   *
+    *    -- ADJUSTED BY HANS KUIJF, WEIGHTS ARE LOGARITHMIC (20-08-90)    *
+    *                                                                     *
+    *    N  = NUMBER OF PARTICLES                                         *
+    *    ET = TOTAL CENTRE-OF-MASS ENERGY                                 *
+    *    XM = PARTICLE MASSES ( DIM=NEXTERNAL-nincoming )                 *
+    *  RETURN                                                             *
+    *    P  = PARTICLE MOMENTA ( DIM=(4,NEXTERNAL-nincoming) )            *
+    *    WT = WEIGHT OF THE EVENT                                         *
+    ***********************************************************************"""
+
     # RUN PARAMETER
     acc = 1e-14
     itmax = 6
@@ -102,13 +102,12 @@ def RAMBO(N,ET,XM):
       po2log = math.log(twopi/4)
       Z[2] = po2log
       for k in range(3, N+1):
-          Z[k] = Z[k-1] +PO2LOG-2.*math.log(k-2) -math.log(k-1)
+          Z[k] = Z[k-1] + po2log - 2.*math.log(k-2) - math.log(k-1)
           
-                                                                                                                                          
-# CHECK ON THE NUMBER OF PARTICLES                                                                                                         
-    assert 1 < N < 101
+# CHECK ON THE NUMBER OF PARTICLES
+      assert 1 < N < 101
 
-# CHECK WHETHER TOTAL ENERGY IS SUFFICIENT; COUNT NONZERO MASSES                                                                           
+# CHECK WHETHER TOTAL ENERGY IS SUFFICIENT; COUNT NONZERO MASSES
     xmt =  0
     nm = 0
     for i in range(1,N+1):
