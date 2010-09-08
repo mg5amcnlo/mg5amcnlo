@@ -335,6 +335,7 @@ class Test_DecayParticle(unittest.TestCase):
 
 
     def test_find_vertexlist(self):
+        """ Test for the find_vertexlist function and the get_max_vertexorder"""
         #undefine object: my_testmodel, mypart, extra_part
         
         #Test validity of arguments
@@ -400,14 +401,66 @@ class Test_DecayParticle(unittest.TestCase):
                                  rightlist22[i])
                 i +=1
 
-        # Test if the find_max_vertexorder can return the correct order
-        self.assertEqual(self.mypart.find_max_vertexorder(), None)
-        self.mypart.decay_vertexlist_written = True
-        self.assertEqual(self.mypart.find_max_vertexorder(), 3)
+        self.assertEqual(0, photon.get_max_vertexorder())
+        self.assertEqual(2, tquark.get_max_vertexorder())
+        self.assertEqual(3, self.mypart.get_max_vertexorder())
 
-    def test_find_channel(self): 
-        pass
-        
+    def test_setget_find_channel(self):
+        """ Test of the get_channel function"""
+        # Prepare the channel
+        full_vertexlist = import_vertexlist.full_vertexlist
+
+        vert_0 = base_objects.Vertex({'id': 0, 'legs': base_objects.LegList([\
+                 base_objects.Leg({'id':25, 'number':1, 'state': False}),
+                 base_objects.Leg({'id':25, 'number':2})])})
+        vert_1 = copy.deepcopy(full_vertexlist[(40, 25)])
+        vert_1['legs'][0]['number'] = 2
+        vert_1['legs'][1]['number'] = 3
+        vert_1['legs'][2]['number'] = 2
+        vert_2 = copy.deepcopy(full_vertexlist[(32, -6)])
+        vert_2['legs'][0]['number'] = 2
+        vert_2['legs'][1]['number'] = 4
+        vert_2['legs'][2]['number'] = 2
+        vert_3 = copy.deepcopy(full_vertexlist[(35, 6)])
+        vert_3['legs'][0]['number'] = 3
+        vert_3['legs'][1]['number'] = 5
+        vert_3['legs'][2]['number'] = 3
+
+        h_tt_bbww = decay_objects.Channel({'vertices': \
+                                           base_objects.VertexList([
+                                           vert_3, vert_2, 
+                                           vert_1, vert_0])})
+        channellist = decay_objects.ChannelList([h_tt_bbww])
+
+        # Test set and get
+        higgs = self.my_testmodel.get_particle(25)
+        higgs.set('decay_channels', {(4, True): channellist})
+        self.assertEqual(higgs.get('decay_channels'), {(4, True): channellist})
+
+        # Test set_channel and get_channel
+        higgs = self.my_testmodel.get_particle(25)
+        higgs.set_channels(4, True, [h_tt_bbww])
+        self.assertEqual(higgs.get_channels(4, True), channellist)
+
+        # Test for exceptions
+        # Wrong final particle number
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError, 
+                          higgs.set_channels, 'non_int', True, [h_tt_bbww])
+        # Wrong onshell
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError, 
+                          higgs.get_channels, 3, 5)
+        # Wrong channel
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError, 
+                          higgs.set_channels, 3, True, ['non', 'channellist'])
+        # Wrong initial particle
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError, 
+                          self.my_testmodel.get_particle(24).set_channels, 3,
+                          True, [h_tt_bbww])
+        # Wrong onshell condition (h is lighter than ww pair)
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError, 
+                          higgs.set_channels, 3, True, [h_tt_bbww],
+                          self.my_testmodel)
+                
 #===============================================================================
 # TestDecayParticleList
 #===============================================================================
@@ -540,6 +593,8 @@ class TestDecayModel(unittest.TestCase):
                                      full_vertexlist[(part.get_pdg_code(),
                                                       partnum, onshell)])
 
+        self.assertEqual(2, self.my_testmodel.get_max_vertexorder())
+
     def test_find_mssm_decay_groups_modified_mssm(self):
         """Test finding the decay groups of the MSSM"""
 
@@ -657,7 +712,7 @@ class TestDecayModel(unittest.TestCase):
         mssm.get('interactions').append(new_interaction_add_sm)
         decay_mssm = decay_objects.DecayModel(mssm)
 
-        decay_mssm.find_decay_groups_general()
+        mssm_decay_groups = decay_mssm.get('decay_groups')
         goal_groups = set([(25, 35, 36, 37, 2000013),
                            (1000001, 1000002, 1000003, 1000004, 1000005, 
                             1000006, 1000021, 2000001, 2000002, 2000003, 
@@ -670,7 +725,7 @@ class TestDecayModel(unittest.TestCase):
 
         self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in \
                                                 group])) \
-                                  for group in decay_mssm.decay_groups]),
+                                  for group in mssm_decay_groups]),
                          goal_groups)
         # Test if all useless interactions are deleted.
         for inter in decay_mssm.reduced_interactions:
@@ -684,6 +739,10 @@ class TestDecayModel(unittest.TestCase):
         #decay_mssm.find_stable_particles()
         #stable_particles = [
 
+
+#===============================================================================
+# Test_Channel
+#===============================================================================
 class Test_Channel(unittest.TestCase):
     """ Test for the channel object"""
 
@@ -755,7 +814,7 @@ class Test_Channel(unittest.TestCase):
                                              vert_1, vert_0])})
 
         #print self.h_tt_bbmmvv.nice_string(), 'and\n', vert_1
-        pic = drawing_eps.EpsDiagramDrawer(self.h_tt_bbmmvv, 'h_tt_bbmmvv', self.my_testmodel)
+        #pic = drawing_eps.EpsDiagramDrawer(self.h_tt_bbmmvv, 'h_tt_bbmmvv', self.my_testmodel)
         #pic.draw()
 
     def test_get_initialfinal(self):
@@ -786,6 +845,22 @@ class Test_Channel(unittest.TestCase):
         # Raise the mass of higgs
         decay_objects.MH = 220
         self.assertTrue(h_tt_bbww.get_onshell(self.my_testmodel))
+
+    def test_find_channels(self):
+        """ Test the find_channels function of DecayParticle"""
+
+        higgs = self.my_testmodel.get_particle(25)
+        
+        vertexlist = self.h_tt_bbmmvv.get('vertices')
+        h_tt_bbww = decay_objects.Channel({'vertices': \
+                                           base_objects.VertexList(\
+                                           vertexlist[2:])})
+
+        goal_config = [(2, 2, 2, 0), (2, 2, 0, 2), (2, 0, 2, 2), (0, 2, 2, 2)]
+        self.assertEqual(higgs.generate_config(h_tt_bbww, 7), goal_config)
+
+        higgs.find_channels(6, self.my_testmodel)        
+        self.assertEqual(higgs.get_channels(6, True), self.h_tt_bbmmvv)
         
                                            
 

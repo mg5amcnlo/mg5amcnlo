@@ -54,10 +54,10 @@ def make_vertexlist(model):
 
             ini_mass = eval('decay_objects.' + part.get('mass')).real
 
-            #If part is not self-conjugate, change the particle into anti-part
-            #temp_legs[num].set('id', pid)
-
             temp_legs_new = copy.deepcopy(temp_legs)
+            #If part is not self-conjugate, change the particle into anti-part
+            temp_legs_new[num].set('id', pid)
+
             # Initial leg should be in the last
             ini_leg = temp_legs_new.pop(num)
             #Sort other legs for comparison
