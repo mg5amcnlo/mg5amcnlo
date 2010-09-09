@@ -423,7 +423,7 @@ def output_comparisons(comparison_results):
         diff = 0
         if abs(max(values)) + abs(min(values)) > 0:
             diff = abs(max(values) - min(values)) / \
-                   (abs(max(values)) + abs(min(values)))
+                   (abs(max(values)) + abs(min(values))) * 2
 
         res_str += '\n' + fixed_string_length(proc, proc_col_size) + \
                    fixed_string_length("%1.10e" % min(values), col_size) + \
