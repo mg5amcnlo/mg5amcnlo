@@ -407,7 +407,7 @@ class IOExportPythonTest(unittest.TestCase):
                                           'import aloha.template_files.wavefunctions as wavefunctions'))
         # Define the routines to be available globally
         for routine in aloha_routines:
-            exec("\n".join(routine.split("\n")[:-1]), globals())
+            exec(routine, globals())
 
         # Write the matrix element(s) in Python
         mypythonmodel = helas_call_writer.PythonUFOHelasCallWriter(\

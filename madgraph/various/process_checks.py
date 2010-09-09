@@ -340,7 +340,7 @@ def check_processes(processes, param_card = None):
 
             # Define the routines to be available globally
             for routine in aloha_routines:
-                exec("\n".join(routine.split("\n")[:-1]), globals())
+                exec(routine, globals())
 
             # Add the defined Aloha routines to used_lorentz
             used_lorentz.extend(me_used_lorentz)
@@ -391,7 +391,7 @@ def output_comparisons(comparison_results):
 
     for proc in comparison_results:
         if len(proc['process'].base_string()) + 1 > proc_col_size:
-            proc_col_size = len(proc) + 1
+            proc_col_size = len(proc['process'].base_string()) + 1
 
     col_size = 17
 
