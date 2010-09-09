@@ -563,17 +563,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                            force_flip_flow)
 
             # If this is Majorana and mother has different fermion
-            # flow, it means that we should from now on in the chain
-            # flip the particle id and flow state.
+            # flow, we should flip the particle id and flow state.
             # Otherwise, if mother has different fermion flow, flip
             # flow
-            flip_flow = new_mother.get('fermionflow') != \
-                        self.get('fermionflow') and \
-                        not self.get('self_antipart')
-            flip_sign = new_mother.get('fermionflow') != \
-                        self.get('fermionflow') and \
-                        self.get('self_antipart') or \
-                        new_mother.get('state') != self.get('state')
             flip_sign = new_mother.get_with_flow('state') != \
                         self.get_with_flow('state') and \
                         self.get('self_antipart')

@@ -1,6 +1,6 @@
 # This file was automatically created by FeynRules $Revision: 302 $
 # Mathematica version: 7.0 for Linux x86 (64-bit) (February 18, 2009)
-# Date: Wed 1 Sep 2010 14:11:14
+# Date: Tue 7 Sep 2010 17:45:03
 
 
 from object_library import all_vertices, Vertex
