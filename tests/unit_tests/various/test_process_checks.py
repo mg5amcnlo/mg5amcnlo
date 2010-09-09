@@ -108,7 +108,7 @@ class TestMatrixElementChecker(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.base_model})
 
-        comparison = process_checks.MatrixElementChecker.check_processes(myproc)[0]
+        comparison = process_checks.check_processes(myproc)[0]
 
         self.assertEqual(len(comparison['values']), 8)
         self.assertTrue(max(comparison['values']) - min(comparison['values']) > 0.)
@@ -134,8 +134,7 @@ class TestMatrixElementChecker(unittest.TestCase):
                                                  'orders':{'QED':0}})
 
         comparisons = \
-                    process_checks.MatrixElementChecker.check_processes(myproc)
-
+                    process_checks.check_processes(myproc)
 
         goal_value_len = [8, 2]
 
@@ -164,7 +163,7 @@ class TestMatrixElementChecker(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.base_model})
 
-        comparison = process_checks.MatrixElementChecker.check_processes(myproc)[0]
+        comparison = process_checks.check_processes(myproc)[0]
 
         self.assertFalse(comparison['passed'])
 

@@ -52,11 +52,12 @@ import madgraph.iolibs.import_v4 as import_v4
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 
-import models.import_ufo as import_ufo
-
 import madgraph.interface.tutorial_text as tutorial_text
 
+import madgraph.various.process_checks as process_checks
+
 import models as ufomodels
+import models.import_ufo as import_ufo
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
@@ -485,7 +486,7 @@ class HelpToCmd(object):
         
     def help_generate(self):
 
-        logger.info("syntax: generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N")
+        logger.info("syntax: generate [check] INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N")
         logger.info("-- generate diagrams for a given process")
         logger.info("   Syntax example: l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1")
         logger.info("   Alternative required s-channels can be separated by \"|\":")
@@ -494,6 +495,9 @@ class HelpToCmd(object):
         logger.info("   core process, decay1, (decay2, (decay2', ...)), ...  etc")
         logger.info("   Example: p p > t~ t QED=0, (t~ > W- b~, W- > l- vl~), t > j j b @2")
         logger.info("   Note that identical particles will all be decayed.")
+        logger.info("""If the \"check\" option is used, a check that the model and MG5
+   are working properly is done by generating the processes in all possible
+   ways, and comparing the result of running the corresponding matrix elements.""")
         logger.info("To generate a second process use the \"add process\" command")
 
     def help_add(self):
@@ -653,18 +657,30 @@ class CheckValidForCmd(object):
         
         self.check_output(args)
     
-    def check_generate(self, line):
-        """check the validity of line"""
-        
-        if len(line) < 1:
-            self.help_generate()
-            raise self.InvalidCmd("\"generate\" requires an argument.")
-            
-        self.check_process_format(line)
+    def check_generate(self, args):
+        """check the validity of args"""
         
         if  not self._curr_model:
             logger.info('No model currently active. Try with the Standard Model')
             self.do_import('model sm')
+
+        if len(args) < 1:
+            self.help_generate()
+            raise self.InvalidCmd("\"generate\" requires an argument.")
+
+        check = False
+        if args[0] == 'check':
+            check = True
+            args = args[1:]
+            
+        if len(args) < 1:
+            self.help_generate()
+            raise self.InvalidCmd("\"generate check\" requires a process.")
+
+        self.check_process_format(" ".join(args))
+        
+        if check:
+            args.insert(0, 'check')
         
         return True
     
@@ -1493,18 +1509,55 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def do_generate(self, line):
         """Generate an amplitude for a given process"""
 
-        # Check line validity
-        self.check_generate(line)
+        args = split_arg(line)
+
+        # Check args validity
+        self.check_generate(args)
 
         # Reset Helas matrix elements
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-        self._generate_info = line
+        self._generate_info = args
+        # Reset _done_export, since we have new process
+        self._done_export = False
 
+        if args[0] == 'check':
+            # Run matrix element generation check on processes
+
+            line = " ".join(args[1:])
+            try:
+                if ',' not in line:
+                    myprocdef = self.extract_process(line)
+                else:
+                    raise MadGraph5Error('Decay chains not allowed in check')
+            except MadGraph5Error as error:
+                raise MadGraph5Error(str(error))
+
+            # Check that we have something    
+            if not myprocdef:
+                raise MadGraph5Error("Empty or wrong format process, please try again.")
+
+            # run the check
+            cpu_time1 = time.time()
+            comparisons = process_checks.check_processes(myprocdef)
+            cpu_time2 = time.time()
+
+            logger.info(process_checks.output_comparisons(comparisons))
+
+            logger.info("%i processes with %i permutations checked in %0.3f s" \
+                        % (len(comparisons),
+                          len(sum([comp['values'] for comp in comparisons],[])),
+                          (cpu_time2 - cpu_time1)))
+            return
+        
+        # For normal operation mode (not check)
+        line = " ".join(args)
         try:
             if ',' not in line:
                 myprocdef = self.extract_process(line)
             else:
                 myprocdef, line = self.extract_decay_chain_process(line)
+                if check:
+                    raise MadGraph5Error('Decay chains not allowed in check')
         except MadGraph5Error as error:
             raise MadGraph5Error(str(error))
         
@@ -1515,14 +1568,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # run the program
         cpu_time1 = time.time()
         try:
-            myproc = diagram_generation.MultiProcess(myprocdef)
-            self._curr_amps = myproc.get('amplitudes')
+            if check:
+                pass
+            else:
+                myproc = diagram_generation.MultiProcess(myprocdef)
+                self._curr_amps = myproc.get('amplitudes')
         except Exception as error:
             raise MadGraph5Error(str(error))
         cpu_time2 = time.time()
-
-        # Reset _done_export, since we have new process
-        self._done_export = False
 
         nprocs = len(self._curr_amps)
         ndiags = sum([amp.get_number_of_diagrams() for \
