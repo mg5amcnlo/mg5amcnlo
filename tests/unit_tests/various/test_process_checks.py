@@ -35,12 +35,9 @@ _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 class TestMatrixElementChecker(unittest.TestCase):
     """Test class for the MatrixElementChecker and get_momenta"""
 
-    base_model = import_ufo.import_model('sm')
-    full_model = model_reader.ModelReader(base_model)
-    full_model.set_parameters_and_couplings()
 
     def setUp(self):
-        pass
+        self.base_model = import_ufo.import_model('sm')
     
     def test_get_momenta(self):
         """Test the get_momenta function"""
@@ -66,7 +63,9 @@ class TestMatrixElementChecker(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.base_model})
 
-        p, w_rambo = process_checks.get_momenta(myproc, self.full_model)
+        full_model = model_reader.ModelReader(self.base_model)
+        full_model.set_parameters_and_couplings()
+        p, w_rambo = process_checks.get_momenta(myproc, full_model)
 
         # Check massless external momenta
         for mom in p[:-1]:
@@ -76,7 +75,7 @@ class TestMatrixElementChecker(unittest.TestCase):
         mom = p[-1]
         mass = math.sqrt(mom[0]**2-(mom[1]**2+mom[2]**2+mom[3]**2))
         self.assertAlmostEqual(mass,
-                               self.full_model.get('parameter_dict')['MZ'],
+                               full_model.get('parameter_dict')['MZ'],
                                8)
 
         # Check momentum balance
@@ -111,9 +110,65 @@ class TestMatrixElementChecker(unittest.TestCase):
 
         comparison = process_checks.MatrixElementChecker.check_processes(myproc)[0]
 
-        self.assertEqual(len(comparison['values']), math.factorial(4))
+        self.assertEqual(len(comparison['values']), 8)
         self.assertTrue(max(comparison['values']) - min(comparison['values']) > 0.)
         self.assertTrue(comparison['passed'])
+
+
+    def test_comparison_for_multiprocess(self):
+        """Test the get_momenta function"""
+
+        myleglist = base_objects.MultiLegList()
+
+        p = [1,2,-1,-2]
+
+        myleglist.append(base_objects.MultiLeg({'ids':p,
+                                           'state':False}))
+        myleglist.append(base_objects.MultiLeg({'ids':p,
+                                           'state':False}))
+        myleglist.append(base_objects.MultiLeg({'ids':p}))
+        myleglist.append(base_objects.MultiLeg({'ids':p}))
+
+        myproc = base_objects.ProcessDefinition({'legs':myleglist,
+                                                 'model':self.base_model,
+                                                 'orders':{'QED':0}})
+
+        comparisons = \
+                    process_checks.MatrixElementChecker.check_processes(myproc)
+
+
+        goal_value_len = [8, 2]
+
+        for i, comparison in enumerate(comparisons):
+            self.assertEqual(len(comparison['values']), goal_value_len[i])
+            self.assertTrue(comparison['passed'])
+
+    def test_failed_process(self):
+        """Test the get_momenta function"""
+
+        # Change 4g interaction so color and lorentz don't agree
+        gggg = self.base_model.get_interaction(3)
+        gggg.set('lorentz', ['VVVV1', 'VVVV4', 'VVVV3'])
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        comparison = process_checks.MatrixElementChecker.check_processes(myproc)[0]
+
+        self.assertFalse(comparison['passed'])
+
+
         
 if __name__ == '__main__':
     unittest.unittest.main()

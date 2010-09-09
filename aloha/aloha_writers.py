@@ -407,8 +407,8 @@ class ALOHAWriterForFortran(WriteALOHA):
         for elem in overm:
             #Mom is in format OMX with X the number of the particle
             index = int(elem[2:])
-            str_out += 'om%d = 0d0\n' % (index)
-            str_out += 'if (m%d .ne. 0d0) om%d' % (index, index) + '=1d0/dcmplx(m%d**2,-w%d*m%d)\n' % (index, index, index) 
+            str_out += 'OM%d = 0d0\n' % (index)
+            str_out += 'if (M%d .ne. 0d0) OM%d' % (index, index) + '=1d0/dcmplx(M%d**2,-W%d*M%d)\n' % (index, index, index) 
         
         # Returning result
         return str_out
@@ -918,8 +918,8 @@ class ALOHAWriterForPython(WriteALOHA):
         for elem in overm:
             #Mom is in format OMX with X the number of the particle
             index = int(elem[2:])
-            str_out += 'om%d = 0.0\n' % (index)
-            str_out += 'if (m%d): om%d' % (index, index) + '=1.0/complex(m%d**2,-w%d*m%d)\n' % (index, index, index) 
+            str_out += 'OM%d = 0.0\n' % (index)
+            str_out += 'if (M%d): OM%d' % (index, index) + '=1.0/complex(M%d**2,-W%d*M%d)\n' % (index, index, index) 
         
         # Returning result
         return str_out    

@@ -1,4 +1,4 @@
-class Matrix_%(process_string)s(object):
+class Matrix(object):
 
     def smatrix(self,p, model):
         #  

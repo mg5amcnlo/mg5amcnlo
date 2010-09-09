@@ -218,7 +218,7 @@ class IOExportPythonTest(unittest.TestCase):
         """Test getting the matrix methods for Python for a matrix element."""
         
         goal_method = (\
-"""class Matrix_0_uux_uux(object):
+"""class Matrix(object):
 
     def smatrix(self,p, model):
         #  
@@ -417,10 +417,6 @@ class IOExportPythonTest(unittest.TestCase):
                                                      mypythonmodel)
         matrix_methods = exporter.get_python_matrix_methods()
 
-        # Define the routines (locally is enough)
-        for matrix_method in matrix_methods.values():
-            exec(matrix_method)
-
         # Calculate parameters and couplings
         full_model = model_reader.ModelReader(model)
         
@@ -437,7 +433,10 @@ class IOExportPythonTest(unittest.TestCase):
 
         answer = 1.39189717257175028e-007
         for process in matrix_methods.keys():
-            value = eval("Matrix_%s().smatrix(p, full_model)" % process)
+            # Define Python matrix element for process
+            exec(matrix_methods[process])
+            # Calculate the matrix element for the momentum p
+            value = eval("Matrix().smatrix(p, full_model)")
             self.assertTrue(abs(value-answer)/answer < 1e-6,
                             "Value is: %.9e should be %.9e" % \
                             (abs(value), answer))

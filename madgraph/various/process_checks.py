@@ -34,6 +34,7 @@ import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
+import madgraph.core.color_amp as color_amp
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 
@@ -139,33 +140,49 @@ class MatrixElementChecker(object):
         orderings of particles (which means different diagram building
         and Helas calls)"""
 
-        amplitudes = diagram_generation.AmplitudeList()
-        matrix_elements = helas_objects.HelasMatrixElementList()
-
-        if isinstance(processes, base_objects.Process):
+        if isinstance(processes, base_objects.ProcessDefinition):
+            # Generate a list of unique processes
+            # Extract IS and FS ids
+            multiprocess = processes
+            model = multiprocess.get('model')
+            isids = [[model.get_particle(id).get_anti_pdg_code() for id in \
+                      leg.get('ids')] for leg in processes.get('legs') \
+                      if not leg.get('state')]
+            fsids = [leg.get('ids') for leg in processes.get('legs') \
+                     if leg.get('state')]
+            sorted_ids = []
+            processes = base_objects.ProcessList()
+            for is_prod in apply(itertools.product, isids):
+                for fs_prod in apply(itertools.product, fsids):
+                    prod = sorted(list(is_prod) + list(fs_prod))
+                    if prod in sorted_ids:
+                        continue
+                    is_prod = [model.get_particle(id).get_anti_pdg_code() \
+                               for id in is_prod]
+                    sorted_ids.append(prod)
+                    processes.append(base_objects.Process({\
+                        'legs': base_objects.LegList(\
+                                [base_objects.Leg({'id': id, 'state':False}) for \
+                                 id in is_prod] + \
+                                [base_objects.Leg({'id': id, 'state':True}) for \
+                                 id in fs_prod]),
+                        'model':multiprocess.get('model'),
+                        'id': multiprocess.get('id'),
+                        'orders': multiprocess.get('orders'),
+                        'required_s_channels': \
+                                      multiprocess.get('required_s_channels'),
+                        'forbidden_s_channels': \
+                                      multiprocess.get('forbidden_s_channels'),
+                        'forbidden_particles': \
+                                      multiprocess.get('forbidden_particles'),
+                        'is_decay_chain': \
+                                      multiprocess.get('is_decay_chain'),
+                        'overall_orders': \
+                                      multiprocess.get('overall_orders')}))
+        elif isinstance(processes, base_objects.Process):
             processes = base_objects.ProcessList([processes])
         elif isinstance(processes, base_objects.ProcessList):
             pass
-        elif isinstance(processes, diagram_generation.Amplitude):
-            amplitudes.append(processes)
-            processes = base_objects.ProcessList([processes.get('process')])
-        elif isinstance(processes, diagram_generation.AmplitudeList):
-            amplitudes = processes
-            processes = base_objects.ProcessList([a.get('process') for \
-                                                  a in processes])
-        elif isinstance(processes, helas_objects.HelasMatrixElement):
-            matrix_elements.append(processes)
-            processes = base_objects.ProcessList(\
-                                                [processes.get('processes')[0]])
-        elif isinstance(processes, helas_objects.HelasMatrixElementList):
-            matrix_elements = processes
-            processes = base_objects.ProcessList([me.get('processes')[0] for \
-                                                  me in processes])
-        elif isinstance(processes, helas_objects.HelasMultiProcess):
-            matrix_elements = processes.get('matrix_elements')
-            processes = base_objects.ProcessList([me.get('processes')[0] for \
-                                                  me in processes.get(\
-                                                          'matrix_elements')])
         else:
             raise MadGraph5Error("processes is of non-supported format")
 
@@ -182,12 +199,19 @@ class MatrixElementChecker(object):
         # Write the matrix element(s) in Python
         helas_writer = helas_call_writer.PythonUFOHelasCallWriter(model)
 
-        comparison_results = []
+        # Keep track of tested processes, matrix elements, color and already
+        # initiated Lorentz routines, to reuse as much as possible
         tested_processes = []
         used_lorentz = []
+        matrix_elements = []
+        list_colorize = []
+        list_color_basis = []
+        list_color_matrices = []        
+
+        comparison_results = []
 
         # For each process, make sure we have set up leg numbers:
-        for iproc, process in enumerate(processes):
+        for process in processes:
             # Check if process is already checked
             ids = [l.get('id') for l in process.get('legs') if l.get('state')]
             ids.extend([model.get_particle(l.get('id')).get_anti_pdg_code() \
@@ -200,9 +224,11 @@ class MatrixElementChecker(object):
 
             # Add this process to tested_processes
             tested_processes.append(ids)
+            # Add also antiprocess, since these are identical
+            anti_ids = sorted([model.get_particle(id).get_anti_pdg_code() \
+                               for id in ids[:-1]]) + [process.get('id')]
+            tested_processes.append(anti_ids)
             
-            logger.info("Testing process %s" % process.nice_string())
-
             # Generate phase space point to use
             p, w_rambo = get_momenta(process, full_model)
             # Initiate the value array
@@ -210,32 +236,87 @@ class MatrixElementChecker(object):
             for i, leg in enumerate(process.get('legs')):
                 leg.set('number', i+1)
 
+            logger.info("Checking %s" % \
+                        process.nice_string().replace('Process', 'process'))
+
+            process_matrix_elements = []
+            process_diagrams = []
+
             # Now, generate all possible permutations of the legs
             for legs in itertools.permutations(process.get('legs')):
-                logger.info("Testing permutation: %s" % \
-                            ([l.get('number') for l in legs]))
-
                 legs = base_objects.LegList(legs)
 
-                if legs == process.get('legs') and \
-                        len(matrix_elements) >= iproc + 1:
-                    matrix_element = matrix_element[iproc]
-                else:
-                    if legs == process.get('legs') and \
-                            len(amplitudes) >= iproc + 1:
-                        amplitude = amplitudes[iproc]
-                    else:
-                        # Generate a process with these legs
-                        newproc = copy.copy(process)
-                        newproc.set('legs', legs)
-                        # Generate the amplitude for this process
-                        amplitude = diagram_generation.Amplitude(newproc)
-                        if not amplitude.get('diagrams'):
-                            # This process has no diagrams; go to next process
-                            break
-                        
-                    # Generate the HelasMatrixElement for the process
-                    matrix_element = helas_objects.HelasMatrixElement(amplitude)
+                if legs != process.get('legs'):
+                    logger.info("Testing permutation: %s" % \
+                                ([l.get('number') for l in legs]))
+
+                # Generate a process with these legs
+                newproc = copy.copy(process)
+                newproc.set('legs', legs)
+                # Generate the amplitude for this process
+                amplitude = diagram_generation.Amplitude(newproc)
+                if not amplitude.get('diagrams'):
+                    # This process has no diagrams; go to next process
+                    logging.info("No diagrams for %s" % \
+                                 newproc.nice_string().replace('Process', 'process'))
+                    break
+
+                # Generate the HelasMatrixElement for the process
+                matrix_element = helas_objects.HelasMatrixElement(amplitude,
+                                                                  gen_color=False)
+                
+                if matrix_element in process_matrix_elements:
+                    # Exactly the same matrix element has been tested
+                    # for other permutation of same process
+                    index = process_matrix_elements.index(matrix_element)
+                    logger.info("Skipping permutation " + \
+                                str([l.get('number') for l in legs]) + \
+                                ", identical matrix element as previous")
+                    continue
+                elif matrix_element in matrix_elements:
+                    # Exactly the same matrix element has been tested
+                    logger.info("Skipping %s, " % process.nice_string() + \
+                                "identical matrix element already tested" \
+                                )
+                    values = []
+                    break
+
+                process_matrix_elements.append(matrix_element)
+                
+                # Create an empty color basis, and the list of raw
+                # colorize objects (before simplification) associated
+                # with amplitude
+                col_basis = color_amp.ColorBasis()
+                new_amp = matrix_element.get_base_amplitude()
+                matrix_element.set('base_amplitude', new_amp)
+                colorize_obj = col_basis.create_color_dict_list(new_amp)
+
+                try:
+                    # If the color configuration of the ME has
+                    # already been considered before, recycle
+                    # the information
+                    col_index = list_colorize.index(colorize_obj)
+                    logger.info(\
+                      "Reusing existing color information for %s" % \
+                      matrix_element.get('processes')[0].nice_string().\
+                                         replace('Process', 'process'))
+                except ValueError:
+                    # If not, create color basis and color
+                    # matrix accordingly
+                    list_colorize.append(colorize_obj)
+                    col_basis.build()
+                    list_color_basis.append(col_basis)
+                    col_matrix = color_amp.ColorMatrix(col_basis)
+                    list_color_matrices.append(col_matrix)
+                    col_index = -1
+                    logger.info(\
+                      "Processing color information for %s" % \
+                      matrix_element.get('processes')[0].nice_string().\
+                                     replace('Process', 'process'))
+                # Set the color for the matrix element
+                matrix_element.set('color_basis', list_color_basis[col_index])
+                matrix_element.set('color_matrix',
+                                   list_color_matrices[col_index])
 
                 # Create the needed aloha routines
                 me_used_lorentz = set(matrix_element.get_used_lorentz())
@@ -244,9 +325,6 @@ class MatrixElementChecker(object):
 
                 aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
                 aloha_model.compute_subset(me_used_lorentz)
-                if aloha_model:
-                    logger.info("Generating ALOHA functions %s" % \
-                                ",".join([str(k) for k in aloha_model.keys()]))
 
                 # Write out the routines in Python
                 aloha_routines = []
@@ -270,19 +348,31 @@ class MatrixElementChecker(object):
                 matrix_methods = exporter.get_python_matrix_methods()
 
                 # Define the routines (locally is enough)
-                for matrix_method in matrix_methods.values():
-                    exec(matrix_method)
+                exec(matrix_methods[newproc.shell_string()])
 
                 # Evaluate the matrix element for the momenta p
-                values.append(eval("Matrix_%s().smatrix(p, full_model)" % \
-                                   process.shell_string()))
+                values.append(eval("Matrix().smatrix(p, full_model)"))
                 
+                # Check if we failed badly - in that case done for
+                # this process
+                if max(abs(max(values)), abs(min(values))) > 0 and \
+                   abs(max(values) - min(values)) / \
+                         max(abs(max(values)), abs(min(values))) > 0.1:
+                    break
+                
+                
+            # Check if process was interrupted
+            if not values:
+                continue
+
+            # Add new matrix element to list och checked matrix elements
+            matrix_elements.extend(process_matrix_elements)
+
             # Done with this process. Collect values, and store
             # process and momenta
-            if not values[0]:
-                passed = max(values) - min(values) < 1.e-10
-            else:
-                passed = abs(max(values) - min(values))/abs(max(values)) < 1.e-10
+            passed = max(abs(max(values)), abs(min(values))) == 0 or \
+                         abs(max(values) - min(values)) / \
+                                max(abs(max(values)), abs(min(values))) < 1.e-8
 
             comparison_results.append({"process": process,
                                        "momenta": p,
