@@ -279,7 +279,8 @@ class ProcessExporterPython(object):
         parameters += [wf.get('width') for wf in \
                        matrix_element.get_all_wavefunctions()]
         parameters = list(set(parameters))
-        parameters.remove('ZERO')
+        if 'ZERO' in parameters:
+            parameters.remove('ZERO')
 
         # Get all couplings used
         couplings = list(set([func.get('coupling') for func in \

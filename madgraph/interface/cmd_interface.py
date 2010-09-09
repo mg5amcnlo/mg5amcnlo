@@ -1556,8 +1556,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 myprocdef = self.extract_process(line)
             else:
                 myprocdef, line = self.extract_decay_chain_process(line)
-                if check:
-                    raise MadGraph5Error('Decay chains not allowed in check')
         except MadGraph5Error as error:
             raise MadGraph5Error(str(error))
         
@@ -1568,11 +1566,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # run the program
         cpu_time1 = time.time()
         try:
-            if check:
-                pass
-            else:
-                myproc = diagram_generation.MultiProcess(myprocdef)
-                self._curr_amps = myproc.get('amplitudes')
+            myproc = diagram_generation.MultiProcess(myprocdef)
+            self._curr_amps = myproc.get('amplitudes')
         except Exception as error:
             raise MadGraph5Error(str(error))
         cpu_time2 = time.time()
