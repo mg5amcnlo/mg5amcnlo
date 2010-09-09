@@ -2444,14 +2444,11 @@ def SSS1_1(S2, S3, C, M1, W1):
             - complex(S1[1]).imag]
     denom =1.0/(( (M1*( -M1+1j*W1))+( (P1[0]**2)-(P1[1]**2)-(P1[2]**2)-(P1[3]**2))))
     S1[0]= C*denom*1j*(S3[0]*S2[0])
-    return S1 
-    
+    return S1
 def SSS1_2(S2, S3, C, M1, W1):
     return SSS1_1(S3,S2,C,M1,W1)
-
 def SSS1_3(S2, S3, C, M1, W1):
-    return SSS1_1(S3,S2,C,M1,W1)
-"""
+    return SSS1_1(S3,S2,C,M1,W1)"""
         
         SSS = UFOLorentz(name = 'SSS1',
                  spins = [ 1, 1, 1 ],
@@ -2468,3 +2465,30 @@ def SSS1_3(S2, S3, C, M1, W1):
         for i,line in enumerate(split_routine):
             self.assertEqual(split_solution[i],line)
         self.assertEqual(len(split_routine), len(split_solution))
+        
+        
+    def test_python_routine_are_exec(self):
+        """ check if the python routine can be call """
+            
+        FFV2 = UFOLorentz(name = 'FFV2',
+               spins = [ 2, 2, 3 ],
+               structure = 'Gamma(3,2,\'s1\')*ProjM(\'s1\',1)')
+            
+        builder = create_aloha.AbstractRoutineBuilder(FFV2)
+        builder.apply_conjugation()
+        amp = builder.compute_routine(0)
+        routine = amp.write(output_dir=None, language='Python')
+
+        
+        solution = """import wavefunctions
+def FFV2C1_0(F1,F2,V3,C):
+    vertex = C*( (F1[3]*( (F2[0]*( -1j*V3[1]-V3[2]))+(F2[1]*( 1j*V3[0]+1j*V3[3]))))+(F1[2]*( (F2[0]*( 1j*V3[0]-1j*V3[3]))+(F2[1]*( -1j*V3[1]+V3[2])))))
+    return vertex""" 
+
+        split_solution = solution.split('\n')
+        split_routine = routine.split('\n')
+        for i,line in enumerate(split_routine):
+            self.assertEqual(split_solution[i],line)
+        self.assertEqual(len(split_routine), len(split_solution))
+            
+            

@@ -835,9 +835,9 @@ class ALOHAWriterForPython(WriteALOHA):
     
     def define_foot(self):
         if not self.offshell:
-            return 'return vertex \n'
+            return 'return vertex'
         else:
-            return 'return %s \n' % (self.outname)
+            return 'return %s' % (self.outname)
             
     
     def define_header(self):
@@ -928,7 +928,7 @@ class ALOHAWriterForPython(WriteALOHA):
         number = self.offshell 
         calls = self.reorder_call_list(self.calllist['CallList'], self.offshell,
                                                                         new_nb)
-        Outstring = 'return '+self.namestring+'('+','.join(calls)+',C,M%s,W%s)\n' \
+        Outstring = 'return '+self.namestring+'('+','.join(calls)+',C,M%s,W%s)' \
                          %(number,number)
         return Outstring        
 
