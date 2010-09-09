@@ -636,17 +636,20 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                            state != new_wf.get('state'),
                                            ['incoming', 'outgoing'])[0])
                 new_wf.set('is_part', not new_wf.get('is_part'))
-
             try:
                 # Use the copy in wavefunctions instead.
                 # Remove this copy from diagram_wavefunctions
+                new_wf_number = new_wf.get('number')
                 new_wf = wavefunctions[wavefunctions.index(new_wf)]
-                index = diagram_wavefunctions.index(new_wf)
+                diagram_wf_numbers = [w.get('number') for w in \
+                                      diagram_wavefunctions]
+                index = diagram_wf_numbers.index(new_wf_number)
                 diagram_wavefunctions.pop(index)
                 # We need to decrease the wf number for later
                 # diagram wavefunctions
-                for wf in diagram_wavefunctions[index:]:
-                    wf.set('number', wf.get('number') - 1)
+                for wf in diagram_wavefunctions:
+                    if wf.get('number') > new_wf_number:
+                        wf.set('number', wf.get('number') - 1)
                 # Since we reuse the old wavefunction, reset wf_number
                 wf_number = wf_number - 1
             except ValueError:
@@ -2133,7 +2136,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                                    diagram_wavefunctions,
                                                    external_wavefunctions,
                                                    wf_number)
-
                         # Create new copy of number_wf_dict
                         new_number_wf_dict = copy.copy(number_wf_dict)
 
@@ -2190,10 +2192,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                               "Nostate",
                                               wf_number)
 
-                # Sort the wavefunctions according to number
-                diagram_wavefunctions.sort(lambda wf1, wf2: \
-                              wf1.get('number') - wf2.get('number'))
-
                 # Now generate HelasAmplitudes from the last vertex.
                 if lastvx.get('id'):
                     inter = model.get('interaction_dict')[lastvx.get('id')]
@@ -2230,12 +2228,17 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         helas_diagram.set('wavefunctions',
                                           diagram_wavefunctions)
 
+                # Sort the wavefunctions according to number
+                diagram_wavefunctions.sort(lambda wf1, wf2: \
+                              wf1.get('number') - wf2.get('number'))
+
                 if optimization:
                     wavefunctions.extend(diagram_wavefunctions)
                     wf_mother_arrays.extend([wf.to_array() for wf \
                                              in diagram_wavefunctions])
                 else:
                     wf_number = len(process.get('legs'))
+
             # Append this diagram in the diagram list
             helas_diagrams.append(helas_diagram)
 
