@@ -789,19 +789,26 @@ class Test_Channel(unittest.TestCase):
         vert_1['legs'][0]['number'] = 2
         vert_1['legs'][1]['number'] = 3
         vert_1['legs'][2]['number'] = 2
-        vert_1['legs'][2]['state'] = False
-        vert_2 = copy.deepcopy(full_vertexlist[(32, -6)])
+        vert_2 = copy.deepcopy(full_vertexlist[(35, 6)])
+        vert_2['id'] = -vert_2['id']
         vert_2['legs'][0]['number'] = 2
+        vert_2['legs'][0]['id'] = -vert_2['legs'][0]['id']
         vert_2['legs'][1]['number'] = 4
+        vert_2['legs'][1]['id'] = -vert_2['legs'][1]['id']
         vert_2['legs'][2]['number'] = 2
+        vert_2['legs'][2]['id'] = -vert_2['legs'][2]['id']
         vert_3 = copy.deepcopy(full_vertexlist[(35, 6)])
         vert_3['legs'][0]['number'] = 3
         vert_3['legs'][1]['number'] = 5
         vert_3['legs'][2]['number'] = 3
-        vert_4 = copy.deepcopy(full_vertexlist[(47, -24)])
-        vert_4['legs'][0]['number'] = 2
+        vert_4 = copy.deepcopy(full_vertexlist[(44, 24)])
+        vert_4['id'] = -vert_4['id']
+        vert_4['legs'][0]['number'] = 4
+        vert_4['legs'][0]['id'] = -vert_4['legs'][0]['id']
         vert_4['legs'][1]['number'] = 6
-        vert_4['legs'][2]['number'] = 2
+        vert_4['legs'][1]['id'] = -vert_4['legs'][1]['id']
+        vert_4['legs'][2]['number'] = 4
+        vert_4['legs'][2]['id'] = -vert_4['legs'][2]['id']
         vert_5 = copy.deepcopy(full_vertexlist[(44, 24)])
         vert_5['legs'][0]['number'] = 5
         vert_5['legs'][1]['number'] = 7
@@ -813,7 +820,7 @@ class Test_Channel(unittest.TestCase):
                                              vert_5, vert_4, vert_3, vert_2, \
                                              vert_1, vert_0])})
 
-        #print self.h_tt_bbmmvv.nice_string(), 'and\n', vert_1
+        #print len(self.h_tt_bbmmvv['vertices'])
         #pic = drawing_eps.EpsDiagramDrawer(self.h_tt_bbmmvv, 'h_tt_bbmmvv', self.my_testmodel)
         #pic.draw()
 
@@ -829,7 +836,7 @@ class Test_Channel(unittest.TestCase):
                                                 vertexlist[1]['legs'][0],
                                                 vertexlist[1]['legs'][1],
                                                 vertexlist[2]['legs'][0],
-                                                vertexlist[3]['legs'][1]])
+                                                vertexlist[3]['legs'][0]])
         self.assertEqual(self.h_tt_bbmmvv.get_final_legs(), goal_final_legs)
 
     def test_get_onshell(self):
@@ -847,7 +854,8 @@ class Test_Channel(unittest.TestCase):
         self.assertTrue(h_tt_bbww.get_onshell(self.my_testmodel))
 
     def test_find_channels(self):
-        """ Test the find_channels function of DecayParticle"""
+        """ Test of the find_channels function of DecayParticle.
+            Also the test for some helper function for find_channels."""
 
         higgs = self.my_testmodel.get_particle(25)
         
@@ -855,12 +863,63 @@ class Test_Channel(unittest.TestCase):
         h_tt_bbww = decay_objects.Channel({'vertices': \
                                            base_objects.VertexList(\
                                            vertexlist[2:])})
+        self.my_testmodel.find_vertexlist()
+        # Artificially add 4 body decay vertex to w boson
+        self.my_testmodel.get_particle(24)['decay_vertexlist'][(4, True)] =\
+            vertexlist[2]        
+        # The two middle are for wboson (see h_tt_bbww.get_final_legs()).
+        goal_configlist = set([(2, 4, 1, 2), (2, 4, 2, 1), (2, 3, 1, 3),
+                               (2, 3, 2, 2), (2, 2, 1, 4), (2, 2, 2, 3),
+                               (2, 1, 2, 4), (1, 4, 2, 2), (1, 4, 1, 3),
+                               (1, 3, 1, 4), (1, 3, 2, 3), (1, 2, 2, 4),])
+        self.assertEqual(set([tuple(i) \
+                              for i in higgs.generate_configlist(h_tt_bbww,
+                                                                 9, 
+                                                           self.my_testmodel)]),
+                         goal_configlist)
+        # Reset the decay_vertexlist of w boson.
+        self.my_testmodel.get_particle(24)['decay_vertexlist'].pop((4, True))
 
-        goal_config = [(2, 2, 2, 0), (2, 2, 0, 2), (2, 0, 2, 2), (0, 2, 2, 2)]
-        self.assertEqual(higgs.generate_config(h_tt_bbww, 7), goal_config)
 
-        higgs.find_channels(6, self.my_testmodel)        
-        self.assertEqual(higgs.get_channels(6, True), self.h_tt_bbmmvv)
+        # Test the connect_channel_vertex
+        h_tt_bwbmuvm = decay_objects.Channel({'vertices': \
+                                              base_objects.VertexList(\
+                                              vertexlist[1:])})
+        #int_leg = h_tt_bbww.get_final_legs()[-1]
+        #print int_leg, h_tt_bbww.get_final_legs()
+        w_muvm = self.my_testmodel.get_particle(24).get_vertexlist(2, True)[0]
+        #print w_muvm
+        new_channel = higgs.connect_channel_vertex(h_tt_bbww, 3, w_muvm,
+                                                   self.my_testmodel)
+        #print 'c1:', new_channel.nice_string(), '\nc2:', h_tt_bwbmuvm.nice_string(), '\n'
+        #print self.h_tt_bbmmvv.nice_string()
+        h_tt_bwbmuvm.get_onshell(self.my_testmodel)
+        self.assertEqual(new_channel, h_tt_bwbmuvm)
+
+        # Test of check_idlegs
+        temp_vert = copy.deepcopy(vertexlist[2])
+        temp_vert['legs'].insert(2, temp_vert['legs'][1])
+        temp_vert['legs'][2]['number'] = 4
+        #print temp_vert
+        self.assertFalse(higgs.check_idlegs(vertexlist[2]))
+        self.assertTrue(higgs.check_idlegs(temp_vert))
+
+        # Test of get_idpart
+        temp_vert2 = copy.deepcopy(temp_vert)
+        temp_vert2['legs'].insert(3, temp_vert['legs'][0])
+        temp_vert2['legs'].insert(4, temp_vert['legs'][0])
+        #print temp_vert2
+        idpart_c = decay_objects.Channel({'vertices': \
+                              base_objects.VertexList([temp_vert, temp_vert2])})
+        self.assertEqual(idpart_c.get_idpartlist(),
+                         {0: [(24,[1, 2])], 1:[(24,[1,2]),(5, [0,3,4])]})
+        
+        # Test of find_channels
+        higgs.find_channels(6, self.my_testmodel)
+        #print higgs.get('decay_channels').keys()
+        result = higgs.get_channels(5, True)
+        print result.nice_string()
+        #self.assertEqual(result, self.h_tt_bbmmvv)
         
                                            
 

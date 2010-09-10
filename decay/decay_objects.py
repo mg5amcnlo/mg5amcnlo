@@ -51,7 +51,7 @@ class DecayParticle(base_objects.Particle):
                    'charge', 'mass', 'width', 'pdg_code',
                    'texname', 'antitexname', 'line', 'propagating',
                    'is_part', 'self_antipart', 
-                   'decay_vertexlist', 'decay_channel'
+                   'decay_vertexlist', 'decay_channels'
                   ]
 
 
@@ -78,9 +78,6 @@ class DecayParticle(base_objects.Particle):
         for item in init_dict.keys():
             self.set(item, init_dict[item])
 
-        #log of the decay_vertexlist_written history
-        self.decay_vertexlist_written = False
-
     def default_setup(self):
         """Default values for all properties"""
         
@@ -96,8 +93,19 @@ class DecayParticle(base_objects.Particle):
                                     (3, False) : base_objects.VertexList(),
                                     (3, True)  : base_objects.VertexList()}
         self['decay_channels'] = {}
+        #log of the vertexlist_found history
+        self.vertexlist_found = False
         self.max_vertexorder = 0
 
+    def get(self, name):
+        """ Overloading get to include vertexlist_found and max_vertexorder"""
+        if name == 'vertexlist_found':
+            return self.vertexlist_found
+        if name == 'max_vertexorder':
+            self.get_max_vertexorder()
+            return self.max_vertexorder
+
+        return super(DecayParticle, self).get(name)
     
     def check_decay_condition(self, partnum, onshell, 
                               value = base_objects.VertexList(), model = {}):
@@ -264,7 +272,7 @@ class DecayParticle(base_objects.Particle):
                 raise self.PhysicsObjectError, \
                     "The model, %s, does not contain particle %s." \
                     %(model.get('name'), self.get_name())
-            if any([ch for ch in value if onshell != ch.get_onshell()]):
+            if any([ch for ch in value if onshell != ch.get_onshell(model)]):
                 raise self.PhysicsObjectError, \
                     "The onshell condition is not consistent with the model."
 
@@ -324,6 +332,10 @@ class DecayParticle(base_objects.Particle):
         """ Get the max vertex order of this particle"""
         # Do not include keys without vertexlist in it
         # Both onshell and offshell are consider
+        if not self.vertexlist_found:
+            print "The vertexlist of this particle has not been searched. ",\
+                "Try find_vertexlist first."
+
         vertnum_list = [k[0] for k in self['decay_vertexlist'].keys() \
              if self['decay_vertexlist'][k]]
         if vertnum_list:
@@ -352,9 +364,9 @@ class DecayParticle(base_objects.Particle):
             raise self.PhysicsObjectError, \
                     "The option %s must be True or False." % str(option)
         
-        #If 'decay_vertexlist_written' is true and option is false,
+        #If 'vertexlist_found' is true and option is false,
         #no action is proceed.
-        if self.decay_vertexlist_written and not option:
+        if self.vertexlist_found and not option:
             return 'The vertexlist has been setup.', \
                 'No action proceeds because of False option.'
 
@@ -415,12 +427,17 @@ class DecayParticle(base_objects.Particle):
                 temp_vertlist, model)"""
 
                 #Append current vert to vertexlist
-                self['decay_vertexlist'][(partnum, \
-                                          ini_mass > (total_mass-ini_mass))].\
-                                             append(vert)
+                try:
+                    self['decay_vertexlist'][(partnum, \
+                                            ini_mass > (total_mass-ini_mass))].\
+                                            append(vert)
+                except KeyError:
+                    self['decay_vertexlist'][(partnum, \
+                                            ini_mass > (total_mass-ini_mass))] \
+                                            = vert
 
-        #Set the decay_vertexlist_written at the end
-        self.decay_vertexlist_written = True
+        #Set the vertexlist_found at the end
+        self.vertexlist_found = True
         
 
     def get_channels(self, partnum ,onshell):
@@ -458,7 +475,25 @@ class DecayParticle(base_objects.Particle):
               
     def find_channels(self, partnum, model):
         """ Function for finding decay channels up to the final particle
-            number given by max_partnum. (Call the function in model.)"""
+            number given by max_partnum.
+            Algorithm:
+            1. Any channel must be a. only one vertex, b. an existing channel
+               plus one vertex.
+            2. Given the maxima channel order, the program start looking for
+               2-body decay channels until the channels with the given order.
+            3. For each channel order,
+               a. First looking for any single vertex with such order and 
+                  construct the channel. Setup the has_idpart property.
+               b. Then finding the channel from off-shell sub-level channels.
+                  Note that any further decay of on-shell sub-level channel
+                  is not a new channel. For each sub-level channel, go through
+                  the final legs and connect vertex with the right order
+                  (with the aid of connect_channel_vertex function).
+               c. If the new channel does not exist in 'decay_channels',
+                  then if the new channel has no identical particle, append it.
+                  If the new channel has identical particle, check if it is not
+                  equvialent with the existing channels. Then append it.
+         """
 
         # Check validity of argument
         if not isinstance(partnum, int):
@@ -467,18 +502,35 @@ class DecayParticle(base_objects.Particle):
         if not isinstance(model, DecayModel):
             raise self.PhysicsObjectError, \
                 "The second argument %s should be a DecayModel object." \
-                % str(model)
-        if not self in model.get['particle_dict']:
+                % str(model)            
+        if not self in model['particles']:
             raise self.PhysicsObjectError, \
                 "The model %s does not contain particle %s" \
                 % (model.get('name'), self.get('name'))
+
+        # If vertexlist has not been found before, run model.find_vertexlist
+        if not model.vertexlist_found:
+            print "Vertexlist of this model has not been searched.",\
+                "Automatically run the model.find_vertexlist()"
+            model.find_vertexlist()
+
+        # If the channel list exist, return.
+        if (partnum, True) in self['decay_channels'].keys() or \
+                (partnum, False) in self['decay_channels'].keys():
+                return
             
+        # The initial vertex (identical vertex).
         ini_vert = base_objects.Vertex({'id': 0, 'legs': base_objects.LegList([\
                    base_objects.Leg({'id':self.get_anti_pdg_code(), 
                                      'number':1, 'state': False}),
                    base_objects.Leg({'id':self.get_pdg_code(), 'number':2})])})
 
+        # Find channels from 2-body decay to partnum-body decay channels.
         for clevel in range(2, partnum+1):
+            # Initialize the item in dictionary
+            self['decay_channels'][(clevel, True)] = ChannelList()
+            self['decay_channels'][(clevel, False)] = ChannelList()
+
             # If there is a vertex in clevel, construct it
             if (clevel, True) in self['decay_vertexlist'].keys() or \
                     (clevel, False) in self['decay_vertexlist'].keys():
@@ -486,35 +538,198 @@ class DecayParticle(base_objects.Particle):
                              self.get_vertexlist(clevel, False)):
                     temp_channel = Channel()
                     temp_vert = copy.deepcopy(vert)
-                    [l.set('id', i+2) \
+                    # Set the leg number (starting from 2)
+                    [l.set('number', i+2) \
                          for i, l in enumerate(temp_vert.get('legs'))]
-                    temp_channel.append(temp_vert)
-                    temp_channel.extend(ini_vert)
-                    try:
-                        self.get_channels(clevel, temp_channel.get_onshell()).\
-                            append(temp_channel)
-                    except KeyError:
-                        self['decay_channels'][(clevel, 
-                                                temp_channel.get_onshell())] = \
-                                                temp_channel
+                    # The final one has 'number' as 2
+                    temp_vert.get('legs')[-1]['number'] = 2
+                    # Append the true vertex and then the ini_vert
+                    temp_channel['vertices'].append(temp_vert)
+                    temp_channel['vertices'].append(ini_vert)
+                    # Setup the 'has_idpart' property
+                    if self.check_idlegs(temp_vert):
+                        temp_channel['has_idpart'] = True
+                    self.get_channels(clevel, temp_channel.get_onshell(model)).\
+                        append(temp_channel)
 
-            for sub_clevel in range(math.ceil(clevel/model.get_max_vertexorder()), clevel):
-                pass
+            # Go through sub-channels and try to add vertex to reach partnum
+            for sub_clevel in range(max((clevel - model.get_max_vertexorder()+1),2), clevel):
+                # The vertex level that should be combine with sub_clevel
+                vlevel = clevel - sub_clevel+1
+                # Go through each 'off-shell' channel in the given sub_clevel.
+                # Decay of on-shell channel is not a new channel.
+                for sub_c in self.get_channels(sub_clevel, False):
+                    # Scan each leg to see if there is any appropriate vertex
+                    for index, leg in enumerate(sub_c.get_final_legs()):
+                        # Get the particle even for anti-particle leg.
+                        inter_part = model.get_particle(abs(leg['id']))
+                        # Get the vertexlist in vlevel
+                        # Both on-shell and off-shell vertex 
+                        # should be considered.
+                        try:
+                            vlist_a = inter_part.get_vertexlist(vlevel, True)
+                        except KeyError:
+                            vlist_a = []
+                        try:
+                            vlist_b = inter_part.get_vertexlist(vlevel, False)
+                        except KeyError:
+                            vlist_b = []
 
-    def generate_config(self, channel, partnum):
-        """ Helping function to generate all the configuration to add
+                        # Find appropriate vertex
+                        for vert in (vlist_a + vlist_b):
+                            # Connect sub_channel to the vertex
+                            # the connect_channel_vertex will
+                            # inherit the 'has_idpart' from sub_c
+                            temp_c = self.connect_channel_vertex(sub_c, index, 
+                                                                 vert, model)
+                            temp_c_o = temp_c.get_onshell(model)
+                            # Append this channel if not exist
+                            if not temp_c in self.get_channels(clevel,temp_c_o):
+                                # If temp_c has identical particles in it,
+                                # check with other existing channels from
+                                # duplication.
+                                if temp_c.get('has_idpart'):
+                                    if not self.check_repeat(clevel,
+                                                             temp_c_o, temp_c):
+                                        self.get_channels(clevel, temp_c_o).\
+                                            append(temp_c)
+                                # If no id. particles, append this channel.
+                                else:
+                                    self.get_channels(clevel, temp_c_o).\
+                                        append(temp_c)
+
+
+    def connect_channel_vertex(self, sub_channel, index, vertex, model):
+        """ Helper function to connect a vertex to one of the legs 
+            in the channel. The argument 'index' specified the position of
+            the leg which will be connected with vertex.
+            If leg is for anti-particle, the vertex will be transform into 
+            anti-part with minus vertex id."""
+
+        # Copy the vertex to prevent the change of leg number
+        new_vertex = copy.deepcopy(vertex)
+
+        # Setup the final leg number that is used in the channel.
+        leg_num = max([l['number'] for l in sub_channel.get_final_legs()])
+
+        # Add minus sign to the vertex id and leg id if the leg in sub_channel
+        # is for anti-particle
+        is_anti_leg = sub_channel.get_final_legs()[index]['id'] < 0
+        if is_anti_leg:
+            new_vertex['id'] = -new_vertex['id']
+
+        # Legs continue the number of the final one in sub_channel,
+        # except the first and the last one ( these two should be connected.)
+        for leg in new_vertex['legs']:
+            # For the first and final legs, this loop is useful
+            # only for reverse leg id in case of mother leg is anti-particle.
+            # leg_num is correct only after the second one.
+            leg['number'] = leg_num
+            leg_num += 1
+            if is_anti_leg:
+                leg['id']  = model.get_particle(leg['id']).get_anti_pdg_code()
+
+        # Assign correct number to each leg in the vertex.
+        # The first leg follows the mother leg.
+        new_vertex['legs'][-1]['number'] = \
+            sub_channel.get_final_legs()[index]['number']
+        new_vertex['legs'][0]['number'] = new_vertex['legs'][-1]['number']
+
+        new_channel = Channel()
+        # New vertex is first
+        new_channel['vertices'].append(new_vertex)
+        # Then extend the vertices of the old channel
+        new_channel['vertices'].extend(sub_channel['vertices'])
+        # Setup properties of new_channel
+        new_channel.get_onshell(model)
+        # Descendent of a channel with identicle particles has the same
+        # attribute. (but 'idpart_list' will change and should not be inherited)
+        new_channel['has_idpart'] = sub_channel['has_idpart']
+
+        return new_channel
+
+    def check_idlegs(self, vert):
+        """ Helper function to check if the vertex has several identical legs.
+            Return True if id_legs exist, otherwise False.
+        """
+        pid_list = []
+        for l in vert['legs']:
+            if l['id'] in pid_list:
+                return True
+            else:
+                pid_list.append(l['id'])
+
+        return False
+
+    def check_repeat(self, clevel, onshell, channel):
+        """ Helper function to check if any channel is indeed identical
+            the given channel. (This mat happens when identical particle in
+            channel)"""
+        pass
+        """# Return if the channel has no identical particle.
+        if not channel.get('has_idpart'):
+            return False
+        
+        # Get the identical particle info and final state of channel
+        final_pid_set = set([l.get('id') for l in channel.get_final_legs()])
+        id_partlist = channel.get_idpartlist()
+        for id_part in id_partlist:
+            
+
+        for other_c in self.get_channels(clevel, onshell):
+            # Continue if this channel has no identical particle.
+            if not other_c.get('has_idpart'):
+                continue
+            final_pid_set_o = set([l.get('id') \
+                                       for l in other_c.get_final_legs()])
+
+            # Continue if the two channels have different final state
+            if final_pid_set_o != final_pid_set:
+                continue
+
+            id_partlist_o = other_c.get_idpartlist()"""
+            
+    # This helper function is useless in current algorithm...
+    def generate_configlist(self, channel, partnum, model):
+        """ Helper function to generate all the configuration to add
             vertetices to channel to create a channel with final 
             particle number as partnum"""
 
-        config = []
         current_num = len(channel.get_final_legs())
-        limit = []
-        pass
-        for l in channel.get_final_legs():
-            for f in config:
-                pass
+        configlist = []
+        limit_list = [model.get_particle(abs(l.get('id'))).get_max_vertexorder() for l in channel.get_final_legs()]
 
-#Helping function
+        for leg_position in range(current_num):
+            if limit_list[leg_position] >= 2:
+                ini_config = [0]* current_num
+                ini_config[leg_position] = 1
+                configlist.append(ini_config)
+
+        for i in range(partnum - current_num -1):
+            new_configlist = []
+            # Add particle one by one to each config
+            for config in configlist:
+                # Add particle to each leg if it does not exceed limit_list
+                for leg_position in range(current_num):
+                    # the current config + new particle*1 + mother 
+                    # <= max_vertexorder
+                    if config[leg_position] + 2 <= limit_list[leg_position]:
+                        temp_config = copy.deepcopy(config)
+                        temp_config[leg_position] += 1
+                        if not temp_config in new_configlist:
+                            new_configlist.append(temp_config)
+            if not new_configlist:
+                break
+            else:
+                configlist = new_configlist
+
+        # Change the format consistent with max_vertexorder
+        configlist = [[l+1 for l in config] for config in configlist]
+        return configlist
+                                            
+                    
+
+# Helper function
 def legcmp(x, y):
     """Define the leg comparison, useful when testEqual is execute"""
     mycmp = cmp(x['id'], y['id'])
@@ -576,6 +791,8 @@ class DecayModel(base_objects.Model):
         """The particles is changed to ParticleList"""
         super(DecayModel, self).default_setup()
         self['particles'] = DecayParticleList()
+        # Other properties
+        self.vertexlist_found = False
         self.max_vertexorder = 0
         self.decay_groups = []
         self.reduced_interactions = []
@@ -635,6 +852,10 @@ class DecayModel(base_objects.Model):
 
     def get_max_vertexorder(self):
         """find the maxima vertex order (i.e. decay particle number)"""
+        if not self.vertexlist_found:
+            print "Use find_vertexlist before get_max_vertexorder!"
+            return
+
         # Do not include key without any vertexlist in it
         self.max_vertexorder = max(sum([[k[0] \
                                          for k in \
@@ -649,7 +870,12 @@ class DecayModel(base_objects.Model):
             '3_body_decay_vertexlist' of the corresponding particles.
             Utilize in finding all the decay table of the whole model
         """
-    
+
+        # Return if self.vertexlist_found is True.\
+        if self.vertexlist_found:
+            print "Vertexlist has been searched before."
+            return
+
         ini_list = []
         #Dict to store all the vertexlist (for conveniece only, removable!)
         vertexlist_dict = {}
@@ -724,6 +950,10 @@ class DecayModel(base_objects.Model):
                     self.get_particle(pid)['decay_vertexlist'][(\
                             partnum, onshell)].append(temp_vertex)
 
+        # Set the property vertexlist_found as True and for all particles
+        self.vertexlist_found = True
+        for part in self['particles']:
+            part.vertexlist_found = True
 
         #fdata = open(os.path.join(MG5DIR, 'models', self['name'], 'vertexlist_dict.dat'), 'w')
         #fdata.write(str(vertexlist_dict))
@@ -1356,8 +1586,9 @@ class DecayModel(base_objects.Model):
             2. From reduced_interactions to see if they can decay into
                others.
         """
-
-        self.find_decay_groups_general()
+        # If self.decay_groups is None, find_decay_groups first.
+        if not self.decay_groups:
+            self.find_decay_groups_general()
         # The list for the stable particle list of all groups
         stable_candidates = [[]]
         large_group_ids = []
@@ -1451,16 +1682,15 @@ class DecayModel(base_objects.Model):
         return self.stable_particles
 
     def find_channels(self, part, max_partnum):
-        """ Function that find channels for a particle. Call the function
-            in DecayParticle."""
-
+        """ Function that find channels for a particle.
+            Call the function in DecayParticle."""
         part.find_channels(max_partnum, self)
 
 #===============================================================================
-# Channel: Each channel for the decay
+# Channel: A specialized Diagram object for decay
 #===============================================================================
 class Channel(base_objects.Diagram):
-    """Channel: a diagram that describes a certain on-shell decay channel
+    """Channel: a diagram that describes a certain decay channel
                 with apprximated (mean) matrix element, phase space area,
                 and decay width
                 ('apx_matrixelement', 'apx_PSarea', and  'apx_decaywidth')
@@ -1469,7 +1699,7 @@ class Channel(base_objects.Diagram):
 
     sorted_keys = ['vertices',
                    'orders',
-                   'onshell',
+                   'onshell', 'has_idpart', 'id_partlist',
                    'apx_matrixelement', 'apx_PSarea', 'apx_decaywidth']
 
     def default_setup(self):
@@ -1479,6 +1709,12 @@ class Channel(base_objects.Diagram):
         
         # New properties
         self['onshell'] = False
+        # This property denotes whether the channel has 
+        # identical particles in it.
+        self['has_idpart'] = False
+        # The position of the identicle particles.
+        self['idpart_list'] = {}
+        # Decay width related properties.
         self['apx_matrixelement'] = 0.
         self['apx_PSarea'] = 0.
         self['apx_decaywidth'] = 0.
@@ -1491,7 +1727,7 @@ class Channel(base_objects.Diagram):
                 raise self.PhysicsObjectError, \
                     "Value %s is not a float" % str(value)
         
-        if name == 'onshell':
+        if name == 'onshell' or name == 'has_idpart':
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid onshell condition." % str(value)
@@ -1522,24 +1758,63 @@ class Channel(base_objects.Diagram):
             for leg in vert.get('legs'):
                 if not leg.get('number') in [l.get('number') \
                                                  for l in temp_legs] and \
-                                                 leg.get('number') != 1:
+                                                 leg.get('number') > 1:
                     temp_legs.append(leg)
 
         return temp_legs
         
     def get_onshell(self, model):
         """ Evaluate the onshell condition with the aid of get_final_legs"""
+        # Check if model is valid
         if not isinstance(model, base_objects.Model):
             raise self.PhysicsObjectError, \
-                "The second argument %s must be a model." % str(model)
+                "The argument %s must be a model." % str(model)
 
         final_mass = sum([eval(model.get_particle(l.get('id')).get('mass')) \
                               for l in self.get_final_legs()])
         final_mass = final_mass.real
-        ini_mass = eval(model.get_particle(self.get_initial_id()).get('mass')).real
+        ini_mass = eval(model.get_particle(self.get_initial_id()).get('mass'))
+        ini_mass = ini_mass.real
         self['onshell'] = ini_mass > final_mass
+
         return self['onshell']
 
+    def get_idpartlist(self):
+        """ Get the position of identical particles in this channel.
+            The format of idpart_list is a dictionary with the vertex
+            which has identical particles, value is the particle id and
+            leg index of identicle particles. Eg.
+            idpart_list = {vertex_index_1: [(pid_1, [index_1, index_2, ..]),
+                                            (pid_2, [index_1, index_2, ..])],
+                           vertex_index_2...}
+        """
+
+        # Look if there is any two more leg with the same id within a vertex.
+        for vindex, vert in enumerate(self.get('vertices')):
+            lindex_dict = {}
+            pid_list = []
+            # Record the occurence of each leg.
+            for lindex, leg in enumerate(vert.get('legs')):
+                try:
+                    lindex_dict[leg['id']].append(lindex)
+                except KeyError:
+                    lindex_dict[leg['id']] = [lindex]
+
+            for key, indexlist in lindex_dict.items():
+                # If more than one index for a key, 
+                # there are identical particles.
+                if len(indexlist) > 1:
+                    self['has_idpart'] = True
+                    # Record the index of vertex, leg id, and 
+                    # the list of leg index.
+                    try:
+                        self['idpart_list'][vindex].append((key, indexlist))
+                    except KeyError:
+                        self['idpart_list'][vindex] = [(key, indexlist)]
+
+        return self['idpart_list']
+                
+                
     def get_apx_matrixelement(self):
         """calculate the apx_matrixelement"""
         pass
