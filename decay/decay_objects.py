@@ -1370,8 +1370,7 @@ class DecayModel(base_objects.Model):
                     # particular situations. Don't implement this now
                     # however.
 
-    def find_decay_groups_general(self, sm_ids = \
-                                  [1,2,3,4,11,12,13,14,15,16,21,22,23,24]):
+    def find_decay_groups_general(self):
         """Iteratively find decay groups, suitable to vertex in all orders
            Algrorithm:
            1. Establish the reduced_interactions
@@ -1404,9 +1403,15 @@ class DecayModel(base_objects.Model):
               other particles. Add this particle to decay_groups.
         """
         
-        #Setup the SM particles and initial decay_groups, reduced_interactions
+        # Setup the SM particles and initial decay_groups, reduced_interactions
         self.decay_groups = [[]]
         self.reduced_interactions = []
+        sm_ids = []
+
+        # Setup the original 'SM' particles, i.e. particle without mass.
+        sm_ids = [p.get('pdg_code') for p in self.get('particles')\
+                      if eval(p.get('mass')) == 0.]
+        print sm_ids
 
         #Read the interaction information and setup
         for inter in self.get('interactions'):

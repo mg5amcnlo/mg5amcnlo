@@ -533,6 +533,12 @@ class MEComparator(object):
         """Output result as a nicely formated table. If filename is provided,
         write it to the file, else to the screen. Tolerance can be adjusted."""
 
+        proc_col_size = 17
+
+        for proc in self.proc_list:
+            if len(proc) + 1 > proc_col_size:
+                proc_col_size = len(proc) + 1
+        
         col_size = 17
 
         pass_proc = 0
@@ -540,7 +546,7 @@ class MEComparator(object):
 
         failed_proc_list = []
 
-        res_str = self._fixed_string_length("\nProcess", col_size) + \
+        res_str = self._fixed_string_length("\nProcess", proc_col_size) + \
                 ''.join([self._fixed_string_length(runner.name, col_size) for \
                            runner in self.me_runners]) + \
                   self._fixed_string_length("Relative diff.", col_size) + \
@@ -556,7 +562,7 @@ class MEComparator(object):
                 diff = (max(list_res) - min(list_res)) / \
                        (max(list_res) + min(list_res))
 
-            res_str += self._fixed_string_length('\n' + proc, col_size) + \
+            res_str += self._fixed_string_length('\n' + proc, proc_col_size)+ \
                        ''.join([self._fixed_string_length("%1.10e" % res,
                                                col_size) for res in list_res])
 

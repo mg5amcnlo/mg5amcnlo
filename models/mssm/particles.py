@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 294 $
+# This file was automatically created by FeynRules $Revision: 302 $
 # Mathematica version: 7.0 for Linux x86 (64-bit) (February 18, 2009)
-# Date: Tue 24 Aug 2010 12:44:50
+# Date: Tue 7 Sep 2010 17:45:02
 
 
 from __future__ import division
@@ -326,7 +326,7 @@ sv3 = Particle(pdg_code = 1000016,
 
 sv3__tilde__ = sv3.anti()
 
-sl1__minus__ = Particle(pdg_code = -1000011,
+sl1__minus__ = Particle(pdg_code = 1000011,
                         name = 'sl1-',
                         antiname = 'sl1+',
                         spin = 1,
@@ -341,7 +341,7 @@ sl1__minus__ = Particle(pdg_code = -1000011,
 
 sl1__plus__ = sl1__minus__.anti()
 
-sl2__minus__ = Particle(pdg_code = -1000013,
+sl2__minus__ = Particle(pdg_code = 1000013,
                         name = 'sl2-',
                         antiname = 'sl2+',
                         spin = 1,
@@ -356,7 +356,7 @@ sl2__minus__ = Particle(pdg_code = -1000013,
 
 sl2__plus__ = sl2__minus__.anti()
 
-sl3__minus__ = Particle(pdg_code = -1000015,
+sl3__minus__ = Particle(pdg_code = 1000015,
                         name = 'sl3-',
                         antiname = 'sl3+',
                         spin = 1,
@@ -371,7 +371,7 @@ sl3__minus__ = Particle(pdg_code = -1000015,
 
 sl3__plus__ = sl3__minus__.anti()
 
-sl4__minus__ = Particle(pdg_code = -2000011,
+sl4__minus__ = Particle(pdg_code = 2000011,
                         name = 'sl4-',
                         antiname = 'sl4+',
                         spin = 1,
@@ -386,7 +386,7 @@ sl4__minus__ = Particle(pdg_code = -2000011,
 
 sl4__plus__ = sl4__minus__.anti()
 
-sl5__minus__ = Particle(pdg_code = -2000013,
+sl5__minus__ = Particle(pdg_code = 2000013,
                         name = 'sl5-',
                         antiname = 'sl5+',
                         spin = 1,
@@ -401,7 +401,7 @@ sl5__minus__ = Particle(pdg_code = -2000013,
 
 sl5__plus__ = sl5__minus__.anti()
 
-sl6__minus__ = Particle(pdg_code = -2000015,
+sl6__minus__ = Particle(pdg_code = 2000015,
                         name = 'sl6-',
                         antiname = 'sl6+',
                         spin = 1,

@@ -330,11 +330,11 @@ particles = [
     'is_part': True,
     'self_antipart': False
 },{
-    'name': 'sl1+',
-    'antiname': 'sl1-',
+    'name': 'sl1-',
+    'antiname': 'sl1+',
     'spin': 1,
     'color': 1,
-    'charge': 1.00,
+    'charge': -1.00,
     'mass': 'Msl1',
     'width': 'Wsl1',
     'pdg_code': 1000011,
@@ -345,11 +345,11 @@ particles = [
     'is_part': True,
     'self_antipart': False
 },{
-    'name': 'sl2+',
-    'antiname': 'sl2-',
+    'name': 'sl2-',
+    'antiname': 'sl2+',
     'spin': 1,
     'color': 1,
-    'charge': 1.00,
+    'charge': -1.00,
     'mass': 'Msl2',
     'width': 'Wsl2',
     'pdg_code': 1000013,
@@ -360,11 +360,11 @@ particles = [
     'is_part': True,
     'self_antipart': False
 },{
-    'name': 'sl3+',
-    'antiname': 'sl3-',
+    'name': 'sl3-',
+    'antiname': 'sl3+',
     'spin': 1,
     'color': 1,
-    'charge': 1.00,
+    'charge': -1.00,
     'mass': 'Msl3',
     'width': 'Wsl3',
     'pdg_code': 1000015,
@@ -375,11 +375,11 @@ particles = [
     'is_part': True,
     'self_antipart': False
 },{
-    'name': 'sl4+',
-    'antiname': 'sl4-',
+    'name': 'sl4-',
+    'antiname': 'sl4+',
     'spin': 1,
     'color': 1,
-    'charge': 1.00,
+    'charge': -1.00,
     'mass': 'Msl4',
     'width': 'Wsl4',
     'pdg_code': 2000011,
@@ -390,11 +390,11 @@ particles = [
     'is_part': True,
     'self_antipart': False
 },{
-    'name': 'sl5+',
-    'antiname': 'sl5-',
+    'name': 'sl5-',
+    'antiname': 'sl5+',
     'spin': 1,
     'color': 1,
-    'charge': 1.00,
+    'charge': -1.00,
     'mass': 'Msl5',
     'width': 'Wsl5',
     'pdg_code': 2000013,
@@ -405,11 +405,11 @@ particles = [
     'is_part': True,
     'self_antipart': False
 },{
-    'name': 'sl6+',
-    'antiname': 'sl6-',
+    'name': 'sl6-',
+    'antiname': 'sl6+',
     'spin': 1,
     'color': 1,
-    'charge': 1.00,
+    'charge': -1.00,
     'mass': 'Msl6',
     'width': 'Wsl6',
     'pdg_code': 2000015,

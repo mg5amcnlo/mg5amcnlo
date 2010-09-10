@@ -1861,22 +1861,22 @@ CALL VVVXXX(W(1,1),W(1,7),W(1,15),MGVX5,AMP(19))
 CALL VVVXXX(W(1,11),W(1,1),W(1,16),MGVX3,AMP(20))
 # Amplitude(s) for diagram number 21
 CALL VVVXXX(W(1,1),W(1,11),W(1,17),MGVX5,AMP(21))
-CALL JW3WNX(W(1,3),W(1,1),W(1,2),MGVX6,DUM0,MW,WW,W(1,18))
+CALL JW3WNX(W(1,2),W(1,1),W(1,3),MGVX6,DUM0,MW,WW,W(1,18))
 # Amplitude(s) for diagram number 22
 CALL VVVXXX(W(1,18),W(1,4),W(1,5),MGVX3,AMP(22))
-CALL JW3WNX(W(1,1),W(1,2),W(1,4),MGVX6,DUM0,MW,WW,W(1,19))
+CALL JW3WNX(W(1,4),W(1,2),W(1,1),MGVX6,DUM0,MW,WW,W(1,19))
 # Amplitude(s) for diagram number 23
 CALL VVVXXX(W(1,3),W(1,19),W(1,5),MGVX3,AMP(23))
-CALL JW3WNX(W(1,1),W(1,5),W(1,2),MGVX4,DUM0,zero,zero,W(1,20))
+CALL JW3WNX(W(1,2),W(1,5),W(1,1),MGVX4,DUM0,zero,zero,W(1,20))
 # Amplitude(s) for diagram number 24
 CALL VVVXXX(W(1,3),W(1,4),W(1,20),MGVX3,AMP(24))
 CALL JW3WNX(W(1,2),W(1,5),W(1,1),MGVX7,DUM0,MZ,WZ,W(1,21))
 # Amplitude(s) for diagram number 25
 CALL VVVXXX(W(1,4),W(1,3),W(1,21),MGVX5,AMP(25))
-CALL JW3WNX(W(1,1),W(1,3),W(1,4),MGVX6,DUM0,MW,WW,W(1,22))
+CALL JW3WNX(W(1,4),W(1,3),W(1,1),MGVX6,DUM0,MW,WW,W(1,22))
 # Amplitude(s) for diagram number 26
 CALL VVVXXX(W(1,2),W(1,22),W(1,5),MGVX3,AMP(26))
-CALL JW3WNX(W(1,1),W(1,5),W(1,3),MGVX4,DUM0,zero,zero,W(1,23))
+CALL JW3WNX(W(1,3),W(1,5),W(1,1),MGVX4,DUM0,zero,zero,W(1,23))
 # Amplitude(s) for diagram number 27
 CALL VVVXXX(W(1,2),W(1,4),W(1,23),MGVX3,AMP(27))
 CALL JW3WNX(W(1,3),W(1,5),W(1,1),MGVX7,DUM0,MZ,WZ,W(1,24))
@@ -2870,6 +2870,129 @@ CALL VVVXXX(W(1,2),W(1,26),W(1,39),GG,AMP(216))""")
       PMASS(6)=ZERO
       PMASS(7)=ZERO
       PMASS(8)=ZERO\n""")
+
+    def test_vector_clash_majorana_process(self):
+        """Test majorana process w+ w- > n2 n2
+        """
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # Neutralino
+        mypartlist.append(base_objects.Particle({'name':'n1',
+                      'antiname':'n2',
+                      'spin':2,
+                      'color':1,
+                      'mass':'MN1',
+                      'width':'WN1',
+                      'texname':'\chi_0^2',
+                      'antitexname':'\chi_0^2',
+                      'line':'straight',
+                      'charge':0.,
+                      'pdg_code':1000022,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        n1 = mypartlist[len(mypartlist) - 1]
+
+        # W+/-
+        mypartlist.append(base_objects.Particle({'name':'w-',
+                      'antiname':'w+',
+                      'spin':3,
+                      'color':1,
+                      'mass':'WMASS',
+                      'width':'WWIDTH',
+                      'texname':'w-',
+                      'antitexname':'w+',
+                      'line':'wavy',
+                      'charge':1.,
+                      'pdg_code':-24,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        wplus = mypartlist[len(mypartlist) - 1]
+        wminus = copy.copy(wplus)
+        wminus.set('is_part', False)
+
+        # chargino+/-
+        mypartlist.append(base_objects.Particle({'name':'x1-',
+                      'antiname':'x1+',
+                      'spin':2,
+                      'color':1,
+                      'mass':'MX1',
+                      'width':'WX1',
+                      'texname':'x1-',
+                      'antitexname':'x1+',
+                      'line':'straight',
+                      'charge':1.,
+                      'pdg_code':-1000024,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        x1plus = mypartlist[len(mypartlist) - 1]
+        x1minus = copy.copy(x1plus)
+        x1minus.set('is_part', False)
+
+        # Coupling of n1 to w
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [n1, \
+                                             x1minus, \
+                                             wplus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GWN1X1'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [x1plus, \
+                                             n1, \
+                                             wminus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GWX1N1'},
+                      'orders':{'QED':1}}))
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':24,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':-24,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                           'model':mymodel})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        self.assertEqual(len(myamplitude.get('diagrams')), 2)
+
+        me = helas_objects.HelasMatrixElement(myamplitude,
+                                              gen_color=False)
+
+        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mymodel)
+
+        self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
+        """CALL VXXXXX(P(0,1),WMASS,NHEL(1),-1*IC(1),W(1,1))
+CALL VXXXXX(P(0,2),WMASS,NHEL(2),-1*IC(2),W(1,2))
+CALL OXXXXX(P(0,3),MN1,NHEL(3),+1*IC(3),W(1,3))
+CALL IXXXXX(P(0,4),MN1,NHEL(4),-1*IC(4),W(1,4))
+CALL FVOXXX(W(1,3),W(1,1),GWN1X1,MX1,WX1,W(1,5))
+# Amplitude(s) for diagram number 1
+CALL IOVXXX(W(1,4),W(1,5),W(1,2),GWX1N1,AMP(1))
+CALL FVICXX(W(1,4),W(1,1),GWN1X1,MX1,WX1,W(1,6))
+# Amplitude(s) for diagram number 2
+CALL IOVCXX(W(1,6),W(1,3),W(1,2),GWX1N1,AMP(2))""")
 
 
     def test_export_majorana_decay_chain(self):

@@ -518,7 +518,7 @@ class TestDecayModel(unittest.TestCase):
         #My_small sm DecayModel
         self.my_testmodel = decay_objects.DecayModel(self.my_testmodel_base)
         param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')
-        self.my_testmodel.read_param_card(param_path)
+        #self.my_testmodel.read_param_card(param_path)
 
         # Simplify the model
         particles = self.my_testmodel.get('particles')
@@ -538,7 +538,7 @@ class TestDecayModel(unittest.TestCase):
         self.my_testmodel.set('particles', particles)
         self.my_testmodel.set('interactions', interactions)
 
-        import_vertexlist.make_vertexlist(self.my_testmodel)
+        #import_vertexlist.make_vertexlist(self.my_testmodel)
 
         #import madgraph.iolibs.export_v4 as export_v4
         #writer = export_v4.UFO_model_to_mg4(self.base_model,'temp')
@@ -674,14 +674,19 @@ class TestDecayModel(unittest.TestCase):
 
         mssm = import_ufo.import_model('mssm')
         decay_mssm = decay_objects.DecayModel(mssm)
+        # Read data to find massless SM-like particle
+        param_path = os.path.join(_file_path,
+                                  '../input_files/param_card_mssm.dat')
+        decay_mssm.read_param_card(param_path)
+        print dir(decay_objects)
 
         decay_mssm.find_decay_groups_general()
         #print decay_mssm.decay_groups
         goal_groups = [[25, 35, 36, 37],
                        [1000001, 1000002, 1000003, 1000004, 1000005, 1000006, 1000011, 1000012, 1000013, 1000014, 1000015, 1000016, 1000021, 1000022, 1000023, 1000024, 1000025, 1000035, 1000037, 2000001, 2000002, 2000003, 2000004, 2000005, 2000006, 2000011, 2000013, 2000015]]
 
-        #for i, group in enumerate(decay_mssm.decay_groups):
-            #print sorted([p.get('pdg_code') for p in group])
+        for i, group in enumerate(decay_mssm.decay_groups):
+            print sorted([p.get('pdg_code') for p in group]), 'r'
             #self.assertEqual(sorted([p.get('pdg_code') for p in group]),
              #                goal_groups[i])
 
@@ -700,9 +705,13 @@ class TestDecayModel(unittest.TestCase):
     def test_find_mssm_decay_groups_modified_mssm_general(self):
         """Test finding the decay groups of the MSSM using general way.
            Test to get decay_groups and stable_particles from get."""
-
+        # Setup the mssm with parameters read in.
         mssm = import_ufo.import_model('mssm')
         particles = mssm.get('particles')
+        param_path = os.path.join(_file_path,
+                                  '../input_files/param_card_mssm.dat')
+        self.my_testmodel.read_param_card(param_path)
+
         no_want_particle_codes = [1000022, 1000023, 1000024, -1000024, 
                                   1000025, 1000035, 1000037, -1000037]
         no_want_particles = [p for p in particles if p.get('pdg_code') in \

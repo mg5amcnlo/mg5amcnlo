@@ -441,33 +441,19 @@ class HelasWavefunction(base_objects.PhysicsObject):
                       Please decompose your vertex into 2-fermion
                       vertices to get fermion flow correct."""
 
-            if len(filter(lambda wf: wf.get_with_flow('state') == 'incoming',
-                          self.get('mothers'))) > \
-                          len(filter(lambda wf: \
-                                     wf.get_with_flow('state') == 'outgoing',
-                          self.get('mothers'))):
-                # If more incoming than outgoing mothers,
-                # Pick one with incoming state as mother and set flow
-                # Note that this needs to be done more properly if we have
-                # 4-fermion vertices
-                mother = filter(lambda wf: \
-                                wf.get_with_flow('state') == 'incoming',
-                                self.get('mothers'))[0]
-            else:
-                # If more outgoing than incoming mothers,
-                # Pick one with outgoing state as mother and set flow
-                # Note that this needs to be done more properly if we have
-                # 4-fermion vertices
-                mother = filter(lambda wf: \
-                                wf.get_with_flow('state') == 'outgoing',
-                                self.get('mothers'))[0]
-            if not self.get('self_antipart'):
-                self.set('state', mother.get('state'))
-                self.set('fermionflow', mother.get('fermionflow'))
-            else:
+            mother = mother_fermions[0]
+            if self.get('self_antipart'):
                 self.set('state', mother.get_with_flow('state'))
                 self.set('is_part', mother.get_with_flow('is_part'))
-
+            else:
+                self.set('state', mother.get('state'))
+                self.set('fermionflow', mother.get('fermionflow'))
+                # Check that the state is compatible with particle/antiparticle
+                if self.get('is_part') and self.get('state') == 'incoming' or \
+                   not self.get('is_part') and self.get('state') == 'outgoing':
+                    self.set('state', {'incoming':'outgoing',
+                                      'outgoing':'incoming'}[self.get('state')])
+                    self.set('fermionflow', -self.get('fermionflow'))
         return True
 
     def check_and_fix_fermion_flow(self,
@@ -577,17 +563,15 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                            force_flip_flow)
 
             # If this is Majorana and mother has different fermion
-            # flow, it means that we should from now on in the chain
-            # flip the particle id and flow state.
+            # flow, we should flip the particle id and flow state.
             # Otherwise, if mother has different fermion flow, flip
             # flow
-            flip_flow = new_mother.get('fermionflow') != \
-                        self.get('fermionflow') and \
+            flip_sign = new_mother.get_with_flow('state') != \
+                        self.get_with_flow('state') and \
+                        self.get('self_antipart')
+            flip_flow = new_mother.get_with_flow('state') != \
+                        self.get_with_flow('state') and \
                         not self.get('self_antipart')
-            flip_sign = new_mother.get('fermionflow') != \
-                        self.get('fermionflow') and \
-                        self.get('self_antipart') or \
-                        new_mother.get('state') != self.get('state')
 
             # Replace old mother with new mother
             mothers[mothers.index(fermion_mother[0])] = new_mother
@@ -644,17 +628,20 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                            state != new_wf.get('state'),
                                            ['incoming', 'outgoing'])[0])
                 new_wf.set('is_part', not new_wf.get('is_part'))
-
             try:
                 # Use the copy in wavefunctions instead.
                 # Remove this copy from diagram_wavefunctions
+                new_wf_number = new_wf.get('number')
                 new_wf = wavefunctions[wavefunctions.index(new_wf)]
-                index = diagram_wavefunctions.index(new_wf)
+                diagram_wf_numbers = [w.get('number') for w in \
+                                      diagram_wavefunctions]
+                index = diagram_wf_numbers.index(new_wf_number)
                 diagram_wavefunctions.pop(index)
                 # We need to decrease the wf number for later
                 # diagram wavefunctions
-                for wf in diagram_wavefunctions[index:]:
-                    wf.set('number', wf.get('number') - 1)
+                for wf in diagram_wavefunctions:
+                    if wf.get('number') > new_wf_number:
+                        wf.set('number', wf.get('number') - 1)
                 # Since we reuse the old wavefunction, reset wf_number
                 wf_number = wf_number - 1
             except ValueError:
@@ -728,7 +715,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         fermionflow"""
 
         return any([wf.get('fermionflow') < 0 for wf in \
-                    self.get('mothers')])
+                    self.get('mothers')]) or \
+                    (self.get('interaction_id') and self.get('fermionflow') < 0)
 
     def get_with_flow(self, name):
         """Generate the is_part and state needed for writing out
@@ -765,7 +753,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         wf_indices = self.get('pdg_codes')
         # take the last index in case of identical particles
         wf_indices.reverse() 
-        wf_index = len(wf_indices) - wf_indices.index(self.get_anti_pdg_code()) -1
+        wf_index = len(wf_indices) - wf_indices.index(self.get_anti_pdg_code()) - 1
         wf_indices.reverse() # restore the ordering
         #wf_index = self.get('pdg_codes').index(self.get_anti_pdg_code())
         # If fermion, then we need to correct for I/O status
@@ -1008,6 +996,23 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return schannels, tchannels
 
+    def get_conjugate_index(self):
+        """Return the index of the particle that should be conjugated."""
+
+        if self.needs_hermitian_conjugate():
+            parts = [wf for wf in self.get('mothers') if \
+                     wf.get('fermionflow') < 0]
+            indices = []
+            self_index = self.find_outgoing_number() - 1
+            for wf in parts:
+                if self.get('mothers').index(wf) < self_index:
+                    indices.append(self.get('mothers').index(wf)/2 + 1)
+                else:
+                    indices.append((self.get('mothers').index(wf) + 1)/2 + 1)
+            return tuple(indices)
+        else:
+            return ()
+
     # Overloaded operators
 
     def __eq__(self, other):
@@ -1142,12 +1147,15 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                       Please decompose your vertex into 2-fermion
                       vertices to get fermion flow correct."""
 
-        # Note that the order of mothers is given by the external
-        # number meaning that the order will in general be different
-        # for t- and s-channel diagrams, hence giving duplication of
-        # wave functions. I don't think there's anything to do about
-        # this.
-        for mother in fermion_mothers:
+        # If any of the mothers have negative fermionflow, we need to
+        # take this mother first.
+        neg_fermionflow_mothers = [mother for mother in fermion_mothers if \
+                                    mother.get('fermionflow') < 0]
+
+        if not neg_fermionflow_mothers:
+            neg_fermionflow_mothers = fermion_mothers
+
+        for mother in neg_fermionflow_mothers:
             if Nincoming > Noutgoing and \
                mother.get_with_flow('state') == 'outgoing' or \
                Nincoming < Noutgoing and \
@@ -1705,6 +1713,22 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         return color_indices
 
+    def find_outgoing_number(self):
+        """Return 0. Needed to treat HelasAmplitudes and
+        HelasWavefunctions on same footing."""
+
+        return 0
+
+    def get_conjugate_index(self):
+        """Return the index of the particle that should be conjugated."""
+
+        if self.needs_hermitian_conjugate():
+            parts = [wf for wf in self.get('mothers') if \
+                     wf.get('fermionflow') < 0]
+            return [self.get('mothers').index(wf)/2 + 1 for wf in parts]
+        else:
+            return ()
+
     # Comparison between different amplitudes, to allow check for
     # identical processes. Note that we are then not interested in
     # interaction id, but in all other properties.
@@ -2104,7 +2128,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                                    diagram_wavefunctions,
                                                    external_wavefunctions,
                                                    wf_number)
-
                         # Create new copy of number_wf_dict
                         new_number_wf_dict = copy.copy(number_wf_dict)
 
@@ -2161,10 +2184,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                               "Nostate",
                                               wf_number)
 
-                # Sort the wavefunctions according to number
-                diagram_wavefunctions.sort(lambda wf1, wf2: \
-                              wf1.get('number') - wf2.get('number'))
-
                 # Now generate HelasAmplitudes from the last vertex.
                 if lastvx.get('id'):
                     inter = model.get('interaction_dict')[lastvx.get('id')]
@@ -2201,12 +2220,17 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         helas_diagram.set('wavefunctions',
                                           diagram_wavefunctions)
 
+                # Sort the wavefunctions according to number
+                diagram_wavefunctions.sort(lambda wf1, wf2: \
+                              wf1.get('number') - wf2.get('number'))
+
                 if optimization:
                     wavefunctions.extend(diagram_wavefunctions)
                     wf_mother_arrays.extend([wf.to_array() for wf \
                                              in diagram_wavefunctions])
                 else:
                     wf_number = len(process.get('legs'))
+
             # Append this diagram in the diagram list
             helas_diagrams.append(helas_diagram)
 
@@ -3149,6 +3173,16 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         return col_amp_list
 
+    def get_used_lorentz(self):
+        """Return a list of (lorentz_name, conjugate, outgoing) with
+        all lorentz structures used by this HelasMatrixElement."""
+
+        return [(wa.get('lorentz'), tuple(wa.get_conjugate_index()),
+                 wa.find_outgoing_number()) for wa in \
+                self.get_all_wavefunctions() + self.get_all_amplitudes() \
+                if wa.get('interaction_id') != 0]
+        
+
     @staticmethod
     def check_equal_decay_processes(decay1, decay2):
         """Check if two single-sided decay processes
@@ -3291,7 +3325,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         if isinstance(arg, HelasWavefunction):
             my_spin = arg.get_spin_state_number()
-            my_index = arg.find_outgoing_number() - 1
+            # Find the last index instead of the first, to work with UFO models
+            pdg_codes.reverse()
+            my_index = len(pdg_codes) - pdg_codes.index(arg.get_anti_pdg_code()) - 1
+            pdg_codes.reverse()
             pdg_codes.pop(my_index)
         
         mothers = copy.copy(arg.get('mothers'))
@@ -3791,4 +3828,13 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             
 
 
+    def get_used_lorentz(self):
+        """Return a list of (lorentz_name, conjugate, outgoing) with
+        all lorentz structures used by this HelasMultiProcess."""
 
+        helas_list = []
+
+        for me in self.get('matrix_elements'):
+            helas_list.extend(me.get_used_lorentz())
+
+        return list(set(helas_list))
