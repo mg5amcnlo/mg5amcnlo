@@ -29,7 +29,7 @@ import aloha.create_aloha as create_aloha
 import madgraph.iolibs.export_pythia8 as export_pythia8
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.helas_call_writers as helas_call_writer
-import madgraph.iolibs.import_ufo as import_ufo
+import models.import_ufo as import_ufo
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 

@@ -1545,7 +1545,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         # Reset Helas matrix elements
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-        self._generate_info = args
+        self._generate_info = line
         # Reset _done_export, since we have new process
         self._done_export = False
 
@@ -1587,7 +1587,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             return
         
         # For normal operation mode (not check)
-        line = " ".join(args)
         try:
             if ',' not in line:
                 myprocdef = self.extract_process(line)

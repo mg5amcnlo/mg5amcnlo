@@ -24,7 +24,7 @@ from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
 import madgraph.core.base_objects as base_objects
 import madgraph.iolibs.export_v4 as export_v4
-import madgraph.iolibs.import_ufo as import_ufo
+import models.import_ufo as import_ufo
 import madgraph.iolibs.files as files
 import madgraph.iolibs.import_v4 as import_v4
 import madgraph.iolibs.ufo_expression_parsers as ufo_expression_parsers
