@@ -275,6 +275,7 @@ class DecayParticle(base_objects.Particle):
             if any([ch for ch in value if onshell != ch.get_onshell(model)]):
                 raise self.PhysicsObjectError, \
                     "The onshell condition is not consistent with the model."
+        return True
 
     def filter(self, name, value):
         """Filter for valid DecayParticle vertexlist."""
@@ -300,7 +301,7 @@ class DecayParticle(base_objects.Particle):
                     self.check_vertexlist(key[0], key[1], item)
                 if name == 'decay_channels':
                     self.check_channels(key[0], key[1], item)          
-
+                    
         super(DecayParticle, self).filter(name, value)
 
         return True
@@ -335,6 +336,7 @@ class DecayParticle(base_objects.Particle):
         if not self.vertexlist_found:
             print "The vertexlist of this particle has not been searched. ",\
                 "Try find_vertexlist first."
+            return
 
         vertnum_list = [k[0] for k in self['decay_vertexlist'].keys() \
              if self['decay_vertexlist'][k]]
@@ -375,6 +377,9 @@ class DecayParticle(base_objects.Particle):
                                     (2, True)  : base_objects.VertexList(),
                                     (3, False) : base_objects.VertexList(),
                                     (3, True)  : base_objects.VertexList()}
+
+        #Set the vertexlist_found at the end
+        self.vertexlist_found = True
         
         # Do not include the massless and stable particle
         if self.get('mass') == 'ZERO' or self in model.stable_particles:
@@ -436,8 +441,6 @@ class DecayParticle(base_objects.Particle):
                                             ini_mass > (total_mass-ini_mass))] \
                                             = vert
 
-        #Set the vertexlist_found at the end
-        self.vertexlist_found = True
         
 
     def get_channels(self, partnum ,onshell):
@@ -1368,7 +1371,7 @@ class DecayModel(base_objects.Model):
                     # however.
 
     def find_decay_groups_general(self, sm_ids = \
-                                  [1,2,3,4,5,6,11,12,13,14,15,16,21,22,23,24]):
+                                  [1,2,3,4,11,12,13,14,15,16,21,22,23,24]):
         """Iteratively find decay groups, suitable to vertex in all orders
            Algrorithm:
            1. Establish the reduced_interactions
