@@ -1428,7 +1428,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             print ' / '.join(couplings)
             
         elif args[0] == 'couplings':
-            if self._model_v4:
+            if self._model_v4_path:
                 print 'No couplings information available in V4 model'
                 return
             try:
@@ -1438,7 +1438,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 raise self.InvalidCmd, 'no couplings %s in current model' % args[1]
         
         elif args[0] == 'lorentz':
-            if self._model_v4:
+            if self._model_v4_path:
                 print 'No lorentz information available in V4 model'
                 return
             elif len(args) == 1: 
@@ -2234,7 +2234,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         if self._done_export == (self._export_dir, self._export_format):
             # We have already done export in this path
-            logger.info("Matrix elements already exported to directory %s")
+            logger.info("Matrix elements already exported to directory %s" % \
+                                    self._export_dir)
             return        
 
         ndiags, cpu_time = generate_matrix_elements(self)

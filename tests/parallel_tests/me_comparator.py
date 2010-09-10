@@ -358,15 +358,14 @@ class MG5Runner(MG4Runner):
         v5_string = "import model_v4 %s\n" % os.path.join(self.mg4_path,
                                                           'Models', model)
 
-        v5_string += "setup standalone_v4 %s -f\n" % \
-                     os.path.join(self.mg4_path, self.temp_dir_name)
-
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \
                          '@%i' % i + '\n'
-        v5_string += 'export\n'
+
+        v5_string += "output standalone_v4 %s -f\n" % \
+                     os.path.join(self.mg4_path, self.temp_dir_name)
 
         return v5_string
 
@@ -380,15 +379,14 @@ class MG5_UFO_Runner(MG5Runner):
 
         v5_string = "import model %s \n" % model
 
-        v5_string += "setup standalone_v4 %s -f\n" % \
-                     os.path.join(self.mg4_path, self.temp_dir_name)
-
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \
                          '@%i' % i + '\n'
-        v5_string += 'export\n'
+        v5_string += "output standalone_v4 %s -f\n" % \
+                     os.path.join(self.mg4_path, self.temp_dir_name)
+
 
         return v5_string
 

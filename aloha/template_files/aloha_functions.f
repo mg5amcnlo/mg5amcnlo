@@ -33,42 +33,42 @@ c
       double precision rZero, rHalf, rTwo
       parameter( rZero = 0.0d0, rHalf = 0.5d0, rTwo = 2.0d0 )
 
-#ifdef HELAS_CHECK
-      double precision p2
-      double precision epsi
-      parameter( epsi = 2.0d-5 )
-      integer stdo
-      parameter( stdo = 6 )
-#endif
+c#ifdef HELAS_CHECK
+c      double precision p2
+c      double precision epsi
+c      parameter( epsi = 2.0d-5 )
+c      integer stdo
+c      parameter( stdo = 6 )
+c#endif
 c
-#ifdef HELAS_CHECK
-      pp = sqrt(p(1)**2+p(2)**2+p(3)**2)
-      if ( abs(p(0))+pp.eq.rZero ) then
-         write(stdo,*)
-     &        ' helas-error : p(0:3) in ixxxxx is zero momentum'
-      endif
-      if ( p(0).le.rZero ) then
-         write(stdo,*)
-     &        ' helas-error : p(0:3) in ixxxxx has non-positive energy'
-         write(stdo,*)
-     &        '             : p(0) = ',p(0)
-      endif
-      p2 = (p(0)-pp)*(p(0)+pp)
-      if ( abs(p2-fmass**2).gt.p(0)**2*epsi ) then
-         write(stdo,*)
-     &        ' helas-error : p(0:3) in ixxxxx has inappropriate mass'
-         write(stdo,*)
-     &        '             : p**2 = ',p2,' : fmass**2 = ',fmass**2
-      endif
-      if (abs(nhel).ne.1) then
-         write(stdo,*) ' helas-error : nhel in ixxxxx is not -1,1'
-         write(stdo,*) '             : nhel = ',nhel
-      endif
-      if (abs(nsf).ne.1) then
-         write(stdo,*) ' helas-error : nsf in ixxxxx is not -1,1'
-         write(stdo,*) '             : nsf = ',nsf
-      endif
-#endif
+c#ifdef HELAS_CHECK
+c      pp = sqrt(p(1)**2+p(2)**2+p(3)**2)
+c      if ( abs(p(0))+pp.eq.rZero ) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in ixxxxx is zero momentum'
+c      endif
+c      if ( p(0).le.rZero ) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in ixxxxx has non-positive energy'
+c         write(stdo,*)
+c     &        '             : p(0) = ',p(0)
+c      endif
+c      p2 = (p(0)-pp)*(p(0)+pp)
+c      if ( abs(p2-fmass**2).gt.p(0)**2*epsi ) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in ixxxxx has inappropriate mass'
+c         write(stdo,*)
+c     &        '             : p**2 = ',p2,' : fmass**2 = ',fmass**2
+c      endif
+c      if (abs(nhel).ne.1) then
+c         write(stdo,*) ' helas-error : nhel in ixxxxx is not -1,1'
+c         write(stdo,*) '             : nhel = ',nhel
+c      endif
+c      if (abs(nsf).ne.1) then
+c         write(stdo,*) ' helas-error : nsf in ixxxxx is not -1,1'
+c         write(stdo,*) '             : nsf = ',nsf
+c      endif
+c#endif
 
       fi(5) = dcmplx(p(0),p(3))*nsf
       fi(6) = dcmplx(p(1),p(2))*nsf
@@ -169,42 +169,42 @@ c
       double precision rZero, rHalf, rTwo
       parameter( rZero = 0.0d0, rHalf = 0.5d0, rTwo = 2.0d0 )
 
-#ifdef HELAS_CHECK
-      double precision p2
-      double precision epsi
-      parameter( epsi = 2.0d-5 )
-      integer stdo
-      parameter( stdo = 6 )
-#endif
+c#ifdef HELAS_CHECK
+c      double precision p2
+c      double precision epsi
+c      parameter( epsi = 2.0d-5 )
+c      integer stdo
+c      parameter( stdo = 6 )
+c#endif
 c
-#ifdef HELAS_CHECK
-      pp = sqrt(p(1)**2+p(2)**2+p(3)**2)
-      if ( abs(p(0))+pp.eq.rZero ) then
-         write(stdo,*)
-     &        ' helas-error : p(0:3) in oxxxxx is zero momentum'
-      endif
-      if ( p(0).le.rZero ) then
-         write(stdo,*)
-     &        ' helas-error : p(0:3) in oxxxxx has non-positive energy'
-         write(stdo,*)
-     &        '         : p(0) = ',p(0)
-      endif
-      p2 = (p(0)-pp)*(p(0)+pp)
-      if ( abs(p2-fmass**2).gt.p(0)**2*epsi ) then
-         write(stdo,*)
-     &        ' helas-error : p(0:3) in oxxxxx has inappropriate mass'
-         write(stdo,*)
-     &        '             : p**2 = ',p2,' : fmass**2 = ',fmass**2
-      endif
-      if ( abs(nhel).ne.1 ) then
-         write(stdo,*) ' helas-error : nhel in oxxxxx is not -1,1'
-         write(stdo,*) '             : nhel = ',nhel
-      endif
-      if ( abs(nsf).ne.1 ) then
-         write(stdo,*) ' helas-error : nsf in oxxxxx is not -1,1'
-         write(stdo,*) '             : nsf = ',nsf
-      endif
-#endif
+c#ifdef HELAS_CHECK
+c      pp = sqrt(p(1)**2+p(2)**2+p(3)**2)
+c      if ( abs(p(0))+pp.eq.rZero ) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in oxxxxx is zero momentum'
+c      endif
+c      if ( p(0).le.rZero ) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in oxxxxx has non-positive energy'
+c         write(stdo,*)
+c     &        '         : p(0) = ',p(0)
+c      endif
+c      p2 = (p(0)-pp)*(p(0)+pp)
+c      if ( abs(p2-fmass**2).gt.p(0)**2*epsi ) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in oxxxxx has inappropriate mass'
+c         write(stdo,*)
+c     &        '             : p**2 = ',p2,' : fmass**2 = ',fmass**2
+c      endif
+c      if ( abs(nhel).ne.1 ) then
+c         write(stdo,*) ' helas-error : nhel in oxxxxx is not -1,1'
+c         write(stdo,*) '             : nhel = ',nhel
+c      endif
+c      if ( abs(nsf).ne.1 ) then
+c         write(stdo,*) ' helas-error : nsf in oxxxxx is not -1,1'
+c         write(stdo,*) '             : nsf = ',nsf
+c      endif
+c#endif
 
       fo(5) = dcmplx(p(0),p(3))*nsf
       fo(6) = dcmplx(p(1),p(2))*nsf
@@ -339,37 +339,37 @@ c
       double precision rOne
       parameter( rOne = 1.0d0 )
 
-#ifdef HELAS_CHECK
-      double precision p2
-      double precision epsi
-      parameter( epsi = 2.0d-5 )
-      double precision rZero
-      parameter( rZero = 0.0d0 )
-      integer stdo
-      parameter( stdo = 6 )
-#endif
+c#ifdef HELAS_CHECK
+c      double precision p2
+c      double precision epsi
+c      parameter( epsi = 2.0d-5 )
+c      double precision rZero
+c      parameter( rZero = 0.0d0 )
+c      integer stdo
+c      parameter( stdo = 6 )
+c#endif
 c
-#ifdef HELAS_CHECK
-      if ( abs(p(0))+abs(p(1))+abs(p(2))+abs(p(3)).eq.rZero ) then
-         write(stdo,*)
-     &        ' helas-error : p(0:3) in sxxxxx is zero momentum'
-      endif
-      if ( p(0).le.rZero ) then
-         write(stdo,*)
-     &        ' helas-error : p(0:3) in sxxxxx has non-positive energy'
-         write(stdo,*)
-     &        '             : p(0) = ',p(0)
-      endif
-      p2 = p(0)**2-(p(1)**2+p(2)**2+p(3)**2)
-      if ( p2.lt.-p(0)**2*epsi ) then
-         write(stdo,*) ' helas-error : p(0:3) in sxxxxx is spacelike'
-         write(stdo,*) '             : p**2 = ',p2
-      endif
-      if ( abs(nss).ne.1 ) then
-         write(stdo,*) ' helas-error : nss in sxxxxx is not -1,1'
-         write(stdo,*) '             : nss = ',nss
-      endif
-#endif
+c#ifdef HELAS_CHECK
+c      if ( abs(p(0))+abs(p(1))+abs(p(2))+abs(p(3)).eq.rZero ) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in sxxxxx is zero momentum'
+c      endif
+c      if ( p(0).le.rZero ) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in sxxxxx has non-positive energy'
+c         write(stdo,*)
+c     &        '             : p(0) = ',p(0)
+c      endif
+c      p2 = p(0)**2-(p(1)**2+p(2)**2+p(3)**2)
+c      if ( p2.lt.-p(0)**2*epsi ) then
+c         write(stdo,*) ' helas-error : p(0:3) in sxxxxx is spacelike'
+c         write(stdo,*) '             : p**2 = ',p2
+c      endif
+c      if ( abs(nss).ne.1 ) then
+c         write(stdo,*) ' helas-error : nss in sxxxxx is not -1,1'
+c         write(stdo,*) '             : nss = ',nss
+c      endif
+c#endif
 
       sc(1) = dcmplx( rOne )
       sc(2) = dcmplx(p(0),p(3))*nss
@@ -571,49 +571,49 @@ c
       parameter( rZero = 0.0d0, rHalf = 0.5d0 )
       parameter( rOne = 1.0d0, rTwo = 2.0d0 )
 
-#ifdef HELAS_CHECK
-      double precision p2
-      double precision epsi
-      parameter( epsi = 2.0d-5 )
-      integer stdo
-      parameter( stdo = 6 )
-#endif
+c#ifdef HELAS_CHECK
+c      double precision p2
+c      double precision epsi
+c      parameter( epsi = 2.0d-5 )
+c      integer stdo
+c      parameter( stdo = 6 )
+c#endif
 c
-#ifdef HELAS_CHECK
-      pp = sqrt(p(1)**2+p(2)**2+p(3)**2)
-      if ( abs(p(0))+pp.eq.rZero ) then
-         write(stdo,*)
-     &        ' helas-error : p(0:3) in vxxxxx is zero momentum'
-      endif
-      if ( p(0).le.rZero ) then
-         write(stdo,*)
-     &        ' helas-error : p(0:3) in vxxxxx has non-positive energy'
-         write(stdo,*)
-     &        '             : p(0) = ',p(0)
-      endif
-      p2 = (p(0)+pp)*(p(0)-pp)
-      if ( abs(p2-vmass**2).gt.p(0)**2*2.e-5 ) then
-         write(stdo,*)
-     &        ' helas-error : p(0:3) in vxxxxx has inappropriate mass'
-         write(stdo,*)
-     &        '             : p**2 = ',p2,' : vmass**2 = ',vmass**2
-      endif
-      if ( vmass.ne.rZero ) then
-         if ( abs(nhel).gt.1 ) then
-            write(stdo,*) ' helas-error : nhel in vxxxxx is not -1,0,1'
-            write(stdo,*) '             : nhel = ',nhel
-         endif
-      else
-         if ( abs(nhel).ne.1 ) then
-            write(stdo,*) ' helas-error : nhel in vxxxxx is not -1,1'
-            write(stdo,*) '             : nhel = ',nhel
-         endif
-      endif
-      if ( abs(nsv).ne.1 ) then
-         write(stdo,*) ' helas-error : nsv in vmxxxx is not -1,1'
-         write(stdo,*) '             : nsv = ',nsv
-      endif
-#endif
+c#ifdef HELAS_CHECK
+c      pp = sqrt(p(1)**2+p(2)**2+p(3)**2)
+c      if ( abs(p(0))+pp.eq.rZero ) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in vxxxxx is zero momentum'
+c      endif
+c      if ( p(0).le.rZero ) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in vxxxxx has non-positive energy'
+c         write(stdo,*)
+c     &        '             : p(0) = ',p(0)
+c      endif
+c      p2 = (p(0)+pp)*(p(0)-pp)
+c      if ( abs(p2-vmass**2).gt.p(0)**2*2.e-5 ) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in vxxxxx has inappropriate mass'
+c         write(stdo,*)
+c     &        '             : p**2 = ',p2,' : vmass**2 = ',vmass**2
+c      endif
+c      if ( vmass.ne.rZero ) then
+c         if ( abs(nhel).gt.1 ) then
+c            write(stdo,*) ' helas-error : nhel in vxxxxx is not -1,0,1'
+c            write(stdo,*) '             : nhel = ',nhel
+c         endif
+c      else
+c         if ( abs(nhel).ne.1 ) then
+c            write(stdo,*) ' helas-error : nhel in vxxxxx is not -1,1'
+c            write(stdo,*) '             : nhel = ',nhel
+c         endif
+c      endif
+c      if ( abs(nsv).ne.1 ) then
+c         write(stdo,*) ' helas-error : nsv in vmxxxx is not -1,1'
+c         write(stdo,*) '             : nsv = ',nsv
+c      endif
+c#endif
 
       sqh = dsqrt(rHalf)
       hel = dble(nhel)
@@ -625,23 +625,23 @@ c
       vc(5) = dcmplx(p(0),p(3))*nsv
       vc(6) = dcmplx(p(1),p(2))*nsv
 
-#ifdef HELAS_CHECK
+c#ifdef HELAS_CHECK
 c nhel=4 option for scalar polarization
-      if( nhel.eq.4 ) then
-         if( vmass.eq.rZero ) then
-            vc(1) = rOne
-            vc(2) = p(1)/p(0)
-            vc(3) = p(2)/p(0)
-            vc(4) = p(3)/p(0)
-         else
-            vc(1) = p(0)/vmass
-            vc(2) = p(1)/vmass
-            vc(3) = p(2)/vmass
-            vc(4) = p(3)/vmass
-         endif
-         return
-      endif
-#endif
+c      if( nhel.eq.4 ) then
+c         if( vmass.eq.rZero ) then
+c            vc(1) = rOne
+c            vc(2) = p(1)/p(0)
+c            vc(3) = p(2)/p(0)
+c            vc(4) = p(3)/p(0)
+c         else
+c            vc(1) = p(0)/vmass
+c            vc(2) = p(1)/vmass
+c            vc(3) = p(2)/vmass
+c            vc(4) = p(3)/vmass
+c         endif
+c         return
+c      endif
+c#endif
 
       if ( vmass.ne.rZero ) then
 
@@ -712,53 +712,53 @@ c
       double precision rZero
       parameter( rZero = 0.0d0 )
 
-#ifdef HELAS_CHECK
-      integer stdo
-      parameter( stdo = 6 )
-      double precision pp
-#endif
+c#ifdef HELAS_CHECK
+c      integer stdo
+c      parameter( stdo = 6 )
+c      double precision pp
+c#endif
 c
       qq = q(1)**2+q(2)**2+q(3)**2
 
-#ifdef HELAS_CHECK
-      if (abs(p(0))+abs(p(1))+abs(p(2))+abs(p(3)).eq.rZero) then
-         write(stdo,*)
-     &        ' helas-error : p(0:3) in boostx is zero momentum'
-      endif
-      if (abs(q(0))+qq.eq.rZero) then
-         write(stdo,*)
-     &        ' helas-error : q(0:3) in boostx is zero momentum'
-      endif
-      if (p(0).le.rZero) then
-         write(stdo,*)
-     &        ' helas-warn  : p(0:3) in boostx has not positive energy'
-         write(stdo,*)
-     &        '             : p(0) = ',p(0)
-      endif
-      if (q(0).le.rZero) then
-         write(stdo,*)
-     &        ' helas-error : q(0:3) in boostx has not positive energy'
-         write(stdo,*)
-     &        '             : q(0) = ',q(0)
-      endif
-      pp=p(0)**2-p(1)**2-p(2)**2-p(3)**2
-      if (pp.lt.rZero) then
-         write(stdo,*)
-     &        ' helas-warn  : p(0:3) in boostx is spacelike'
-         write(stdo,*)
-     &        '             : p**2 = ',pp
-      endif
-      if (q(0)**2-qq.le.rZero) then
-         write(stdo,*)
-     &        ' helas-error : q(0:3) in boostx is not timelike'
-         write(stdo,*)
-     &        '             : q**2 = ',q(0)**2-qq
-      endif
-      if (qq.eq.rZero) then
-         write(stdo,*)
-     &   ' helas-warn  : q(0:3) in boostx has zero spacial components'
-      endif
-#endif
+c#ifdef HELAS_CHECK
+c      if (abs(p(0))+abs(p(1))+abs(p(2))+abs(p(3)).eq.rZero) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in boostx is zero momentum'
+c      endif
+c      if (abs(q(0))+qq.eq.rZero) then
+c         write(stdo,*)
+c     &        ' helas-error : q(0:3) in boostx is zero momentum'
+c      endif
+c      if (p(0).le.rZero) then
+c         write(stdo,*)
+c     &        ' helas-warn  : p(0:3) in boostx has not positive energy'
+c         write(stdo,*)
+c     &        '             : p(0) = ',p(0)
+c      endif
+c      if (q(0).le.rZero) then
+c         write(stdo,*)
+c     &        ' helas-error : q(0:3) in boostx has not positive energy'
+c         write(stdo,*)
+c     &        '             : q(0) = ',q(0)
+c      endif
+c      pp=p(0)**2-p(1)**2-p(2)**2-p(3)**2
+c      if (pp.lt.rZero) then
+c         write(stdo,*)
+c     &        ' helas-warn  : p(0:3) in boostx is spacelike'
+c         write(stdo,*)
+c     &        '             : p**2 = ',pp
+c      endif
+c      if (q(0)**2-qq.le.rZero) then
+c         write(stdo,*)
+c     &        ' helas-error : q(0:3) in boostx is not timelike'
+c         write(stdo,*)
+c     &        '             : q**2 = ',q(0)**2-qq
+c      endif
+c      if (qq.eq.rZero) then
+c         write(stdo,*)
+c     &   ' helas-warn  : q(0:3) in boostx has zero spacial components'
+c      endif
+c#endif
 
       if ( qq.ne.rZero ) then
          pq = p(1)*q(1)+p(2)*q(2)+p(3)*q(3)
@@ -797,35 +797,35 @@ c
       double precision rZero, rOne
       parameter( rZero = 0.0d0, rOne = 1.0d0 )
 
-#ifdef HELAS_CHECK
-      double precision rPi, rTwo
-      parameter( rPi = 3.14159265358979323846d0, rTwo = 2.d0 )
-      integer stdo
-      parameter( stdo = 6 )
-#endif
+c#ifdef HELAS_CHECK
+c      double precision rPi, rTwo
+c      parameter( rPi = 3.14159265358979323846d0, rTwo = 2.d0 )
+c      integer stdo
+c      parameter( stdo = 6 )
+c#endif
 c
-#ifdef HELAS_CHECK
-      if (energy.lt.mass) then
-         write(stdo,*)
-     &        ' helas-error : energy in momntx is less than mass'
-         write(stdo,*)
-     &        '             : energy = ',energy,' : mass = ',mass
-      endif
-      if (mass.lt.rZero) then
-         write(stdo,*) ' helas-error : mass in momntx is negative'
-         write(stdo,*) '             : mass = ',mass
-      endif
-      if (abs(costh).gt.rOne) then
-         write(stdo,*) ' helas-error : costh in momntx is improper'
-         write(stdo,*) '             : costh = ',costh
-      endif
-      if (phi.lt.rZero .or. phi.gt.rTwo*rPi) then
-         write(stdo,*)
-     &   ' helas-warn  : phi in momntx does not lie on 0.0 thru 2.0*pi'
-         write(stdo,*)
-     &   '             : phi = ',phi
-      endif
-#endif
+c#ifdef HELAS_CHECK
+c      if (energy.lt.mass) then
+c         write(stdo,*)
+c     &        ' helas-error : energy in momntx is less than mass'
+c         write(stdo,*)
+c     &        '             : energy = ',energy,' : mass = ',mass
+c      endif
+c      if (mass.lt.rZero) then
+c         write(stdo,*) ' helas-error : mass in momntx is negative'
+c         write(stdo,*) '             : mass = ',mass
+c      endif
+c      if (abs(costh).gt.rOne) then
+c         write(stdo,*) ' helas-error : costh in momntx is improper'
+c         write(stdo,*) '             : costh = ',costh
+c      endif
+c      if (phi.lt.rZero .or. phi.gt.rTwo*rPi) then
+c         write(stdo,*)
+c     &   ' helas-warn  : phi in momntx does not lie on 0.0 thru 2.0*pi'
+c         write(stdo,*)
+c     &   '             : phi = ',phi
+c      endif
+c#endif
 
       p(0) = energy
 
@@ -872,29 +872,29 @@ c
       double precision rZero, rOne
       parameter( rZero = 0.0d0, rOne = 1.0d0 )
 
-#ifdef HELAS_CHECK
-      integer stdo
-      parameter( stdo = 6 )
-#endif
+c#ifdef HELAS_CHECK
+c      integer stdo
+c      parameter( stdo = 6 )
+c#endif
 c
       prot(0) = p(0)
 
       qt2 = q(1)**2 + q(2)**2
 
-#ifdef HELAS_CHECK
-      if (abs(p(0))+abs(p(1))+abs(p(2))+abs(p(3)).eq.rZero) then
-         write(stdo,*)
-     &        ' helas-error : p(0:3) in rotxxx is zero momentum'
-      endif
-      if (abs(q(0))+abs(q(3))+qt2.eq.rZero) then
-         write(stdo,*)
-     &        ' helas-error : q(0:3) in rotxxx is zero momentum'
-      endif
-      if (qt2+abs(q(3)).eq.rZero) then
-         write(stdo,*)
-     &   ' helas-warn  : q(0:3) in rotxxx has zero spacial momentum'
-      endif
-#endif
+c#ifdef HELAS_CHECK
+c      if (abs(p(0))+abs(p(1))+abs(p(2))+abs(p(3)).eq.rZero) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in rotxxx is zero momentum'
+c      endif
+c      if (abs(q(0))+abs(q(3))+qt2.eq.rZero) then
+c         write(stdo,*)
+c     &        ' helas-error : q(0:3) in rotxxx is zero momentum'
+c      endif
+c      if (qt2+abs(q(3)).eq.rZero) then
+c         write(stdo,*)
+c     &   ' helas-warn  : q(0:3) in rotxxx has zero spacial momentum'
+c      endif
+c#endif
 
       if ( qt2.eq.rZero ) then
           if ( q(3).eq.rZero ) then
