@@ -599,8 +599,6 @@ class InteractionList(PhysicsObjectList):
         Return a list where the first element is the n>0 dictionary and
         the second one is n-1>1."""
 
-        logger.info("Generate reference dictionaries for diagram generation")
-
         ref_dict_to0 = {}
         ref_dict_to1 = {}
 
@@ -682,7 +680,7 @@ class Model(PhysicsObject):
                                                         type(value)
 
         if name == 'got_majoranas':
-            if not isinstance(value, bool):
+            if not isinstance(value, bool) or value == None:
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a boolean" % \
                                                         type(value)

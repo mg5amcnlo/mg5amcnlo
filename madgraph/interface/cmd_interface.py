@@ -451,9 +451,10 @@ class HelpToCmd(object):
     def help_display(self):
         logger.info("syntax: display " + "|".join(self._display_opts))
         logger.info("-- display a the status of various internal state variables")
-        logger.info("   for particles/interactions you can specify the name of the")
+        logger.info("   for particles/interactions you can specify the name or id of the")
         logger.info("   particles/interactions to receive more details information.")
-        logger.info("   example display particles e+ ")
+        logger.info("   example display particles e+.")
+        logger.info("   For \"checks\", can specify only to see failed checks.")
 
     def help_tutorial(self):
         logger.info("syntax: tutorial [" + "|".join(self._tutorial_opts) + "]")
@@ -632,6 +633,8 @@ class CheckValidForCmd(object):
 
         if args[0] in ['processes', 'diagrams'] and not self._curr_amps:
             raise self.InvalidCmd("No process generated, please generate a process!")
+        if args[0] == 'checks' and not self._comparisons:
+            raise self.InvalidCmd("No check results to display.")
 
 
     def check_draw(self, args):
@@ -670,6 +673,9 @@ class CheckValidForCmd(object):
 
         check = False
         if args[0] == 'check':
+            if self._model_v4_path:
+                raise self.InvalidCmd(\
+                    "\"generate check\" not possible for v4 models")
             check = True
             args = args[1:]
             
@@ -1023,9 +1029,14 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_display(self, text, line, begidx, endidx):
         "Complete the display command"
 
+        args = split_arg(line[0:begidx])
+
         # Format
-        if len(split_arg(line[0:begidx])) == 1:
+        if len(args) == 1:
             return self.list_completion(text, self._display_opts)
+
+        if len(args) == 2 and arg[0] == 'checks':
+            return self.list_completion(text, 'failed')
 
     def complete_draw(self, text, line, begidx, endidx):
         "Complete the import command"
@@ -1193,7 +1204,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
     # Options and formats available
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams', 
-                     'multiparticles', 'couplings','lorentz']
+                     'multiparticles', 'couplings', 'lorentz', 'checks']
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _tutorial_opts = ['start', 'stop']
@@ -1214,6 +1225,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _export_dir = None
     _export_format = 'madevent_v4'
     _mgme_dir = MG4DIR
+    _comparisons = None
     
     def __init__(self, mgme_dir = '', *completekey, **stdin):
         """ add a tracker of the history """
@@ -1439,6 +1451,23 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             except:
                 raise self.InvalidCmd, 'no lorentz %s in current model' % args[1]
             
+        elif args[0] == 'checks':
+            comparisons = self._comparisons
+            if len(args) > 1 and args[1] == 'failed':
+                comparisons = [c for c in comparisons if not c['passed']]
+            for comp in comparisons:
+                print "%s:" % comp['process'].nice_string()
+                print "   Phase space point: (px py pz E)"
+                for i, p in enumerate(comp['momenta']):
+                    print "%2s    %+.9e  %+.9e  %+.9e  %+.9e" % tuple([i] + p)
+                print "   Permutation values:"
+                print "   " + str(comp['values'])
+                if comp['passed']:
+                    print "   Process passed (rel. difference %.9e)" % \
+                          comp['difference']
+                else:
+                    print "   Process failed (rel. difference %.9e)" % \
+                          comp['difference']
         
     def multiparticle_string(self, key):
         """Returns a nicely formatted string for the multiparticle"""
@@ -1536,17 +1565,25 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if not myprocdef:
                 raise MadGraph5Error("Empty or wrong format process, please try again.")
 
+            # Disable diagram generation logger
+            diag_logger = logging.getLogger('madgraph.diagram_generation')
+            old_level = diag_logger.setLevel(logging.WARNING)
+            
             # run the check
             cpu_time1 = time.time()
-            comparisons = process_checks.check_processes(myprocdef)
+            self._comparisons = process_checks.check_processes(myprocdef)
             cpu_time2 = time.time()
 
-            logger.info(process_checks.output_comparisons(comparisons))
+            logger.info(process_checks.output_comparisons(self._comparisons))
 
             logger.info("%i processes with %i permutations checked in %0.3f s" \
-                        % (len(comparisons),
-                          len(sum([comp['values'] for comp in comparisons],[])),
+                        % (len(self._comparisons),
+                          len(sum([comp['values'] for comp in \
+                                   self._comparisons],[])),
                           (cpu_time2 - cpu_time1)))
+            # Restore diagram logger
+            diag_logger.setLevel(old_level)
+
             return
         
         # For normal operation mode (not check)

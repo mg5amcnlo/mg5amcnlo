@@ -244,7 +244,6 @@ def check_processes(processes, param_card = None):
                     process.nice_string().replace('Process', 'process'))
 
         process_matrix_elements = []
-        process_diagrams = []
 
         # Now, generate all possible permutations of the legs
         for legs in itertools.permutations(process.get('legs')):
@@ -299,10 +298,7 @@ def check_processes(processes, param_card = None):
                 # already been considered before, recycle
                 # the information
                 col_index = list_colorize.index(colorize_obj)
-                logger.info(\
-                  "Reusing existing color information for %s" % \
-                  matrix_element.get('processes')[0].nice_string().\
-                                     replace('Process', 'process'))
+
             except ValueError:
                 # If not, create color basis and color
                 # matrix accordingly
@@ -312,10 +308,7 @@ def check_processes(processes, param_card = None):
                 col_matrix = color_amp.ColorMatrix(col_basis)
                 list_color_matrices.append(col_matrix)
                 col_index = -1
-                logger.info(\
-                  "Processing color information for %s" % \
-                  matrix_element.get('processes')[0].nice_string().\
-                                 replace('Process', 'process'))
+
             # Set the color for the matrix element
             matrix_element.set('color_basis', list_color_basis[col_index])
             matrix_element.set('color_matrix',
@@ -360,7 +353,7 @@ def check_processes(processes, param_card = None):
             # this process
             if abs(max(values)) + abs(min(values)) > 0 and \
                      abs(max(values) - min(values)) / \
-                     (abs(max(values)) + abs(min(values))) > 0.1:
+                     (abs(max(values)) + abs(min(values))) > 0.2:
                 break
 
 
@@ -373,13 +366,17 @@ def check_processes(processes, param_card = None):
 
         # Done with this process. Collect values, and store
         # process and momenta
-        passed = abs(max(values)) + abs(min(values)) == 0 or \
-                 abs(max(values) - min(values)) / \
-                 (abs(max(values)) + abs(min(values))) < 1.e-8
+        diff = 0
+        if abs(max(values)) + abs(min(values)) > 0:
+            diff = 2* abs(max(values) - min(values)) / \
+                   (abs(max(values)) + abs(min(values)))
+
+        passed = diff < 1.e-8
 
         comparison_results.append({"process": process,
                                    "momenta": p,
                                    "values": values,
+                                   "difference": diff,
                                    "passed": passed})
 
     return comparison_results
@@ -416,19 +413,16 @@ def output_comparisons(comparison_results):
             res_str += '\n' + fixed_string_length(proc, proc_col_size) + \
                    "    * No permutations, process not checked *" 
             no_check_proc += 1
-            no_check_proc_list.append(proc)
+            no_check_proc_list.append(result['process'].nice_string())
             continue
 
         passed = result['passed']
-        diff = 0
-        if abs(max(values)) + abs(min(values)) > 0:
-            diff = abs(max(values) - min(values)) / \
-                   (abs(max(values)) + abs(min(values))) * 2
 
         res_str += '\n' + fixed_string_length(proc, proc_col_size) + \
                    fixed_string_length("%1.10e" % min(values), col_size) + \
                    fixed_string_length("%1.10e" % max(values), col_size) + \
-                   fixed_string_length("%1.10e" % diff, col_size)
+                   fixed_string_length("%1.10e" % result['difference'],
+                                       col_size)
         if passed:
             pass_proc += 1
             res_str += "Passed"
