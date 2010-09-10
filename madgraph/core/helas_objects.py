@@ -563,17 +563,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                            force_flip_flow)
 
             # If this is Majorana and mother has different fermion
-            # flow, it means that we should from now on in the chain
-            # flip the particle id and flow state.
+            # flow, we should flip the particle id and flow state.
             # Otherwise, if mother has different fermion flow, flip
             # flow
-            flip_flow = new_mother.get('fermionflow') != \
-                        self.get('fermionflow') and \
-                        not self.get('self_antipart')
-            flip_sign = new_mother.get('fermionflow') != \
-                        self.get('fermionflow') and \
-                        self.get('self_antipart') or \
-                        new_mother.get('state') != self.get('state')
             flip_sign = new_mother.get_with_flow('state') != \
                         self.get_with_flow('state') and \
                         self.get('self_antipart')
@@ -2054,7 +2046,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         diagram_number = 0
 
         for diagram in diagram_list:
-
+            
             # List of dictionaries from leg number to wave function,
             # keeps track of the present position in the tree.
             # Need one dictionary per coupling multiplicity (diagram)
@@ -2221,23 +2213,26 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         
                     amp.set('color_indices', new_color_list)
 
-                    # Generate HelasDiagram
+                    # Add amplitude to amplitdes in helas_diagram
                     helas_diagram.get('amplitudes').append(amp)
-                    if diagram_wavefunctions and not \
-                                       helas_diagram.get('wavefunctions'):
-                        helas_diagram.set('wavefunctions',
-                                          diagram_wavefunctions)
 
-                # Sort the wavefunctions according to number
-                diagram_wavefunctions.sort(lambda wf1, wf2: \
-                              wf1.get('number') - wf2.get('number'))
+            # After generation of all wavefunctions and amplitudes,
+            # add wavefunctions to diagram
+            if diagram_wavefunctions and not \
+                               helas_diagram.get('wavefunctions'):
+                helas_diagram.set('wavefunctions',
+                                  diagram_wavefunctions)
 
-                if optimization:
-                    wavefunctions.extend(diagram_wavefunctions)
-                    wf_mother_arrays.extend([wf.to_array() for wf \
-                                             in diagram_wavefunctions])
-                else:
-                    wf_number = len(process.get('legs'))
+            # Sort the wavefunctions according to number
+            diagram_wavefunctions.sort(lambda wf1, wf2: \
+                          wf1.get('number') - wf2.get('number'))
+
+            if optimization:
+                wavefunctions.extend(diagram_wavefunctions)
+                wf_mother_arrays.extend([wf.to_array() for wf \
+                                         in diagram_wavefunctions])
+            else:
+                wf_number = len(process.get('legs'))
 
             # Append this diagram in the diagram list
             helas_diagrams.append(helas_diagram)

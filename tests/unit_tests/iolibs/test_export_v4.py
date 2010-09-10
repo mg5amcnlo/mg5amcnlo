@@ -1994,6 +1994,196 @@ CALL VVVL2X(W(1,2),W(1,3),W(1,9),G2,AMP(10))
 CALL VVVL1X(W(1,2),W(1,3),W(1,10),G1,AMP(11))
 CALL VVVL2X(W(1,2),W(1,3),W(1,10),G2,AMP(12))""")
 
+    def test_multiple_lorentz_structures_with_fermion_flow_clash(self):
+        """Testing process w+ w+ > z x1+ x1+.
+        """
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # Z particle
+        mypartlist.append(base_objects.Particle({'name':'z',
+                      'antiname':'z',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MZ',
+                      'width':'WZ',
+                      'texname':'Z',
+                      'antitexname':'Z',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':23,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        z = mypartlist[len(mypartlist) - 1]
+
+        # W particle
+        mypartlist.append(base_objects.Particle({'name':'w+',
+                      'antiname':'w-',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MW',
+                      'width':'WW',
+                      'texname':'W',
+                      'antitexname':'W',
+                      'line':'curly',
+                      'charge':1.,
+                      'pdg_code':24,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+
+        wplus = mypartlist[len(mypartlist) - 1]
+        wminus = copy.copy(wplus)
+        wminus.set('is_part', False)
+
+        # n1 particle
+        mypartlist.append(base_objects.Particle({'name':'n1',
+                      'antiname':'n1',
+                      'spin':2,
+                      'color':1,
+                      'mass':'Mneu1',
+                      'width':'Wneu1',
+                      'texname':'n1',
+                      'antitexname':'n1',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':1000023,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        n1 = mypartlist[len(mypartlist) - 1]
+
+        # x1+ particle
+        mypartlist.append(base_objects.Particle({'name':'x1+',
+                      'antiname':'x1-',
+                      'spin':2,
+                      'color':1,
+                      'mass':'Mx1p',
+                      'width':'Wx1p',
+                      'texname':'x1+',
+                      'antitexname':'x1-',
+                      'line':'curly',
+                      'charge':1.,
+                      'pdg_code':1000024,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+
+        x1plus = mypartlist[len(mypartlist) - 1]
+        x1minus = copy.copy(x1plus)
+        x1minus.set('is_part', False)
+
+        # Interactions
+
+        myinterlist.append(base_objects.Interaction({
+            'id': 1,
+            'particles': base_objects.ParticleList([wminus,wplus,z]),
+            'color': [],
+            'lorentz': ['VVV1'],
+            'couplings': {(0, 0): 'GC_214'},
+            'orders': {'QED': 1}
+            }))
+        myinterlist.append(base_objects.Interaction({
+            'id': 2,
+            'particles': base_objects.ParticleList([n1,x1plus,wminus]),
+            'color': [],
+            'lorentz': ['FFV2', 'FFV3'],
+            'couplings': {(0, 1): 'GC_628', (0, 0): 'GC_422'},
+            'orders': {'QED': 1}
+            }))
+        myinterlist.append(base_objects.Interaction({
+            'id': 3,
+            'particles': base_objects.ParticleList([n1,n1,z]),
+            'color': [],
+            'lorentz': ['FFV5'],
+            'couplings': {(0, 0): 'GC_418'},
+            'orders': {'QED': 1}
+            }))
+
+        mybasemodel = base_objects.Model()
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':24,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':24,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':23,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':1000024,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':1000024,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mybasemodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        self.assertEqual(len(myamplitude.get('diagrams')), 6)
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude, gen_color=False)
+
+        result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
+                                   get_matrix_element_calls(matrix_element)
+
+        goal = """CALL VXXXXX(P(0,1),MW,NHEL(1),-1*IC(1),W(1,1))
+CALL VXXXXX(P(0,2),MW,NHEL(2),-1*IC(2),W(1,2))
+CALL VXXXXX(P(0,3),MZ,NHEL(3),+1*IC(3),W(1,3))
+CALL IXXXXX(P(0,4),Mx1p,NHEL(4),-1*IC(4),W(1,4))
+CALL OXXXXX(P(0,5),Mx1p,NHEL(5),+1*IC(5),W(1,5))
+CALL VVV1_2(W(1,3),W(1,1),GC_214,MW, WW, W(1,6))
+CALL FFV2C1_2(W(1,4),W(1,2),GC_422,Mneu1, Wneu1, W(1,7))
+CALL FFV3C1_2(W(1,4),W(1,2),GC_628,Mneu1, Wneu1, W(1,8))
+# Amplitude(s) for diagram number 1
+CALL FFV2_0(W(1,7),W(1,5),W(1,6),GC_422,AMP(1))
+CALL FFV3_0(W(1,7),W(1,5),W(1,6),GC_628,AMP(2))
+CALL FFV2_0(W(1,8),W(1,5),W(1,6),GC_422,AMP(3))
+CALL FFV3_0(W(1,8),W(1,5),W(1,6),GC_628,AMP(4))
+CALL FFV2_1(W(1,5),W(1,2),GC_422,Mneu1, Wneu1, W(1,9))
+CALL FFV3_1(W(1,5),W(1,2),GC_628,Mneu1, Wneu1, W(1,10))
+# Amplitude(s) for diagram number 2
+CALL FFV2C1_0(W(1,4),W(1,9),W(1,6),GC_422,AMP(5))
+CALL FFV3C1_0(W(1,4),W(1,9),W(1,6),GC_628,AMP(6))
+CALL FFV2C1_0(W(1,4),W(1,10),W(1,6),GC_422,AMP(7))
+CALL FFV3C1_0(W(1,4),W(1,10),W(1,6),GC_628,AMP(8))
+CALL FFV2C1_2(W(1,4),W(1,1),GC_422,Mneu1, Wneu1, W(1,11))
+CALL FFV3C1_2(W(1,4),W(1,1),GC_628,Mneu1, Wneu1, W(1,12))
+CALL VVV1_2(W(1,3),W(1,2),GC_214,MW, WW, W(1,13))
+# Amplitude(s) for diagram number 3
+CALL FFV2_0(W(1,11),W(1,5),W(1,13),GC_422,AMP(9))
+CALL FFV3_0(W(1,11),W(1,5),W(1,13),GC_628,AMP(10))
+CALL FFV2_0(W(1,12),W(1,5),W(1,13),GC_422,AMP(11))
+CALL FFV3_0(W(1,12),W(1,5),W(1,13),GC_628,AMP(12))
+# Amplitude(s) for diagram number 4
+CALL FFV5_0(W(1,11),W(1,9),W(1,3),GC_418,AMP(13))
+CALL FFV5_0(W(1,11),W(1,10),W(1,3),GC_418,AMP(14))
+CALL FFV5_0(W(1,12),W(1,9),W(1,3),GC_418,AMP(15))
+CALL FFV5_0(W(1,12),W(1,10),W(1,3),GC_418,AMP(16))
+CALL FFV2_1(W(1,5),W(1,1),GC_422,Mneu1, Wneu1, W(1,14))
+CALL FFV3_1(W(1,5),W(1,1),GC_628,Mneu1, Wneu1, W(1,15))
+# Amplitude(s) for diagram number 5
+CALL FFV2C1_0(W(1,4),W(1,14),W(1,13),GC_422,AMP(17))
+CALL FFV3C1_0(W(1,4),W(1,14),W(1,13),GC_628,AMP(18))
+CALL FFV2C1_0(W(1,4),W(1,15),W(1,13),GC_422,AMP(19))
+CALL FFV3C1_0(W(1,4),W(1,15),W(1,13),GC_628,AMP(20))
+# Amplitude(s) for diagram number 6
+CALL FFV5_0(W(1,7),W(1,14),W(1,3),GC_418,AMP(21))
+CALL FFV5_0(W(1,8),W(1,14),W(1,3),GC_418,AMP(22))
+CALL FFV5_0(W(1,7),W(1,15),W(1,3),GC_418,AMP(23))
+CALL FFV5_0(W(1,8),W(1,15),W(1,3),GC_418,AMP(24))""".split('\n')
+
+        for i in range(len(goal)):
+            self.assertEqual(result[i], goal[i])
+
     def test_export_matrix_element_v4_standalone(self):
         """Test the result of exporting a matrix element to file"""
 

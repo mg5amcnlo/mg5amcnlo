@@ -428,7 +428,7 @@ def output_comparisons(comparison_results):
             res_str += "Passed"
         else:
             fail_proc += 1
-            failed_proc_list.append(proc)
+            failed_proc_list.append(result['process'].nice_string())
             res_str += "Failed"
 
     res_str += "\nSummary: %i/%i passed, %i/%i failed" % \

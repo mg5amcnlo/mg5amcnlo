@@ -93,10 +93,10 @@ if '__main__' == __name__:
     #my_comp.cleanup()
 
     # Print the output
-    my_comp.output_result(filename='mssm_result-higgs-new_ufo_mssm.log')
+    my_comp.output_result(filename='mssm_results.log')
 
     
-    pydoc.pager(file('mssm_result-higgs-new_ufo_mssm.log','r').read())
+    pydoc.pager(file('mssm_results.log','r').read())
 
     # Print a list of non zero processes
     #print my_comp.get_non_zero_processes()
