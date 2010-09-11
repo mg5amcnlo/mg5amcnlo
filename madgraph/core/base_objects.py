@@ -727,6 +727,7 @@ class Model(PhysicsObject):
             self['interaction_dict'] = {}
             self['ref_dict_to1'] = {}
             self['ref_dict_to0'] = {}
+            self['got_majoranas'] = None
 
         Model.__bases__[0].set(self, name, value) # call the mother routine
 
@@ -740,6 +741,7 @@ class Model(PhysicsObject):
             self.get('interaction_dict')
             self.get('ref_dict_to1')
             self.get('ref_dict_to0')
+            self.get('got_majoranas')
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
@@ -765,10 +767,23 @@ class Model(PhysicsObject):
             return None
 
     def check_majoranas(self):
-        """Return True if there are Majorana fermions, False otherwise"""
+        """Return True if there is fermion flow violation, False otherwise"""
 
-        return any([part.is_fermion() and part.get('self_antipart') \
-                    for part in self.get('particles')])
+        if any([part.is_fermion() and part.get('self_antipart') \
+                for part in self.get('particles')]):
+            return True
+
+        # No Majorana particles, but may still be fermion flow
+        # violating interactions
+        for inter in self.get('interactions'):
+            fermions = [p for p in inter.get('particles') if p.is_fermion()]
+            for i in range(0, len(fermions), 2):
+                if fermions[i].get('is_part') == \
+                   fermions[i+1].get('is_part'):
+                    # This is a fermion flow violating interaction
+                    return True
+        # No fermion flow violations
+        return False
 
     def reset_dictionaries(self):
         """Reset all dictionaries and got_majoranas. This is necessary
