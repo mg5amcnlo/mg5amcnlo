@@ -68,7 +68,10 @@ if '__main__' == __name__:
                     'h1 x1+ > x1+ w+ w- / h2 h3 n1 n2 n3',
                     'h1 x1+ > x1+ w- w+/ h2 h3 n1 n2 n3',
                     'h1 w+ > x1+ x1- w+ / h2 h3 n1 n2 n3',
-                    'h1 w+ > x1- x1+ w+ / h2 h3 n1 n2 n3']
+                    'h1 w+ > x1- x1+ w+ / h2 h3 n1 n2 n3',
+                    'w+ w+ > h1 x1+ x1+ / h2 h3 n1 n2 n3',
+                    'w+ w- > h1 x1+ x1- / h2 h3 n1 n2 n3',
+                    'w+ w- > h1 x1+ x1-']
     # Create a MERunner object for MG4
     my_mg4 = me_comparator.MG4Runner()
     my_mg4.setup(mg4_path)

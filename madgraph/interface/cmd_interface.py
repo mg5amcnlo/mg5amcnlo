@@ -233,11 +233,13 @@ class CmdExtended(cmd.Cmd):
             debug_file = open('MG5_debug', 'a')
             traceback.print_exc(file=debug_file)
             # Create a nice error output
-            if line == self.history[-1]:
+            if self.history and line == self.history[-1]:
                 error_text = 'Command \"%s\" interrupted with error:\n' % line
-            else:
+            elif self.history:
                 error_text = 'Command \"%s\" interrupted in sub-command:\n' %line
                 error_text += '\"%s\" with error:\n' % self.history[-1]
+            else:
+                error_text = ''
             error_text += '%s : %s\n' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
             error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
             error_text += 'More information is found in \'%s\'.\n' % \
@@ -487,7 +489,7 @@ class HelpToCmd(object):
         
     def help_generate(self):
 
-        logger.info("syntax: generate [check] INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N")
+        logger.info("syntax: generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N")
         logger.info("-- generate diagrams for a given process")
         logger.info("   Syntax example: l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1")
         logger.info("   Alternative required s-channels can be separated by \"|\":")
@@ -496,11 +498,19 @@ class HelpToCmd(object):
         logger.info("   core process, decay1, (decay2, (decay2', ...)), ...  etc")
         logger.info("   Example: p p > t~ t QED=0, (t~ > W- b~, W- > l- vl~), t > j j b @2")
         logger.info("   Note that identical particles will all be decayed.")
-        logger.info("""If the \"check\" option is used, a check that the model and MG5
-   are working properly is done by generating the processes in all possible
-   ways, and comparing the result of running the corresponding matrix elements.""")
         logger.info("To generate a second process use the \"add process\" command")
 
+    def help_check(self):
+
+        logger.info("syntax: check %s INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N" \
+                        % '|'.join(self._check_opts) )
+        logger.info("-- Checking consistency for a given process")
+        logger.info("   For more details on process syntax, type \"help generate\"")
+        logger.info("-- check aloha PROCESS :")
+        logger.info("   Checks that different combination of ALOHA routine provides the same value for the matrix element.")
+        logger.info("-- check gauge PROCESS :")
+        logger.info("   Checks that the diagram is gauge invariant (BRS test)")
+        
     def help_add(self):
 
         logger.info("syntax: add process INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2")
@@ -684,9 +694,37 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd("\"generate check\" requires a process.")
 
         self.check_process_format(" ".join(args))
+
+    def check_do_check(self, args):
+        """check the validity of args"""
         
-        if check:
-            args.insert(0, 'check')
+        if  not self._curr_model:
+            logger.info('No model currently active. Try with the Standard Model')
+            self.do_import('model sm')
+
+        if len(args) == 1:
+            self.help_check()
+            raise self.InvalidCmd("\"check\" requires a process definition")
+        elif not len(args):
+            self.help_check()
+            raise self.InvalidCmd('\"check\" requires a mode of check')
+        
+        if args[0] not in self._check_opts:
+            self.help_check()
+            raise self.InvalidCmd('\"check option is not any of %s possibilies' % 
+                                                    ', '.join(self._check_opts))
+
+        if any([',' in elem for elem in args]):
+            raise MadGraph5Error('Decay chains not allowed in check')
+
+
+        if self._model_v4_path:
+            raise self.InvalidCmd(\
+                    "\"generate check\" not possible for v4 models")
+        
+        
+        
+        self.check_process_format(" ".join(args[1:]))
         
         return True
     
@@ -1038,6 +1076,15 @@ class CompleteForCmd(CheckValidForCmd):
         if len(args) == 2 and arg[0] == 'checks':
             return self.list_completion(text, 'failed')
 
+    def complete_check(self, text, line, begidx, endidx):
+        "Complete the display command"
+
+        args = split_arg(line[0:begidx])
+
+        # Format
+        if len(args) == 1:
+            return self.list_completion(text, self._check_opts)
+
     def complete_draw(self, text, line, begidx, endidx):
         "Complete the import command"
 
@@ -1208,6 +1255,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _tutorial_opts = ['start', 'stop']
+    _check_opts = ['aloha','gauge']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
     _export_formats = ['madevent_v4', 'standalone_v4', 'matrix_v4', 'pythia8']
 
@@ -1482,6 +1530,83 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             return "%s = %s" % (key, " ".join([self._curr_model.\
                                     get('particle_dict')[part_id].get_name() \
                                     for part_id in self._multiparticles[key]]))
+            
+    # Generate a new amplitude
+    def do_check(self, line):
+        """Check an amplitude for a given process"""
+
+        args = split_arg(line)
+
+        # Check args validity
+        self.check_do_check(args)
+
+        # Reset Helas matrix elements
+        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+        self._generate_info = line
+        # Reset _done_export, since we have new process
+        self._done_export = False
+
+        if args[0] == 'aloha':
+            # Run matrix element generation check on processes
+
+            line = " ".join(args[1:])
+            myprocdef = self.extract_process(line)
+            # Check that we have something    
+            if not myprocdef:
+                raise MadGraph5Error("Empty or wrong format process, please try again.")
+
+            # Disable diagram generation logger
+            diag_logger = logging.getLogger('madgraph.diagram_generation')
+            old_level = diag_logger.setLevel(logging.WARNING)
+            
+            # run the check
+            cpu_time1 = time.time()
+            self._comparisons = process_checks.check_processes(myprocdef)
+            cpu_time2 = time.time()
+
+            logger.info(process_checks.output_comparisons(self._comparisons))
+
+            logger.info("%i processes with %i permutations checked in %0.3f s" \
+                        % (len(self._comparisons),
+                          len(sum([comp['values'] for comp in \
+                                   self._comparisons],[])),
+                          (cpu_time2 - cpu_time1)))
+            # Restore diagram logger
+            diag_logger.setLevel(old_level)
+
+            return
+        
+        elif args[0] == 'gauge':
+            # Run matrix element generation check on processes
+
+            line = " ".join(args[1:])
+            try:
+                if ',' not in line:
+                    myprocdef = self.extract_process(line)
+                else:
+                    raise MadGraph5Error('Decay chains not allowed in check')
+            except MadGraph5Error as error:
+                raise MadGraph5Error(str(error))
+
+            # Check that we have something    
+            if not myprocdef:
+                raise MadGraph5Error("Empty or wrong format process, please try again.")
+
+            # Disable diagram generation logger
+            diag_logger = logging.getLogger('madgraph.diagram_generation')
+            old_level = diag_logger.setLevel(logging.WARNING)
+            
+            # run the check
+            cpu_time1 = time.time()
+            process_checks.check_gauge(myprocdef)
+            cpu_time2 = time.time()
+
+            #logger.info("  checked in %0.3f s" \
+            #            % (cpu_time2 - cpu_time1))
+            # Restore diagram logger
+            diag_logger.setLevel(old_level)
+
+            return
 
     def do_tutorial(self, line):
         """Activate/deactivate the tutorial mode."""
@@ -1549,44 +1674,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Reset _done_export, since we have new process
         self._done_export = False
 
-        if args[0] == 'check':
-            # Run matrix element generation check on processes
-
-            line = " ".join(args[1:])
-            try:
-                if ',' not in line:
-                    myprocdef = self.extract_process(line)
-                else:
-                    raise MadGraph5Error('Decay chains not allowed in check')
-            except MadGraph5Error as error:
-                raise MadGraph5Error(str(error))
-
-            # Check that we have something    
-            if not myprocdef:
-                raise MadGraph5Error("Empty or wrong format process, please try again.")
-
-            # Disable diagram generation logger
-            diag_logger = logging.getLogger('madgraph.diagram_generation')
-            old_level = diag_logger.setLevel(logging.WARNING)
-            
-            # run the check
-            cpu_time1 = time.time()
-            self._comparisons = process_checks.check_processes(myprocdef)
-            cpu_time2 = time.time()
-
-            logger.info(process_checks.output_comparisons(self._comparisons))
-
-            logger.info("%i processes with %i permutations checked in %0.3f s" \
-                        % (len(self._comparisons),
-                          len(sum([comp['values'] for comp in \
-                                   self._comparisons],[])),
-                          (cpu_time2 - cpu_time1)))
-            # Restore diagram logger
-            diag_logger.setLevel(old_level)
-
-            return
-        
-        # For normal operation mode (not check)
         try:
             if ',' not in line:
                 myprocdef = self.extract_process(line)

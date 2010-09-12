@@ -54,10 +54,10 @@ class AbstractRoutine(object):
         if not outgoing in self.symmetries:
             self.symmetries.append(outgoing)
         
-    def write(self, output_dir, language='Fortran'):
+    def write(self, output_dir, language='Fortran', mode='self'):
         """ write the content of the object """
         
-        return getattr(aloha_writers, 'ALOHAWriterFor%s' % language)(self, output_dir).write()
+        return getattr(aloha_writers, 'ALOHAWriterFor%s' % language)(self, output_dir).write(mode=mode)
 
 
 

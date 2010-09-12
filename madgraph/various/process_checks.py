@@ -452,3 +452,147 @@ def fixed_string_length(mystr, length):
     else:
         return mystr + " " * (length - len(mystr))
 
+
+
+#===============================================================================
+# check_gauge
+#===============================================================================
+def check_gauge(processes, param_card = None):
+    """Check gauge invariance of the processes by using the BRS check.
+    For one of the massless external bosons (e.g. gluon or photon), 
+    replace the polarization vector (epsilon_mu) with its momentum (p_mu)
+    """
+    
+    if isinstance(processes, base_objects.ProcessDefinition):
+        # Generate a list of unique processes
+        # Extract IS and FS ids
+        multiprocess = processes
+        model = multiprocess.get('model')
+        isids = [[model.get_particle(id).get_anti_pdg_code() for id in \
+                  leg.get('ids')] for leg in processes.get('legs') \
+                  if not leg.get('state')]
+        fsids = [leg.get('ids') for leg in processes.get('legs') \
+                 if leg.get('state')]
+        sorted_ids = []
+        processes = base_objects.ProcessList()
+        for is_prod in apply(itertools.product, isids):
+            for fs_prod in apply(itertools.product, fsids):
+                prod = sorted(list(is_prod) + list(fs_prod))
+                if prod in sorted_ids:
+                    continue
+                is_prod = [model.get_particle(id).get_anti_pdg_code() \
+                           for id in is_prod]
+                sorted_ids.append(prod)
+                processes.append(base_objects.Process({\
+                    'legs': base_objects.LegList(\
+                            [base_objects.Leg({'id': id, 'state':False}) for \
+                             id in is_prod] + \
+                            [base_objects.Leg({'id': id, 'state':True}) for \
+                             id in fs_prod]),
+                    'model':multiprocess.get('model'),
+                    'id': multiprocess.get('id'),
+                    'orders': multiprocess.get('orders'),
+                    'required_s_channels': \
+                                  multiprocess.get('required_s_channels'),
+                    'forbidden_s_channels': \
+                                  multiprocess.get('forbidden_s_channels'),
+                    'forbidden_particles': \
+                                  multiprocess.get('forbidden_particles'),
+                    'is_decay_chain': \
+                                  multiprocess.get('is_decay_chain'),
+                    'overall_orders': \
+                                  multiprocess.get('overall_orders')}))
+    elif isinstance(processes, base_objects.Process):
+        processes = base_objects.ProcessList([processes])
+    elif isinstance(processes, base_objects.ProcessList):
+        pass
+    else:
+        raise MadGraph5Error("processes is of non-supported format")
+
+    assert processes, "No processes given"
+
+    model = processes[0].get('model')
+
+    # Read a param_card and calculate couplings
+    full_model = model_reader.ModelReader(model)
+
+    full_model.set_parameters_and_couplings(param_card)
+
+    # Write the matrix element(s) in Python
+    helas_writer = helas_call_writer.PythonUFOHelasCallWriter(model)
+    
+    used_lorentz = []
+    comparison_results = []
+
+    # For each process, make sure we have set up leg numbers:
+    for process in processes:
+        # Check if process is already checked
+        ids = [l.get('id') for l in process.get('legs') if l.get('state')]
+        ids.extend([model.get_particle(l.get('id')).get_anti_pdg_code() \
+                    for l in process.get('legs') if not l.get('state')])
+        ids = sorted(ids) + [process.get('id')]
+
+        # Generate phase space point to use
+        p, w_rambo = get_momenta(process, full_model)
+        # Initiate the value array
+        values = [0.0]
+        for i, leg in enumerate(process.get('legs')):
+            leg.set('number', i+1)
+
+        logger.info("Checking gauge %s" % \
+                    process.nice_string().replace('Process', 'process'))
+
+        process_matrix_elements = []
+        legs = process.get('legs')
+        # Generate a process with these legs
+        # Generate the amplitude for this process
+        amplitude = diagram_generation.Amplitude(process)
+        if not amplitude.get('diagrams'):
+            # This process has no diagrams; go to next process
+            logging.info("No diagrams for %s" % \
+                             newproc.nice_string().replace('Process', 'process'))
+            break
+
+        # Generate the HelasMatrixElement for the process
+        matrix_element = helas_objects.HelasMatrixElement(amplitude)
+
+        # Create the needed aloha routines
+        me_used_lorentz = set(matrix_element.get_used_lorentz())
+        me_used_lorentz = [lorentz for lorentz in me_used_lorentz \
+                               if lorentz not in used_lorentz]
+
+        aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
+        aloha_model.compute_subset(me_used_lorentz)
+
+        # Write out the routines in Python
+        aloha_routines = []
+        for routine in aloha_model.values():
+            aloha_routines.append(routine.write(output_dir = None, 
+                                                    mode='mg5',
+                                                    language = 'Python'))
+
+        # Define the routines to be available globally
+        for routine in aloha_routines:
+            exec(routine, globals())
+
+
+        # Export the matrix element to Python calls
+        exporter = export_python.ProcessExporterPython(matrix_element,
+                                                           helas_writer)
+        matrix_methods = exporter.get_python_matrix_methods(gauge_check=True)
+
+        # Define the routines (locally is enough)
+        exec(matrix_methods[process.shell_string()])
+
+        # Evaluate the matrix element for the momenta p
+        value = eval("Matrix().smatrix(p, full_model)")
+
+        if value > 1e-15:
+            logger.info('gauge check fail at level %s '% value)
+        else:
+            logger.info('gauge check pass result %s ' % value)
+        return
+
+    return comparison_results
+
+

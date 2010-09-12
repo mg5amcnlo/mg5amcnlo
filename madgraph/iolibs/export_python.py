@@ -47,7 +47,7 @@ logger = logging.getLogger('madgraph.export_python')
 #===============================================================================
 class ProcessExporterPython(object):
     """Class to take care of exporting a set of matrix elements to
-    Pythia 8 format."""
+    Python format."""
 
     class ProcessExporterPythonError(Exception):
         pass
@@ -83,7 +83,7 @@ class ProcessExporterPython(object):
     #===========================================================================
     # write_python_process_cc_file
     #===========================================================================
-    def get_python_matrix_methods(self):
+    def get_python_matrix_methods(self, gauge_check=False):
         """Write the matrix element calculation method for the processes"""
 
         replace_dict = {}
@@ -144,7 +144,7 @@ class ProcessExporterPython(object):
 
             # Extract helas calls
             helas_calls = self.helas_call_writer.get_matrix_element_calls(\
-                                                                matrix_element)
+                                                    matrix_element, gauge_check)
             replace_dict['helas_calls'] = "\n        ".join(helas_calls)
 
             # Extract JAMP lines

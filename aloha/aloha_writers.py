@@ -488,7 +488,7 @@ class ALOHAWriterForFortran(WriteALOHA):
     def define_foot(self):
         return 'end' 
 
-    def write(self):
+    def write(self, mode='self'):
                 
         writer = writers.FortranWriter(self.out_path)
         writer.downcase = False 
@@ -748,7 +748,7 @@ class ALOHAWriterForCPP(WriteALOHA):
 
         return cc_string
     
-    def write(self):
+    def write(self, mode='self'):
         """Write the .h and .cc files"""
 
         writer_h = writers.CPPWriter(self.out_path + ".h")
@@ -936,7 +936,7 @@ class ALOHAWriterForPython(WriteALOHA):
                          
         # write head - momenta - body - foot
         if mode == 'mg5':
-            text = 'import aloha.templates_files.wavefunctions as wavefunctions\n'
+            text = 'import aloha.template_files.wavefunctions as wavefunctions\n'
         else:
             text = 'import wavefunctions\n'
         text += self.define_header()

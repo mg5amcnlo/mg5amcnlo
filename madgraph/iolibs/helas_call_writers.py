@@ -16,6 +16,7 @@
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
+from madgraph import MadGraph5Error
 
 #===============================================================================
 # HelasCallWriter
@@ -601,18 +602,18 @@ class UFOHelasCallWriter(HelasCallWriter):
     the interaction."""
 
 
-    def get_wavefunction_call(self, wavefunction):
+    def get_wavefunction_call(self, wavefunction, **opt):
         """Return the function for writing the wavefunction
         corresponding to the key. If the function doesn't exist,
         generate_helas_call is called to automatically create the
-        function."""
-
+        function. -UFO ROUTINE-"""
+        
         val = super(UFOHelasCallWriter, self).get_wavefunction_call(wavefunction)
         if val:
             return val
 
         # If function not already existing, try to generate it.
-        self.generate_helas_call(wavefunction)
+        self.generate_helas_call(wavefunction, **opt)
         return super(UFOHelasCallWriter, self).get_wavefunction_call(\
             wavefunction)
 
@@ -895,7 +896,34 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
     generates the Python Helas call based on the Lorentz structure of
     the interaction."""
 
-    def generate_helas_call(self, argument):
+    def get_matrix_element_calls(self, matrix_element, gauge_check=False):
+        """Return a list of strings, corresponding to the Helas calls
+        for the matrix element"""
+
+        assert isinstance(matrix_element, helas_objects.HelasMatrixElement), \
+                  "%s not valid argument for get_matrix_element_calls" % \
+                  repr(matrix_element)
+
+        res = []
+        if gauge_check:
+            # check if the replacmnet is already done.
+            self.gauge_done = False
+            
+        for diagram in matrix_element.get('diagrams'):
+            res.extend([ self.get_wavefunction_call(wf, gauge_check=gauge_check) 
+                                    for wf in diagram.get('wavefunctions') ])
+            res.append("# Amplitude(s) for diagram number %d" % \
+                       diagram.get('number'))
+            for amplitude in diagram.get('amplitudes'):
+                res.append(self.get_amplitude_call(amplitude))
+
+        if gauge_check and not self.gauge_done:
+            raise MadGraph5Error, 'no massless spin one particle for gauge check'
+        return res
+
+
+
+    def generate_helas_call(self, argument, gauge_check=False):
         """Routine for automatic generation of Python Helas calls
         according to just the spin structure of the interaction.
         """
@@ -906,6 +934,10 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
                   "get_helas_call must be called with wavefunction or amplitude"
         
         call_function = None
+
+        #only one transformation for the gauge check
+        if gauge_check and self.gauge_done:
+            gauge_check = False
 
         if isinstance(argument, helas_objects.HelasAmplitude) and \
            argument.get('interaction_id') == 0:
@@ -926,7 +958,12 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
             call = call + "(p[%d],"
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity
-                call = call + "%s,hel[%d],"
+                if gauge_check and argument.get('spin') == 3 and \
+                                                 argument.get('mass') == 'ZERO':
+                    call = call + "%s, 4,"
+                    self.gauge_done = True
+                else:
+                    call = call + "%s,hel[%d],"
             call = call + "%+d)"
             if argument.get('spin') == 1:
                 call_function = lambda wf: call % \
@@ -935,11 +972,19 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
                                  # For boson, need initial/final here
                                  (-1)**(wf.get('state') == 'initial'))
             elif argument.is_boson():
-                call_function = lambda wf: call % \
+                if not gauge_check or argument.get('mass') != 'ZERO':
+                    call_function = lambda wf: call % \
                                 (wf.get('number')-1,
                                  wf.get('number_external')-1,
                                  wf.get('mass'),
                                  wf.get('number_external')-1,
+                                 # For boson, need initial/final here
+                                 (-1)**(wf.get('state') == 'initial'))
+                else:
+                    call_function = lambda wf: call % \
+                                (wf.get('number')-1,
+                                 wf.get('number_external')-1,
+                                 'ZERO',
                                  # For boson, need initial/final here
                                  (-1)**(wf.get('state') == 'initial'))
             else:
