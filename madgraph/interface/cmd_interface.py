@@ -487,6 +487,21 @@ class HelpToCmd(object):
         logger.info("       output")
         logger.info("       output standalone_v4 MYRUN -d ../MG_ME -f")
         
+    def help_check(self):
+
+        logger.info("syntax: check " + "|".join(self._check_opts) + " process_definition")
+        logger.info("-- check a process or set of processes. Options:")
+        logger.info("full: Checks that the model and MG5 are working properly")
+        logger.info("   by generating the all permutations of the process and")
+        logger.info("   checking that the result of calculating the resulting")
+        logger.info("   matrix elements give the same result. For processes with")
+        logger.info("   gauge bosons, check gauge invariance.")
+        logger.info("quick: A faster version of the above checks.")
+        logger.info("   Only checks a subset of permutations.")
+        logger.info("gauge: Only check that processes with massless gauge bosons")
+        logger.info("   are gauge invariant")
+        logger.info("For process syntax, please see help generate")
+
     def help_generate(self):
 
         logger.info("syntax: generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N")
@@ -500,17 +515,6 @@ class HelpToCmd(object):
         logger.info("   Note that identical particles will all be decayed.")
         logger.info("To generate a second process use the \"add process\" command")
 
-    def help_check(self):
-
-        logger.info("syntax: check %s INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N" \
-                        % '|'.join(self._check_opts) )
-        logger.info("-- Checking consistency for a given process")
-        logger.info("   For more details on process syntax, type \"help generate\"")
-        logger.info("-- check aloha PROCESS :")
-        logger.info("   Checks that different combination of ALOHA routine provides the same value for the matrix element.")
-        logger.info("-- check gauge PROCESS :")
-        logger.info("   Checks that the diagram is gauge invariant (BRS test)")
-        
     def help_add(self):
 
         logger.info("syntax: add process INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2")
@@ -670,6 +674,32 @@ class CheckValidForCmd(object):
         
         self.check_output(args)
     
+    def check_check(self, args):
+        """check the validity of args"""
+        
+        if  not self._curr_model:
+            logger.info('No model currently active. Try with the Standard Model')
+            self.do_import('model sm')
+
+        if self._model_v4_path:
+            raise self.InvalidCmd(\
+                "\"check\" not possible for v4 models")
+
+        if len(args) < 2:
+            self.help_check()
+            raise self.InvalidCmd("\"check\" requires an argument and a process.")
+
+        if args[0] not in self._check_opts:
+            self.help_check()
+            raise self.InvalidCmd("\"check\" called with wrong argument")
+        
+        if any([',' in elem for elem in args]):
+            raise MadGraph5Error('Decay chains not allowed in check')
+        
+        self.check_process_format(" ".join(args[1:]))
+        
+        return True
+    
     def check_generate(self, args):
         """check the validity of args"""
         
@@ -679,53 +709,10 @@ class CheckValidForCmd(object):
 
         if len(args) < 1:
             self.help_generate()
-            raise self.InvalidCmd("\"generate\" requires an argument.")
-
-        check = False
-        if args[0] == 'check':
-            if self._model_v4_path:
-                raise self.InvalidCmd(\
-                    "\"generate check\" not possible for v4 models")
-            check = True
-            args = args[1:]
-            
-        if len(args) < 1:
-            self.help_generate()
-            raise self.InvalidCmd("\"generate check\" requires a process.")
+            raise self.InvalidCmd("\"generate\" requires a process.")
 
         self.check_process_format(" ".join(args))
-
-    def check_do_check(self, args):
-        """check the validity of args"""
-        
-        if  not self._curr_model:
-            logger.info('No model currently active. Try with the Standard Model')
-            self.do_import('model sm')
-
-        if len(args) == 1:
-            self.help_check()
-            raise self.InvalidCmd("\"check\" requires a process definition")
-        elif not len(args):
-            self.help_check()
-            raise self.InvalidCmd('\"check\" requires a mode of check')
-        
-        if args[0] not in self._check_opts:
-            self.help_check()
-            raise self.InvalidCmd('\"check option is not any of %s possibilies' % 
-                                                    ', '.join(self._check_opts))
-
-        if any([',' in elem for elem in args]):
-            raise MadGraph5Error('Decay chains not allowed in check')
-
-
-        if self._model_v4_path:
-            raise self.InvalidCmd(\
-                    "\"generate check\" not possible for v4 models")
-        
-        
-        
-        self.check_process_format(" ".join(args[1:]))
-        
+ 
         return True
     
     def check_process_format(self, process):
@@ -1057,6 +1044,13 @@ class CompleteForCmd(CheckValidForCmd):
         if len(split_arg(line[0:begidx])) == 1:
             return self.list_completion(text, self._add_opts)
         
+    def complete_check(self, text, line, begidx, endidx):
+        "Complete the add command"
+
+        # Format
+        if len(split_arg(line[0:begidx])) == 1:
+            return self.list_completion(text, self._check_opts)
+        
     def complete_tutorial(self, text, line, begidx, endidx):
         "Complete the tutorial command"
 
@@ -1075,15 +1069,6 @@ class CompleteForCmd(CheckValidForCmd):
 
         if len(args) == 2 and arg[0] == 'checks':
             return self.list_completion(text, 'failed')
-
-    def complete_check(self, text, line, begidx, endidx):
-        "Complete the display command"
-
-        args = split_arg(line[0:begidx])
-
-        # Format
-        if len(args) == 1:
-            return self.list_completion(text, self._check_opts)
 
     def complete_draw(self, text, line, begidx, endidx):
         "Complete the import command"
@@ -1255,7 +1240,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _tutorial_opts = ['start', 'stop']
-    _check_opts = ['aloha','gauge']
+    _check_opts = ['full', 'quick', 'gauge']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
     _export_formats = ['madevent_v4', 'standalone_v4', 'matrix_v4', 'pythia8']
 
@@ -1531,82 +1516,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                     get('particle_dict')[part_id].get_name() \
                                     for part_id in self._multiparticles[key]]))
             
-    # Generate a new amplitude
-    def do_check(self, line):
-        """Check an amplitude for a given process"""
-
-        args = split_arg(line)
-
-        # Check args validity
-        self.check_do_check(args)
-
-        # Reset Helas matrix elements
-        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-        self._generate_info = line
-        # Reset _done_export, since we have new process
-        self._done_export = False
-
-        if args[0] == 'aloha':
-            # Run matrix element generation check on processes
-
-            line = " ".join(args[1:])
-            myprocdef = self.extract_process(line)
-            # Check that we have something    
-            if not myprocdef:
-                raise MadGraph5Error("Empty or wrong format process, please try again.")
-
-            # Disable diagram generation logger
-            diag_logger = logging.getLogger('madgraph.diagram_generation')
-            old_level = diag_logger.setLevel(logging.WARNING)
-            
-            # run the check
-            cpu_time1 = time.time()
-            self._comparisons = process_checks.check_processes(myprocdef)
-            cpu_time2 = time.time()
-
-            logger.info(process_checks.output_comparisons(self._comparisons))
-
-            logger.info("%i processes with %i permutations checked in %0.3f s" \
-                        % (len(self._comparisons),
-                          len(sum([comp['values'] for comp in \
-                                   self._comparisons],[])),
-                          (cpu_time2 - cpu_time1)))
-            # Restore diagram logger
-            diag_logger.setLevel(old_level)
-
-            return
-        
-        elif args[0] == 'gauge':
-            # Run matrix element generation check on processes
-
-            line = " ".join(args[1:])
-            try:
-                if ',' not in line:
-                    myprocdef = self.extract_process(line)
-                else:
-                    raise MadGraph5Error('Decay chains not allowed in check')
-            except MadGraph5Error as error:
-                raise MadGraph5Error(str(error))
-
-            # Check that we have something    
-            if not myprocdef:
-                raise MadGraph5Error("Empty or wrong format process, please try again.")
-
-            # Disable diagram generation logger
-            diag_logger = logging.getLogger('madgraph.diagram_generation')
-            old_level = diag_logger.setLevel(logging.WARNING)
-            
-            # run the check
-            cpu_time1 = time.time()
-            process_checks.check_gauge(myprocdef)
-            cpu_time2 = time.time()
-
-            #logger.info("  checked in %0.3f s" \
-            #            % (cpu_time2 - cpu_time1))
-            # Restore diagram logger
-            diag_logger.setLevel(old_level)
-
-            return
+  
 
     def do_tutorial(self, line):
         """Activate/deactivate the tutorial mode."""
@@ -1660,6 +1570,89 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         logger.info('time to draw %s' % (stop - start)) 
     
     # Generate a new amplitude
+    def do_check(self, line):
+        """Check a given process or set of processes"""
+
+        args = split_arg(line)
+
+        # Check args validity
+        self.check_check(args)
+
+        if args[0] == 'full' or args[0] == 'quick':
+            # Run matrix element generation check on processes
+
+            line = " ".join(args[1:])
+            try:
+                if ',' not in line:
+                    myprocdef = self.extract_process(line)
+                else:
+                    raise MadGraph5Error('Decay chains not allowed in check')
+            except MadGraph5Error as error:
+                raise MadGraph5Error(str(error))
+
+            # Check that we have something    
+            if not myprocdef:
+                raise MadGraph5Error("Empty or wrong format process, please try again.")
+
+            # Disable diagram generation logger
+            diag_logger = logging.getLogger('madgraph.diagram_generation')
+            old_level = diag_logger.setLevel(logging.WARNING)
+            
+            # run the check
+            cpu_time1 = time.time()
+            if args[0] == 'quick':
+                self._comparisons = \
+                                  process_checks.check_processes(myprocdef,
+                                                                 quick = True)
+            else:
+                self._comparisons = process_checks.check_processes(myprocdef)
+            cpu_time2 = time.time()
+
+            logger.info(process_checks.output_comparisons(self._comparisons))
+
+            logger.info("%i processes with %i permutations checked in %0.3f s" \
+                        % (len(self._comparisons),
+                          len(sum([comp['values'] for comp in \
+                                   self._comparisons],[])),
+                          (cpu_time2 - cpu_time1)))
+            # Restore diagram logger
+            diag_logger.setLevel(old_level)
+
+        if args[0] == 'full' or args[0] == 'gauge':
+            # Run matrix element generation check on processes
+
+            line = " ".join(args[1:])
+            myprocdef = self.extract_process(line)
+            
+            # Check that we have something    
+            if not myprocdef:
+                raise MadGraph5Error("Empty or wrong format process, please try again.")
+
+            # Disable diagram generation logger
+            diag_logger = logging.getLogger('madgraph.diagram_generation')
+            old_level = diag_logger.setLevel(logging.WARNING)
+            
+            # run the check
+            cpu_time1 = time.time()
+            gauge_result = process_checks.check_gauge(myprocdef)
+            cpu_time2 = time.time()
+
+            logger.info('gauge results:')
+            
+            logger.info(process_checks.output_gauge(gauge_result))
+
+            logger.info("%i processes checked in %0.3f s" \
+                        % (len(gauge_result),
+                          (cpu_time2 - cpu_time1)))
+
+            #logger.info("  checked in %0.3f s" \
+            #            % (cpu_time2 - cpu_time1))
+            # Restore diagram logger
+            diag_logger.setLevel(old_level)
+
+            return
+    
+    # Generate a new amplitude
     def do_generate(self, line):
         """Generate an amplitude for a given process"""
 
@@ -1674,14 +1667,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Reset _done_export, since we have new process
         self._done_export = False
 
-        try:
-            if ',' not in line:
-                myprocdef = self.extract_process(line)
-            else:
-                myprocdef, line = self.extract_decay_chain_process(line)
-        except MadGraph5Error as error:
-            raise MadGraph5Error(str(error))
-        
+        # Extract process from process definition
+        myprocdef = self.extract_process(line)
+                
         # Check that we have something    
         if not myprocdef:
             raise MadGraph5Error("Empty or wrong format process, please try again.")

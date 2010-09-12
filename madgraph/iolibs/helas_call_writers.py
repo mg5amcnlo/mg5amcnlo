@@ -18,6 +18,11 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
 from madgraph import MadGraph5Error
 
+
+class HelasWriterError(Exception):
+    """Class for the error of this module """
+    pass
+
 #===============================================================================
 # HelasCallWriter
 #===============================================================================
@@ -918,7 +923,7 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
                 res.append(self.get_amplitude_call(amplitude))
 
         if gauge_check and not self.gauge_done:
-            raise MadGraph5Error, 'no massless spin one particle for gauge check'
+            raise HelasWriterError, 'no massless spin one particle for gauge check'
         return res
 
 

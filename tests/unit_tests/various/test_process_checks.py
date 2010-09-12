@@ -167,6 +167,10 @@ class TestMatrixElementChecker(unittest.TestCase):
 
         self.assertFalse(comparison['passed'])
 
+        comparison = process_checks.check_processes(myproc, quick = True)[0]
+
+        self.assertFalse(comparison['passed'])
+
 
         
 if __name__ == '__main__':

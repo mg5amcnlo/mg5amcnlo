@@ -139,7 +139,7 @@ def get_momenta(process, model, energy = 1000.):
 #===============================================================================
 # check_processes
 #===============================================================================
-def check_processes(processes, param_card = None):
+def check_processes(processes, param_card = None, quick = []):
     """Check processes by generating them with all possible orderings
     of particles (which means different diagram building and Helas
     calls), and comparing the resulting matrix element values."""
@@ -245,8 +245,29 @@ def check_processes(processes, param_card = None):
 
         process_matrix_elements = []
 
+        # For quick checks, only test twp permutations with leg "1" in
+        # each position
+        if quick:
+            leg_positions = [[] for leg in process.get('legs')]
+            quick = range(1,len(process.get('legs')) + 1)
         # Now, generate all possible permutations of the legs
         for legs in itertools.permutations(process.get('legs')):
+
+            if quick:
+                found_leg = True
+                for num in quick:
+                    # Only test one permutation for each position of the
+                    # specified legs
+                    leg_position = legs.index([l for l in legs if \
+                                               l.get('number') == num][0])
+
+                    if not leg_position in leg_positions[num-1]:
+                        found_leg = False
+                        leg_positions[num-1].append(leg_position)
+                        
+                if found_leg:
+                    continue
+                
             legs = base_objects.LegList(legs)
 
             if legs != process.get('legs'):
@@ -349,11 +370,11 @@ def check_processes(processes, param_card = None):
             # Evaluate the matrix element for the momenta p
             values.append(eval("Matrix().smatrix(p, full_model)"))
 
-            # Check if we failed badly - in that case done for
-            # this process
+            # Check if we failed badly (1% is already bad) - in that
+            # case done for this process
             if abs(max(values)) + abs(min(values)) > 0 and \
-                     abs(max(values) - min(values)) / \
-                     (abs(max(values)) + abs(min(values))) > 0.2:
+                   2 * abs(max(values) - min(values)) / \
+                   (abs(max(values)) + abs(min(values))) > 0.01:
                 break
 
 
@@ -441,6 +462,49 @@ def output_comparisons(comparison_results):
         res_str += "\nNot checked processes: %s" % ', '.join(no_check_proc_list)
 
     return res_str
+
+def output_gauge(comparison_results):
+    """Present the results of a comparison in a nice list format"""
+
+    proc_col_size = 17
+
+    for proc, value in comparison_results:
+        if len(proc) + 1 > proc_col_size:
+            proc_col_size = len(proc) + 1
+
+    col_size = 17
+
+    pass_proc = 0
+    fail_proc = 0
+
+    failed_proc_list = []
+    no_check_proc_list = []
+
+    res_str = fixed_string_length("Process", proc_col_size) + \
+              fixed_string_length("value", col_size) + \
+              "Result"
+
+    for proc, value in comparison_results:
+        res_str += '\n' + fixed_string_length(proc, proc_col_size) + \
+                    fixed_string_length("%1.10e" % value, col_size)
+                    
+        if value > 1e-16:
+            fail_proc += 1
+            failed_proc_list.append(proc)
+            res_str += "Failed"
+        else:
+            pass_proc += 1
+            res_str += "Passed"
+
+    res_str += "\nSummary: %i/%i passed, %i/%i failed" % \
+                (pass_proc, pass_proc + fail_proc,
+                 fail_proc, pass_proc + fail_proc)
+
+    if fail_proc != 0:
+        res_str += "\nFailed processes: %s" % ', '.join(failed_proc_list)
+
+    return res_str
+
 
 
 def fixed_string_length(mystr, length):
@@ -550,8 +614,8 @@ def check_gauge(processes, param_card = None):
         if not amplitude.get('diagrams'):
             # This process has no diagrams; go to next process
             logging.info("No diagrams for %s" % \
-                             newproc.nice_string().replace('Process', 'process'))
-            break
+                             process.nice_string().replace('Process', 'process'))
+            continue 
 
         # Generate the HelasMatrixElement for the process
         matrix_element = helas_objects.HelasMatrixElement(amplitude)
@@ -579,20 +643,17 @@ def check_gauge(processes, param_card = None):
         # Export the matrix element to Python calls
         exporter = export_python.ProcessExporterPython(matrix_element,
                                                            helas_writer)
-        matrix_methods = exporter.get_python_matrix_methods(gauge_check=True)
-
+        try:
+            matrix_methods = exporter.get_python_matrix_methods(gauge_check=True)
+        except helas_call_writer.HelasWriterError, error:
+            logger.info(error)
+            continue
         # Define the routines (locally is enough)
         exec(matrix_methods[process.shell_string()])
 
         # Evaluate the matrix element for the momenta p
         value = eval("Matrix().smatrix(p, full_model)")
-
-        if value > 1e-15:
-            logger.info('gauge check fail at level %s '% value)
-        else:
-            logger.info('gauge check pass result %s ' % value)
-        return
-
+        comparison_results.append((process.base_string(), value))
     return comparison_results
 
 
