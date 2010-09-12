@@ -283,8 +283,8 @@ class ProcessExporterPython(object):
             parameters.remove('ZERO')
 
         # Get all couplings used
-        couplings = list(set([func.get('coupling') for func in \
-                              matrix_element.get_all_wavefunctions() + \
+        couplings = list(set([func.get('coupling').replace('-', '') for func \
+                              in matrix_element.get_all_wavefunctions() + \
                               matrix_element.get_all_amplitudes()
                               if func.get('mothers')]))
         

@@ -485,6 +485,21 @@ class HelpToCmd(object):
         logger.info("       output")
         logger.info("       output standalone_v4 MYRUN -d ../MG_ME -f")
         
+    def help_check(self):
+
+        logger.info("syntax: check " + "|".join(self._check_opts) + " process definition")
+        logger.info("-- check a process or set of processes. Options:")
+        logger.info("full: Checks that the model and MG5 are working properly")
+        logger.info("   by generating the all permutations of the process and")
+        logger.info("   checking that the result of calculating the resulting")
+        logger.info("   matrix elements give the same result. For processes with")
+        logger.info("   gauge bosons, check gauge invariance.")
+        logger.info("quick: A faster version of the above checks.")
+        logger.info("   Only checks a subset of permutations.")
+        logger.info("gauge: Only check that processes with gauge bosons are gauge")
+        logger.info("   invariant")
+        logger.info("For process syntax, please see help generate")
+
     def help_generate(self):
 
         logger.info("syntax: generate [check] INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N")
@@ -496,9 +511,6 @@ class HelpToCmd(object):
         logger.info("   core process, decay1, (decay2, (decay2', ...)), ...  etc")
         logger.info("   Example: p p > t~ t QED=0, (t~ > W- b~, W- > l- vl~), t > j j b @2")
         logger.info("   Note that identical particles will all be decayed.")
-        logger.info("""If the \"check\" option is used, a check that the model and MG5
-   are working properly is done by generating the processes in all possible
-   ways, and comparing the result of running the corresponding matrix elements.""")
         logger.info("To generate a second process use the \"add process\" command")
 
     def help_add(self):
@@ -660,6 +672,29 @@ class CheckValidForCmd(object):
         
         self.check_output(args)
     
+    def check_check(self, args):
+        """check the validity of args"""
+        
+        if  not self._curr_model:
+            logger.info('No model currently active. Try with the Standard Model')
+            self.do_import('model sm')
+
+        if self._model_v4_path:
+            raise self.InvalidCmd(\
+                "\"check\" not possible for v4 models")
+
+        if len(args) < 2:
+            self.help_check()
+            raise self.InvalidCmd("\"check\" requires an argument and a process.")
+
+        if args[0] not in self._check_opts:
+            self.help_check()
+            raise self.InvalidCmd("\"check\" called with wrong argument")
+            
+        self.check_process_format(" ".join(args[1:]))
+        
+        return True
+    
     def check_generate(self, args):
         """check the validity of args"""
         
@@ -669,24 +704,9 @@ class CheckValidForCmd(object):
 
         if len(args) < 1:
             self.help_generate()
-            raise self.InvalidCmd("\"generate\" requires an argument.")
-
-        check = False
-        if args[0] == 'check':
-            if self._model_v4_path:
-                raise self.InvalidCmd(\
-                    "\"generate check\" not possible for v4 models")
-            check = True
-            args = args[1:]
-            
-        if len(args) < 1:
-            self.help_generate()
-            raise self.InvalidCmd("\"generate check\" requires a process.")
+            raise self.InvalidCmd("\"generate\" requires a process.")
 
         self.check_process_format(" ".join(args))
-        
-        if check:
-            args.insert(0, 'check')
         
         return True
     
@@ -1019,6 +1039,13 @@ class CompleteForCmd(CheckValidForCmd):
         if len(split_arg(line[0:begidx])) == 1:
             return self.list_completion(text, self._add_opts)
         
+    def complete_check(self, text, line, begidx, endidx):
+        "Complete the add command"
+
+        # Format
+        if len(split_arg(line[0:begidx])) == 1:
+            return self.list_completion(text, self._check_opts)
+        
     def complete_tutorial(self, text, line, begidx, endidx):
         "Complete the tutorial command"
 
@@ -1208,6 +1235,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _tutorial_opts = ['start', 'stop']
+    _check_opts = ['full', 'quick', 'gauge']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
     _export_formats = ['madevent_v4', 'standalone_v4', 'matrix_v4', 'pythia8']
 
@@ -1535,21 +1563,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         logger.info('time to draw %s' % (stop - start)) 
     
     # Generate a new amplitude
-    def do_generate(self, line):
-        """Generate an amplitude for a given process"""
+    def do_check(self, line):
+        """Check a given process or set of processes"""
 
         args = split_arg(line)
 
         # Check args validity
-        self.check_generate(args)
+        self.check_check(args)
 
-        # Reset Helas matrix elements
-        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-        self._generate_info = line
-        # Reset _done_export, since we have new process
-        self._done_export = False
-
-        if args[0] == 'check':
+        if args[0] == 'full' or args[0] == 'quick':
             # Run matrix element generation check on processes
 
             line = " ".join(args[1:])
@@ -1571,7 +1593,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             
             # run the check
             cpu_time1 = time.time()
-            self._comparisons = process_checks.check_processes(myprocdef)
+            if args[0] == 'quick':
+                self._comparisons = \
+                                  process_checks.check_processes(myprocdef,
+                                                                 quick = True)
+            else:
+                self._comparisons = process_checks.check_processes(myprocdef)
             cpu_time2 = time.time()
 
             logger.info(process_checks.output_comparisons(self._comparisons))
@@ -1586,7 +1613,23 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             return
         
-        # For normal operation mode (not check)
+    
+    # Generate a new amplitude
+    def do_generate(self, line):
+        """Generate an amplitude for a given process"""
+
+        args = split_arg(line)
+
+        # Check args validity
+        self.check_generate(args)
+
+        # Reset Helas matrix elements
+        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+        self._generate_info = line
+        # Reset _done_export, since we have new process
+        self._done_export = False
+
+        # Extract process from process definition
         try:
             if ',' not in line:
                 myprocdef = self.extract_process(line)

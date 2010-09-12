@@ -139,7 +139,7 @@ def get_momenta(process, model, energy = 1000.):
 #===============================================================================
 # check_processes
 #===============================================================================
-def check_processes(processes, param_card = None):
+def check_processes(processes, param_card = None, quick = []):
     """Check processes by generating them with all possible orderings
     of particles (which means different diagram building and Helas
     calls), and comparing the resulting matrix element values."""
@@ -245,8 +245,29 @@ def check_processes(processes, param_card = None):
 
         process_matrix_elements = []
 
+        # For quick checks, only test twp permutations with leg "1" in
+        # each position
+        if quick:
+            leg_positions = [[] for leg in process.get('legs')]
+            quick = range(1,len(process.get('legs')) + 1)
         # Now, generate all possible permutations of the legs
         for legs in itertools.permutations(process.get('legs')):
+
+            if quick:
+                found_leg = True
+                for num in quick:
+                    # Only test one permutation for each position of the
+                    # specified legs
+                    leg_position = legs.index([l for l in legs if \
+                                               l.get('number') == num][0])
+
+                    if not leg_position in leg_positions[num-1]:
+                        found_leg = False
+                        leg_positions[num-1].append(leg_position)
+                        
+                if found_leg:
+                    continue
+                
             legs = base_objects.LegList(legs)
 
             if legs != process.get('legs'):
@@ -349,11 +370,11 @@ def check_processes(processes, param_card = None):
             # Evaluate the matrix element for the momenta p
             values.append(eval("Matrix().smatrix(p, full_model)"))
 
-            # Check if we failed badly - in that case done for
-            # this process
+            # Check if we failed badly (1% is already bad) - in that
+            # case done for this process
             if abs(max(values)) + abs(min(values)) > 0 and \
-                     abs(max(values) - min(values)) / \
-                     (abs(max(values)) + abs(min(values))) > 0.2:
+                   2 * abs(max(values) - min(values)) / \
+                   (abs(max(values)) + abs(min(values))) > 0.01:
                 break
 
 
