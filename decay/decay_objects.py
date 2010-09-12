@@ -522,92 +522,102 @@ class DecayParticle(base_objects.Particle):
                 (partnum, False) in self['decay_channels'].keys():
                 return
             
+        # Find channels from 2-body decay to partnum-body decay channels.
+        for clevel in range(2, partnum+1):
+            self.find_channels_nextlevel(clevel, model)
+
+    def find_channels_nextlevel(self, clevel, model):
+        """ Find channels from all the existing lower level channels to 
+            the channels with level given by clevel. It is implemented when
+            the channels lower than clevel are all found. The user could
+            first setup channels by find_channels and then use this function
+            if they want to have high level decay."""
+
+        # Initialize the item in dictionary
+        self['decay_channels'][(clevel, True)] = ChannelList()
+        self['decay_channels'][(clevel, False)] = ChannelList()
+
         # The initial vertex (identical vertex).
         ini_vert = base_objects.Vertex({'id': 0, 'legs': base_objects.LegList([\
                    base_objects.Leg({'id':self.get_anti_pdg_code(), 
                                      'number':1, 'state': False}),
                    base_objects.Leg({'id':self.get_pdg_code(), 'number':2})])})
 
-        # Find channels from 2-body decay to partnum-body decay channels.
-        for clevel in range(2, partnum+1):
-            # Initialize the item in dictionary
-            self['decay_channels'][(clevel, True)] = ChannelList()
-            self['decay_channels'][(clevel, False)] = ChannelList()
-
-            # If there is a vertex in clevel, construct it
-            if (clevel, True) in self['decay_vertexlist'].keys() or \
-                    (clevel, False) in self['decay_vertexlist'].keys():
-                for vert in (self.get_vertexlist(clevel, True) + \
+        # If there is a vertex in clevel, construct it
+        if (clevel, True) in self['decay_vertexlist'].keys() or \
+                (clevel, False) in self['decay_vertexlist'].keys():
+            for vert in (self.get_vertexlist(clevel, True) + \
                              self.get_vertexlist(clevel, False)):
-                    temp_channel = Channel()
-                    temp_vert = copy.deepcopy(vert)
-                    # Set the leg number (starting from 2)
-                    [l.set('number', i+2) \
-                         for i, l in enumerate(temp_vert.get('legs'))]
-                    # The final one has 'number' as 2
-                    temp_vert.get('legs')[-1]['number'] = 2
-                    # Append the true vertex and then the ini_vert
-                    temp_channel['vertices'].append(temp_vert)
-                    temp_channel['vertices'].append(ini_vert)
-                    # Setup the 'has_idpart' property
-                    if self.check_idlegs(temp_vert):
-                        temp_channel['has_idpart'] = True
-                    self.get_channels(clevel, temp_channel.get_onshell(model)).\
-                        append(temp_channel)
+                temp_channel = Channel()
+                temp_vert = copy.deepcopy(vert)
+                # Set the leg number (starting from 2)
+                [l.set('number', i+2) \
+                     for i, l in enumerate(temp_vert.get('legs'))]
+                # The final one has 'number' as 2
+                temp_vert.get('legs')[-1]['number'] = 2
+                # Append the true vertex and then the ini_vert
+                temp_channel['vertices'].append(temp_vert)
+                temp_channel['vertices'].append(ini_vert)
+                # Setup the 'has_idpart' property
+                if Channel.check_idlegs(temp_vert):
+                    temp_channel['has_idpart'] = True
+                self.get_channels(clevel, temp_channel.get_onshell(model)).\
+                    append(temp_channel)
 
-            # Go through sub-channels and try to add vertex to reach partnum
-            for sub_clevel in range(max((clevel - model.get_max_vertexorder()+1),2), clevel):
-                # The vertex level that should be combine with sub_clevel
-                vlevel = clevel - sub_clevel+1
-                # Go through each 'off-shell' channel in the given sub_clevel.
-                # Decay of on-shell channel is not a new channel.
-                for sub_c in self.get_channels(sub_clevel, False):
-                    # Scan each leg to see if there is any appropriate vertex
-                    for index, leg in enumerate(sub_c.get_final_legs()):
-                        # Get the particle even for anti-particle leg.
-                        inter_part = model.get_particle(abs(leg['id']))
-                        # Get the vertexlist in vlevel
-                        # Both on-shell and off-shell vertex 
-                        # should be considered.
-                        try:
-                            vlist_a = inter_part.get_vertexlist(vlevel, True)
-                        except KeyError:
-                            vlist_a = []
-                        try:
-                            vlist_b = inter_part.get_vertexlist(vlevel, False)
-                        except KeyError:
-                            vlist_b = []
+        # Go through sub-channels and try to add vertex to reach partnum
+        for sub_clevel in range(max((clevel - model.get_max_vertexorder()+1),2),
+ clevel):
+            # The vertex level that should be combine with sub_clevel
+            vlevel = clevel - sub_clevel+1
+            # Go through each 'off-shell' channel in the given sub_clevel.
+            # Decay of on-shell channel is not a new channel.
+            for sub_c in self.get_channels(sub_clevel, False):
+                # Scan each leg to see if there is any appropriate vertex
+                for index, leg in enumerate(sub_c.get_final_legs()):
+                    # Get the particle even for anti-particle leg.
+                    inter_part = model.get_particle(abs(leg['id']))
+                    # Get the vertexlist in vlevel
+                    # Both on-shell and off-shell vertex 
+                    # should be considered.
+                    try:
+                        vlist_a = inter_part.get_vertexlist(vlevel, True)
+                    except KeyError:
+                        vlist_a = []
+                    try:
+                        vlist_b = inter_part.get_vertexlist(vlevel, False)
+                    except KeyError:
+                        vlist_b = []
 
-                        # Find appropriate vertex
-                        for vert in (vlist_a + vlist_b):
-                            # Connect sub_channel to the vertex
-                            # the connect_channel_vertex will
-                            # inherit the 'has_idpart' from sub_c
-                            temp_c = self.connect_channel_vertex(sub_c, index, 
-                                                                 vert, model)
-                            temp_c_o = temp_c.get_onshell(model)
-                            # Append this channel if not exist
-                            if not temp_c in self.get_channels(clevel,temp_c_o):
-                                # If temp_c has identical particles in it,
-                                # check with other existing channels from
-                                # duplication.
-                                if temp_c.get('has_idpart'):
-                                    if not self.check_repeat(clevel,
-                                                             temp_c_o, temp_c):
-                                        self.get_channels(clevel, temp_c_o).\
-                                            append(temp_c)
-                                # If no id. particles, append this channel.
-                                else:
+                    # Find appropriate vertex
+                    for vert in (vlist_a + vlist_b):
+                        # Connect sub_channel to the vertex
+                        # the connect_channel_vertex will
+                        # inherit the 'has_idpart' from sub_c
+                        temp_c = self.connect_channel_vertex(sub_c, index, 
+                                                             vert, model)
+                        temp_c_o = temp_c.get_onshell(model)
+                        # Append this channel if not exist
+                        if not temp_c in self.get_channels(clevel,temp_c_o):
+                            # If temp_c has identical particles in it,
+                            # check with other existing channels from
+                            # duplication.
+                            if temp_c.get('has_idpart'):
+                                if not self.check_repeat(clevel,
+                                                         temp_c_o, temp_c):
                                     self.get_channels(clevel, temp_c_o).\
                                         append(temp_c)
-
+                            # If no id. particles, append this channel.
+                            else:
+                                self.get_channels(clevel, temp_c_o).\
+                                    append(temp_c)
+        
 
     def connect_channel_vertex(self, sub_channel, index, vertex, model):
         """ Helper function to connect a vertex to one of the legs 
             in the channel. The argument 'index' specified the position of
-            the leg which will be connected with vertex.
-            If leg is for anti-particle, the vertex will be transform into 
-            anti-part with minus vertex id."""
+            the leg in sub_channel final_legs which will be connected with 
+            vertex. If leg is for anti-particle, the vertex will be transform
+            into anti-part with minus vertex id."""
 
         # Copy the vertex to prevent the change of leg number
         new_vertex = copy.deepcopy(vertex)
@@ -645,53 +655,21 @@ class DecayParticle(base_objects.Particle):
         new_channel['vertices'].extend(sub_channel['vertices'])
         # Setup properties of new_channel
         new_channel.get_onshell(model)
-        # Descendent of a channel with identicle particles has the same
-        # attribute. (but 'idpart_list' will change and should not be inherited)
-        new_channel['has_idpart'] = sub_channel['has_idpart']
+        # The 'has_idpart' property of descendent of a channel 
+        # must derive from the mother channel and the vertex
+        # (but 'idpart_list' will change and should not be inherited)
+        new_channel['has_idpart'] = (sub_channel['has_idpart'] or \
+                                         Channel.check_idlegs(vertex))
 
         return new_channel
 
-    def check_idlegs(self, vert):
-        """ Helper function to check if the vertex has several identical legs.
-            Return True if id_legs exist, otherwise False.
-        """
-        pid_list = []
-        for l in vert['legs']:
-            if l['id'] in pid_list:
-                return True
-            else:
-                pid_list.append(l['id'])
-
-        return False
-
     def check_repeat(self, clevel, onshell, channel):
-        """ Helper function to check if any channel is indeed identical
-            the given channel. (This mat happens when identical particle in
-            channel)"""
+        """ Check whether there is any equivalent channels with the given 
+            channel. Use the check_channels_equiv function."""
         pass
-        """# Return if the channel has no identical particle.
-        if not channel.get('has_idpart'):
-            return False
-        
-        # Get the identical particle info and final state of channel
-        final_pid_set = set([l.get('id') for l in channel.get_final_legs()])
-        id_partlist = channel.get_idpartlist()
-        for id_part in id_partlist:
-            
-
-        for other_c in self.get_channels(clevel, onshell):
-            # Continue if this channel has no identical particle.
-            if not other_c.get('has_idpart'):
-                continue
-            final_pid_set_o = set([l.get('id') \
-                                       for l in other_c.get_final_legs()])
-
-            # Continue if the two channels have different final state
-            if final_pid_set_o != final_pid_set:
-                continue
-
-            id_partlist_o = other_c.get_idpartlist()"""
-            
+        """for other_c in self.get_channels(clevel, onshell):
+            self.check_channels_equiv(other_c, channel)"""
+    
     # This helper function is useless in current algorithm...
     def generate_configlist(self, channel, partnum, model):
         """ Helper function to generate all the configuration to add
@@ -1787,6 +1765,35 @@ class Channel(base_objects.Diagram):
 
         return self['onshell']
 
+    @staticmethod
+    def check_idlegs(vert):
+        """ Helper function to check if the vertex has several identical legs.
+            If id_legs exist, return a tuple of 
+            (vertex id, leg id, [leg index1, index2, ...])
+            Otherwise return False.
+        """
+        lindex_dict = {}
+        idpart_list = []
+        # Record the occurence of each leg.
+        for lindex, leg in enumerate(vert.get('legs')):
+            try:
+                lindex_dict[leg['id']].append(lindex)
+            except KeyError:
+                lindex_dict[leg['id']] = [lindex]
+
+        for key, indexlist in lindex_dict.items():
+            # If more than one index for a key, 
+            # there are identical particles.
+            if len(indexlist) > 1:
+                # Record the index of vertex, vertex id (interaction id),
+                # leg id, and the list of leg index.
+                idpart_list.append((vert.get('id'), key, indexlist))
+
+        if not idpart_list:
+            return False
+        else:
+            return idpart_list
+
     def get_idpartlist(self):
         """ Get the position of identical particles in this channel.
             The format of idpart_list is a dictionary with the vertex
@@ -1799,30 +1806,51 @@ class Channel(base_objects.Diagram):
 
         # Look if there is any two more leg with the same id within a vertex.
         for vindex, vert in enumerate(self.get('vertices')):
-            lindex_dict = {}
-            pid_list = []
-            # Record the occurence of each leg.
-            for lindex, leg in enumerate(vert.get('legs')):
-                try:
-                    lindex_dict[leg['id']].append(lindex)
-                except KeyError:
-                    lindex_dict[leg['id']] = [lindex]
+            # Use the idpart_list given by check_idlegs
+            idpart_list = Channel.check_idlegs(vert)
+            if idpart_list:
+                # Record the idpart_list if exists.
+                self['idpart_list'][vindex] = idpart_list
+                self['has_idpart'] = True
 
-            for key, indexlist in lindex_dict.items():
-                # If more than one index for a key, 
-                # there are identical particles.
-                if len(indexlist) > 1:
-                    self['has_idpart'] = True
-                    # Record the index of vertex, leg id, and 
-                    # the list of leg index.
-                    try:
-                        self['idpart_list'][vindex].append((key, indexlist))
-                    except KeyError:
-                        self['idpart_list'][vindex] = [(key, indexlist)]
+        return self['idpart_list']                
+                
+    @staticmethod
+    def check_channels_equiv(channel_a, channel_b):
+        """ Helper function to check if any channel is indeed identical
+            the given channel. (This mat happens when identical particle in
+            channel)"""
 
-        return self['idpart_list']
-                
-                
+        # Return if the channel has no identical particle.
+        if not channel_a.get('has_idpart') or not channel_b.get('has_idpart'):
+            return False
+        
+        # Get the identical particle info and final state of channel
+        final_pid_a = set([l.get('id') for l in channel_a.get_final_legs()])
+        id_partlist_a = channel_a.get_idpartlist()
+        final_pid_b = set([l.get('id') for l in channel_b.get_final_legs()])
+        id_partlist_b = channel_b.get_idpartlist()
+
+        # The decay chain before the first identicle particles 
+        # of the two channels must be the same.
+        first_idpart_a = max([vindex for vindex in id_partlist_a.keys()])
+        first_idpart_b = max([vindex for vindex in id_partlist_b.keys()])
+        if channel_a.get('vertices')[first_idpart_a:] != \
+                channel_b.get('vertices')[first_idpart_b:]:
+            return False
+
+        # Compare the identicle particles in both channels
+        # including the vertex id, particle id, leg id
+        if set([id_part for key, id_part in id_partlist_a.items()]) != \
+                set([id_part for key, id_part in id_partlist_b.items()]):
+            return False
+
+        """self.check_vertex_equiv(channel_a, -1, channel_b, -1)"""
+
+    @staticmethod
+    def check_channels_vertex_equiv(channel_a, vid_a, channel_b, vid_b):
+        pass
+
     def get_apx_matrixelement(self):
         """calculate the apx_matrixelement"""
         pass

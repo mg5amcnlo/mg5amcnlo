@@ -1,4 +1,22 @@
-{(32, -6): {
+{(40, 25): {
+    'id': 40,
+    'legs': [{
+    'id': -6,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 6,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 25,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}]
+}, (32, -6): {
     'id': 32,
     'legs': [{
     'id': -24,
@@ -66,6 +84,24 @@
     'from_group': True
 }, {
     'id': -24,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}]
+}, (6, 25): {
+    'id': 6,
+    'legs': [{
+    'id': -24,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 24,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 25,
     'number': 0,
     'state': True,
     'from_group': True
@@ -138,6 +174,24 @@
     'from_group': True
 }, {
     'id': -5,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}]
+}, (26, 25): {
+    'id': 26,
+    'legs': [{
+    'id': -5,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 5,
+    'number': 0,
+    'state': True,
+    'from_group': True
+}, {
+    'id': 25,
     'number': 0,
     'state': True,
     'from_group': True

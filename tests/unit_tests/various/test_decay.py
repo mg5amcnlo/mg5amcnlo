@@ -518,7 +518,7 @@ class TestDecayModel(unittest.TestCase):
         #My_small sm DecayModel
         self.my_testmodel = decay_objects.DecayModel(self.my_testmodel_base)
         param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')
-        #self.my_testmodel.read_param_card(param_path)
+        self.my_testmodel.read_param_card(param_path)
 
         # Simplify the model
         particles = self.my_testmodel.get('particles')
@@ -673,7 +673,7 @@ class TestDecayModel(unittest.TestCase):
         """Test finding the decay groups of the MSSM"""
 
         mssm = import_ufo.import_model('mssm')
-        decay_mssm = decay_objects.DecayModel(mssm)
+        #decay_mssm = decay_objects.DecayModel(mssm)
         # Read data to find massless SM-like particle
         param_path = os.path.join(_file_path,
                                   '../input_files/param_card_mssm.dat')
@@ -933,14 +933,16 @@ class Test_Channel(unittest.TestCase):
         #print self.h_tt_bbmmvv.nice_string()
         h_tt_bwbmuvm.get_onshell(self.my_testmodel)
         self.assertEqual(new_channel, h_tt_bwbmuvm)
+        
 
         # Test of check_idlegs
         temp_vert = copy.deepcopy(vertexlist[2])
         temp_vert['legs'].insert(2, temp_vert['legs'][1])
         temp_vert['legs'][2]['number'] = 4
         #print temp_vert
-        self.assertFalse(higgs.check_idlegs(vertexlist[2]))
-        self.assertTrue(higgs.check_idlegs(temp_vert))
+        self.assertFalse(decay_objects.Channel.check_idlegs(vertexlist[2]))
+        self.assertEqual(decay_objects.Channel.check_idlegs(temp_vert),
+                         [(35, 24, [1, 2])])
 
         # Test of get_idpart
         temp_vert2 = copy.deepcopy(temp_vert)
@@ -948,9 +950,13 @@ class Test_Channel(unittest.TestCase):
         temp_vert2['legs'].insert(4, temp_vert['legs'][0])
         #print temp_vert2
         idpart_c = decay_objects.Channel({'vertices': \
-                              base_objects.VertexList([temp_vert, temp_vert2])})
+                              base_objects.VertexList([temp_vert])})
+        idpart_c = higgs.connect_channel_vertex(idpart_c, 1, temp_vert2, 
+                                                self.my_testmodel)
         self.assertEqual(idpart_c.get_idpartlist(),
-                         {0: [(24,[1, 2])], 1:[(24,[1,2]),(5, [0,3,4])]})
+                         {1: [(35, 24,[1, 2])], 
+                          0: [(35, 24,[1, 2]), (35, 5, [0,3,4])]})
+        self.assertTrue(idpart_c.get('has_idpart'))
 
     def test_findchannels(self):
         """ Test of the find_channels functions."""
@@ -976,7 +982,7 @@ class Test_Channel(unittest.TestCase):
         higgs.find_channels(6, self.my_testmodel)
         #print higgs.get('decay_channels').keys()
         result = higgs.get_channels(5, True)
-        #print result.nice_string()
+        print result.nice_string()
         #self.assertEqual(result, self.h_tt_bbmmvv)
         
                                            
