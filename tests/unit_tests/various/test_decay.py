@@ -508,8 +508,8 @@ class TestDecayParticleList(unittest.TestCase):
 class TestDecayModel(unittest.TestCase):
     """Test class for the DecayModel object"""
 
-    base_model = import_ufo.import_model('sm')
-    my_testmodel_base = import_ufo.import_model('sm')
+    base_model = import_ufo.import_model('mssm')
+    my_testmodel_base = import_ufo.import_model('mssm')
     def setUp(self):
         """Set up decay model"""
         #Full SM DecayModel
@@ -517,8 +517,8 @@ class TestDecayModel(unittest.TestCase):
 
         #My_small sm DecayModel
         self.my_testmodel = decay_objects.DecayModel(self.my_testmodel_base)
-        param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')
-        self.my_testmodel.read_param_card(param_path)
+        #param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')
+        #self.my_testmodel.read_param_card(param_path)
 
         # Simplify the model
         particles = self.my_testmodel.get('particles')
@@ -546,7 +546,7 @@ class TestDecayModel(unittest.TestCase):
 
     def test_read_param_card(self):
         """Test reading a param card"""
-        param_path = os.path.join(_file_path, '../input_files/param_card_sm.dat')
+        param_path = os.path.join(_file_path, '../input_files/param_card_mssm.dat')
         self.decay_model.read_param_card(os.path.join(param_path))
 
         for param in sum([self.base_model.get('parameters')[key] for key \
@@ -800,7 +800,7 @@ class Test_Channel(unittest.TestCase):
         interactions = self.my_testmodel.get('interactions')
         inter_list = copy.copy(interactions)
         # Pids that will be removed
-        no_want_pid = [1, 2, 3, 4, 13, 14, 15, 16, 21, 23]
+        no_want_pid = [1, 2, 3, 4, 15, 16, 21, 23]
         for pid in no_want_pid:
             particles.remove(self.my_testmodel.get_particle(pid))
 
@@ -858,7 +858,7 @@ class Test_Channel(unittest.TestCase):
                                              vert_5, vert_4, vert_3, vert_2, \
                                              vert_1, vert_0])})
 
-        #print len(self.h_tt_bbmmvv['vertices'])
+        #print self.h_tt_bbmmvv.nice_string()
         #pic = drawing_eps.EpsDiagramDrawer(self.h_tt_bbmmvv, 'h_tt_bbmmvv', self.my_testmodel)
         #pic.draw()
 
@@ -940,11 +940,11 @@ class Test_Channel(unittest.TestCase):
         temp_vert['legs'].insert(2, temp_vert['legs'][1])
         temp_vert['legs'][2]['number'] = 4
         #print temp_vert
-        self.assertFalse(decay_objects.Channel.check_idlegs(vertexlist[2]))
+        self.assertEqual(decay_objects.Channel.check_idlegs(vertexlist[2]), {})
         self.assertEqual(decay_objects.Channel.check_idlegs(temp_vert),
-                         [(35, 24, [1, 2])])
+                         {24: [1, 2]})
 
-        # Test of get_idpart
+        # Test of get_idpartlist
         temp_vert2 = copy.deepcopy(temp_vert)
         temp_vert2['legs'].insert(3, temp_vert['legs'][0])
         temp_vert2['legs'].insert(4, temp_vert['legs'][0])
@@ -953,11 +953,174 @@ class Test_Channel(unittest.TestCase):
                               base_objects.VertexList([temp_vert])})
         idpart_c = higgs.connect_channel_vertex(idpart_c, 1, temp_vert2, 
                                                 self.my_testmodel)
+
         self.assertEqual(idpart_c.get_idpartlist(),
-                         {1: [(35, 24,[1, 2])], 
-                          0: [(35, 24,[1, 2]), (35, 5, [0,3,4])]})
+                         {(1, 35, 24): [1, 2], 
+                          (0, 35, 24): [1, 2],
+                          (0, 35, 5):  [0,3,4]})
         self.assertTrue(idpart_c.get('has_idpart'))
 
+        # Test of generate_configs
+        test_list = {21: [1,4,6], 25: [2, 3, 7, 9]}
+        goal_configs = {21: [[1,4,6], [1,6,4], [4,1,6], [4,6,1], 
+                             [6,1,4], [6,4,1]],
+                        25: [[2,3,7,9], [2,3,9,7], [2,7,3,9], [2,7,9,3],
+                             [2,9,3,7], [2,9,7,3],
+                             [3,2,7,9], [3,2,9,7], [3,7,2,9], [3,7,9,2],
+                             [3,9,2,7], [3,9,7,2],
+                             [7,2,3,9], [7,2,9,3], [7,3,2,9], [7,3,9,2],
+                             [7,9,2,3], [7,9,3,2],
+                             [9,2,3,7], [9,2,7,3], [9,3,2,7], [9,3,7,2],
+                             [9,7,2,3], [9,7,3,2]]}
+        self.assertEqual(decay_objects.Channel.generate_configs(test_list),
+                         goal_configs)
+
+        # Test of check_channels_equiv
+        # Create several non-realistic vertex
+        vert_1_id = copy.deepcopy(vertexlist[4])
+        vert_1_id.set('id', 80)
+        vert_1_id.get('legs').insert(2, copy.copy(vert_1_id.get('legs')[1]))
+        vert_1_id.get('legs').insert(3, copy.copy(vert_1_id.get('legs')[0]))
+        vert_1_id.get('legs').insert(4, copy.copy(vert_1_id.get('legs')[0]))
+        vert_1_id.get('legs')[2]['number'] = 4
+        vert_1_id.get('legs')[3]['number'] = 5
+        vert_1_id.get('legs')[4]['number'] = 6
+
+        vert_2_id = copy.deepcopy(vertexlist[2])
+        vert_2_id.set('id', 90)
+        vert_2_id.get('legs').insert(2, copy.copy(vert_2_id.get('legs')[1]))
+        vert_2_id.get('legs')[2]['number'] = 0
+
+        w_muvmu = copy.deepcopy(vertexlist[0])
+        w_muvmu.set('id', 100)
+        w_muvmu.get('legs')[0].set('id', -13)
+        w_muvmu.get('legs')[1].set('id', 14)
+
+        # Nice string for channel_a:
+        # ((8(13),12(-14)>8(-24),id:-100), (7(11),11(-12)>7(-24),id:-44),
+        #  (5(-5),10(-24)>5(-6),id:-35),(4(5),9(24)>4(6),id:35),
+        #  (2(-5),7(-24),8(-24)>2(-6),id:-90),
+        #  (2(-6),3(6),4(6),5(-6),6(6)>2(25),id:80),(2(25),1(25),id:0)) ()
+        
+        # Nice string of channel_b:
+        #((10(11),12(-12)>10(-24),id:-44),(9(13),11(-14)>9(-24),id:-100),
+        # (6(-5),9(-24),10(-24)>6(-6),id:-90),(3(5),8(24)>3(6),id:35),
+        # (2(-5),7(-24)>2(-6),id:-35),
+        # (2(-6),3(6),4(6),5(-6),6(-6)>2(25),id:80),(2(25),1(25),id:0)) ()
+
+        # Nice string of channel_c:
+        #((10(13),12(-14)>10(-24),id:-100),(9(13),11(-14)>9(-24),id:-100),
+        # (6(-5),9(-24),10(-24)>6(-6),id:-90),(3(5),8(24)>3(6),id:35),
+        # (2(-5),7(-24)>2(-6),id:-35),
+        # (2(-6),3(6),4(6),5(-6),6(-6)>2(25),id:80),(2(25),1(25),id:0)) ()
+
+        # Initiate channel_a
+        # h > t~ t t t~ t~
+        channel_a = decay_objects.Channel({'vertices': base_objects.VertexList(\
+                    [vert_1_id, vertexlist[5]])})
+        # Add t~ > b~ w- w- to first t~
+        channel_a = higgs.connect_channel_vertex(channel_a, 0,
+                                                 vert_2_id,
+                                                 self.my_testmodel)
+        #print channel_a.nice_string()
+        # Add t > b w+ to 2nd t
+        channel_a = higgs.connect_channel_vertex(channel_a, 4,
+                                                 vertexlist[2],
+                                                 self.my_testmodel)
+        #print channel_a.nice_string()
+        # Add t~ > b~ w- to 2nd t~
+        channel_a = higgs.connect_channel_vertex(channel_a, 6,
+                                                 vertexlist[2],
+                                                 self.my_testmodel)
+        #print channel_a.nice_string()
+        # Add w- > e- ve~ to first w- in t~ decay chain
+        channel_a = higgs.connect_channel_vertex(channel_a, 5,
+                                                 vertexlist[0],
+                                                 self.my_testmodel)
+        #print channel_a.nice_string()
+        # Add w- > mu vm~ to 2nd w- in t~ decay chain
+        channel_a = higgs.connect_channel_vertex(channel_a, 7,
+                                                 w_muvmu,
+                                                 self.my_testmodel)
+        #print 'Channel_a:\n', channel_a.nice_string()
+        
+        # Initiate channel_b
+        # h > t~ t t t~ t~
+        channel_b = decay_objects.Channel({'vertices': base_objects.VertexList(\
+                    [vert_1_id, vertexlist[5]])})
+
+        # Add t > b w+ to 1st t
+        channel_b = higgs.connect_channel_vertex(channel_b, 0,
+                                                 vertexlist[2],
+                                                 self.my_testmodel)
+        #print '\n', channel_b.nice_string()
+
+        # Add t~ > b~ w- to 1st t~
+        channel_b = higgs.connect_channel_vertex(channel_b, 2,
+                                                 vertexlist[2],
+                                                 self.my_testmodel)
+        #print channel_b.nice_string()
+
+        # Add t~ > b~ w- w- to final t~
+        channel_b = higgs.connect_channel_vertex(channel_b, 6,
+                                                 vert_2_id,
+                                                 self.my_testmodel)
+        #print channel_b.nice_string()
+
+        # Add w- > e- ve~ to 2nd w- in t~ decay chain
+        channel_b = higgs.connect_channel_vertex(channel_b, 1,
+                                                 w_muvmu,
+                                                 self.my_testmodel)
+        #print channel_b.nice_string()
+
+        # Add w- > mu vm~ to 1st w- in t~ decay chain
+        channel_b = higgs.connect_channel_vertex(channel_b, 3,
+                                                 vertexlist[0],
+                                                 self.my_testmodel)
+        #print 'Channel_b:\n', channel_b.nice_string()
+
+        # h > t~ t t t~ t~
+        channel_c = decay_objects.Channel({'vertices': base_objects.VertexList(\
+                    [vert_1_id, vertexlist[5]])})
+
+        # Add t > b w+ to 1st t
+        channel_c = higgs.connect_channel_vertex(channel_c, 0,
+                                                 vertexlist[2],
+                                                 self.my_testmodel)
+        #print '\n', channel_c.nice_string()
+
+        # Initiate channel_c
+        # Add t~ > b~ w- to 1st t~
+        channel_c = higgs.connect_channel_vertex(channel_c, 2,
+                                                 vertexlist[2],
+                                                 self.my_testmodel)
+        #print channel_c.nice_string()
+
+        # Add t~ > b~ w- w- to final t~
+        channel_c = higgs.connect_channel_vertex(channel_c, 6,
+                                                 vert_2_id,
+                                                 self.my_testmodel)
+        #print channel_c.nice_string()
+
+        # Add w- > e- ve~ to 2nd w- in t~ decay chain
+        channel_c = higgs.connect_channel_vertex(channel_c, 1,
+                                                 w_muvmu,
+                                                 self.my_testmodel)
+        #print channel_c.nice_string()
+
+        # Add w- > mu vm~ to 1st w- in t~ decay chain
+        channel_c = higgs.connect_channel_vertex(channel_c, 3,
+                                                 w_muvmu,
+                                                 self.my_testmodel)
+        #print 'Channel_c:\n', channel_c.nice_string()
+        self.assertTrue(decay_objects.Channel.check_channels_equiv_rec(channel_a, 4, channel_b, 2))                        
+        self.assertTrue(decay_objects.Channel.check_channels_equiv_rec(channel_a, -1, channel_b, -1))
+        self.assertFalse(decay_objects.Channel.check_channels_equiv_rec(channel_a, -1, channel_c, -1))
+
+        self.assertTrue(decay_objects.Channel.check_channels_equiv(channel_a,
+                                                                   channel_b))
+        self.assertFalse(decay_objects.Channel.check_channels_equiv(channel_a,
+                                                                    channel_c))
     def test_findchannels(self):
         """ Test of the find_channels functions."""
 
@@ -982,7 +1145,7 @@ class Test_Channel(unittest.TestCase):
         higgs.find_channels(6, self.my_testmodel)
         #print higgs.get('decay_channels').keys()
         result = higgs.get_channels(5, True)
-        print result.nice_string()
+        #print result.nice_string()
         #self.assertEqual(result, self.h_tt_bbmmvv)
         
                                            

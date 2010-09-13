@@ -22,6 +22,7 @@ import logging
 import math
 import os
 import re
+import sys
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -657,9 +658,9 @@ class DecayParticle(base_objects.Particle):
         new_channel.get_onshell(model)
         # The 'has_idpart' property of descendent of a channel 
         # must derive from the mother channel and the vertex
-        # (but 'idpart_list' will change and should not be inherited)
+        # (but 'id_part_list' will change and should not be inherited)
         new_channel['has_idpart'] = (sub_channel['has_idpart'] or \
-                                         Channel.check_idlegs(vertex))
+                                         bool(Channel.check_idlegs(vertex)))
 
         return new_channel
 
@@ -1685,7 +1686,7 @@ class Channel(base_objects.Diagram):
 
     sorted_keys = ['vertices',
                    'orders',
-                   'onshell', 'has_idpart', 'id_partlist',
+                   'onshell', 'has_idpart', 'id_part_list',
                    'apx_matrixelement', 'apx_PSarea', 'apx_decaywidth']
 
     def default_setup(self):
@@ -1699,7 +1700,7 @@ class Channel(base_objects.Diagram):
         # identical particles in it.
         self['has_idpart'] = False
         # The position of the identicle particles.
-        self['idpart_list'] = {}
+        self['id_part_list'] = {}
         # Decay width related properties.
         self['apx_matrixelement'] = 0.
         self['apx_PSarea'] = 0.
@@ -1768,12 +1769,12 @@ class Channel(base_objects.Diagram):
     @staticmethod
     def check_idlegs(vert):
         """ Helper function to check if the vertex has several identical legs.
-            If id_legs exist, return a tuple of 
-            (vertex id, leg id, [leg index1, index2, ...])
+            If id_legs exist, return a dict in the following format,
+            {particle_id: [leg_index1, index2, ...]}
             Otherwise return False.
         """
         lindex_dict = {}
-        idpart_list = []
+        id_part_list = {}
         # Record the occurence of each leg.
         for lindex, leg in enumerate(vert.get('legs')):
             try:
@@ -1787,69 +1788,237 @@ class Channel(base_objects.Diagram):
             if len(indexlist) > 1:
                 # Record the index of vertex, vertex id (interaction id),
                 # leg id, and the list of leg index.
-                idpart_list.append((vert.get('id'), key, indexlist))
+                id_part_list[key] = indexlist
 
-        if not idpart_list:
-            return False
-        else:
-            return idpart_list
+        return id_part_list
 
     def get_idpartlist(self):
         """ Get the position of identical particles in this channel.
-            The format of idpart_list is a dictionary with the vertex
+            The format of id_part_list is a dictionary with the vertex
             which has identical particles, value is the particle id and
             leg index of identicle particles. Eg.
-            idpart_list = {vertex_index_1: [(pid_1, [index_1, index_2, ..]),
-                                            (pid_2, [index_1, index_2, ..])],
-                           vertex_index_2...}
+            id_part_list = {(vertex_index_1, vertex id, pid_1): 
+                           [index_1, index_2, ..],
+                           (vertex_index_1, vertex id, pid_2): 
+                           [index_1, index_2, ..],
+                           (vertex_index_2,...): ...}
         """
 
-        # Look if there is any two more leg with the same id within a vertex.
-        for vindex, vert in enumerate(self.get('vertices')):
-            # Use the idpart_list given by check_idlegs
-            idpart_list = Channel.check_idlegs(vert)
-            if idpart_list:
-                # Record the idpart_list if exists.
-                self['idpart_list'][vindex] = idpart_list
-                self['has_idpart'] = True
+        if not self['id_part_list']:
+            # Check each vertex by check_idlegs
+            for vindex, vert in enumerate(self.get('vertices')):
+                # Use the id_part_list given by check_idlegs
+                id_part_list = Channel.check_idlegs(vert)
+                if id_part_list:
+                    for key, idpartlist in id_part_list.items():
+                        # Record the id_part_list if exists.
+                        self['id_part_list'][(vindex, vert.get('id'), 
+                                             key)] = id_part_list[key]
+                        self['has_idpart'] = True
 
-        return self['idpart_list']                
+        return self['id_part_list']
                 
     @staticmethod
     def check_channels_equiv(channel_a, channel_b):
-        """ Helper function to check if any channel is indeed identical
-            the given channel. (This mat happens when identical particle in
-            channel)"""
+        """ Helper function to check if any channel is indeed identical to
+            the given channel. (This may happens when identical particle in
+            channel.) This function check the 'has_idpart' and the final
+            state particles of the two channels. Then check the equivalence
+            by the recursive "check_channels_equiv_rec" function."""
 
         # Return if the channel has no identical particle.
         if not channel_a.get('has_idpart') or not channel_b.get('has_idpart'):
             return False
         
-        # Get the identical particle info and final state of channel
+        # Get the final states of channels
         final_pid_a = set([l.get('id') for l in channel_a.get_final_legs()])
-        id_partlist_a = channel_a.get_idpartlist()
         final_pid_b = set([l.get('id') for l in channel_b.get_final_legs()])
-        id_partlist_b = channel_b.get_idpartlist()
-
-        # The decay chain before the first identicle particles 
-        # of the two channels must be the same.
-        first_idpart_a = max([vindex for vindex in id_partlist_a.keys()])
-        first_idpart_b = max([vindex for vindex in id_partlist_b.keys()])
-        if channel_a.get('vertices')[first_idpart_a:] != \
-                channel_b.get('vertices')[first_idpart_b:]:
+        # Return False if they are not the same
+        if final_pid_a != final_pid_b:
             return False
 
-        # Compare the identicle particles in both channels
-        # including the vertex id, particle id, leg id
-        if set([id_part for key, id_part in id_partlist_a.items()]) != \
-                set([id_part for key, id_part in id_partlist_b.items()]):
-            return False
-
-        """self.check_vertex_equiv(channel_a, -1, channel_b, -1)"""
+        # Recursively check the two channels from the final vertices
+        # (the origin of decay.)
+        return Channel.check_channels_equiv_rec(channel_a, -1, channel_b, -1)
 
     @staticmethod
-    def check_channels_vertex_equiv(channel_a, vid_a, channel_b, vid_b):
-        pass
+    def check_channels_equiv_rec(channel_a, vindex_a, channel_b, vindex_b):
+        """ The recursive function to check the equivalence of channels 
+            starting from the given vertex point.
+            Algorithm:
+            1. Check if the two vertices are the same (in id).
+            2. Compare each the non-identical legs. Either they are both 
+               final legs or their decay chain are the same. The comparision
+               of decay chain is via recursive call of check_channels_equiv_rec
+            3. Check all the identical particle legs, try all the possible
+               configuration of each kind of identical particles. 
+               (e.g. if there are three Z boson, there are 3! = 6 configurations
+               to compare them between the two channels.) All the 
+               possible configuration is generated by generate_configlist.
+               If the decay chains are the same for one configuration,
+               these identical particle legs are the same.
+            4. If the two channels are the same for all the non-identical legs
+               and are the same for every kind of identical particle,
+               the two channels are the same from the given vertices."""
+        
+        # If vindex_a or vindex_b not in the normal range of index
+        # convert it. (e.g. vindex_b = -1)
+        vindex_a = vindex_a % len(channel_a.get('vertices'))        
+        vindex_b = vindex_b % len(channel_b.get('vertices'))
+
+        # First compare the id of the two vertices.
+        # Do not compare them directly because the number property of legs
+        # may be different.
+        # If vertex id is the same, then the legs id are all the same!
+        if channel_a.get('vertices')[vindex_a]['id'] != \
+                channel_b.get('vertices')[vindex_b]['id']:
+            return False
+        
+        # Find the list of identical particles
+        id_part_list_a=Channel.check_idlegs(channel_a.get('vertices')[vindex_a])
+
+        result = True
+        # For each leg, find their decay chain and compare them.
+        for i, leg_a in \
+                enumerate(channel_a.get('vertices')[vindex_a].get('legs')):
+            # The two channels are equivalent as long as the decay chain 
+            # of the two legs must be the same if they are not part of
+            # the identicle particles.
+            if not leg_a.get('id') in id_part_list_a.keys():
+                # The corresponding leg in channel_b
+                leg_b = channel_b.get('vertices')[vindex_b].get('legs')[i]
+
+                # Find the next vertex index of the decay chain of 
+                # leg_a and leg_b. If the new vertex index is the same as now,
+                # the leg is final_leg.
+                for j,v in enumerate(channel_a.get('vertices')):
+                    if leg_a in v.get('legs'):
+                        new_vid_a = j
+                        break
+                
+                for j,v in enumerate(channel_b.get('vertices')):
+                    if leg_b in v.get('legs'):
+                        new_vid_b = j
+                        break
+
+                if new_vid_a == vindex_a or new_vid_b == vindex_b:
+                    # If both legs are final legs, they are the same since
+                    # vertex id is already the same.
+                    if (new_vid_a == vindex_a and new_vid_b == vindex_b):
+                        continue
+                    # Return false if one is final leg while the other is not.
+                    else:
+                        return False
+
+                # Compare the decay chains of the two legs.
+                # If they are already different, return False
+                if not Channel.check_channels_equiv_rec(channel_a, new_vid_a,
+                                                        channel_b, new_vid_b):
+                    return False
+
+        # If the check can proceed out of the loop of legs,
+        # the decay chain is all the same for non-identicle particles.
+        # Return True if there is no identical particles.
+        if not id_part_list_a:
+            return True
+
+        all_configs = Channel.generate_configs(id_part_list_a)
+        # Check each kind of identicle particles
+        for pid, configs in all_configs.items():
+            # result_pid denotes the equivalence of the decay chains of 
+            # the identicle particles with pid.
+            result_pid = True
+            for config in configs:
+                # Reset the result_pid whenever testing a new config.
+                result_pid = True
+                for i, index_a in enumerate(config):
+                    # Leg_a position is given by id_part_list_a
+                    leg_a = channel_a.get('vertices')[vindex_a].get('legs')[id_part_list_a[pid][i]]
+                    # Leg_b position is given by config
+                    leg_b = channel_b.get('vertices')[vindex_b].get('legs')[config[i]]
+
+                    # Get the vertex indices for the decay chain of the two
+                    # legs.
+                    for j,v in enumerate(channel_a.get('vertices')):
+                        if leg_a in v.get('legs'):
+                            new_vid_a = j
+                            break
+                    for j,v in enumerate(channel_b.get('vertices')):
+                        if leg_b in v.get('legs'):
+                            new_vid_b = j
+                            break
+
+                    # Similar to non-identicle particles, but
+                    # we could not return False when one is final leg while
+                    # the other is not since this could due to the wrong
+                    # config used now.
+                    if new_vid_a == vindex_a or new_vid_b == vindex_b:
+                        if (new_vid_a == vindex_a and new_vid_b ==vindex_b):
+                            continue
+                        # Set result_pid as False as break the check of this
+                        # config
+                        else:
+                            result_pid = False
+                            break
+
+                    # If any one of the pairs (leg_a, leg_b) is not equivalent,
+                    # this config is not equivalent, break the check.
+                    if not Channel.check_channels_equiv_rec(channel_a,new_vid_a,
+                                                           channel_b,new_vid_b):
+                        result_pid = False
+                        break
+
+                # If any configuration of these identical particles with pid
+                # is equivalent, the decay chains of these id_legs 
+                # are equivalent. The loop over configs stops!
+                # result_pid = True
+                if result_pid:
+                    break
+
+            # The result_pid will be False until all configs are examined 
+            # but none of them is satisfied.
+            if not result_pid:
+                return False
+
+        # If no difference is found (i.e. return False),
+        # the two decay chain are the same eventually.
+        return True
+
+    # Helper function
+    @staticmethod
+    def generate_configs(id_part_list):
+        """ Generate all possible configuration for the identical particles in
+            the two channels. E.g. for legs of id=21, index= [1, 3, 5],
+            This function generate a dictionary
+            {leg id ( =21): [[1,3,5], [1,5,3], [3,1,5], [3,5,1], 
+                             [5,1,3], [5,3,1]]}
+            which gives all the possible between the id_legs 
+            in the two channels.
+        """
+        id_part_configs = {}
+        for leg_id, id_parts in id_part_list.items():
+            id_part_configs[leg_id] = [[]]
+
+            # For each index_a, pair it with an index_b.
+            for position, index_a in enumerate(id_parts):
+                # Initiate the new configs of next stage
+                id_part_configs_new = []
+
+                # For each configuration, try to find the index_b
+                # to pair with index_a in the new position.
+                for config in id_part_configs[leg_id]:
+                    # Try to pair index_a with index_b that has not been used
+                    # yet.
+                    for index_b in id_parts:
+                        if not index_b in config:
+                            config_new = copy.copy(config)
+                            config_new.append(index_b)
+                            id_part_configs_new.append(config_new)
+
+                # Finally, replace the configs by the new one.
+                id_part_configs[leg_id] = id_part_configs_new
+
+        return id_part_configs
 
     def get_apx_matrixelement(self):
         """calculate the apx_matrixelement"""
