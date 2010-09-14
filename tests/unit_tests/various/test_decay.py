@@ -505,11 +505,11 @@ class TestDecayParticleList(unittest.TestCase):
 #===============================================================================
 # TestDecayModel
 #===============================================================================
-class TestDecayModel(unittest.TestCase):
+class Test_DecayModel(unittest.TestCase):
     """Test class for the DecayModel object"""
 
     base_model = import_ufo.import_model('mssm')
-    my_testmodel_base = import_ufo.import_model('mssm')
+    my_testmodel_base = import_ufo.import_model('sm')
     def setUp(self):
         """Set up decay model"""
         #Full SM DecayModel
@@ -517,8 +517,8 @@ class TestDecayModel(unittest.TestCase):
 
         #My_small sm DecayModel
         self.my_testmodel = decay_objects.DecayModel(self.my_testmodel_base)
-        #param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')
-        #self.my_testmodel.read_param_card(param_path)
+        param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')
+        self.my_testmodel.read_param_card(param_path)
 
         # Simplify the model
         particles = self.my_testmodel.get('particles')
@@ -538,7 +538,7 @@ class TestDecayModel(unittest.TestCase):
         self.my_testmodel.set('particles', particles)
         self.my_testmodel.set('interactions', interactions)
 
-        #import_vertexlist.make_vertexlist(self.my_testmodel)
+        import_vertexlist.make_vertexlist(self.my_testmodel)
 
         #import madgraph.iolibs.export_v4 as export_v4
         #writer = export_v4.UFO_model_to_mg4(self.base_model,'temp')
@@ -673,29 +673,28 @@ class TestDecayModel(unittest.TestCase):
         """Test finding the decay groups of the MSSM"""
 
         mssm = import_ufo.import_model('mssm')
-        #decay_mssm = decay_objects.DecayModel(mssm)
+        decay_mssm = decay_objects.DecayModel(mssm)
         # Read data to find massless SM-like particle
         param_path = os.path.join(_file_path,
                                   '../input_files/param_card_mssm.dat')
         decay_mssm.read_param_card(param_path)
-        print dir(decay_objects)
-
         decay_mssm.find_decay_groups_general()
+
         #print decay_mssm.decay_groups
-        goal_groups = [[25, 35, 36, 37],
-                       [1000001, 1000002, 1000003, 1000004, 1000005, 1000006, 1000011, 1000012, 1000013, 1000014, 1000015, 1000016, 1000021, 1000022, 1000023, 1000024, 1000025, 1000035, 1000037, 2000001, 2000002, 2000003, 2000004, 2000005, 2000006, 2000011, 2000013, 2000015]]
+        goal_groups = [[15, 23, 24, 25, 35, 36, 37],
+                       [1000001, 1000002, 1000003, 1000004, 1000011, 1000012, 1000013, 1000014, 1000015, 1000016, 1000021, 1000022, 1000023, 1000024, 1000025, 1000035, 1000037, 2000001, 2000002, 2000003, 2000004, 2000011, 2000013, 2000015], [1000005, 1000006, 2000005, 2000006], [5, 6]]
+        goal_stable_particle_ids = [[5]]
 
         for i, group in enumerate(decay_mssm.decay_groups):
-            print sorted([p.get('pdg_code') for p in group]), 'r'
-            #self.assertEqual(sorted([p.get('pdg_code') for p in group]),
-             #                goal_groups[i])
+            self.assertEqual(sorted([p.get('pdg_code') for p in group]),
+                             goal_groups[i])
 
-        """for inter in decay_mssm.reduced_interactions:
-            print inter['id'], [p.get_pdg_code() for p in inter['particles']]"""
+        for inter in decay_mssm.reduced_interactions:
+            print inter['id'], [p.get_pdg_code() for p in inter['particles']]
 
-        """decay_mssm.find_stable_particles()
-        for partlist in decay_mssm.stable_particles:
-            print [p.get_pdg_code() for p in partlist]"""
+        decay_mssm.find_stable_particles()
+        self.assertEqual([[p.get('pdg_code') for p in plist] for plist in decay_mssm.stable_particles], goal_stable_particle_ids)
+            
 
         # Test if all useless interactions are deleted.
         for inter in decay_mssm.reduced_interactions:
@@ -707,10 +706,11 @@ class TestDecayModel(unittest.TestCase):
            Test to get decay_groups and stable_particles from get."""
         # Setup the mssm with parameters read in.
         mssm = import_ufo.import_model('mssm')
-        particles = mssm.get('particles')
+        decay_mssm = decay_objects.DecayModel(mssm)
+        particles = decay_mssm.get('particles')
         param_path = os.path.join(_file_path,
                                   '../input_files/param_card_mssm.dat')
-        self.my_testmodel.read_param_card(param_path)
+        decay_mssm.read_param_card(param_path)
 
         no_want_particle_codes = [1000022, 1000023, 1000024, -1000024, 
                                   1000025, 1000035, 1000037, -1000037]
@@ -720,62 +720,68 @@ class TestDecayModel(unittest.TestCase):
         for particle in no_want_particles:
             particles.remove(particle)
 
-        interactions = mssm.get('interactions')
+        interactions = decay_mssm.get('interactions')
         inter_list = copy.copy(interactions)
         new_interaction = base_objects.Interaction({\
-                'id': len(mssm.get('interactions'))+1,
+                'id': len(decay_mssm.get('interactions'))+1,
                 'particles': base_objects.ParticleList(
-                             [mssm.get_particle(1000001),
-                              mssm.get_particle(1000011),
-                              mssm.get_particle(1000003),
-                              mssm.get_particle(1000013),
+                             [decay_mssm.get_particle(1000001),
+                              decay_mssm.get_particle(1000011),
+                              decay_mssm.get_particle(1000003),
+                              decay_mssm.get_particle(1000013),
                               # This new SM particle should be removed
                               # In the reduction level
-                              mssm.get_particle(2000013),
-                              mssm.get_particle(1000015)])})
+                              decay_mssm.get_particle(2000013),
+                              decay_mssm.get_particle(1000015)])})
         new_interaction_add_sm = base_objects.Interaction({\
-                'id': len(mssm.get('interactions'))+2,
+                'id': len(decay_mssm.get('interactions'))+2,
                 'particles': base_objects.ParticleList(
-                             [mssm.get_particle(25),
-                              mssm.get_particle(2000013)])})
+                             [decay_mssm.get_particle(25),
+                              decay_mssm.get_particle(2000013)])})
 
         for interaction in inter_list:
             if any([p.get('pdg_code') in no_want_particle_codes for p in \
                         interaction.get('particles')]):
                 interactions.remove(interaction)
         
-        mssm.set('particles', particles)
-        mssm.set('interactions', interactions)
+        decay_mssm.set('particles', particles)
+        decay_mssm.set('interactions', interactions)
 
-        mssm.get('interactions').append(new_interaction)
-        mssm.get('interactions').append(new_interaction_add_sm)
-        decay_mssm = decay_objects.DecayModel(mssm)
+        decay_mssm.get('interactions').append(new_interaction)
+        decay_mssm.get('interactions').append(new_interaction_add_sm)
 
         mssm_decay_groups = decay_mssm.get('decay_groups')
-        goal_groups = set([(25, 35, 36, 37, 2000013),
-                           (1000001, 1000002, 1000003, 1000004, 1000005, 
-                            1000006, 1000021, 2000001, 2000002, 2000003, 
-                            2000004, 2000005, 2000006), 
-                           (1000011, 1000012), 
-                           (1000013, 1000014), 
-                           (1000015, 1000016, 2000015), 
-                           (2000011,), (5, 6)
-                           ])
-
-        #self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in \
-                                                #group])) \
-                                  #for group in mssm_decay_groups]),
-                         #goal_groups)
-        # Test if all useless interactions are deleted.
-        for inter in decay_mssm.reduced_interactions:
-            self.assertTrue(len(inter['particles']))
-
-        """param_path = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
-        self.my_testmodel.read_param_card(param_path)
+        goal_groups = [(15, 23, 24, 25, 35, 36, 37, 2000013),
+                       (1000005, 1000006, 2000005, 2000006),
+                       (1000015, 1000016, 2000015),                        
+                       (1000001, 1000002, 1000003, 1000004, 
+                        1000021, 2000001, 2000002, 2000003, 2000004),
+                       (5, 6),
+                       (1000011, 1000012), 
+                       (1000013, 1000014), 
+                       (2000011,)
+                      ]
+        goal_stable_candidates = [[], [1000006], [1000015], [2000001, 2000003],
+                                  [5], [1000012], [1000014],[2000011]]
+        goal_stable_particle_ids = [[5], # (5,6) combine with squark
+                                    [1000015], # all sleptons are combine
+                                    [2000011]]
+        self.assertEqual([tuple(sorted([p.get('pdg_code') for p in \
+                                            group])) \
+                              for group in mssm_decay_groups],
+                         goal_groups)
 
         for p in decay_mssm.get('particles'):
-            print '(%s, %d)' % (p.get('pdg_code'), eval(p.get('mass')))"""
-        #stable_particles = [
+            print '%s (%d) mass = %f' %(p.get('name') , 
+                                        p.get('pdg_code'),
+                                   eval('decay_objects.'+p.get('mass')+'.real'))
+
+        # Test if all useless interactions are deleted.
+        for inter in decay_mssm.reduced_interactions:
+            print inter['id'], [p.get_pdg_code() for p in inter['particles']]
+
+        decay_mssm.find_stable_particles()
+        self.assertEqual([[p.get('pdg_code') for p in plist] for plist in decay_mssm.stable_particles], goal_stable_particle_ids)
 
 
 #===============================================================================

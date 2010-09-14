@@ -165,7 +165,7 @@ class DecayParticle(base_objects.Particle):
         #Find all the possible initial particle(s).
         #Check onshell condition if the model is given.
         if model:
-            if (self.get('mass') == 'ZERO') and (len(value) != 0):
+            if (eval(self.get('mass')) == 0.) and (len(value) != 0):
                 raise self.PhysicsObjectError, \
                     "Massless particle %s cannot decay." % self['name']
 
@@ -383,7 +383,7 @@ class DecayParticle(base_objects.Particle):
         self.vertexlist_found = True
         
         # Do not include the massless and stable particle
-        if self.get('mass') == 'ZERO' or self in model.stable_particles:
+        if eval(self.get('mass')) == 0. or self in model.stable_particles:
             return
 
         #Go through each interaction...
@@ -760,6 +760,9 @@ class DecayModel(base_objects.Model):
     """Model object with an attribute to construct the decay vertex list
        for a given particle and a interaction
     """
+    sorted_keys = ['name', 'particles', 'parameters', 'interactions', 
+                   'couplings', 'lorentz', 'stable_particles',
+                   'reduced_interaction', 'decay_groups', 'max_vertexorder']
 
     def __init__(self, ini_dict = {}):
         """Reset the particle_dict so that items in it is 
@@ -779,6 +782,9 @@ class DecayModel(base_objects.Model):
         self.decay_groups = []
         self.reduced_interactions = []
         self.stable_particles = base_objects.ParticleList()
+    
+    def get_sorted_keys(self):
+        return self.sorted_keys
 
     def get(self, name):
         """ Evaluate some special properties first if the user request. """
@@ -862,7 +868,7 @@ class DecayModel(base_objects.Model):
         #Dict to store all the vertexlist (for conveniece only, removable!)
         vertexlist_dict = {}
         for part in self.get('particles'):
-            if part['mass'] != 'ZERO':
+            if eval(part['mass']) != 0.:
                 #All valid initial particles (mass != 0 and is_part == True)
                 ini_list.append(part.get_pdg_code())
             for partnum in [2, 3]:
@@ -963,7 +969,6 @@ class DecayModel(base_objects.Model):
                 dict = {}
                 parameter_dict[param.lhablock.lower()] = dict
             dict[tuple(param.lhacode)] = param.name
-            
         # Now read parameters from the param_card
 
         # Read in param_card
@@ -971,10 +976,12 @@ class DecayModel(base_objects.Model):
 
         # Define regular expressions
         re_block = re.compile("^block\s+(?P<name>\w+)")
-        re_decay = re.compile("^decay\s+(?P<pid>\d+)\s+(?P<value>[\d\.e\+-]+)")
-        re_single_index = re.compile("^\s*(?P<i1>\d+)\s+(?P<value>[\d\.e\+-]+)")
+        re_decay = re.compile(\
+            "^decay\s+(?P<pid>\d+)\s+(?P<value>-*\d\.\d+e(\+|-)\d+)\s*")
+        re_single_index = re.compile(\
+            "^\s*(?P<i1>\d+)\s+(?P<value>-*\d\.\d+e(\+|-)\d+)\s*")
         re_double_index = re.compile(\
-                       "^\s*(?P<i1>\d+)\s+(?P<i2>\d+)\s+(?P<value>[\d\.e\+-]+)")
+            "^\s*(?P<i1>\d+)\s+(?P<i2>\d+)\s+(?P<value>-*\d\.\d+e(\+|-)\d+)\s*")
         block = ""
         # Go through lines in param_card
         for line in param_lines:
@@ -988,6 +995,8 @@ class DecayModel(base_objects.Model):
                 continue
             # Look for single indices
             single_index_match = re_single_index.match(line)
+            double_index_match = re_double_index.match(line)
+            decay_match = re_decay.match(line)
             if block and single_index_match:
                 i1 = int(single_index_match.group('i1'))
                 value = single_index_match.group('value')
@@ -1062,6 +1071,7 @@ class DecayModel(base_objects.Model):
             derived_parameters += self['parameters'][('aEWM1', 'aS')]
         except KeyError:
             pass
+
 
         # Now calculate derived parameters
         # TO BE IMPLEMENTED use running alpha_s for aS-dependent params
@@ -1390,7 +1400,6 @@ class DecayModel(base_objects.Model):
         # Setup the original 'SM' particles, i.e. particle without mass.
         sm_ids = [p.get('pdg_code') for p in self.get('particles')\
                       if eval(p.get('mass')) == 0.]
-        print sm_ids
 
         #Read the interaction information and setup
         for inter in self.get('interactions'):
@@ -1576,10 +1585,11 @@ class DecayModel(base_objects.Model):
         # If self.decay_groups is None, find_decay_groups first.
         if not self.decay_groups:
             self.find_decay_groups_general()
+
         # The list for the stable particle list of all groups
         stable_candidates = [[]]
         large_group_ids = []
-        self.stable_particles = base_objects.ParticleList()
+        self.stable_particles = []
         
         # Find lightest particle in each group.
         # SM-like group is excluded.
@@ -1591,23 +1601,19 @@ class DecayModel(base_objects.Model):
             # Set the initial mass
             lightest_mass = eval(group[0].get('mass')).real
             for part in group:
-                # If there is a massless particle, there is no massive
-                # stable particle in this group
-                if part.get('mass') != 'ZERO':
-                    # If the mass is smaller, replace the the list.
-                    if eval(part.get('mass')).real < lightest_mass :
-                        stable_candidates[-1] = [part]
-                    # If degenerate, append current particle to the list.
-                    elif eval(part.get('mass')).real == lightest_mass:
-                        stable_candidates[-1].append(part)
-                # Escape this loop when massless particle exists
-                else:
-                    stable_candidates[-1] = []
-                    break
+                # If the mass is smaller, replace the the list.
+                if eval(part.get('mass')).real < lightest_mass :
+                    stable_candidates[-1] = [part]
+                    lightest_mass = eval(part.get('mass')).real
+                    print part.get('pdg_code'), eval(part.get('mass')).real 
+                # If degenerate, append current particle to the list.
+                elif eval(part.get('mass')).real == lightest_mass:
+                    stable_candidates[-1].append(part)
 
+        print [[p.get('pdg_code') for p in plist]for plist in stable_candidates]
         for inter in self.reduced_interactions:
             # Ids for the groups that particles of this inter belong to
-            temp_large_group = [[index for i, g in enumerate(self.decay_groups)\
+            temp_large_group = [[i for i, g in enumerate(self.decay_groups)\
                                  if p in g][0] for p in inter['particles']]
 
             # Check if any id is repeated in previous groups
@@ -1626,34 +1632,23 @@ class DecayModel(base_objects.Model):
             # Add current up-to-date group to large_group_ids
             large_group_ids.append(temp_large_group)
 
-
         for common_group in large_group_ids:
             # Avoid common_group with no element (already merged)
-            if not common_group:
-                # If there is a massless particle in the first group
-                # These groups do not have stable particle
-                if not stable_candidates[common_group[0]]:
-                    break
+            if common_group:
                 # Set initial stable_particles
                 temp_partlist = stable_candidates[common_group[0]]
                 # Go through each group in common_group to find the lightest
                 # particles
                 for group_id in common_group:
-                    # If the group has no stable particle (i.e. contain
-                    # massless particle) break the search and do not add
-                    # any particle.
-                    if not stable_candidates[group_id]:
-                        temp_partlist = []
-                        break
                     # If the new group has lighter mass, replace the
                     # temp_partlist
-                    elif eval(stable_candidates[group_id][0].get('mass')) < \
-                            eval(temp_partlist[0].get('mass')):
+                    if eval(stable_candidates[group_id][0].get('mass')).real < \
+                            eval(temp_partlist[0].get('mass')).real:
                         temp_partlist = stable_candidates[group_id]
                     # If the new group has stable particle with the equal mass
                     # append the stable_candidates to temp_partlist
-                    elif eval(stable_candidates[group_id][0].get('mass')) == \
-                            eval(temp_partlist[0].get('mass')):
+                    elif eval(stable_candidates[group_id][0].get('mass')).real \
+                            == eval(temp_partlist[0].get('mass')).real:
                         temp_partlist.extend(stable_candidates[group_id])
 
                 # If temp_partlist is not empty, add to stable_particles
@@ -1663,8 +1658,9 @@ class DecayModel(base_objects.Model):
         # Append the stable particles if their group stand alone
         # (the mixing definition is in large_group_ids)
         for i, stable_particlelist in enumerate(stable_candidates):
-            if not i in sum(large_group_ids, []):
-                self.stable_particles.append(stable_particlelist)              
+            # stable_candidates[0] is for SM-like particles
+            if not i in sum(large_group_ids, []) and i != 0:
+                self.stable_particles.append(stable_particlelist)
  
         return self.stable_particles
 
