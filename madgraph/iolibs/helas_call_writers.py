@@ -470,9 +470,7 @@ class FortranHelasCallWriter(HelasCallWriter):
             if argument.needs_hermitian_conjugate():
                 call = call + 'C'
 
-            if len(call) > 11:
-                raise self.PhysicsObjectError, \
-                      "Call to Helas routine %s should be maximum 6 chars" \
+            assert len(call) < 11, "Call to Helas routine %s should be maximum 6 chars" \
                       % call[5:]
 
             # Fill out with X up to 6 positions

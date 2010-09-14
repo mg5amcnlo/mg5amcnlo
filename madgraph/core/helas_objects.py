@@ -1009,6 +1009,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     indices.append(self.get('mothers').index(wf)/2 + 1)
                 else:
                     indices.append((self.get('mothers').index(wf) + 1)/2 + 1)
+            if indices == []:
+                return (1,)
             return tuple(indices)
         else:
             return ()

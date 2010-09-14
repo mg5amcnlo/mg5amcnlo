@@ -1447,6 +1447,7 @@ class UFO_model_to_mg4(object):
         self.params_indep = [] # (name, expression, type)
         self.params_ext = []   # external parameter
         self.p_to_f = parsers.UFOExpressionParserFortran()
+        self.mass_width_check = '' #temp variable to store consistency check
         
     def build(self):
         """modify the couplings to fit with MG4 convention and creates all the 
@@ -1783,21 +1784,36 @@ class UFO_model_to_mg4(object):
      
         external_param = [format(param) for param in self.params_ext]
         fsock.writelines('\n'.join(external_param))
+
+    def format_line_param_read(self, parameter):
+        """return the line for the ident_card corresponding to this parameter"""
+
+        template = \
+        """ call LHA_get_real(npara,param,value,'%(name)s',%(name)s,%(value)s)""" \
+            % {'name': parameter.name,
+                               'value': self.p_to_f.parse(str(parameter.value))}
+        
+        if parameter.lhablock.upper() == 'DECAY':
+            mass = [param.name for param in self.params_ext if
+                                            param.lhablock == 'MASS' and \
+                                            param.lhacode == parameter.lhacode]
+            if mass:
+                self.mass_width_check += '%s = sign(%s,%s)\n' % \
+                                       (parameter.name, parameter.name, mass[0]) 
+            
+        return template
+
         
     def create_param_read(self):    
         """create param_read"""
-        
-        def format(parameter):
-            """return the line for the ident_card corresponding to this parameter"""
-            template = \
-            """ call LHA_get_real(npara,param,value,'%(name)s',%(name)s,%(value)s)"""
-            
-            return template % {'name': parameter.name,
-                               'value': self.p_to_f.parse(str(parameter.value))}
-        
+    
         fsock = self.open('param_read.inc', format='fortran')
-        external_param = [format(param) for param in self.params_ext]
+        external_param = [self.format_line_param_read(param) \
+                          for param in self.params_ext]
         fsock.writelines('\n'.join(external_param))
+        fsock.writelines(self.mass_width_check)
+        self.mass_width_check = ''
+
 
     def create_param_card(self):
         """ create the param_card.dat """
