@@ -12,7 +12,31 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-"""Definition for the objects used in the decay module."""
+"""Definition for the objects used in the decay module.
+   DecayParticle: this object contains all the decay related properties
+                  including all the decay verteices and decay channels.
+                  This object also has the 'is_stable' label to denote
+                  wether this particle is stable.
+   DecayParticleList: this helper class will help to turn Particle 
+                      in base_objects into DecayParticle.
+   DecayModel: This model contains DecayParticle. Particle in base_objects
+               will be automatically converted into DecayParticle either 
+               during the initialization or when a ParticleList is set as
+               the particles of DecayModel through set function.
+               This model can search all the decay_vertexlist for all
+               its particles at one time. The function 'find_stable_particles'
+               and 'find_decay_groups_general' will find stable particles
+               automatically from interaction and mass without any input.
+   Channel: A diagram object specialized for decay process. This includes
+            several helper functions for channel generations and the functions
+            to calculate the approximate decay width.
+   ChannelList: A list of channels.
+   
+   Users can run DecayParticle.find_channels(final_state_number, model)
+   to get the channels with final state number they request. Or they
+   may run DecayModel.find_all_channels(final_state_number) to search
+   the channels for all particles in the given model."""
+
 
 import array
 import cmath
@@ -36,17 +60,19 @@ ZERO = 0
 # Logger for decay_module
 #===============================================================================
 
-logger = logging.getLogger('decay')
+logger = logging.getLogger('decay.decay_objects')
 
 
 #===============================================================================
 # DecayParticle
 #===============================================================================
 class DecayParticle(base_objects.Particle):
-    """DecayParticle is the the particle used in the decay module.
-       It will list all the corresponding vertices
-       (2_body_decay_vertices and 3_body_decay_vertices) with
-       the on-shell conditions specified.
+    """DecayParticle includes the decay vertices and channels for this
+       particle. The label 'is_stable' specifies whether the particle
+       is stable. The function find_channels will launch all necessary
+       functions it needs. If users try to find channels with more final
+       state particles, they can run find_channels_nextlevel to get the
+       channels in next level.
     """
     sorted_keys = ['name', 'antiname', 'spin', 'color',
                    'charge', 'mass', 'width', 'pdg_code',
@@ -84,29 +110,20 @@ class DecayParticle(base_objects.Particle):
         
         super(DecayParticle, self).default_setup()
 
-        # The decay_vertexlist contain a list of real decay vertex
-        # and one for pseudo decay vertex.
-        # n_body_decay_vertexlist[0](or [False]): off-shell decay;
-        # n_body_decay_vertexlist[1](or [True] ):on-shell decay.
+        self['is_stable'] = False
+        #log of the find_vertexlist history
+        self['vertexlist_found'] = False
+        self['max_vertexorder'] = 0
+
+        # The decay_vertexlist is a dictionary with vertex list as items and
+        # final state particles and on shell condition as keys.
+        # decay_channels is similar.
 
         self['decay_vertexlist'] = {(2, False) : base_objects.VertexList(),
                                     (2, True)  : base_objects.VertexList(),
                                     (3, False) : base_objects.VertexList(),
                                     (3, True)  : base_objects.VertexList()}
         self['decay_channels'] = {}
-        #log of the vertexlist_found history
-        self.vertexlist_found = False
-        self.max_vertexorder = 0
-
-    def get(self, name):
-        """ Overloading get to include vertexlist_found and max_vertexorder"""
-        if name == 'vertexlist_found':
-            return self.vertexlist_found
-        if name == 'max_vertexorder':
-            self.get_max_vertexorder()
-            return self.max_vertexorder
-
-        return super(DecayParticle, self).get(name)
     
     def check_decay_condition(self, partnum, onshell, 
                               value = base_objects.VertexList(), model = {}):
@@ -303,6 +320,16 @@ class DecayParticle(base_objects.Particle):
                 if name == 'decay_channels':
                     self.check_channels(key[0], key[1], item)          
                     
+        if name == 'vertexlist_found' or name == 'is_stable':
+            if not isinstance(value, bool):
+                raise self.PhysicsObjectError, \
+                    "Propery %s should be Boolean type." % name
+
+        if name == 'max_vertexorder':
+            if not isinstance(value, int):
+                raise self.PhysicsObjectError, \
+                    "Propery %s should be int type." % name
+
         super(DecayParticle, self).filter(name, value)
 
         return True
@@ -334,20 +361,21 @@ class DecayParticle(base_objects.Particle):
         """ Get the max vertex order of this particle"""
         # Do not include keys without vertexlist in it
         # Both onshell and offshell are consider
-        if not self.vertexlist_found:
-            print "The vertexlist of this particle has not been searched. ",\
-                "Try find_vertexlist first."
+        if not self['vertexlist_found']:
+            logger.warning("The vertexlist of this particle has not been searched."+"Try find_vertexlist first.")
             return
 
         vertnum_list = [k[0] for k in self['decay_vertexlist'].keys() \
              if self['decay_vertexlist'][k]]
         if vertnum_list:
-            self.max_vertexorder = max(vertnum_list)
+            self['max_vertexorder'] = max(vertnum_list)
         else:
-            self.max_vertexorder = 0
+            self['max_vertexorder'] = 0
 
-        return self.max_vertexorder
+        return self['max_vertexorder']
 
+    # OBSOLETE function. It is recommended to run the find_vertexlist in
+    # DecayModel object.
     def find_vertexlist(self, model, option=False):
         """Find the possible decay channel to decay,
            for both on-shell and off-shell.
@@ -369,7 +397,7 @@ class DecayParticle(base_objects.Particle):
         
         #If 'vertexlist_found' is true and option is false,
         #no action is proceed.
-        if self.vertexlist_found and not option:
+        if self['vertexlist_found'] and not option:
             return 'The vertexlist has been setup.', \
                 'No action proceeds because of False option.'
 
@@ -380,10 +408,11 @@ class DecayParticle(base_objects.Particle):
                                     (3, True)  : base_objects.VertexList()}
 
         #Set the vertexlist_found at the end
-        self.vertexlist_found = True
+        self['vertexlist_found'] = True
         
         # Do not include the massless and stable particle
-        if eval(self.get('mass')) == 0. or self in model.stable_particles:
+        model.get('stable_particles')
+        if self.get('is_stable'):
             return
 
         #Go through each interaction...
@@ -513,15 +542,27 @@ class DecayParticle(base_objects.Particle):
                 % (model.get('name'), self.get('name'))
 
         # If vertexlist has not been found before, run model.find_vertexlist
-        if not model.vertexlist_found:
-            print "Vertexlist of this model has not been searched.",\
-                "Automatically run the model.find_vertexlist()"
+        if not model['vertexlist_found']:
+            logger.info("Vertexlist of this model has not been searched."+ \
+                "Automatically run the model.find_vertexlist()")
             model.find_vertexlist()
+
+        # Find stable particles of this model
+        model.get('stable_particles')
 
         # If the channel list exist, return.
         if (partnum, True) in self['decay_channels'].keys() or \
                 (partnum, False) in self['decay_channels'].keys():
                 return
+
+        # Set empty decay_channels for stable particles
+        if self.get('is_stable'):
+            for num in range(2, partnum+1):
+                self['decay_channels'][(num, True)] = ChannelList()
+                self['decay_channels'][(num, False)] = ChannelList()
+            logger.info("Particle %s is stable. " % self['name'] +
+                            "No channel search will not proceed." )
+            return
             
         # Find channels from 2-body decay to partnum-body decay channels.
         for clevel in range(2, partnum+1):
@@ -537,6 +578,12 @@ class DecayParticle(base_objects.Particle):
         # Initialize the item in dictionary
         self['decay_channels'][(clevel, True)] = ChannelList()
         self['decay_channels'][(clevel, False)] = ChannelList()
+
+        # Return if this particle is stable
+        if self.get('is_stable'):
+            logger.info("Particle %s is stable."+\
+                            "No channel search will not proceed." %self['name'])
+            return
 
         # The initial vertex (identical vertex).
         ini_vert = base_objects.Vertex({'id': 0, 'legs': base_objects.LegList([\
@@ -577,6 +624,9 @@ class DecayParticle(base_objects.Particle):
                 for index, leg in enumerate(sub_c.get_final_legs()):
                     # Get the particle even for anti-particle leg.
                     inter_part = model.get_particle(abs(leg['id']))
+                    # If this inter_part is stable, do not attach vertices to it
+                    if inter_part.get('is_stable'):
+                        continue
                     # Get the vertexlist in vlevel
                     # Both on-shell and off-shell vertex 
                     # should be considered.
@@ -656,6 +706,8 @@ class DecayParticle(base_objects.Particle):
         new_channel['vertices'].extend(sub_channel['vertices'])
         # Setup properties of new_channel
         new_channel.get_onshell(model)
+        new_channel.calculate_orders(model)
+
         # The 'has_idpart' property of descendent of a channel 
         # must derive from the mother channel and the vertex
         # (but 'id_part_list' will change and should not be inherited)
@@ -667,10 +719,10 @@ class DecayParticle(base_objects.Particle):
     def check_repeat(self, clevel, onshell, channel):
         """ Check whether there is any equivalent channels with the given 
             channel. Use the check_channels_equiv function."""
-        pass
-        """for other_c in self.get_channels(clevel, onshell):
-            self.check_channels_equiv(other_c, channel)"""
-    
+
+        return any([Channel.check_channels_equiv(other_c, channel) \
+                        for other_c in self.get_channels(clevel, onshell)])
+
     # This helper function is useless in current algorithm...
     def generate_configlist(self, channel, partnum, model):
         """ Helper function to generate all the configuration to add
@@ -747,7 +799,7 @@ class DecayParticleList(base_objects.ParticleList):
         for particle in self:
             particle_dict[particle.get('pdg_code')] = particle
             if not particle.get('self_antipart'):
-                antipart = copy.deepcopy(particle)
+                antipart = copy.copy(particle)
                 antipart.set('is_part', False)
                 particle_dict[antipart.get_pdg_code()] = antipart
 
@@ -757,31 +809,54 @@ class DecayParticleList(base_objects.ParticleList):
 # DecayModel: Model object that is used in this module
 #===============================================================================
 class DecayModel(base_objects.Model):
-    """Model object with an attribute to construct the decay vertex list
-       for a given particle and a interaction
+    """DecayModel object is able construct the decay vertices for
+       all its particles by find_vertexlist. When the user try to get stable
+       particles, it will find all stable particles automatically according to
+       the particle mass and interactions by find_stable_particles functions.
+       The run of find_channels uses the function of DecayParticle. 
+       Note that Particle objects will be converted into DecayParticle 
+       either during the initialization or when the set function is used.
     """
     sorted_keys = ['name', 'particles', 'parameters', 'interactions', 
-                   'couplings', 'lorentz', 'stable_particles',
-                   'reduced_interaction', 'decay_groups', 'max_vertexorder']
+                   'couplings', 'lorentz', 
+                   'stable_particles', 'vertexlist_found',
+                   'reduced_interactions', 'decay_groups', 'max_vertexorder']
 
-    def __init__(self, ini_dict = {}):
+    def __init__(self, init_dict = {}):
         """Reset the particle_dict so that items in it is 
            of DecayParitcle type"""
-        super(DecayModel, self).__init__(ini_dict)
+
+        dict.__init__(self)
+        self.default_setup()
+
+        assert isinstance(init_dict, dict), \
+            "Argument %s is not a dictionary" % repr(init_dict)
+
+        # Must set particles first so that the particle_dict
+        # can point to DecayParticle
+        # Futhermore, the set of interactions can have correct particle_dict
+        if 'particles' in init_dict.keys():
+            self.set('particles', init_dict['particles'])
 
         self['particle_dict'] = {}
         self.get('particle_dict')
+        # Do not copy the particle_dict, it may be old version and point only
+        # to Particle rather than DecayParticle.
+        for item in init_dict.keys():
+            if item != 'particles' and item != 'particle_dict':
+                self.set(item, init_dict[item])
+
         
     def default_setup(self):
         """The particles is changed to ParticleList"""
         super(DecayModel, self).default_setup()
         self['particles'] = DecayParticleList()
         # Other properties
-        self.vertexlist_found = False
-        self.max_vertexorder = 0
-        self.decay_groups = []
-        self.reduced_interactions = []
-        self.stable_particles = base_objects.ParticleList()
+        self['vertexlist_found'] = False
+        self['max_vertexorder'] = 0
+        self['decay_groups'] = []
+        self['reduced_interactions'] = []
+        self['stable_particles'] = []
     
     def get_sorted_keys(self):
         return self.sorted_keys
@@ -789,23 +864,49 @@ class DecayModel(base_objects.Model):
     def get(self, name):
         """ Evaluate some special properties first if the user request. """
 
-        if name == 'stable_particles' and not self.stable_particles:
+        if name == 'stable_particles' and not self['stable_particles']:
             self.find_stable_particles()
-            return self.stable_particles
+            return self['stable_particles']
         # reduced_interactions might be empty, cannot judge the evaluation is
         # done or not by it.
         elif (name == 'decay_groups' or name == 'reduced_interactions') and \
-                not self.decay_groups:
+                not self['decay_groups']:
             self.find_decay_groups_general()
-            return eval('self.' + name)
-        elif name == 'max_vertexorder' and self.max_vertexorder == 0:
+            return self[name]
+        elif name == 'max_vertexorder' and self['max_vertexorder'] == 0:
             self.get_max_vertexorder()
-            return self.max_vertexorder
-        else:       
+            return self['max_vertexorder']
+        else:
             # call the mother routine
             return DecayModel.__bases__[0].get(self, name)
         
+    def filter(self, name, value):
+        if name == 'vertexlist_found':
+            if not isinstance(value, bool):
+                raise self.PhysicsObjectError, \
+                    "Property %s should be bool type." % name
+        if name == 'max_vertexorder':
+            if not isinstance(value, int):
+                raise self.PhysicsObjectError,\
+                    "Property %s should be int type." % name
+        if name == 'stable_particles' or name == 'decay_groups':
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError,\
+                    "Property %s should be a list contains several particle list." % name
+            for plist in value:                
+                if not isinstance(plist, list):
+                    raise self.PhysicsObjectError,\
+                    "Property %s should be a list contains several particle list." % name
+                for p in plist:
+                    if not isinstance(p, DecayParticle):
+                        raise self.PhysicsObjectError,\
+                            "Property %s should be a list contains several particle list." % name
 
+        super(DecayModel, self).filter(name, value)
+        
+        return True
+            
+        
     def set(self, name, value):
         """Change the Particle into DecayParticle"""
         #Record the validity of set by mother routine
@@ -814,23 +915,36 @@ class DecayModel(base_objects.Model):
 
         if return_value:
             if name == 'particles':
-                #Reset dictionaries
+                #Reset dictionaries and decay related properties.
                 self['particle_dict'] = {}
                 self['got_majoranas'] = None
+                self['vertexlist_found'] = False
+                self['max_vertexorder'] = 0
+                self['decay_groups'] = []
+                self['reduced_interactions'] = []
+                self['stable_particles'] = []
+
                 #Convert to DecayParticleList
                 self['particles'] = DecayParticleList(value)
                 #Generate new dictionaries with items are DecayParticle
                 self.get('particle_dict')
                 self.get('got_majoranas')
             if name == 'interactions':
-                # Reset dictionaries
+                # Reset dictionaries and decay related properties.
                 self['interaction_dict'] = {}
                 self['ref_dict_to1'] = {}
                 self['ref_dict_to0'] = {}
-                #Generate interactions with particles are DecayParticleLis
+                self['vertexlist_found'] = False
+                self['max_vertexorder'] = 0
+                self['decay_groups'] = []
+                self['reduced_interactions'] = []
+                self['stable_particles'] = []
+
+                # Generate interactions with particles are DecayParticleList
+                # Get particle from particle_dict so that the particles
+                # of interaction is the alias of particles of DecayModel
                 for inter in self['interactions']:
-                    inter['particles']=DecayParticleList([part for part in \
-                                                          inter['particles']])
+                    inter['particles']=DecayParticleList([self.get_particle(part.get_pdg_code()) for part in inter['particles']])
                 # Generate new dictionaries
                 self.get('interaction_dict')
                 self.get('ref_dict_to1')
@@ -840,17 +954,18 @@ class DecayModel(base_objects.Model):
 
     def get_max_vertexorder(self):
         """find the maxima vertex order (i.e. decay particle number)"""
-        if not self.vertexlist_found:
-            print "Use find_vertexlist before get_max_vertexorder!"
+        if not self['vertexlist_found']:
+            logger.warning("Use find_vertexlist before get_max_vertexorder!")
             return
 
         # Do not include key without any vertexlist in it
-        self.max_vertexorder = max(sum([[k[0] \
-                                         for k in \
-                                         p.get('decay_vertexlist').keys() \
-                                         if p.get('decay_vertexlist')[k]] \
-                                     for p in self.get('particles')], []))
-        return self.max_vertexorder
+        self['max_vertexorder'] = max(sum([[k[0] \
+                                            for k in \
+                                            p.get('decay_vertexlist').keys() \
+                                            if p.get('decay_vertexlist')[k]] \
+                                            for p in self.get('particles')], [])
+                                      )
+        return self['max_vertexorder']
             
     def find_vertexlist(self):
         """ Check whether the interaction is able to decay from mother_part.
@@ -859,16 +974,25 @@ class DecayModel(base_objects.Model):
             Utilize in finding all the decay table of the whole model
         """
 
-        # Return if self.vertexlist_found is True.\
-        if self.vertexlist_found:
+        # Return if self['vertexlist_found'] is True.\
+        if self['vertexlist_found']:
             print "Vertexlist has been searched before."
             return
-
+        # Find the stable particles of this model and do not assign decay vertex
+        # to them.
+        self.get('stable_particles')
+        
         ini_list = []
         #Dict to store all the vertexlist (for conveniece only, removable!)
         vertexlist_dict = {}
         for part in self.get('particles'):
-            if eval(part['mass']) != 0.:
+            # Initialized the decay_vertexlist
+            part['decay_vertexlist'] = {(2, False) : base_objects.VertexList(),
+                                        (2, True)  : base_objects.VertexList(),
+                                        (3, False) : base_objects.VertexList(),
+                                        (3, True)  : base_objects.VertexList()}
+
+            if not part.get('is_stable'):
                 #All valid initial particles (mass != 0 and is_part == True)
                 ini_list.append(part.get_pdg_code())
             for partnum in [2, 3]:
@@ -939,9 +1063,9 @@ class DecayModel(base_objects.Model):
                             partnum, onshell)].append(temp_vertex)
 
         # Set the property vertexlist_found as True and for all particles
-        self.vertexlist_found = True
+        self['vertexlist_found'] = True
         for part in self['particles']:
-            part.vertexlist_found = True
+            part['vertexlist_found'] = True
 
         #fdata = open(os.path.join(MG5DIR, 'models', self['name'], 'vertexlist_dict.dat'), 'w')
         #fdata.write(str(vertexlist_dict))
@@ -977,11 +1101,11 @@ class DecayModel(base_objects.Model):
         # Define regular expressions
         re_block = re.compile("^block\s+(?P<name>\w+)")
         re_decay = re.compile(\
-            "^decay\s+(?P<pid>\d+)\s+(?P<value>-*\d\.\d+e(\+|-)\d+)\s*")
+            "^decay\s+(?P<pid>\d+)\s+(?P<value>-*\d+\.\d+e(\+|-)\d+)\s*")
         re_single_index = re.compile(\
-            "^\s*(?P<i1>\d+)\s+(?P<value>-*\d\.\d+e(\+|-)\d+)\s*")
+            "^\s*(?P<i1>\d+)\s+(?P<value>-*\d+\.\d+e(\+|-)\d+)\s*")
         re_double_index = re.compile(\
-            "^\s*(?P<i1>\d+)\s+(?P<i2>\d+)\s+(?P<value>-*\d\.\d+e(\+|-)\d+)\s*")
+            "^\s*(?P<i1>\d+)\s+(?P<i2>\d+)\s+(?P<value>-*\d+\.\d+e(\+|-)\d+)\s*")
         block = ""
         # Go through lines in param_card
         for line in param_lines:
@@ -1147,16 +1271,16 @@ class DecayModel(base_objects.Model):
         """
 
         self.sm_ids = [1,2,3,4,5,6,11,12,13,14,15,16,21,22,23,24]
-        self.decay_groups = [[]]
+        self['decay_groups'] = [[]]
 
         particles = [p for p in self.get('particles') if \
                      p.get('pdg_code') not in self.sm_ids]
 
         for particle in particles:
             # Check if particles is already in a decay group
-            if particle not in sum(self.decay_groups, []):
+            if particle not in sum(self['decay_groups'], []):
                 # Insert particle in new decay group
-                self.decay_groups.append([particle])
+                self['decay_groups'].append([particle])
                 self.find_decay_groups_for_particle(particle)
 
     def find_decay_groups_for_particle(self, particle):
@@ -1201,40 +1325,40 @@ class DecayModel(base_objects.Model):
                                 if p != particle and \
                                 not p.get('pdg_code') in self.sm_ids and \
                                 not (p.get('is_part') and p in \
-                                     self.decay_groups[0] or \
+                                     self['decay_groups'][0] or \
                                      not p.get('is_part') and \
                                      self.get_particle(p.get('pdg_code')) in \
-                                     self.decay_groups[0])]
-            group_index = [i for (i, g) in enumerate(self.decay_groups) \
+                                     self['decay_groups'][0])]
+            group_index = [i for (i, g) in enumerate(self['decay_groups']) \
                            if particle in g][0]
 
             if len(non_sm_particles) == 0:
                 # The decay group of this particle is the SM group
                 if group_index > 0:
-                    group = self.decay_groups.pop(group_index)
-                    self.decay_groups[0].extend(group)
+                    group = self['decay_groups'].pop(group_index)
+                    self['decay_groups'][0].extend(group)
                     
             elif len(non_sm_particles) == 1:
                 # The other particle should be in my decay group
                 particle2 = non_sm_particles[0]
                 if not particle2.get('is_part'):
                     particle2 = self.get_particle(particle2.get_anti_pdg_code())
-                if particle2 in self.decay_groups[group_index]:
+                if particle2 in self['decay_groups'][group_index]:
                     # This particle is already in this decay group,
                     # and has been treated.
                     continue
-                elif particle2 in sum(self.decay_groups, []):
+                elif particle2 in sum(self['decay_groups'], []):
                     # This particle is in a different decay group - merge
                     group_index2 = [i for (i, g) in \
-                                    enumerate(self.decay_groups) \
+                                    enumerate(self['decay_groups']) \
                                     if particle2 in g][0]
-                    group = self.decay_groups.pop(max(group_index,
+                    group = self['decay_groups'].pop(max(group_index,
                                                       group_index2))
-                    self.decay_groups[min(group_index, group_index2)].\
+                    self['decay_groups'][min(group_index, group_index2)].\
                                                         extend(group)
                 else:
                     # Add particle2 to this decay group
-                    self.decay_groups[group_index].append(particle2)
+                    self['decay_groups'][group_index].append(particle2)
 
             elif len(non_sm_particles) > 1:
                 # Check if any of the particles are not already in any
@@ -1243,11 +1367,11 @@ class DecayModel(base_objects.Model):
 
                 non_checked_particles = [p for p in non_sm_particles if \
                                          (p.get('is_part') and not p in \
-                                          sum(self.decay_groups, []) or \
+                                          sum(self['decay_groups'], []) or \
                                           not p.get('is_part') and not \
                                           self.get_particle(\
                                                      p.get_anti_pdg_code()) in \
-                                          sum(self.decay_groups, []))
+                                          sum(self['decay_groups'], []))
                                          ]
 
                 if not non_checked_particles:
@@ -1256,13 +1380,13 @@ class DecayModel(base_objects.Model):
                     if len(non_sm_particles) == 2:
                         # Are any of the particles in my decay group already?
                         this_group_particles = [p for p in non_sm_particles \
-                                                if p in self.decay_groups[\
+                                                if p in self['decay_groups'][\
                                                                    group_index]]
                         if len(this_group_particles) == 2:
                             # There can't be any conserved quantum
                             # number! Should be SM group!
-                            group = self.decay_groups.pop(group_index)
-                            self.decay_groups[0].extend(group)
+                            group = self['decay_groups'].pop(group_index)
+                            self['decay_groups'][0].extend(group)
                             continue
                         elif len(this_group_particles) == 1:
                             # One particle is in the same group as this particle
@@ -1273,10 +1397,10 @@ class DecayModel(base_objects.Model):
                                 particle2 = self.get_particle(particle2.get_anti_pdg_code())
 
                             group_index2 = [i for (i, g) in \
-                                                enumerate(self.decay_groups)\
+                                                enumerate(self['decay_groups'])\
                                                 if particle2 in g][0]
-                            group_2 = self.decay_groups.pop(group_index2)
-                            self.decay_groups[0].extend(group_2)
+                            group_2 = self['decay_groups'].pop(group_index2)
+                            self['decay_groups'][0].extend(group_2)
 
                         else:
                             # If the two particles are in another same group,
@@ -1288,21 +1412,21 @@ class DecayModel(base_objects.Model):
                                     particle1.get_anti_pdg_code())
                             # Find the group of particle1
                             group_index1 = [i for (i, g) in \
-                                            enumerate(self.decay_groups) \
+                                            enumerate(self['decay_groups']) \
                                             if particle1 in g][0]
 
                             # If the other non_sm_particle is in the same group
                             # as particle1, try to merge this particle to SM
                             if non_sm_particles[1] in \
-                                    self.decay_groups[group_index1]:
+                                    self['decay_groups'][group_index1]:
                                 if group_index > 0:
-                                    group = self.decay_groups.pop(group_index)
-                                    self.decay_groups[0].extend(group)
+                                    group = self['decay_groups'].pop(group_index)
+                                    self['decay_groups'][0].extend(group)
 
                     if len(non_sm_particles) == 3:
                         # Are any of the particles in my decay group already?
                         this_group_particles = [p for p in non_sm_particles \
-                                                if p in self.decay_groups[\
+                                                if p in self['decay_groups'][\
                                                                    group_index]]
                         if len(this_group_particles) == 2:
                             # Also the 3rd particle has to be in this group.
@@ -1313,11 +1437,11 @@ class DecayModel(base_objects.Model):
                                 particle2 = self.get_particle(\
                                                   particle2.get_anti_pdg_code())
                             group_index2 = [i for (i, g) in \
-                                            enumerate(self.decay_groups) \
+                                            enumerate(self['decay_groups']) \
                                             if particle2 in g][0]
-                            group = self.decay_groups.pop(max(group_index,
+                            group = self['decay_groups'].pop(max(group_index,
                                                               group_index2))
-                            self.decay_groups[min(group_index, group_index2)].\
+                            self['decay_groups'][min(group_index, group_index2)].\
                                                                 extend(group)
                         if len(this_group_particles) == 1:
                             # The other two particles have to be in
@@ -1330,21 +1454,21 @@ class DecayModel(base_objects.Model):
                                 particle1 = self.get_particle(\
                                                   particle1.get_anti_pdg_code())
                             group_index1 = [i for (i, g) in \
-                                            enumerate(self.decay_groups) \
+                                            enumerate(self['decay_groups']) \
                                             if particle1 in g][0]
                             particle2 = other_group_particles[0]
                             if not particle2.get('is_part'):
                                 particle2 = self.get_particle(\
                                                   particle2.get_anti_pdg_code())
                             group_index2 = [i for (i, g) in \
-                                            enumerate(self.decay_groups) \
+                                            enumerate(self['decay_groups']) \
                                             if particle2 in g][0]
 
                             if group_index1 != group_index2:
                                 # Merge groups
-                                group = self.decay_groups.pop(max(group_index1,
+                                group = self['decay_groups'].pop(max(group_index1,
                                                                   group_index2))
-                                self.decay_groups[min(group_index1,
+                                self['decay_groups'][min(group_index1,
                                                       group_index2)].\
                                                                    extend(group)
 
@@ -1361,6 +1485,7 @@ class DecayModel(base_objects.Model):
 
     def find_decay_groups_general(self):
         """Iteratively find decay groups, suitable to vertex in all orders
+           SM particle is defined as all MASSLESS particles.
            Algrorithm:
            1. Establish the reduced_interactions
               a. Read non-sm particles only
@@ -1393,8 +1518,8 @@ class DecayModel(base_objects.Model):
         """
         
         # Setup the SM particles and initial decay_groups, reduced_interactions
-        self.decay_groups = [[]]
-        self.reduced_interactions = []
+        self['decay_groups'] = [[]]
+        self['reduced_interactions'] = []
         sm_ids = []
 
         # Setup the original 'SM' particles, i.e. particle without mass.
@@ -1408,10 +1533,10 @@ class DecayModel(base_objects.Model):
                 #If this particle is anti-particle, convert it.
                 if not part.get('is_part'):
                     part = self.get_particle(part.get_anti_pdg_code())
-                                  
+
                 #Read this particle if it is not in SM
                 if not part.get('pdg_code') in sm_ids and \
-                   not part in self.decay_groups[0]:
+                   not part in self['decay_groups'][0]:
                     #If pid is not in the interaction yet, append it
                     if not part in temp_int['particles']:
                         temp_int['particles'].append(part)
@@ -1424,93 +1549,92 @@ class DecayModel(base_objects.Model):
             if len(temp_int['particles']) == 1:
                 # Remove this particle and add to decay_groups
                 part = temp_int['particles'].pop(0)
-                self.decay_groups[0].append(part)
+                self['decay_groups'][0].append(part)
 
             # Finally, append only interaction with nonzero particles
             # to reduced_interactions.
             if len(temp_int['particles']):
-                self.reduced_interactions.append(temp_int)
+                self['reduced_interactions'].append(temp_int)
             # So interactions in reduced_interactions are all 
             # with non-zero particles in this stage
-
 
         # Now start the iterative interaction reduction
         change = True
         while change:
             change = False
-            for inter in self.reduced_interactions:
+            for inter in self['reduced_interactions']:
                 #If only two particles in inter, they are in the same group
                 if len(inter['particles']) == 2:
                     #If they are in different groups, merge them.
                     #Interaction is useless.
 
                     # Case for the particle is in decay_groups
-                    if inter['particles'][0] in sum(self.decay_groups, []):
+                    if inter['particles'][0] in sum(self['decay_groups'], []):
                         group_index_0 =[i for (i,g) in\
-                                        enumerate(self.decay_groups)\
+                                        enumerate(self['decay_groups'])\
                                         if inter['particles'][0] in g][0]
 
                         # If the second one is also in decay_groups, merge them.
-                        if inter['particles'][1] in sum(self.decay_groups, []):
+                        if inter['particles'][1] in sum(self['decay_groups'], []):
                             if not inter['particles'][1] in \
-                                    self.decay_groups[group_index_0]:
+                                    self['decay_groups'][group_index_0]:
                                 group_index_1 =[i for (i,g) in \
-                                                enumerate(self.decay_groups)\
+                                                enumerate(self['decay_groups'])\
                                                 if inter['particles'][1] 
                                                 in g][0]
                                 # Remove the outer group
-                                group_1 = self.decay_groups.pop(max(\
+                                group_1 = self['decay_groups'].pop(max(\
                                           group_index_0, group_index_1))
                                 # Merge with the inner one
-                                self.decay_groups[min(group_index_0, \
+                                self['decay_groups'][min(group_index_0, \
                                                  group_index_1)].extend(group_1)
                         # The other one is no in decay_groups yet
                         # Add inter['particles'][1] to the group of 
                         # inter['particles'][0]
                         else:
-                            self.decay_groups[group_index_0].append(
+                            self['decay_groups'][group_index_0].append(
                                 inter['particles'][1])
                     # Case for inter['particles'][0] is not in decay_groups yet.
                     else:
                         # If only inter[1] is in decay_groups instead, 
                         # add inter['particles'][0] to its group.
-                        if inter['particles'][1] in sum(self.decay_groups, []):
+                        if inter['particles'][1] in sum(self['decay_groups'], []):
                             group_index_1 =[i for (i,g) in \
-                                            enumerate(self.decay_groups)\
+                                            enumerate(self['decay_groups'])\
                                             if inter['particles'][1] in g][0]
                             # Add inter['particles'][0]
-                            self.decay_groups[group_index_1].append(
+                            self['decay_groups'][group_index_1].append(
                                 inter['particles'][0])
 
                         # Both are not in decay_groups
                         # Add both particles to decay_groups
                         else:
-                            self.decay_groups.append(inter['particles'])
+                            self['decay_groups'].append(inter['particles'])
 
                     # No matter merging or not the interaction is useless now. 
                     # Kill it.
-                    self.reduced_interactions.remove(inter)
+                    self['reduced_interactions'].remove(inter)
                     change = True
 
                 # If only one particle in this interaction,
                 # this particle must be SM-like group.
                 elif len(inter['particles']) == 1:
-                    if inter['particles'][0] in sum(self.decay_groups, []):
+                    if inter['particles'][0] in sum(self['decay_groups'], []):
                         group_index_1 =[i for (i,g) in \
-                                        enumerate(self.decay_groups)\
+                                        enumerate(self['decay_groups'])\
                                         if inter['particles'][0] in g][0]
                         # If it is not, merge it with SM.
                         if group_index_1 > 0:
-                            self.decay_groups[0].extend(self.decay_groups.pop(\
-                                                                 group_index_1))
+                            self['decay_groups'][0].\
+                                extend(self['decay_groups'].pop(group_index_1))
 
                     # Inter['Particles'][0] not in decay_groups yet, 
                     # add it to SM-like group
                     else:
-                        self.decay_groups[0].extend(inter['particles'])
+                        self['decay_groups'][0].extend(inter['particles'])
 
                     # The interaction is useless now. Kill it.
-                    self.reduced_interactions.remove(inter)
+                    self['reduced_interactions'].remove(inter)
                     change = True
                 
                 # Case for more than two particles in this interaction.
@@ -1526,7 +1650,7 @@ class DecayModel(base_objects.Model):
                     for i, part in enumerate(inter['particles']):
                         try:
                             group_ids.append([n for (n,g) in \
-                                              enumerate(self.decay_groups) \
+                                              enumerate(self['decay_groups']) \
                                               if part in g][0])
                         # No group_ids if this particle is not in decay_groups
                         except IndexError:
@@ -1562,7 +1686,7 @@ class DecayModel(base_objects.Model):
 
                     # Remove the interaction if there is no particle in it
                     if not len(inter['particles']):
-                        self.reduced_interactions.remove(inter)
+                        self['reduced_interactions'].remove(inter)
 
                 # Start a new iteration...
 
@@ -1570,9 +1694,9 @@ class DecayModel(base_objects.Model):
         # Check if there is any particle that cannot be classified.
         # Such particle is in the group of its own.
         for part in self.get('particles'):
-            if not part in sum(self.decay_groups, []) and \
+            if not part in sum(self['decay_groups'], []) and \
                     not part.get('pdg_code') in sm_ids:
-                self.decay_groups.append([part])
+                self['decay_groups'].append([part])
 
     def find_stable_particles(self):
         """ Find stable particles that are protected by parity conservation
@@ -1582,40 +1706,47 @@ class DecayModel(base_objects.Model):
             2. From reduced_interactions to see if they can decay into
                others.
         """
-        # If self.decay_groups is None, find_decay_groups first.
-        if not self.decay_groups:
+
+        # If self['decay_groups'] is None, find_decay_groups first.
+        if not self['decay_groups']:
             self.find_decay_groups_general()
 
         # The list for the stable particle list of all groups
         stable_candidates = [[]]
         large_group_ids = []
-        self.stable_particles = []
-        
+        # Set the massless particles into stable_particles
+        self['stable_particles'] = [[]]
+        for p in self.get('particles'):
+            if eval(p.get('mass')) == 0. :
+                p.set('is_stable', True)
+                self['stable_particles'][-1].append(p)
+                
         # Find lightest particle in each group.
         # SM-like group is excluded.
-        for group in self.decay_groups[1:]:
+        for group in self['decay_groups'][1:]:
             # The stable particles of each group is described by a sublist
             # (take degeneracy into account). Group index is the index in the
-            # stable_candidates.
-            stable_candidates.append([])
-            # Set the initial mass
-            lightest_mass = eval(group[0].get('mass')).real
-            for part in group:
+            # stable_candidates. Suppose the lightest particle is the 1st one.
+            stable_candidates.append([group[0]])
+            for part in group[1:]:
                 # If the mass is smaller, replace the the list.
-                if eval(part.get('mass')).real < lightest_mass :
+                if eval(part.get('mass')).real < \
+                        eval(stable_candidates[-1][0].get('mass')).real :
                     stable_candidates[-1] = [part]
-                    lightest_mass = eval(part.get('mass')).real
-                    print part.get('pdg_code'), eval(part.get('mass')).real 
                 # If degenerate, append current particle to the list.
-                elif eval(part.get('mass')).real == lightest_mass:
+                elif eval(part.get('mass')).real == \
+                        eval(stable_candidates[-1][0].get('mass')).real :
                     stable_candidates[-1].append(part)
 
-        print [[p.get('pdg_code') for p in plist]for plist in stable_candidates]
-        for inter in self.reduced_interactions:
-            # Ids for the groups that particles of this inter belong to
-            temp_large_group = [[i for i, g in enumerate(self.decay_groups)\
-                                 if p in g][0] for p in inter['particles']]
 
+        for inter in self['reduced_interactions']:
+            # Ids for the groups that particles of this inter belongs to
+            temp_large_group = [[i for i, g in enumerate(self['decay_groups'])\
+                                     if p in g][0] for p in inter['particles']]
+            # If this reduced_interactions is exactly the same as others
+            # in terms of group ids. Skip it.
+            if temp_large_group in large_group_ids:
+                continue
             # Check if any id is repeated in previous groups
             for group_id in temp_large_group:
                 for i, g in enumerate(large_group_ids):
@@ -1639,12 +1770,13 @@ class DecayModel(base_objects.Model):
                 temp_partlist = stable_candidates[common_group[0]]
                 # Go through each group in common_group to find the lightest
                 # particles
-                for group_id in common_group:
+                for group_id in common_group[1:]:
                     # If the new group has lighter mass, replace the
                     # temp_partlist
                     if eval(stable_candidates[group_id][0].get('mass')).real < \
                             eval(temp_partlist[0].get('mass')).real:
                         temp_partlist = stable_candidates[group_id]
+
                     # If the new group has stable particle with the equal mass
                     # append the stable_candidates to temp_partlist
                     elif eval(stable_candidates[group_id][0].get('mass')).real \
@@ -1653,31 +1785,43 @@ class DecayModel(base_objects.Model):
 
                 # If temp_partlist is not empty, add to stable_particles
                 if temp_partlist:
-                    self.stable_particles.append(temp_partlist)
+                    self['stable_particles'].append(temp_partlist)
 
         # Append the stable particles if their group stand alone
         # (the mixing definition is in large_group_ids)
         for i, stable_particlelist in enumerate(stable_candidates):
             # stable_candidates[0] is for SM-like particles
             if not i in sum(large_group_ids, []) and i != 0:
-                self.stable_particles.append(stable_particlelist)
- 
-        return self.stable_particles
+                self['stable_particles'].append(stable_particlelist)
+
+        # Set the is_stable label for particles in the stable_particles
+        for p in sum(self['stable_particles'], []):
+            p.set('is_stable', True)
+
+        return self['stable_particles']
 
     def find_channels(self, part, max_partnum):
         """ Function that find channels for a particle.
             Call the function in DecayParticle."""
         part.find_channels(max_partnum, self)
 
+    def find_all_channels(self, max_partnum):
+        """ Function that find channels for all particles in this model.
+            Call the function in DecayParticle."""
+        for part in self.get('particles'):
+            part.find_channels(max_partnum, self)
+
 #===============================================================================
 # Channel: A specialized Diagram object for decay
 #===============================================================================
 class Channel(base_objects.Diagram):
     """Channel: a diagram that describes a certain decay channel
-                with apprximated (mean) matrix element, phase space area,
-                and decay width
-                ('apx_matrixelement', 'apx_PSarea', and  'apx_decaywidth')
-                Model must be specified.
+                with on shell condition, apprximated matrix element, 
+                phase space area, and decay width.
+                There are several helper static methods.
+                The check_idlegs will return the identical legs of the
+                given vertex. The check_channels_equiv will check the
+                equivalence of two channels.                
     """
 
     sorted_keys = ['vertices',
@@ -1695,7 +1839,7 @@ class Channel(base_objects.Diagram):
         # This property denotes whether the channel has 
         # identical particles in it.
         self['has_idpart'] = False
-        # The position of the identicle particles.
+        # The position of the identicle particles with pid as keys.
         self['id_part_list'] = {}
         # Decay width related properties.
         self['apx_matrixelement'] = 0.
@@ -1728,6 +1872,25 @@ class Channel(base_objects.Diagram):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
         return self.sorted_keys
+
+    def calculate_orders(self, model):
+        """Calculate the actual coupling orders of this channel,
+           negative vertex id is interepret as positive one 
+           (the CPT counterpart)."""
+
+        coupling_orders = {}
+        for vertex in self['vertices']:
+            if vertex.get('id') == 0: continue
+            vid = vertex.get('id')
+            couplings = model.get('interaction_dict')[abs(vertex.get('id'))].\
+                        get('orders')
+            for coupling in couplings.keys():
+                try:
+                    coupling_orders[coupling] += couplings[coupling]
+                except:
+                    coupling_orders[coupling] = couplings[coupling]
+
+        self.set('orders', coupling_orders)
 
     def get_initial_id(self):
         """ Return the id of initial particle"""

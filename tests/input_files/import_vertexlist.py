@@ -39,7 +39,7 @@ def make_vertexlist(model):
 
         for num, part in enumerate(inter['particles']):
             #Ignore massless incoming particle
-            if part.get('mass') == 'ZERO':
+            if part.get('mass') == 'ZERO' or part.get('pdg_code') in [1,2,3,4,5,11,12,13,14,16,21,22]:
                 continue
 
             pid = part.get_anti_pdg_code()

@@ -119,7 +119,10 @@ class Test_DecayParticle(unittest.TestCase):
                            (2, False): self.my_2bodyvertexlist,
                            (2, True) : self.my_2bodyvertexlist,
                            (3, False): self.my_3bodyvertexlist,
-                           (3, True) : self.my_3bodyvertexlist}
+                           (3, True) : self.my_3bodyvertexlist},
+                       'is_stable': False,
+                       'vertexlist_found': False,
+                       'max_vertexorder': 0
                        }
 
         self.mypart = decay_objects.DecayParticle(self.mydict)
@@ -213,7 +216,16 @@ class Test_DecayParticle(unittest.TestCase):
                        {'prop':'self_antipart',
                         'right_list':[True, False],
                         'wrong_list':[1, 'a', 'true', None]},
-                      {'prop':'decay_vertexlist',
+                       {'prop':'is_stable',
+                        'right_list':[True, False],
+                        'wrong_list':[1, 'a', 'true', None]},
+                       {'prop':'vertexlist_found',
+                        'right_list':[True, False],
+                        'wrong_list':[1, 'a', 'true', None]},
+                       {'prop':'max_vertexorder',
+                        'right_list':[3, 4, 0],
+                        'wrong_list':['a', 'true', None]},
+                       {'prop':'decay_vertexlist',
                         'right_list':[{(2, False):self.my_2bodyvertexlist,
                                        (2, True) :self.my_2bodyvertexlist,
                                        (3, False):self.my_3bodyvertexlist,
@@ -408,7 +420,7 @@ class Test_DecayParticle(unittest.TestCase):
         # Test for correct get_max_vertexorder()
         self.assertEqual(0, photon.get_max_vertexorder())
         self.assertEqual(2, tquark.get_max_vertexorder())
-        self.mypart.vertexlist_found = True
+        self.mypart['vertexlist_found'] = True
         self.assertEqual(3, self.mypart.get_max_vertexorder())
 
     def test_setget_channel(self):
@@ -554,7 +566,22 @@ class Test_DecayModel(unittest.TestCase):
             value = eval("decay_objects.%s" % param.name)
             self.assertTrue(isinstance(value, int) or \
                             isinstance(value, float) or \
-                            isinstance(value, complex)) 
+                            isinstance(value, complex))
+
+    def test_setget(self):
+        """ Test the set and get for special properties"""
+
+        self.my_testmodel.set('vertexlist_found', True)
+        self.assertEqual(self.my_testmodel.get('vertexlist_found'), True)
+        self.my_testmodel.set('vertexlist_found', False)
+        self.assertRaises(self.my_testmodel.PhysicsObjectError,
+                          self.my_testmodel.filter, 'max_vertexorder', 'a')
+        self.assertRaises(self.my_testmodel.PhysicsObjectError,
+                          self.my_testmodel.filter, 'stable_particles', 
+                          [self.my_testmodel.get('particles'), ['a']])
+        self.assertRaises(decay_objects.DecayModel.PhysicsObjectError,
+                          self.my_testmodel.filter, 'vertexlist_found', 4)
+                          
     
     def test_particles_type(self):
         """Test if the DecayModel can convert the assign particle into
@@ -609,11 +636,18 @@ class Test_DecayModel(unittest.TestCase):
                     self.assertEqual(part.get_vertexlist(partnum, onshell),
                                      full_vertexlist[(part.get_pdg_code(),
                                                       partnum, onshell)])
-
+        
         self.assertEqual(2, self.my_testmodel.get_max_vertexorder())
+        self.my_testmodel['max_vertexorder'] = 0
+        self.assertEqual(2, self.my_testmodel.get('max_vertexorder'))
         # Test the get from particle
         self.assertEqual(2, 
                         self.my_testmodel.get_particle(6).get_max_vertexorder())
+
+        # Test the assignment of vertexlist_found property
+        self.assertTrue(self.my_testmodel.get('vertexlist_found'))
+        self.assertTrue(all([p.get('vertexlist_found') for p in \
+                                self.my_testmodel.get('particles')]))
 
     def test_find_mssm_decay_groups_modified_mssm(self):
         """Test finding the decay groups of the MSSM"""
@@ -652,7 +686,7 @@ class Test_DecayModel(unittest.TestCase):
 
         self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in \
                                                 group])) \
-                                  for group in decay_mssm.decay_groups]),
+                                  for group in decay_mssm['decay_groups']]),
                          goal_groups)
 
     def test_find_mssm_decay_groups(self):
@@ -660,12 +694,12 @@ class Test_DecayModel(unittest.TestCase):
 
         mssm = import_ufo.import_model('mssm')
         decay_mssm = decay_objects.DecayModel(mssm)
-
         decay_mssm.find_decay_groups()
         goal_groups = [[25, 35, 36, 37],
                        [1000001, 1000002, 1000003, 1000004, 1000005, 1000006, 1000011, 1000012, 1000013, 1000014, 1000015, 1000016, 1000021, 1000022, 1000023, 1000024, 1000025, 1000035, 1000037, 2000001, 2000002, 2000003, 2000004, 2000005, 2000006, 2000011, 2000013, 2000015]]
 
-        for i, group in enumerate(decay_mssm.decay_groups):
+        # find_decay_groups_general should be run automatically
+        for i, group in enumerate(decay_mssm['decay_groups']):
             self.assertEqual(sorted([p.get('pdg_code') for p in group]),
                              goal_groups[i])
 
@@ -678,28 +712,27 @@ class Test_DecayModel(unittest.TestCase):
         param_path = os.path.join(_file_path,
                                   '../input_files/param_card_mssm.dat')
         decay_mssm.read_param_card(param_path)
-        decay_mssm.find_decay_groups_general()
 
-        #print decay_mssm.decay_groups
         goal_groups = [[15, 23, 24, 25, 35, 36, 37],
                        [1000001, 1000002, 1000003, 1000004, 1000011, 1000012, 1000013, 1000014, 1000015, 1000016, 1000021, 1000022, 1000023, 1000024, 1000025, 1000035, 1000037, 2000001, 2000002, 2000003, 2000004, 2000011, 2000013, 2000015], [1000005, 1000006, 2000005, 2000006], [5, 6]]
-        goal_stable_particle_ids = [[5]]
+        goal_stable_particle_ids = set([(1,2,3,4,11,12,13,14,16,21,22),
+                                        (1000025,)])
 
-        for i, group in enumerate(decay_mssm.decay_groups):
+        for i, group in enumerate(decay_mssm.get('decay_groups')):
             self.assertEqual(sorted([p.get('pdg_code') for p in group]),
                              goal_groups[i])
 
-        for inter in decay_mssm.reduced_interactions:
-            print inter['id'], [p.get_pdg_code() for p in inter['particles']]
-
-        decay_mssm.find_stable_particles()
-        self.assertEqual([[p.get('pdg_code') for p in plist] for plist in decay_mssm.stable_particles], goal_stable_particle_ids)
-            
-
+        # Reset decay_groups, test the auto run from find_stable_particles
+        decay_mssm['decay_groups'] = []
         # Test if all useless interactions are deleted.
-        for inter in decay_mssm.reduced_interactions:
+        for inter in decay_mssm['reduced_interactions']:
             self.assertTrue(len(inter['particles']))
 
+        # Reset decay_groups, test the auto run from find_stable_particles
+        decay_mssm['decay_groups'] = []
+        self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in plist])) for plist in decay_mssm.get('stable_particles')]), goal_stable_particle_ids)
+
+            
 
     def test_find_mssm_decay_groups_modified_mssm_general(self):
         """Test finding the decay groups of the MSSM using general way.
@@ -711,7 +744,25 @@ class Test_DecayModel(unittest.TestCase):
         param_path = os.path.join(_file_path,
                                   '../input_files/param_card_mssm.dat')
         decay_mssm.read_param_card(param_path)
+        
+        # Set sd4, sd5 quark mass the same as b quark, so that 
+        # degeneracy happens and can be test 
+        # (both particle and anti-particle must be changed)
+        # This reset of particle mass must before the reset of particles
+        # so that the particles of all interactions can change simutaneuosly.
+        decay_mssm.get_particle(2000003)['mass'] = \
+            decay_mssm.get_particle(5).get('mass')
+        decay_mssm.get_particle(2000001)['mass'] = \
+            decay_mssm.get_particle(5).get('mass')
+        decay_mssm.get_particle(1000012)['mass'] = \
+            decay_mssm.get_particle(1000015).get('mass')
 
+        decay_mssm.get_particle(-2000003)['mass'] = \
+            decay_mssm.get_particle(5).get('mass')
+        decay_mssm.get_particle(-2000001)['mass'] = \
+            decay_mssm.get_particle(5).get('mass')
+
+        # Set no want particles
         no_want_particle_codes = [1000022, 1000023, 1000024, -1000024, 
                                   1000025, 1000035, 1000037, -1000037]
         no_want_particles = [p for p in particles if p.get('pdg_code') in \
@@ -722,6 +773,16 @@ class Test_DecayModel(unittest.TestCase):
 
         interactions = decay_mssm.get('interactions')
         inter_list = copy.copy(interactions)
+
+        for interaction in inter_list:
+            if any([p.get('pdg_code') in no_want_particle_codes for p in \
+                        interaction.get('particles')]):
+                interactions.remove(interaction)
+        
+        decay_mssm.set('particles', particles)
+        decay_mssm.set('interactions', interactions)
+
+        # New interactions that mix different groups
         new_interaction = base_objects.Interaction({\
                 'id': len(decay_mssm.get('interactions'))+1,
                 'particles': base_objects.ParticleList(
@@ -739,50 +800,72 @@ class Test_DecayModel(unittest.TestCase):
                              [decay_mssm.get_particle(25),
                               decay_mssm.get_particle(2000013)])})
 
-        for interaction in inter_list:
-            if any([p.get('pdg_code') in no_want_particle_codes for p in \
-                        interaction.get('particles')]):
-                interactions.remove(interaction)
-        
-        decay_mssm.set('particles', particles)
-        decay_mssm.set('interactions', interactions)
-
         decay_mssm.get('interactions').append(new_interaction)
         decay_mssm.get('interactions').append(new_interaction_add_sm)
 
-        mssm_decay_groups = decay_mssm.get('decay_groups')
-        goal_groups = [(15, 23, 24, 25, 35, 36, 37, 2000013),
-                       (1000005, 1000006, 2000005, 2000006),
-                       (1000015, 1000016, 2000015),                        
-                       (1000001, 1000002, 1000003, 1000004, 
-                        1000021, 2000001, 2000002, 2000003, 2000004),
-                       (5, 6),
-                       (1000011, 1000012), 
-                       (1000013, 1000014), 
-                       (2000011,)
-                      ]
+        goal_groups = set([(15, 23, 24, 25, 35, 36, 37, 2000013),
+                           (1000005, 1000006, 2000005, 2000006),
+                           (1000015, 1000016, 2000015),                        
+                           (1000001, 1000002, 1000003, 1000004, 
+                            1000021, 2000001, 2000002, 2000003, 2000004),
+                           (5, 6),
+                           (1000011, 1000012), 
+                           (1000013, 1000014), 
+                           (2000011,)
+                           ])
+        # the stable_candidates that should appear in 1st stage of
+        # find stable_particles
         goal_stable_candidates = [[], [1000006], [1000015], [2000001, 2000003],
                                   [5], [1000012], [1000014],[2000011]]
-        goal_stable_particle_ids = [[5], # (5,6) combine with squark
-                                    [1000015], # all sleptons are combine
-                                    [2000011]]
-        self.assertEqual([tuple(sorted([p.get('pdg_code') for p in \
+        goal_stable_particle_ids = set([(1,2,3,4,11,12,13,14,16,21,22),
+                                        (5, 2000001, 2000003), # 5 mass = squark
+                                        # will be set later
+                                        (1000012, 1000015),
+                                        # all sleptons are combine
+                                        (2000011,)])
+
+
+        # Since particle_dict is a new one after reset of particles,
+        # set the mass again so that when the find_decay_groups_general
+        # use particle_dict, it can get the correct mass.
+        decay_mssm.get_particle(2000003)['mass'] = \
+            decay_mssm.get_particle(5).get('mass')
+        decay_mssm.get_particle(2000001)['mass'] = \
+            decay_mssm.get_particle(5).get('mass')
+        decay_mssm.get_particle(1000012)['mass'] = \
+            decay_mssm.get_particle(1000015).get('mass')
+
+        decay_mssm.get_particle(-2000003)['mass'] = \
+            decay_mssm.get_particle(5).get('mass')
+        decay_mssm.get_particle(-2000001)['mass'] = \
+            decay_mssm.get_particle(5).get('mass')
+
+        # Get the decay_groups (this should run find_decay_groups_general)
+        # automatically.
+        mssm_decay_groups = decay_mssm.get('decay_groups')
+
+        self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in \
                                             group])) \
-                              for group in mssm_decay_groups],
+                              for group in mssm_decay_groups]),
                          goal_groups)
-
-        for p in decay_mssm.get('particles'):
-            print '%s (%d) mass = %f' %(p.get('name') , 
-                                        p.get('pdg_code'),
-                                   eval('decay_objects.'+p.get('mass')+'.real'))
-
+ 
         # Test if all useless interactions are deleted.
-        for inter in decay_mssm.reduced_interactions:
-            print inter['id'], [p.get_pdg_code() for p in inter['particles']]
+        for inter in decay_mssm['reduced_interactions']:
+            self.assertTrue(len(inter['particles']))
 
+        # Test stable particles
+        # Reset the decay_groups, test the auto-run of find_decay_groups_general
+        decay_mssm['decay_groups'] = []
         decay_mssm.find_stable_particles()
-        self.assertEqual([[p.get('pdg_code') for p in plist] for plist in decay_mssm.stable_particles], goal_stable_particle_ids)
 
+        self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in plist])) for plist in decay_mssm['stable_particles']]), goal_stable_particle_ids)
+        
+        # Test the assignment of is_stable to particles
+        goal_stable_pid = [1,2,3,4,5,11,12,13,14,16,21,22,1000012,1000015,
+                           2000001, 2000003, 2000011]
+        self.assertEqual(sorted([p.get_pdg_code() \
+                                     for p in decay_mssm.get('particles') \
+                                     if p.get('is_stable')]), goal_stable_pid)
 
 #===============================================================================
 # Test_Channel
@@ -806,7 +889,7 @@ class Test_Channel(unittest.TestCase):
         interactions = self.my_testmodel.get('interactions')
         inter_list = copy.copy(interactions)
         # Pids that will be removed
-        no_want_pid = [1, 2, 3, 4, 15, 16, 21, 23]
+        no_want_pid = [1, 2, 3, 4, 15, 16, 21]
         for pid in no_want_pid:
             particles.remove(self.my_testmodel.get_particle(pid))
 
@@ -827,8 +910,8 @@ class Test_Channel(unittest.TestCase):
     
         full_vertexlist = import_vertexlist.full_vertexlist
         vert_0 = base_objects.Vertex({'id': 0, 'legs': base_objects.LegList([\
-                    base_objects.Leg({'id':25, 'number':2}), \
-                    base_objects.Leg({'id':25, 'number':1, 'state': False})])})
+                    base_objects.Leg({'id':25, 'number':1, 'state': False}), \
+                    base_objects.Leg({'id':25, 'number':2})])})
         vert_1 = copy.deepcopy(full_vertexlist[(40, 25)])
         vert_1['legs'][0]['number'] = 2
         vert_1['legs'][1]['number'] = 3
@@ -912,7 +995,7 @@ class Test_Channel(unittest.TestCase):
         self.my_testmodel.get_particle(24)['decay_vertexlist'][(4, True)] =\
             vertexlist[2]        
         # The two middle are for wboson (see h_tt_bbww.get_final_legs()).
-        goal_configlist = set([(2, 4, 1, 2), (2, 4, 2, 1), (2, 3, 1, 3),
+        """goal_configlist = set([(2, 4, 1, 2), (2, 4, 2, 1), (2, 3, 1, 3),
                                (2, 3, 2, 2), (2, 2, 1, 4), (2, 2, 2, 3),
                                (2, 1, 2, 4), (1, 4, 2, 2), (1, 4, 1, 3),
                                (1, 3, 1, 4), (1, 3, 2, 3), (1, 2, 2, 4),])
@@ -920,7 +1003,7 @@ class Test_Channel(unittest.TestCase):
                               for i in higgs.generate_configlist(h_tt_bbww,
                                                                  9, 
                                                            self.my_testmodel)]),
-                         goal_configlist)
+                         goal_configlist)"""
         # Reset the decay_vertexlist of w boson.
         self.my_testmodel.get_particle(24)['decay_vertexlist'].pop((4, True))
 
@@ -1139,21 +1222,52 @@ class Test_Channel(unittest.TestCase):
                           higgs.find_channels,
                           4, higgs)
         non_sm = copy.copy(higgs)
-        non_sm.set('pdg_code', 26)
+        non_sm.set('pdg_code', 800)
         self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
                           higgs.find_channels,
                           non_sm, self.my_testmodel)
-        
 
+        # Create two equivalent channels
+        vert_0 = self.h_tt_bbmmvv.get('vertices')[-1] 
+        vert_1 = import_vertexlist.full_vertexlist[(12, 25)]
+        vert_2 = import_vertexlist.full_vertexlist[(54, 23)]
+        channel_a = decay_objects.Channel({'vertices': base_objects.VertexList(\
+                    [vert_0])})
+        channel_b = decay_objects.Channel({'vertices': base_objects.VertexList(\
+                    [vert_0])})        
+        channel_a = higgs.connect_channel_vertex(channel_a, 0, vert_1,
+                                                self.my_testmodel)
+        channel_a = higgs.connect_channel_vertex(channel_a, 0, vert_2,
+                                                self.my_testmodel)
+        channel_b = higgs.connect_channel_vertex(channel_b, 0, vert_1,
+                                                self.my_testmodel)
+        channel_b = higgs.connect_channel_vertex(channel_b, 1, vert_2,
+                                                self.my_testmodel)
+        #print channel_a.nice_string(), '\n', channel_b.nice_string()
+        
         # Test of find_channels
         # Without running find_vertexlist before, but the program should run it
-        # automatically.
-        higgs.find_channels(6, self.my_testmodel)
-        #print higgs.get('decay_channels').keys()
-        result = higgs.get_channels(5, True)
-        #print result.nice_string()
-        #self.assertEqual(result, self.h_tt_bbmmvv)
+        # automatically. Also for find_stable_particles
+        self.my_testmodel.find_channels(self.my_testmodel.get_particle(5), 3)
+        self.assertFalse(self.my_testmodel.get_particle(5).get_channels(3, True))
+        self.assertTrue(self.my_testmodel['stable_particles'])
+
+        higgs.find_channels(4, self.my_testmodel)
+        result = higgs.get_channels(3, True)
+        print result.nice_string()
+        # Test if the equivalent channels appear only once.
+        self.assertTrue((result.count(channel_b)+ result.count(channel_a)) == 1)
+
+        """ Test on MSSM, to get a feeling on the execution time. """        
+        mssm = import_ufo.import_model('mssm')
+        param_path = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
+        decay_mssm = decay_objects.DecayModel(mssm)
+        decay_mssm.read_param_card(param_path)
         
+        susy_higgs = decay_mssm.get_particle(25)
+        susy_higgs.find_channels(3, decay_mssm)
+        print susy_higgs.get_channels(3, True).nice_string()
+        #decay_mssm.find_all_channels(3)
                                            
 
 
