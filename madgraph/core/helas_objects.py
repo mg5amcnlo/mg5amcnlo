@@ -1000,18 +1000,16 @@ class HelasWavefunction(base_objects.PhysicsObject):
         """Return the index of the particle that should be conjugated."""
 
         if self.needs_hermitian_conjugate():
-            parts = [wf for wf in self.get('mothers') if \
-                     wf.get('fermionflow') < 0]
+            fermions = [wf for wf in self.get('mothers') if \
+                        wf.is_fermion()]
             indices = []
             self_index = self.find_outgoing_number() - 1
-            for wf in parts:
-                if self.get('mothers').index(wf) < self_index:
-                    indices.append(self.get('mothers').index(wf)/2 + 1)
-                else:
-                    indices.append((self.get('mothers').index(wf) + 1)/2 + 1)
-            if indices == []:
-                return (1,)
-            return tuple(set(indices))
+            fermions.insert(self_index, self)
+            for i in range(0,len(fermions), 2):
+                if fermions[i].get('fermionflow') < 0 or \
+                   fermions[i+1].get('fermionflow') < 0:
+                    indices.append(i/2 + 1)
+            return tuple(indices)
         else:
             return ()
 
