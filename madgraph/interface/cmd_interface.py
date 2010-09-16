@@ -1586,79 +1586,52 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Check args validity
         self.check_check(args)
 
-        if args[0] == 'full' or args[0] == 'quick':
-            # Run matrix element generation check on processes
+        line = " ".join(args[1:])
+        myprocdef = self.extract_process(line)
 
-            line = " ".join(args[1:])
-            try:
-                if ',' not in line:
-                    myprocdef = self.extract_process(line)
-                else:
-                    raise MadGraph5Error('Decay chains not allowed in check')
-            except MadGraph5Error as error:
-                raise MadGraph5Error(str(error))
+        # Check that we have something    
+        if not myprocdef:
+            raise MadGraph5Error("Empty or wrong format process, please try again.")
 
-            # Check that we have something    
-            if not myprocdef:
-                raise MadGraph5Error("Empty or wrong format process, please try again.")
+        # Disable diagram generation logger
+        diag_logger = logging.getLogger('madgraph.diagram_generation')
+        old_level = diag_logger.setLevel(logging.WARNING)
 
-            # Disable diagram generation logger
-            diag_logger = logging.getLogger('madgraph.diagram_generation')
-            old_level = diag_logger.setLevel(logging.WARNING)
-            
-            # run the check
-            cpu_time1 = time.time()
-            if args[0] == 'quick':
-                self._comparisons = \
-                                  process_checks.check_processes(myprocdef,
-                                                                 quick = True)
-            else:
-                self._comparisons = process_checks.check_processes(myprocdef)
-            cpu_time2 = time.time()
+        # run the check
+        cpu_time1 = time.time()
+        # Run matrix element generation check on processes
 
-            logger.info(process_checks.output_comparisons(self._comparisons))
+        comparisons = []
+        gauge_result = []
 
-            logger.info("%i processes with %i permutations checked in %0.3f s" \
-                        % (len(self._comparisons),
-                          len(sum([comp['values'] for comp in \
-                                   self._comparisons],[])),
-                          (cpu_time2 - cpu_time1)))
-            # Restore diagram logger
-            diag_logger.setLevel(old_level)
+        if args[0] == 'quick':
+            comparisons = process_checks.check_processes(myprocdef,
+                                                         quick = True)
+        else:
+            if args[0] == 'full':
+                comparisons = process_checks.check_processes(myprocdef)
 
-        if args[0] == 'full' or args[0] == 'gauge':
-            # Run matrix element generation check on processes
-
-            line = " ".join(args[1:])
-            myprocdef = self.extract_process(line)
-            
-            # Check that we have something    
-            if not myprocdef:
-                raise MadGraph5Error("Empty or wrong format process, please try again.")
-
-            # Disable diagram generation logger
-            diag_logger = logging.getLogger('madgraph.diagram_generation')
-            old_level = diag_logger.setLevel(logging.WARNING)
-            
-            # run the check
-            cpu_time1 = time.time()
             gauge_result = process_checks.check_gauge(myprocdef)
-            cpu_time2 = time.time()
 
+        cpu_time2 = time.time()
+
+        logger.info("%i processes checked in %0.3f s" \
+                    % (len(gauge_result) + len(comparisons),
+                      (cpu_time2 - cpu_time1)))
+
+        if gauge_result:
             logger.info('gauge results:')
-            
+
             logger.info(process_checks.output_gauge(gauge_result))
 
-            logger.info("%i processes checked in %0.3f s" \
-                        % (len(gauge_result),
-                          (cpu_time2 - cpu_time1)))
+        if comparisons:
+            logger.info(process_checks.output_comparisons(comparisons))
+            self._comparisons = comparisons
 
-            #logger.info("  checked in %0.3f s" \
-            #            % (cpu_time2 - cpu_time1))
-            # Restore diagram logger
-            diag_logger.setLevel(old_level)
+        # Restore diagram logger
+        diag_logger.setLevel(old_level)
 
-            return
+        return
     
     # Generate a new amplitude
     def do_generate(self, line):
