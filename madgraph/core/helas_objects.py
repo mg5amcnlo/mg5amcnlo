@@ -1004,7 +1004,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         wf.is_fermion()]
             indices = []
             self_index = self.find_outgoing_number() - 1
-            fermions.insert(self_index, self)
+            if self.is_fermion():
+                fermions.insert(self_index, self)
             for i in range(0,len(fermions), 2):
                 if fermions[i].get('fermionflow') < 0 or \
                    fermions[i+1].get('fermionflow') < 0:
