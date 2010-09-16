@@ -1676,19 +1676,19 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self._done_export = False
 
         # Extract process from process definition
-        myprocdef = self.extract_process(line)
-                
+        if ',' in line:
+            myprocdef, line = self.extract_decay_chain_process(line)
+        else:
+            myprocdef = self.extract_process(line)
+            
         # Check that we have something    
         if not myprocdef:
             raise MadGraph5Error("Empty or wrong format process, please try again.")
 
         # run the program
         cpu_time1 = time.time()
-        try:
-            myproc = diagram_generation.MultiProcess(myprocdef)
-            self._curr_amps = myproc.get('amplitudes')
-        except Exception as error:
-            raise MadGraph5Error(str(error))
+        myproc = diagram_generation.MultiProcess(myprocdef)
+        self._curr_amps = myproc.get('amplitudes')
         cpu_time2 = time.time()
 
         nprocs = len(self._curr_amps)
