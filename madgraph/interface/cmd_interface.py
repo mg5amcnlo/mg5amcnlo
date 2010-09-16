@@ -473,9 +473,11 @@ class HelpToCmd(object):
         logger.info("   - If mode is standalone_v4, the directory will be in")
         logger.info("     Standalone format, otherwise in MadEvent format.")
         logger.info("   - If mode is matrix_v4, output the matrix.f files for all")
-        logger.info("     generated processes in directory \"name\"")
+        logger.info("     generated processes in directory \"name\".")
         logger.info("   - If mode is pythia8, output the .h and .cc files for the")
-        logger.info("     processes in Pythia 8 format in directory \"name\"")
+        logger.info("     processes in Pythia 8 format in directory \"name\".")
+        logger.info("   - If mode is pythia8_model, output the .h and .cc files for")
+        logger.info("     for the model parameters and Aloha functions for the model.")
         logger.info("   name: The name of the copy of Template.")
         logger.info("   If you put '.' instead of a name, your pwd will be used.")
         logger.info("   If you put 'auto', an automatic name PROC_XX_n will be created.")
@@ -539,18 +541,23 @@ class HelpToCmd(object):
         *Note* that if you have run the 'output', export format and FILEPATH
         are optional.
         - For madevent_v4, the path needs to be to a MadEvent SubProcesses
-        directory, and the result is the Pxxx directories (including the
-        diagram .ps and .jpg files) for the subprocesses as well as a
-        correctly generated subproc.mg file.
+          directory, and the result is the Pxxx directories (including the
+          diagram .ps and .jpg files) for the subprocesses as well as a
+          correctly generated subproc.mg file.
         - For standalone_v4, the result is a set of complete MG4 Standalone
-        process directories.
+          process directories.
         - For matrix_v4, the resulting files will be
-        FILEPATH/matrix_\"process_string\".f
+          FILEPATH/matrix_\"process_string\".f
         - For pythia8, the resulting files will be
-        FILEPATH/Sigma_\"process_string\".h and
-        FILEPATH/Sigma_\"process_string\".cc.
+          FILEPATH/Sigma_\"process_string\".h and
+          FILEPATH/Sigma_\"process_string\".cc.
+        - For pythia8_model, the resulting files will be
+          FILEPATH/Parameters_\"process_string\".h,
+          FILEPATH/Parameters_\"process_string\".cc,
+          FILEPATH/hel_amps_\"process_string\".h and
+          FILEPATH/hel_amps_\"process_string\".cc.
         - available options are \"-nojpeg\", to suppress generation of
-        jpeg diagrams in MadEvent 4 subprocess directories.""")
+          jpeg diagrams in MadEvent 4 subprocess directories.""")
 
     def help_history(self):
         logger.info("syntax: history [FILEPATH|clean|.] ")
@@ -817,10 +824,6 @@ class CheckValidForCmd(object):
             text = 'No model found. Please import a model first and then retry.'
             raise self.InvalidCmd(text)
 
-        if not self._curr_amps:
-            text = 'No processes generated. Please generate a process first.'
-            raise self.InvalidCmd(text)
-
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
 
@@ -853,6 +856,10 @@ class CheckValidForCmd(object):
                   "To generate a new MG4 directory, you need a valid MG_ME path"
 
         self._export_dir = os.path.realpath(self._export_dir)
+
+        if not self._curr_amps and self._export_format != "pythia8_model":
+            text = 'No processes generated. Please generate a process first.'
+            raise self.InvalidCmd(text)
 
     def get_default_path(self):
         """Set self._export_dir to the default (\'auto\') path"""
@@ -1242,7 +1249,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _tutorial_opts = ['start', 'stop']
     _check_opts = ['full', 'quick', 'gauge']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
-    _export_formats = ['madevent_v4', 'standalone_v4', 'matrix_v4', 'pythia8']
+    _export_formats = ['madevent_v4', 'standalone_v4', 'matrix_v4', 'pythia8',
+                       'pythia8_model']
 
     # Variables to store object information
     _curr_model = None  #base_objects.Model()
@@ -2306,6 +2314,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         args = split_arg(line)
         # Check the validity of the arguments and return the output path
         self.check_export(args)
+
+        if self._export_format == 'pythia8_model':
+            cpu_time1 = time.time()
+            export_pythia8.convert_model_to_pythia8(\
+                            self._curr_model, self._export_dir)
+            cpu_time2 = time.time()
+            logger.info(("Exported UFO model to Pythia 8 format in %0.3f s") \
+                        % (cpu_time2 - cpu_time1))
+
+            return
 
         if self._done_export == (self._export_dir, self._export_format):
             # We have already done export in this path

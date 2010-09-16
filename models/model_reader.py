@@ -178,6 +178,15 @@ class ModelReader(base_objects.Model):
                 logger.warning("%s has no expression: %s" % (param.name,
                                                              param.expr))
         
+        # Correct width sign for Majorana particles (where the width
+        # and mass need to have the same sign)
+        for particle in self.get('particles'):
+            if particle.is_fermion() and particle.get('self_antipart') and \
+                   particle.get('width').lower() != 'zero' and \
+                   eval(particle.get('mass')) < 0:
+                exec("locals()[\'%(width)s\'] = -abs(%(width)s)" % \
+                     {'width': particle.get('width')})
+
         # Extract couplings
         couplings = sum(self['couplings'].values(), [])
 

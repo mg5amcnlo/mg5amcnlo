@@ -1075,12 +1075,12 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
 # Routines to output UFO models in Pythia8 format
 #===============================================================================
 
-def convert_model_to_pythia8(self, model, output_dir):
+def convert_model_to_pythia8(model, output_dir):
     """Create a full valid Pythia 8 model from an MG5 model (coming from UFO)"""
 
     # create the model parameter files
     model_builder = UFOModelConverterPythia8(model, output_dir)
-    model_builder.build()
+    model_builder.write_files()
 
 #===============================================================================
 # UFOModelConverterPythia8
@@ -1316,6 +1316,15 @@ class UFOModelConverterPythia8(object):
         res_strings = []
         for param in params:
             res_strings.append("%s=%s;" % (param.name, param.expr))
+
+        # Correct width sign for Majorana particles (where the width
+        # and mass need to have the same sign)        
+        for particle in self.model.get('particles'):
+            if particle.is_fermion() and particle.get('self_antipart') and \
+                   particle.get('width').lower() != 'zero':
+                res_strings.append("if (%s < 0)" % particle.get('mass'))
+                res_strings.append("%(width)s = -abs(%(width)s);" % \
+                                   {"width": particle.get('width')})
 
         return "\n".join(res_strings)
 
