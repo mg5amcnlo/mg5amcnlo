@@ -153,6 +153,12 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
               if not leg.get('state')]
     fsids = [leg.get('ids') for leg in multiprocess.get('legs') \
              if leg.get('state')]
+    # Create dictionary between isids and antiids, to speed up lookup
+    id_anti_id_dict = {}
+    for id in set(tuple(sum(isids+fsids, []))):
+        id_anti_id_dict[id] = model.get_particle(id).get_anti_pdg_code()
+        id_anti_id_dict[model.get_particle(id).get_anti_pdg_code()] = id        
+
     sorted_ids = []
     results = []
     for is_prod in apply(itertools.product, isids):
@@ -160,7 +166,7 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
 
             # Check if we have already checked the process
             if check_already_checked(is_prod, fs_prod, sorted_ids,
-                                     multiprocess, model):
+                                     multiprocess, model, id_anti_id_dict):
                 continue
 
             # Generate process based on the selected ids
@@ -192,13 +198,19 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
 #===============================================================================
 # Helper function check_already_checked
 #===============================================================================
-def check_already_checked(is_ids, fs_ids, sorted_ids, process, model):
+def check_already_checked(is_ids, fs_ids, sorted_ids, process, model,
+                          id_anti_id_dict = {}):
     """Check if process already checked, if so return True, otherwise add
     process and antiprocess to sorted_ids."""
 
     # Check if process is already checked
-    is_ids = [model.get_particle(id).get_anti_pdg_code() for id in \
-              is_ids]
+    if id_anti_id_dict:
+        is_ids = [id_anti_id_dict[id] for id in \
+                  is_ids]
+    else:
+        is_ids = [model.get_particle(id).get_anti_pdg_code() for id in \
+                  is_ids]        
+
     ids = array.array('i', sorted(is_ids + list(fs_ids)) + \
                       [process.get('id')])
 
@@ -208,11 +220,18 @@ def check_already_checked(is_ids, fs_ids, sorted_ids, process, model):
 
     # Add this process to tested_processes
     sorted_ids.append(ids)
+
     # Add also antiprocess, since these are identical
-    anti_ids = sorted([model.get_particle(id).get_anti_pdg_code() \
-                       for id in ids[:-1]]) + [process.get('id')]
+    if id_anti_id_dict:
+        anti_ids = sorted([id_anti_id_dict[id] \
+                           for id in ids[:-1]]) + [process.get('id')]
+    else:
+        anti_ids = sorted([model.get_particle(id).get_anti_pdg_code() \
+                           for id in ids[:-1]]) + [process.get('id')]
+    anti_ids = array.array('i', anti_ids)
+
     if anti_ids != ids:
-        sorted_ids.append(array.array('i', anti_ids))
+        sorted_ids.append(anti_ids)
 
     return False
 
@@ -318,7 +337,7 @@ def evaluate_matrix_element(matrix_element, stored_quantities, helas_writer,
 
     # Evaluate the matrix element for the momenta p
     return eval("Matrix().smatrix(p, full_model)")
-
+    
 #===============================================================================
 # check_processes
 #===============================================================================
