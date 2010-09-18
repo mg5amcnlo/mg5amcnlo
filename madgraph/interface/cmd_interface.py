@@ -491,7 +491,7 @@ class HelpToCmd(object):
         
     def help_check(self):
 
-        logger.info("syntax: check " + "|".join(self._check_opts) + " process_definition")
+        logger.info("syntax: check " + "|".join(self._check_opts) + " [param_card] process_definition")
         logger.info("-- check a process or set of processes. Options:")
         logger.info("full: Checks that the model and MG5 are working properly")
         logger.info("   by generating the all permutations of the process and")
@@ -502,6 +502,8 @@ class HelpToCmd(object):
         logger.info("   Only checks a subset of permutations.")
         logger.info("gauge: Only check that processes with massless gauge bosons")
         logger.info("   are gauge invariant")
+        logger.info("If param_card is given, that param_card is used instead")
+        logger.info("   of the default values for the model.")
         logger.info("For process syntax, please see help generate")
 
     def help_generate(self):
@@ -696,6 +698,10 @@ class CheckValidForCmd(object):
             self.help_check()
             raise self.InvalidCmd("\"check\" requires an argument and a process.")
 
+        param_card = None
+        if os.path.isfile(args[1]):
+            param_card = args.pop(1)
+
         if args[0] not in self._check_opts:
             self.help_check()
             raise self.InvalidCmd("\"check\" called with wrong argument")
@@ -704,8 +710,8 @@ class CheckValidForCmd(object):
             raise MadGraph5Error('Decay chains not allowed in check')
         
         self.check_process_format(" ".join(args[1:]))
-        
-        return True
+
+        return param_card
     
     def check_generate(self, args):
         """check the validity of args"""
@@ -1054,9 +1060,20 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_check(self, text, line, begidx, endidx):
         "Complete the add command"
 
+        args = split_arg(line[0:begidx])
+
         # Format
-        if len(split_arg(line[0:begidx])) == 1:
+        if len(args) == 1:
             return self.list_completion(text, self._check_opts)
+
+        # Directory continuation
+        if args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))
+
+        if len(args) == 2:
+            return self.path_completion(text)
         
     def complete_tutorial(self, text, line, begidx, endidx):
         "Complete the tutorial command"
@@ -1493,7 +1510,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 raise self.InvalidCmd, 'no lorentz %s in current model' % args[1]
             
         elif args[0] == 'checks':
-            comparisons = self._comparisons
+            comparisons = self._comparisons[0]
             if len(args) > 1 and args[1] == 'failed':
                 comparisons = [c for c in comparisons if not c['passed']]
             for comp in comparisons:
@@ -1509,6 +1526,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 else:
                     print "   Process failed (rel. difference %.9e)" % \
                           comp['difference']
+
+            used_aloha = sorted(self._comparisons[1])
+            print "Checked ALOHA routines:"
+            for aloha in used_aloha:
+                aloha_str = aloha[0]
+                if aloha[1]:
+                    aloha_str += 'C' + 'C'.join(aloha[1])
+                aloha_str += "_%d" % aloha[2]
+                print aloha_str
         
     def multiparticle_string(self, key):
         """Returns a nicely formatted string for the multiparticle"""
@@ -1584,7 +1610,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         args = split_arg(line)
 
         # Check args validity
-        self.check_check(args)
+        param_card = self.check_check(args)
 
         line = " ".join(args[1:])
         myprocdef = self.extract_process(line)
@@ -1606,12 +1632,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         if args[0] == 'quick':
             comparisons = process_checks.check_processes(myprocdef,
-                                                         quick = True)
+                                                        param_card = param_card,
+                                                        quick = True)
         else:
             if args[0] == 'full':
-                comparisons = process_checks.check_processes(myprocdef)
-
-            gauge_result = process_checks.check_gauge(myprocdef)
+                comparisons = process_checks.check_processes(myprocdef,
+                                                        param_card = param_card)
+            gauge_result = process_checks.check_gauge(myprocdef,
+                                                      param_card = param_card)
 
         cpu_time2 = time.time()
 
@@ -1625,7 +1653,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             logger.info(process_checks.output_gauge(gauge_result))
 
         if comparisons:
-            logger.info(process_checks.output_comparisons(comparisons))
+            logger.info(process_checks.output_comparisons(comparisons[0]))
             self._comparisons = comparisons
 
         # Restore diagram logger

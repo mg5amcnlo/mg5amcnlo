@@ -361,12 +361,14 @@ def check_processes(processes, param_card = None, quick = []):
         
         stored_quantities = {}
 
-        return run_multiprocs_no_crossings(check_process,
-                                           multiprocess,
-                                           stored_quantities,
-                                           helas_writer,
-                                           full_model,
-                                           quick)
+        results = run_multiprocs_no_crossings(check_process,
+                                              multiprocess,
+                                              stored_quantities,
+                                              helas_writer,
+                                              full_model,
+                                              quick)
+
+        return results, stored_quantities["used_lorentz"]
 
     elif isinstance(processes, base_objects.Process):
         processes = base_objects.ProcessList([processes])
@@ -410,7 +412,7 @@ def check_processes(processes, param_card = None, quick = []):
         if res:
             comparison_results.append(res)
 
-    return comparison_results
+    return comparison_results, stored_quantities["used_lorentz"]
 
 def check_process(process, stored_quantities, helas_writer, full_model, quick):
     """Check the helas calls for a process by generating the process

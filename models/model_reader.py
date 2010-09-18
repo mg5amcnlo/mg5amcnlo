@@ -90,38 +90,6 @@ class ModelReader(base_objects.Model):
                 if not line.strip() or line[0] == '#':
                     continue
                 line = line.lower()
-                # Look for blocks
-                block_match = re_block.match(line)
-                if block_match:
-                    block = block_match.group('name')
-                    continue
-                # Look for single indices
-                single_index_match = re_single_index.match(line)
-                if block and single_index_match:
-                    i1 = int(single_index_match.group('i1'))
-                    value = single_index_match.group('value')
-                    try:
-                        exec("locals()[\'%s\'] = %s" % (parameter_dict[block][(i1,)].name,
-                                          value))
-                        parameter_dict[block][(i1,)].value = complex(value)
-                    except KeyError:
-                        logger.warning('No parameter found for block %s index %d' %\
-                                       (block, i1))
-                    continue
-                double_index_match = re_double_index.match(line)
-                # Look for double indices
-                if block and double_index_match:
-                    i1 = int(double_index_match.group('i1'))
-                    i2 = int(double_index_match.group('i2'))
-                    try:
-                        exec("locals()[\'%s\'] = %s" % (parameter_dict[block][(i1,i2)].name,
-                                          double_index_match.group('value')))
-                        parameter_dict[block][(i1,i2)].value = complex(value)
-
-                    except KeyError:
-                        logger.warning('No parameter found for block %s index %d %d' %\
-                                       (block, i1, i2))
-                    continue
                 # Look for decays
                 decay_match = re_decay.match(line)
                 if decay_match:
@@ -135,6 +103,39 @@ class ModelReader(base_objects.Model):
                         parameter_dict['decay'][(pid,)].value = complex(value)
                     except KeyError:
                         logger.warning('No decay parameter found for %d' % pid)
+                    continue
+                # Look for blocks
+                block_match = re_block.match(line)
+                if block_match:
+                    block = block_match.group('name')
+                    continue
+                # Look for double indices
+                double_index_match = re_double_index.match(line)
+                if block and double_index_match:
+                    i1 = int(double_index_match.group('i1'))
+                    i2 = int(double_index_match.group('i2'))
+                    value = double_index_match.group('value')
+                    try:
+                        exec("locals()[\'%s\'] = %s" % (parameter_dict[block][(i1,i2)].name,
+                                          value))
+                        parameter_dict[block][(i1,i2)].value = float(value)
+
+                    except KeyError:
+                        logger.warning('No parameter found for block %s index %d %d' %\
+                                       (block, i1, i2))
+                    continue
+                # Look for single indices
+                single_index_match = re_single_index.match(line)
+                if block and single_index_match:
+                    i1 = int(single_index_match.group('i1'))
+                    value = single_index_match.group('value')
+                    try:
+                        exec("locals()[\'%s\'] = %s" % (parameter_dict[block][(i1,)].name,
+                                          value))
+                        parameter_dict[block][(i1,)].value = complex(value)
+                    except KeyError:
+                        logger.warning('No parameter found for block %s index %d' %\
+                                       (block, i1))
                     continue
         else:
             # No param_card, use default values
