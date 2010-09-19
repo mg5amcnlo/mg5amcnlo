@@ -150,26 +150,11 @@ class ModelReader(base_objects.Model):
 
         # Extract derived parameters
         derived_parameters = []
-        try:
-            derived_parameters += self['parameters'][()]
-        except KeyError:
-            pass
-        try:
-            derived_parameters += self['parameters'][('aEWM1',)]
-        except KeyError:
-            pass
-        try:
-            derived_parameters += self['parameters'][('aS',)]
-        except KeyError:
-            pass
-        try:
-            derived_parameters += self['parameters'][('aS', 'aEWM1')]
-        except KeyError:
-            pass
-        try:
-            derived_parameters += self['parameters'][('aEWM1', 'aS')]
-        except KeyError:
-            pass
+        keys = [key for key in self['parameters'].keys() if \
+                key != ('external',)]
+        keys.sort(key=len)
+        for key in keys:
+            derived_parameters += self['parameters'][key]
 
         # Now calculate derived parameters
         for param in derived_parameters:
