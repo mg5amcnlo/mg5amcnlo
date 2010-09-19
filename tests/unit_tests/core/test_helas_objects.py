@@ -94,6 +94,7 @@ class HelasWavefunctionTest(unittest.TestCase):
             for x in test['wrong_list']:
                 self.assertFalse(temp_wavefunction.set(test['prop'], x))
 
+
 #===============================================================================
 # HelasAmplitudeTest
 #===============================================================================
@@ -1893,6 +1894,72 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         for i, wf in enumerate(me.get_all_wavefunctions()):
             self.assertEqual(wf.get('number'), i + 1)        
+
+
+    def test_get_conjugate_index(self):
+        """Test the get_conjugate_index routines"""
+
+        myleg1 = base_objects.Leg({'id':2})
+        myleg2 = base_objects.Leg({'id':2})
+        myleg3 = base_objects.Leg({'id':-11})
+        myleg4 = base_objects.Leg({'id':11})
+
+        wf1 = helas_objects.HelasWavefunction(myleg1, 3, self.mymodel)
+        wf2 = helas_objects.HelasWavefunction(myleg2, 0, self.mymodel)
+        wf3 = helas_objects.HelasWavefunction(myleg3, 0, self.mymodel)
+        wf4 = helas_objects.HelasWavefunction(myleg4, 0, self.mymodel)
+
+        mothers = helas_objects.HelasWavefunctionList([wf2, wf3, wf4])
+
+        wf1.set('mothers', mothers)
+        wf1.set('pdg_codes', [-2,2,-11,11])
+        
+        self.assertEqual(wf1.get_spin_state_number(), 2)
+        self.assertEqual(wf1.find_outgoing_number(), 1)
+        self.assertEqual(wf1.get_conjugate_index(), ())
+
+        wf1.set('fermionflow', -1)
+        self.assertEqual(wf1.get_conjugate_index(), (1,))
+
+        wf2.set('fermionflow', -1)
+        self.assertEqual(wf1.get_conjugate_index(), (1,))
+
+        wf1.set('fermionflow', 1)
+        self.assertEqual(wf1.get_conjugate_index(), (1,))
+
+        wf2.set('fermionflow', 1)
+        wf3.set('fermionflow', -1)
+        self.assertEqual(wf1.get_conjugate_index(), (2,))
+
+        wf4.set('fermionflow', -1)
+        self.assertEqual(wf1.get_conjugate_index(), (2,))
+
+        wf3.set('fermionflow', 1)
+        self.assertEqual(wf1.get_conjugate_index(), (2,))
+
+        wf1.set('fermionflow', -1)
+        self.assertEqual(wf1.get_conjugate_index(), (1, 2))
+
+        myleg5 = base_objects.Leg({'id':2, 'state': False})
+        wf5 = helas_objects.HelasWavefunction(myleg5, 0, self.mymodel)
+
+        mothers.insert(0, wf5)
+        wf4.set('fermionflow', 1)
+
+        amp = helas_objects.HelasAmplitude()
+        amp.set('mothers', mothers)
+
+        self.assertEqual([w.is_fermion() for w in mothers], [True] * 4)
+        self.assertEqual(amp.get_conjugate_index(), ())
+        
+        wf5.set('fermionflow', -1)
+        self.assertEqual(amp.get_conjugate_index(), (1,))
+
+        wf4.set('fermionflow', -1)
+        self.assertEqual(amp.get_conjugate_index(), (1,2))
+
+        wf5.set('fermionflow', 1)
+        self.assertEqual(amp.get_conjugate_index(), (2,))
 
 #===============================================================================
 # HelasDecayChainProcessTest
