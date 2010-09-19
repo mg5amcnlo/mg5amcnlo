@@ -18,7 +18,8 @@ void SLHABlock::set_entry(vector<int> indices, double value)
 double SLHABlock::get_entry(vector<int> indices, double def_val)
 {
   if (_entries.find(indices) == _entries.end()){
-    cout << "No such entry, using default value " << def_val << endl;
+    cout << "Warning: No such entry in " << _name << ", using default value " 
+	 << def_val << endl;
     return def_val;
   }
   return _entries[indices];
@@ -27,8 +28,10 @@ double SLHABlock::get_entry(vector<int> indices, double def_val)
 void SLHAReader::read_slha_file(string file_name)
 {
   ifstream param_card;
-  cout << "Open slha file " << file_name << endl;
   param_card.open(file_name.c_str(), ifstream::in);
+  if(!param_card.good())
+    throw "Error while opening param card";
+  cout << "Opened slha file " << file_name << " for reading" << endl;
   char buf[200];
   string line;
   string block("");
@@ -36,6 +39,7 @@ void SLHAReader::read_slha_file(string file_name)
   while(param_card.good()){
     param_card.getline(buf, 200);
     line = buf;
+    // Change to lowercase
     transform(line.begin(), line.end(), line.begin(), (int(*)(int)) tolower);
     if(line != "" && line[0] != '#'){
       if(block != ""){
@@ -93,6 +97,9 @@ void SLHAReader::read_slha_file(string file_name)
     }
   }
 
+  if (_blocks.size() == 0)
+    throw "No information read from SLHA card";
+
   param_card.close();
 }
 
@@ -124,10 +131,10 @@ double SLHAReader::set_block_entry(string block_name, vector<int> indices,
     _blocks[block_name] = block;
   }
   _blocks[block_name].set_entry(indices, value);  
-  cout << "Set block " << block_name << " entry ";
-  for (int i=0;i < indices.size();i++) 
-    cout << indices[i] << " ";
-  cout << "to " << _blocks[block_name].get_entry(indices) << endl;
+  /* cout << "Set block " << block_name << " entry ";
+     for (int i=0;i < indices.size();i++) 
+     cout << indices[i] << " ";
+     cout << "to " << _blocks[block_name].get_entry(indices) << endl;*/
 }
 
 double SLHAReader::set_block_entry(string block_name, int index, 
