@@ -355,24 +355,48 @@ class Epsilon(ColorObject):
         self.triplets = not self.triplets
 
 #===============================================================================
-# Color sextet objects: delta6, K6, K3, T3, T6
+# Color sextet objects: delta3, delta6, K6, K3, T3, T6
 #===============================================================================
-class delta6(ColorObject):
-    """delta6, the sextet identity object."""
+class delta3(ColorObject):
+    """delta3, the identity object for triplets."""
 
     def __init__(self, *args):
         """Ensure delta6 objects have strictly 2 indices"""
 
-        super(f, self).__init__()
+        super(delta3, self).__init__()
+        if len(args) != 2:
+            raise ValueError, \
+                "delta3 objects must have two indices!"
+
+    def simplify(self):
+        """Implement delta3(i,j) = Nc*delta(i,j)"""
+
+        # delta3(i,i) = Nc
+        if self[0] == self[1]:
+            col_str = ColorString()
+            col_str.Nc_power = 1
+            return ColorFactor([col_str])
+
+class delta6(ColorObject):
+    """delta6, the identity object sextets."""
+
+    def __init__(self, *args):
+        """Ensure delta6 objects have strictly 2 indices"""
+
+        super(delta6, self).__init__()
         if len(args) != 2:
             raise ValueError, \
                 "delta6 objects must have two indices!"
 
     def simplify(self):
-        """Implement delta6(i,j) = T(i,j)"""
+        """Implement delta6(i,j) = 2*Nc*delta(i,j)"""
 
-        # delta6(i,j) = T(i,j)
-        return ColorFactor([ColorString([T(self[:])])])
+        # delta6(i,i) = Nc
+        if self[0] == self[1]:
+            col_str = ColorString()
+            col_str.Nc_power = 1
+            col_str.coeff = fractions.Fraction(2, 1)
+            return ColorFactor([col_str])
 
 class K6(ColorObject):
     """K6, the symmetry clebsch coefficient, mapping into the symmetric
@@ -386,8 +410,6 @@ class K6(ColorObject):
             raise ValueError, \
                 "sextet color objects must have three indices!"
 
-        self.bar = False
-
     def pair_simplify(self, col_obj):
         """Implement the replacement rules
         K6(m,i,j)K6B(m,k,l) = 1/2(delta3(l,i)delta3(k,j)
@@ -395,13 +417,7 @@ class K6(ColorObject):
         K6(m,i,j)K6B(n,j,i) = delta6(m,n)
         K6(m,i,j)K6B(n,i,j) = delta6(m,n)."""
 
-        if self.bar and isinstance(col_obj, K6) and not col_obj.bar:
-            return col_obj.pair_simplify(self)
-
-        if not self.bar and isinstance(col_obj, K6) and col_obj.bar:
-
-            # I ASSUME THAT delta3 == T
-            # Rules for delta6 are missing.
+        if isinstance(col_obj, K6B):
 
             m = self[0]
             n = col_obj[0]
@@ -412,14 +428,10 @@ class K6(ColorObject):
             # K6(m,i,j)K6B(m,k,l) = 1/2(delta3(l,i)delta3(k,j)
             #                           + delta3(k,i)delta3(l,j)
             if m == n:
-                col_str1 = ColorString([T([ij2[1] + ij1[0]]),
-                                        T([ij2[0] + ij1[1]])])
-                #col_str1 = ColorString([T(*(ij2[1:] + ij1[:1])),
-                #                        T(*(ij2[:1] + ij1[1:]))])
-                col_str2 = ColorString([T([ij2[0], ij1[0]]),
-                                        T([ij2[1], ij1[1]])])
-                #col_str2 = ColorString([T(*(ij2[:1] + ij1[:1])),
-                #                        T(*(ij2[1:] + ij1[1:]))])
+                col_str1 = ColorString([delta3(ij2[1], ij1[0]),
+                                        delta3(ij2[0], ij1[1])])
+                col_str2 = ColorString([delta3(ij2[0], ij1[0]),
+                                        delta3(ij2[1], ij1[1])])
                 col_str1.coeff = fractions.Fraction(1, 2)
                 col_str2.coeff = fractions.Fraction(1, 2)
 
@@ -427,13 +439,53 @@ class K6(ColorObject):
 
             # K6(m,i,j)K6B(n,j,i) = delta6(m,n)
             if ij1[1] == ij2[0] and ij1[0] == ij2[1]:
-                return ColorFactor([ColorString([delta6([m, n])])])
+                return ColorFactor([ColorString([delta6(m, n)])])
 
             # K6(m,i,j)K6B(n,i,j) = delta6(m,n)
             if ij1[0] == ij2[0] and ij1[1] == ij2[1]:
-                return ColorFactor([ColorString([delta6([m, n])])])
+                return ColorFactor([ColorString([delta6(m, n)])])
 
-class K3(K6):
+class K6B(ColorObject):
+    """K6B, the barred symmetry clebsch coefficient, mapping into the symmetric
+    tensor."""
+
+    def __init__(self, *args):
+        """Ensure sextet color objects have strictly 3 indices"""
+
+        super(K6B, self).__init__()
+        if len(args) != 3:
+            raise ValueError, \
+                "sextet color objects must have three indices!"
+
+class T6(ColorObject):
+    """The T6 sextet trace color object."""
+
+    new_index = 10000
+
+    def __init__(self, *args):
+        """Check for exactly three indices"""
+
+        super(T6, self).__init__()
+        if len(args) != 3:
+            raise ValueError, \
+                "T6 objects must have three indices!"
+
+    def simplify(self):
+        """Implement T6(a,i,j) = 2(K6(i,ii,jj)T(a,jj,kk)K6B(j,kk,ii))"""
+
+        # Set new indices according to the Mathematica template
+        ii = T6.new_index
+        jj = ii + 1
+        kk = jj + 1
+        T6.new_index += 3
+        # Create the resulting color objects
+        col_string = ColorString([K6(self[1], ii, jj),
+                                  T(self[0], jj, kk),
+                                  K6B(self[2], kk, ii)])
+        col_string.coeff = fractions.Fraction(2, 1)
+        return ColorFactor([col_string])
+
+class K3(ColorObject):
     """K3, the antisymmetry clebsch coefficient, mapping into the
     antisymmetric tensor."""
 
@@ -449,9 +501,6 @@ class K3(K6):
 
         if not self.bar and isinstance(col_obj, K3) and col_obj.bar:
 
-            # I ASSUME THAT delta3 == T
-            # Rules for delta6 are missing.
-
             m = self[0]
             n = col_obj[0]
 
@@ -461,10 +510,10 @@ class K3(K6):
             # K3(m,i,j)K3B(m,k,l) = 1/2(delta3(l,i)delta3(k,j)
             #                           - delta3(k,i)delta3(l,j)
             if m == n:
-                col_str1 = ColorString([T([ij2[1] + ij1[0]]),
-                                        T([ij2[0] + ij1[1]])])
-                col_str2 = ColorString([T([ij2[0], ij1[0]]),
-                                        T([ij2[1], ij1[1]])])
+                col_str1 = ColorString([delta3(ij2[1], ij1[0]),
+                                        delta3(ij2[0], ij1[1])])
+                col_str2 = ColorString([delta3(ij2[0], ij1[0]),
+                                        delta3(ij2[1], ij1[1])])
                 col_str1.coeff = fractions.Fraction(1, 2)
                 col_str2.coeff = fractions.Fraction(-1, 2)
 
@@ -566,7 +615,7 @@ class ColorString(list):
         """Simplify the current ColorString by applying simplify rules on
         each element and building a new ColorFactor to return if necessary"""
 
-        # First, try sto simplify element by element
+        # First, try to simplify element by element
         for i1, col_obj1 in enumerate(self):
             res = col_obj1.simplify()
             # If a simplification possibility is found...
@@ -583,6 +632,7 @@ class ColorString(list):
                     # remains the same for comparison
                     first_col_str.sort()
                     res_col_factor.append(first_col_str)
+
                 return res_col_factor
 
         # Second, try to simplify pairs

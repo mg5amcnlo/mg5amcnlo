@@ -198,7 +198,90 @@ class ColorObjectTest(unittest.TestCase):
         self.assertEqual(my_epsilon1.pair_simplify(my_epsilon2),
                          color.ColorFactor([my_goal_str1, my_goal_str2]))
 
+    def test_delta3_simplify(self):
+        """Test delta3 simplify"""
 
+        # delta3(i,i) = Nc
+        col_str = color.ColorString()
+        col_str.Nc_power = 1
+        self.assertEqual(color.delta3(1, 1).simplify(),
+                         color.ColorFactor([col_str]))
+        # delta3(i,j) = 0 if i != j
+        self.assertEqual(color.delta3(1, 2).simplify(),
+                         None)
+
+    def test_delta6_simplify(self):
+        """Test delta6 simplify"""
+
+        # delta6(i,i) = 1
+        col_str = color.ColorString()
+        col_str.Nc_power = 1
+        col_str.coeff = fractions.Fraction(2,1)
+        self.assertEqual(color.delta6(1, 1).simplify(),
+                         color.ColorFactor([col_str]))
+
+    def test_K6_objects(self):
+        """Test K6 product simplifications"""
+
+        #K6(m,i,j)K6B(m,k,l) = 1/2(delta3(l,i)delta3(k,j)
+        #                          + delta3(k,i)delta3(l,j)
+
+        my_K6 = color.K6(1,101,102)
+        my_K6B = color.K6B(1,103,104)
+
+        col_str1 = color.ColorString([color.delta3(104,101),
+                                      color.delta3(103,102)])
+        col_str2 = color.ColorString([color.delta3(103,101),
+                                      color.delta3(104,102)])
+        col_str1.coeff = fractions.Fraction(1, 2)
+        col_str2.coeff = fractions.Fraction(1, 2)
+
+        self.assertEqual(my_K6.pair_simplify(my_K6B),
+                         color.ColorFactor([col_str1, col_str2]))
+
+        #K6(m,i,j)K6B(n,j,i) = delta6(m,n)
+
+        my_K6 = color.K6(1,101,102)
+        my_K6B = color.K6B(2,102,101)
+
+        self.assertEqual(my_K6.pair_simplify(my_K6B),
+                         color.ColorFactor([\
+                         color.ColorString([color.delta6(1,2)])]))
+
+        #K6(m,i,j)K6B(n,i,j) = delta6(m,n).
+        my_K6 = color.K6(1,101,102)
+        my_K6B = color.K6B(2,101,102)
+
+        self.assertEqual(my_K6.pair_simplify(my_K6B),
+                         color.ColorFactor([\
+                         color.ColorString([color.delta6(1,2)])]))
+
+
+    def test_T6_simplify(self):
+        """Test T6 simplify"""
+
+        # T6(a,i,j) = 2(K6(i,ii,jj)T(a,jj,kk)K6B(j,kk,ii))
+
+        my_T6 = color.T6(1,101,102)
+
+        color.T6.new_index = 10000
+
+        k6 = color.K6(101, 10000, 10001)
+        t = color.T(1, 10001, 10002)
+        k6b = color.K6B(102, 10002, 10000)
+        col_string = color.ColorString([k6, t, k6b])
+        col_string.coeff = fractions.Fraction(2, 1)
+        self.assertEqual(my_T6.simplify(), color.ColorFactor([col_string]))
+
+        my_T6 = color.T6(1,101,102)
+
+        k6 = color.K6(101, 10003, 10004)
+        t = color.T(1, 10004, 10005)
+        k6b = color.K6B(102, 10005, 10003)
+        col_string = color.ColorString([k6, t, k6b])
+        col_string.coeff = fractions.Fraction(2, 1)
+        self.assertEqual(my_T6.simplify(), color.ColorFactor([col_string]))
+        
 class ColorStringTest(unittest.TestCase):
     """Test class for the ColorString objects"""
 
@@ -386,4 +469,14 @@ class ColorFactorTest(unittest.TestCase):
         '(2 I Tr(1,2,5,4,3))+(-2 I Tr(1,3,4,5,2))+(2 I Tr(1,5,3,4,2))+' + \
         '(2 I Tr(1,4,3,5,2))+(-2 I Tr(1,5,4,3,2))')
 
+
+    def test_sextet_products(self):
+        """Test a non trivial product of sextet operators"""
+
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.T6(2, 101, 102),
+                                       color.T6(2, 102, 103)])])
+
+        self.assertEqual(str(my_color_factor.full_simplify()),
+        "")
 
