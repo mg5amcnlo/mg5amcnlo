@@ -200,22 +200,30 @@ class UFOMG5Converter(object):
 
         # add to the interactions
         self.interactions.append(interaction)
-        
-    @staticmethod
-    def treat_color(data_string, interaction_info):
+    
+    _pat_T = re.compile(r'''T\((?P<first>\d*),(?P<second>\d*)\)''')
+    _pat_id = re.compile(r'''Identity\((?P<first>\d*),(?P<second>\d*)\)''')
+    
+    def treat_color(self, data_string, interaction_info):
         """ convert the string to ColorStirng"""
-        original = copy.copy(data_string)
-        # Change identity in color.TC        
-        p = re.compile(r'''Identity\((?P<first>\d*),(?P<second>\d*)\)''')
-        #data_string = p.sub('color.T(\g<first>,\g<second>)', data_string)
-        pattern = p.search(data_string)
-        if pattern:
-            particle = interaction_info.particles[int(pattern.group('first'))-1]
-            if particle.color < 0 :
-                data_string = p.sub('color.T(\g<second>,\g<first>)', data_string)
-            else:
-                data_string = p.sub('color.T(\g<first>,\g<second>)', data_string)
         
+        #original = copy.copy(data_string)
+        #data_string = p.sub('color.T(\g<first>,\g<second>)', data_string)
+        
+        
+        output = []
+        for term in data_string.split('*'):
+            pattern = self._pat_id.search(term)
+            if pattern:
+                particle = interaction_info.particles[int(pattern.group('first'))-1]
+                if particle.color < 0 :
+                    output.append(self._pat_id.sub('color.T(\g<second>,\g<first>)', term))
+                else:
+                    output.append(self._pat_id.sub('color.T(\g<first>,\g<second>)', term))
+            else:
+                output.append(term)
+        data_string = '*'.join(output)
+
         # Change convention for summed indices
         p = re.compile(r'''\'\w(?P<number>\d+)\'''')
         data_string = p.sub('-\g<number>', data_string)
