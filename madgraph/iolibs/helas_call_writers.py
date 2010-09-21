@@ -756,16 +756,16 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
 
 
 #===============================================================================
-# Pythia8UFOHelasCallWriter
+# CPPUFOHelasCallWriter
 #===============================================================================
-class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
+class CPPUFOHelasCallWriter(UFOHelasCallWriter):
     """The class for writing Helas calls in C++, starting from
     HelasWavefunctions and HelasAmplitudes.
 
     Includes the function generate_helas_call, which automatically
     generates the C++ Helas call based on the Lorentz structure of
     the interaction."""
-    
+
     def generate_helas_call(self, argument):
         """Routine for automatic generation of C++ Helas calls
         according to just the spin structure of the interaction.
@@ -812,7 +812,6 @@ class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
             # Fill out with X up to 6 positions
             call = call + 'x' * (6 - len(call))
             # Specify namespace for Helas calls
-            call = "Pythia8_%s::" % self.get_model_name() + call
             call = call + "(p[%d],"
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity
@@ -887,7 +886,6 @@ class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
         else:
             self.add_amplitude(argument.get_call_key(), call_function)
 
-
 #===============================================================================
 # PythonUFOHelasCallWriter
 #===============================================================================
@@ -908,20 +906,24 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
                   repr(matrix_element)
 
         res = []
-        if gauge_check:
-            # check if the replacmnet is already done.
-            self.gauge_done = False
-            
         for diagram in matrix_element.get('diagrams'):
-            res.extend([ self.get_wavefunction_call(wf, gauge_check=gauge_check) 
-                                    for wf in diagram.get('wavefunctions') ])
+            wfs = diagram.get('wavefunctions')
+            if gauge_check and diagram.get('number') == 1:
+                gauge_check_wfs = [wf for wf in wfs if not wf.get('mothers') \
+                                   and wf.get('spin') == 3 \
+                                   and wf.get('mass').lower() == 'zero']
+                if not gauge_check_wfs:
+                    raise HelasWriterError, \
+                          'no massless spin one particle for gauge check'
+                gauge_check_wf = wfs.pop(wfs.index(gauge_check_wfs[0]))
+                res.append(self.generate_helas_call(gauge_check_wf, True)(\
+                                                    gauge_check_wf))
+            res.extend([ self.get_wavefunction_call(wf) for wf in wfs ])
             res.append("# Amplitude(s) for diagram number %d" % \
                        diagram.get('number'))
             for amplitude in diagram.get('amplitudes'):
                 res.append(self.get_amplitude_call(amplitude))
-
-        if gauge_check and not self.gauge_done:
-            raise HelasWriterError, 'no massless spin one particle for gauge check'
+                
         return res
 
 
@@ -937,10 +939,6 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
                   "get_helas_call must be called with wavefunction or amplitude"
         
         call_function = None
-
-        #only one transformation for the gauge check
-        if gauge_check and self.gauge_done:
-            gauge_check = False
 
         if isinstance(argument, helas_objects.HelasAmplitude) and \
            argument.get('interaction_id') == 0:
@@ -964,7 +962,6 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
                 if gauge_check and argument.get('spin') == 3 and \
                                                  argument.get('mass') == 'ZERO':
                     call = call + "%s, 4,"
-                    self.gauge_done = True
                 else:
                     call = call + "%s,hel[%d],"
             call = call + "%+d)"
@@ -1046,8 +1043,9 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
         
         # Add the constructed function to wavefunction or amplitude dictionary
         if isinstance(argument, helas_objects.HelasWavefunction):
-            self.add_wavefunction(argument.get_call_key(), call_function)
+            if not gauge_check:
+                self.add_wavefunction(argument.get_call_key(), call_function)
         else:
             self.add_amplitude(argument.get_call_key(), call_function)
 
-
+        return call_function

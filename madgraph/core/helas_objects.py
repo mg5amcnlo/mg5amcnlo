@@ -1724,9 +1724,14 @@ class HelasAmplitude(base_objects.PhysicsObject):
         """Return the index of the particle that should be conjugated."""
 
         if self.needs_hermitian_conjugate():
-            parts = [wf for wf in self.get('mothers') if \
-                     wf.get('fermionflow') < 0]
-            return [self.get('mothers').index(wf)/2 + 1 for wf in parts]
+            fermions = [wf for wf in self.get('mothers') if \
+                        wf.is_fermion()]
+            indices = []
+            for i in range(0,len(fermions), 2):
+                if fermions[i].get('fermionflow') < 0 or \
+                   fermions[i+1].get('fermionflow') < 0:
+                    indices.append(i/2 + 1)
+            return tuple(indices)
         else:
             return ()
 
