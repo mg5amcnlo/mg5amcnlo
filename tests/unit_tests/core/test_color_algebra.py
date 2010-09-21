@@ -210,6 +210,19 @@ class ColorObjectTest(unittest.TestCase):
         self.assertEqual(color.delta3(1, 2).simplify(),
                          None)
 
+        self.assertEqual(color.delta3(101,102).pair_simplify(color.K6(1,101,103)),
+                         color.ColorFactor([color.ColorString([color.K6(1,102,103)])]))
+        self.assertEqual(color.delta3(101,102).pair_simplify(color.K6(1,103,101)),
+                         color.ColorFactor([color.ColorString([color.K6(1,103,102)])]))
+        self.assertEqual(color.delta3(102,101).pair_simplify(color.K6B(1,101,103)),
+                         color.ColorFactor([color.ColorString([color.K6B(1,102,103)])]))
+        self.assertEqual(color.delta3(102,101).pair_simplify(color.K6B(1,103,101)),
+                         color.ColorFactor([color.ColorString([color.K6B(1,103,102)])]))
+        self.assertEqual(color.delta3(102,101).pair_simplify(color.T(1,2,3,101,103)),
+                         color.ColorFactor([color.ColorString([color.T(1,2,3,102,103)])]))
+        self.assertEqual(color.delta3(102,101).pair_simplify(color.T(1,2,3,103,101)),
+                         color.ColorFactor([color.ColorString([color.T(1,2,3,103,102)])]))
+
     def test_delta6_simplify(self):
         """Test delta6 simplify"""
 
@@ -471,12 +484,39 @@ class ColorFactorTest(unittest.TestCase):
 
 
     def test_sextet_products(self):
-        """Test a non trivial product of sextet operators"""
+        """Test non trivial product of sextet operators"""
+
+        # T6[2, 101, 102] T6[2, 102, 103] = (-1 + Nc) (2 + Nc) delta6[101, 103])/Nc
 
         my_color_factor = color.ColorFactor([\
                     color.ColorString([color.T6(2, 101, 102),
                                        color.T6(2, 102, 103)])])
 
-        self.assertEqual(str(my_color_factor.full_simplify()),
-        "")
+        col_str1 = color.ColorString([color.delta6(101,103)])
+        col_str1.Nc_power = 1
+        col_str2 = copy.copy(col_str1)
+        col_str2.Nc_power = 0
+        col_str3 = copy.copy(col_str1)
+        col_str3.Nc_power = -1
+        col_str3.coeff = fractions.Fraction(-2, 1)
 
+        self.assertEqual(my_color_factor.full_simplify(),
+                         color.ColorFactor([col_str1, col_str2, col_str3]))
+
+        # T6[2, 101, 102] T6[3, 102, 101] = 1/2 (2 + Nc) delta8[2, 3]
+
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.T6(2, 101, 102),
+                                       color.T6(3, 102, 101)])])
+
+        col_str1 = color.ColorString([color.delta8(2,3)])
+        col_str1.Nc_power = 1
+        col_str1.coeff = fractions.Fraction(1, 2)
+        col_str2 = copy.copy(col_str1)
+        col_str2.Nc_power = 0
+        col_str1.coeff = fractions.Fraction(1, 1)
+
+        self.assertEqual(my_color_factor.full_simplify(),
+                         color.ColorFactor([col_str1, col_str2]))
+
+        

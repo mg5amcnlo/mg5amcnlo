@@ -101,6 +101,12 @@ class Tr(ColorObject):
             col_str.Nc_power = 1
             return ColorFactor([col_str])
 
+        # Tr(a,b)=1/2 delta8(a,b)
+        if len(self) == 2:
+            col_str = ColorString([delta8(*self)])
+            col_str.coeff = fractions.Fraction(1, 2)
+            return ColorFactor([col_str])
+
         # Always order starting from smallest index
         if self[0] != min(self):
             pos = self.index(min(self))
@@ -184,6 +190,10 @@ class T(ColorObject):
         # T(a,b,c,...,i,i) = Tr(a,b,c,...)
         if self[-2] == self[-1]:
             return ColorFactor([ColorString([Tr(*self[:-2])])])
+
+        # T(i,j) = delta3(i,j)
+        if len(self) == 2:
+            return ColorFactor([ColorString([delta3(*self)])])
 
         # T(a,x,b,x,c,i,j) = 1/2(T(a,c,i,j)Tr(b)-1/Nc T(a,b,c,i,j))
         for i1, index1 in enumerate(self[:-2]):
@@ -355,13 +365,13 @@ class Epsilon(ColorObject):
         self.triplets = not self.triplets
 
 #===============================================================================
-# Color sextet objects: delta3, delta6, K6, K3, T3, T6
+# Color sextet objects: delta3, delta6, delta8, K6, K3, T3, T6
 #===============================================================================
 class delta3(ColorObject):
     """delta3, the identity object for triplets."""
 
     def __init__(self, *args):
-        """Ensure delta6 objects have strictly 2 indices"""
+        """Ensure delta3 objects have strictly 2 indices"""
 
         super(delta3, self).__init__()
         if len(args) != 2:
@@ -376,6 +386,82 @@ class delta3(ColorObject):
             col_str = ColorString()
             col_str.Nc_power = 1
             return ColorFactor([col_str])
+
+    def pair_simplify(self, col_obj):
+        """Implement the replacement rules
+        delta3(j,k)delta3(i,j) = delta3(i,k)
+        delta3(i,j)delta3(j,k) = delta3(i,k)
+        delta3(j,k)K6(m,i,j) = K6(m,i,j)
+        delta3(i,j)K6(m,j,k) = K6(m,i,k)
+        delta3(j,k)K6B(m,i,j) = K6B(m,i,k)
+        delta3(i,j)K6B(m,j,k) = K6B(m,i,k)
+        delta3(j,k)T(x,...,i,j) = T(x,...,i,k)
+        delta3(i,j)T(x,...,j,k) = T(x,...,i,k)."""
+
+        if isinstance(col_obj, delta3):
+
+            #delta3(j,k)delta3(i,j) = K6(k,j)
+            if col_obj[0] in self:
+                index1 = self.index(col_obj[0])
+                return ColorFactor([ColorString([delta3(self[1-index1],
+                                                        col_obj[1])])])
+            #delta3(j,k)delta3(j,i) = K6(k,j)
+            if col_obj[1] in self:
+                index1 = self.index(col_obj[1])
+                return ColorFactor([ColorString([delta3(col_obj[0],
+                                                        self[1-index1])])])
+
+        if isinstance(col_obj, K6):
+
+            ij1 = self[-2:]
+            ij2 = col_obj[-2:]
+
+            #delta3(j,k)K6(m,i,j) = K6(m,i,k)
+            if ij2[0] in ij1:
+                index1 = ij1.index(ij2[0])
+                return ColorFactor([ColorString([K6(col_obj[0],
+                                                     ij1[1-index1], ij2[1])])])
+            #delta3(i,j)K6(m,j,k) = K6(m,i,k)
+            if ij2[1] in ij1:
+                index1 = ij1.index(ij2[1])
+                return ColorFactor([ColorString([K6(col_obj[0],
+                                                     ij2[0], ij1[1-index1])])])
+
+        if isinstance(col_obj, K6B):
+
+            ij1 = self[-2:]
+            ij2 = col_obj[-2:]
+
+            #delta3(j,k)K6B(m,i,j) = K6B(m,k,j)
+            if ij2[0] in ij1:
+                index1 = ij1.index(ij2[0])
+                return ColorFactor([ColorString([K6B(col_obj[0],
+                                                     ij1[1-index1], ij2[1])])])
+            #delta3(i,j)K6B(m,j,k) = K6B(m,i,k)
+            if ij2[1] in ij1:
+                index1 = ij1.index(ij2[1])
+                return ColorFactor([ColorString([K6B(col_obj[0],
+                                                     ij2[0], ij1[1-index1])])])
+
+        if isinstance(col_obj, T):
+
+            ij1 = self[-2:]
+            ij2 = col_obj[-2:]
+
+            a = col_obj[:-2]
+
+            #delta3(j,k)T(x,...,i,j) = T(x,...,i,k)
+            if ij2[0] in ij1:
+                index1 = ij1.index(ij2[0])
+                b = ij1[1-index1:2-index1]
+                c = ij2[1:]
+                return ColorFactor([ColorString([T(*(a + b + c))])])
+            #delta3(i,j)T(x,...,j,k) = T(x,...,i,k)
+            if ij2[1] in ij1:
+                index1 = ij1.index(ij2[1])
+                b = ij2[:1]
+                c = ij1[1-index1:2-index1]
+                return ColorFactor([ColorString([T(*(a + b + c))])])
 
 class delta6(ColorObject):
     """delta6, the identity object sextets."""
@@ -393,10 +479,47 @@ class delta6(ColorObject):
 
         # delta6(i,i) = Nc
         if self[0] == self[1]:
-            col_str = ColorString()
-            col_str.Nc_power = 1
-            col_str.coeff = fractions.Fraction(2, 1)
-            return ColorFactor([col_str])
+            col_str1 = ColorString()
+            col_str1.Nc_power = 2
+            col_str1.coeff = fractions.Fraction(1, 2)
+            col_str2 = ColorString()
+            col_str2.Nc_power = 1
+            col_str2.coeff = fractions.Fraction(1, 2)
+            return ColorFactor([col_str1, col_str2])
+
+    def pair_simplify(self, col_obj):
+        """Implement the replacement rules
+        delta6(j,k)delta6(i,j) = delta6(i,k)
+        delta6(i,j)delta6(j,k) = delta6(i,k)
+        delta6(m,n)K6(m,i,j) = K6(n,i,j)
+        delta6(m,n)K6B(m,i,j) = K6B(n,i,j)."""
+
+        if isinstance(col_obj, delta6):
+
+            #delta6(j,k)delta6(i,j) = delta6(k,j)
+            if col_obj[0] in self:
+                index1 = self.index(col_obj[0])
+                return ColorFactor([ColorString([delta6(self[1-index1],
+                                                        col_obj[1])])])
+            #delta6(j,k)delta6(j,i) = delta6(k,j)
+            if col_obj[1] in self:
+                index1 = self.index(col_obj[1])
+                return ColorFactor([ColorString([delta6(col_obj[0],
+                                                        self[1-index1])])])
+
+        if isinstance(col_obj, K6):
+            pass
+
+class delta8(ColorObject):
+    """delta3, the identity object for triplets."""
+
+    def __init__(self, *args):
+        """Ensure delta8 objects have strictly 2 indices"""
+
+        super(delta8, self).__init__()
+        if len(args) != 2:
+            raise ValueError, \
+                "delta8 objects must have two indices!"
 
 class K6(ColorObject):
     """K6, the symmetry clebsch coefficient, mapping into the symmetric
