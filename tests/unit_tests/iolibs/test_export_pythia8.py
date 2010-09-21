@@ -247,8 +247,6 @@ int id4Mass() const {return 4;}""")
 #ifndef Pythia8_Sigma_sm_qqx_qqx_H
 #define Pythia8_Sigma_sm_qqx_qqx_H
 
-#include <complex> 
-
 #include "SigmaProcess.h"
 #include "Parameters_sm.h"
 
@@ -301,7 +299,7 @@ class Sigma_sm_qqx_qqx : public Sigma2Process
     // Calculate wavefunctions
     void calculate_wavefunctions(const int hel[]); 
     static const int nwavefuncs = 10; 
-    std::complex<double> w[nwavefuncs][18]; 
+    complex w[nwavefuncs][18]; 
     double matrix_uux_uux(); 
 
     // Constants for array limits
@@ -390,7 +388,7 @@ void Sigma_sm_qqx_qqx::sigmaKin()
   static int ntry = 0, sum_hel = 0, ngood = 0; 
   static int igood[ncomb]; 
   static int jhel; 
-  std::complex<double> * * wfs; 
+  complex * * wfs; 
   double t[nprocesses]; 
   // Helicities for the process
   static const int helicities[ncomb][nexternal] = {-1, -1, -1, -1, -1, -1, -1,
@@ -586,8 +584,8 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
   // Local variables
   const int ngraphs = 10; 
   const int ncolor = 2; 
-  std::complex<double> ztemp; 
-  std::complex<double> amp[ngraphs], jamp[ncolor]; 
+  complex ztemp; 
+  complex amp[ngraphs], jamp[ncolor]; 
   // The color matrix;
   static const double denom[ncolor] = {1, 1}; 
   static const double cf[ncolor][ncolor] = {9, 3, 3, 9}; 
@@ -738,89 +736,4 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
         
         print "Please try compiling the file /tmp/Parameters_sm.cc:"
         print "cd /tmp; g++ -c -I $PATH_TO_PYTHIA8/include Parameters_sm.cc"
-
-
-#===============================================================================
-# ExportUFOModelCPPTest
-#===============================================================================
-class ExportUFOModelCPPTest(unittest.TestCase,
-                                test_file_writers.CheckFileCreate):
-
-    created_files = [
-                    ]
-
-    def disabled_setUp(self):
-
-        model_pkl = os.path.join(MG5DIR, 'models','mssm','model.pkl')
-        if os.path.isfile(model_pkl):
-            self.model = save_load_object.load_from_file(model_pkl)
-        else:
-            self.model = import_ufo.import_model('mssm')
-        self.model_builder = export_pythia8.UFOModelConverterCPP(\
-                                                            self.model, "/tmp")
-        
-        test_file_writers.CheckFileCreate.clean_files
-
-    tearDown = test_file_writers.CheckFileCreate.clean_files
-
-    def disabled_test_read_aloha_template_files(self):
-        """Test reading the ALOHA template .h and .cc files"""
-
-        template_h = self.model_builder.read_aloha_template_files("h")
-        self.assertTrue(template_h)
-        for file_lines in template_h:
-            self.assertFalse(file_lines.find('#include') > -1)
-            self.assertFalse(file_lines.find('namespace') > -1)
-        template_cc = self.model_builder.read_aloha_template_files("cc")
-        self.assertTrue(template_cc)
-        for file_lines in template_cc:
-            self.assertFalse(file_lines.find('#include') > -1)
-            self.assertFalse(file_lines.find('namespace') > -1) 
-       
-    def disabled_test_write_aloha_functions(self):
-        """Test writing function declarations and definitions"""
-
-        template_h_files = []
-        template_cc_files = []
-
-        aloha_model = create_aloha.AbstractALOHAModel(\
-                                         self.model_builder.model.get('name'))
-        aloha_model.compute_all(save=False)
-        for abstracthelas in dict(aloha_model).values():
-            abstracthelas.write('/tmp', 'CPP')
-            #abstracthelas.write('/tmp', 'Fortran')
-
-        print "Please try compiling the files /tmp/*.cc and /tmp/*.f:"
-        print "cd /tmp; g++ -c *.cc; gfortran -c *.f"
-        
-
-    def disabled_test_write_aloha_routines(self):
-        """Test writing the aloha .h and.cc files"""
-
-        self.model_builder.write_aloha_routines()
-        print "Please try compiling the file /tmp/hel_amps_sm.cc:"
-        print "cd /tmp; g++ -c hel_amps_sm.cc"
-
-    def disabled_test_couplings_and_parameters(self):
-        """Test generation of couplings and parameters"""
-
-        self.assertTrue(self.model_builder.params_indep)
-        self.assertTrue(self.model_builder.params_dep)
-        self.assertTrue(self.model_builder.coups_indep)
-        self.assertTrue(self.model_builder.coups_dep)
-
-        g_expr = re.compile("G(?!f)")
-
-        for indep_par in self.model_builder.params_indep:
-            self.assertFalse(g_expr.search(indep_par.expr))
-        for indep_coup in self.model_builder.coups_indep: 
-            self.assertFalse(g_expr.search(indep_coup.expr))
-
-    def disabled_test_write_parameter_files(self):
-        """Test writing the model parameter .h and.cc files"""
-
-        self.model_builder.write_parameter_class_files()        
-        
-        print "Please try compiling the file /tmp/Parameters_sm.cc:"
-        print "cd /tmp; g++ -c Parameters_sm.cc"
 

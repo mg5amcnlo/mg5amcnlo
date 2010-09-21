@@ -6,8 +6,7 @@
 #ifndef Pythia8_parameters_%(model_name)s_H
 #define Pythia8_parameters_%(model_name)s_H
 
-#include <complex>
-
+#include "PythiaComplex.h"
 #include "ParticleData.h"
 #include "StandardModel.h"
 

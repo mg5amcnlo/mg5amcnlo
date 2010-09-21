@@ -240,7 +240,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         '''expression : PI'''
         p[0] = 'pi'
 
-class UFOExpressionParserCPP(UFOExpressionParser):
+class UFOExpressionParserPythia8(UFOExpressionParser):
     """A parser for UFO algebraic expressions, outputting
     C++-style code."""
 
@@ -270,7 +270,7 @@ class UFOExpressionParserCPP(UFOExpressionParser):
 
     def p_expression_complex(self, p):
         "expression : COMPLEX '(' expression ',' expression ')'"
-        p[0] = 'std::complex<double>(' + p[3] + ',' + p[5] + ')'
+        p[0] = 'complex(' + p[3] + ',' + p[5] + ')'
 
     def p_expression_func(self, p):
         '''expression : CSC group
@@ -303,10 +303,10 @@ if __name__ == '__main__':
         exit()
     if sys.argv[1] == "fortran":
         calc = UFOExpressionParserFortran()
-    elif sys.argv[1] == "c++":
-        calc = UFOExpressionParserCPP()
+    elif sys.argv[1] == "pythia8":
+        calc = UFOExpressionParserPythia8()
     else:
-        print "Please specify a parser: tex, fortran or c++"
+        print "Please specify a parser: tex, fortran or pythia8"
         print "You gave", sys.argv
         exit()
 

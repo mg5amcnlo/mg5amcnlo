@@ -107,7 +107,7 @@ class TestUFOExpressionParsers(unittest.TestCase):
     def test_parse_to_cpp(self):
         """Test Python to C++ expression parser"""
         
-        ufo_to_pythia8 = ufo_expression_parsers.UFOExpressionParserCPP()
+        ufo_to_pythia8 = ufo_expression_parsers.UFOExpressionParserPythia8()
         expr = 'cmath.sqrt(2)'
         converted = ufo_to_pythia8.parse(expr)
         self.assertTrue(isinstance(converted, str))
@@ -137,7 +137,7 @@ class TestUFOExpressionParsers(unittest.TestCase):
     def test_convert_number_to_cpp(self):
         """ test it can convert number in C++ string"""
         
-        ufo_to_pythia8 = ufo_expression_parsers.UFOExpressionParserCPP()
+        ufo_to_pythia8 = ufo_expression_parsers.UFOExpressionParserPythia8()
         expr = str(2)
         converted = ufo_to_pythia8.parse(expr)
         self.assertTrue(isinstance(converted, str))
@@ -157,16 +157,6 @@ class TestUFOExpressionParsers(unittest.TestCase):
         converted = ufo_to_pythia8.parse(expr)
         self.assertTrue(isinstance(converted, str))
         self.assertEqual(converted, '2.5e6')
-        
-        expr = '2.5e+6'
-        converted = ufo_to_pythia8.parse(expr)
-        self.assertTrue(isinstance(converted, str))
-        self.assertEqual(converted, '2.5e+6')
-        
-        expr = '.5e-6'
-        converted = ufo_to_pythia8.parse(expr)
-        self.assertTrue(isinstance(converted, str))
-        self.assertEqual(converted, '.5e-6')
         
         expr = str(1.5)  
         converted = ufo_to_pythia8.parse(expr)

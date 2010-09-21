@@ -6,8 +6,6 @@
 #ifndef Pythia8_%(process_file_name)s_H
 #define Pythia8_%(process_file_name)s_H
 
-#include <complex>
-
 #include "SigmaProcess.h"
 #include "Parameters_%(model_name)s.h"
 
