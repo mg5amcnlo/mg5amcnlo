@@ -245,20 +245,20 @@ class T(ColorObject):
                         return ColorFactor([col_str1, col_str2])
 
         if len(self) == 2:
-            if isinstance(col_obj, K6):
-                #delta3(i,j)K6(m,j,k) = K6(m,i,k)
-                #delta3(k,j)K6(m,i,j) = K6(m,i,k)
+            if isinstance(col_obj, K6B):
+                #delta3(i,j)K6B(m,j,k) = K6B(m,i,k)
+                #delta3(k,j)K6B(m,i,j) = K6B(m,i,k)
                 if self[1] in col_obj[-2:]:
                     index1 = col_obj[-2:].index(self[1])
-                    return ColorFactor([ColorString([K6(col_obj[0],
+                    return ColorFactor([ColorString([K6B(col_obj[0],
                                                         col_obj[2-index1],
                                                         self[0])])])
-            if isinstance(col_obj, K6B):
-                #delta3(i,j)K6B(m,i,k) = K6B(m,j,k)
-                #delta3(i,k)K6B(m,j,i) = K6B(m,j,k)
+            if isinstance(col_obj, K6):
+                #delta3(i,j)K6(m,i,k) = K6(m,j,k)
+                #delta3(i,k)K6(m,j,i) = K6(m,j,k)
                 if self[0] in col_obj[-2:]:
                     index1 = col_obj[-2:].index(self[0])
-                    return ColorFactor([ColorString([K6B(col_obj[0],
+                    return ColorFactor([ColorString([K6(col_obj[0],
                                                         col_obj[2-index1],
                                                         self[1])])])
 
@@ -462,10 +462,10 @@ class K6(ColorObject):
             # K6(m,i,j)K6B(m,k,l) = 1/2(T(l,i)T(k,j)
             #                           + T(k,i)T(l,j)
             if m == n:
-                col_str1 = ColorString([T(ij1[0], ij2[1]),
-                                        T(ij1[1], ij2[0])])
-                col_str2 = ColorString([T(ij1[0], ij2[0]),
-                                        T(ij1[1], ij2[1])])
+                col_str1 = ColorString([T(ij2[1], ij1[0]),
+                                        T(ij2[0], ij1[1])])
+                col_str2 = ColorString([T(ij2[0], ij1[0]),
+                                        T(ij2[1], ij1[1])])
                 col_str1.coeff = fractions.Fraction(1, 2)
                 col_str2.coeff = fractions.Fraction(1, 2)
 
@@ -505,7 +505,7 @@ class T6(ColorObject):
                 "T6 objects must have three indices!"
 
     def simplify(self):
-        """Implement T6(a,i,j) = 2(K6(i,ii,jj)T(a,kk,jj)K6B(j,kk,ii))"""
+        """Implement T6(a,i,j) = 2(K6(i,ii,jj)T(a,jj,kk)K6B(j,kk,ii))"""
 
         # Set new indices according to the Mathematica template
         ii = T6.new_index
@@ -514,7 +514,7 @@ class T6(ColorObject):
         T6.new_index += 3
         # Create the resulting color objects
         col_string = ColorString([K6(self[1], ii, jj),
-                                  T(self[0], kk, jj),
+                                  T(self[0], jj, kk),
                                   K6B(self[2], kk, ii)])
         col_string.coeff = fractions.Fraction(2, 1)
         return ColorFactor([col_string])

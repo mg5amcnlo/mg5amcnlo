@@ -26,6 +26,7 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_algebra as color
+import madgraph.core.color_amp as color_amp
 import tests.unit_tests.core.test_helas_objects as test_helas_objects
 
 #===============================================================================
@@ -4261,3 +4262,209 @@ C     Number of configs
       DATA MAPCONFIG(0)/1/
 """)
 
+
+    def test_export_color_sextet_processes(self):
+        """Test color sextet process u u > six > t t
+        """
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A u quark and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[len(mypartlist) - 1]
+        ubar = copy.copy(u)
+        ubar.set('is_part', False)
+
+        # Top
+        mypartlist.append(base_objects.Particle({'name':'t',
+                      'antiname':'t~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'mt',
+                      'width':'wt',
+                      'texname':'t',
+                      'antitexname':'\bar t',
+                      'line':'straight',
+                      'charge':2./3.,
+                      'pdg_code':6,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        t = mypartlist[len(mypartlist) - 1]
+        tbar = copy.copy(t)
+        tbar.set('is_part', False)
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        g = mypartlist[len(mypartlist) - 1]
+
+        # Color sextet
+        mypartlist.append(base_objects.Particle({'name':'six',
+                      'antiname':'six~',
+                      'spin':0,
+                      'color':6,
+                      'mass':'msix',
+                      'width':'wsix',
+                      'texname':'six',
+                      'antitexname':'\bar {six}',
+                      'line':'straight',
+                      'charge':4./3.,
+                      'pdg_code':6000001,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        six = mypartlist[len(mypartlist) - 1]
+        sixbar = copy.copy(six)
+        sixbar.set('is_part', False)
+
+        # Coupling of u to six
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [u, \
+                                             u, \
+                                             sixbar]),
+                      'color': [color.ColorString([color.K6B(0,1,2)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GUSIX'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [ubar, \
+                                             ubar, \
+                                             six]),
+                      'color': [color.ColorString([color.K6(2,0,1)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GUSIX'},
+                      'orders':{'QCD':1}}))
+
+        # Coupling of t to six
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [t, \
+                                             t, \
+                                             sixbar]),
+                      'color': [color.ColorString([color.K6B(0,1,2)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GTSIX'},
+                      'orders':{'QCD':1}}))
+        
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [tbar, \
+                                             tbar, \
+                                             six]),
+                      'color': [color.ColorString([color.K6(2,0,1)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GTSIX'},
+                      'orders':{'QCD':1}}))
+
+        # Coupling of g to u
+        myinterlist.append(base_objects.Interaction({
+                      'id': 5,
+                      'particles': base_objects.ParticleList(\
+                                            [ubar, \
+                                             u, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2,1,0)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'G'},
+                      'orders':{'QCD':1}}))
+        
+        # Coupling of g to t
+        myinterlist.append(base_objects.Interaction({
+                      'id': 6,
+                      'particles': base_objects.ParticleList(\
+                                            [tbar, \
+                                             t, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2,1,0)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'G'},
+                      'orders':{'QCD':1}}))
+        
+        # Coupling of g to six
+        myinterlist.append(base_objects.Interaction({
+                      'id': 7,
+                      'particles': base_objects.ParticleList(\
+                                            [g, \
+                                             sixbar, \
+                                             six]),
+                      'color': [color.ColorString([color.T6(2,1,0)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'G6'},
+                      'orders':{'QCD':1}}))
+        
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mymodel})
+
+        myamplitude = diagram_generation.Amplitude(myproc)
+
+        print myamplitude.nice_string()
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude)
+
+        myfortranmodel = export_v4.HelasFortranModel()
+
+        # Test helas call output
+        print "\n".join(myfortranmodel.get_matrix_element_calls(matrix_element))
+        # Test color matrix output
+        print "\n".join(export_v4.get_color_data_lines(matrix_element))
+
+        # Test JAMP output
+        print "\n".join(export_v4.get_JAMP_lines(matrix_element))
+
+        # Test leshouches output
+        fsock = StringIO.StringIO()
+        #export_v4.write_leshouche_file(fsock, matrix_element, myfortranmodel)
+
+        print fsock.getvalue()
