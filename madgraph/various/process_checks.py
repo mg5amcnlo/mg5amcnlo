@@ -710,7 +710,9 @@ def check_gauge_process(process, stored_quantities, helas_writer, full_model):
 
     res = evaluate_matrix_element(matrix_element, stored_quantities,
                                   helas_writer, full_model, gauge_check = True)
-    return (process.base_string(), res)
+
+    if res:
+        return (process.base_string(), res)
     
 
 def output_gauge(comparison_results):
