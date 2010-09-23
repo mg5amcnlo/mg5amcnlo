@@ -25,14 +25,16 @@ on individual commands.
 Type "tutorial" for an interactive quick-start tutorial.
 
 
-To run from an MG/ME installation:
-----------------------------------
-Install MadGraph 5 in directory "madgraph5" under the MG_ME directory.
-Make a copy of the Template. Modify the Cards/proc_card.dat, and run:
+To use with MadEvent:
+---------------------
+Please copy the latest MG_ME/Template directory to the present directory.
+
+To run using the MadEvent newprocess_mg5 script: 
+Copy the Template directory to a new directory, e.g. MyRunDir.
+Modify the Cards/proc_card.dat, and run:
 ./bin/newprocess_mg5
 After completed process generation, you will find the sequence of
 commands used by MG5 in the file Cards/proc_card_mg5.dat.
-*Note*: You need MG/ME v. 4.4.44 or later.
 
 To run the test suite:
 ----------------------
@@ -46,3 +48,9 @@ To run the test suite:
      (Please check the files in madgraph5/tests/parallel_tests to choose
       running of individual tests)
 Run individual tests by specifying the test name.
+
+To create a release tar.gz file:
+--------------------------------
+Please run:
+python bin/create_release.py
+
