@@ -80,6 +80,8 @@ def import_model(model_name):
     model.set('couplings', couplings)
     model.set('functions', ufo_model.all_functions)
     
+    # Reset particle dict for the pickle.
+    model.set('particle_dict', {})
     # save in a pickle files to fasten future usage
     save_load_object.save_to_file(os.path.join(model_path, 'model.pkl'), model) 
  
@@ -107,11 +109,11 @@ class UFOMG5Converter(object):
     def load_model(self):
         """load the different of the model first particles then interactions"""
 
-        logger.info('load particle')
+        logger.info('load particles')
         for particle_info in self.ufomodel.all_particles:            
             self.add_particle(particle_info)
             
-        logger.info('load vertex')
+        logger.info('load vertices')
         for interaction_info in self.ufomodel.all_vertices:
             self.add_interaction(interaction_info)
         
