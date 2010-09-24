@@ -798,7 +798,7 @@ class Model(PhysicsObject):
             if part: 
                 error_text = \
                 '%s particles with pdg code %s is in conflict with MG ' + \
-                'convention name for particle %s.\n Use --modelname in order ' + \
+                'convention name for particle %s.\n Use -modelname in order ' + \
                 'to use the particles name defined in the model and not the ' + \
                 'MadGraph convention'
                 

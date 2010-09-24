@@ -649,7 +649,7 @@ class ModelTest(unittest.TestCase):
                   'self_antipart':True}))
         self.mymodel.set('particles', particles)
         mypartdict[22] = particles[2]
-        self.assertEqual(mypartdict, self.mymodel['particle_dict'])
+        self.assertEqual(mypartdict, self.mymodel.get('particle_dict'))
 
         interactions = copy.copy(self.mymodel.get('interactions'))
         interactions.append(base_objects.Interaction({
@@ -664,7 +664,7 @@ class ModelTest(unittest.TestCase):
                       'orders':{'QED':1}}))
         self.mymodel.set('interactions', interactions)
         myinterdict[2] = interactions[1]
-        self.assertEqual(myinterdict, self.mymodel['interaction_dict'])
+        self.assertEqual(myinterdict, self.mymodel.get('interaction_dict'))
         
     def test_check_majoranas(self):
         """Test the check_majoranas function"""

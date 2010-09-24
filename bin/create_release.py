@@ -22,9 +22,9 @@ following actions:
 1. bzr branch the present directory to a new directory
    MadGraph5_vVERSION
 
-2. Copy the Template either from the present directory or from a valid
-   MG_ME directory in the path or given by the -d flag, and remove the
-   bin/newprocess file
+2. Copy the Template and HELAS directories, either from the present
+   directory or from a valid MG_ME directory in the path or given by the
+   -d flag, and remove the bin/newprocess file
 
    *WARNING* Note that it is your responsibility to make sure this
    Template is up-to-date!!
@@ -90,14 +90,14 @@ mgme_dir = options.mgme_dir
 
 # Set Template directory path
 
-if mgme_dir and path.isdir(path.join(mgme_dir, 'Template')):
+if mgme_dir and path.isdir(path.join(mgme_dir, 'Template')) \
+   and path.isdir(path.join(mgme_dir, 'HELAS')):
     template_path = path.join(mgme_dir, 'Template')
-
-elif path.isdir(path.join(MG5DIR, 'Template')):
-    template_path = path.join(MG5DIR, 'Template')
-
+    helas_path = path.join(mgme_dir, 'Helas')
 elif MG4DIR and path.isdir(path.join(MG4DIR, 'Template')):
+    and path.isdir(path.join(MG4DIR, 'HELAS')):
     template_path = path.join(MG4DIR, 'Template')
+    helas_path = path.join(MG4DIR, 'HELAS')
 else:
     logging.error("Could not find the Template directory in the path")
     exit()
@@ -124,11 +124,26 @@ elif status:
 
 logging.info("Copying " + template_path)
 shutil.copytree(template_path, path.join(filepath, 'Template'), symlinks = True)
-os.remove(path.join(filepath, 'Template', 'bin', 'newprocess'))
-
+if path.exists(path.join(filepath, 'Template', 'bin', 'newprocess')):
+    os.remove(path.join(filepath, 'Template', 'bin', 'newprocess'))
+# Remove CVS directories
 for i in range(6):
     cvs_dirs = glob.glob(path.join(filepath,
                                    path.join('Template', *(['*']*i)), 'CVS'))
+    if not cvs_dirs:
+        break
+    for cvs_dir in cvs_dirs:
+        shutil.rmtree(cvs_dir)
+logging.info("Copying " + helas_path)
+try:
+    shutil.copytree(helas_path, path.join(filepath, 'HELAS'), symlinks = True)
+except OSError as error:
+    logging.error("Error while copying HELAS directory: " + error.strerror)
+    exit()
+# Remove CVS directories
+for i in range(3):
+    cvs_dirs = glob.glob(path.join(filepath,
+                                   path.join('HELAS', *(['*']*i)), 'CVS'))
     if not cvs_dirs:
         break
     for cvs_dir in cvs_dirs:
@@ -156,20 +171,36 @@ if model_path:
         shutil.copytree(mdir, new_m_path)
         if path.exists(path.join(new_m_path, "model.pkl")):
             os.remove(path.join(new_m_path, "model.pkl"))
+        # Remove CVS directories
+        for i in range(2):
+            cvs_dirs = glob.glob(path.join(path.join(new_m_path, *(['*']*i)),
+                                           'CVS'))
+            if not cvs_dirs:
+                break
+            for cvs_dir in cvs_dirs:
+                shutil.rmtree(cvs_dir)
 
-v4_models = [d for d in glob.glob(path.join(MG5DIR, "models", "*_v4")) \
-             if path.isdir(d) and \
-             path.exists(path.join(d, "particles.dat"))]
+else:
+    v4_models = [d for d in glob.glob(path.join(MG5DIR, "models", "*_v4")) \
+                 if path.isdir(d) and \
+                 path.exists(path.join(d, "particles.dat"))]
 
-if v4_models:
     logging.info("Copying v4 models from " + path.join(MG5DIR, "models") + ":")
     for mdir in v4_models:
         modelname = path.split(mdir)[-1]
         new_m_path = path.join(filepath, 'models', modelname + "_v4")
-        logging.info(mdir + " -> " + new_m_path)
-        shutil.copytree(mdir, new_m_path)
+        try:
+            shutil.copytree(mdir, new_m_path)
+            logging.info(mdir + " -> " + new_m_path)
+        except OSError:
+            logging.warning("Directory " + new_m_path + \
+                            " already exists, not copied.")
         if path.exists(path.join(new_m_path, "model.pkl")):
             os.remove(path.join(new_m_path, "model.pkl"))
+        if path.exists(path.join(new_m_path, "model.pkl")):
+            os.remove(path.join(new_m_path, "model.pkl"))
+    if not v4_models:
+        logging.info("No v4 models in " + path.join(MG5DIR, "models"))
 
 # 4. Create the automatic documentation in the apidoc directory
 
@@ -185,6 +216,7 @@ if status1:
 
 shutil.rmtree(path.join(filepath, '.bzr'))
 os.remove(path.join(filepath, 'bin', 'create_release.py'))
+os.remove(path.join(filepath, 'bin', 'setup_madevent_template.py'))
 os.remove(path.join(filepath, 'README.developer'))
 shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
 

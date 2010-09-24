@@ -27,7 +27,8 @@ Type "tutorial" for an interactive quick-start tutorial.
 
 To use with MadEvent:
 ---------------------
-Please copy the latest MG_ME/Template directory to the present directory.
+Please run the script
+./bin/setup_madevent_template.py -d MG_ME_PATH
 
 To run using the MadEvent newprocess_mg5 script: 
 Copy the Template directory to a new directory, e.g. MyRunDir.
