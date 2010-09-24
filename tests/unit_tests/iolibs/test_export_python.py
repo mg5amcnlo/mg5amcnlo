@@ -273,7 +273,7 @@ class IOExportPythonTest(unittest.TestCase):
 
     def matrix(self, p, hel, model):
         #  
-        #  MadGraph 5 v. 0.4.3, 2010-07-21
+        #  MadGraph 5 v. %(version)s, %(date)s
         #  By the MadGraph Development Team
         #  Please visit us at https://launchpad.net/madgraph5
         #

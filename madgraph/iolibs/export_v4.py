@@ -55,7 +55,12 @@ def copy_v4template(mgme_dir, dir_path, clean):
         logger.info('initialize a new directory: %s' % \
                     os.path.basename(dir_path))
         shutil.copytree(os.path.join(mgme_dir, 'Template'), dir_path, True)
-        shutil.copy(os.path.join(mgme_dir, 'MGMEVersion.txt'), dir_path)
+        try:
+            shutil.copy(os.path.join(mgme_dir, 'MGMEVersion.txt'), dir_path)
+        except IOError:
+            MG5_version = misc.get_pkg_info()
+            open(os.path.join(mgme_dir, 'MGMEVersion.txt'), 'w').write( \
+                "5." + MG5_version['version'])
     elif not os.path.isfile(os.path.join(dir_path, 'MGMEVersion.txt')):
         if not mgme_dir:
             raise MadGraph5Error, \

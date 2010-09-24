@@ -731,18 +731,6 @@ class Model(PhysicsObject):
 
         Model.__bases__[0].set(self, name, value) # call the mother routine
 
-        if name == 'particles':
-            # Generate new dictionaries
-            self.get('particle_dict')
-            self.get('got_majoranas')
-
-        if name == 'interactions':
-            # Generate new dictionaries
-            self.get('interaction_dict')
-            self.get('ref_dict_to1')
-            self.get('ref_dict_to0')
-            self.get('got_majoranas')
-
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
@@ -810,7 +798,7 @@ class Model(PhysicsObject):
             if part: 
                 error_text = \
                 '%s particles with pdg code %s is in conflict with MG ' + \
-                'convention name for particle %s.\n Use --modelname in order ' + \
+                'convention name for particle %s.\n Use -modelname in order ' + \
                 'to use the particles name defined in the model and not the ' + \
                 'MadGraph convention'
                 

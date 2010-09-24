@@ -14,6 +14,7 @@
 ################################################################################
 
 """Unit test library for the export Python format routines"""
+from __future__ import division
 
 import array
 import copy
@@ -708,11 +709,15 @@ def check_gauge_process(process, stored_quantities, helas_writer, full_model):
     matrix_element = helas_objects.HelasMatrixElement(amplitude,
                                                       gen_color = False)
 
-    res = evaluate_matrix_element(matrix_element, stored_quantities,
+    num = evaluate_matrix_element(matrix_element, stored_quantities,
                                   helas_writer, full_model, gauge_check = True)
 
-    if res:
-        return (process.base_string(), res)
+    matrix_element = helas_objects.HelasMatrixElement(amplitude,
+                                                      gen_color = False)    
+    den = evaluate_matrix_element(matrix_element, stored_quantities,
+                                  helas_writer, full_model, gauge_check = False)
+    if den:
+        return (process.base_string(), num/den)
     
 
 def output_gauge(comparison_results):
@@ -740,7 +745,7 @@ def output_gauge(comparison_results):
         res_str += '\n' + fixed_string_length(proc, proc_col_size) + \
                     fixed_string_length("%1.10e" % value, col_size)
                     
-        if value > 1e-16:
+        if value > 1e-10:
             fail_proc += 1
             failed_proc_list.append(proc)
             res_str += "Failed"

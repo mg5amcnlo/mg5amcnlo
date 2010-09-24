@@ -355,8 +355,7 @@ class MG5Runner(MG4Runner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = "import model_v4 %s\n" % os.path.join(self.mg4_path,
-                                                          'Models', model)
+        v5_string = "import model_v4 %s\n" % model
 
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 

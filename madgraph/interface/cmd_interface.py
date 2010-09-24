@@ -76,9 +76,7 @@ class CmdExtended(cmd.Cmd):
     #suggested list of command
     next_possibility = {
         'mg5_start': ['import model ModelName', 'import command PATH',
-                      'import model_v4 PATH','import proc_v4 PATH', 'tutorial'],
-        'import model_v4': ['generate PROCESS','define MULTIPART = PART1 PART2 ...', 
-                                   'display particles', 'display interactions'],
+                      'import proc_v4 PATH', 'tutorial'],
         'import model' : ['generate PROCESS','define MULTIPART PART1 PART2 ...', 
                                    'display particles', 'display interactions'],
         'define': ['define MULTIPART PART1 PART2 ...', 'generate PROCESS', 
@@ -90,7 +88,7 @@ class CmdExtended(cmd.Cmd):
         'draw': ['shell CMD'],
         'export':['history PATH', 'exit'],
         'import proc_v4' : ['exit'],
-        'tutorial': ['import model_v4 sm','help']
+        'tutorial': ['generate PROCESS', 'import model MODEL', 'help TOPIC']
     }
         
     def __init__(self, *arg, **opt):
@@ -430,7 +428,7 @@ class HelpToCmd(object):
         logger.info("-- imports file(s) in various formats")
         logger.info("")
         logger.info("   import model MODEL [-modelname]:")
-        logger.info("      Import a UFO model.")
+        logger.info("      Import a UFO or MG4 model.")
         logger.info("      MODEL should be a valid UFO model name")
         logger.info("      -modelname keeps the original")
         logger.info("             particle names for the model")
@@ -1227,17 +1225,31 @@ class CompleteForCmd(CheckValidForCmd):
         if len(split_arg(line[0:begidx])) == 2:
             if args[1] == 'model':
                 out = [name for name in \
-                        self.path_completion(text,
-                                             os.path.join(MG5DIR,'models'),
-                                             only_dirs = True) \
-                        if name not in ['Template']]
+                       self.path_completion(text,
+                                            os.path.join(MG5DIR,'models'),
+                                            only_dirs = True) \
+                       if not name.endswith('_v4') and \
+                       name != 'template_files']
             elif args[1] == 'model_v4' and self._mgme_dir:
-                out = [name for name in \
-                        self.path_completion(text,
-                                             os.path.join(self._mgme_dir,
-                                                          'Models'),
-                                             only_dirs = True) \
-                        if name not in ['CVS']]
+                if os.path.isdir(os.path.join(self._mgme_dir, 'Models')):
+                    # self._mgme_dir is an MG_ME v4 directory
+                    out = [name for name in \
+                            self.path_completion(text,
+                                                 os.path.join(self._mgme_dir,
+                                                              'Models'),
+                                                 only_dirs = True) \
+                            if name not in ['CVS']]
+                elif os.path.isdir(os.path.join(self._mgme_dir, 'models')):
+                    # self._mgme_dir is the MG5DIR
+                    out = [name[:-3] for name in \
+                            self.path_completion(text,
+                                                 os.path.join(self._mgme_dir,
+                                                              
+                                                              'models'),
+                                                 only_dirs = True) \
+                            if name.endswith('_v4')]
+                else:
+                    out = self.path_completion(text)
             else:
                 out = self.path_completion(text)
             return out
@@ -2012,14 +2024,22 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Check argument's validity
         self.check_import(args)
         
-        if args[0] == 'model':
+        if args[0].startswith('model'):
             self._model_v4_path = None
-            self._curr_model = import_ufo.import_model(args[1])
+            if args[0].endswith('_v4'):
+                self._curr_model, self._model_v4_path = \
+                                 import_v4.import_model(args[1], self._mgme_dir)
+                self._curr_fortran_model = \
+                      helas_call_writers.FortranHelasCallWriter(\
+                                                             self._curr_model)
+            else:
+                self._curr_model = import_ufo.import_model(args[1])
+                self._curr_fortran_model = \
+                      helas_call_writers.FortranUFOHelasCallWriter(\
+                                                             self._curr_model)
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
             self.add_default_multiparticles()
-            self._curr_fortran_model = \
-                  helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
         elif args[0] == 'command':
             if not os.path.isfile(args[1]):
                 raise MadGraph5Error("Path %s is not a valid pathname" % args[1])
@@ -2030,15 +2050,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 # Execute the card
                 self.import_mg5_proc_card(args[1])    
         
-        elif args[0] == 'model_v4':
-            self._curr_model, self._model_v4_path = \
-                              import_v4.import_model(args[1], self._mgme_dir)
-            if '-modelname' not in args:
-                self._curr_model.pass_particles_name_in_mg_default()
-            self.add_default_multiparticles()
-            self._curr_fortran_model = \
-                  helas_call_writers.FortranHelasCallWriter(self._curr_model)
-
         elif args[0] == 'proc_v4':
             
             if len(args) == 1 and self._export_dir:

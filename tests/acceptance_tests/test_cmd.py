@@ -52,6 +52,7 @@ class TestCmdShell1(unittest.TestCase):
         """command 'generate' works"""
     
         self.do('load model %s' % self.join_path(_pickle_path, 'sm.pkl'))
+        self.cmd._curr_model.pass_particles_name_in_mg_default()
         self.do('generate e+ e- > e+ e-')
         self.assertTrue(self.cmd._curr_amps)
         self.do('define P Z u')
@@ -85,8 +86,6 @@ class TestCmdShell1(unittest.TestCase):
     def test_draw(self):
         """ command 'draw' works """
         
-        self.do('load model %s' % self.join_path(_pickle_path, \
-                                                          'sm.pkl'))
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('draw .')
         self.assertTrue(os.path.exists('./diagrams_0_epem_epem.eps'))
