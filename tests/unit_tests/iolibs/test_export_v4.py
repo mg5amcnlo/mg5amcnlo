@@ -4529,11 +4529,15 @@ CALL IOVXXX(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
 
         myleglist = base_objects.LegList()
 
-        myleglist.append(base_objects.Leg({'id':2,
+        myleglist.append(base_objects.Leg({'id':-2,
                                          'state':False}))
-        myleglist.append(base_objects.Leg({'id':2,
+        myleglist.append(base_objects.Leg({'id':-2,
                                          'state':False}))
-        myleglist.append(base_objects.Leg({'id':6000001,
+        #myleglist.append(base_objects.Leg({'id':6000001,
+        #                                 'state':True}))
+        myleglist.append(base_objects.Leg({'id':-6,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':-6,
                                          'state':True}))
         myleglist.append(base_objects.Leg({'id':21,
                                          'state':True}))

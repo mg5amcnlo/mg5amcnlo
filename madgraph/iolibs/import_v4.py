@@ -104,6 +104,7 @@ def read_particles_v4(fsock):
 
     color_equiv = {'s': 1,
                    't': 3,
+                   '6': 6,
                    'o': 8}
 
     line_equiv = {'d': 'dashed',
@@ -266,7 +267,6 @@ def read_interactions_v4(fsock, ref_part_list):
                     my_cs2 = color.ColorString(\
                         [color.T(3, 2, 1, 0)])
                     myinter.set('color', [my_cs1, my_cs2])
-
                 elif colors == [8, 8, 8, 8]:
                     # 4-glue / glue-glue-gluino-gluino coupling
                     cs1 = color.ColorString([color.f(0, 1, -1),
@@ -279,6 +279,26 @@ def read_interactions_v4(fsock, ref_part_list):
                                                    color.f(0, 3, -1)])
                     #cs3.coeff = fractions.Fraction(-1)
                     myinter.set('color', [cs1, cs2, cs3])
+                elif colors == [-6, 6]:
+                    # Triple glue coupling
+                    my_color_string = color.ColorString(\
+                        [color.delta6(1, 0)])
+                    myinter.set('color', [my_color_string])
+                elif colors == [-6, 6, 8]:
+                    # Triple glue coupling
+                    my_color_string = color.ColorString(\
+                        [color.T6(2, 1, 0)])
+                    myinter.set('color', [my_color_string])
+                elif colors == [-3, -3, 6]:
+                    # Triple glue coupling
+                    my_color_string = color.ColorString(\
+                        [color.K6(2, 0, 1)])
+                    myinter.set('color', [my_color_string])
+                elif colors == [-6, 3, 3]:
+                    # Triple glue coupling
+                    my_color_string = color.ColorString(\
+                        [color.K6B(0, 1, 2)])
+                    myinter.set('color', [my_color_string])
                 else:
                     logger.warning(\
                         "Color combination %s not yet implemented." % \
