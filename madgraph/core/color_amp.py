@@ -140,7 +140,7 @@ class ColorBasis(dict):
                 color_num_pairs.append((curr_color, curr_num))
 
         # Order the color/number pairs according to increasing color (assumed
-        # to be the ordering chose in interactions.py). For identical colors,
+        # to be the ordering choose in interactions.py). For identical colors,
         # keep the normal leg ordering.
         color_num_pairs = sorted(color_num_pairs, lambda p1, p2:p1[0] - p2[0])
 
@@ -292,6 +292,9 @@ class ColorBasis(dict):
         or 1 arguments). If one arguments is given, it's interpreted as 
         an amplitude."""
 
+        assert len(args) < 2, "Object ColorBasis must be initialized with 0 or 1 arguments"
+
+
         dict.__init__(self)
 
         # Dictionary to save simplifications already done in a canonical form
@@ -300,14 +303,11 @@ class ColorBasis(dict):
         # Dictionary store the raw colorize information
         self._list_color_dict = []
 
-        if len(args) not in (0, 1):
-            raise ValueError, \
-                "Object ColorBasis must be initialized with 0 or 1 arguments"
 
-        if len(args) == 1:
-            if not isinstance(args[0], diagram_generation.Amplitude):
-                raise TypeError, \
-                        "%s is not a valid Amplitude object" % str(value)
+        if args:
+            assert isinstance(args[0], diagram_generation.Amplitude), \
+                        "%s is not a valid Amplitude object" % str(args[0])
+                        
             self.build(*args)
 
     def __str__(self):

@@ -15,7 +15,7 @@
 
 """Unit test library for the Misc routine library in the I/O package"""
 
-import unittest
+import tests.unit_tests as unittest
 
 import madgraph.iolibs.misc as misc
 

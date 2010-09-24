@@ -76,6 +76,7 @@ def get_time_info():
                  'fill': ' ' * (26 - len(creation_time))}
 
     return time_info
+    return None
 
 #===============================================================================
 # find a executable

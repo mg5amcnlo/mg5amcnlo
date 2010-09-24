@@ -38,10 +38,10 @@ import unittest
 
 
 #Add the ROOT dir to the current PYTHONPATH
-# Only for profiling with -m cProfile!
-#root_path = os.path.split(os.path.dirname(os.path.realpath(sys.argv[0])))[0]
-#sys.path.append(root_path)
 root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
+sys.path.append(root_path)
+# Only for profiling with -m cProfile!
+root_path = os.path.split(os.path.dirname(os.path.realpath(sys.argv[0])))[0]
 sys.path.append(root_path)
 
 from madgraph import MG4DIR
@@ -125,7 +125,6 @@ class TestFinder(list):
             move = True
             self.go_to_root()
 
-
         for name in os.listdir(os.path.join(root_path,directory)):
             local_check = checking
 
@@ -150,7 +149,8 @@ class TestFinder(list):
         """ Find the different class instance derivated of TestCase """
 
         pyname = self.passin_pyformat(filename)
-        exec('import ' + pyname + ' as obj')
+        __import__(pyname)
+        obj = sys.modules[pyname]
         #look at class
         for name in dir(obj):
             class_ = getattr(obj, name)
@@ -285,7 +285,6 @@ class TestFinder(list):
                 possibility.append(val)
         #end local def
 
-        #print name
         #sanity
         if name.startswith('./'): 
             name = name[2:]
@@ -350,10 +349,22 @@ if __name__ == "__main__":
     if len(args) == 0:
         args = ''
 
-    logging.config.fileConfig(os.path.join(root_path,'tests','.mg5_logging.conf'))
-    logging.root.setLevel(eval('logging.' + options.logging))
-    logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
-    logging.getLogger('cmdprint').setLevel(eval('logging.' + options.logging))
+    if options.path == 'U':
+        options.path = 'tests/unit_tests'
+    elif options.path == 'P':
+        options.path = 'tests/parallel_tests'
+    elif options.path == 'A':
+        options.path = 'tests/acceptance_tests'
+
+
+    try:
+        logging.config.fileConfig(os.path.join(root_path,'tests','.mg5_logging.conf'))
+        logging.root.setLevel(eval('logging.' + options.logging))
+        logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
+        logging.getLogger('cmdprint').setLevel(eval('logging.' + options.logging))
+        logging.getLogger('tutorial').setLevel('ERROR')
+    except:
+        pass
 
     #logging.basicConfig(level=vars(logging)[options.logging])
     run(args, re_opt=options.reopt, verbosity=options.verbose, \

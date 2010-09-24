@@ -60,6 +60,7 @@ class ColorObject(array.array):
         reversed. Can be overwritten for specific color objects like T,..."""
 
         self.reverse()
+        return self
 
     def replace_indices(self, repl_dict):
         """Replace current indices following the rules listed in the replacement
@@ -71,7 +72,7 @@ class ColorObject(array.array):
                 self[i] = repl_dict[index]
             except KeyError:
                 continue
-
+    
     def create_copy(self):
         """Return a real copy of the current object."""
         return globals()[self.__class__.__name__](*self)
@@ -171,12 +172,11 @@ class T(ColorObject):
 
     def __init__(self, *args):
         """Check for at least two indices"""
-
+        
+        assert len(args) > 1 , "T objects must have at least two indices!"
+        
         super(T, self).__init__()
-        if len(args) < 2:
-            raise ValueError, \
-                "T objects must have at least two indices!"
-
+        
     def simplify(self):
         """Implement T(a,b,c,...,i,i) = Tr(a,b,c,...) and
         T(a,x,b,x,c,i,j) = 1/2(T(a,c,i,j)Tr(b)-1/Nc T(a,b,c,i,j))"""
@@ -273,6 +273,7 @@ class T(ColorObject):
         l2 = self[-2:]
         l2.reverse()
         self[:] = l1 + l2
+        return self
 
 #===============================================================================
 # f
@@ -282,11 +283,11 @@ class f(ColorObject):
 
     def __init__(self, *args):
         """Ensure f and d objects have strictly 3 indices"""
-
+        
+        assert len(args) == 3, "f and d objects must have three indices!"
+        
         super(f, self).__init__()
-        if len(args) != 3:
-            raise ValueError, \
-                "f and d objects must have three indices!"
+                
 
     def simplify(self):
         """Implement only the replacement rule 
@@ -373,6 +374,7 @@ class Epsilon(ColorObject):
         interchange triplets and antitriplets."""
 
         self.triplets = not self.triplets
+        return self
 
 #===============================================================================
 # Color sextet objects: delta6, K6, K3, T3, T6
@@ -479,6 +481,13 @@ class K6(ColorObject):
             if ij1[0] == ij2[0] and ij1[1] == ij2[1]:
                 return ColorFactor([ColorString([delta6(m, n)])])
 
+    def complex_conjugate(self):
+        """Complex conjugation. By default, the ordering of color index is
+        reversed. Can be overwritten for specific color objects like T,..."""
+
+        return K6B(*self)
+
+
 class K6B(ColorObject):
     """K6B, the barred symmetry clebsch coefficient, mapping into the symmetric
     tensor."""
@@ -490,6 +499,12 @@ class K6B(ColorObject):
         if len(args) != 3:
             raise ValueError, \
                 "sextet color objects must have three indices!"
+
+    def complex_conjugate(self):
+        """Complex conjugation. By default, the ordering of color index is
+        reversed. Can be overwritten for specific color objects like T,..."""
+
+        return K6(*self)
 
 class T6(ColorObject):
     """The T6 sextet trace color object."""
@@ -698,9 +713,10 @@ class ColorString(list):
     def complex_conjugate(self):
         """Returns the complex conjugate of the current color string"""
 
-        compl_conj_str = copy.copy(self)
-        for col_obj in compl_conj_str:
-            col_obj.complex_conjugate()
+        compl_conj_str = ColorString([], self.coeff, self.is_imaginary,
+                                     self.Nc_power)
+        for col_obj in self:
+            compl_conj_str.append(col_obj.complex_conjugate())
         if compl_conj_str.is_imaginary:
             compl_conj_str.coeff = -compl_conj_str.coeff
 

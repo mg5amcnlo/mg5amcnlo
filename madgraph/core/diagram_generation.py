@@ -12,7 +12,6 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
- 
 """Classes for diagram generation. Amplitude performs the diagram
 generation, DecayChainAmplitude keeps track of processes with decay
 chains, and MultiProcess allows generation of processes with
@@ -25,6 +24,7 @@ import logging
 
 import madgraph.core.base_objects as base_objects
 
+from madgraph import MadGraph5Error
 logger = logging.getLogger('madgraph.diagram_generation')
 
 #===============================================================================
@@ -157,8 +157,7 @@ class Amplitude(base_objects.PhysicsObject):
             except KeyError:
                 process.get('orders')[key] = process.get('overall_orders')[key]
 
-        if not model.get('particles') or not model.get('interactions'):
-            raise self.PhysicsObjectError, \
+        assert model.get('particles') and model.get('interactions'), \
                   "%s is missing particles or interactions" % repr(model)
 
         res = base_objects.DiagramList()
@@ -248,11 +247,15 @@ class Amplitude(base_objects.PhysicsObject):
         # s-channel propagators are taken into account
         failed_crossing = not res
 
-        # Select the diagrams where all required s-channel propagators
-        # are present.
-        # Note that we shouldn't look at the last vertex in each
-        # diagram, since that is the n->0 vertex
-        if process.get('required_s_channels'):
+        # Required s-channels is a list of id-lists. Select the
+        # diagrams where all required s-channel propagators in any of
+        # the lists are present (i.e., the different lists correspond
+        # to "or", while the elements of the list correspond to
+        # "and").
+        if process.get('required_s_channels') and \
+               process.get('required_s_channels')[0]:
+            # We shouldn't look at the last vertex in each diagram,
+            # since that is the n->0 vertex
             lastvx = -1
             # For decay chain processes, there is an "artificial"
             # extra vertex corresponding to particle 1=1, so we need
@@ -260,14 +263,19 @@ class Amplitude(base_objects.PhysicsObject):
             if is_decay_proc: lastvx = -2
             ninitial = len(filter(lambda leg: leg.get('state') == False,
                                   process.get('legs')))
-            res = base_objects.DiagramList(\
-                filter(lambda diagram: \
-                       all([req_s_channel in \
-                            [vertex.get_s_channel_id(\
-                            process.get('model'), ninitial) \
-                            for vertex in diagram.get('vertices')[:lastvx]] \
-                            for req_s_channel in \
-                            process.get('required_s_channels')]), res))
+            # Check required s-channels for each list in required_s_channels
+            old_res = res
+            res = base_objects.DiagramList()
+            for id_list in process.get('required_s_channels'):
+                res_diags = filter(lambda diagram: \
+                          all([req_s_channel in \
+                               [vertex.get_s_channel_id(\
+                               process.get('model'), ninitial) \
+                               for vertex in diagram.get('vertices')[:lastvx]] \
+                               for req_s_channel in \
+                               id_list]), old_res)
+                # Add diagrams only if not already in res
+                res.extend([diag for diag in res_diags if diag not in res])
 
         # Select the diagrams where no forbidden s-channel propagators
         # are present.
@@ -297,6 +305,9 @@ class Amplitude(base_objects.PhysicsObject):
         if res:
             logger.info("Process has %d diagrams" % len(res))
 
+        # Sort process legs according to leg number
+        self.get('process').get('legs').sort()
+        
         return not failed_crossing
 
     def reduce_leglist(self, curr_leglist, max_multi_to1, ref_dict_to0,
@@ -644,7 +655,7 @@ class DecayChainAmplitude(Amplitude):
                 if not process.get('is_decay_chain'):
                     process.set('is_decay_chain',True)
                 if not process.get_ninitial() == 1:
-                    raise self.PhysicsObjectError,\
+                    raise MadGraph5Error,\
                           "Decay chain process must have exactly one" + \
                           " incoming particle"
                 self['decay_chains'].append(\
@@ -830,10 +841,9 @@ class MultiProcess(base_objects.PhysicsObject):
         identify processes with identical amplitudes.
         """
 
-        if not isinstance(process_definition, base_objects.ProcessDefinition):
-            raise base_objects.PhysicsObjectError,\
-                  "%s not valid ProcessDefinition object" % \
-                  repr(process_definition)
+        assert isinstance(process_definition, base_objects.ProcessDefinition), \
+                                    "%s not valid ProcessDefinition object" % \
+                                    repr(process_definition)
 
         processes = base_objects.ProcessList()
         amplitudes = AmplitudeList()
@@ -911,8 +921,8 @@ class MultiProcess(base_objects.PhysicsObject):
 
         # Raise exception if there are no amplitudes for this process
         if not amplitudes:
-            raise MultiProcess.PhysicsObjectError, \
-                  "No amplitudes generated from process %s" % \
+            raise MadGraph5Error, \
+            "No amplitudes generated from process %s. Please enter a valid process" % \
                   process_definition.nice_string()
         
 
@@ -929,9 +939,7 @@ def expand_list(mylist):
     """
 
     # Check that argument is a list
-    if not isinstance(mylist, list):
-        raise base_objects.PhysicsObject.PhysicsObjectError, \
-              "Expand_list argument must be a list"
+    assert isinstance(mylist, list), "Expand_list argument must be a list"
 
     res = []
 
@@ -954,9 +962,12 @@ def expand_list_list(mylist):
     """
 
     res = []
+
+    if not mylist or len(mylist) == 1 and not mylist[0]:
+        return [[]]
+
     # Check the first element is at least a list
-    if not isinstance(mylist[0], list):
-        raise base_objects.PhysicsObject.PhysicsObjectError, \
+    assert isinstance(mylist[0], list), \
               "Expand_list_list needs a list of lists and lists of lists"
 
     # Recursion stop condition, one single element
