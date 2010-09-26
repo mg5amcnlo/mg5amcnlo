@@ -990,6 +990,7 @@ class Test_Channel(unittest.TestCase):
         h_tt_bbww = decay_objects.Channel({'vertices': \
                                            base_objects.VertexList(\
                                            vertexlist[2:])})
+        h_tt_bbww.calculate_orders(self.my_testmodel)
         self.my_testmodel.find_vertexlist()
         # Artificially add 4 body decay vertex to w boson
         self.my_testmodel.get_particle(24)['decay_vertexlist'][(4, True)] =\
@@ -1021,8 +1022,8 @@ class Test_Channel(unittest.TestCase):
         #print 'c1:', new_channel.nice_string(), '\nc2:', h_tt_bwbmuvm.nice_string(), '\n'
         #print self.h_tt_bbmmvv.nice_string()
         h_tt_bwbmuvm.get_onshell(self.my_testmodel)
+        #h_tt_bwbmuvm.calculate_orders(self.my_testmodel)
         self.assertEqual(new_channel, h_tt_bwbmuvm)
-        
 
         # Test of check_idlegs
         temp_vert = copy.deepcopy(vertexlist[2])
@@ -1084,6 +1085,14 @@ class Test_Channel(unittest.TestCase):
         w_muvmu.set('id', 100)
         w_muvmu.get('legs')[0].set('id', -13)
         w_muvmu.get('legs')[1].set('id', 14)
+
+        self.my_testmodel.get('interactions').append(\
+            base_objects.Interaction({'id':80}))
+        self.my_testmodel.get('interactions').append(\
+            base_objects.Interaction({'id':90}))
+        self.my_testmodel.get('interactions').append(\
+            base_objects.Interaction({'id':100}))
+        self.my_testmodel.reset_dictionaries()
 
         # Nice string for channel_a:
         # ((8(13),12(-14)>8(-24),id:-100), (7(11),11(-12)>7(-24),id:-44),
@@ -1243,6 +1252,8 @@ class Test_Channel(unittest.TestCase):
                                                 self.my_testmodel)
         channel_b = higgs.connect_channel_vertex(channel_b, 1, vert_2,
                                                 self.my_testmodel)
+        channel_a.calculate_orders(self.my_testmodel)
+        channel_b.calculate_orders(self.my_testmodel)
         #print channel_a.nice_string(), '\n', channel_b.nice_string()
         
         # Test of find_channels
@@ -1253,10 +1264,11 @@ class Test_Channel(unittest.TestCase):
         self.assertTrue(self.my_testmodel['stable_particles'])
 
         higgs.find_channels(4, self.my_testmodel)
+        higgs.find_channels_nextlevel(self.my_testmodel)
         result = higgs.get_channels(3, True)
-        print result.nice_string()
+        #print result.nice_string()
         # Test if the equivalent channels appear only once.
-        self.assertTrue((result.count(channel_b)+ result.count(channel_a)) == 1)
+        self.assertEqual((result.count(channel_b)+ result.count(channel_a)),1)
 
         """ Test on MSSM, to get a feeling on the execution time. """        
         mssm = import_ufo.import_model('mssm')
@@ -1266,6 +1278,7 @@ class Test_Channel(unittest.TestCase):
         
         susy_higgs = decay_mssm.get_particle(25)
         susy_higgs.find_channels(3, decay_mssm)
+        #susy_higgs.find_channels_nextlevel(decay_mssm)
         print susy_higgs.get_channels(3, True).nice_string()
         #decay_mssm.find_all_channels(3)
                                            

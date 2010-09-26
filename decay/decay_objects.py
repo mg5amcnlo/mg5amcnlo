@@ -566,14 +566,20 @@ class DecayParticle(base_objects.Particle):
             
         # Find channels from 2-body decay to partnum-body decay channels.
         for clevel in range(2, partnum+1):
-            self.find_channels_nextlevel(clevel, model)
+            self.find_channels_nextlevel(model)
 
-    def find_channels_nextlevel(self, clevel, model):
+    def find_channels_nextlevel(self, model):
         """ Find channels from all the existing lower level channels to 
-            the channels with level given by clevel. It is implemented when
+            the channels with one more final particle. It is implemented when
             the channels lower than clevel are all found. The user could
             first setup channels by find_channels and then use this function
             if they want to have high level decay."""
+
+        # Find the next channel level
+        try:
+            clevel = max([key[0] for key in self['decay_channels'].keys()])+1
+        except ValueError:
+            clevel = 2
 
         # Initialize the item in dictionary
         self['decay_channels'][(clevel, True)] = ChannelList()
@@ -591,6 +597,8 @@ class DecayParticle(base_objects.Particle):
                                      'number':1, 'state': False}),
                    base_objects.Leg({'id':self.get_pdg_code(), 'number':2})])})
 
+        connect_channel_vertex = self.connect_channel_vertex
+        check_repeat = self.check_repeat
         # If there is a vertex in clevel, construct it
         if (clevel, True) in self['decay_vertexlist'].keys() or \
                 (clevel, False) in self['decay_vertexlist'].keys():
@@ -655,10 +663,12 @@ class DecayParticle(base_objects.Particle):
                             if temp_c.get('has_idpart'):
                                 if not self.check_repeat(clevel,
                                                          temp_c_o, temp_c):
+                                    temp_c.calculate_orders(model)
                                     self.get_channels(clevel, temp_c_o).\
                                         append(temp_c)
                             # If no id. particles, append this channel.
                             else:
+                                temp_c.calculate_orders(model)
                                 self.get_channels(clevel, temp_c_o).\
                                     append(temp_c)
         
@@ -681,17 +691,16 @@ class DecayParticle(base_objects.Particle):
         is_anti_leg = sub_channel.get_final_legs()[index]['id'] < 0
         if is_anti_leg:
             new_vertex['id'] = -new_vertex['id']
+            for leg in new_vertex['legs']:
+                leg['id']  = model.get_particle(leg['id']).get_anti_pdg_code()
 
         # Legs continue the number of the final one in sub_channel,
         # except the first and the last one ( these two should be connected.)
-        for leg in new_vertex['legs']:
-            # For the first and final legs, this loop is useful
+        for leg in new_vertex['legs'][1:len(new_vertex['legs'])-1]:
+            # For the first and final legs, this loop is useless
             # only for reverse leg id in case of mother leg is anti-particle.
-            # leg_num is correct only after the second one.
-            leg['number'] = leg_num
             leg_num += 1
-            if is_anti_leg:
-                leg['id']  = model.get_particle(leg['id']).get_anti_pdg_code()
+            leg['number'] = leg_num
 
         # Assign correct number to each leg in the vertex.
         # The first leg follows the mother leg.
@@ -704,9 +713,9 @@ class DecayParticle(base_objects.Particle):
         new_channel['vertices'].append(new_vertex)
         # Then extend the vertices of the old channel
         new_channel['vertices'].extend(sub_channel['vertices'])
-        # Setup properties of new_channel
+        # Setup properties of new_channel (This slows the time)
         new_channel.get_onshell(model)
-        new_channel.calculate_orders(model)
+        new_channel.get_final_legs()
 
         # The 'has_idpart' property of descendent of a channel 
         # must derive from the mother channel and the vertex
@@ -720,8 +729,13 @@ class DecayParticle(base_objects.Particle):
         """ Check whether there is any equivalent channels with the given 
             channel. Use the check_channels_equiv function."""
 
-        return any([Channel.check_channels_equiv(other_c, channel) \
-                        for other_c in self.get_channels(clevel, onshell)])
+        # To optimize the check, check if the final_mass is the same first
+        # this will significantly reduce the number of call to
+        # check_channels_equiv
+
+        return any(Channel.check_channels_equiv(other_c, channel)\
+                       for other_c in self.get_channels(clevel, onshell) \
+                       if other_c['final_mass'] == channel['final_mass'])
 
     # This helper function is useless in current algorithm...
     def generate_configlist(self, channel, partnum, model):
@@ -1835,12 +1849,15 @@ class Channel(base_objects.Diagram):
         self['orders'] = {}
         
         # New properties
-        self['onshell'] = False
+        self['onshell'] = 0
         # This property denotes whether the channel has 
         # identical particles in it.
         self['has_idpart'] = False
         # The position of the identicle particles with pid as keys.
         self['id_part_list'] = {}
+        self['final_legs'] = base_objects.LegList()
+        # Property for optimizing the check_repeat of DecayParticle
+        self['final_mass'] = 0
         # Decay width related properties.
         self['apx_matrixelement'] = 0.
         self['apx_PSarea'] = 0.
@@ -1899,29 +1916,29 @@ class Channel(base_objects.Diagram):
     def get_final_legs(self):
         """ Return a list of the final state legs."""
 
-        temp_legs = []
-        for vert in self.get('vertices'):
-            for leg in vert.get('legs'):
-                if not leg.get('number') in [l.get('number') \
-                                                 for l in temp_legs] and \
-                                                 leg.get('number') > 1:
-                    temp_legs.append(leg)
+        if not self['final_legs']:
+            for vert in self.get('vertices'):
+                for leg in vert.get('legs'):
+                    if not leg.get('number') in [l.get('number') \
+                                                 for l in self['final_legs']]\
+                                                 and leg.get('number') > 1:
+                        self['final_legs'].append(leg)
 
-        return temp_legs
+        return self['final_legs']
         
     def get_onshell(self, model):
         """ Evaluate the onshell condition with the aid of get_final_legs"""
-        # Check if model is valid
-        if not isinstance(model, base_objects.Model):
-            raise self.PhysicsObjectError, \
-                "The argument %s must be a model." % str(model)
+        if not isinstance(self['onshell'], bool):
+            # Check if model is valid
+            if not isinstance(model, base_objects.Model):
+                raise self.PhysicsObjectError, \
+                    "The argument %s must be a model." % str(model)
 
-        final_mass = sum([eval(model.get_particle(l.get('id')).get('mass')) \
-                              for l in self.get_final_legs()])
-        final_mass = final_mass.real
-        ini_mass = eval(model.get_particle(self.get_initial_id()).get('mass'))
-        ini_mass = ini_mass.real
-        self['onshell'] = ini_mass > final_mass
+            self['final_mass'] = sum([abs(eval(model.get_particle(l.get('id')).get('mass'))) \
+                                  for l in self.get_final_legs()])
+            ini_mass = abs(eval(model.get_particle(self.get_initial_id()).get('mass')))
+            # ini_mass = ini_mass.real
+            self['onshell'] = ini_mass > self['final_mass']
 
         return self['onshell']
 
@@ -2009,13 +2026,11 @@ class Channel(base_objects.Diagram):
             2. Compare each the non-identical legs. Either they are both 
                final legs or their decay chain are the same. The comparision
                of decay chain is via recursive call of check_channels_equiv_rec
-            3. Check all the identical particle legs, try all the possible
-               configuration of each kind of identical particles. 
-               (e.g. if there are three Z boson, there are 3! = 6 configurations
-               to compare them between the two channels.) All the 
-               possible configuration is generated by generate_configlist.
-               If the decay chains are the same for one configuration,
-               these identical particle legs are the same.
+            3. Check all the identical particle legs, try to match each leg of b
+               for the legs of a of each kind of identical particles. 
+               If a leg of b is fit for one leg of a, do not match this leg of a
+               to other legs of b
+               If any one leg of b cannot be matched, return False.
             4. If the two channels are the same for all the non-identical legs
                and are the same for every kind of identical particle,
                the two channels are the same from the given vertices."""
@@ -2024,7 +2039,6 @@ class Channel(base_objects.Diagram):
         # convert it. (e.g. vindex_b = -1)
         vindex_a = vindex_a % len(channel_a.get('vertices'))        
         vindex_b = vindex_b % len(channel_b.get('vertices'))
-
         # First compare the id of the two vertices.
         # Do not compare them directly because the number property of legs
         # may be different.
@@ -2032,6 +2046,11 @@ class Channel(base_objects.Diagram):
         if channel_a.get('vertices')[vindex_a]['id'] != \
                 channel_b.get('vertices')[vindex_b]['id']:
             return False
+        # If the vertex is the initial vertex, start from the next vertex
+        if vindex_a == len(channel_a.get('vertices'))-1 and \
+                vindex_b == len(channel_b.get('vertices'))-1 :
+            return Channel.check_channels_equiv_rec(channel_a, -2,
+                                                    channel_b, -2)
         
         # Find the list of identical particles
         id_part_list_a=Channel.check_idlegs(channel_a.get('vertices')[vindex_a])
@@ -2039,7 +2058,7 @@ class Channel(base_objects.Diagram):
         result = True
         # For each leg, find their decay chain and compare them.
         for i, leg_a in \
-                enumerate(channel_a.get('vertices')[vindex_a].get('legs')):
+                enumerate(channel_a.get('vertices')[vindex_a].get('legs')[:-1]):
             # The two channels are equivalent as long as the decay chain 
             # of the two legs must be the same if they are not part of
             # the identicle particles.
@@ -2047,28 +2066,35 @@ class Channel(base_objects.Diagram):
                 # The corresponding leg in channel_b
                 leg_b = channel_b.get('vertices')[vindex_b].get('legs')[i]
 
+                # If the 'is final' is inconsistent between a and b,
+                # return False. 
+                # If both are 'is final', end the comparision of these two legs.
+                leg_a_isfinal =  leg_a in channel_a.get_final_legs()
+                leg_b_isfinal =  leg_b in channel_b.get_final_legs()
+                if leg_a_isfinal or leg_b_isfinal:
+                    if leg_a_isfinal and leg_b_isfinal:
+                        continue
+                    else:
+                        # Return false if one is final leg 
+                        # while the other is not.
+                        return False
+                # The case with both legs are not final needs
+                # further analysis
+
                 # Find the next vertex index of the decay chain of 
-                # leg_a and leg_b. If the new vertex index is the same as now,
-                # the leg is final_leg.
-                for j,v in enumerate(channel_a.get('vertices')):
+                # leg_a and leg_b.
+                for j in range(vindex_a-1, -1, -1):
+                    v = channel_a.get('vertices')[j]
                     if leg_a in v.get('legs'):
                         new_vid_a = j
                         break
-                
-                for j,v in enumerate(channel_b.get('vertices')):
+                    
+                for j in range(vindex_b-1, -1, -1):
+                    v = channel_b.get('vertices')[j]
                     if leg_b in v.get('legs'):
                         new_vid_b = j
                         break
-
-                if new_vid_a == vindex_a or new_vid_b == vindex_b:
-                    # If both legs are final legs, they are the same since
-                    # vertex id is already the same.
-                    if (new_vid_a == vindex_a and new_vid_b == vindex_b):
-                        continue
-                    # Return false if one is final leg while the other is not.
-                    else:
-                        return False
-
+                
                 # Compare the decay chains of the two legs.
                 # If they are already different, return False
                 if not Channel.check_channels_equiv_rec(channel_a, new_vid_a,
@@ -2081,69 +2107,68 @@ class Channel(base_objects.Diagram):
         if not id_part_list_a:
             return True
 
-        all_configs = Channel.generate_configs(id_part_list_a)
+
         # Check each kind of identicle particles
-        for pid, configs in all_configs.items():
-            # result_pid denotes the equivalence of the decay chains of 
-            # the identicle particles with pid.
-            result_pid = True
-            for config in configs:
-                # Reset the result_pid whenever testing a new config.
-                result_pid = True
-                for i, index_a in enumerate(config):
-                    # Leg_a position is given by id_part_list_a
-                    leg_a = channel_a.get('vertices')[vindex_a].get('legs')[id_part_list_a[pid][i]]
-                    # Leg_b position is given by config
-                    leg_b = channel_b.get('vertices')[vindex_b].get('legs')[config[i]]
-
-                    # Get the vertex indices for the decay chain of the two
-                    # legs.
-                    for j,v in enumerate(channel_a.get('vertices')):
-                        if leg_a in v.get('legs'):
-                            new_vid_a = j
-                            break
-                    for j,v in enumerate(channel_b.get('vertices')):
-                        if leg_b in v.get('legs'):
-                            new_vid_b = j
-                            break
-
+        for pid, indices_a in id_part_list_a.items():
+            indices_b = copy.copy(indices_a)
+            # Match each leg of channel_b to every leg of channel_a
+            for index_b in indices_b:
+                # Suppose the fit fail
+                this_leg_fit = False
+                # setup leg_b                
+                leg_b = channel_b.get('vertices')[vindex_b].get('legs')[index_b]
+                # Search for match leg in legs from indices_a
+                for i, index_a in enumerate(indices_a):
+                    # setup leg_a
+                    leg_a = channel_a.get('vertices')[vindex_a].get('legs')[index_a]
                     # Similar to non-identicle particles, but
                     # we could not return False when one is final leg while
                     # the other is not since this could due to the wrong
                     # config used now.
-                    if new_vid_a == vindex_a or new_vid_b == vindex_b:
-                        if (new_vid_a == vindex_a and new_vid_b ==vindex_b):
-                            continue
-                        # Set result_pid as False as break the check of this
-                        # config
+                    # If the leg is fit (both are final) stop the match of this
+                    # leg.
+                    leg_a_isfinal =  leg_a in channel_a.get_final_legs()
+                    leg_b_isfinal =  leg_b in channel_b.get_final_legs()
+                    if leg_a_isfinal or leg_b_isfinal:
+                        if leg_a_isfinal and leg_b_isfinal:
+                            this_leg_fit = True
+                            indices_a.pop(i)
+                            break
                         else:
-                            result_pid = False
+                            continue
+
+                    # Get the vertex indices for the decay chain of the two
+                    # legs.
+                    for j in range(vindex_a-1, -1, -1):
+                        v = channel_a.get('vertices')[j]
+                        if leg_a in v.get('legs'):
+                            new_vid_a = j
+                            break
+                    for j in range(vindex_b-1, -1, -1):
+                        v = channel_b.get('vertices')[j]
+                        if leg_b in v.get('legs'):
+                            new_vid_b = j
                             break
 
-                    # If any one of the pairs (leg_a, leg_b) is not equivalent,
-                    # this config is not equivalent, break the check.
-                    if not Channel.check_channels_equiv_rec(channel_a,new_vid_a,
-                                                           channel_b,new_vid_b):
-                        result_pid = False
+                    # If any one of the pairs (leg_a, leg_b) is matched,
+                    # stop the match of this leg
+                    if Channel.check_channels_equiv_rec(channel_a,new_vid_a,
+                                                        channel_b,new_vid_b):
+                        this_leg_fit = True
+                        indices_a.pop(i)
                         break
 
-                # If any configuration of these identical particles with pid
-                # is equivalent, the decay chains of these id_legs 
-                # are equivalent. The loop over configs stops!
-                # result_pid = True
-                if result_pid:
-                    break
-
-            # The result_pid will be False until all configs are examined 
-            # but none of them is satisfied.
-            if not result_pid:
-                return False
+                # If this_leg_fit is True, continue to match the next leg of
+                # channel_b. If this_leg_fit remains False, the match of this 
+                # leg cannot match to any leg of channel_a, return False
+                if not this_leg_fit:
+                    return False
 
         # If no difference is found (i.e. return False),
         # the two decay chain are the same eventually.
         return True
 
-    # Helper function
+    # Helper function (obselete)
     @staticmethod
     def generate_configs(id_part_list):
         """ Generate all possible configuration for the identical particles in
