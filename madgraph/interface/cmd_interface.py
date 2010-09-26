@@ -607,12 +607,12 @@ class CheckValidForCmd(object):
         if args[0] != 'process':
             raise self.InvalidCmd('\"add\" requires the argument \"process\"')
 
-        self.check_process_format(' '.join(args[1:]))
-
         if not self._curr_model:
             raise MadGraph5Error, \
                   'No model currently active, please load or import a model.'
     
+        self.check_process_format(' '.join(args[1:]))
+
     def check_define(self, args):
         """check the validity of line
         syntax: define multipart_name [ part_name_list ]
@@ -1365,12 +1365,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
                 cpu_time1 = time.time()
                 
-                try:
-                    myproc = diagram_generation.MultiProcess(myprocdef)
-                except MadGraph5Error, error:
-                    logger_stderr.warning("Empty or wrong format process :\n" + \
-                                     str(error))
-                    return
+                # Set automatic coupling orders
+                myprocdef.set('orders', diagram_generation.MultiProcess.\
+                                     find_maximal_non_qcd_order(myprocdef))
+                # Generate processes
+                myproc = diagram_generation.MultiProcess(myprocdef)
                     
                 for amp in myproc.get('amplitudes'):
                     if amp not in self._curr_amps:
@@ -1698,8 +1697,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if not myprocdef:
             raise MadGraph5Error("Empty or wrong format process, please try again.")
 
-        # run the program
         cpu_time1 = time.time()
+        # Set automatic coupling orders
+        myprocdef.set('orders', diagram_generation.MultiProcess.\
+                             find_maximal_non_qcd_order(myprocdef))
+        # Generate processes
         myproc = diagram_generation.MultiProcess(myprocdef)
         self._curr_amps = myproc.get('amplitudes')
         cpu_time2 = time.time()
