@@ -2345,8 +2345,10 @@ class MultiProcessTest(unittest.TestCase):
             my_multi_leglist[0].set('state', False)
             my_multi_leglist[1].set('state', False)
 
-            my_process_definition = base_objects.ProcessDefinition({'legs':my_multi_leglist,
-                                                                    'model':self.mymodel})
+            my_process_definition = base_objects.ProcessDefinition({\
+                                                     'legs':my_multi_leglist,
+                                                     'model':self.mymodel,
+                                                     'orders': {'QED': nfs}})
             my_multiprocess = diagram_generation.MultiProcess(\
                 {'process_definitions':\
                  base_objects.ProcessDefinitionList([my_process_definition])})

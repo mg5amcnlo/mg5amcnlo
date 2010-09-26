@@ -845,6 +845,10 @@ class MultiProcess(base_objects.PhysicsObject):
                                     "%s not valid ProcessDefinition object" % \
                                     repr(process_definition)
 
+        # Set automatic coupling orders
+        process_definition.set('orders', MultiProcess.\
+                               find_maximal_non_qcd_order(process_definition))
+        
         processes = base_objects.ProcessList()
         amplitudes = AmplitudeList()
 

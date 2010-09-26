@@ -1365,9 +1365,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
                 cpu_time1 = time.time()
                 
-                # Set automatic coupling orders
-                myprocdef.set('orders', diagram_generation.MultiProcess.\
-                                     find_maximal_non_qcd_order(myprocdef))
                 # Generate processes
                 myproc = diagram_generation.MultiProcess(myprocdef)
                     
@@ -1698,9 +1695,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             raise MadGraph5Error("Empty or wrong format process, please try again.")
 
         cpu_time1 = time.time()
-        # Set automatic coupling orders
-        myprocdef.set('orders', diagram_generation.MultiProcess.\
-                             find_maximal_non_qcd_order(myprocdef))
         # Generate processes
         myproc = diagram_generation.MultiProcess(myprocdef)
         self._curr_amps = myproc.get('amplitudes')
