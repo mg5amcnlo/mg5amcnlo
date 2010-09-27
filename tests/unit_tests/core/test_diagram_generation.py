@@ -2540,3 +2540,32 @@ class MultiProcessTest(unittest.TestCase):
             if nfs <= 3:
                 self.assertEqual(valid_procs, goal_valid_procs[nfs - 2])
 
+    def test_wrong_multiparticle(self):
+        """Check that no error is raise for empty multipart amplitudes"""
+        
+        max_fs = 2 # 3
+
+        p = [-1, -2]
+        j = [ 1,  2]
+
+        my_multi_init = base_objects.MultiLeg({'ids': p, 'state': False});
+        my_multi_final = base_objects.MultiLeg({'ids': j, 'state': True});
+        goal_number_processes = [0, 0]
+        
+        for nfs in range(2, max_fs + 1):
+            # Define the multiprocess
+            my_multi_leglist = base_objects.MultiLegList(
+                          [copy.copy(leg) for leg in [my_multi_init] * 2] + \
+                          [copy.copy(leg) for leg in [my_multi_final] * nfs]
+                          )
+
+            my_process_definition = base_objects.ProcessDefinition({'legs':my_multi_leglist,
+                                                                    'model':self.mymodel}
+                                                                  )
+            my_multiprocess = diagram_generation.MultiProcess(\
+                {'process_definitions':\
+                 base_objects.ProcessDefinitionList([my_process_definition])})
+
+            if nfs <= 3:
+                self.assertEqual(len(my_multiprocess.get('amplitudes')),
+                                 goal_number_processes[nfs - 2])
