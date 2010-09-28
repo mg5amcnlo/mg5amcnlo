@@ -923,11 +923,11 @@ class MultiProcess(base_objects.PhysicsObject):
                 if amplitude.get('diagrams'):
                     amplitudes.append(amplitude)
 
-        # Print a warning if there are no amplitudes for this process
+        # Raise exception if there are no amplitudes for this process
         if not amplitudes:
-            logger.warning("No amplitudes generated from process" + 
-                           " %s. Please enter a valid process" % \
-                           process_definition.nice_string())
+            raise MadGraph5Error, \
+            "No amplitudes generated from process %s. Please enter a valid process" % \
+                  process_definition.nice_string()
         
 
         # Return the produced amplitudes

@@ -25,6 +25,7 @@ import tests.unit_tests as unittest
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
+from madgraph import MadGraph5Error
 
 #===============================================================================
 # AmplitudeTest
@@ -2541,7 +2542,7 @@ class MultiProcessTest(unittest.TestCase):
                 self.assertEqual(valid_procs, goal_valid_procs[nfs - 2])
 
     def test_wrong_multiparticle(self):
-        """Check that no error is raise for empty multipart amplitudes"""
+        """Check that an exception is raised for empty multipart amplitudes"""
         
         max_fs = 2 # 3
 
@@ -2567,5 +2568,5 @@ class MultiProcessTest(unittest.TestCase):
                  base_objects.ProcessDefinitionList([my_process_definition])})
 
             if nfs <= 3:
-                self.assertEqual(len(my_multiprocess.get('amplitudes')),
-                                 goal_number_processes[nfs - 2])
+                self.assertRaises(MadGraph5Error,
+                                  my_multiprocess.get, 'amplitudes')
