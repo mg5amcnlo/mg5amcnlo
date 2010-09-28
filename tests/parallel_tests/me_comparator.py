@@ -343,9 +343,13 @@ class MG5Runner(MG4Runner):
 
         # Run mg5
         logging.info("Running mg5")
-        cmd_interface.MadGraphCmdShell().run_cmd('import command ' + \
-                            os.path.join(dir_name, 'Cards', 'proc_card_v5.dat'))
-               
+        proc_card = open(os.path.join(dir_name, 'Cards', 'proc_card_v5.dat'), 'r').read()
+        cmd = cmd_interface.MadGraphCmdShell()
+        for line in proc_card.split('\n'):
+            try:
+                cmd.run_cmd(line)
+            except MadGraph5Error:
+                pass
         # Get the ME value
         for i, proc in enumerate(proc_list):
             self.res_list.append(self.get_me_value(proc, i))
