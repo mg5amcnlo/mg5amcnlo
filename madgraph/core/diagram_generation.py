@@ -239,8 +239,9 @@ class Amplitude(base_objects.PhysicsObject):
                                                   is_decay_proc,
                                                   process.get('orders'))
 
-        for vertex_list in reduced_leglist:
-            res.append(base_objects.Diagram(
+        if reduced_leglist:
+            for vertex_list in reduced_leglist:
+                res.append(base_objects.Diagram(
                             {'vertices':base_objects.VertexList(vertex_list)}))
 
         # Record whether or not we failed generation before required
@@ -845,6 +846,10 @@ class MultiProcess(base_objects.PhysicsObject):
                                     "%s not valid ProcessDefinition object" % \
                                     repr(process_definition)
 
+        # Set automatic coupling orders
+        process_definition.set('orders', MultiProcess.\
+                               find_maximal_non_qcd_order(process_definition))
+        
         processes = base_objects.ProcessList()
         amplitudes = AmplitudeList()
 
@@ -919,15 +924,186 @@ class MultiProcess(base_objects.PhysicsObject):
                 if amplitude.get('diagrams'):
                     amplitudes.append(amplitude)
 
-        # Raise exception if there are no amplitudes for this process
+        # Print a warning if there are no amplitudes for this process
         if not amplitudes:
-            raise MadGraph5Error, \
-            "No amplitudes generated from process %s. Please enter a valid process" % \
-                  process_definition.nice_string()
+            logger.warning("No amplitudes generated from process" + 
+                           " %s. Please enter a valid process" % \
+                           process_definition.nice_string())
         
 
         # Return the produced amplitudes
         return amplitudes
+            
+    @staticmethod
+    def find_maximal_non_qcd_order(process_definition):
+        """Find the maximal QCD order for this set of processes.
+        The algorithm:
+
+        1) Check that there is only one non-QCD coupling in model.
+        
+        2) Find number of non-QCD-charged legs. This is the starting
+        non-QCD order. If non-QCD required s-channel particles are
+        specified, use the maximum of non-QCD legs and 2*number of
+        non-QCD s-channel particles as starting non-QCD order.
+
+        3) Run process generation with the maximal non-QCD order with
+        all gluons removed from the final state, until we find a
+        process which passes. Return that order.
+
+        4) If no processes pass with the given order, increase order
+        by one and repeat from 3) until we order #final - 1.
+
+        5) If no processes found, return non-QCD order = #final.
+        """
+
+        assert isinstance(process_definition, base_objects.ProcessDefinition), \
+                                    "%s not valid ProcessDefinition object" % \
+                                    repr(process_definition)
+
+        processes = base_objects.ProcessList()
+        amplitudes = AmplitudeList()
+
+        # If there are already couplings defined, return
+        if process_definition.get('orders') or \
+               process_definition.get('overall_orders'):
+            return process_definition.get('orders')
+
+        temp_process_definition = copy.copy(process_definition)
+
+        model = process_definition['model']
+        
+        isids = [leg['ids'] for leg in \
+                 filter(lambda leg: leg['state'] == False, process_definition['legs'])]
+        fsids = [leg['ids'] for leg in \
+                 filter(lambda leg: leg['state'] == True, process_definition['legs'])]
+
+
+        # Find coupling orders in model
+        orders = list(set(sum([i.get('orders').keys() for i in \
+                               model.get('interactions')], [])))
+        non_QCD_orders = [order for order in  orders if order != 'QCD']
+        if len(non_QCD_orders) != 1 or len(orders)-len(non_QCD_orders) != 1:
+            # Too many or few orders
+            logger.info("Automatic coupling order check not possible " + \
+                        "for this model.")
+            logger.info("Please specify coupling orders by hand.")
+            return {}
+
+        coupling = non_QCD_orders[0]
+        
+        logger.info("Checking for minimal non-QCD order which gives processes.")
+        logger.info("Please specify coupling orders to bypass this step.")
+
+        # Find number of non-QCD-charged legs
+        max_order_now = 0
+        for l in process_definition.get('legs'):
+            if any([model.get_particle(id).get('color') > 1 for id in \
+                    l.get('ids')]):
+                continue
+            max_order_now += 1
+
+        # Check for non-QCD-charged s-channel propagators
+        max_order_prop = []
+        for idlist in process_definition.get('required_s_channels'):
+            max_order_prop.append(0)
+            for id in idlist:
+                if model.get_particle(id).get('color') > 1:
+                    continue
+                max_order_prop[-1] += 2
+
+        if max_order_prop:
+            if len(max_order_prop) >1:
+                max_order_prop = min(*max_order_prop)
+            else:
+                max_order_prop = max_order_prop[0]
+
+            max_order_now = max(max_order_now, max_order_prop)
+
+        # Generate all combinations for the initial state
+        
+        while max_order_now < len(fsids):
+
+            logger.info("Trying coupling order %s=%d" % (coupling,
+                                                         max_order_now))
+
+            oldloglevel = logger.setLevel(logging.WARNING)
+
+            # failed_procs are processes that have already failed
+            # based on crossing symmetry
+            failed_procs = []
+
+            for prod in apply(itertools.product, isids):
+                islegs = [\
+                        base_objects.Leg({'id':id, 'state': False}) \
+                        for id in prod]
+
+                # Generate all combinations for the final state, and make
+                # sure to remove double counting
+
+                red_fsidlist = []
+
+                for prod in apply(itertools.product, fsids):
+
+                    # Remove double counting between final states
+                    if tuple(sorted(prod)) in red_fsidlist:
+                        continue
+
+                    red_fsidlist.append(tuple(sorted(prod)));
+
+                    # Remove gluons from final state
+                    prod = [id for id in prod if id != 21]
+
+                    # Generate leg list for process
+                    leg_list = [copy.copy(leg) for leg in islegs]
+
+                    leg_list.extend([\
+                            base_objects.Leg({'id':id, 'state': True}) \
+                            for id in prod])
+
+                    legs = base_objects.LegList(leg_list)
+
+                    # Set coupling order
+                    coupling_orders_now = {coupling: max_order_now}
+
+                    # Setup process
+                    process = base_objects.Process({\
+                              'legs':legs,
+                              'model':process_definition.get('model'),
+                              'id': process_definition.get('id'),
+                              'orders': coupling_orders_now,
+                              'required_s_channels': \
+                                 process_definition.get('required_s_channels'),
+                              'forbidden_s_channels': \
+                                 process_definition.get('forbidden_s_channels'),
+                              'forbidden_particles': \
+                                 process_definition.get('forbidden_particles'),
+                              'is_decay_chain': \
+                                 process_definition.get('is_decay_chain'),
+                              'overall_orders': \
+                                 process_definition.get('overall_orders')})
+
+                    # Check for crossed processes
+                    sorted_legs = sorted(legs.get_outgoing_id_list(model))
+                    # Check if crossed process has already failed
+                    # In that case don't check process
+                    if tuple(sorted_legs) in failed_procs:
+                        continue
+
+                    amplitude = Amplitude({"process": process})
+                    if not amplitude.generate_diagrams():
+                        # Add process to failed_procs
+                        failed_procs.append(tuple(sorted_legs))
+
+                    if amplitude.get('diagrams'):
+                        # We found a valid amplitude. Return this order number
+                        logger.setLevel(oldloglevel)
+                        return {coupling: max_order_now}
+            # No processes found, increase max_order_now
+            max_order_now += 1
+            logger.setLevel(oldloglevel)
+
+        # If no valid processes found with nfinal-1 couplings, return nfinal
+        return {coupling: len(fsids)}        
             
 #===============================================================================
 # Global helper methods

@@ -199,6 +199,52 @@ class CmdExtended(cmd.Cmd):
 
         # execute the line command
         return line
+
+    def nice_error_handling(self, error, line):
+        """ """ 
+        # Make sure that we are at the initial position
+        os.chdir(self.__initpos)
+        # Create the debug files
+        self.log = False
+        cmd.Cmd.onecmd(self, 'history MG5_debug')
+        debug_file = open('MG5_debug', 'a')
+        traceback.print_exc(file=debug_file)
+        # Create a nice error output
+        if self.history and line == self.history[-1]:
+            error_text = 'Command \"%s\" interrupted with error:\n' % line
+        elif self.history:
+            error_text = 'Command \"%s\" interrupted in sub-command:\n' %line
+            error_text += '\"%s\" with error:\n' % self.history[-1]
+        else:
+            error_text = ''
+        error_text += '%s : %s\n' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
+        error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
+        error_text += 'More information is found in \'%s\'.\n' % \
+                        os.path.realpath("MG5_debug")
+        error_text += 'Please attach this file to your report.'
+        logger_stderr.critical(error_text)
+        #stop the execution if on a non interactive mode
+        if self.use_rawinput == False:
+            sys.exit('Exit on error')
+        return False
+
+    def nice_user_error(self, error, line):
+        # Make sure that we are at the initial position
+        os.chdir(self.__initpos)
+        if line == self.history[-1]:
+            error_text = 'Command \"%s\" interrupted with error:\n' % line
+        else:
+            error_text = 'Command \"%s\" interrupted in sub-command:\n' %line
+            error_text += '\"%s\" with error:\n' % self.history[-1] 
+        error_text += '%s : %s' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
+        logger_stderr.error(error_text)
+        #stop the execution if on a non interactive mode
+        if self.use_rawinput == False:
+            sys.exit()
+        # Remove failed command from history
+        self.history.pop()
+        return False
+
     
     def onecmd(self, line):
         """catch all error and stop properly command accordingly"""
@@ -206,49 +252,13 @@ class CmdExtended(cmd.Cmd):
         try:
             cmd.Cmd.onecmd(self, line)
         except MadGraph5Error as error:
-            # Make sure that we are at the initial position
-            os.chdir(self.__initpos)
-            if str(error):
-                if line == self.history[-1]:
-                    error_text = 'Command \"%s\" interrupted with error:\n' % line
-                else:
-                    error_text = 'Command \"%s\" interrupted in sub-command:\n' %line
-                    error_text += '\"%s\" with error:\n' % self.history[-1] 
-                error_text += '%s : %s' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
-                logger_stderr.error(error_text)
-                #stop the execution if on a non interactive mode
-                if self.use_rawinput == False:
-                    sys.exit()
-            # Remove failed command from history
-            self.history.pop()
-            return False
-        except Exception as error:
-            # Make sure that we are at the initial position
-            os.chdir(self.__initpos)
-            # Create the debug files
-            self.log = False
-            cmd.Cmd.onecmd(self, 'history MG5_debug')
-            debug_file = open('MG5_debug', 'a')
-            traceback.print_exc(file=debug_file)
-            # Create a nice error output
-            if self.history and line == self.history[-1]:
-                error_text = 'Command \"%s\" interrupted with error:\n' % line
-            elif self.history:
-                error_text = 'Command \"%s\" interrupted in sub-command:\n' %line
-                error_text += '\"%s\" with error:\n' % self.history[-1]
+            if __debug__:
+                self.nice_error_handling(error, line)
             else:
-                error_text = ''
-            error_text += '%s : %s\n' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
-            error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
-            error_text += 'More information is found in \'%s\'.\n' % \
-                          os.path.realpath("MG5_debug")
-            error_text += 'Please attach this file to your report.'
-            logger_stderr.critical(error_text)
-            #stop the execution if on a non interactive mode
-            if self.use_rawinput == False:
-                sys.exit('Exit on error')
-            return False
-
+                self.nice_user_error(error, line)
+        except Exception as error:
+            self.nice_error_handling(error, line)
+            
     def exec_cmd(self, line):
         """for third party call, call the line with pre and postfix treatment"""
         
@@ -607,12 +617,12 @@ class CheckValidForCmd(object):
         if args[0] != 'process':
             raise self.InvalidCmd('\"add\" requires the argument \"process\"')
 
-        self.check_process_format(' '.join(args[1:]))
-
         if not self._curr_model:
             raise MadGraph5Error, \
                   'No model currently active, please load or import a model.'
     
+        self.check_process_format(' '.join(args[1:]))
+
     def check_define(self, args):
         """check the validity of line
         syntax: define multipart_name [ part_name_list ]
@@ -1365,12 +1375,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
                 cpu_time1 = time.time()
                 
-                try:
-                    myproc = diagram_generation.MultiProcess(myprocdef)
-                except MadGraph5Error, error:
-                    logger_stderr.warning("Empty or wrong format process :\n" + \
-                                     str(error))
-                    return
+                # Generate processes
+                myproc = diagram_generation.MultiProcess(myprocdef)
                     
                 for amp in myproc.get('amplitudes'):
                     if amp not in self._curr_amps:
@@ -1698,8 +1704,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if not myprocdef:
             raise MadGraph5Error("Empty or wrong format process, please try again.")
 
-        # run the program
         cpu_time1 = time.time()
+        # Generate processes
         myproc = diagram_generation.MultiProcess(myprocdef)
         self._curr_amps = myproc.get('amplitudes')
         cpu_time2 = time.time()
