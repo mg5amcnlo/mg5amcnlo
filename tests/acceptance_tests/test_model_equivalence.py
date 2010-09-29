@@ -75,9 +75,7 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         """ test the UFO and MG4 model correspond to the same model """
         
         # import UFO model
-        import models.sm as model
-        converter = import_ufo.UFOMG5Converter(model)
-        ufo_model = converter.load_model()
+        ufo_model = import_ufo.import_model('sm')
         ufo_model.pass_particles_name_in_mg_default()
         
         # import MG4 model
@@ -93,7 +91,7 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         
         # Checking the particles
         for particle in model['particles']:
-            ufo_particle = ufo_model["particle_dict"][particle['pdg_code']]
+            ufo_particle = ufo_model.get("particle_dict")[particle['pdg_code']]
             self.check_particles(particle, ufo_particle)
         
         # Checking the interactions
@@ -118,8 +116,9 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         
         # import UFO model
         import models.mssm as model
-        converter = import_ufo.UFOMG5Converter(model)
-        ufo_model = converter.load_model()
+        ufo_model = import_ufo.import_model('mssm')
+        #converter = import_ufo.UFOMG5Converter(model)
+        #ufo_model = converter.load_model()
         ufo_model.pass_particles_name_in_mg_default()
         
         # import MG4 model
@@ -134,7 +133,7 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         
         #problem due to T1
         self.assertRaises(MadGraph5Error, model.pass_particles_name_in_mg_default)
-        for particle in model['particles']:
+        for particle in model.get('particles'):
             if particle['pdg_code']> 8000000:
                 model['particles'].remove(particle)
         
@@ -144,7 +143,7 @@ class CompareMG4WithUFOModel(unittest.TestCase):
             if particle['pdg_code']> 8000000:
                 # different ways to treat 4 gluon vertex
                 continue
-            ufo_particle = ufo_model["particle_dict"][particle['pdg_code']]
+            ufo_particle = ufo_model.get("particle_dict")[particle['pdg_code']]
             self.check_particles(particle, ufo_particle)
         
         # Checking the interactions
@@ -162,7 +161,7 @@ class CompareMG4WithUFOModel(unittest.TestCase):
                     nb_vertex += 1
                     self.check_interactions(vertex, ufo_vertex, rep )
             
-        self.assertEqual(nb_vertex, 1307)  
+        self.assertEqual(nb_vertex, 602)  
   
             
     
