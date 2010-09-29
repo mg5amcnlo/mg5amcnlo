@@ -776,6 +776,7 @@ class ModelTest(unittest.TestCase):
         
         model_name = [(part.get('name'), part.get('antiname')) \
                                           for part in self.mymodel['particles']]
+
         model2 = copy.copy(self.mymodel)
         
         # check that standard name are not modified
@@ -785,24 +786,28 @@ class ModelTest(unittest.TestCase):
         self.assertEqual(set(model_name),set(model2_name))
         
         # add a particle with non conventional name
-        model2['particles'].append(base_objects.Particle({'name':'ee',
+        particles = model2['particles']
+        particles.append(base_objects.Particle({'name':'ee',
                   'antiname':'eex',
                   'pdg_code':1}))
-        
+        model2.set('particles', particles)
+
         model2.pass_particles_name_in_mg_default()
+
         model2_name = [(part.get('name'), part.get('antiname')) \
                                                 for part in model2['particles']]        
         self.assertEqual(set(model_name + [('d','d~')]), set(model2_name))
         
         # add a particles with non conventional name with the conventional name
         #associtaed to another particle
-        model2['particles'].append(base_objects.Particle({'name':'u',
+        particles.append(base_objects.Particle({'name':'u',
                   'antiname':'d~',
                   'pdg_code':100}))
-        model2['particles'].append(base_objects.Particle({'name':'ee',
+        particles.append(base_objects.Particle({'name':'ee',
                   'antiname':'eex',
                   'pdg_code':2}))
-        
+        model2.set('particles', particles)
+
         self.assertRaises(madgraph.MadGraph5Error, \
                                        model2.pass_particles_name_in_mg_default)
 #===============================================================================

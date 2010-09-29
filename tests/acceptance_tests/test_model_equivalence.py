@@ -123,45 +123,50 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         
         # import MG4 model
         model = base_objects.Model()
+        if not MG4DIR:
+            raise MadGraph5Error, "Please provide a valid MG/ME path with -d"
+        v4_path = os.path.join(MG4DIR, 'Models', 'mssm')
+        if not os.path.isdir(v4_path):
+            v4_path = os.path.join(MG4DIR, 'models', 'mssm_v4')
+            if not os.path.isdir(v4_path):
+                raise MadGraph5Error, \
+                      "Please provide a valid MG/ME path with -d"
+
         model.set('particles', files.read_from_file(
-               os.path.join(MG4DIR,'Models','mssm_mg','particles.dat'),
+               os.path.join(v4_path,'particles.dat'),
                import_v4.read_particles_v4))
         model.set('interactions', files.read_from_file(
-            os.path.join(MG4DIR,'Models','mssm_mg','interactions.dat'),
+            os.path.join(v4_path,'interactions.dat'),
             import_v4.read_interactions_v4,
             model['particles']))
-        
-        #problem due to T1
-        self.assertRaises(MadGraph5Error, model.pass_particles_name_in_mg_default)
-        for particle in model.get('particles'):
-            if particle['pdg_code']> 8000000:
-                model['particles'].remove(particle)
         
         model.pass_particles_name_in_mg_default()
         # Checking the particles
         for particle in model['particles']:
-            if particle['pdg_code']> 8000000:
-                # different ways to treat 4 gluon vertex
-                continue
             ufo_particle = ufo_model.get("particle_dict")[particle['pdg_code']]
             self.check_particles(particle, ufo_particle)
         
         # Checking the interactions
         nb_vertex = 0
+        ufo_vertices = []
         for ufo_vertex in ufo_model['interactions']:
             pdg_code_ufo = [abs(part['pdg_code']) for part in ufo_vertex['particles']]
             int_name = [part['name'] for part in ufo_vertex['particles']]
             rep = (pdg_code_ufo, int_name)
             pdg_code_ufo.sort()
-            for vertex in model['interactions']:
-                pdg_code_mg4 = [abs(part['pdg_code']) for part in vertex['particles']]
-                pdg_code_mg4.sort()
-                
-                if pdg_code_mg4 == pdg_code_ufo:
-                    nb_vertex += 1
-                    self.check_interactions(vertex, ufo_vertex, rep )
-            
-        self.assertEqual(nb_vertex, 602)  
+            ufo_vertices.append(pdg_code_ufo)
+        mg4_vertices = []
+        for vertex in model['interactions']:
+            pdg_code_mg4 = [abs(part['pdg_code']) for part in vertex['particles']]
+            pdg_code_mg4.sort()
+
+            try:
+                ufo_vertices.remove(pdg_code_mg4)
+            except ValueError:
+                mg4_vertices.append(pdg_code_mg4)
+
+        self.assertEqual(ufo_vertices, [])  
+        self.assertEqual(mg4_vertices, [])  
   
             
     
