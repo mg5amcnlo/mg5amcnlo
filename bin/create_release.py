@@ -187,7 +187,7 @@ else:
     logging.info("Copying v4 models from " + path.join(MG5DIR, "models") + ":")
     for mdir in v4_models:
         modelname = path.split(mdir)[-1]
-        new_m_path = path.join(filepath, 'models', modelname + "_v4")
+        new_m_path = path.join(filepath, 'models', modelname)
         try:
             shutil.copytree(mdir, new_m_path)
             logging.info(mdir + " -> " + new_m_path)
@@ -241,3 +241,4 @@ logging.info("*Please* check the output log above to make sure that")
 logging.info("  all copied directories are the ones you intended!")
 logging.info("*Please* untar the release tar.gz and run the acceptance ")
 logging.info("  tests before uploading the release to Launchpad!")
+logging.info("  Syntax: python tests/test_manager.py -p A")

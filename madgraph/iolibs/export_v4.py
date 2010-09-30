@@ -63,7 +63,7 @@ def copy_v4template(mgme_dir, dir_path, clean):
         shutil.copy(os.path.join(mgme_dir, 'MGMEVersion.txt'), dir_path)
     except IOError:
         MG5_version = misc.get_pkg_info()
-        open(os.path.join(mgme_dir, 'MGMEVersion.txt'), 'w').write( \
+        open(os.path.join(dir_path, 'MGMEVersion.txt'), 'w').write( \
             "5." + MG5_version['version'])
     
     #Ensure that the Template is clean
