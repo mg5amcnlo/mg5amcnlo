@@ -66,7 +66,8 @@ if len(args) == 0:
     args = ''
 
 # Set logging level according to the logging level given by options
-logging.basicConfig(level=vars(logging)[options.logging])
+logging.basicConfig(level=vars(logging)[options.logging],
+                    format="%(message)s")
 
 # Set the filepath to the MG5 directory:
 filepath = MG5DIR
@@ -82,7 +83,7 @@ if not mgme_dir:
 if not mgme_dir or not path.isdir(path.join(mgme_dir, "Template")) \
        or not path.isdir(path.join(mgme_dir, "Models")) \
        or not path.isdir(path.join(mgme_dir, "HELAS")):
-    logging.error("No valid MG_ME directory. Please specify using -d MG_ME_DIR")
+    logging.error("Error: No valid MG_ME directory. Please specify using -d MG_ME_DIR")
     exit()
     
 # Set Template directory path

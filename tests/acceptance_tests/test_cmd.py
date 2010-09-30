@@ -114,8 +114,8 @@ class TestCmdShell2(unittest.TestCase):
         
     def tearDown(self):
         """ basic destruction after have run """
-        #if os.path.exists(self.out_dir):
-        #    shutil.rmtree(self.out_dir)
+        if os.path.exists(self.out_dir):
+            shutil.rmtree(self.out_dir)
     
     join_path = TestCmdShell1.join_path
 
@@ -125,7 +125,7 @@ class TestCmdShell2(unittest.TestCase):
     
     
     def test_output_madevent_directory(self):
-        """Test outputing a MadEvent directory"""
+        """Test outputting a MadEvent directory"""
 
         if os.path.isdir(self.out_dir):
             shutil.rmdir(self.out_dir)
@@ -196,6 +196,7 @@ class TestCmdShell2(unittest.TestCase):
                             self.join_path(_pickle_path,'simple_v4_proc_card.dat'),
                             os.path.join(self.out_dir,'Cards','proc_card.dat')))
     
+        self.cmd = Cmd.MadGraphCmdShell()
         self.do('import proc_v4 %s' % os.path.join(self.out_dir,
                                                        'Cards','proc_card.dat'))
 
@@ -357,5 +358,36 @@ class TestCmdShell2(unittest.TestCase):
         self.do('import model sm')
         self.do('generate mu+ mu- > ta+ ta-')       
         
-        
-        
+    def test_pythia8_output(self):
+        """Test Pythia 8 output"""
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmdir(self.out_dir)
+
+        os.mkdir(self.out_dir)        
+
+        self.do('import model sm')
+        self.do('output pythia8_model %s ' % self.out_dir)
+        # Check that the needed files are generated
+        files = ['hel_amps_sm.h', 'hel_amps_sm.cc',
+                 'Parameters_sm.h', 'Parameters_sm.cc']
+        for f in files:
+            self.assertTrue(os.path.isfile(os.path.join(self.out_dir, f)), 
+                            '%s file is not in directory' % f)
+        self.do('define p u u~ d d~')
+        self.do('generate p p > e+ e-')
+        self.do('output pythia8 %s ' % self.out_dir)
+        # Check that the needed files are generated
+        files = ['Sigma_sm_pp_epem.h', 'Sigma_sm_pp_epem.cc']
+        for f in files:
+            self.assertTrue(os.path.isfile(os.path.join(self.out_dir, f)), 
+                            '%s file is not in directory' % f)
+        self.do('define j u u~ d d~')
+        self.do('generate g p > w+ j')
+        self.do('add process p g > w+ j')
+        self.do('output pythia8 %s' % self.out_dir)
+        # Check that the needed files are generated
+        files = ['Sigma_sm_gp_wpj.h', 'Sigma_sm_gp_wpj.cc']
+        for f in files:
+            self.assertTrue(os.path.isfile(os.path.join(self.out_dir, f)), 
+                            '%s file is not in directory' % f)

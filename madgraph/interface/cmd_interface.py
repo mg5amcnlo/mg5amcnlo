@@ -887,6 +887,9 @@ class CheckValidForCmd(object):
                                     (self._curr_model['name'], i)
             auto_path = lambda i: os.path.join(self.writing_dir,
                                                name_dir(i))                
+        else:
+            self._export_dir = '.'
+            return
         for i in range(500):
             if os.path.isdir(auto_path(i)):
                 continue
