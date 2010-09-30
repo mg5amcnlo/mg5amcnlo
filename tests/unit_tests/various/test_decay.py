@@ -1280,9 +1280,35 @@ class Test_Channel(unittest.TestCase):
         susy_higgs.find_channels(3, decay_mssm)
         #susy_higgs.find_channels_nextlevel(decay_mssm)
         print susy_higgs.get_channels(3, True).nice_string()
-        #decay_mssm.find_all_channels(3)
+        decay_mssm.find_all_channels(3)
                                            
+    def test_apx_decayrate(self):
+        """ Test for the approximation of decay rate"""
 
+        higgs = self.my_testmodel.get_particle(25)
+        # Set the higgs mass < Z-boson mass so that identicle particles appear
+        # in final state
+        decay_objects.MH = 91
+        higgs.find_channels(4, self.my_testmodel)
+        # Test if the error raise when calculating off shell ps area
+        self.assertRaises(decay_objects.Channel.PhysicsObjectError,
+                          higgs.get_channels(2, False)[0].get_apx_psarea,
+                          self.my_testmodel)
+        # Test of the symmetric factor
+        print higgs.get_channels(3, True).nice_string()
+        h_zz_llvv_1 = higgs.get_channels(4, True)[9]
+        h_zz_llvv_2 = higgs.get_channels(4, True)[10]
+        print higgs.get_channels(4, True)[9].nice_string(), '\n',\
+            higgs.get_channels(4, True)[10].nice_string()
+
+        h_zz_llvv_1.get_apx_psarea(self.my_testmodel)
+        h_zz_llvv_2.get_apx_psarea(self.my_testmodel)
+        self.assertEqual(4, h_zz_llvv_1['s_factor'])
+        self.assertEqual(1, h_zz_llvv_2['s_factor'])
+
+        channel_1 = higgs.get_channels(3, True)[0]
+        print channel_1.get('final_mass_list')
+        print channel_1.get_apx_psarea(self.my_testmodel)
 
 if __name__ == '__main__':
     unittest.unittest.main()

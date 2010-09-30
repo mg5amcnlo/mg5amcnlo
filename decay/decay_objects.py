@@ -735,7 +735,8 @@ class DecayParticle(base_objects.Particle):
 
         return any(Channel.check_channels_equiv(other_c, channel)\
                        for other_c in self.get_channels(clevel, onshell) \
-                       if other_c['final_mass'] == channel['final_mass'])
+                       if sum(other_c['final_mass_list']) == \
+                       sum(channel['final_mass_list']))
 
     # This helper function is useless in current algorithm...
     def generate_configlist(self, channel, partnum, model):
@@ -1828,6 +1829,10 @@ class DecayModel(base_objects.Model):
 #===============================================================================
 # Channel: A specialized Diagram object for decay
 #===============================================================================
+
+"""parameters for estimating the phase space area"""
+c_psarea = 0.8
+
 class Channel(base_objects.Diagram):
     """Channel: a diagram that describes a certain decay channel
                 with on shell condition, apprximated matrix element, 
@@ -1841,7 +1846,7 @@ class Channel(base_objects.Diagram):
     sorted_keys = ['vertices',
                    'orders',
                    'onshell', 'has_idpart', 'id_part_list',
-                   'apx_matrixelement', 'apx_PSarea', 'apx_decaywidth']
+                   'apx_matrixelement', 'apx_psarea', 'apx_decaywidth']
 
     def default_setup(self):
         """Default values for all properties"""
@@ -1857,16 +1862,17 @@ class Channel(base_objects.Diagram):
         self['id_part_list'] = {}
         self['final_legs'] = base_objects.LegList()
         # Property for optimizing the check_repeat of DecayParticle
-        self['final_mass'] = 0
+        self['final_mass_list'] = 0
         # Decay width related properties.
         self['apx_matrixelement'] = 0.
-        self['apx_PSarea'] = 0.
+        self['s_factor'] = 1
+        self['apx_psarea'] = 0.
         self['apx_decaywidth'] = 0.
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
         
-        if name in ['apx_matrixelement', 'apx_PSarea', 'apx_decaywidth']:
+        if name in ['apx_matrixelement', 'apx_psarea', 'apx_decaywidth']:
             if not isinstance(value, float):
                 raise self.PhysicsObjectError, \
                     "Value %s is not a float" % str(value)
@@ -1934,11 +1940,12 @@ class Channel(base_objects.Diagram):
                 raise self.PhysicsObjectError, \
                     "The argument %s must be a model." % str(model)
 
-            self['final_mass'] = sum([abs(eval(model.get_particle(l.get('id')).get('mass'))) \
-                                  for l in self.get_final_legs()])
+            self['final_mass_list'] =[abs(eval(model.get_particle(l.get('id')).\
+                                               get('mass'))) \
+                                      for l in self.get_final_legs()]
             ini_mass = abs(eval(model.get_particle(self.get_initial_id()).get('mass')))
             # ini_mass = ini_mass.real
-            self['onshell'] = ini_mass > self['final_mass']
+            self['onshell'] = ini_mass > sum(self['final_mass_list'])
 
         return self['onshell']
 
@@ -2208,48 +2215,65 @@ class Channel(base_objects.Diagram):
         """calculate the apx_matrixelement"""
         pass
 
-    def get_apx_PSarea(self):
-        """calculate the apx_PSarea"""
+    def get_apx_psarea(self, model):
+        """ get the approximate phase space area, calculate it if not exist."""
+        # Raise error if the channel is off-shell
+        if not self.get_onshell(model):
+            raise self.PhysicsObjectError,\
+                "Off-shell decay cannot have phase space area."
+        
+        if not self['apx_psarea']:
+            # The initial particle mass
+            M = abs(eval(model.get_particle(self.get_initial_id()).get('mass')))
+            mass_list = copy.copy(self['final_mass_list'])
+            self['apx_psarea'] = self.calculate_apx_psarea(M, mass_list)
 
-        # The initial particle mass
-        M = self['model'].get_particle(self.get_initial_id()[0])['mass']
+        return self['apx_psarea']
 
-        if len(self.get_final_ids()) == 2:
-            
-            m_1 = self['model'].get_particle(self.get_final_ids()[0])['mass']
-            m_2 = self['model'].get_particle(self.get_final_ids()[1])['mass']
+    def calculate_apx_psarea(self, M, mass_list):
+        """Recursive function to calculate the apx_psarea"""
 
-            apx_PSarea = 1 / (32 * math.pi ) * \
-                         math.sqrt((M-m_1^2-m_2^2)^2-4*m_1^2*m_2^2)
+        if len(mass_list) >2 :
+            # Mass_n is the mass that use pop out to calculate the ps area.
+            mass_n = mass_list.pop()
+            # Mean value of the c.m. mass of the rest particles in mass_list
+            M_eff_sq_mean = ((M-mass_n) ** 2+sum(mass_list) ** 2)/2
+            # The range of the c.m. mass square
+            delta_M_eff_sq = ((M-mass_n) ** 2-sum(mass_list) ** 2)
+            # Recursive formula for ps area,
+            # initial mass is replaced as the square root of M_eff_sq_mean
+            return math.sqrt((M ** 2+mass_n ** 2-M_eff_sq_mean) ** 2-\
+                                 4*(M ** 2)*(mass_n ** 2))* \
+                self.calculate_apx_psarea(math.sqrt(M_eff_sq_mean), 
+                                          mass_list)* \
+                delta_M_eff_sq*c_psarea* \
+                1/(16*(math.pi ** 2)*(M ** 2))
 
-        elif self.get_num_finalparticles() == 3:
-            # Calculate the phase space area for 3 body decay
-            m_1 = self['model'].get_particle(self.get_final_ids()[0])['mass']
-            m_2 = self['model'].get_particle(self.get_final_ids()[1])['mass']
-            m_3 = self['model'].get_particle(self.get_final_ids()[2])['mass']
-            
-            # The middle point value of the m_1, m_2 C.M. mass
-            m_12_mid = (M-m_3+m_1+m_2)/2
-
-            E_2_dag = (m_12^2-m_1^2+m_2^2)/(2*m_12)
-            E_3_dag = (M-m_12^2-m_3^2)/(2*m_12)
-
-            apx_PSarea = 4*math.sqrt((E_2_dag^2-m_2^2)*(E_3_dag^2-m_3^2)) \
-                         * ((1-m_3)^2-(m_1+m_2)^2)
-
+        # for two particle decay the phase space area is known.
         else:
-            # This version cannot deal with channels with more than 3 final
-            # particles.
+            # calculate the symmetric factor first
+            id_list = sorted([l.get('id') for l in self.get_final_legs()])
+            count =1
+            for i, pid in enumerate(id_list):
+                if i !=0 and id_list[i-1] == pid:
+                    count += 1
+                elif count != 1:
+                    self['s_factor'] = self['s_factor'] * math.factorial(count)
+                    count = 1
+            # This complete the s_factor if the idparticle is in the last part
+            # of list.
+            if count != 1:
+                self['s_factor'] = self['s_factor'] * math.factorial(count)
 
-            raise self.PhysicsObjectError, \
-                    "Number of final particles larger than three.\n" \
-                        "Not allow in this version."
+            return math.sqrt((M ** 2+mass_list[0] ** 2-mass_list[1] ** 2) ** 2-\
+                                 4*(M ** 2)*(mass_list[0] ** 2))* \
+                                 1/(8*math.pi*(M ** 2)*self['s_factor'])
 
 
     def get_apx_decaywidth(self):
         """Calculate the apx_decaywidth"""
         
-        self.apx_decaywidth = self.get_apx_matrixelment() * self.get_apx_PSarea()
+        self.apx_decaywidth = self.get_apx_matrixelment() * self.get_apx_psarea()
 
 #===============================================================================
 # ChannelList: List of all possible  channels for the decay
@@ -2260,5 +2284,4 @@ class ChannelList(base_objects.DiagramList):
 
     def is_valid_element(self, obj):
         """ Test if the object is a valid Channel for the list. """
-
         return isinstance(obj, Channel)
