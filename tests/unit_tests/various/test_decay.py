@@ -19,6 +19,7 @@ import copy
 import os
 import sys
 import time
+import math
 
 import tests.unit_tests as unittest
 import madgraph.core.base_objects as base_objects
@@ -1285,30 +1286,131 @@ class Test_Channel(unittest.TestCase):
     def test_apx_decayrate(self):
         """ Test for the approximation of decay rate"""
 
+        full_sm_base = import_ufo.import_model('sm')
+        full_sm = decay_objects.DecayModel(full_sm_base)
+
         higgs = self.my_testmodel.get_particle(25)
         # Set the higgs mass < Z-boson mass so that identicle particles appear
         # in final state
-        decay_objects.MH = 91
+        MH_new = 91
+        decay_objects.MH = MH_new
         higgs.find_channels(4, self.my_testmodel)
+
         # Test if the error raise when calculating off shell ps area
         self.assertRaises(decay_objects.Channel.PhysicsObjectError,
                           higgs.get_channels(2, False)[0].get_apx_psarea,
                           self.my_testmodel)
+        self.assertRaises(decay_objects.Channel.PhysicsObjectError,
+                          higgs.get_channels(2, False)[0].get_apx_decaywidth,
+                          self.my_testmodel)
+
         # Test of the symmetric factor
-        print higgs.get_channels(3, True).nice_string()
+
+        #print higgs.get_channels(3, True).nice_string()
         h_zz_llvv_1 = higgs.get_channels(4, True)[9]
         h_zz_llvv_2 = higgs.get_channels(4, True)[10]
-        print higgs.get_channels(4, True)[9].nice_string(), '\n',\
-            higgs.get_channels(4, True)[10].nice_string()
+        channel_1 = higgs.get_channels(3, True)[0]
+        print 'h_zz_llvv_symm:', higgs.get_channels(4, True)[9].nice_string(), \
+            '\n',\
+            'h_zz_llvv_no_symm:',higgs.get_channels(4, True)[10].nice_string(),\
+            '\n',\
+            'channel_1:', channel_1.nice_string()
 
         h_zz_llvv_1.get_apx_psarea(self.my_testmodel)
         h_zz_llvv_2.get_apx_psarea(self.my_testmodel)
         self.assertEqual(4, h_zz_llvv_1['s_factor'])
         self.assertEqual(1, h_zz_llvv_2['s_factor'])
 
-        channel_1 = higgs.get_channels(3, True)[0]
-        print channel_1.get('final_mass_list')
-        print channel_1.get_apx_psarea(self.my_testmodel)
+
+        # Test of the get_apx_fnrule
+
+        MW = channel_1.get('final_mass_list')[-1]
+        #print channel_1.get('final_mass_list')
+        #print channel_1.get_apx_matrixelement_sq(self.my_testmodel)
+        #print 'Vertor boson, onshell:', \
+        #    channel_1.get_apx_fnrule(24, 0.5,
+        #                            False, self.my_testmodel)
+        q_offshell = 10
+        q_offshell_2 = 88
+        q_onshell = 200
+        self.assertTrue((channel_1.get_apx_fnrule(24, q_onshell, 
+                                                  self.my_testmodel)-
+                         (1+1/(MW ** 2)*q_onshell **2))/ \
+                          (1+1/(MW ** 2)*q_onshell **2) < 0.00001)
+        self.assertTrue((channel_1.get_apx_fnrule(24, q_offshell, 
+                                                   self.my_testmodel)-
+                          ((1-2*((q_offshell/MW) ** 2)+(q_offshell/MW) ** 4)/ \
+                               ((q_offshell**2-MW **2)**2)))/ \
+                             channel_1.get_apx_fnrule(24, q_offshell, 
+                                                      self.my_testmodel)\
+                          < 0.000001)
+        # Fermion
+        self.assertEqual(channel_1.get_apx_fnrule(11, q_onshell, 
+                                                  full_sm),
+                         q_onshell*2)
+        self.assertEqual(channel_1.get_apx_fnrule(6, q_onshell, 
+                                                  self.my_testmodel),
+                         q_onshell*6)
+        self.assertTrue((channel_1.get_apx_fnrule(6, q_offshell, 
+                                                  self.my_testmodel)-
+                         q_offshell/(q_offshell ** 2 - decay_objects.MT **2)\
+                             ** 2)\
+                             /channel_1.get_apx_fnrule(6, q_offshell, 
+                                                       self.my_testmodel) \
+                             < 0.00001)
+        # Scalar
+        self.assertEqual(channel_1.get_apx_fnrule(25, q_onshell, 
+                                                  self.my_testmodel),
+                         1)
+
+        self.assertTrue((channel_1.get_apx_fnrule(25, q_offshell_2, 
+                                                  self.my_testmodel) -\
+                         1/(q_offshell_2 ** 2 - MH_new ** 2)**2)/ \
+                            channel_1.get_apx_fnrule(25, q_offshell_2, 
+                                                      self.my_testmodel) \
+                            < 0.000001)
+
+        # Test of matrix element square calculation
+
+        E_mean = (MH_new-MW)/3
+        #print channel_1.get_apx_fnrule(-24, 2*E_mean, False, full_sm)
+        #print abs(decay_objects.GC_11) **2
+        #print channel_1.get_apx_fnrule(24, E_mean+MW, True, self.my_testmodel)
+        #print abs(decay_objects.GC_22) **2
+        self.assertTrue((channel_1.get_apx_matrixelement_sq(self.my_testmodel)-
+                          ((E_mean**2*4*(1-2*(2*E_mean/MW)**2+(2*E_mean/MW)**4)\
+                                /(((2*E_mean)**2-MW **2)**2))*\
+                               (1+(1/MW*(E_mean+MW))**2)*\
+                               abs(decay_objects.GC_11) **2*\
+                               abs(decay_objects.GC_22) **2))/ \
+                   channel_1.get_apx_matrixelement_sq(self.my_testmodel) <\
+                             0.00001)
+        
+        tau = full_sm.get_particle(15)
+        tau.find_channels(3, full_sm)
+        tau_qdecay = tau.get_channels(3, True)[0]
+        tau_ldecay = tau.get_channels(3, True)[2]
+        #print tau_ldecay.nice_string()
+        self.assertEqual( round(tau_qdecay.get_apx_decaywidth(full_sm)/ \
+                                    tau_ldecay.get_apx_decaywidth(full_sm)), 9)
+        MTAU = abs(eval('decay_objects.' + tau.get('mass')))
+        self.assertTrue((tau_qdecay.get_apx_matrixelement_sq(full_sm)-
+                          ((MTAU/3) **3 *8*9*MTAU*(1-2*(2*MTAU/(3*MW))**2 +\
+                                                       (2*MTAU/(3*MW))**4)/ \
+                               ((2*MTAU/3) ** 2 - MW **2) **2 *\
+                               abs(decay_objects.GC_11) **4))/ \
+                            tau_qdecay.get_apx_matrixelement_sq(full_sm) \
+                            < 0.00001)
+
+
+        # Test of phase space area calculation
+        #print 'Tau decay ps_area', tau_qdecay.get_apx_psarea(full_sm)
+        self.assertTrue((tau_qdecay.calculate_apx_psarea(1.777, [0,0])-\
+                         1/(8*math.pi)) < 0.00001)
+        self.assertTrue((tau_qdecay.calculate_apx_psarea(1.777, [0,0,0])-\
+                         0.000477383)/ 0.000477383 < 10 ** (-5))
+        self.assertTrue((channel_1.get_apx_psarea(full_sm)-0.00502273)\
+            /0.0050227 < 0.00001)
 
 if __name__ == '__main__':
     unittest.unittest.main()

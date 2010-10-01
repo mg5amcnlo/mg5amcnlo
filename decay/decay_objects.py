@@ -835,7 +835,8 @@ class DecayModel(base_objects.Model):
     sorted_keys = ['name', 'particles', 'parameters', 'interactions', 
                    'couplings', 'lorentz', 
                    'stable_particles', 'vertexlist_found',
-                   'reduced_interactions', 'decay_groups', 'max_vertexorder']
+                   'reduced_interactions', 'decay_groups', 'max_vertexorder',
+                  ]
 
     def __init__(self, init_dict = {}):
         """Reset the particle_dict so that items in it is 
@@ -1824,7 +1825,7 @@ class DecayModel(base_objects.Model):
         """ Function that find channels for all particles in this model.
             Call the function in DecayParticle."""
         for part in self.get('particles'):
-            part.find_channels(max_partnum, self)
+            part.find_channels(max_partnum, self)        
 
 #===============================================================================
 # Channel: A specialized Diagram object for decay
@@ -1846,7 +1847,7 @@ class Channel(base_objects.Diagram):
     sorted_keys = ['vertices',
                    'orders',
                    'onshell', 'has_idpart', 'id_part_list',
-                   'apx_matrixelement', 'apx_psarea', 'apx_decaywidth']
+                   'apx_matrixelement_sq', 'apx_psarea', 'apx_decaywidth']
 
     def default_setup(self):
         """Default values for all properties"""
@@ -1864,7 +1865,7 @@ class Channel(base_objects.Diagram):
         # Property for optimizing the check_repeat of DecayParticle
         self['final_mass_list'] = 0
         # Decay width related properties.
-        self['apx_matrixelement'] = 0.
+        self['apx_matrixelement_sq'] = 0.
         self['s_factor'] = 1
         self['apx_psarea'] = 0.
         self['apx_decaywidth'] = 0.
@@ -1872,7 +1873,7 @@ class Channel(base_objects.Diagram):
     def filter(self, name, value):
         """Filter for valid diagram property values."""
         
-        if name in ['apx_matrixelement', 'apx_psarea', 'apx_decaywidth']:
+        if name in ['apx_matrixelement_sq', 'apx_psarea', 'apx_decaywidth']:
             if not isinstance(value, float):
                 raise self.PhysicsObjectError, \
                     "Value %s is not a float" % str(value)
@@ -2211,10 +2212,102 @@ class Channel(base_objects.Diagram):
 
         return id_part_configs
 
-    def get_apx_matrixelement(self):
-        """calculate the apx_matrixelement"""
-        pass
 
+    def get_apx_matrixelement_sq(self, model):
+        """calculate the apx_matrixelement_sq"""
+
+        # To ensure the final_mass_list is setup, run get_onshell first
+        self.get_onshell(model)
+
+        # Setup the value of matrix element square and the average energy
+        # q_dict is to record the flow of energy
+        apx_m = 1
+        ini_part = model.get_particle(self.get_initial_id())
+        avg_q = (abs(eval(ini_part.get('mass'))) - sum(self['final_mass_list']))/len(self.get_final_legs())
+        q_dict = {}
+
+        # Go through each vertex and assign factors to apx_m
+        # Do not run the identical vertex
+        for i, vert in enumerate(self['vertices'][:-1]):
+            # Total energy of this vertex
+            q_total = 0
+            # Assign value to apx_m except the mother leg (last leg)
+            for leg in vert['legs'][:-1]:
+                # Case for final legs
+                if leg in self.get_final_legs():
+                    mass  = abs(eval(model.get_particle(leg.get('id')).get('mass')))
+                    q_total += (mass + avg_q)
+                    apx_m *= self.get_apx_fnrule(leg.get('id'),
+                                                 avg_q+mass, model)
+
+                # If this is only internal vertex, assign value to only the
+                # mother leg (other legs are assign before.)                
+                else:
+                    q_total += q_dict[(leg.get('id'), leg.get('number'))]
+
+            # The energy for mother leg is sum of the energy of other legs.
+            # Set the q_dict
+            q_dict[(vert.get('legs')[-1].get('id'), 
+                    vert.get('legs')[-1].get('number'))] = q_total
+            # Assign the value if the leg is not inital leg.
+            if i != len(self.get('vertices'))-2: 
+                apx_m *= self.get_apx_fnrule(vert.get('legs')[-1].get('id'),
+                                             q_total, model)
+            # Assign the value to initial particle.
+            else:
+                apx_m *= self.get_apx_fnrule(vert.get('legs')[-1].get('id'),
+                                             q_total, model)
+
+            # Evaluate the coupling strength
+            apx_m *= sum([abs(eval(v)) ** 2 for key, v in \
+                             model.get('interaction_dict')[abs(vert.get('id'))]\
+                              ['couplings'].items()])
+
+        # Correct the factor of spin/color sum of initial particle (average it)
+        if ini_part.get('spin') == 2:
+            apx_m *= 1/(2.*ini_part.get('color'))
+
+        self['apx_matrixelement_sq'] = apx_m
+        return apx_m
+            
+    def get_apx_fnrule(self, pid, q, model):
+        """ The library that provide the 'approximated Feynmann rule'
+            q is the energy of the leg. The energy will be compared with mass
+            to decide whether this particle is onshell."""
+        part = model.get('particle_dict')[pid]
+        
+        # If q is too close to mass, set it as onshell
+        mass  = abs(eval(part.get('mass')))
+        if mass != 0 and abs((q-mass)/mass) < 10 ** -8:
+            onshell = True
+        else:
+            onshell =  q > mass
+
+        # Set the propagator value (square is for square of matrix element)
+        if onshell:
+            value = 1.
+        else:
+            value = 1./(q ** 2 - mass ** 2) ** 2
+        
+        # Set the value according the particle type
+        # vector boson case
+        if part.get('spin') == 3:
+            if onshell:
+                value *= (1+ (q/mass) **2)
+            else:
+                value *= (1 - 2* (q/mass) **2 + (q/mass) **4)
+        # fermion case
+        elif part.get('spin') == 2:
+            value *= q
+            if onshell:
+                # Spin and color sum is corrected here
+                value *= 2. * part.get('color')
+
+        # Do nothing for scalar
+
+        return value
+            
+        
     def get_apx_psarea(self, model):
         """ get the approximate phase space area, calculate it if not exist."""
         # Raise error if the channel is off-shell
@@ -2237,21 +2330,21 @@ class Channel(base_objects.Diagram):
             # Mass_n is the mass that use pop out to calculate the ps area.
             mass_n = mass_list.pop()
             # Mean value of the c.m. mass of the rest particles in mass_list
-            M_eff_sq_mean = ((M-mass_n) ** 2+sum(mass_list) ** 2)/2
+            M_eff_mean = ((M-mass_n) +sum(mass_list))/2
             # The range of the c.m. mass square
             delta_M_eff_sq = ((M-mass_n) ** 2-sum(mass_list) ** 2)
             # Recursive formula for ps area,
             # initial mass is replaced as the square root of M_eff_sq_mean
-            return math.sqrt((M ** 2+mass_n ** 2-M_eff_sq_mean) ** 2-\
-                                 4*(M ** 2)*(mass_n ** 2))* \
-                self.calculate_apx_psarea(math.sqrt(M_eff_sq_mean), 
-                                          mass_list)* \
-                delta_M_eff_sq*c_psarea* \
-                1/(16*(math.pi ** 2)*(M ** 2))
-
+            return math.sqrt((M ** 2+mass_n ** 2-M_eff_mean**2) ** 2-\
+                                 (2*M *mass_n) ** 2)* \
+                                 self.calculate_apx_psarea(M_eff_mean, mass_list)*\
+                                 delta_M_eff_sq*c_psarea* \
+                                 1./(16*(math.pi ** 2)*(M ** 2))
+            
         # for two particle decay the phase space area is known.
         else:
             # calculate the symmetric factor first
+            self['s_factor'] =1
             id_list = sorted([l.get('id') for l in self.get_final_legs()])
             count =1
             for i, pid in enumerate(id_list):
@@ -2264,16 +2357,24 @@ class Channel(base_objects.Diagram):
             # of list.
             if count != 1:
                 self['s_factor'] = self['s_factor'] * math.factorial(count)
-
             return math.sqrt((M ** 2+mass_list[0] ** 2-mass_list[1] ** 2) ** 2-\
-                                 4*(M ** 2)*(mass_list[0] ** 2))* \
-                                 1/(8*math.pi*(M ** 2)*self['s_factor'])
+                                 (2* M *mass_list[0]) ** 2)* \
+                                 1./(8*math.pi*(M ** 2)*self['s_factor'])
 
 
-    def get_apx_decaywidth(self):
-        """Calculate the apx_decaywidth"""
+    def get_apx_decaywidth(self, model):
+        """Calculate the apx_decaywidth
+           formula: Gamma = ps_area* matrix element square * (1/2M)"""
+
+        # Raise error if the channel is off-shell
+        if not self.get_onshell(model):
+            raise self.PhysicsObjectError,\
+                "Off-shell decay cannot have decaywidth."
         
-        self.apx_decaywidth = self.get_apx_matrixelment() * self.get_apx_psarea()
+        self['apx_decaywidth'] = self.get_apx_matrixelement_sq(model) * \
+            self.get_apx_psarea(model)/ \
+            (2*abs(eval(model.get_particle(self.get_initial_id()).get('mass'))))
+        return self['apx_decaywidth']
 
 #===============================================================================
 # ChannelList: List of all possible  channels for the decay
