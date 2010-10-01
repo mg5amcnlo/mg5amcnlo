@@ -501,7 +501,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                      wavefunctions,
                                      diagram_wavefunctions,
                                      external_wavefunctions,
-                                     wf_number, force_flip_flow=False):
+                                     wf_number, force_flip_flow=False,
+                                     number_to_wavefunctions=[]):
         """Recursive function. Check for Majorana fermion. If found,
         continue down to external leg, then flip all the fermion flows
         on the way back up, in the correct way:
@@ -644,6 +645,13 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         wf.set('number', wf.get('number') - 1)
                 # Since we reuse the old wavefunction, reset wf_number
                 wf_number = wf_number - 1
+                # Need to replace wavefunction in number_to_wavefunctions
+                # (in case this wavefunction is in another of the dicts)
+                for n_to_wf_dict in number_to_wavefunctions:
+                    if new_wf in n_to_wf_dict.values():
+                        for key in n_to_wf_dict.keys():
+                            if n_to_wf_dict[key] == new_wf:
+                                n_to_wf_dict[key] = new_wf
             except ValueError:
                 pass
 
@@ -1108,7 +1116,8 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                                    external_wavefunctions,
                                    my_state,
                                    wf_number,
-                                   force_flip_flow=False):
+                                   force_flip_flow=False,
+                                   number_to_wavefunctions=[]):
         """Check for clashing fermion flow (N(incoming) !=
         N(outgoing)). If found, we need to trace back through the
         mother structure (only looking at fermions), until we find a
@@ -1175,7 +1184,8 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                                                 diagram_wavefunctions,
                                                 external_wavefunctions,
                                                 wf_number,
-                                                force_flip_flow)
+                                                force_flip_flow,
+                                                number_to_wavefunctions)
 
             # Replace old mother with new mother
             self[self.index(mother)] = new_mother
@@ -1203,7 +1213,8 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                                    external_wavefunctions,
                                    my_state,
                                    wf_number,
-                                   force_flip_flow)
+                                   force_flip_flow,
+                                   number_to_wavefunctions)
 
         return wf_number
 
@@ -2052,7 +2063,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         diagram_number = 0
 
         for diagram in diagram_list:
-            
+
             # List of dictionaries from leg number to wave function,
             # keeps track of the present position in the tree.
             # Need one dictionary per coupling multiplicity (diagram)
@@ -2188,7 +2199,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                               diagram_wavefunctions,
                                               external_wavefunctions,
                                               "Nostate",
-                                              wf_number)
+                                              wf_number,
+                                              False,
+                                              number_to_wavefunctions)
 
                 # Now generate HelasAmplitudes from the last vertex.
                 if lastvx.get('id'):
@@ -2224,10 +2237,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
             # After generation of all wavefunctions and amplitudes,
             # add wavefunctions to diagram
-            if diagram_wavefunctions and not \
-                               helas_diagram.get('wavefunctions'):
-                helas_diagram.set('wavefunctions',
-                                  diagram_wavefunctions)
+            helas_diagram.set('wavefunctions', diagram_wavefunctions)
 
             # Sort the wavefunctions according to number
             diagram_wavefunctions.sort(lambda wf1, wf2: \
