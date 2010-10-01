@@ -114,8 +114,8 @@ class TestCmdShell2(unittest.TestCase):
         
     def tearDown(self):
         """ basic destruction after have run """
-        #if os.path.exists(self.out_dir):
-        #    shutil.rmtree(self.out_dir)
+        if os.path.exists(self.out_dir):
+            shutil.rmtree(self.out_dir)
     
     join_path = TestCmdShell1.join_path
 
@@ -125,7 +125,7 @@ class TestCmdShell2(unittest.TestCase):
     
     
     def test_output_madevent_directory(self):
-        """Test outputing a MadEvent directory"""
+        """Test outputting a MadEvent directory"""
 
         if os.path.isdir(self.out_dir):
             shutil.rmdir(self.out_dir)
@@ -196,6 +196,7 @@ class TestCmdShell2(unittest.TestCase):
                             self.join_path(_pickle_path,'simple_v4_proc_card.dat'),
                             os.path.join(self.out_dir,'Cards','proc_card.dat')))
     
+        self.cmd = Cmd.MadGraphCmdShell()
         self.do('import proc_v4 %s' % os.path.join(self.out_dir,
                                                        'Cards','proc_card.dat'))
 
@@ -213,7 +214,7 @@ class TestCmdShell2(unittest.TestCase):
 
 
     def test_output_standalone_directory(self):
-        """ command 'output' works with path"""
+        """Test command 'output' with path"""
         
         if os.path.isdir(self.out_dir):
             shutil.rmdir(self.out_dir)
@@ -229,7 +230,7 @@ class TestCmdShell2(unittest.TestCase):
                                                'Cards', 'proc_card_mg5.dat')))
         
     def test_ufo_aloha(self):
-        """ test the import of models and the export of Helas Routine """
+        """Test the import of models and the export of Helas Routine """
 
         if os.path.isdir(self.out_dir):
             shutil.rmdir(self.out_dir)
@@ -285,10 +286,108 @@ class TestCmdShell2(unittest.TestCase):
         self.assertTrue(re.search('Matrix element\s*=\s*1.953735\d*[Ee]-0*2',
                                   log_output))
         
+    def test_madevent_ufo_aloha(self):
+        """Test MadEvent output with UFO/ALOHA"""
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmdir(self.out_dir)
+
+        self.do('import model sm')
+        self.do('generate e+ e->e+ e-')
+        self.do('output %s ' % self.out_dir)
+        # Check that the needed ALOHA subroutines are generated
+        files = ['aloha_file.inc', 
+                 #'FFS1C1_2.f', 'FFS1_0.f',
+                 'FFV1_0.f', 'FFV1_3.f',
+                 'FFV2_0.f', 'FFV2_3.f',
+                 'FFV4_0.f', 'FFV4_3.f',
+                 'makefile', 'aloha_functions.f']
+        for f in files:
+            self.assertTrue(os.path.isfile(os.path.join(self.out_dir,
+                                                        'Source', 'DHELAS',
+                                                        f)), 
+                            '%s file is not in aloha directory' % f)
+
+        devnull = open(os.devnull,'w')
+        # Check that the Source directory compiles
+        status = subprocess.call(['make'],
+                                 stdout=devnull, stderr=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'Source'))
+        self.assertEqual(status, 0)
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libdhelas3.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libmodel.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libgeneric.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libcernlib.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libdsample.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libpdf.a')))
+        # Check that gensym compiles
+        status = subprocess.call(['make', 'gensym'],
+                                 stdout=devnull, stderr=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                                  'P0_epem_epem'))
+        self.assertEqual(status, 0)
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P0_epem_epem',
+                                                    'gensym')))
+        # Check that gensym runs
+        status = subprocess.call('./gensym', 
+                                 stdout=devnull, stderr=devnull,
+                                 cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                                  'P0_epem_epem'), shell=True)
+        self.assertEqual(status, 0)
+        # Check that madevent compiles
+        status = subprocess.call(['make', 'madevent'],
+                                 stdout=devnull, stderr=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                                  'P0_epem_epem'))
+        self.assertEqual(status, 0)
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P0_epem_epem',
+                                                    'madevent')))
+        
     def test_ufo_standard_sm(self):
         """ check that we can use standard MG4 name """
         self.do('import model sm')
         self.do('generate mu+ mu- > ta+ ta-')       
         
-        
-        
+    def test_pythia8_output(self):
+        """Test Pythia 8 output"""
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmdir(self.out_dir)
+
+        os.mkdir(self.out_dir)        
+
+        self.do('import model sm')
+        self.do('output pythia8_model %s ' % self.out_dir)
+        # Check that the needed files are generated
+        files = ['hel_amps_sm.h', 'hel_amps_sm.cc',
+                 'Parameters_sm.h', 'Parameters_sm.cc']
+        for f in files:
+            self.assertTrue(os.path.isfile(os.path.join(self.out_dir, f)), 
+                            '%s file is not in directory' % f)
+        self.do('define p u u~ d d~')
+        self.do('generate p p > e+ e-')
+        self.do('output pythia8 %s ' % self.out_dir)
+        # Check that the needed files are generated
+        files = ['Sigma_sm_pp_epem.h', 'Sigma_sm_pp_epem.cc']
+        for f in files:
+            self.assertTrue(os.path.isfile(os.path.join(self.out_dir, f)), 
+                            '%s file is not in directory' % f)
+        self.do('define j u u~ d d~')
+        self.do('generate g p > w+ j')
+        self.do('add process p g > w+ j')
+        self.do('output pythia8 %s' % self.out_dir)
+        # Check that the needed files are generated
+        files = ['Sigma_sm_gp_wpj.h', 'Sigma_sm_gp_wpj.cc']
+        for f in files:
+            self.assertTrue(os.path.isfile(os.path.join(self.out_dir, f)), 
+                            '%s file is not in directory' % f)

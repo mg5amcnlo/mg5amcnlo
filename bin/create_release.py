@@ -63,11 +63,8 @@ import subprocess
 root_path = path.split(path.dirname(path.realpath( __file__ )))[0]
 sys.path.append(root_path)
 
-print root_path
-
 import madgraph.iolibs.misc as misc
 from madgraph import MG4DIR, MG5DIR
-
 
 # Write out nice usage message if called with -h or --help
 usage = "usage: %prog [options] [FILE] "
@@ -81,7 +78,8 @@ if len(args) == 0:
     args = ''
 
 # Set logging level according to the logging level given by options
-logging.basicConfig(level=vars(logging)[options.logging])
+logging.basicConfig(level=vars(logging)[options.logging],
+                    format="%(message)s")
 
 # If an MG_ME dir is given in the options, use that dir for Template
 # and v4 models
@@ -94,12 +92,13 @@ if mgme_dir and path.isdir(path.join(mgme_dir, 'Template')) \
    and path.isdir(path.join(mgme_dir, 'HELAS')):
     template_path = path.join(mgme_dir, 'Template')
     helas_path = path.join(mgme_dir, 'Helas')
-elif MG4DIR and path.isdir(path.join(MG4DIR, 'Template')):
+elif MG4DIR and path.isdir(path.join(MG4DIR, 'Template')) \
     and path.isdir(path.join(MG4DIR, 'HELAS')):
     template_path = path.join(MG4DIR, 'Template')
     helas_path = path.join(MG4DIR, 'HELAS')
 else:
-    logging.error("Could not find the Template directory in the path")
+    logging.error("Error: Could not find the Template directory in the path")
+    logging.error("       Please supply MG_ME path using the -d option")
     exit()
 
 
@@ -155,9 +154,9 @@ for i in range(3):
 
 model_path = ""
 if mgme_dir:
-    if path.join(mgme_dir, 'Models'):
+    if path.isdir(path.join(mgme_dir, 'Models')):
         model_path = path.join(mgme_dir, 'Models')
-elif MG4DIR and path.join(MG4DIR, 'Models'):
+elif MG4DIR and path.isdir(path.join(MG4DIR, 'Models')):
     model_path = path.join(MG4DIR, 'Models')
 
 if model_path:
@@ -188,7 +187,7 @@ else:
     logging.info("Copying v4 models from " + path.join(MG5DIR, "models") + ":")
     for mdir in v4_models:
         modelname = path.split(mdir)[-1]
-        new_m_path = path.join(filepath, 'models', modelname + "_v4")
+        new_m_path = path.join(filepath, 'models', modelname)
         try:
             shutil.copytree(mdir, new_m_path)
             logging.info(mdir + " -> " + new_m_path)
@@ -227,7 +226,7 @@ logging.info("Create the tar file " + filepath + ".tar.gz")
 status2 = subprocess.call(['tar', 'czf', filepath + ".tar.gz", filepath])
 
 if status2:
-    info.warning('Non-0 exit code %d from tar. Please check result.' % \
+    logging.warning('Non-0 exit code %d from tar. Please check result.' % \
                  status)
 
 if not status1 and not status2:
@@ -235,3 +234,11 @@ if not status1 and not status2:
     logging.info("Removing directory " + filepath)
     shutil.rmtree(filepath)
     
+logging.info("Thanks for creating a release.")
+logging.info("*Please* make sure that you used the latest version")
+logging.info("  of the MG/ME Template and models!")
+logging.info("*Please* check the output log above to make sure that")
+logging.info("  all copied directories are the ones you intended!")
+logging.info("*Please* untar the release tar.gz and run the acceptance ")
+logging.info("  tests before uploading the release to Launchpad!")
+logging.info("  Syntax: python tests/test_manager.py -p A")

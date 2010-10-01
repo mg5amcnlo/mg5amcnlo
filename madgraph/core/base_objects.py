@@ -618,6 +618,25 @@ class InteractionList(PhysicsObjectList):
 
         return interaction_dict
 
+    def synchronize_interactions_with_particles(self, particle_dict):
+        """Make sure that the particles in the interactions are those
+        in the particle_dict, and that there are no interactions
+        refering to particles that don't exist. To be called when the
+        particle_dict is updated in a model.
+        """
+
+        iint = 0
+        while iint < len(self):
+            inter = self[iint]
+            particles = inter.get('particles')
+            try:
+                for ipart, part in enumerate(particles):
+                    particles[ipart] = particle_dict[part.get_pdg_code()]
+                iint += 1
+            except KeyError:
+                # This interaction has particles that no longer exist
+                self.pop(iint)
+
 #===============================================================================
 # Model
 #===============================================================================
@@ -701,6 +720,10 @@ class Model(PhysicsObject):
         if (name == 'particle_dict') and not self[name]:
             if self['particles']:
                 self['particle_dict'] = self['particles'].generate_dict()
+            if self['interactions']:
+                self['interactions'].synchronize_interactions_with_particles(\
+                                                          self['particle_dict'])
+                
 
         if (name == 'interaction_dict') and not self[name]:
             if self['interactions']:
@@ -718,8 +741,8 @@ class Model(PhysicsObject):
 
         if name == 'particles':
             # Reset dictionaries
-            self['ref_dict_to0'] = {}
             self['particle_dict'] = {}
+            self['ref_dict_to0'] = {}
             self['got_majoranas'] = None
 
         if name == 'interactions':
@@ -731,6 +754,10 @@ class Model(PhysicsObject):
 
         Model.__bases__[0].set(self, name, value) # call the mother routine
 
+        if name == 'particles':
+            # Recreate particle_dict
+            self.get('particle_dict')
+            
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
@@ -806,27 +833,24 @@ class Model(PhysicsObject):
                                      (part.get_name(), part.get_pdg_code(), pdg)                
 
         default = self.load_default_name()
-        
-        for particle in self['particles']:
-            pdg = particle.get_pdg_code()
-            if pdg not in default.keys():
+
+        for pdg in default.keys():
+            part = self.get_particle(pdg)
+            if not part:
                 continue
-            name = particle.get_name()
-            antiname = particle.get('antiname')
-            
+            antipart = self.get_particle(-pdg)
+            name = part.get_name()
             if name != default[pdg]:
                 check_name_free(self, default[pdg])
-                particle.set('name', default[pdg])
-                if name == antiname:
-                    particle.set('antiname', default[pdg])
-                elif name != default[-1 *pdg]:
-                    check_name_free(self, default[-1 *pdg])
-                    particle.set('antiname', default[-1 *pdg])        
-                continue
-            elif name != antiname and antiname != default[-1 *pdg]:
-                    check_name_free(self, default[-1 *pdg])
-                    particle.set('antiname', default[-1 *pdg])  
-    
+                if part.get('is_part'):
+                    part.set('name', default[pdg])
+                    if antipart:
+                        antipart.set('name', default[pdg])
+                else:
+                    part.set('antiname', default[pdg])
+                    if antipart:
+                        antipart.set('antiname', default[pdg])
+                
     @ staticmethod
     def load_default_name():
         """ load the default for name convention """

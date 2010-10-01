@@ -631,8 +631,8 @@ class ProcessInfo(object):
             
 
         # check if we have a MG5 format
-        if line.startswith('/mg5/'):
-            self.line = line[5:]
+        if '/mg5/' in line:
+            self.line = line.replace('/mg5/','')
             self.is_mg5_valid = True
             return
         if ',' in line or '=' in line:

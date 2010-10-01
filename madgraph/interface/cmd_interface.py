@@ -887,6 +887,9 @@ class CheckValidForCmd(object):
                                     (self._curr_model['name'], i)
             auto_path = lambda i: os.path.join(self.writing_dir,
                                                name_dir(i))                
+        else:
+            self._export_dir = '.'
+            return
         for i in range(500):
             if os.path.isdir(auto_path(i)):
                 continue
@@ -1126,25 +1129,29 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_load(self, text, line, begidx, endidx):
         "Complete the load command"
 
+        args = split_arg(line[0:begidx])        
+
         # Format
-        if len(split_arg(line[0:begidx])) == 1:
+        if len(args) == 1:
             return self.list_completion(text, self._save_opts)
 
         # Directory continuation
         if args[-1].endswith(os.path.sep):
             return self.path_completion(text,
-                                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
-                                        only_dirs = True)
+                                        os.path.join('.',*[a for a in args if \
+                                                      a.endswith(os.path.sep)]))
 
         # Filename if directory is not given
-        if len(split_arg(line[0:begidx])) == 2:
+        if len(args) == 2:
             return self.path_completion(text)
 
     def complete_save(self, text, line, begidx, endidx):
         "Complete the save command"
 
+        args = split_arg(line[0:begidx])
+
         # Format
-        if len(split_arg(line[0:begidx])) == 1:
+        if len(args) == 1:
             return self.list_completion(text, self._save_opts)
 
         # Directory continuation
@@ -1154,7 +1161,7 @@ class CompleteForCmd(CheckValidForCmd):
                                         only_dirs = True)
 
         # Filename if directory is not given
-        if len(split_arg(line[0:begidx])) == 2:
+        if len(args) == 2:
             return self.path_completion(text)
 
     def complete_output(self, text, line, begidx, endidx,
