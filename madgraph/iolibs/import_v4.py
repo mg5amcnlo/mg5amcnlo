@@ -284,8 +284,8 @@ def read_interactions_v4(fsock, ref_part_list):
                     myinter.set('color', [cs1, cs2, cs3])
                 else:
                     logger.warning(\
-                        "Color combination %s not yet implemented for %s %s" % \
-                        (repr(colors),values,[part['spin'] for part in part_list]))
+                        "Color combination %s not yet implemented." % \
+                        repr(colors))
 
                 # Set the Lorentz structure. Default for 3-particle
                 # vertices is empty string, for 4-particle pair of
