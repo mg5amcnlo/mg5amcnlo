@@ -324,7 +324,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         else:
             add = (len(diagramlist) - self.lower_scale) // \
                      (self.second_scale['nb_col'] * self.second_scale['nb_line'])
-            self.npage += self.lower_scale + add
+            self.npage += self.lower_scale + add -2
         if diagramlist:
             # diagramlist Argument should be a DiagramList object
             assert(isinstance(diagramlist, base_objects.DiagramList))
