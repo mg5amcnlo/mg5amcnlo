@@ -878,6 +878,7 @@ class CheckValidForCmd(object):
 
     def get_default_path(self):
         """Set self._export_dir to the default (\'auto\') path"""
+        
         if self._export_format == 'madevent':
             name_dir = lambda i: 'PROC_%s_%s' % \
                                     (self._curr_model['name'], i)
@@ -1360,7 +1361,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Check the validity of the arguments
         self.check_add(args)
 
-        if args[0] == 'process':
+        if args[0] == 'process':            
             # Rejoin line
             line = ' '.join(args[1:])
             
@@ -1630,8 +1631,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             logger.info("Drawing " + \
                          amp.get('process').nice_string())
-            #plot.draw(opt=options)
-            plot.draw()
+            plot.draw(opt=options)
             logger.info("Wrote file " + filename)
 
         stop = time.time()
@@ -1731,7 +1731,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                               amp in self._curr_amps])
         logger.info("%i processes with %i diagrams generated in %0.3f s" % \
                   (nprocs, ndiags, (cpu_time2 - cpu_time1)))
-    
     
     def extract_process(self, line, proc_number = 0, overall_orders = {}):
         """Extract a process definition from a string. Returns
@@ -2441,6 +2440,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 options = ['-nojpeg']
                 
             self.finalize(options)
+            
+        #reinitialize to empty the default output dir
+        self._export_dir = None
     
     def finalize(self, options):
         """Make the html output, write proc_card_mg5.dat and create
