@@ -143,7 +143,7 @@ class TestCmdShell2(unittest.TestCase):
                                                     'matrix1.jpg')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'madevent.tar.gz')))        
-        self.do('output')
+        self.do('output %s' % self.out_dir)
         self.assertFalse(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_epem_epem',
@@ -151,7 +151,7 @@ class TestCmdShell2(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'SubProcesses', 'P0_epem_epem')))
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
-        self.do('output -f')
+        self.do('output %s -f' % self.out_dir)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_epem_epem',
@@ -220,7 +220,7 @@ class TestCmdShell2(unittest.TestCase):
             shutil.rmdir(self.out_dir)
 
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
-        self.do('output standalone_v4 %s' % self.out_dir)
+        self.do('output standalone %s' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
         self.assertTrue(os.path.isfile(os.path.join(self.out_dir, 'lib', 'libdhelas3.a')))
         self.assertTrue(os.path.isfile(os.path.join(self.out_dir, 'lib', 'libmodel.a')))
@@ -237,7 +237,7 @@ class TestCmdShell2(unittest.TestCase):
 
         self.do('import model sm')
         self.do('generate e+ e->e+ e-')
-        self.do('output standalone_v4 %s ' % self.out_dir)
+        self.do('output standalone %s ' % self.out_dir)
         # Check that the needed ALOHA subroutines are generated
         files = ['aloha_file.inc', 
                  #'FFS1C1_2.f', 'FFS1_0.f',

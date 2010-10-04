@@ -222,10 +222,10 @@ def read_interactions_v4(fsock, ref_part_list):
                     raise Interaction.PhysicsObjectError, \
                         "Vertex with less than 3 known particles found."
 
-                # Flip part/antipart of first part for FFV and FFS vertices
+                # Flip part/antipart of first part for FFV, FFS, FFT vertices
                 # according to v4 convention
                 spin_array = [part['spin'] for part in part_list]
-                if spin_array in [[2, 2, 1], [2, 2, 3]]  and \
+                if spin_array[:2] == [2, 2] and \
                    not part_list[0].get('self_antipart'):
                     part_list[0]['is_part'] = not part_list[0]['is_part']
 

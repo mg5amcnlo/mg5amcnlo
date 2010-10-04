@@ -59,9 +59,13 @@ def import_model(model_name):
         
     # use pickle files if defined and up-to-date
     if files.is_uptodate(os.path.join(model_path, 'model.pkl'), files_list):
-        model = save_load_object.load_from_file( \
+        try:
+            model = save_load_object.load_from_file( \
                                           os.path.join(model_path, 'model.pkl'))
-        return model
+        except Exception:
+            logger.info('failed to load model from pickle file. Try importing UFO from File')
+        else:
+            return model
 
     # Load basic information
     ufo_model = ufomodels.load_model(model_name)

@@ -141,7 +141,7 @@ should be ./my_mg5_cmd.dat. In order to load a history file and
 execute the commands in it, you can do:
 mg5>import command my_mg5_cmd.dat
 or from the shell:
-./madgraph5/bin/mg5 my_mg5_cmd.dat
+./bin/mg5 my_mg5_cmd.dat
 
 It is also possible to display this file directly from MG5 by
 launching a shell command. For example:

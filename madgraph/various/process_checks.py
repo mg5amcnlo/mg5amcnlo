@@ -591,13 +591,12 @@ def output_comparisons(comparison_results):
 def fixed_string_length(mystr, length):
     """Helper function to fix the length of a string by cutting it 
     or adding extra space."""
-
+    
     if len(mystr) > length:
         return mystr[0:length]
     else:
         return mystr + " " * (length - len(mystr))
-
-
+    
 
 #===============================================================================
 # check_gauge
@@ -709,23 +708,22 @@ def check_gauge_process(process, stored_quantities, helas_writer, full_model):
     matrix_element = helas_objects.HelasMatrixElement(amplitude,
                                                       gen_color = False)
 
-    num = evaluate_matrix_element(matrix_element, stored_quantities,
+    brsvalue = evaluate_matrix_element(matrix_element, stored_quantities,
                                   helas_writer, full_model, gauge_check = True)
 
     matrix_element = helas_objects.HelasMatrixElement(amplitude,
                                                       gen_color = False)    
-    den = evaluate_matrix_element(matrix_element, stored_quantities,
+    mvalue = evaluate_matrix_element(matrix_element, stored_quantities,
                                   helas_writer, full_model, gauge_check = False)
-    if den:
-        return (process.base_string(), num/den)
+    if mvalue:
+        return (process.base_string(), mvalue, brsvalue)
     
 
 def output_gauge(comparison_results):
     """Present the results of a comparison in a nice list format"""
 
     proc_col_size = 17
-
-    for proc, value in comparison_results:
+    for proc, mvalue, brsvalue in comparison_results:
         if len(proc) + 1 > proc_col_size:
             proc_col_size = len(proc) + 1
 
@@ -738,14 +736,19 @@ def output_gauge(comparison_results):
     no_check_proc_list = []
 
     res_str = fixed_string_length("Process", proc_col_size) + \
-              fixed_string_length("value", col_size) + \
+              fixed_string_length("matrix", col_size) + \
+              fixed_string_length("BRS", col_size) + \
+              fixed_string_length("ratio", col_size) + \
               "Result"
 
-    for proc, value in comparison_results:
+    for proc, mvalue, brsvalue in comparison_results:
+        ratio = (brsvalue/mvalue)
         res_str += '\n' + fixed_string_length(proc, proc_col_size) + \
-                    fixed_string_length("%1.10e" % value, col_size)
-                    
-        if value > 1e-10:
+                    fixed_string_length("%1.10e" % mvalue, col_size)+ \
+                    fixed_string_length("%1.10e" % brsvalue, col_size)+ \
+                    fixed_string_length("%1.10e" % ratio, col_size)
+         
+        if ratio > 1e-10:
             fail_proc += 1
             failed_proc_list.append(proc)
             res_str += "Failed"

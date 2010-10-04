@@ -474,13 +474,13 @@ class HelpToCmd(object):
         logger.info("syntax [" + "|".join(self._export_formats) + \
                     "] [name|.|auto] [options]")
         logger.info("-- Output any generated process(es) to file.")
-        logger.info("   mode: Default mode is madevent_v4. Default path is \'.\'.")
-        logger.info("   If mode is madevent_v4 or standalone_v4, create a copy of")
+        logger.info("   mode: Default mode is madevent. Default path is \'.\'.")
+        logger.info("   If mode is madevent or standalone, create a copy of")
         logger.info("   the V4 Template in the MG_ME directory, with the model and")
         logger.info("   Helas set up appropriately.")
-        logger.info("   - If mode is standalone_v4, the directory will be in")
+        logger.info("   - If mode is standalone, the directory will be in")
         logger.info("     Standalone format, otherwise in MadEvent format.")
-        logger.info("   - If mode is matrix_v4, output the matrix.f files for all")
+        logger.info("   - If mode is matrix, output the matrix.f files for all")
         logger.info("     generated processes in directory \"name\".")
         logger.info("   - If mode is pythia8, output the .h and .cc files for the")
         logger.info("     processes in Pythia 8 format in directory \"name\".")
@@ -495,7 +495,7 @@ class HelpToCmd(object):
         logger.info("      -nojpeg: no jpeg diagrams will be generated")
         logger.info("   Example:")
         logger.info("       output")
-        logger.info("       output standalone_v4 MYRUN -d ../MG_ME -f")
+        logger.info("       output standalone MYRUN -d ../MG_ME -f")
         
     def help_check(self):
 
@@ -550,13 +550,13 @@ class HelpToCmd(object):
         logger.info("""-- export matrix elements.
         *Note* that if you have run the 'output', export format and FILEPATH
         are optional.
-        - For madevent_v4, the path needs to be to a MadEvent SubProcesses
+        - For madevent, the path needs to be to a MadEvent SubProcesses
           directory, and the result is the Pxxx directories (including the
           diagram .ps and .jpg files) for the subprocesses as well as a
           correctly generated subproc.mg file.
-        - For standalone_v4, the result is a set of complete MG4 Standalone
+        - For standalone, the result is a set of complete MG4 Standalone
           process directories.
-        - For matrix_v4, the resulting files will be
+        - For matrix, the resulting files will be
           FILEPATH/matrix_\"process_string\".f
         - For pythia8, the resulting files will be
           FILEPATH/Sigma_\"process_string\".h and
@@ -841,7 +841,8 @@ class CheckValidForCmd(object):
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
 
-        if self._model_v4_path and not self._export_format.endswith('_v4'):
+        if self._model_v4_path and \
+                             self._export_format not in self._v4_export_formats:
             text = " The Model imported (MG4 format) does not contain enough\n "
             text += " information for this type of output. In order to create\n"
             text += " output for " + args[0] + ", you have to use a UFO model.\n"
@@ -854,7 +855,7 @@ class CheckValidForCmd(object):
             path = args.pop(0)
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
-                     ['madevent_v4', 'standalone_v4']:
+                     ['madevent', 'standalone']:
                 self.get_default_path()
             else:
                 self._export_dir = path
@@ -863,7 +864,7 @@ class CheckValidForCmd(object):
             # No valid path
             self.get_default_path()
 
-        if self._export_format in ['madevent_v4', 'standalone_v4'] and \
+        if self._export_format in ['madevent', 'standalone'] and \
            not self._mgme_dir and \
            os.path.realpath(self._export_dir) != os.path.realpath('.'):
             raise MadGraph5Error, \
@@ -877,12 +878,13 @@ class CheckValidForCmd(object):
 
     def get_default_path(self):
         """Set self._export_dir to the default (\'auto\') path"""
-        if self._export_format == 'madevent_v4':
+        
+        if self._export_format == 'madevent':
             name_dir = lambda i: 'PROC_%s_%s' % \
                                     (self._curr_model['name'], i)
             auto_path = lambda i: os.path.join(self.writing_dir,
                                                name_dir(i))
-        elif self._export_format == 'standalone_v4':
+        elif self._export_format == 'standalone':
             name_dir = lambda i: 'PROC_SA_%s_%s' % \
                                     (self._curr_model['name'], i)
             auto_path = lambda i: os.path.join(self.writing_dir,
@@ -1295,8 +1297,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _tutorial_opts = ['start', 'stop']
     _check_opts = ['full', 'quick', 'gauge']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
-    _export_formats = ['madevent_v4', 'standalone_v4', 'matrix_v4', 'pythia8',
+    _v4_export_formats = ['madevent', 'standalone','matrix'] 
+    _export_formats = _v4_export_formats + ['pythia8',
                        'pythia8_model']
+
 
     # Variables to store object information
     _curr_model = None  #base_objects.Model()
@@ -1310,7 +1314,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _model_format = None
     _model_v4_path = None
     _export_dir = None
-    _export_format = 'madevent_v4'
+    _export_format = 'madevent'
     _mgme_dir = MG4DIR
     _comparisons = None
     
@@ -1357,7 +1361,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Check the validity of the arguments
         self.check_add(args)
 
-        if args[0] == 'process':
+        if args[0] == 'process':            
             # Rejoin line
             line = ' '.join(args[1:])
             
@@ -1599,6 +1603,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         args = split_arg(line)
         # Check the validity of the arguments
         self.check_draw(args)
+        
+        # Check if we plot a decay chain 
+        if ',' in self._generate_info and not self._done_export:
+            warn = '''WARNING: You try to plot decay chain diagram. But you didn't run output first.\n'''
+            warn += '''\t  In consequence the decay are not combine in a unique diagram.'''
+            logger.warning(warn)
 
         (options, args) = _draw_parser.parse_args(args)
         options = draw_lib.DrawOption(options)
@@ -1621,8 +1631,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             logger.info("Drawing " + \
                          amp.get('process').nice_string())
-            #plot.draw(opt=options)
-            plot.draw()
+            plot.draw(opt=options)
             logger.info("Wrote file " + filename)
 
         stop = time.time()
@@ -1722,7 +1731,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                               amp in self._curr_amps])
         logger.info("%i processes with %i diagrams generated in %0.3f s" % \
                   (nprocs, ndiags, (cpu_time2 - cpu_time1)))
-    
     
     def extract_process(self, line, proc_number = 0, overall_orders = {}):
         """Extract a process definition from a string. Returns
@@ -2285,7 +2293,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             return
 
         if not force and not noclean and os.path.isdir(self._export_dir)\
-               and self._export_format in ['madevent_v4', 'standalone_v4']:
+               and self._export_format in ['madevent', 'standalone']:
             # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % self._export_dir)
             logger.info('If you continue this directory will be cleaned')
@@ -2294,10 +2302,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 raise MadGraph5Error('Stopped by user request')
 
         # Make a Template Copy
-        if self._export_format == 'madevent_v4':
+        if self._export_format == 'madevent':
             export_v4.copy_v4template(self._mgme_dir, self._export_dir,
                                       not noclean)
-        elif self._export_format == 'standalone_v4':
+        elif self._export_format == 'standalone':
             export_v4.copy_v4standalone(self._mgme_dir, self._export_dir,
                                         not noclean)
         elif not os.path.isdir(self._export_dir):
@@ -2362,10 +2370,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         nojpeg = '-nojpeg' in args
 
         path = self._export_dir
-        if self._export_format in ['madevent_v4', 'standalone_v4']:
+        if self._export_format in ['madevent', 'standalone']:
             path = os.path.join(path, 'SubProcesses')
 
-        if self._export_format == 'madevent_v4':
+        if self._export_format == 'madevent':
             for me in self._curr_matrix_elements.get('matrix_elements'):
                 calls = calls + \
                         export_v4.generate_subprocess_directory_v4_madevent(\
@@ -2382,13 +2390,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 except:
                     pass
                 
-        if self._export_format == 'standalone_v4':
+        if self._export_format == 'standalone':
             for me in self._curr_matrix_elements.get('matrix_elements'):
                 calls = calls + \
                         export_v4.generate_subprocess_directory_v4_standalone(\
                             me, self._curr_fortran_model, path)
             
-        if self._export_format == 'matrix_v4':
+        if self._export_format == 'matrix':
             for me in self._curr_matrix_elements.get('matrix_elements'):
                 filename = os.path.join(path, 'matrix_' + \
                            me.get('processes')[0].shell_string() + ".f")
@@ -2425,13 +2433,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Remember that we have done export
         self._done_export = (self._export_dir, self._export_format)
 
-        if self._export_format in ['madevent_v4', 'standalone_v4']:
+        if self._export_format in ['madevent', 'standalone']:
             # Automatically run finalize
             options = []
             if nojpeg:
                 options = ['-nojpeg']
                 
             self.finalize(options)
+            
+        #reinitialize to empty the default output dir
+        self._export_dir = None
     
     def finalize(self, options):
         """Make the html output, write proc_card_mg5.dat and create
@@ -2450,7 +2461,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             export_v4.export_model_files(self._model_v4_path, self._export_dir)
             export_v4.export_helas(os.path.join(self._mgme_dir,'HELAS'),
                                    self._export_dir)
-        elif self._export_format in ['madevent_v4', 'standalone_v4']:
+        elif self._export_format in ['madevent', 'standalone']:
             logger.info('Export UFO model to MG4 format')
             # wanted_lorentz are the lorentz structures which are
             # actually used in the wavefunctions and amplitudes in
@@ -2460,20 +2471,20 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                            os.path.join(self._export_dir),
                                            wanted_lorentz)
 
-        if self._export_format == 'madevent_v4':
+        if self._export_format == 'madevent':
             os.system('touch %s/done' % os.path.join(self._export_dir,
                                                      'SubProcesses'))        
             export_v4.finalize_madevent_v4_directory(self._export_dir, makejpg,
                                                      [self.history_header] + \
                                                      self.history)
-        elif self._export_format == 'standalone_v4':
+        elif self._export_format == 'standalone':
             export_v4.make_v4standalone(self._export_dir)
             export_v4.finalize_standalone_v4_directory(self._export_dir,
                                                      [self.history_header] + \
                                                      self.history)
 
         logger.info('Output to directory ' + self._export_dir + ' done.')
-        if self._export_format == 'madevent_v4':
+        if self._export_format == 'madevent':
             logger.info('Please see ' + self._export_dir + '/README')
             logger.info('for information about how to generate events from this process.')
 
