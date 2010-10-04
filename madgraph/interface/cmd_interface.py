@@ -1542,28 +1542,31 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             comparisons = self._comparisons[0]
             if len(args) > 1 and args[1] == 'failed':
                 comparisons = [c for c in comparisons if not c['passed']]
+            outstr = "Process check results:"
             for comp in comparisons:
-                print "%s:" % comp['process'].nice_string()
-                print "   Phase space point: (px py pz E)"
+                outstr += "\n%s:" % comp['process'].nice_string()
+                outstr += "\n   Phase space point: (px py pz E)"
                 for i, p in enumerate(comp['momenta']):
-                    print "%2s    %+.9e  %+.9e  %+.9e  %+.9e" % tuple([i] + p)
-                print "   Permutation values:"
-                print "   " + str(comp['values'])
+                    outstr += "\n%2s    %+.9e  %+.9e  %+.9e  %+.9e" % tuple([i] + p)
+                outstr += "\n   Permutation values:"
+                outstr += "\n   " + str(comp['values'])
                 if comp['passed']:
-                    print "   Process passed (rel. difference %.9e)" % \
+                    outstr += "\n   Process passed (rel. difference %.9e)" % \
                           comp['difference']
                 else:
-                    print "   Process failed (rel. difference %.9e)" % \
+                    outstr += "\n   Process failed (rel. difference %.9e)" % \
                           comp['difference']
 
             used_aloha = sorted(self._comparisons[1])
-            print "Checked ALOHA routines:"
+            outstr += "\nChecked ALOHA routines:"
             for aloha in used_aloha:
                 aloha_str = aloha[0]
                 if aloha[1]:
-                    aloha_str += 'C' + 'C'.join(aloha[1])
+                    aloha_str += 'C' + 'C'.join([str(ia) for ia in aloha[1]])
                 aloha_str += "_%d" % aloha[2]
-                print aloha_str
+                outstr += "\n" + aloha_str
+
+            pydoc.pager(outstr)            
         
     def multiparticle_string(self, key):
         """Returns a nicely formatted string for the multiparticle"""
@@ -1606,8 +1609,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         # Check if we plot a decay chain 
         if ',' in self._generate_info and not self._done_export:
-            warn = '''WARNING: You try to plot decay chain diagram. But you didn't run output first.\n'''
-            warn += '''\t  In consequence the decay are not combine in a unique diagram.'''
+            warn = 'WARNING: You try to draw decay chain diagrams without first running output.\n'
+            warn += '\t  The decay processes will be drawn separately'
             logger.warning(warn)
 
         (options, args) = _draw_parser.parse_args(args)
