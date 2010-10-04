@@ -717,14 +717,12 @@ class Test_DecayModel(unittest.TestCase):
         goal_groups = [[15, 23, 24, 25, 35, 36, 37],
                        [1000001, 1000002, 1000003, 1000004, 1000011, 1000012, 1000013, 1000014, 1000015, 1000016, 1000021, 1000022, 1000023, 1000024, 1000025, 1000035, 1000037, 2000001, 2000002, 2000003, 2000004, 2000011, 2000013, 2000015], [1000005, 1000006, 2000005, 2000006], [5, 6]]
         goal_stable_particle_ids = set([(1,2,3,4,11,12,13,14,16,21,22),
-                                        (1000025,)])
+                                        (5,)])
 
         for i, group in enumerate(decay_mssm.get('decay_groups')):
             self.assertEqual(sorted([p.get('pdg_code') for p in group]),
                              goal_groups[i])
 
-        # Reset decay_groups, test the auto run from find_stable_particles
-        decay_mssm['decay_groups'] = []
         # Test if all useless interactions are deleted.
         for inter in decay_mssm['reduced_interactions']:
             self.assertTrue(len(inter['particles']))
@@ -1482,9 +1480,16 @@ class Test_Channel(unittest.TestCase):
         model.read_param_card(param_path)
         
         model.find_all_channels(3)
+        particle = model.get_particle(6)
+        #for part in model.get('particles'):
+        #    print part['pdg_code'], part['decay_width']
 
-        particle = model.get_particle(25)
-        print particle.get_channels(3, True).nice_string(), particle.get('decay_width')
+        particle.calculate_branch_ratio()
+        model.write_decay_table()
+        print decay_objects.MH
+        #print particle.estimate_width_error()
+        print particle.get_channels(2, True).nice_string(),\
+            particle.get('decay_width')
 
 if __name__ == '__main__':
     unittest.unittest.main()
