@@ -2468,6 +2468,8 @@ class Channel(base_objects.Diagram):
             for i, vert in enumerate(self['vertices'][:-1]):
                 # Total energy of this vertex
                 q_total = 0
+                # Color multiplcity
+                color_multi = []
                 # Assign value to apx_m except the mother leg (last leg)
                 for leg in vert['legs'][:-1]:
                     # Case for final legs
@@ -2477,12 +2479,14 @@ class Channel(base_objects.Diagram):
                         q_total += (mass + avg_q)
                         apx_m *= self.get_apx_fnrule(leg.get('id'),
                                                      avg_q+mass, True, model)
-
                     # If this is only internal leg, calculate the energy
                     # it accumulate. (The value of this leg is assigned before.)
                     else:
                         q_total += q_dict[(leg.get('id'), leg.get('number'))]
 
+                    # Record the color content
+                    color_multi.append(model.get_particle(leg.get('id')).\
+                                           get('color'))
                 # The energy for mother leg is sum of the energy of its product.
                 # Set the q_dict
                 q_dict[(vert.get('legs')[-1].get('id'), 
@@ -2502,6 +2506,11 @@ class Channel(base_objects.Diagram):
                                   model.get('interaction_dict')[\
                             abs(vert.get('id'))]['couplings'].items()])
 
+                # Find the correct color factor
+                if model.get_particle(vert.get('legs')[-1].get('id')).\
+                        get('color') ==1:
+                    if min(color_multi) == 3:
+                        apx_m *= 3.
 
         # A quick estimate of the next-level decay of a off-shell decay
         # Consider all legs are onshell.
@@ -2536,7 +2545,7 @@ class Channel(base_objects.Diagram):
 
         # For both on-shell and off-shell cases,
         # Correct the factor of spin/color sum of initial particle (average it)
-        apx_m *= 1./(ini_part.get('spin')*ini_part.get('color'))
+        apx_m *= 1./(ini_part.get('spin'))
 
         self['apx_matrixelement_sq'] = apx_m
         return apx_m
@@ -2552,7 +2561,7 @@ class Channel(base_objects.Diagram):
         # Set the propagator value (square is for square of matrix element)
         # The width is included in the propagator.
         if onshell:
-            value = 1. * part.get('color')
+            value = 1.
         else:
             value = 1./((q ** 2 - mass ** 2) ** 2 + part.get('decay_width') **2)
         

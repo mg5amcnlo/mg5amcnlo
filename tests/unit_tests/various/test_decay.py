@@ -1299,7 +1299,7 @@ class Test_Channel(unittest.TestCase):
 
 
         # Test of the symmetric factor
-        #print higgs.get_channels(4, True).nice_string()
+        #print higgs.get_channels(3, True).nice_string()
         h_zz_llvv_1 = higgs.get_channels(4, True)[13]
         h_zz_llvv_2 = higgs.get_channels(4, True)[6]
         # higgs > w (w > l vl)
@@ -1344,7 +1344,7 @@ class Test_Channel(unittest.TestCase):
                          q_onshell*2)
         self.assertEqual(channel_1.get_apx_fnrule(6, q_onshell, 
                                                   True, self.my_testmodel),
-                         q_onshell*6)
+                         q_onshell*2)
         self.assertTrue((channel_1.get_apx_fnrule(6, q_offshell, 
                                                   False, self.my_testmodel)-
                          q_offshell/(q_offshell ** 2 - decay_objects.MT **2)\
@@ -1386,10 +1386,10 @@ class Test_Channel(unittest.TestCase):
         tau_ldecay = tau.get_channels(3, True)[2]
         #print tau_qdecay.nice_string()
         self.assertEqual( round(tau_qdecay.get_apx_decaywidth(full_sm)/ \
-                                    tau_ldecay.get_apx_decaywidth(full_sm)), 9)
+                                    tau_ldecay.get_apx_decaywidth(full_sm)), 3)
         MTAU = abs(eval('decay_objects.' + tau.get('mass')))
         self.assertTrue((tau_qdecay.get_apx_matrixelement_sq(full_sm)-
-                          ((MTAU/3) **3 *8*9*MTAU*(1-2*(2*MTAU/(3*MW))**2 +\
+                          ((MTAU/3) **3 *8*3*MTAU*(1-2*(2*MTAU/(3*MW))**2 +\
                                                        (2*MTAU/(3*MW))**4)/ \
                                ((2*MTAU/3) ** 2 - MW **2) **2 *\
                                abs(decay_objects.GC_11) **4))/ \
@@ -1486,7 +1486,7 @@ class Test_Channel(unittest.TestCase):
 
         particle.calculate_branch_ratio()
         model.write_decay_table()
-        print decay_objects.MH
+        #print model.get('interactions')[115].get('color')[0]
         #print particle.estimate_width_error()
         print particle.get_channels(2, True).nice_string(),\
             particle.get('decay_width')
