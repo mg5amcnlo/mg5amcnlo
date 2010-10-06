@@ -1295,7 +1295,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _tutorial_opts = ['start', 'stop']
-    _check_opts = ['full', 'quick', 'gauge']
+    _check_opts = ['full', 'quick', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
     _v4_export_formats = ['madevent', 'standalone','matrix'] 
     _export_formats = _v4_export_formats + ['pythia8',
@@ -1666,28 +1666,31 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         comparisons = []
         gauge_result = []
+        lorentz_result =[]
 
-        if args[0] == 'quick':
+        if args[0] in  ['quick', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
                                                         param_card = param_card,
                                                         quick = True)
-        else:
-            if args[0] == 'full':
-                comparisons = process_checks.check_processes(myprocdef,
-                                                        param_card = param_card)
+        if args[0] in  ['gauge', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
                                                       param_card = param_card)
-
+        if args[0] in ['lorentz_invariance', 'full']:
+            lorentz_result = process_checks.check_lorentz(myprocdef,
+                                                      param_card = param_card)
         cpu_time2 = time.time()
 
         logger.info("%i processes checked in %0.3f s" \
-                    % (len(gauge_result) + len(comparisons),
+                    % (len(gauge_result) + len(comparisons) + len(lorentz_result),
                       (cpu_time2 - cpu_time1)))
 
         if gauge_result:
             logger.info('gauge results:')
-
             logger.info(process_checks.output_gauge(gauge_result))
+
+        if lorentz_result:
+            logger.info('lorentz invariance results:')
+            logger.info(process_checks.output_lorentz_inv(lorentz_result))
 
         if comparisons:
             logger.info(process_checks.output_comparisons(comparisons[0]))
