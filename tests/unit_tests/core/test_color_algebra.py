@@ -190,7 +190,7 @@ class ColorObjectTest(unittest.TestCase):
 
         my_epsilon1 = color.Epsilon(2, 3, 1)
         my_epsilon2 = color.Epsilon(5, 1, 4)
-        my_epsilon2.complex_conjugate()
+        my_epsilon2 = my_epsilon2.complex_conjugate()
 
         my_goal_str1 = color.ColorString([color.T(2, 4), color.T(3, 5)])
         my_goal_str2 = color.ColorString([color.T(2, 5), color.T(3, 4)])

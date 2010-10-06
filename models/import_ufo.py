@@ -236,6 +236,7 @@ class UFOMG5Converter(object):
         info = [(i+1,part.color) for i,part in enumerate(interaction_info.particles) 
                  if part.color!=1]
         order = sorted(info, lambda p1, p2:p1[1] - p2[1])
+
         new_indices={}
         for i,(j, pcolor) in enumerate(order):
             new_indices[j]=i

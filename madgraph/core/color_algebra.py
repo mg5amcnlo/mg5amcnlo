@@ -330,10 +330,7 @@ class d(f):
 # epsilon
 #===============================================================================
 class Epsilon(ColorObject):
-    """Espilon_ijk color object for three triplets/antitriplets"""
-
-    # If this tag is true, ijk are triplet indices, otherwise antitriplet
-    triplets = True
+    """Epsilon_ijk color object for three triplets"""
 
     def __init__(self, *args):
         """Ensure e_ijk objects have strictly 3 indices"""
@@ -344,9 +341,11 @@ class Epsilon(ColorObject):
                 "Epsilon objects must have three indices!"
 
     def pair_simplify(self, col_obj):
-        """Implement e_ijk ae_ilm = T(j,l)T(k,m) - T(j,m)T(k,l)"""
+        """Implement e_ijk ae_ilm = T(j,l)T(k,m) - T(j,m)T(k,l) and
+        e_ijk T(l,k) = e_ikl"""
 
-        if isinstance(col_obj, Epsilon) and col_obj.triplets != self.triplets:
+        # e_ijk ae_ilm = T(j,l)T(k,m) - T(j,m)T(k,l)
+        if isinstance(col_obj, Epsilonbar):
 
             incommon = False
             eps_indices = self[:]
@@ -369,12 +368,51 @@ class Epsilon(ColorObject):
 
                 return ColorFactor([col_str1, col_str2])
 
+        # e_ijk T(l,k) = e_ikl
+        if isinstance(col_obj, T) and len(col_obj) == 2 and col_obj[1] in self:
+
+            com_index = self.index(col_obj[1])
+            new_self = copy.copy(self)
+            new_self[com_index] = col_obj[0]
+
+            return ColorFactor([ColorString([new_self])])
+
+
     def complex_conjugate(self):
         """Complex conjugation. Overwritten here because complex conjugation
         interchange triplets and antitriplets."""
 
-        self.triplets = not self.triplets
-        return self
+        return Epsilonbar(*self)
+
+class Epsilonbar(ColorObject):
+    """Epsilon_ijk color object for three antitriplets"""
+
+    def __init__(self, *args):
+        """Ensure e_ijk objects have strictly 3 indices"""
+
+        super(Epsilonbar, self).__init__()
+        if len(args) != 3:
+            raise ValueError, \
+                "Epsilonbar objects must have three indices!"
+
+    def pair_simplify(self, col_obj):
+        """Implement ebar_ijk T(k,l) = e_ikl"""
+
+        # ebar_ijk T(k,l) = e_ijl
+        if isinstance(col_obj, T) and len(col_obj) == 2 and col_obj[0] in self:
+
+            com_index = self.index(col_obj[0])
+            new_self = copy.copy(self)
+            new_self[com_index] = col_obj[1]
+
+            return ColorFactor([ColorString([new_self])])
+
+
+    def complex_conjugate(self):
+        """Complex conjugation. Overwritten here because complex conjugation
+        interchange triplets and antitriplets."""
+
+        return Epsilon(*self)
 
 #===============================================================================
 # Color sextet objects: delta6, K6, K3, T3, T6

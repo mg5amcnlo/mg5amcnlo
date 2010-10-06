@@ -312,7 +312,7 @@ class Particle(PhysicsObject):
     def get_color(self):
         """Return the color code with a correct minus sign"""
 
-        if not self['is_part'] and self['color'] in [3, 6]:
+        if not self['is_part'] and abs(self['color']) in [3, 6]:
             return - self['color']
         else:
             return self['color']

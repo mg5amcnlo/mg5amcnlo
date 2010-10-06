@@ -210,7 +210,6 @@ class ColorBasis(dict):
 
         # loop over possible color chains
         for col_chain, col_str in colorize_dict.items():
-
             # Create a canonical immutable representation of the the string
             canonical_rep, rep_dict = col_str.to_canonical()
 

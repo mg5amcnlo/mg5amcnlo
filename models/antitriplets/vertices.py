@@ -340,32 +340,32 @@ V_55 = Vertex(name = 'V_55',
               couplings = {(0,0):C.GC_19})
 
 V_56 = Vertex(name = 'V_56',
-              particles = [ P.u, P.u, P.six__tilde__ ],
-              color = [ 'K6B(3,1,2)' ],
+              particles = [ P.u, P.u, P.anti3__tilde__ ],
+              color = [ 'Epsilon(1,2,3)' ],
               lorentz = [ L.FFS1 ],
               couplings = {(0,0):C.GC_27})
 
 V_57 = Vertex(name = 'V_57',
-              particles = [ P.u__tilde__, P.u__tilde__, P.six ],
-              color = [ 'K6(3,1,2)' ],
+              particles = [ P.u__tilde__, P.u__tilde__, P.anti3 ],
+              color = [ 'Epsilonbar(1,2,3)' ],
               lorentz = [ L.FFS1 ],
               couplings = {(0,0):C.GC_27})
 
 V_58 = Vertex(name = 'V_58',
-              particles = [ P.t, P.t, P.six__tilde__ ],
-              color = [ 'K6B(3,1,2)' ],
+              particles = [ P.t, P.t, P.anti3__tilde__ ],
+              color = [ 'Epsilon(1,2,3)' ],
               lorentz = [ L.FFS1 ],
               couplings = {(0,0):C.GC_28})
 
 V_59 = Vertex(name = 'V_59',
-              particles = [ P.t__tilde__, P.t__tilde__, P.six ],
-              color = [ 'K6(3,1,2)' ],
+              particles = [ P.t__tilde__, P.t__tilde__, P.anti3 ],
+              color = [ 'Epsilonbar(1,2,3)' ],
               lorentz = [ L.FFS1 ],
               couplings = {(0,0):C.GC_28})
 
 V_60 = Vertex(name = 'V_60',
-              particles = [ P.G, P.six__tilde__, P.six ],
-              color = [ 'T6(1,3,2)' ],
+              particles = [ P.G, P.anti3__tilde__, P.anti3 ],
+              color = [ 'T(1,2,3)' ],
               lorentz = [ L.VSS1 ],
               couplings = {(0,0):C.GC_29})
 

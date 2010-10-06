@@ -1561,7 +1561,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             for aloha in used_aloha:
                 aloha_str = aloha[0]
                 if aloha[1]:
-                    aloha_str += 'C' + 'C'.join(aloha[1])
+                    aloha_str += 'C' + 'C'.join([str(ia) for ia in aloha[1]])
                 aloha_str += "_%d" % aloha[2]
                 print aloha_str
         
@@ -1678,7 +1678,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         cpu_time2 = time.time()
 
         logger.info("%i processes checked in %0.3f s" \
-                    % (len(gauge_result) + len(comparisons),
+                    % (len(gauge_result) + len(comparisons[0]),
                       (cpu_time2 - cpu_time1)))
 
         if gauge_result:
