@@ -1069,12 +1069,42 @@ class CompleteForCmd(CheckValidForCmd):
         if len(args) == 1:
             return self.path_completion(text)
         
+    def complete_generate(self, text, line, begidx, endidx):
+        "Complete the add command"
+
+        # Return list of particle names and multiparticle names, as well as
+        # coupling orders and allowed symbols
+        args = split_arg(line[0:begidx])
+        if len(args) > 2 and args[-1] == '@' or args[-1].endswith('='):
+            return
+        couplings = []
+        if len(args) > 1 and args[-1] != '>':
+            couplings = ['>']
+        if '>' in args and args.index('>') < len(args) - 1:
+            couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
+        return self.list_completion(text, self._particle_names + \
+                                    self._multiparticles.keys() + couplings)
+        
     def complete_add(self, text, line, begidx, endidx):
         "Complete the add command"
 
+        args = split_arg(line[0:begidx])
+
         # Format
-        if len(split_arg(line[0:begidx])) == 1:
+        if len(args) == 1:
             return self.list_completion(text, self._add_opts)
+
+        return self.complete_generate(text, " ".join(args[1:]), begidx, endidx)
+
+        # Return list of particle names and multiparticle names, as well as
+        # coupling orders and allowed symbols
+        couplings = []
+        if len(args) > 2 and args[-1] != '>':
+            couplings = ['>']
+        if '>' in args and args.index('>') < len(args) - 1:
+            couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
+        return self.list_completion(text, self._particle_names + \
+                                    self._multiparticles.keys() + couplings)
         
     def complete_check(self, text, line, begidx, endidx):
         "Complete the add command"
@@ -2075,12 +2105,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                              self._curr_model)
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
+            # Set variables for autocomplete
+            self._particle_names = [p.get('name') for p in self._curr_model.get('particles')] + \
+                 [p.get('antiname') for p in self._curr_model.get('particles')]
+            self._couplings = list(set(sum([i.get('orders').keys() for i in \
+                                            self._curr_model.get('interactions')], [])))
             # Check if we can use case-independent particle names
             self._use_lower_part_names = \
-                ([p.get('name') for p in self._curr_model.get('particles')] + \
-                 [p.get('antiname') for p in self._curr_model.get('particles')] == \
+                (self._particle_names == \
                  [p.get('name').lower() for p in self._curr_model.get('particles')] + \
                  [p.get('antiname').lower() for p in self._curr_model.get('particles')])
+            # Add default multiparticles
             self.add_default_multiparticles()
         elif args[0] == 'command':
             if not os.path.isfile(args[1]):
