@@ -1053,12 +1053,19 @@ class CompleteForCmd(CheckValidForCmd):
 
     def model_completion(self, text, process):
         """ complete the line with model information """
+        while ',' in process:
+            process = process[process.index(',')+1:]
         args = split_arg(process)
         couplings = []
-        if len(args) > 1 and args[-1] != '>':
+        # Force '>' if two initial particles.
+        if len(args) == 2 and args[-1] != '>':
+            return self.list_completion(text, '>')
+        # Add non-particle names
+        if len(args) > 0 and args[-1] != '>':
             couplings = ['>']
         if '>' in args and args.index('>') < len(args) - 1:
-            couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
+            couplings = [c + "=" for c in self._couplings] + \
+                        ['@','$','/','>',',']
         return self.list_completion(text, self._particle_names + \
                                     self._multiparticles.keys() + couplings)
         
@@ -2145,18 +2152,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                              self._curr_model)
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
-            # Set variables for autocomplete
-            self._particle_names = [p.get('name') for p in self._curr_model.get('particles')] + \
-                 [p.get('antiname') for p in self._curr_model.get('particles')]
-            self._couplings = list(set(sum([i.get('orders').keys() for i in \
-                                            self._curr_model.get('interactions')], [])))
-            # Check if we can use case-independent particle names
-            self._use_lower_part_names = \
-                (self._particle_names == \
-                 [p.get('name').lower() for p in self._curr_model.get('particles')] + \
-                 [p.get('antiname').lower() for p in self._curr_model.get('particles')])
-            # Add default multiparticles
-            self.add_default_multiparticles()
+
+            # Do post-processing of model
+            self.process_model()
+
         elif args[0] == 'command':
             if not os.path.isfile(args[1]):
                 raise MadGraph5Error("Path %s is not a valid pathname" % args[1])
@@ -2187,7 +2186,23 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             #convert and excecute the card
             self.import_mg4_proc_card(proc_card)
                                      
+    def process_model(self):
+        """Set variables _particle_names and _couplings for tab
+        completion, defined multiparticles"""
 
+         # Set variables for autocomplete
+        self._particle_names = [p.get('name') for p in self._curr_model.get('particles')] + \
+             [p.get('antiname') for p in self._curr_model.get('particles')]
+        self._couplings = list(set(sum([i.get('orders').keys() for i in \
+                                        self._curr_model.get('interactions')], [])))
+        # Check if we can use case-independent particle names
+        self._use_lower_part_names = \
+            (self._particle_names == \
+             [p.get('name').lower() for p in self._curr_model.get('particles')] + \
+             [p.get('antiname').lower() for p in self._curr_model.get('particles')])
+
+        self.add_default_multiparticles()
+        
     
     def import_mg4_proc_card(self, filepath):
         """ read a V4 proc card, convert it and run it in mg5"""
@@ -2314,7 +2329,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self._curr_fortran_model = \
                   helas_call_writers.FortranHelasCallWriter(self._curr_model)
 
-            self.add_default_multiparticles()
+            # Do post-processing of model
+            self.process_model()
                 
             #save_model.save_model(args[1], self._curr_model)
             if isinstance(self._curr_model, base_objects.Model):
@@ -2349,7 +2365,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     self._curr_amps = amps                    
                     self._curr_model = model
                     logger.info("Model set from process.")
-                    self.add_default_multiparticles()
+                    # Do post-processing of model
+                    self.process_model()
                 self._done_export = None
             else:
                 raise self.RWError('Could not load processes from file %s' % args[1])
