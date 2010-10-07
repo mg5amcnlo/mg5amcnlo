@@ -846,6 +846,8 @@ class Model(PhysicsObject):
                     part.set('name', default[pdg])
                     if antipart:
                         antipart.set('name', default[pdg])
+                    else:
+                        part.set('antiname', default[pdg])                        
                 else:
                     part.set('antiname', default[pdg])
                     if antipart:

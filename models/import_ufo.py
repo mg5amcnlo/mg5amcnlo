@@ -93,6 +93,8 @@ def import_model(model_name):
 class UFOMG5Converter(object):
     """Convert a UFO model to the MG5 format"""
 
+    use_lower_part_names = False
+
     def __init__(self, model, auto=False):
         """ initialize empty list for particles/interactions """
         
@@ -101,7 +103,6 @@ class UFOMG5Converter(object):
         self.model = base_objects.Model()
         self.model.set('particles', self.particles)
         self.model.set('interactions', self.interactions)
-        
         
         self.ufomodel = model
         
@@ -112,6 +113,14 @@ class UFOMG5Converter(object):
         """load the different of the model first particles then interactions"""
 
         logger.info('load particles')
+        # Check if multiple particles have the same name but different case.
+        # Otherwise, we can use lowercase particle names.
+        if len(set([p.name for p in self.ufomodel.all_particles] + \
+                   [p.antiname for p in self.ufomodel.all_particles])) == \
+           len(set([p.name.lower() for p in self.ufomodel.all_particles] + \
+                   [p.antiname.lower() for p in self.ufomodel.all_particles])):
+            self.use_lower_part_names = True
+
         for particle_info in self.ufomodel.all_particles:            
             self.add_particle(particle_info)
             
@@ -148,7 +157,10 @@ class UFOMG5Converter(object):
             if key in base_objects.Particle.sorted_keys:
                 nb_property +=1
                 if key in ['name', 'antiname']:
-                    particle.set(key, value.lower())
+                    if self.use_lower_part_names:
+                        particle.set(key, value.lower())
+                    else:
+                        particle.set(key, value)
                 elif key == 'charge':
                     particle.set(key, float(value))
                 else:

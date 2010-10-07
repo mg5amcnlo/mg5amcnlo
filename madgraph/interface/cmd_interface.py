@@ -521,6 +521,10 @@ class HelpToCmd(object):
         logger.info("   Syntax example: l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1")
         logger.info("   Alternative required s-channels can be separated by \"|\":")
         logger.info("   b b~ > W+ W- | H+ H- > ta+ vt ta- vt~")
+        logger.info("   If no coupling orders are given, MG5 will try to determine")
+        logger.info("   orders to ensure maximum number of QCD vertices.")
+        logger.info("   Note that if there are more than one non-QCD coupling type,")
+        logger.info("   coupling orders need to be specified by hand.")
         logger.info("Decay chain syntax:")
         logger.info("   core process, decay1, (decay2, (decay2', ...)), ...  etc")
         logger.info("   Example: p p > t~ t QED=0, (t~ > W- b~, W- > l- vl~), t > j j b @2")
@@ -534,6 +538,8 @@ class HelpToCmd(object):
         logger.info("   Syntax example: l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1")
         logger.info("   Alternative required s-channels can be separated by \"|\":")
         logger.info("   b b~ > W+ W- | H+ H- > ta+ vt ta- vt~")
+        logger.info("   If no coupling orders are given, MG5 will try to determine")
+        logger.info("   orders to ensure maximum number of QCD vertices.")
         logger.info("Decay chain syntax:")
         logger.info("   core process, decay1, (decay2, (decay2', ...)), ...  etc")
         logger.info("   Example: p p > t~ t QED=0, (t~ > W- b~, W- > l- vl~), t > j j b @2")
@@ -1063,12 +1069,42 @@ class CompleteForCmd(CheckValidForCmd):
         if len(args) == 1:
             return self.path_completion(text)
         
+    def complete_generate(self, text, line, begidx, endidx):
+        "Complete the add command"
+
+        # Return list of particle names and multiparticle names, as well as
+        # coupling orders and allowed symbols
+        args = split_arg(line[0:begidx])
+        if len(args) > 2 and args[-1] == '@' or args[-1].endswith('='):
+            return
+        couplings = []
+        if len(args) > 1 and args[-1] != '>':
+            couplings = ['>']
+        if '>' in args and args.index('>') < len(args) - 1:
+            couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
+        return self.list_completion(text, self._particle_names + \
+                                    self._multiparticles.keys() + couplings)
+        
     def complete_add(self, text, line, begidx, endidx):
         "Complete the add command"
 
+        args = split_arg(line[0:begidx])
+
         # Format
-        if len(split_arg(line[0:begidx])) == 1:
+        if len(args) == 1:
             return self.list_completion(text, self._add_opts)
+
+        return self.complete_generate(text, " ".join(args[1:]), begidx, endidx)
+
+        # Return list of particle names and multiparticle names, as well as
+        # coupling orders and allowed symbols
+        couplings = []
+        if len(args) > 2 and args[-1] != '>':
+            couplings = ['>']
+        if '>' in args and args.index('>') < len(args) - 1:
+            couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
+        return self.list_completion(text, self._particle_names + \
+                                    self._multiparticles.keys() + couplings)
         
     def complete_check(self, text, line, begidx, endidx):
         "Complete the add command"
@@ -1087,6 +1123,10 @@ class CompleteForCmd(CheckValidForCmd):
 
         if len(args) == 2:
             return self.path_completion(text)
+
+        if len(args) > 2:
+            return self.complete_generate(text, " ".join(args[2:]),
+                                          begidx, endidx)
         
     def complete_tutorial(self, text, line, begidx, endidx):
         "Complete the tutorial command"
@@ -1295,7 +1335,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _tutorial_opts = ['start', 'stop']
-    _check_opts = ['full', 'quick', 'gauge']
+    _check_opts = ['full', 'quick', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
     _v4_export_formats = ['madevent', 'standalone','matrix'] 
     _export_formats = _v4_export_formats + ['pythia8',
@@ -1313,6 +1353,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _generate_info = "" # store the first generated process
     _model_format = None
     _model_v4_path = None
+    _use_lower_part_names = False
     _export_dir = None
     _export_format = 'madevent'
     _mgme_dir = MG4DIR
@@ -1416,8 +1457,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def do_define(self, line, log=True):
         """Define a multiparticle"""
 
-        # Particle names always lowercase
-        line = line.lower()
+        if self._use_lower_part_names:
+            # Particle names lowercase
+            line = line.lower()
         # Make sure there are spaces around = and |
         line = line.replace("=", " = ")
         line = line.replace("|", " | ")
@@ -1542,28 +1584,31 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             comparisons = self._comparisons[0]
             if len(args) > 1 and args[1] == 'failed':
                 comparisons = [c for c in comparisons if not c['passed']]
+            outstr = "Process check results:"
             for comp in comparisons:
-                print "%s:" % comp['process'].nice_string()
-                print "   Phase space point: (px py pz E)"
+                outstr += "\n%s:" % comp['process'].nice_string()
+                outstr += "\n   Phase space point: (px py pz E)"
                 for i, p in enumerate(comp['momenta']):
-                    print "%2s    %+.9e  %+.9e  %+.9e  %+.9e" % tuple([i] + p)
-                print "   Permutation values:"
-                print "   " + str(comp['values'])
+                    outstr += "\n%2s    %+.9e  %+.9e  %+.9e  %+.9e" % tuple([i] + p)
+                outstr += "\n   Permutation values:"
+                outstr += "\n   " + str(comp['values'])
                 if comp['passed']:
-                    print "   Process passed (rel. difference %.9e)" % \
+                    outstr += "\n   Process passed (rel. difference %.9e)" % \
                           comp['difference']
                 else:
-                    print "   Process failed (rel. difference %.9e)" % \
+                    outstr += "\n   Process failed (rel. difference %.9e)" % \
                           comp['difference']
 
             used_aloha = sorted(self._comparisons[1])
-            print "Checked ALOHA routines:"
+            outstr += "\nChecked ALOHA routines:"
             for aloha in used_aloha:
                 aloha_str = aloha[0]
                 if aloha[1]:
                     aloha_str += 'C' + 'C'.join([str(ia) for ia in aloha[1]])
                 aloha_str += "_%d" % aloha[2]
-                print aloha_str
+                outstr += "\n" + aloha_str
+
+            pydoc.pager(outstr)            
         
     def multiparticle_string(self, key):
         """Returns a nicely formatted string for the multiparticle"""
@@ -1606,8 +1651,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         # Check if we plot a decay chain 
         if ',' in self._generate_info and not self._done_export:
-            warn = '''WARNING: You try to plot decay chain diagram. But you didn't run output first.\n'''
-            warn += '''\t  In consequence the decay are not combine in a unique diagram.'''
+            warn = 'WARNING: You try to draw decay chain diagrams without first running output.\n'
+            warn += '\t  The decay processes will be drawn separately'
             logger.warning(warn)
 
         (options, args) = _draw_parser.parse_args(args)
@@ -1663,28 +1708,31 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         comparisons = []
         gauge_result = []
+        lorentz_result =[]
 
-        if args[0] == 'quick':
+        if args[0] in  ['quick', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
                                                         param_card = param_card,
                                                         quick = True)
-        else:
-            if args[0] == 'full':
-                comparisons = process_checks.check_processes(myprocdef,
-                                                        param_card = param_card)
+        if args[0] in  ['gauge', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
                                                       param_card = param_card)
-
+        if args[0] in ['lorentz_invariance', 'full']:
+            lorentz_result = process_checks.check_lorentz(myprocdef,
+                                                      param_card = param_card)
         cpu_time2 = time.time()
 
         logger.info("%i processes checked in %0.3f s" \
-                    % (len(gauge_result) + len(comparisons[0]),
+                    % (len(gauge_result) + len(comparisons[0]) + len(lorentz_result),
                       (cpu_time2 - cpu_time1)))
 
         if gauge_result:
             logger.info('gauge results:')
-
             logger.info(process_checks.output_gauge(gauge_result))
+
+        if lorentz_result:
+            logger.info('lorentz invariance results:')
+            logger.info(process_checks.output_lorentz_inv(lorentz_result))
 
         if comparisons:
             logger.info(process_checks.output_comparisons(comparisons[0]))
@@ -1769,8 +1817,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             line = order_re.group(1)
             order_re = order_pattern.match(line)
 
-        # Particle names always lowercase
-        line = line.lower()
+        if self._use_lower_part_names:
+            # Particle names lowercase
+            line = line.lower()
 
         # Now check for forbidden particles, specified using "/"
         slash = line.find("/")
@@ -2060,6 +2109,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                              self._curr_model)
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
+            # Set variables for autocomplete
+            self._particle_names = [p.get('name') for p in self._curr_model.get('particles')] + \
+                 [p.get('antiname') for p in self._curr_model.get('particles')]
+            self._couplings = list(set(sum([i.get('orders').keys() for i in \
+                                            self._curr_model.get('interactions')], [])))
+            # Check if we can use case-independent particle names
+            self._use_lower_part_names = \
+                (self._particle_names == \
+                 [p.get('name').lower() for p in self._curr_model.get('particles')] + \
+                 [p.get('antiname').lower() for p in self._curr_model.get('particles')])
+            # Add default multiparticles
             self.add_default_multiparticles()
         elif args[0] == 'command':
             if not os.path.isfile(args[1]):
@@ -2160,7 +2220,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if line.startswith('#'):
                 continue
             try:
-                multipart_name = line.lower().split()[0]
+                if self._use_lower_part_names:
+                    multipart_name = line.lower().split()[0]
+                else:
+                    multipart_name = line.split()[0]
                 if multipart_name not in self._multiparticles:
                     self.do_define(line)
                     
