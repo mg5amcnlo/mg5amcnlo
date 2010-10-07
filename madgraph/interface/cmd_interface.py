@@ -510,6 +510,8 @@ class HelpToCmd(object):
         logger.info("   Only checks a subset of permutations.")
         logger.info("gauge: Only check that processes with massless gauge bosons")
         logger.info("   are gauge invariant")
+        logger.info("lorentz_invariance: Only check that the amplitude is lorentz")
+        logger.info("   invariant by comparing the amplitiude in different frames")        
         logger.info("If param_card is given, that param_card is used instead")
         logger.info("   of the default values for the model.")
         logger.info("For process syntax, please see help generate")
@@ -1047,8 +1049,19 @@ class CompleteForCmd(CheckValidForCmd):
         completion += [f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
                        f.startswith(text)]
 
-        return completion      
-    
+        return completion
+
+    def model_completion(self, text, process):
+        """ complete the line with model information """
+        args = split_arg(process)
+        couplings = []
+        if len(args) > 1 and args[-1] != '>':
+            couplings = ['>']
+        if '>' in args and args.index('>') < len(args) - 1:
+            couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
+        return self.list_completion(text, self._particle_names + \
+                                    self._multiparticles.keys() + couplings)
+        
             
     def complete_export(self, text, line, begidx, endidx):
         "Complete the export command"
@@ -1077,13 +1090,18 @@ class CompleteForCmd(CheckValidForCmd):
         args = split_arg(line[0:begidx])
         if len(args) > 2 and args[-1] == '@' or args[-1].endswith('='):
             return
-        couplings = []
-        if len(args) > 1 and args[-1] != '>':
-            couplings = ['>']
-        if '>' in args and args.index('>') < len(args) - 1:
-            couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
-        return self.list_completion(text, self._particle_names + \
-                                    self._multiparticles.keys() + couplings)
+
+        try:
+            return self.model_completion(text, ' '.join(args[1:]))
+        except Exception as error:
+            print error
+            
+        #if len(args) > 1 and args[-1] != '>':
+        #    couplings = ['>']
+        #if '>' in args and args.index('>') < len(args) - 1:
+        #    couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
+        #return self.list_completion(text, self._particle_names + \
+        #                            self._multiparticles.keys() + couplings)
         
     def complete_add(self, text, line, begidx, endidx):
         "Complete the add command"
@@ -1115,18 +1133,23 @@ class CompleteForCmd(CheckValidForCmd):
         if len(args) == 1:
             return self.list_completion(text, self._check_opts)
 
+        
+
+
         # Directory continuation
         if args[-1].endswith(os.path.sep):
             return self.path_completion(text,
                                         os.path.join('.',*[a for a in args \
                                                     if a.endswith(os.path.sep)]))
+        # autocompletion for particles/couplings
+        model_comp = self.model_completion(text, ' '.join(args[2:]))
 
         if len(args) == 2:
-            return self.path_completion(text)
+            return model_comp + self.path_completion(text)
 
         if len(args) > 2:
-            return self.complete_generate(text, " ".join(args[2:]),
-                                          begidx, endidx)
+            return model_comp
+            
         
     def complete_tutorial(self, text, line, begidx, endidx):
         "Complete the tutorial command"
@@ -1134,18 +1157,24 @@ class CompleteForCmd(CheckValidForCmd):
         # Format
         if len(split_arg(line[0:begidx])) == 1:
             return self.list_completion(text, self._tutorial_opts)
+        
+    def complete_define(self, text, line, begidx, endidx):
+        """Complete particle information"""
+        return self.model_completion(text, line[6:])
 
     def complete_display(self, text, line, begidx, endidx):
         "Complete the display command"
 
         args = split_arg(line[0:begidx])
-
         # Format
         if len(args) == 1:
             return self.list_completion(text, self._display_opts)
 
-        if len(args) == 2 and arg[0] == 'checks':
+        if len(args) == 2 and args[1] == 'checks':
             return self.list_completion(text, 'failed')
+
+        if len(args) == 2 and args[1] == 'particles':
+            return self.model_completion(text, line[begidx:])
 
     def complete_draw(self, text, line, begidx, endidx):
         "Complete the import command"
@@ -1709,21 +1738,28 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         comparisons = []
         gauge_result = []
         lorentz_result =[]
-
+        nb_processes = 0
+        
         if args[0] in  ['quick', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
                                                         param_card = param_card,
                                                         quick = True)
+            nb_processes += len(comparisons[0])
+            
         if args[0] in  ['gauge', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
                                                       param_card = param_card)
+            nb_processes += len(gauge_result)
+            
         if args[0] in ['lorentz_invariance', 'full']:
             lorentz_result = process_checks.check_lorentz(myprocdef,
                                                       param_card = param_card)
+            nb_processes += len(lorentz_result)
+            
         cpu_time2 = time.time()
 
         logger.info("%i processes checked in %0.3f s" \
-                    % (len(gauge_result) + len(comparisons[0]) + len(lorentz_result),
+                    % (nb_processes,
                       (cpu_time2 - cpu_time1)))
 
         if gauge_result:
