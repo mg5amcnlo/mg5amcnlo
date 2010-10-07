@@ -1123,6 +1123,10 @@ class CompleteForCmd(CheckValidForCmd):
 
         if len(args) == 2:
             return self.path_completion(text)
+
+        if len(args) > 2:
+            return self.complete_generate(text, " ".join(args[2:]),
+                                          begidx, endidx)
         
     def complete_tutorial(self, text, line, begidx, endidx):
         "Complete the tutorial command"
@@ -1719,7 +1723,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         cpu_time2 = time.time()
 
         logger.info("%i processes checked in %0.3f s" \
-                    % (len(gauge_result) + len(comparisons) + len(lorentz_result),
+                    % (len(gauge_result) + len(comparisons[0]) + len(lorentz_result),
                       (cpu_time2 - cpu_time1)))
 
         if gauge_result:
