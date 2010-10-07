@@ -688,9 +688,8 @@ class CheckValidForCmd(object):
         if not self._curr_amps:
             raise self.InvalidCmd("No process generated, please generate a process!")
             
-
         if not os.path.isdir(args[0]):
-            raise self.InvalidCmd( "%s is not a valid directory for export file" % args[1])
+            raise self.InvalidCmd( "%s is not a valid directory for export file" % args[0])
             
     def check_export(self, args):
         """check the validity of line
@@ -1057,9 +1056,11 @@ class CompleteForCmd(CheckValidForCmd):
             process = process[process.index(',')+1:]
         args = split_arg(process)
         couplings = []
+
         # Force '>' if two initial particles.
         if len(args) == 2 and args[-1] != '>':
-            return self.list_completion(text, '>')
+                return self.list_completion(text, '>')
+            
         # Add non-particle names
         if len(args) > 0 and args[-1] != '>':
             couplings = ['>']
