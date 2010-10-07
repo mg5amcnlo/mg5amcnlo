@@ -1347,7 +1347,7 @@ class Test_Channel(unittest.TestCase):
                          q_onshell*2)
         self.assertTrue((channel_1.get_apx_fnrule(6, q_offshell, 
                                                   False, self.my_testmodel)-
-                         q_offshell/(q_offshell ** 2 - decay_objects.MT **2)\
+                         q_offshell**2/(q_offshell ** 2 - decay_objects.MT **2)\
                              ** 2)\
                              /channel_1.get_apx_fnrule(6, q_offshell, 
                                                        False,self.my_testmodel)\
@@ -1460,15 +1460,17 @@ class Test_Channel(unittest.TestCase):
                            h_ww_wtb.get_apx_decaywidth(full_sm)*(ratio-1))/ \
                             h_ww_wtb.get_apx_decaywidth_nextlevel(full_sm)
                         < 0.0001)
-
+        print channel_1.get_apx_fnrule(24, q_offshell, False, self.my_testmodel)
+        print ((1-2*((q_offshell/MW) ** 2)+(q_offshell/MW) ** 4)/ \
+                               (((q_offshell**2-MW **2)**2+MW**2*WW**2)))
         # Test of the Brett-Wigner correction of propagator
         self.assertTrue((channel_1.get_apx_fnrule(24, q_offshell, 
                                                   False, self.my_testmodel)-
                           ((1-2*((q_offshell/MW) ** 2)+(q_offshell/MW) ** 4)/ \
-                               (((q_offshell**2-MW **2)**2+WW**2))))/ \
+                               (((q_offshell**2-MW **2)**2+MW**2*WW**2))))/ \
                              channel_1.get_apx_fnrule(24, q_offshell, 
                                                       False, self.my_testmodel)\
-                          < 0.0001)
+                          < 0.001)
 
 
     def test_apx_decaywidth_full(self):
@@ -1480,13 +1482,14 @@ class Test_Channel(unittest.TestCase):
         model.read_param_card(param_path)
         
         model.find_all_channels(3)
+        model.write_decay_table()
         particle = model.get_particle(6)
         #for part in model.get('particles'):
         #    print part['pdg_code'], part['decay_width']
 
         particle.calculate_branch_ratio()
-        model.write_decay_table()
-        #print model.get('interactions')[115].get('color')[0]
+        #print decay_objects.MT, decay_objects.MW
+        #print decay_objects.GC_128, decay_objects.GC_129
         #print particle.estimate_width_error()
         print particle.get_channels(2, True).nice_string(),\
             particle.get('decay_width')

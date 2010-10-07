@@ -2563,7 +2563,8 @@ class Channel(base_objects.Diagram):
         if onshell:
             value = 1.
         else:
-            value = 1./((q ** 2 - mass ** 2) ** 2 + part.get('decay_width') **2)
+            value = 1./((q ** 2 - mass ** 2) ** 2 + \
+                            mass **2 * part.get('decay_width') **2)
         
         # Set the value according the particle type
         # vector boson case
@@ -2580,9 +2581,10 @@ class Channel(base_objects.Diagram):
                 value *= (1 - 2* (q/mass) **2 + (q/mass) **4)
         # fermion case
         elif part.get('spin') == 2:
-            value *= q
             if onshell:
-                value *= 2.
+                value *= 2.*q
+            else:
+                value *= q **2
 
         # Do nothing for scalar
 
