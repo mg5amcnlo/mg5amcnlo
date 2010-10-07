@@ -1319,6 +1319,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _generate_info = "" # store the first generated process
     _model_format = None
     _model_v4_path = None
+    _use_lower_part_names = False
     _export_dir = None
     _export_format = 'madevent'
     _mgme_dir = MG4DIR
@@ -1422,8 +1423,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def do_define(self, line, log=True):
         """Define a multiparticle"""
 
-        # Particle names always lowercase
-        line = line.lower()
+        if self._use_lower_part_names:
+            # Particle names lowercase
+            line = line.lower()
         # Make sure there are spaces around = and |
         line = line.replace("=", " = ")
         line = line.replace("|", " | ")
@@ -1781,8 +1783,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             line = order_re.group(1)
             order_re = order_pattern.match(line)
 
-        # Particle names always lowercase
-        line = line.lower()
+        if self._use_lower_part_names:
+            # Particle names lowercase
+            line = line.lower()
 
         # Now check for forbidden particles, specified using "/"
         slash = line.find("/")
@@ -2072,6 +2075,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                              self._curr_model)
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
+            # Check if we can use case-independent particle names
+            self._use_lower_part_names = \
+                ([p.get('name') for p in self._curr_model.get('particles')] + \
+                 [p.get('antiname') for p in self._curr_model.get('particles')] == \
+                 [p.get('name').lower() for p in self._curr_model.get('particles')] + \
+                 [p.get('antiname').lower() for p in self._curr_model.get('particles')])
             self.add_default_multiparticles()
         elif args[0] == 'command':
             if not os.path.isfile(args[1]):
@@ -2172,7 +2181,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if line.startswith('#'):
                 continue
             try:
-                multipart_name = line.lower().split()[0]
+                if self._use_lower_part_names:
+                    multipart_name = line.lower().split()[0]
+                else:
+                    multipart_name = line.split()[0]
                 if multipart_name not in self._multiparticles:
                     self.do_define(line)
                     
