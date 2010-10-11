@@ -1413,8 +1413,7 @@ def convert_model_to_mg4(model, output_dir, wanted_lorentz = []):
     else:
         aloha_model.compute_all(save=False)
     write_dir=os.path.join(output_dir, 'Source', 'DHELAS')
-    for abstracthelas in dict(aloha_model).values():
-        abstracthelas.write(write_dir, language='Fortran')
+    aloha_model.write(write_dir, 'Fortran')
     
     #copy Helas Template
     cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')

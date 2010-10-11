@@ -272,7 +272,7 @@ class OrganizeModelExpression:
     
     # regular expression to shorten the expressions
     complex_number = re.compile(r'''complex\((?P<real>[^,\(\)]+),(?P<imag>[^,\(\)]+)\)''')
-    expo_expr = re.compile(r'''(?P<expr>\w+)\s*\*\*\s*(?P<expo>\d+)''')
+    expo_expr = re.compile(r'''(?P<expr>[\w.]+)\s*\*\*\s*(?P<expo>\d+)''')
     cmath_expr = re.compile(r'''cmath.(?P<operation>\w+)\((?P<expr>\w+)\)''')
     #operation is usualy sqrt / sin / cos / tan
     conj_expr = re.compile(r'''complexconjugate\((?P<expr>\w+)\)''')
@@ -424,6 +424,9 @@ class OrganizeModelExpression:
         output = '%s__exp__%s' % (expr, exponent)
         old_expr = '%s**%s' % (expr,exponent)
 
+        if expr.startswith('cmath'):
+            return old_expr
+        
         if expr.isdigit():
             output = '_' + output #prevent to start with a number
             new_param = base_objects.ModelVariable(output, old_expr,'real')
@@ -435,7 +438,7 @@ class OrganizeModelExpression:
         return output
         
     def shorten_cmath(self, matchobj):
-        """add the short expression, and retrun the nice string associate"""
+        """add the short expression, and return the nice string associate"""
         
         expr = matchobj.group('expr')
         operation = matchobj.group('operation')
