@@ -23,7 +23,8 @@ import math
 
 import tests.unit_tests as unittest
 import madgraph.core.base_objects as base_objects
-import madgraph.iolibs.import_ufo as import_ufo
+import models.import_ufo as import_ufo
+import models.model_reader as model_reader
 import madgraph.iolibs.save_model as save_model
 import madgraph.iolibs.drawing_eps as drawing_eps
 from madgraph import MG5DIR
@@ -56,6 +57,7 @@ class Test_DecayParticle(unittest.TestCase):
 
         # Simplify the model
         particles = self.my_testmodel.get('particles')
+        #print 'Here\n', self.my_testmodel['particles']
         interactions = self.my_testmodel.get('interactions')
         inter_list = copy.copy(interactions)
         no_want_pid = [1, 2, 3, 4, 13, 14, 15, 16, 21, 23]
@@ -426,7 +428,7 @@ class Test_DecayParticle(unittest.TestCase):
 
     def test_setget_channel(self):
         """ Test of the get_channel set_channel functions (and the underlying
-            check_vertexlist.)"""
+            check_channels.)"""
         # Prepare the channel
         full_vertexlist = import_vertexlist.full_vertexlist
 
@@ -456,7 +458,7 @@ class Test_DecayParticle(unittest.TestCase):
         higgs = self.my_testmodel.get_particle(25)
         higgs.set('decay_channels', {(4, True): channellist})
         self.assertEqual(higgs.get('decay_channels'), {(4, True): channellist})
-
+                
         # Test set_channel and get_channel
         higgs = self.my_testmodel.get_particle(25)
         higgs.set_channels(4, True, [h_tt_bbww])
@@ -488,11 +490,12 @@ class Test_DecayParticle(unittest.TestCase):
         self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError, 
                           higgs.set_channels, 3, False, [h_tt_bbww],
                           self.my_testmodel)
-                
+
+
 #===============================================================================
 # TestDecayParticleList
 #===============================================================================
-class TestDecayParticleList(unittest.TestCase):
+class Test_DecayParticleList(unittest.TestCase):
     """Test the DecayParticleList"""
     def setUp(self):
         self.mg5_part = base_objects.Particle({'pdg_code':6, 'is_part':True})
@@ -1237,9 +1240,11 @@ class Test_Channel(unittest.TestCase):
                           non_sm, self.my_testmodel)
 
         # Create two equivalent channels
+        # h > z (z > ln ln~)
         vert_0 = self.h_tt_bbmmvv.get('vertices')[-1] 
         vert_1 = import_vertexlist.full_vertexlist[(12, 25)]
         vert_2 = import_vertexlist.full_vertexlist[(54, 23)]
+        #print vert_1, vert_2
         channel_a = decay_objects.Channel({'vertices': base_objects.VertexList(\
                     [vert_0])})
         channel_b = decay_objects.Channel({'vertices': base_objects.VertexList(\
@@ -1257,6 +1262,30 @@ class Test_Channel(unittest.TestCase):
         channel_a.get_apx_decaywidth(self.my_testmodel)
         channel_b.get_apx_decaywidth(self.my_testmodel)
         #print channel_a.nice_string(), '\n', channel_b.nice_string()
+
+        # Create two equivalent channels
+        # h > w+ w- > l l~ vl vl~
+        vert_3 = import_vertexlist.full_vertexlist[(6, 25)]
+        vert_4 = import_vertexlist.full_vertexlist[(44, 24)]
+        channel_c = decay_objects.Channel({'vertices': base_objects.VertexList(\
+                    [vert_0])})
+        channel_d = decay_objects.Channel({'vertices': base_objects.VertexList(\
+                    [vert_0])})        
+        channel_c = higgs.connect_channel_vertex(channel_c, 0, vert_3,
+                                                self.my_testmodel)
+        channel_c = higgs.connect_channel_vertex(channel_c, 1, vert_4,
+                                                self.my_testmodel)
+        channel_c = higgs.connect_channel_vertex(channel_c, 2, vert_4,
+                                                self.my_testmodel)
+        channel_d = higgs.connect_channel_vertex(channel_d, 0, vert_3,
+                                                self.my_testmodel)
+        channel_d = higgs.connect_channel_vertex(channel_d, 0, vert_4,
+                                                self.my_testmodel)
+        channel_d = higgs.connect_channel_vertex(channel_d, 2, vert_4,
+                                                self.my_testmodel)
+        print channel_c.nice_string(), '\n', channel_d.nice_string()
+        channel_c.calculate_orders(self.my_testmodel)
+        channel_d.calculate_orders(self.my_testmodel)
         
         # Test of find_channels
         # Without running find_vertexlist before, but the program should run it
@@ -1265,12 +1294,25 @@ class Test_Channel(unittest.TestCase):
         self.assertFalse(self.my_testmodel.get_particle(5).get_channels(3, True))
         self.assertTrue(self.my_testmodel['stable_particles'])
 
-        higgs.find_channels(4, self.my_testmodel)
+        higgs.find_channels(3, self.my_testmodel)
         higgs.find_channels_nextlevel(self.my_testmodel)
-        result = higgs.get_channels(3, True)
-        print result.nice_string()
+        result1 = higgs.get_channels(3, True)
+        print result1.nice_string()
         # Test if the equivalent channels appear only once.
-        self.assertEqual((result.count(channel_b)+ result.count(channel_a)),1)
+
+        # For both has_idpart and not has_idpart channels
+        self.assertEqual((result1.count(channel_b)+ result1.count(channel_a)),1)
+
+        # Set MH < MW to get the desire channels.
+        decay_objects.MH = 50
+        channel_c.get_apx_decaywidth(self.my_testmodel)
+        channel_d.get_apx_decaywidth(self.my_testmodel)
+        higgs['decay_channels'] = {}
+        higgs.find_channels(3, self.my_testmodel)
+        higgs.find_channels_nextlevel(self.my_testmodel)
+        result2 = higgs.get_channels(4, True)
+        print result2.nice_string()
+        self.assertEqual((result2.count(channel_c)+ result2.count(channel_d)),1)
 
         """ Test on MSSM, to get a feeling on the execution time. """        
         mssm = import_ufo.import_model('mssm')
@@ -1281,7 +1323,7 @@ class Test_Channel(unittest.TestCase):
         susy_higgs = decay_mssm.get_particle(25)
         susy_higgs.find_channels(3, decay_mssm)
         #susy_higgs.find_channels_nextlevel(decay_mssm)
-        print susy_higgs.get_channels(3, True).nice_string()
+        print len(susy_higgs.get_channels(3, False))
         #decay_mssm.find_all_channels(3)
                                            
     def test_apx_decaywidth(self):
@@ -1300,20 +1342,19 @@ class Test_Channel(unittest.TestCase):
 
         # Test of the symmetric factor
         #print higgs.get_channels(3, True).nice_string()
-        h_zz_llvv_1 = higgs.get_channels(4, True)[13]
-        h_zz_llvv_2 = higgs.get_channels(4, True)[6]
+        #print higgs.get_channels(4, True).nice_string()
+        h_zz_llll_1 = higgs.get_channels(4, True)[5]
+        h_zz_llll_2 = higgs.get_channels(4, True)[6]
         # higgs > w (w > l vl)
         channel_1 = higgs.get_channels(3, True)[0]
-        print 'h_zz_llvv_symm:', higgs.get_channels(4, True)[9].nice_string(), \
-            '\n',\
-            'h_zz_llvv_no_symm:',higgs.get_channels(4, True)[10].nice_string(),\
-            '\n',\
+        print 'h_zz_llll_symm:', h_zz_llll_1.nice_string(), '\n',\
+            'h_zz_llll_no_symm:', h_zz_llll_2.nice_string(), '\n',\
             'channel_1:', channel_1.nice_string()
 
-        h_zz_llvv_1.get_apx_psarea(self.my_testmodel)
-        h_zz_llvv_2.get_apx_psarea(self.my_testmodel)
-        self.assertEqual(4, h_zz_llvv_1['s_factor'])
-        self.assertEqual(1, h_zz_llvv_2['s_factor'])
+        h_zz_llll_1.get_apx_psarea(self.my_testmodel)
+        h_zz_llll_2.get_apx_psarea(self.my_testmodel)
+        self.assertEqual(4, h_zz_llll_1['s_factor'])
+        self.assertEqual(1, h_zz_llll_2['s_factor'])
 
 
         # Test of the get_apx_fnrule
@@ -1384,7 +1425,7 @@ class Test_Channel(unittest.TestCase):
         tau.find_channels(3, full_sm)
         tau_qdecay = tau.get_channels(3, True)[0]
         tau_ldecay = tau.get_channels(3, True)[2]
-        #print tau_qdecay.nice_string()
+        #print tau_ldecay.nice_string()
         self.assertEqual( round(tau_qdecay.get_apx_decaywidth(full_sm)/ \
                                     tau_ldecay.get_apx_decaywidth(full_sm)), 3)
         MTAU = abs(eval('decay_objects.' + tau.get('mass')))
@@ -1437,8 +1478,8 @@ class Test_Channel(unittest.TestCase):
 
         # Test of the estimated further decay width of off shell channel
         full_sm.find_all_channels(3)
-        WT = full_sm.get_particle(6).get('decay_width')
-        WW = full_sm.get_particle(24).get('decay_width')
+        WT = full_sm.get_particle(6).get('apx_decaywidth')
+        WW = full_sm.get_particle(24).get('apx_decaywidth')
         ratio = (1+ WT*abs(decay_objects.MT)/MH_new*\
                      (1/4/math.pi)*MH_new **3 *0.8/ \
                      h_ww_wtb.get_apx_fnrule(6, decay_objects.MT,
@@ -1460,9 +1501,11 @@ class Test_Channel(unittest.TestCase):
                            h_ww_wtb.get_apx_decaywidth(full_sm)*(ratio-1))/ \
                             h_ww_wtb.get_apx_decaywidth_nextlevel(full_sm)
                         < 0.0001)
-        print channel_1.get_apx_fnrule(24, q_offshell, False, self.my_testmodel)
-        print ((1-2*((q_offshell/MW) ** 2)+(q_offshell/MW) ** 4)/ \
-                               (((q_offshell**2-MW **2)**2+MW**2*WW**2)))
+        #print channel_1.get_apx_fnrule(24, q_offshell, False, self.my_testmodel)
+        #print ((1-2*((q_offshell/MW) ** 2)+(q_offshell/MW) ** 4)/ \
+        #                       (((q_offshell**2-MW **2)**2+MW**2*WW**2)))
+
+
         # Test of the Brett-Wigner correction of propagator
         self.assertTrue((channel_1.get_apx_fnrule(24, q_offshell, 
                                                   False, self.my_testmodel)-
@@ -1472,6 +1515,34 @@ class Test_Channel(unittest.TestCase):
                                                       False, self.my_testmodel)\
                           < 0.001)
 
+
+        model_base = import_ufo.import_model('mssm')
+        param_path = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
+        model = decay_objects.DecayModel(model_base)
+        model.read_param_card(param_path)
+        model.find_all_channels(2)
+
+        channel_2 = copy.deepcopy(channel_1)
+        channel_2['vertices'][0]['legs'][0]['id'] = -1000024
+        channel_2['vertices'][0]['legs'][1]['id'] = 1000024
+        channel_2['vertices'][0]['legs'][2]['id'] = 23
+        channel_2['vertices'][0]['id'] = 128
+        channel_2['vertices'][1]['legs'][0]['id'] = 1000035
+        channel_2['vertices'][1]['legs'][1]['id'] = 23
+        channel_2['vertices'][1]['legs'][2]['id'] = 1000025
+        channel_2['vertices'][1]['id'] = 516
+        channel_2['vertices'][2]['legs'][0]['id'] = 1000025
+        channel_2['vertices'][2]['legs'][1]['id'] = 1000025
+        channel_2['vertices'][2]['id'] = 0
+        channel_2['onshell'] = 0
+        #print channel_2.get_onshell(model)
+        channel_2.get_final_legs()
+        #print channel_2.nice_string()
+        #print channel_2.get_apx_matrixelement_sq(model)
+        #print channel_2.get_apx_psarea(model)
+        #print channel_2.get_apx_decaywidth(model)
+        #print channel_2.get_apx_decaywidth_nextlevel(model)
+        #print channel_2.nice_string()
 
     def test_apx_decaywidth_full(self):
         """ The test to show the estimation of decay width."""
@@ -1483,16 +1554,217 @@ class Test_Channel(unittest.TestCase):
         
         model.find_all_channels(3)
         model.write_decay_table()
-        particle = model.get_particle(6)
+        particle = model.get_particle(1000025)
         #for part in model.get('particles'):
         #    print part['pdg_code'], part['decay_width']
 
         particle.calculate_branch_ratio()
         #print decay_objects.MT, decay_objects.MW
-        #print decay_objects.GC_128, decay_objects.GC_129
-        #print particle.estimate_width_error()
-        print particle.get_channels(2, True).nice_string(),\
-            particle.get('decay_width')
+        #print decay_objects.GC_857, decay_objects.GC_733, decay_objects.GC_437, decay_objects.GC_665
+        print particle.estimate_width_error()
+        print len(particle.get_channels(3, False))
+        print particle.get_channels(3, False)[0].nice_string(),\
+            particle.get('apx_decaywidth')
+
+
+#===============================================================================
+# Test_DecayAmplitude
+#===============================================================================
+class Test_DecayAmplitude(unittest.TestCase):
+    """ Test for the DecayAmplitude and DecayAmplitudeList object."""
+
+    def setUp(self):
+        """ Set up necessary objects for the test"""
+        self.my_testmodel_base = import_ufo.import_model('sm')
+        #Import a model from my_testmodel
+        self.my_testmodel = decay_objects.DecayModel(self.my_testmodel_base)
+        param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')
+        self.my_testmodel.read_param_card(param_path)
+
+        my_channel = decay_objects.Channel()
+        h_tt_bbmmvv = decay_objects.Channel()
+
+        # Simplify the model
+        particles = self.my_testmodel.get('particles')
+        interactions = self.my_testmodel.get('interactions')
+        inter_list = copy.copy(interactions)
+        # Pids that will be removed
+        no_want_pid = [1, 2, 3, 4, 15, 16, 21]
+        for pid in no_want_pid:
+            particles.remove(self.my_testmodel.get_particle(pid))
+
+        for inter in inter_list:
+            if any([p.get('pdg_code') in no_want_pid for p in \
+                        inter.get('particles')]):
+                interactions.remove(inter)
+
+        # Set a new name
+        self.my_testmodel.set('name', 'my_smallsm')
+        self.my_testmodel.set('particles', particles)
+        self.my_testmodel.set('interactions', interactions)
+
+        #Setup the vertexlist for my_testmodel and save this model (optional)
+        import_vertexlist.make_vertexlist(self.my_testmodel)
+        #save_model.save_model(os.path.join(MG5DIR, 'tests/input_files', 
+        #self.my_testmodel['name']), self.my_testmodel)
+    
+        full_vertexlist = import_vertexlist.full_vertexlist
+        vert_0 = base_objects.Vertex({'id': 0, 'legs': base_objects.LegList([\
+                    base_objects.Leg({'id':25, 'number':1, 'state': False}), \
+                    base_objects.Leg({'id':25, 'number':2})])})
+        vert_1 = copy.deepcopy(full_vertexlist[(40, 25)])
+        vert_1['legs'][0]['number'] = 2
+        vert_1['legs'][1]['number'] = 3
+        vert_1['legs'][2]['number'] = 2
+        vert_2 = copy.deepcopy(full_vertexlist[(35, 6)])
+        vert_2['id'] = -vert_2['id']
+        vert_2['legs'][0]['number'] = 2
+        vert_2['legs'][0]['id'] = -vert_2['legs'][0]['id']
+        vert_2['legs'][1]['number'] = 4
+        vert_2['legs'][1]['id'] = -vert_2['legs'][1]['id']
+        vert_2['legs'][2]['number'] = 2
+        vert_2['legs'][2]['id'] = -vert_2['legs'][2]['id']
+        vert_3 = copy.deepcopy(full_vertexlist[(35, 6)])
+        vert_3['legs'][0]['number'] = 3
+        vert_3['legs'][1]['number'] = 5
+        vert_3['legs'][2]['number'] = 3
+        vert_4 = copy.deepcopy(full_vertexlist[(44, 24)])
+        vert_4['id'] = -vert_4['id']
+        vert_4['legs'][0]['number'] = 4
+        vert_4['legs'][0]['id'] = -vert_4['legs'][0]['id']
+        vert_4['legs'][1]['number'] = 6
+        vert_4['legs'][1]['id'] = -vert_4['legs'][1]['id']
+        vert_4['legs'][2]['number'] = 4
+        vert_4['legs'][2]['id'] = -vert_4['legs'][2]['id']
+        vert_5 = copy.deepcopy(full_vertexlist[(44, 24)])
+        vert_5['legs'][0]['number'] = 5
+        vert_5['legs'][1]['number'] = 7
+        vert_5['legs'][2]['number'] = 5
+
+        #temp_vertices = base_objects.VertexList
+        self.h_tt_bbmmvv = decay_objects.Channel({'vertices': \
+                                             base_objects.VertexList([
+                                             vert_5, vert_4, vert_3, vert_2, \
+                                             vert_1, vert_0])})
+
+        #print self.h_tt_bbmmvv.nice_string()
+        #pic = drawing_eps.EpsDiagramDrawer(self.h_tt_bbmmvv, 'h_tt_bbmmvv', self.my_testmodel)
+        #pic.draw()
+
+
+    def test_init_setget(self):
+        """ Test the set and get function of"""
+
+        # Setup higgs and lower its mass
+        higgs = self.my_testmodel.get_particle(25)
+        decay_objects.MH = 50
+
+        # Set channels
+        self.my_testmodel.find_all_channels(4)
+        print higgs.get_channels(4, True).nice_string()
+        h_mmvv_1 = higgs.get_channels(4, True)[5]
+        h_mmvv_2 = higgs.get_channels(4, True)[9]
+
+        # Test the initialization
+        amplt_h_mmvv = decay_objects.DecayAmplitude(h_mmvv_1,
+                                                      self.my_testmodel)
+        # goal id list for legs in process
+        goal_id_list = [-12, -11, 11, 12, 25]
+        self.assertEqual(sorted([l.get('id') for l in amplt_h_mmvv.get('process').get('legs')]), goal_id_list)
+        # Check the legs in process
+        for l in amplt_h_mmvv.get('process').get('legs'):
+            if l.get('id') != 25:
+                self.assertTrue(l.get('state'))
+            else:
+                self.assertFalse(l.get('state'))
+            self.assertEqual(0, l.get('number'))
+
+        # Test the set and get in Amplitude
+        goal_width = h_mmvv_1.get('apx_decaywidth')
+        self.assertEqual(amplt_h_mmvv.get('apx_decaywidth'), goal_width)
+        goal_width += h_mmvv_2.get('apx_decaywidth')
+        amplt_h_mmvv.get('diagrams').append(h_mmvv_2)
+        amplt_h_mmvv.reset_width_br()
+        # Test if the reset works.
+        self.assertEqual(amplt_h_mmvv['apx_decaywidth'], 0.)
+        # Test the get for decaywidth and branch ratio.
+        self.assertEqual(amplt_h_mmvv.get('apx_decaywidth'), goal_width)
+        self.assertEqual(amplt_h_mmvv.get('apx_br'),
+                         goal_width/higgs.get('apx_decaywidth'))
+        WH = higgs['apx_decaywidth']
+        higgs['apx_decaywidth'] = 0.
+        amplt_h_mmvv.reset_width_br()
+        # WARNING should show for getting br from zero-width particle.
+        amplt_h_mmvv.get('apx_br')
+
+        # Test for exceptions in set get of Amplitude
+        wrong_prop_list = {'process': [1, 'a', base_objects.Diagram()],
+                           'diagrams': [1, 'a', base_objects.Diagram()]}
+        for key, proplist in wrong_prop_list.items():
+            for prop in proplist:
+                self.assertRaises(decay_objects.DecayAmplitude.PhysicsObjectError,
+                                  amplt_h_mmvv.filter,
+                                  key, prop)
+
+        # Test for set and get in DecayParticle
+        my_amplist = decay_objects.DecayAmplitudeList([amplt_h_mmvv])
+        higgs.set('decay_amplitudes', {4: my_amplist})
+        self.assertEqual(higgs.get('decay_amplitudes'), {4: my_amplist})
+
+        # Test for exceptions
+        valuelist = ['nondict', {'a': my_amplist}, {4: base_objects.Process()}]
+        for value in valuelist:
+            self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                              higgs.filter,
+                              'decay_amplitudes', value)            
+
+        # Test for set_amplitudes and get_amplitudes
+        higgs.set_amplitudes(4, decay_objects.DecayAmplitudeList())
+        self.assertEqual(higgs.get_amplitudes(4), 
+                         decay_objects.DecayAmplitudeList())
+        # Test the set from normal list of Amplitude
+        higgs.set_amplitudes(4, [amplt_h_mmvv])
+        self.assertEqual(higgs.get_amplitudes(4), my_amplist)
+
+        # Test for exceptions
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          higgs.get_amplitudes, 'a')
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          higgs.set_amplitudes,
+                          'a', decay_objects.DecayAmplitudeList())
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          higgs.set_amplitudes,
+                          4, decay_objects.DecayAmplitude())
+
+    def test_group_channels2amplitudes(self):
+        """ Test the group_channels_2_amplitudes function."""
+
+        # Setup higgs and lower its mass
+        higgs = self.my_testmodel.get_particle(25)
+        decay_objects.MH = 50
+
+        # Set channels and amplitude
+        self.my_testmodel.find_all_channels(4)
+        print higgs.get_channels(4, True).nice_string()
+        h_mmvv_1 = higgs.get_channels(4, True)[0]
+        h_mmvv_2 = higgs.get_channels(4, True)[9]
+        amplt_h_mmvv = decay_objects.DecayAmplitude(h_mmvv_1,
+                                                      self.my_testmodel)
+        # Test for exceptions in arguments.
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          higgs.group_channels_2_amplitudes,
+                          'a', self.my_testmodel)
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          higgs.group_channels_2_amplitudes,
+                          3, 'a')
+
+        # Test if the group works
+        higgs.find_channels(4, self.my_testmodel)
+        higgs.group_channels_2_amplitudes(4, self.my_testmodel)
+        #print higgs.get_amplitudes(4).nice_string()
+        amplt_h_mmvv.get('apx_decaywidth')
+        self.assertTrue(amplt_h_mmvv in higgs.get_amplitudes(4))
+        
 
 if __name__ == '__main__':
     unittest.unittest.main()

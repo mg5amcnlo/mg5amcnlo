@@ -343,9 +343,13 @@ class MG5Runner(MG4Runner):
 
         # Run mg5
         logging.info("Running mg5")
-        cmd_interface.MadGraphCmdShell().run_cmd('import command ' + \
-                            os.path.join(dir_name, 'Cards', 'proc_card_v5.dat'))
-               
+        proc_card = open(os.path.join(dir_name, 'Cards', 'proc_card_v5.dat'), 'r').read()
+        cmd = cmd_interface.MadGraphCmdShell()
+        for line in proc_card.split('\n'):
+            try:
+                cmd.run_cmd(line)
+            except MadGraph5Error:
+                pass
         # Get the ME value
         for i, proc in enumerate(proc_list):
             self.res_list.append(self.get_me_value(proc, i))
@@ -355,18 +359,15 @@ class MG5Runner(MG4Runner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = "import model_v4 %s\n" % os.path.join(self.mg4_path,
-                                                          'Models', model)
-
-        v5_string += "setup standalone_v4 %s -f\n" % \
-                     os.path.join(self.mg4_path, self.temp_dir_name)
+        v5_string = "import model_v4 %s\n" % model
 
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \
                          '@%i' % i + '\n'
-        v5_string += 'export\n'
+        v5_string += "output standalone_v4 %s -f\n" % \
+                     os.path.join(self.mg4_path, self.temp_dir_name)
 
         return v5_string
 
@@ -380,15 +381,13 @@ class MG5_UFO_Runner(MG5Runner):
 
         v5_string = "import model %s \n" % model
 
-        v5_string += "setup standalone_v4 %s -f\n" % \
-                     os.path.join(self.mg4_path, self.temp_dir_name)
-
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \
                          '@%i' % i + '\n'
-        v5_string += 'export\n'
+        v5_string += "output standalone_v4 %s -f\n" % \
+                     os.path.join(self.mg4_path, self.temp_dir_name)
 
         return v5_string
 
@@ -546,11 +545,11 @@ class MEComparator(object):
 
         failed_proc_list = []
 
-        res_str = self._fixed_string_length("\nProcess", proc_col_size) + \
+        res_str = "\n" + self._fixed_string_length("Process", proc_col_size) + \
                 ''.join([self._fixed_string_length(runner.name, col_size) for \
                            runner in self.me_runners]) + \
                   self._fixed_string_length("Relative diff.", col_size) + \
-                  self._fixed_string_length("Result", col_size)
+                  "Result"
 
         for i, proc in enumerate(self.proc_list):
             list_res = [res[i][0][0] for res in self.results]
@@ -562,7 +561,7 @@ class MEComparator(object):
                 diff = (max(list_res) - min(list_res)) / \
                        (max(list_res) + min(list_res))
 
-            res_str += self._fixed_string_length('\n' + proc, proc_col_size)+ \
+            res_str += '\n' + self._fixed_string_length(proc, proc_col_size)+ \
                        ''.join([self._fixed_string_length("%1.10e" % res,
                                                col_size) for res in list_res])
 
@@ -570,11 +569,11 @@ class MEComparator(object):
 
             if diff < tolerance:
                 pass_proc += 1
-                res_str += self._fixed_string_length("Pass", col_size)
+                res_str += "Pass"
             else:
                 fail_proc += 1
                 failed_proc_list.append(proc)
-                res_str += self._fixed_string_length("Fail", col_size)
+                res_str += "Fail"
 
         res_str += "\nSummary: %i/%i passed, %i/%i failed" % \
                     (pass_proc, pass_proc + fail_proc,

@@ -39,27 +39,24 @@ mg4_path = MG4DIR
 
 if '__main__' == __name__: 
     # Get full logging info
-    logging.config.fileConfig(os.path.join(mg5_path,'tests','.mg5_logging.conf'))
+    logging.config.fileConfig(os.path.join(mg5_path, 'tests', '.mg5_logging.conf'))
     logging.root.setLevel(logging.INFO)
     logging.getLogger('madgraph').setLevel(logging.INFO)
     logging.getLogger('cmdprint').setLevel(logging.INFO)
     logging.getLogger('tutorial').setLevel(logging.ERROR)
         
     logging.basicConfig(level=logging.INFO)
-    # Create a list of processes to check automatically
-    #my_proc_list = me_comparator.create_proc_list_enhanced(
-    #    ['u','u~', 'd', 'd~', 's', 's~', 'c', 'c~', 'b', 'b~', 'g'],
-    #    ['ul','ul~', 'dl', 'dl~', 'sl', 'sl~', 'cl', 'cl~', 'b1', 'b1~',
-    #     'ur','ur~', 'dr', 'dr~', 'sr', 'sr~', 'cr', 'cr~', 'b2', 'b2~',
-    #     't1', 't1~', 't2', 't2~'],
-    #    initial=2, final_1=2)
-    my_proc_list = me_comparator.create_proc_list_enhanced(
-        ['w+', 'w-', 'z'],
-        ['h1', 'h2', 'h3', 'h+', 'h-'],
-        initial=2, final_1=2)
+#    my_proc_list = me_comparator.create_proc_list_enhanced(
+##        ['w+', 'w-', 'z'],
+##        initial=2, final_1=2)
+    #my_proc_list = ['w+ w+ > h1 x1+ x1+', ' w+ w+ > h+ h+ h1', ' w+ w- > el+ el- h1', ' w+ w- > el+ el- h2', ' w+ w- > h1 h1 h1', ' w+ w- > h1 h1 h2', ' w+ w- > h1 h2 h2', ' w+ w- > h1 h3 h3', ' w+ w- > h+ h- h1', ' w+ w- > h2 h2 h2', ' w+ w- > h2 h3 h3', ' w+ w- > h+ h- h2', ' el+ w+ > el+ h1 w+', ' el+ w+ > el+ h2 w+', ' el+ w+ > el+ h+ h1', ' el+ w+ > el+ h+ h2', ' el+ w+ > el+ h+ h3', ' el- w+ > el- h1 w+', ' el- w+ > el- h2 w+', ' el- w+ > el- h+ h1', ' el- w+ > el- h+ h2', ' el- w+ > el- h+ h3', ' w+ x1+ > h1 w+ x1+', ' w+ x1+ > h+ h1 x1+', ' w+ x1+ > h+ h2 x1+', ' w+ x1+ > h+ h3 x1+', ' w+ x1- > h1 w+ x1-', ' w+ x1- > h1 w- x1+', ' w+ x1- > h+ h1 x1-', ' w+ x1- > h+ h2 x1-', ' w+ x1- > h+ h3 x1-', ' h1 w+ > h1 h1 w+', ' h1 w+ > h1 h2 w+', ' h1 w+ > w- x1+ x1+', ' h1 w+ > h+ h+ w-', ' h1 w+ > h+ x1+ x1-', ' h1 w+ > h+ h1 h1', ' h1 w+ > h+ h1 h2', ' h1 w+ > h+ h1 h3', ' h1 w+ > h+ h2 h3', ' h2 w+ > h1 h2 w+', ' h2 w+ > h2 h2 w+', ' h2 w+ > h+ x1+ x1-', ' h2 w+ > h+ h1 h2', ' h2 w+ > h+ h1 h3', ' h2 w+ > h+ h2 h2', ' h2 w+ > h+ h2 h3', ' h3 w+ > h1 h3 w+', ' h3 w+ > h2 h3 w+', ' h3 w+ > h+ x1+ x1-', ' h3 w+ > h+ h1 h3', ' h3 w+ > h+ h2 h3', ' h3 w+ > h+ h3 h3', ' h+ w+ > h1 w+ w+', ' h+ w+ > h+ h1 w+', ' h+ w+ > h+ h2 w+', ' h+ w+ > h+ h+ h1', ' h+ w+ > h+ h+ h2', ' h+ w+ > h+ h+ h3', ' h- w+ > h1 w+ w-', ' h- w+ > h- h1 w+', ' h- w+ > h- h2 w+', ' h- w+ > h+ h1 w-', ' h- w+ > h1 x1+ x1-', ' h- w+ > h2 x1+ x1-', ' h- w+ > h3 x1+ x1-', ' h- w+ > h1 h1 h3', ' h- w+ > h1 h2 h3', ' h- w+ > h1 h3 h3', ' h- w+ > h+ h- h1', ' h- w+ > h2 h2 h3', ' h- w+ > h2 h3 h3', ' h- w+ > h+ h- h2', ' h- w+ > h+ h- h3', ' w- w- > h1 x1- x1-', ' w- w- > h- h- h1', ' el+ w- > el+ h1 w-', ' el+ w- > el+ h2 w-', ' el+ w- > el+ h- h1', ' el+ w- > el+ h- h2', ' el+ w- > el+ h- h3', ' el- w- > el- h1 w-', ' el- w- > el- h2 w-', ' el- w- > el- h- h1', ' el- w- > el- h- h2', ' el- w- > el- h- h3', ' w- x1+ > h1 w+ x1-', ' w- x1+ > h1 w- x1+', ' w- x1+ > h- h1 x1+', ' w- x1+ > h- h2 x1+', ' w- x1+ > h- h3 x1+', ' w- x1- > h1 w- x1-', ' w- x1- > h- h1 x1-', ' w- x1- > h- h2 x1-', ' w- x1- > h- h3 x1-', ' h1 w- > w+ x1- x1-', ' h1 w- > h- h- w+', ' h1 w- > w- x1+ x1-', ' h1 w- > h1 h1 w-', ' h1 w- > h1 h2 w-', ' h1 w- > h- x1+ x1-', ' h1 w- > h- h1 h1', ' h1 w- > h- h1 h2', ' h1 w- > h- h1 h3', ' h1 w- > h- h2 h3', ' h2 w- > h1 h2 w-', ' h2 w- > h2 h2 w-', ' h2 w- > h- x1+ x1-', ' h2 w- > h- h1 h2', ' h2 w- > h- h1 h3', ' h2 w- > h- h2 h2', ' h2 w- > h- h2 h3', ' h3 w- > h1 h3 w-', ' h3 w- > h2 h3 w-', ' h3 w- > h- x1+ x1-', ' h3 w- > h- h1 h3', ' h3 w- > h- h2 h3', ' h3 w- > h- h3 h3', ' h+ w- > h1 w+ w-', ' h+ w- > h- h1 w+', ' h+ w- > h+ h1 w-', ' h+ w- > h+ h2 w-', ' h+ w- > h1 x1+ x1-', ' h+ w- > h2 x1+ x1-', ' h+ w- > h3 x1+ x1-', ' h+ w- > h1 h1 h3', ' h+ w- > h1 h2 h3', ' h+ w- > h1 h3 h3', ' h+ w- > h+ h- h1', ' h+ w- > h2 h2 h3', ' h+ w- > h2 h3 h3', ' h+ w- > h+ h- h2', ' h+ w- > h+ h- h3', ' h- w- > h1 w- w-', ' h- w- > h- h1 w-', ' h- w- > h- h2 w-', ' h- w- > h- h- h1', ' h- w- > h- h- h2', ' h- w- > h- h- h3', ' e- x1+ > e- h1 x1+', ' e- x1+ > e- h2 x1+', ' e- x1+ > e- h3 x1+', ' e+ x1- > e+ h1 x1-', ' e+ x1- > e+ h2 x1-', ' e+ x1- > e+ h3 x1-', ' el+ el+ > e+ e+ h2', ' el+ el- > h1 w+ w-', ' el+ el- > h2 w+ w-', ' el+ el- > h- h1 w+', ' el+ el- > h- h2 w+', ' el+ el- > h- h3 w+', ' el+ el- > h+ h1 w-', ' el+ el- > h+ h2 w-', ' el+ el- > h+ h3 w-', ' el+ el- > el+ el- h3', ' el+ h1 > el+ w+ w-', ' el+ h1 > el+ h- w+', ' el+ h1 > el+ h+ w-', ' el+ h1 > el+ h+ h-', ' el+ h2 > el+ w+ w-', ' el+ h2 > el+ h- w+', ' el+ h2 > el+ h+ w-', ' el+ h3 > el+ h- w+', ' el+ h3 > el+ h+ w-', ' el+ h+ > el+ h1 w+', ' el+ h+ > el+ h2 w+', ' el+ h+ > el+ h3 w+', ' el+ h- > el+ h1 w-', ' el+ h- > el+ h2 w-', ' el+ h- > el+ h3 w-', ' el- el- > e- e- h2', ' el- h1 > el- w+ w-', ' el- h1 > el- h- w+', ' el- h1 > el- h+ w-', ' el- h2 > el- w+ w-', ' el- h2 > el- h- w+', ' el- h2 > el- h+ w-', ' el- h3 > el- h- w+', ' el- h3 > el- h+ w-', ' el- h+ > el- h1 w+', ' el- h+ > el- h2 w+', ' el- h+ > el- h3 w+', ' el- h- > el- h1 w-', ' el- h- > el- h2 w-', ' el- h- > el- h3 w-', ' x1+ x1+ > h1 w+ w+', ' x1+ x1- > h1 w+ w-', ' h1 x1+ > w+ w+ x1-', ' h1 x1+ > w+ w- x1+', ' h1 x1+ > h- w+ x1+', ' h1 x1+ > h+ w- x1+', ' h2 x1+ > h- w+ x1+', ' h2 x1+ > h+ w- x1+', ' h3 x1+ > h- w+ x1+', ' h3 x1+ > h+ w- x1+', ' h+ x1+ > h1 w+ x1+', ' h+ x1+ > h2 w+ x1+', ' h+ x1+ > h3 w+ x1+', ' h- x1+ > h1 w- x1+', ' h- x1+ > h2 w- x1+', ' h- x1+ > h3 w- x1+', ' x1- x1- > h1 w- w-', ' h1 x1- > w+ w- x1-', ' h1 x1- > h- w+ x1-', ' h1 x1- > w- w- x1+', ' h1 x1- > h+ w- x1-', ' h2 x1- > h- w+ x1-', ' h2 x1- > h+ w- x1-', ' h3 x1- > h- w+ x1-', ' h3 x1- > h+ w- x1-', ' h+ x1- > h1 w+ x1-', ' h+ x1- > h2 w+ x1-', ' h+ x1- > h3 w+ x1-', ' h- x1- > h1 w- x1-', ' h- x1- > h2 w- x1-', ' h- x1- > h3 w- x1-', ' h1 h1 > h1 w+ w-', ' h1 h1 > h2 w+ w-', ' h1 h1 > h- h1 w+', ' h1 h1 > h- h2 w+', ' h1 h1 > h- h3 w+', ' h1 h1 > h+ h1 w-', ' h1 h1 > h+ h2 w-', ' h1 h1 > h+ h3 w-', ' h1 h1 > h+ h- h2', ' h1 h2 > h1 w+ w-', ' h1 h2 > h- h1 w+', ' h1 h2 > h- h3 w+', ' h1 h2 > h+ h1 w-', ' h1 h2 > h+ h3 w-', ' h1 h2 > el+ el- h2', ' h1 h3 > h- h1 w+', ' h1 h3 > h- h2 w+', ' h1 h3 > h+ h1 w-', ' h1 h3 > h+ h2 w-', ' h+ h1 > h- w+ w+', ' h+ h1 > h+ w+ w-', ' h+ h1 > w+ x1+ x1-', ' h+ h1 > h1 h3 w+', ' h+ h1 > h2 h3 w+', ' h+ h1 > h3 h3 w+', ' h+ h1 > h+ h- w+', ' h+ h1 > h+ h+ w-', ' h+ h1 > h+ h1 h2', ' h- h1 > h- w+ w-', ' h- h1 > h- h- w+', ' h- h1 > h+ w- w-', ' h- h1 > w- x1+ x1-', ' h- h1 > h1 h3 w-', ' h- h1 > h2 h3 w-', ' h- h1 > h3 h3 w-', ' h- h1 > h+ h- w-', ' h- h1 > h- h1 h2', ' h2 h2 > h1 w+ w-', ' h2 h2 > h2 w+ w-', ' h2 h2 > h- h1 w+', ' h2 h2 > h- h2 w+', ' h2 h2 > h- h3 w+', ' h2 h2 > h+ h1 w-', ' h2 h2 > h+ h2 w-', ' h2 h2 > h+ h3 w-', ' h2 h3 > h- h1 w+', ' h2 h3 > h- h2 w+', ' h2 h3 > h+ h1 w-', ' h2 h3 > h+ h2 w-', ' h+ h2 > h+ w+ w-', ' h+ h2 > w+ x1+ x1-', ' h+ h2 > h1 h3 w+', ' h+ h2 > h2 h3 w+', ' h+ h2 > h+ h- w+', ' h+ h2 > h+ h+ w-', ' h- h2 > h- w+ w-', ' h- h2 > h- h- w+', ' h- h2 > w- x1+ x1-', ' h- h2 > h1 h3 w-', ' h- h2 > h2 h3 w-', ' h- h2 > h+ h- w-', ' h3 h3 > h1 w+ w-', ' h3 h3 > h2 w+ w-', ' h3 h3 > h- h1 w+', ' h3 h3 > h- h2 w+', ' h3 h3 > h- h3 w+', ' h3 h3 > h+ h1 w-', ' h3 h3 > h+ h2 w-', ' h3 h3 > h+ h3 w-', ' h+ h3 > w+ x1+ x1-', ' h+ h3 > h1 h2 w+', ' h+ h3 > h1 h3 w+', ' h+ h3 > h2 h3 w+', ' h+ h3 > h+ h- w+', ' h+ h3 > h+ h+ w-', ' h- h3 > h- h- w+', ' h- h3 > w- x1+ x1-', ' h- h3 > h1 h2 w-', ' h- h3 > h1 h3 w-', ' h- h3 > h2 h3 w-', ' h- h3 > h+ h- w-', ' h+ h+ > h1 w+ w+', ' h+ h+ > h+ h1 w+', ' h+ h+ > h+ h2 w+', ' h+ h+ > h+ h3 w+', ' h+ h+ > h+ h+ h1', ' h+ h+ > h+ h+ h3', ' h+ h- > h1 w+ w-', ' h+ h- > h2 w+ w-', ' h+ h- > h- h1 w+', ' h+ h- > h- h2 w+', ' h+ h- > h- h3 w+', ' h+ h- > h+ h1 w-', ' h+ h- > h+ h2 w-', ' h+ h- > h+ h3 w-', ' h+ h- > el+ el- h2', ' h+ h- > h1 h1 h1', ' h- h- > h1 w- w-', ' h- h- > h- h1 w-', ' h- h- > h- h2 w-', ' h- h- > h- h3 w-', ' h- h- > h- h- h1', ' h- h- > h- h- h3']
+    my_proc_list = ['e- x1+ > e- h1 x1+','e- x1+ > e- h2 x1+','e- x1+ > e- h3 x1+',
+                    'e+ x1+ > e+ h1 x1+','e+ x1+ > e+ h2 x1+','e+ x1+ > e+ h3 x1+']
+    my_proc_list += ['el+ h2 > el+ w+ w-']
+                   
     # Create a MERunner object for MG4
-    #my_mg4 = me_comparator.MG4Runner()
-    #my_mg4.setup(mg4_path)
+    my_mg4 = me_comparator.MG4Runner()
+    my_mg4.setup(mg4_path)
 
     # Create a MERunner object for MG5
     my_mg5 = me_comparator.MG5Runner()
@@ -71,20 +68,20 @@ if '__main__' == __name__:
 
     # Create and setup a comparator
     my_comp = me_comparator.MEComparator()
-    my_comp.set_me_runners(my_mg5, my_mg5_ufo)
+    my_comp.set_me_runners(my_mg5, my_mg5_ufo, my_mg4)
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                       model=['mssm','mssm'], orders={'QED':4, 'QCD':4}, energy=2000)
+                       model='mssm', orders={'QED':4, 'QCD':4}, energy=2000)
 
     # Do some cleanup
     #my_comp.cleanup()
 
     # Print the output
-    my_comp.output_result(filename='mssm_result-higgs-new_ufo_mssm.log')
+    my_comp.output_result(filename='mssm_results.log')
 
     
-    pydoc.pager(file('mssm_result-higgs-new_ufo_mssm.log','r').read())
+    pydoc.pager(file('mssm_results.log','r').read())
 
     # Print a list of non zero processes
     #print my_comp.get_non_zero_processes()

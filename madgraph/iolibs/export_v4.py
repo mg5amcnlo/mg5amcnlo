@@ -28,7 +28,7 @@ import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.file_writers as writers
-import madgraph.iolibs.template_files as Template
+import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
 
 import aloha.create_aloha as create_aloha
@@ -49,10 +49,23 @@ def copy_v4template(mgme_dir, dir_path, clean):
     
     #First copy the full template tree if dir_path doesn't exit
     if not os.path.isdir(dir_path):
+        if not mgme_dir:
+            raise MadGraph5Error, \
+                  "No valid MG_ME path given for MG4 run directory creation."
         logger.info('initialize a new directory: %s' % \
                     os.path.basename(dir_path))
         shutil.copytree(os.path.join(mgme_dir, 'Template'), dir_path, True)
-
+    elif not os.path.isfile(os.path.join(dir_path, 'TemplateVersion.txt')):
+        if not mgme_dir:
+            raise MadGraph5Error, \
+                  "No valid MG_ME path given for MG4 run directory creation."
+    try:
+        shutil.copy(os.path.join(mgme_dir, 'MGMEVersion.txt'), dir_path)
+    except IOError:
+        MG5_version = misc.get_pkg_info()
+        open(os.path.join(dir_path, 'MGMEVersion.txt'), 'w').write( \
+            "5." + MG5_version['version'])
+    
     #Ensure that the Template is clean
     if clean:
         logger.info('remove old information in %s' % os.path.basename(dir_path))
@@ -142,8 +155,8 @@ def write_procdef_mg5(file_pos, modelname, process_str):
     """ write an equivalent of the MG4 proc_card in order that all the Madevent
     Perl script of MadEvent4 are still working properly for pure MG5 run."""
     
-    proc_card_template = Template.mg4_proc_card.mg4_template
-    process_template = Template.mg4_proc_card.process_template
+    proc_card_template = template_files.mg4_proc_card.mg4_template
+    process_template = template_files.mg4_proc_card.process_template
     process_text = ''
     coupling = ''
     new_process_content = []
@@ -1385,7 +1398,7 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
 # Routines to output UFO models in MG4 format
 #===============================================================================
 
-def convert_model_to_mg4(model, output_dir):
+def convert_model_to_mg4(model, output_dir, wanted_lorentz = []):
     """ Create a full valid MG4 model from a MG5 model (coming from UFO)"""
     
     # create the MODEL
@@ -1393,17 +1406,22 @@ def convert_model_to_mg4(model, output_dir):
     model_builder = UFO_model_to_mg4(model, write_dir)
     model_builder.build()
     
-    # Write Helas Routine
+    # Create and write ALOHA Routine
+    aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
+    if wanted_lorentz:
+        aloha_model.compute_subset(wanted_lorentz)
+    else:
+        aloha_model.compute_all(save=False)
     write_dir=os.path.join(output_dir, 'Source', 'DHELAS')
-    for abstracthelas in model.get('lorentz').values():
+    for abstracthelas in dict(aloha_model).values():
         abstracthelas.write(write_dir, language='Fortran')
     
     #copy Helas Template
-    cp(MG5DIR + '/aloha/Template/Makefile_F', write_dir+'/makefile')
-    for filename in os.listdir(os.path.join(MG5DIR,'aloha','Template')):
+    cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
+    for filename in os.listdir(os.path.join(MG5DIR,'aloha','template_files')):
         if not filename.lower().endswith('.f'):
             continue
-        cp((MG5DIR + '/aloha/Template/' + filename), write_dir)
+        cp((MG5DIR + '/aloha/template_files/' + filename), write_dir)
     create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
                 
     # Make final link in the Process
@@ -1524,7 +1542,7 @@ class UFO_model_to_mg4(object):
                         'rw_para.f', 'testprog.f', 'rw_para.f']
     
         for filename in file_to_link:
-            cp( MG5DIR + '/models/Template/fortran/' + filename, self.dir_path)
+            cp( MG5DIR + '/models/template_files/fortran/' + filename, self.dir_path)
 
     def create_coupl_inc(self):
         """ write coupling.inc """
@@ -1769,21 +1787,37 @@ class UFO_model_to_mg4(object):
      
         external_param = [format(param) for param in self.params_ext]
         fsock.writelines('\n'.join(external_param))
+
         
     def create_param_read(self):    
         """create param_read"""
-        
-        def format(parameter):
-            """return the line for the ident_card corresponding to this parameter"""
+    
+        def format_line(parameter):
+            """return the line for the ident_card corresponding to this 
+            parameter"""
+
             template = \
-            """ call LHA_get_real(npara,param,value,'%(name)s',%(name)s,%(value)s)"""
-            
-            return template % {'name': parameter.name,
+            """ call LHA_get_real(npara,param,value,'%(name)s',%(name)s,%(value)s)""" \
+                % {'name': parameter.name,
                                'value': self.p_to_f.parse(str(parameter.value))}
         
+            return template        
+    
         fsock = self.open('param_read.inc', format='fortran')
-        external_param = [format(param) for param in self.params_ext]
-        fsock.writelines('\n'.join(external_param))
+        res_strings = [format_line(param) \
+                          for param in self.params_ext]
+        
+        # Correct width sign for Majorana particles (where the width
+        # and mass need to have the same sign)        
+        for particle in self.model.get('particles'):
+            if particle.is_fermion() and particle.get('self_antipart') and \
+                   particle.get('width').lower() != 'zero':
+                
+                res_strings.append('%(width)s = sign(%(width)s,%(mass)s)' % \
+                 {'width': particle.get('width'), 'mass': particle.get('mass')})
+                
+        
+        fsock.writelines('\n'.join(res_strings))
 
     def create_param_card(self):
         """ create the param_card.dat """

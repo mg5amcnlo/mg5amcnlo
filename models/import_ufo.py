@@ -31,7 +31,7 @@ import aloha.create_aloha as create_aloha
 
 import models as ufomodels
 
-logger = logging.getLogger('madgraph.import_ufo')
+logger = logging.getLogger('models.import_ufo')
 
 
 
@@ -45,7 +45,7 @@ def import_model(model_name):
         model_path = os.path.join(MG5DIR, 'models', model_name)
     else:
         raise MadGraph5Error("Path %s is not a valid pathname" % model_name)
-
+            
     # Check the validity of the model
     files_list_prov = ['couplings.py','lorentz.py','parameters.py',
                        'particles.py', 'vertices.py']
@@ -59,9 +59,13 @@ def import_model(model_name):
         
     # use pickle files if defined and up-to-date
     if files.is_uptodate(os.path.join(model_path, 'model.pkl'), files_list):
-        model = save_load_object.load_from_file( \
+        try:
+            model = save_load_object.load_from_file( \
                                           os.path.join(model_path, 'model.pkl'))
-        return model
+        except Exception:
+            logger.info('failed to load model from pickle file. Try importing UFO from File')
+        else:
+            return model
 
     # Load basic information
     ufo_model = ufomodels.load_model(model_name)
@@ -70,10 +74,10 @@ def import_model(model_name):
     model.set('name', os.path.split(model_name)[-1])
  
     # Load Abstract Helas routine from Aloha
-    abstract_model = create_aloha.AbstractALOHAModel(model_name)
+    #abstract_model = create_aloha.AbstractALOHAModel(model_name)
     #abstract_model.compute_all(save=False)
-    model.set('lorentz', dict(abstract_model))
-    
+    #model.set('lorentz', abstract_model)
+
     # Load the Parameter/Coupling in a convinient format.
     parameters, couplings = OrganizeModelExpression(ufo_model).main()
     model.set('parameters', parameters)
@@ -89,6 +93,8 @@ def import_model(model_name):
 class UFOMG5Converter(object):
     """Convert a UFO model to the MG5 format"""
 
+    use_lower_part_names = False
+
     def __init__(self, model, auto=False):
         """ initialize empty list for particles/interactions """
         
@@ -98,7 +104,6 @@ class UFOMG5Converter(object):
         self.model.set('particles', self.particles)
         self.model.set('interactions', self.interactions)
         
-        
         self.ufomodel = model
         
         if auto:
@@ -107,11 +112,19 @@ class UFOMG5Converter(object):
     def load_model(self):
         """load the different of the model first particles then interactions"""
 
-        logger.info('load particle')
+        logger.info('load particles')
+        # Check if multiple particles have the same name but different case.
+        # Otherwise, we can use lowercase particle names.
+        if len(set([p.name for p in self.ufomodel.all_particles] + \
+                   [p.antiname for p in self.ufomodel.all_particles])) == \
+           len(set([p.name.lower() for p in self.ufomodel.all_particles] + \
+                   [p.antiname.lower() for p in self.ufomodel.all_particles])):
+            self.use_lower_part_names = True
+
         for particle_info in self.ufomodel.all_particles:            
             self.add_particle(particle_info)
             
-        logger.info('load vertex')
+        logger.info('load vertices')
         for interaction_info in self.ufomodel.all_vertices:
             self.add_interaction(interaction_info)
         
@@ -144,7 +157,10 @@ class UFOMG5Converter(object):
             if key in base_objects.Particle.sorted_keys:
                 nb_property +=1
                 if key in ['name', 'antiname']:
-                    particle.set(key, value.lower())
+                    if self.use_lower_part_names:
+                        particle.set(key, value.lower())
+                    else:
+                        particle.set(key, value)
                 elif key == 'charge':
                     particle.set(key, float(value))
                 else:
@@ -200,22 +216,30 @@ class UFOMG5Converter(object):
 
         # add to the interactions
         self.interactions.append(interaction)
-        
-    @staticmethod
-    def treat_color(data_string, interaction_info):
+    
+    _pat_T = re.compile(r'''T\((?P<first>\d*),(?P<second>\d*)\)''')
+    _pat_id = re.compile(r'''Identity\((?P<first>\d*),(?P<second>\d*)\)''')
+    
+    def treat_color(self, data_string, interaction_info):
         """ convert the string to ColorStirng"""
-        original = copy.copy(data_string)
-        # Change identity in color.TC        
-        p = re.compile(r'''Identity\((?P<first>\d*),(?P<second>\d*)\)''')
-        #data_string = p.sub('color.T(\g<first>,\g<second>)', data_string)
-        pattern = p.search(data_string)
-        if pattern:
-            particle = interaction_info.particles[int(pattern.group('first'))-1]
-            if particle.color < 0 :
-                data_string = p.sub('color.T(\g<second>,\g<first>)', data_string)
-            else:
-                data_string = p.sub('color.T(\g<first>,\g<second>)', data_string)
         
+        #original = copy.copy(data_string)
+        #data_string = p.sub('color.T(\g<first>,\g<second>)', data_string)
+        
+        
+        output = []
+        for term in data_string.split('*'):
+            pattern = self._pat_id.search(term)
+            if pattern:
+                particle = interaction_info.particles[int(pattern.group('first'))-1]
+                if particle.color < 0 :
+                    output.append(self._pat_id.sub('color.T(\g<second>,\g<first>)', term))
+                else:
+                    output.append(self._pat_id.sub('color.T(\g<first>,\g<second>)', term))
+            else:
+                output.append(term)
+        data_string = '*'.join(output)
+
         # Change convention for summed indices
         p = re.compile(r'\'\w(?P<number>\d+)\'')
         data_string = p.sub('-\g<number>', data_string)
@@ -238,40 +262,6 @@ class UFOMG5Converter(object):
             col_obj.replace_indices(new_indices)
         
         return output
-    
-        
-        
-            
-# Helping class
-class ParamExpr(object):
-    """ A convenient class for parameter/coupling """
-    
-    def __init__(self, name, expression, type, depend=()):
-        """store param/coupling information"""
-        self.name = name
-        self.expr = expression # python expression
-        self.type = type
-        self.depend = depend
-    
-    def __eq__(self, other):
-        """ equality"""
-        
-        try:
-            return other.name == self.name
-        except:
-            return other == self.name
-
-class ExternalParamExpr(ParamExpr):
-    """ A convenient class for external couplings"""
-    
-    depend = ('external',)
-    type = 'real'
-    
-    def __init__(self, name, value, lhablock, lhacode):
-        self.name = name
-        self.value = value
-        self.lhablock = lhablock
-        self.lhacode = lhacode
       
 class OrganizeModelExpression:
     """Organize the couplings/parameters of a model"""
@@ -293,9 +283,9 @@ class OrganizeModelExpression:
     def __init__(self, model):
     
         self.model = model  # UFOMODEL
-        self.params = {}     # depend on -> paramexpr
-        self.couplings = {}  # depend on -> paramexpr
-        self.all_expr = {} # variable_name -> paramexpr
+        self.params = {}     # depend on -> ModelVariable
+        self.couplings = {}  # depend on -> ModelVariable
+        self.all_expr = {} # variable_name -> ModelVariable
     
     def main(self):
         """Launch the actual computation and return the associate 
@@ -312,13 +302,13 @@ class OrganizeModelExpression:
         
         for param in self.model.all_parameters:
             if param.nature == 'external':
-                parameter = ExternalParamExpr(param.name, param.value, \
+                parameter = base_objects.ParamCardVariable(param.name, param.value, \
                                                param.lhablock, param.lhacode)
                 
             else:
                 expr = self.shorten_expr(param.value)
                 depend_on = self.find_dependencies(expr)
-                parameter = ParamExpr(param.name, expr, param.type, depend_on)
+                parameter = base_objects.ModelVariable(param.name, expr, param.type, depend_on)
             
             self.add_parameter(parameter)
 
@@ -327,7 +317,7 @@ class OrganizeModelExpression:
         """ add consistently the parameter in params and all_expr.
         avoid duplication """
         
-        assert isinstance(parameter, ParamExpr)
+        assert isinstance(parameter, base_objects.ModelVariable)
         
         if parameter.name in self.all_expr.keys():
             return
@@ -342,7 +332,7 @@ class OrganizeModelExpression:
         """ add consistently the coupling in couplings and all_expr.
         avoid duplication """
         
-        assert isinstance(coupling, ParamExpr)
+        assert isinstance(coupling, base_objects.ModelVariable)
         
         if coupling.name in self.all_expr.keys():
             return
@@ -364,7 +354,7 @@ class OrganizeModelExpression:
             # shorten expression, find dependencies, create short object
             expr = self.shorten_expr(coupling.value)
             depend_on = self.find_dependencies(expr)
-            parameter = ParamExpr(coupling.name, expr, 'complex', depend_on)
+            parameter = base_objects.ModelVariable(coupling.name, expr, 'complex', depend_on)
             
             # Add consistently in the couplings/all_expr
             try:
@@ -419,7 +409,7 @@ class OrganizeModelExpression:
         real = float(matchobj.group('real'))
         imag = float(matchobj.group('imag'))
         if real == 0 and imag ==1:
-            new_param = ParamExpr('complexi', 'complex(0,1)', 'complex')
+            new_param = base_objects.ModelVariable('complexi', 'complex(0,1)', 'complex')
             self.add_parameter(new_param)
             return 'complexi'
         else:
@@ -436,11 +426,11 @@ class OrganizeModelExpression:
 
         if expr.isdigit():
             output = '_' + output #prevent to start with a number
-            new_param = ParamExpr(output, old_expr,'real')
+            new_param = base_objects.ModelVariable(output, old_expr,'real')
         else:
             depend_on = self.find_dependencies(expr)
             type = self.search_type(expr)
-            new_param = ParamExpr(output, old_expr, type, depend_on)
+            new_param = base_objects.ModelVariable(output, old_expr, type, depend_on)
         self.add_parameter(new_param)
         return output
         
@@ -452,11 +442,11 @@ class OrganizeModelExpression:
         output = '%s__%s' % (operation, expr)
         old_expr = ' cmath.%s(%s) ' %  (operation, expr)
         if expr.isdigit():
-            new_param = ParamExpr(output, old_expr , 'real')
+            new_param = base_objects.ModelVariable(output, old_expr , 'real')
         else:
             depend_on = self.find_dependencies(expr)
             type = self.search_type(expr)
-            new_param = ParamExpr(output, old_expr, type, depend_on)
+            new_param = base_objects.ModelVariable(output, old_expr, type, depend_on)
         self.add_parameter(new_param)
         
         return output        
@@ -469,7 +459,7 @@ class OrganizeModelExpression:
         old_expr = ' complexconjugate(%s) ' % expr
         depend_on = self.find_dependencies(expr)
         type = 'complex'
-        new_param = ParamExpr(output, old_expr, type, depend_on)
+        new_param = base_objects.ModelVariable(output, old_expr, type, depend_on)
         self.add_parameter(new_param)  
                     
         return output            

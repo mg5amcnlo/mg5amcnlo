@@ -13,7 +13,7 @@
 #
 ################################################################################
 
-"""Unit test library for the export v4 format routines"""
+"""Unit test library for the export Pythia8 format routines"""
 
 import StringIO
 import copy
@@ -24,11 +24,12 @@ import re
 import tests.unit_tests as unittest
 
 import aloha.aloha_writers as aloha_writers
+import aloha.create_aloha as create_aloha
 
 import madgraph.iolibs.export_pythia8 as export_pythia8
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.helas_call_writers as helas_call_writer
-import madgraph.iolibs.import_ufo as import_ufo
+import models.import_ufo as import_ufo
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 
@@ -668,8 +669,8 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
             self.model = save_load_object.load_from_file(model_pkl)
         else:
             self.model = import_ufo.import_model('sm')
-        self.model_builder = export_pythia8.UFO_model_to_pythia8(self.model,
-                                                                 "/tmp")
+        self.model_builder = export_pythia8.UFOModelConverterPythia8(\
+                                                            self.model, "/tmp")
         
         test_file_writers.CheckFileCreate.clean_files
 
@@ -695,9 +696,12 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
         template_h_files = []
         template_cc_files = []
 
-        for abstracthelas in self.model_builder.model.get('lorentz').values():
+        aloha_model = create_aloha.AbstractALOHAModel(\
+                                         self.model_builder.model.get('name'))
+        aloha_model.compute_all(save=False)
+        for abstracthelas in dict(aloha_model).values():
             abstracthelas.write('/tmp', 'CPP')
-            abstracthelas.write('/tmp', 'Fortran')
+            #abstracthelas.write('/tmp', 'Fortran')
 
         print "Please try compiling the files /tmp/*.cc and /tmp/*.f:"
         print "cd /tmp; g++ -c *.cc; gfortran -c *.f"

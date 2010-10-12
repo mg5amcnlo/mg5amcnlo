@@ -496,10 +496,11 @@ class ModelTest(unittest.TestCase):
     """Test class for the Model object"""
 
     mymodel = base_objects.Model()
-    myinterlist = base_objects.InteractionList()
-    mypartlist = base_objects.ParticleList()
 
     def setUp(self):
+
+        self.myinterlist = base_objects.InteractionList()
+        self.mypartlist = base_objects.ParticleList()
 
         # Create a model with gluon and top quark + a single interaction
         self.mypartlist.append(base_objects.Particle({'name':'t',
@@ -648,7 +649,7 @@ class ModelTest(unittest.TestCase):
                   'self_antipart':True}))
         self.mymodel.set('particles', particles)
         mypartdict[22] = particles[2]
-        self.assertEqual(mypartdict, self.mymodel['particle_dict'])
+        self.assertEqual(mypartdict, self.mymodel.get('particle_dict'))
 
         interactions = copy.copy(self.mymodel.get('interactions'))
         interactions.append(base_objects.Interaction({
@@ -663,14 +664,119 @@ class ModelTest(unittest.TestCase):
                       'orders':{'QED':1}}))
         self.mymodel.set('interactions', interactions)
         myinterdict[2] = interactions[1]
-        self.assertEqual(myinterdict, self.mymodel['interaction_dict'])
+        self.assertEqual(myinterdict, self.mymodel.get('interaction_dict'))
         
+    def test_check_majoranas(self):
+        """Test the check_majoranas function"""
+
+        # By default, mymodel has no fermion flow clashes
+        self.assertFalse(self.mymodel.get('got_majoranas'))
+
+        # Add a Majorana particle
+        self.mypartlist.append(base_objects.Particle({'name':'n1',
+                  'antiname':'n1',
+                  'spin':2,
+                  'color':[],
+                  'mass':'mn1',
+                  'width':'wn1',
+                  'line':'straight',
+                  'charge':0.,
+                  'pdg_code':1000022,
+                  'propagating':True,
+                  'self_antipart':True}))
+
+        self.mymodel.set('particles', self.mypartlist)
+        self.assertTrue(self.mymodel.get('got_majoranas'))
+
+        # Remove the Majorana particle again
+        self.mypartlist.pop(-1)
+        self.mymodel.set('particles', self.mypartlist)
+        self.assertFalse(self.mymodel.get('got_majoranas'))
+
+        # Add a new set of particles
+        self.mypartlist.append(base_objects.Particle({'name':'x1',
+                  'antiname':'x1~',
+                  'spin':2,
+                  'color':[],
+                  'mass':'mx1',
+                  'width':'wx1',
+                  'line':'straight',
+                  'charge':0.,
+                  'pdg_code':10024,
+                  'propagating':True,
+                  'self_antipart':False}))
+        
+        self.mypartlist.append(base_objects.Particle({'name':'x2',
+                  'antiname':'x2~',
+                  'spin':2,
+                  'color':[],
+                  'mass':'mx2',
+                  'width':'wx2',
+                  'line':'straight',
+                  'charge':0.,
+                  'pdg_code':10025,
+                  'propagating':True,
+                  'self_antipart':False}))
+
+        self.mypartlist.append(base_objects.Particle({'name':'z',
+                      'antiname':'z',
+                      'spin':3,
+                      'color':[],
+                      'mass':'zero',
+                      'width':'zero',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':32,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        self.mymodel.set('particles', self.mypartlist)
+        
+        # Add a non-fermion clash 4-fermion interaction
+        self.myinterlist.append(base_objects.Interaction({
+                      'id':2,
+                      'particles': base_objects.ParticleList(\
+                                         [self.mymodel.get_particle(10024), \
+                                          self.mymodel.get_particle(-10025), \
+                                          self.mymodel.get_particle(10025), \
+                                          self.mymodel.get_particle(-10024), \
+                                          self.mymodel.get_particle(32)]),
+                      'color': [color.ColorString([color.f(1, 2, 3),
+                                                   color.d(1, 2, 3)])],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        self.mymodel.set('interactions', self.myinterlist)
+        self.assertFalse(self.mymodel.get('got_majoranas'))
+        
+        # Add a fermion clash 4-fermion interaction
+        self.myinterlist.append(base_objects.Interaction({
+                      'id':3,
+                      'particles': base_objects.ParticleList(\
+                                         [self.mymodel.get_particle(10024), \
+                                          self.mymodel.get_particle(-10025), \
+                                          self.mymodel.get_particle(10025), \
+                                          self.mymodel.get_particle(10024), \
+                                          self.mymodel.get_particle(32)]),
+                      'color': [color.ColorString([color.f(1, 2, 3),
+                                                   color.d(1, 2, 3)])],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        self.mymodel.set('interactions', self.myinterlist)
+        self.assertTrue(self.mymodel.get('got_majoranas'))
+
+
     def test_pass_in_standard_name(self):
         """Test if we can overwrite the name of the model following MG 
         convention"""
         
         model_name = [(part.get('name'), part.get('antiname')) \
                                           for part in self.mymodel['particles']]
+
         model2 = copy.copy(self.mymodel)
         
         # check that standard name are not modified
@@ -680,24 +786,28 @@ class ModelTest(unittest.TestCase):
         self.assertEqual(set(model_name),set(model2_name))
         
         # add a particle with non conventional name
-        model2['particles'].append(base_objects.Particle({'name':'ee',
+        particles = model2['particles']
+        particles.append(base_objects.Particle({'name':'ee',
                   'antiname':'eex',
                   'pdg_code':1}))
-        
+        model2.set('particles', particles)
+
         model2.pass_particles_name_in_mg_default()
+
         model2_name = [(part.get('name'), part.get('antiname')) \
                                                 for part in model2['particles']]        
         self.assertEqual(set(model_name + [('d','d~')]), set(model2_name))
         
         # add a particles with non conventional name with the conventional name
         #associtaed to another particle
-        model2['particles'].append(base_objects.Particle({'name':'u',
+        particles.append(base_objects.Particle({'name':'u',
                   'antiname':'d~',
                   'pdg_code':100}))
-        model2['particles'].append(base_objects.Particle({'name':'ee',
+        particles.append(base_objects.Particle({'name':'ee',
                   'antiname':'eex',
                   'pdg_code':2}))
-        
+        model2.set('particles', particles)
+
         self.assertRaises(madgraph.MadGraph5Error, \
                                        model2.pass_particles_name_in_mg_default)
 #===============================================================================

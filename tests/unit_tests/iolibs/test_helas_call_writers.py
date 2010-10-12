@@ -754,7 +754,6 @@ class FortranHelasCallWriterTest(HelasModelTestSetup):
 class UFOHELASCallWriterTest(unittest.TestCase):
     """Test class for the FortranHelasCallWriterTest object"""
 
-    mymodel = helas_call_writers.HelasCallWriter()
     mybasemodel = base_objects.Model()
 
     def setUp(self):
@@ -844,7 +843,6 @@ class UFOHELASCallWriterTest(unittest.TestCase):
         self.mybasemodel.set('particles', mypartlist)
         self.mybasemodel.set('interactions', myinterlist)
         self.mybasemodel.set('name', 'sm')
-        self.mymodel.set('model', self.mybasemodel)
         
         
         #import madgraph.interface.cmd_interface as cmd
@@ -871,10 +869,11 @@ class UFOHELASCallWriterTest(unittest.TestCase):
         
         self.mymatrixelement = helas_objects.HelasMatrixElement(myamplitude)
         
-    def test_UFO_ordering(self):
-        """Test automatic generation of wavefunction and amplitude calls"""
+    def test_UFO_fortran_helas_call_writer(self):
+        """Test automatic generation of UFO helas calls in Fortran"""
         
-        fortran_model = helas_call_writers.FortranUFOHelasCallWriter()
+        fortran_model = helas_call_writers.FortranUFOHelasCallWriter(\
+            self.mybasemodel)
         
         result = fortran_model.get_matrix_element_calls(self.mymatrixelement)
         solution =["CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))",
@@ -888,6 +887,51 @@ class UFOHELASCallWriterTest(unittest.TestCase):
                    "CALL VVVV1_3(W(1,4),W(1,1),W(1,3),GC_51,wmas, wwid, W(1,7))",
                    "# Amplitude(s) for diagram number 2",
                    "CALL VVV1_0(W(1,2),W(1,7),W(1,5),GC_12,AMP(2))"]
+        
+        for i, line in enumerate(solution):
+            self.assertEqual(line, result[i])
+        
+    def test_UFO_Pythia8_helas_call_writer(self):
+        """Test automatic generation of UFO helas calls in C++"""
+        
+        cpp_model = helas_call_writers.Pythia8UFOHelasCallWriter(\
+            self.mybasemodel)
+        
+        result = cpp_model.get_matrix_element_calls(self.mymatrixelement)
+        solution =["Pythia8_sm::vxxxxx(p[0],mME[0],hel[0],-1,w[0]);",
+                   "Pythia8_sm::vxxxxx(p[1],mME[1],hel[1],-1,w[1]);",
+                   "Pythia8_sm::vxxxxx(p[2],mME[2],hel[2],+1,w[2]);",
+                   "Pythia8_sm::vxxxxx(p[3],mME[3],hel[3],+1,w[3]);",
+                   "Pythia8_sm::vxxxxx(p[4],mME[4],hel[4],+1,w[4]);",
+                   "VVVV1_4(w[0],w[2],w[1],pars->GC_51,pars->wmas, pars->wwid, w[5]);",
+                   "# Amplitude(s) for diagram number 1",
+                   "VVV1_0(w[5],w[3],w[4],pars->GC_12,amp[0]);",
+                   "VVVV1_3(w[3],w[0],w[2],pars->GC_51,pars->wmas, pars->wwid, w[6]);",
+                   "# Amplitude(s) for diagram number 2",
+                   "VVV1_0(w[1],w[6],w[4],pars->GC_12,amp[1]);"]
+        
+        for i, line in enumerate(solution):
+            self.assertEqual(line, result[i])
+        
+
+    def test_UFO_Python_helas_call_writer(self):
+        """Test automatic generation of UFO helas calls in Python"""
+        
+        cpp_model = helas_call_writers.PythonUFOHelasCallWriter(\
+            self.mybasemodel)
+        
+        result = cpp_model.get_matrix_element_calls(self.mymatrixelement)
+        solution =["w[0] = vxxxxx(p[0],zero,hel[0],-1)",
+                   "w[1] = vxxxxx(p[1],wmas,hel[1],-1)",
+                   "w[2] = vxxxxx(p[2],zero,hel[2],+1)",
+                   "w[3] = vxxxxx(p[3],wmas,hel[3],+1)",
+                   "w[4] = vxxxxx(p[4],zmas,hel[4],+1)",
+                   "w[5] = VVVV1_4(w[0],w[2],w[1],GC_51,wmas, wwid)",
+                   "# Amplitude(s) for diagram number 1",
+                   "amp[0] = VVV1_0(w[5],w[3],w[4],GC_12)",
+                   "w[6] = VVVV1_3(w[3],w[0],w[2],GC_51,wmas, wwid)",
+                   "# Amplitude(s) for diagram number 2",
+                   "amp[1] = VVV1_0(w[1],w[6],w[4],GC_12)"]
         
         for i, line in enumerate(solution):
             self.assertEqual(line, result[i])

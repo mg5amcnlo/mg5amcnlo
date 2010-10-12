@@ -37,6 +37,10 @@ class FRBaseClass(object):
     def __str__(self):
         return self.name
 
+    def nice_string(self):
+        """ return string with the full information """
+        return '\n'.join(['%s \t: %s' %(name, value) for name, value in self.__dict__.items()])
+
 
     def __repr__(self):
         replacements = [

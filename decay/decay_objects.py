@@ -77,8 +77,9 @@ class DecayParticle(base_objects.Particle):
     sorted_keys = ['name', 'antiname', 'spin', 'color',
                    'charge', 'mass', 'width', 'pdg_code',
                    'texname', 'antitexname', 'line', 'propagating',
-                   'is_part', 'self_antipart', 
-                   'decay_vertexlist', 'decay_channels', 'decay_width',
+                   'is_part', 'self_antipart', 'is_stable',
+                   'decay_vertexlist', 'decay_channels', 'apx_decaywidth',
+                   'decay_amplitudes'
                   ]
 
 
@@ -117,11 +118,13 @@ class DecayParticle(base_objects.Particle):
 
         # The decay_vertexlist is a dictionary with vertex list as items and
         # final state particles and on shell condition as keys.
-        # decay_channels is similar.
+        # decay_channels, decay_amplitudes are similar.
 
         self['decay_vertexlist'] = {}
         self['decay_channels'] = {}
-        self['decay_width'] = 0.
+        self['decay_amplitudes'] = {}
+        self['apx_decaywidth'] = 0.
+        
     
     def check_vertex_condition(self, partnum, onshell, 
                               value = base_objects.VertexList(), model = {}):
@@ -287,6 +290,25 @@ class DecayParticle(base_objects.Particle):
                     "The onshell condition is not consistent with the model."
         return True
 
+
+    def check_amplitudes(self, partnum, value):
+        """Check the validity of DecayAmplitudes condition, including,
+           partnum: final state particle number,
+           value  : the assign amplitudelist, all amplitudes in it must
+                    be consistent to the processess they hold.
+        """
+        # Check if partnum is an integer.
+        if not isinstance(partnum, int):
+            raise self.PhysicsObjectError, \
+                "Final particle number %s must be an integer." % str(partnum)
+        
+        # Check if the value is a DecayAmplitudeList
+        if (not isinstance(value, DecayAmplitudeList) and value):
+            raise self.PhysicsObjectError, \
+                "%s must be DecayAmplitudeList type." % str(value)
+                
+        return True
+
     def filter(self, name, value):
         """Filter for valid DecayParticle vertexlist."""
         
@@ -311,6 +333,17 @@ class DecayParticle(base_objects.Particle):
                     self.check_vertexlist(key[0], key[1], item)
                 if name == 'decay_channels':
                     self.check_channels(key[0], key[1], item)          
+
+        if name == 'decay_amplitudes':
+
+            #Value must be a dictionary.
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError, \
+                    "Decay_amplitudes %s must be a dictionary." % str(value)
+
+            # For each key and item, check them with check_amplitudes
+            for key, item in value.items():                
+                self.check_amplitudes(key, item)
                     
         if name == 'vertexlist_found' or name == 'is_stable':
             if not isinstance(value, bool):
@@ -322,7 +355,7 @@ class DecayParticle(base_objects.Particle):
                 raise self.PhysicsObjectError, \
                     "Propery %s should be int type." % name
 
-        if name == 'decay_width':
+        if name == 'apx_decaywidth':
             if not isinstance(value, float):
                 raise self.PhysicsObjectError, \
                     "Propery %s should be float type." % name
@@ -501,6 +534,36 @@ class DecayParticle(base_objects.Particle):
         else:
             raise self.PhysicsObjectError, \
                 "The input must be a list of diagrams."
+
+    def get_amplitudes(self, partnum):
+        """Return the n-body decay amplitudes.
+           partnum = n.
+        """
+        #check the validity of arguments
+        if not isinstance(partnum, int):
+            raise self.PhysicsObjectError, \
+                "The particle number %s must be an integer."  %str(partnum)
+
+        return self.get('decay_amplitudes')[partnum]
+
+    def set_amplitudes(self, partnum, value):
+        """Set the n_body decay_amplitudes.
+           partnum: n, 
+           value: the decay_amplitudes that is tried to assign.
+        """
+
+        #Check the value by check_amplitudes
+        if isinstance(value, DecayAmplitudeList):
+            if self.check_amplitudes(partnum, value):
+                self['decay_amplitudes'][partnum] = value
+        elif isinstance(value, list) and \
+                all([isinstance(a, DecayAmplitude) for a in value]):
+            value_transform = DecayAmplitudeList(value)
+            if self.check_amplitudes(partnum, value_transform):
+                self['decay_amplitudes'][partnum] = value_transform
+        else:
+            raise self.PhysicsObjectError, \
+                "The input must be a list of decay amplitudes."
         
               
     def find_channels(self, partnum, model):
@@ -550,7 +613,10 @@ class DecayParticle(base_objects.Particle):
         # If the channel list exist, return.
         if (partnum, True) in self['decay_channels'].keys() or \
                 (partnum, False) in self['decay_channels'].keys():
-                return
+            logger.info("Particle %s has found channels in %d-body level. " \
+                            % (self['name'], partnum) +\
+                        "No channel search will not proceed." )
+            return
 
         # Set empty decay_channels for stable particles
         if self.get('is_stable'):
@@ -561,7 +627,7 @@ class DecayParticle(base_objects.Particle):
                             "No channel search will not proceed." )
             return
 
-        self['decay_width'] = 0.
+        self['apx_decaywidth'] = 0.
         # Find channels from 2-body decay to partnum-body decay channels.
         for clevel in range(2, partnum+1):
             self.find_channels_nextlevel(model)
@@ -600,6 +666,7 @@ class DecayParticle(base_objects.Particle):
 
         connect_channel_vertex = self.connect_channel_vertex
         check_repeat = self.check_repeat
+
         # If there is a vertex in clevel, construct it
         if (clevel, True) in self['decay_vertexlist'].keys() or \
                 (clevel, False) in self['decay_vertexlist'].keys():
@@ -620,7 +687,7 @@ class DecayParticle(base_objects.Particle):
                     temp_channel['has_idpart'] = True
                 # Add width to total width if onshell
                 if temp_channel.get_onshell(model):
-                    self['decay_width'] +=temp_channel.get_apx_decaywidth(model)
+                    self['apx_decaywidth'] +=temp_channel.get_apx_decaywidth(model)
                 # Calculate the order
                 temp_channel.calculate_orders(model)
                 self.get_channels(clevel, temp_channel.get_onshell(model)).\
@@ -661,30 +728,15 @@ class DecayParticle(base_objects.Particle):
                         temp_c = self.connect_channel_vertex(sub_c, index, 
                                                              vert, model)
                         temp_c_o = temp_c.get_onshell(model)
-                        # Append this channel if not exist
-                        if not temp_c in self.get_channels(clevel,temp_c_o):
-                            # If temp_c has identical particles in it,
-                            # check with other existing channels from
-                            # duplication.
-                            if temp_c.get('has_idpart'):
-                                if not self.check_repeat(clevel,
-                                                         temp_c_o, temp_c):
-                                    temp_c.calculate_orders(model)
-                                    # Calculate the width if onshell
-                                    if temp_c_o:
-                                        self['decay_width'] += temp_c.\
-                                            get_apx_decaywidth(model)
-                                    self.get_channels(clevel, temp_c_o).\
-                                        append(temp_c)
-                            # If no id. particles, append this channel.
-                            else:
-                                temp_c.calculate_orders(model)
-                                # Calculate the width if onshell
-                                if temp_c_o:
-                                    self['decay_width'] += temp_c.\
-                                        get_apx_decaywidth(model)
-                                self.get_channels(clevel, temp_c_o).\
-                                    append(temp_c)
+                        # Append this channel if not exist yet
+                        if not self.check_repeat(clevel,
+                                                 temp_c_o, temp_c):
+                            temp_c.calculate_orders(model)
+                            # Calculate the width if onshell
+                            if temp_c_o:
+                                self['apx_decaywidth'] += temp_c.\
+                                    get_apx_decaywidth(model)
+                            self.get_channels(clevel, temp_c_o).append(temp_c)
 
         # After the total width is known, estimate the next level width
         # by get_apx_decaywidth_nextlevel                                
@@ -693,9 +745,10 @@ class DecayParticle(base_objects.Particle):
                 channel.get_apx_decaywidth_nextlevel(model)
 
         # Sort the channels by their width
-        self.get_channels(clevel, True).sort(channelcmp)
-        self.get_channels(clevel, True).sort(channelcmp)
-    
+        self.get_channels(clevel, False).sort(channelcmp_width)
+
+        # Group channels into amplitudes
+        self.group_channels_2_amplitudes(clevel, model)
 
     def connect_channel_vertex(self, sub_channel, index, vertex, model):
         """ Helper function to connect a vertex to one of the legs 
@@ -758,22 +811,72 @@ class DecayParticle(base_objects.Particle):
         # this will significantly reduce the number of call to
         # check_channels_equiv
 
+
         return any(Channel.check_channels_equiv(other_c, channel)\
                        for other_c in self.get_channels(clevel, onshell) \
-                       if sum(other_c['final_mass_list']) == \
-                       sum(channel['final_mass_list']))
+                       if abs(sum(other_c['final_mass_list'])-\
+                       sum(channel['final_mass_list']))< 0.00001
+                   )
+
+    def group_channels_2_amplitudes(self, clevel, model):
+        """ After the channels is found, combining channels with the same 
+            final states into amplitudes.
+            clevel: the number of final particles
+            model: the model use in find_channels
+        """
+
+        if not isinstance(clevel, int):
+            raise self.PhysicsObjectError, \
+                "The channel level %s must be an integer." % str(clevel)
+
+        if not isinstance(model, DecayModel):
+            raise self.PhysicsObjectError, \
+                "The model must be an DecayModel object."
+
+        # Reset the value of decay_amplitudes
+        self.set_amplitudes(clevel, DecayAmplitudeList())
+        # Sort the order of onshell channels according to their final mass list.
+        self.get_channels(clevel, True).sort(channelcmp_final)
+
+        for channel in self.get_channels(clevel, True):
+            
+            found = False
+            # Record the final particle id.
+            final_pid = sorted([l.get('id') for l in channel.get_final_legs()])
+        
+            # Check if there is a amplitude for it. Since the channels with 
+            # the similar final states are put together. Use reversed order
+            # of loop.
+            for amplt in reversed(self['decay_amplitudes'][clevel]):
+                # Do not include the first leg (initial id)
+                if sorted([l.get('id') for l in amplt['process']['legs'][1:]])\
+                        == final_pid:
+                    amplt['diagrams'].append(channel)
+                    found = True
+                    break
+
+            # If no amplitude is satisfied, initiate a new one.
+            if not found:
+                self.get_amplitudes(clevel).append(DecayAmplitude(channel,
+                                                                  model))
+
+        # Calculate the apx_decaywidth and apx_br for every amplitude.
+        for amp in self.get_amplitudes(clevel):
+            amp.get('apx_decaywidth')
+        self.get_amplitudes(clevel).sort(amplitudecmp_width)
+
 
     def calculate_branch_ratio(self):
         """ Calculate the branch ratio of the decay channels of this particle.
             Find channels and calculate width before running this,
             otherwise their is no branch ratio."""
 
-        if self['decay_width']:
+        if self['apx_decaywidth']:
             for key, clist in self['decay_channels'].items():
                 if key[1]:
                     for c in clist:
                         c['apx_br'] = \
-                            c.get('apx_decaywidth')/self['decay_width'] *100
+                            c.get('apx_decaywidth')/self['apx_decaywidth'] *100
         else:
             logger.info('Particle %d is stable, branch ratio is not available.'\
                             % self.get('pdg_code'))
@@ -783,10 +886,11 @@ class DecayParticle(base_objects.Particle):
         """ This function will sum all the estimated width for nextlevel to
             provide the error of current width."""
 
-        if self['decay_width']:
-            err = sum([sum([c['apx_decaywidth_nextlevel'] for c in clist]) \
-                           for key, clist in self['decay_channels'].items()\
-                           if (key[0] > 2) and not key[1]])/self['decay_width']
+        if self['apx_decaywidth']:
+            final_level = max([k[0] for k, i in self['decay_channels'].items()])
+            err = sum([c['apx_decaywidth_nextlevel'] \
+                           for c in self.get_channels(final_level, False)])/ \
+                           self['apx_decaywidth']
         else:
             err = 0
 
@@ -1915,21 +2019,21 @@ class DecayModel(base_objects.Model):
                                         %(part.get('pdg_code'), 
                                           self['decaywidth_list']\
                                               [(part.get('pdg_code'), True)],
-                                          part['decay_width'],
-                                          part['decay_width']/self['decaywidth_list'][(part.get('pdg_code'), True)])))
+                                          part['apx_decaywidth'],
+                                          part['apx_decaywidth']/self['decaywidth_list'][(part.get('pdg_code'), True)])))
                 # For width not available, do not calculate the ratio.
                 except KeyError:
                     fdata.write(str('%11d    %.4e     %.4e    %s\n'\
                                         %(part.get('pdg_code'), 
                                           0.,
-                                          part['decay_width'],
+                                          part['apx_decaywidth'],
                                           'N/A')))
                 # For width in param_card is zero.
                 except ZeroDivisionError:
                     fdata.write(str('%11d    %.4e     %.4e    %s\n'\
                                         %(part.get('pdg_code'), 
                                           0.,
-                                          part['decay_width'],
+                                          part['apx_decaywidth'],
                                           'N/A')))
             # For stable particles
             else:
@@ -1976,13 +2080,13 @@ class DecayModel(base_objects.Model):
         nonspart = ''
         for p in self['particles']:
             # Write the table only for particles with finite width.
-            if p.get('decay_width'):
+            if p.get('apx_decaywidth'):
                 p.calculate_branch_ratio()
                 nonspart += ('\n'+seperator)
                 nonspart += str(\
                     'PARTICLE : %d  \nWIDTH    : %.4e  \nEST. ERR.: %.4f %%\n'\
                         %(p.get('pdg_code'), 
-                          p.get('decay_width'),
+                          p.get('apx_decaywidth'),
                           p.estimate_width_error()*100 ))
                 nonspart += seperator
                 # Write the decay table from 2-body decay.
@@ -2059,7 +2163,7 @@ class Channel(base_objects.Diagram):
                    'orders',
                    'onshell', 'has_idpart', 'id_part_list',
                    'apx_matrixelement_sq', 'apx_psarea', 'apx_decaywidth',
-                   'apx_decaywidth_nextlevel']
+                   'apx_decaywidth_nextlevel', 'apx_width_calculated']
 
     def default_setup(self):
         """Default values for all properties"""
@@ -2082,8 +2186,8 @@ class Channel(base_objects.Diagram):
         self['apx_psarea'] = 0.
         self['apx_decaywidth'] = 0.
         # branch ratio is multiply by 100.
-        self['apx_br'] = 0.
         self['apx_decaywidth_nextlevel'] = 0.
+        self['apx_width_calculated'] = False
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
@@ -2095,7 +2199,8 @@ class Channel(base_objects.Diagram):
                 raise self.PhysicsObjectError, \
                     "Value %s is not a float" % str(value)
         
-        if name == 'onshell' or name == 'has_idpart':
+        if name == 'onshell' or name == 'has_idpart' or \
+                name == 'apx_width_calculated':
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid onshell condition." % str(value)
@@ -2138,13 +2243,9 @@ class Channel(base_objects.Diagram):
         mystr = super(Channel, self).nice_string()
         if self['vertices']:
             if self['onshell']:
-                if self.get('apx_br'):
-                    mystr +=" (BR: %2.2f %%, width = %.3e)" \
-                        % (self.get('apx_br'), self['apx_decaywidth'])
-                else:
-                    mystr +=" (width = %.3e)" % self['apx_decaywidth']
+                mystr +=" (width = %.3e)" % self['apx_decaywidth']
             else:
-                mystr +=" (estimated further width = %.3e)" % self['apx_decaywidth_nextlevel']              
+                mystr +=" (est. further width = %.3e)" % self['apx_decaywidth_nextlevel']              
 
         return mystr
 
@@ -2173,9 +2274,8 @@ class Channel(base_objects.Diagram):
                 raise self.PhysicsObjectError, \
                     "The argument %s must be a model." % str(model)
 
-            self['final_mass_list'] =[abs(eval(model.get_particle(l.get('id')).\
-                                               get('mass'))) \
-                                      for l in self.get_final_legs()]
+            self['final_mass_list'] =sorted([abs(eval(model.get_particle(l.get('id')).get('mass'))) \
+                                                for l in self.get_final_legs()])
             ini_mass = abs(eval(model.get_particle(self.get_initial_id()).get('mass')))
             # ini_mass = ini_mass.real
             self['onshell'] = ini_mass > sum(self['final_mass_list'])
@@ -2243,8 +2343,8 @@ class Channel(base_objects.Diagram):
             by the recursive "check_channels_equiv_rec" function."""
 
         # Return if the channel has no identical particle.
-        if not channel_a.get('has_idpart') or not channel_b.get('has_idpart'):
-            return False
+        #if not channel_a.get('has_idpart') or not channel_b.get('has_idpart'):
+        #    return False
         
         # Get the final states of channels
         final_pid_a = set([l.get('id') for l in channel_a.get_final_legs()])
@@ -2527,7 +2627,7 @@ class Channel(base_objects.Diagram):
                 # q is assumed as 0.5M
                 if i != len(self.get('vertices'))-2: 
                     apx_m *= self.get_apx_fnrule(vert.get('legs')[-1].get('id'),
-                                                 0.5*M, False, model)
+                                                 1*M, False, model)
                 # Assign the value to initial particle.
                 else:
                     apx_m *= self.get_apx_fnrule(vert.get('legs')[-1].get('id'),
@@ -2542,7 +2642,6 @@ class Channel(base_objects.Diagram):
             for leg in self.get_final_legs():
                 apx_m *= self.get_apx_fnrule(leg.get('id'),
                                              avg_E, True, model)
-
         # For both on-shell and off-shell cases,
         # Correct the factor of spin/color sum of initial particle (average it)
         apx_m *= 1./(ini_part.get('spin'))
@@ -2564,7 +2663,7 @@ class Channel(base_objects.Diagram):
             value = 1.
         else:
             value = 1./((q ** 2 - mass ** 2) ** 2 + \
-                            mass **2 * part.get('decay_width') **2)
+                            mass **2 * part.get('apx_decaywidth') **2)
         
         # Set the value according the particle type
         # vector boson case
@@ -2667,9 +2766,14 @@ class Channel(base_objects.Diagram):
            formula: Gamma = ps_area* matrix element square * (1/2M)
            Note that it still simulate the value for off-shell decay."""
 
+        # Return the value now if width has been calculated.
+        if self['apx_width_calculated']:
+            return self['apx_decaywidth']
+        
         self['apx_decaywidth'] = self.get_apx_matrixelement_sq(model) * \
             self.get_apx_psarea(model)/ \
             (2*abs(eval(model.get_particle(self.get_initial_id()).get('mass'))))
+        self['apx_width_calculated'] = True
 
         return self['apx_decaywidth']
 
@@ -2685,13 +2789,13 @@ class Channel(base_objects.Diagram):
             # width
             part = model.get_particle(abs(leg.get('id')))
             # For legs that are possible to decay.
-            if (not part.get('is_stable')) and part.get('decay_width'):
+            if (not part.get('is_stable')) and part.get('apx_decaywidth'):
                 # Suppose the further decay is two-body.
                 # Formula: ratio = width_of_this_leg * (M/m_leg)**(-1) *
                 #                  (2 * M * 8 * pi * (c_psarea* (M/8/pi)**2)) *
                 #                  1/(leg_mleg(mleg)/leg_mleg(0.5M) *
                 #                  Propagator of mleg(0.5M)
-                ratio *= (1+ part.get('decay_width')*\
+                ratio *= (1+ part.get('apx_decaywidth')*\
                               (M/abs(eval(part.get('mass')))) **(-1) *\
                               (c_psarea*(M **3/4/math.pi)) / \
                               (self.get_apx_fnrule(leg.get('id'), 0.5*M,
@@ -2721,7 +2825,144 @@ class ChannelList(base_objects.DiagramList):
         """ Test if the object is a valid Channel for the list. """
         return isinstance(obj, Channel)
 
+
+
+#===============================================================================
+# DecayAmplitude: An Amplitude like object contain Process and Channels
+#===============================================================================
+class DecayAmplitude(diagram_generation.Amplitude):
+    """ DecayAmplitude is derived from Amplitude. It collects channels 
+        with the same final states and create a Process object to describe it.
+        This could used to generate HELAS amplitude."""
+
+    sorted_keys = ['process', 'diagrams', 'apx_decaywidth', 'apx_br']
+
+    def default_setup(self):
+        """Default values for all properties. Property 'diagrams' is now
+           as ChannelList object."""
+
+        self['process'] = base_objects.Process()
+        self['diagrams'] = ChannelList()
+        self['apx_decaywidth'] = 0.
+        self['apx_br'] = 0.
+        
+
+    def __init__(self, argument=None, model=None):
+        """ Allow initialization with a Channel and DecayModel to create 
+            the corresponding process."""
+
+        if isinstance(argument, Channel) and isinstance(model, DecayModel):
+
+            super(DecayAmplitude, self).__init__()
+
+            # Set the corresponding process.
+            # Append the initial leg.
+            leglist = base_objects.LegList([base_objects.Leg({'id': argument.get_initial_id(),
+                                                             'state': False})])
+            # Extract legs from final legs of Channel.
+            leglist.extend(base_objects.LegList(\
+                    copy.deepcopy(sorted([l for l in argument.get_final_legs()],
+                                         legcmp))))
+            
+            # Set the number of every leg as zero.
+            [l.set('number', 0) for l in leglist]
+
+            # Set up process and diagrams.
+            self.set('process', base_objects.Process({'legs':leglist,
+                                                      'model':model}))
+            self.set('diagrams', ChannelList([argument]))
+
+        else:
+            super(DecayAmplitude, self).__init__(argument)
+
+    def filter(self, name, value):
+        """Filter for valid amplitude property values."""
+
+        if name == 'process':
+            if not isinstance(value, base_objects.Process):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid Process object." % str(value)
+            # Reset the width and br
+            self.reset_width_br()
+        if name == 'diagrams':
+            if not isinstance(value, ChannelList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid ChannelList object." % str(value)
+            # Reset the width and br
+            self.reset_width_br()
+        if name == 'apx_decaywidth' and name == 'apx_br':
+            if not isinstance(value, float):
+                raise self.PhysicsObjectError, \
+                        "%s is not a float." % str(value)
+
+        return True
+
+    def get(self, name):
+        """Get the value of the property name."""
+
+        # When apx_decaywidth is request, recalculate it if needed.
+        # Calculate br in the same time.
+        if name == 'apx_decaywidth' and not self[name]:
+            self['apx_decaywidth'] = sum([c.get('apx_decaywidth') \
+                                  for c in self['diagrams']])
+            try:
+                self['apx_br'] = self['apx_decaywidth']/ \
+                    self['process']['model'].\
+                    get_particle(self['diagrams'][0].get_initial_id()).\
+                    get('apx_decaywidth')
+            except ZeroDivisionError:
+                logger.warning("Try to get branch ratio from a zero width particle %s. No action proceed." % self['process']['model'].\
+                              get_particle(self['diagrams'][0].get_initial_id()).\
+                                get('name'))
+
+        # If apx_br is requested, recalculate from the apx_decaywidth if needed.
+        if name == 'apx_br' and not self[name]:
+            try:
+                self['apx_br'] = self['apx_decaywidth']/ \
+                    self['process']['model'].\
+                    get_particle(self['diagrams'][0].get_initial_id()).\
+                    get('apx_decaywidth')
+            except ZeroDivisionError:
+                logger.warning("Try to get branch ratio from a zero width particle %s. No action proceed." % self['process']['model'].\
+                              get_particle(self['diagrams'][0].get_initial_id()).\
+                                get('name'))
+
+        return super(DecayAmplitude, self).get(name)
+
+    def get_sorted_keys(self):
+        """Return DecayProcess property names as a nicely sorted list."""
+
+        return self.sorted_keys
+
+    def reset_width_br(self):
+        """ Reset the value of decay width and branch ratio.
+            Automatically done in the set(filter) function.
+            This is needed when content of diagrams or process are changed."""
+        
+        self['apx_decaywidth'] = 0.
+        self['apx_br'] = 0.
+        
+#===============================================================================
+# DecayAmplitudeList: An Amplitude like object contain Process and Channels
+#===============================================================================
+class DecayAmplitudeList(diagram_generation.AmplitudeList):
+    """ List for DecayAmplitudeList objects.
+    """
+
+    def is_valid_element(self, obj):
+        """ Test if the object is a valid DecayAmplitude for the list. """
+        return isinstance(obj, DecayAmplitude)
+
+    def nice_string(self):
+        """ Nice string from Amplitude """
+        mystr = '\n'.join([a.nice_string() for a in self])
+
+        return mystr
+
+
+#===============================================================================
 # Helper function
+#===============================================================================
 def legcmp(x, y):
     """Define the leg comparison, useful when testEqual is execute"""
     mycmp = cmp(x['id'], y['id'])
@@ -2729,10 +2970,24 @@ def legcmp(x, y):
         mycmp = cmp(x['state'], y['state'])
     return mycmp
 
-def channelcmp(x, y):
+def channelcmp_width(x, y):
     """ Sort the channels by their width."""
     if x['onshell']:
         mycmp = cmp(x['apx_decaywidth'], y['apx_decaywidth'])
     else:
         mycmp = cmp(x['apx_decaywidth_nextlevel'], y['apx_decaywidth_nextlevel'])
+    return -mycmp
+
+def channelcmp_final(x, y):
+    """ Sort the channels by their final_mass_list. 
+        This will be similar to sort by the final state particles."""
+
+    mycmp = cmp(x['final_mass_list'], y['final_mass_list'])
+
+    return -mycmp
+
+def amplitudecmp_width(x, y):
+    """ Sort the amplitudes by their width."""
+    mycmp = cmp(x['apx_decaywidth'], y['apx_decaywidth'])
+
     return -mycmp

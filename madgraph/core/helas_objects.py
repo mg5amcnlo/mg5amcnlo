@@ -501,7 +501,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                      wavefunctions,
                                      diagram_wavefunctions,
                                      external_wavefunctions,
-                                     wf_number, force_flip_flow=False):
+                                     wf_number, force_flip_flow=False,
+                                     number_to_wavefunctions=[]):
         """Recursive function. Check for Majorana fermion. If found,
         continue down to external leg, then flip all the fermion flows
         on the way back up, in the correct way:
@@ -644,6 +645,13 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         wf.set('number', wf.get('number') - 1)
                 # Since we reuse the old wavefunction, reset wf_number
                 wf_number = wf_number - 1
+                # Need to replace wavefunction in number_to_wavefunctions
+                # (in case this wavefunction is in another of the dicts)
+                for n_to_wf_dict in number_to_wavefunctions:
+                    if new_wf in n_to_wf_dict.values():
+                        for key in n_to_wf_dict.keys():
+                            if n_to_wf_dict[key] == new_wf:
+                                n_to_wf_dict[key] = new_wf
             except ValueError:
                 pass
 
@@ -1000,15 +1008,16 @@ class HelasWavefunction(base_objects.PhysicsObject):
         """Return the index of the particle that should be conjugated."""
 
         if self.needs_hermitian_conjugate():
-            parts = [wf for wf in self.get('mothers') if \
-                     wf.get('fermionflow') < 0]
+            fermions = [wf for wf in self.get('mothers') if \
+                        wf.is_fermion()]
             indices = []
             self_index = self.find_outgoing_number() - 1
-            for wf in parts:
-                if self.get('mothers').index(wf) < self_index:
-                    indices.append(self.get('mothers').index(wf)/2 + 1)
-                else:
-                    indices.append((self.get('mothers').index(wf) + 1)/2 + 1)
+            if self.is_fermion():
+                fermions.insert(self_index, self)
+            for i in range(0,len(fermions), 2):
+                if fermions[i].get('fermionflow') < 0 or \
+                   fermions[i+1].get('fermionflow') < 0:
+                    indices.append(i/2 + 1)
             return tuple(indices)
         else:
             return ()
@@ -1107,7 +1116,8 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                                    external_wavefunctions,
                                    my_state,
                                    wf_number,
-                                   force_flip_flow=False):
+                                   force_flip_flow=False,
+                                   number_to_wavefunctions=[]):
         """Check for clashing fermion flow (N(incoming) !=
         N(outgoing)). If found, we need to trace back through the
         mother structure (only looking at fermions), until we find a
@@ -1174,7 +1184,8 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                                                 diagram_wavefunctions,
                                                 external_wavefunctions,
                                                 wf_number,
-                                                force_flip_flow)
+                                                force_flip_flow,
+                                                number_to_wavefunctions)
 
             # Replace old mother with new mother
             self[self.index(mother)] = new_mother
@@ -1202,7 +1213,8 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                                    external_wavefunctions,
                                    my_state,
                                    wf_number,
-                                   force_flip_flow)
+                                   force_flip_flow,
+                                   number_to_wavefunctions)
 
         return wf_number
 
@@ -1723,9 +1735,14 @@ class HelasAmplitude(base_objects.PhysicsObject):
         """Return the index of the particle that should be conjugated."""
 
         if self.needs_hermitian_conjugate():
-            parts = [wf for wf in self.get('mothers') if \
-                     wf.get('fermionflow') < 0]
-            return [self.get('mothers').index(wf)/2 + 1 for wf in parts]
+            fermions = [wf for wf in self.get('mothers') if \
+                        wf.is_fermion()]
+            indices = []
+            for i in range(0,len(fermions), 2):
+                if fermions[i].get('fermionflow') < 0 or \
+                   fermions[i+1].get('fermionflow') < 0:
+                    indices.append(i/2 + 1)
+            return tuple(indices)
         else:
             return ()
 
@@ -2182,7 +2199,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                               diagram_wavefunctions,
                                               external_wavefunctions,
                                               "Nostate",
-                                              wf_number)
+                                              wf_number,
+                                              False,
+                                              number_to_wavefunctions)
 
                 # Now generate HelasAmplitudes from the last vertex.
                 if lastvx.get('id'):
@@ -2213,23 +2232,23 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         
                     amp.set('color_indices', new_color_list)
 
-                    # Generate HelasDiagram
+                    # Add amplitude to amplitdes in helas_diagram
                     helas_diagram.get('amplitudes').append(amp)
-                    if diagram_wavefunctions and not \
-                                       helas_diagram.get('wavefunctions'):
-                        helas_diagram.set('wavefunctions',
-                                          diagram_wavefunctions)
 
-                # Sort the wavefunctions according to number
-                diagram_wavefunctions.sort(lambda wf1, wf2: \
-                              wf1.get('number') - wf2.get('number'))
+            # After generation of all wavefunctions and amplitudes,
+            # add wavefunctions to diagram
+            helas_diagram.set('wavefunctions', diagram_wavefunctions)
 
-                if optimization:
-                    wavefunctions.extend(diagram_wavefunctions)
-                    wf_mother_arrays.extend([wf.to_array() for wf \
-                                             in diagram_wavefunctions])
-                else:
-                    wf_number = len(process.get('legs'))
+            # Sort the wavefunctions according to number
+            diagram_wavefunctions.sort(lambda wf1, wf2: \
+                          wf1.get('number') - wf2.get('number'))
+
+            if optimization:
+                wavefunctions.extend(diagram_wavefunctions)
+                wf_mother_arrays.extend([wf.to_array() for wf \
+                                         in diagram_wavefunctions])
+            else:
+                wf_number = len(process.get('legs'))
 
             # Append this diagram in the diagram list
             helas_diagrams.append(helas_diagram)

@@ -2119,11 +2119,37 @@ class test_aloha_creation(unittest.TestCase):
         
     def test_aloha_symmetries(self):
         """ test that the symmetries of particles works """
+    
+        # Check that full identification symmetry works
+        helas_suite = create_aloha.AbstractALOHAModel('sm')
+        helas_suite.look_for_symmetries()
+        solution = {'VVS1': {2: 1}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 'VVVV2': {2: 1, 4: 3}} 
+        self.assertEqual(solution, helas_suite.symmetries)
+        
+    def test_has_symmetries(self):
+        """Check that functions returning symmetries works"""
         
         helas_suite = create_aloha.AbstractALOHAModel('sm')
         helas_suite.look_for_symmetries()
-        solution = {'SSSS1': {2: 1, 3: 1, 4: 3}, 'VVS1': {2: 1}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 'VVVV2': {2: 1, 4: 3}} 
-        self.assertEqual(solution, helas_suite.symmetries)
+        
+        base = helas_suite.has_symmetries('SSS1', 3)
+        self.assertEqual(base, 1)
+
+        base = helas_suite.has_symmetries('SSS1', 3, valid_output=(1, 2))
+        self.assertEqual(base, 1)
+        
+        base = helas_suite.has_symmetries('SSS1', 3, valid_output=(1,))
+        self.assertEqual(base, 1)
+        
+        base = helas_suite.has_symmetries('SSS1', 3, valid_output=(2,))
+        self.assertEqual(base, 2)   
+        
+        base = helas_suite.has_symmetries('VVS1', 3, valid_output=(3,))
+        self.assertEqual(base, None)
+        
+        base = helas_suite.has_symmetries('VVS1', 3, valid_output=(1, 2))
+        self.assertEqual(base, None)   
+        
         
     def test_full_sm_aloha(self):
         """test that the full SM seems to work"""
@@ -2147,6 +2173,35 @@ class test_aloha_creation(unittest.TestCase):
             spin_solution = spin_index[helas.spins[output_part -1]]
             self.assertEqual(abstract.expr.numerator.nb_spin, spin_solution, \
                              error % name)
+    
+    def test_mssm_subset_creation(self):
+        """ test the creation of subpart of ALOHA routines 
+        including clash routines """
+        helas_suite = create_aloha.AbstractALOHAModel('mssm')
+        
+        requested_routines=[('FFV1' , (), 0), 
+                            ('FFV1', (), 2),
+                            ('FFV1', (1,), 0),
+                            ('FFV2', (1,), 3),
+                            ('VVV1', (), 3)]
+        
+        helas_suite.compute_subset(requested_routines)        
+        self.assertEqual(len(helas_suite), 5)
+        
+        # Apply basic check for coherence
+        error = 'wrong contraction for %s'
+        for (name, output_part), abstract in helas_suite.items():
+            if not output_part:
+                self.assertEqual(abstract.expr.nb_lor, 0, error % name)
+                self.assertEqual(abstract.expr.nb_spin, 0, error % abstract.expr.spin_ind)
+            elif name in ['FFV2C1','VVV1']:
+                self.assertEqual(abstract.expr.numerator.nb_lor, 1, error % name)
+                self.assertEqual(abstract.expr.numerator.nb_spin, 0, error % name)
+            elif name in ['FFV1']:
+                self.assertEqual(abstract.expr.numerator.nb_lor, 0, error % name)
+                self.assertEqual(abstract.expr.numerator.nb_spin, 1, error % name)
+            else:
+                raise Exception, 'not expected routine %s' % name
             
     def find_helas(self, name, model):
         for lorentz in model.all_lorentz:
@@ -2176,7 +2231,8 @@ class test_aloha_creation(unittest.TestCase):
         self.assertNotEqual(amp.name, conjg_amp.name)
         
     def test_aloha_expr_FFV2C1(self):
-        from models.sm.object_library import Lorentz
+        """Test analytical expression for fermion clash routine"""
+        from models.mssm.object_library import Lorentz
         FFV = Lorentz(name = 'FFV2',
                  spins = [ 2, 2, 3 ],
                  structure = 'Gamma(3,2,\'s1\')*ProjM(\'s1\',1)')
@@ -2374,6 +2430,65 @@ class TestAlohaWriter(unittest.TestCase):
         map(self.assertEqual, converted, solution)
  
  
-    
-    
+    def test_pythonwriter(self):
+        """ test that python writer works """
         
+        solution ="""import wavefunctions
+def SSS1_1(S2, S3, C, M1, W1):
+    S1 = wavefunctions.WaveFunction(size=3)
+    S1[1] = S2[1]+S3[1]
+    S1[2] = S2[2]+S3[2]
+    P1 = [-complex(S1[1]).real, \\
+            - complex(S1[2]).real, \\
+            - complex(S1[2]).imag, \\
+            - complex(S1[1]).imag]
+    denom =1.0/(( (M1*( -M1+1j*W1))+( (P1[0]**2)-(P1[1]**2)-(P1[2]**2)-(P1[3]**2))))
+    S1[0]= C*denom*1j*(S3[0]*S2[0])
+    return S1
+def SSS1_2(S2, S3, C, M1, W1):
+    return SSS1_1(S3,S2,C,M1,W1)
+def SSS1_3(S2, S3, C, M1, W1):
+    return SSS1_1(S3,S2,C,M1,W1)"""
+        
+        SSS = UFOLorentz(name = 'SSS1',
+                 spins = [ 1, 1, 1 ],
+                 structure = '1')        
+        builder = create_aloha.AbstractRoutineBuilder(SSS)
+        amp = builder.compute_routine(1)
+        amp.add_symmetry(2)
+        amp.add_symmetry(3)
+        
+        routine = amp.write(output_dir=None, language='Python')
+        
+        split_solution = solution.split('\n')
+        split_routine = routine.split('\n')
+        for i,line in enumerate(split_routine):
+            self.assertEqual(split_solution[i],line)
+        self.assertEqual(len(split_routine), len(split_solution))
+        
+        
+    def test_python_routine_are_exec(self):
+        """ check if the python routine can be call """
+            
+        FFV2 = UFOLorentz(name = 'FFV2',
+               spins = [ 2, 2, 3 ],
+               structure = 'Gamma(3,2,\'s1\')*ProjM(\'s1\',1)')
+            
+        builder = create_aloha.AbstractRoutineBuilder(FFV2)
+        builder.apply_conjugation()
+        amp = builder.compute_routine(0)
+        routine = amp.write(output_dir=None, language='Python')
+
+        
+        solution = """import wavefunctions
+def FFV2C1_0(F1,F2,V3,C):
+    vertex = C*( (F1[3]*( (F2[0]*( -1j*V3[1]-V3[2]))+(F2[1]*( 1j*V3[0]+1j*V3[3]))))+(F1[2]*( (F2[0]*( 1j*V3[0]-1j*V3[3]))+(F2[1]*( -1j*V3[1]+V3[2])))))
+    return vertex""" 
+
+        split_solution = solution.split('\n')
+        split_routine = routine.split('\n')
+        for i,line in enumerate(split_routine):
+            self.assertEqual(split_solution[i],line)
+        self.assertEqual(len(split_routine), len(split_solution))
+            
+            

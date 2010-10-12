@@ -25,15 +25,15 @@ import re
 import shutil
 import subprocess
 
+import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
 import madgraph.iolibs.helas_call_writers as helas_call_writers
-import madgraph.iolibs.import_ufo as import_ufo
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.file_writers as writers
-import madgraph.iolibs.template_files as Template
+import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
 from madgraph import MadGraph5Error, MG5DIR
 
@@ -1075,15 +1075,15 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
 # Routines to output UFO models in Pythia8 format
 #===============================================================================
 
-def convert_model_to_pythia8(self, model, output_dir):
+def convert_model_to_pythia8(model, output_dir):
     """Create a full valid Pythia 8 model from an MG5 model (coming from UFO)"""
 
     # create the model parameter files
-    model_builder = UFOModelToPythia8Converter(model, output_dir)
-    model_builder.build()
+    model_builder = UFOModelConverterPythia8(model, output_dir)
+    model_builder.write_files()
 
 #===============================================================================
-# UFOModelToPythia8Converter
+# UFOModelConverterPythia8
 #===============================================================================
 
 class UFOModelConverterPythia8(object):
@@ -1118,10 +1118,10 @@ class UFOModelConverterPythia8(object):
         # For dependent couplings, only want to update the ones
         # actually used in each process. For other couplings and
         # parameters, just need a list of all.
-        self.coups_dep = {}    # name -> import_ufo.ParamExpr
-        self.coups_indep = []  # import_ufo.ParamExpr
-        self.params_dep = []   # import_ufo.ParamExpr
-        self.params_indep = [] # import_ufo.ParamExpr
+        self.coups_dep = {}    # name -> base_objects.ModelVariable
+        self.coups_indep = []  # base_objects.ModelVariable
+        self.params_dep = []   # base_objects.ModelVariable
+        self.params_indep = [] # base_objects.ModelVariable
         self.p_to_cpp = parsers.UFOExpressionParserPythia8()
 
         # Prepare parameters and couplings for writeout in C++
@@ -1132,11 +1132,11 @@ class UFOModelConverterPythia8(object):
         """Modify the parameters to fit with Pythia8 conventions and
         creates all necessary files"""
 
-        # Write parameter (and coupling) class files
-        self.write_parameter_class_files()
-
         # Write Helas Routines
         self.write_aloha_routines()
+
+        # Write parameter (and coupling) class files
+        self.write_parameter_class_files()
 
     # Routines for preparing parameters and couplings from the model
 
@@ -1153,13 +1153,13 @@ class UFOModelConverterPythia8(object):
                 params_ext += self.model['parameters'][key]
             elif 'aS' in key:
                 for p in self.model['parameters'][key]:
-                    self.params_dep.append(import_ufo.ParamExpr(p.name,
+                    self.params_dep.append(base_objects.ModelVariable(p.name,
                                                  self.p_to_cpp.parse(p.expr),
                                                  p.type,
                                                  p.depend))
             else:
                 for p in self.model['parameters'][key]:
-                    self.params_indep.append(import_ufo.ParamExpr(p.name,
+                    self.params_indep.append(base_objects.ModelVariable(p.name,
                                                  self.p_to_cpp.parse(p.expr),
                                                  p.type,
                                                  p.depend))
@@ -1174,14 +1174,14 @@ class UFOModelConverterPythia8(object):
             if 'aS' in self.slha_to_depend.setdefault(key, ()):
                 # This value needs to be set event by event
                 self.params_dep.insert(0,
-                                       import_ufo.ParamExpr(param.name,
+                                       base_objects.ModelVariable(param.name,
                                                          self.slha_to_expr[key],
                                                          'real'))
             else:
                 try:
                     # This is an SM parameter defined above
                     self.params_indep.insert(0,
-                                             import_ufo.ParamExpr(param.name,
+                                             base_objects.ModelVariable(param.name,
                                                          self.slha_to_expr[key],
                                                          'real'))
                 except:
@@ -1198,7 +1198,7 @@ class UFOModelConverterPythia8(object):
                                             % param.lhacode[0]
                     if key in self.slha_to_expr:
                         self.params_indep.insert(0,\
-                                                 import_ufo.ParamExpr(param.name,
+                                                 base_objects.ModelVariable(param.name,
                                                           self.slha_to_expr[key],
                                                           'real'))
                     else:
@@ -1218,13 +1218,13 @@ class UFOModelConverterPythia8(object):
         for key, coup_list in self.model['couplings'].items():
             if 'aS' in key:
                 for c in coup_list:
-                    self.coups_dep[c.name] = import_ufo.ParamExpr(c.name,
+                    self.coups_dep[c.name] = base_objects.ModelVariable(c.name,
                                                  self.p_to_cpp.parse(c.expr),
                                                  c.type,
                                                  c.depend)
             else:
                 for c in coup_list:
-                    self.coups_indep.append(import_ufo.ParamExpr(c.name,
+                    self.coups_indep.append(base_objects.ModelVariable(c.name,
                                                  self.p_to_cpp.parse(c.expr),
                                                  c.type,
                                                  c.depend))
@@ -1289,6 +1289,11 @@ class UFOModelConverterPythia8(object):
         writers.CPPWriter(parameter_h_file).writelines(file_h)
         writers.CPPWriter(parameter_cc_file).writelines(file_cc)
 
+        logger.info("Created files %s and %s in directory %s" \
+                    % (os.path.split(parameter_h_file)[-1],
+                       os.path.split(parameter_cc_file)[-1],
+                       os.path.split(parameter_h_file)[0]))
+
     def write_parameters(self, params):
         """Write out the definitions of parameters"""
 
@@ -1316,6 +1321,15 @@ class UFOModelConverterPythia8(object):
         res_strings = []
         for param in params:
             res_strings.append("%s=%s;" % (param.name, param.expr))
+
+        # Correct width sign for Majorana particles (where the width
+        # and mass need to have the same sign)        
+        for particle in self.model.get('particles'):
+            if particle.is_fermion() and particle.get('self_antipart') and \
+                   particle.get('width').lower() != 'zero':
+                res_strings.append("if (%s < 0)" % particle.get('mass'))
+                res_strings.append("%(width)s = -abs(%(width)s);" % \
+                                   {"width": particle.get('width')})
 
         return "\n".join(res_strings)
 
@@ -1351,7 +1365,10 @@ class UFOModelConverterPythia8(object):
         template_h_files = self.read_aloha_template_files(ext = 'h')
         template_cc_files = self.read_aloha_template_files(ext = 'cc')
 
-        for abstracthelas in self.model.get('lorentz').values():
+        aloha_model = create_aloha.AbstractALOHAModel(\
+                                         self.model.get('name'))
+        aloha_model.compute_all(save=False)
+        for abstracthelas in dict(aloha_model).values():
             aloha_writer = aloha_writers.ALOHAWriterForCPP(abstracthelas,
                                                         self.dir_path)
             header = aloha_writer.define_header()
@@ -1370,12 +1387,19 @@ class UFOModelConverterPythia8(object):
         writers.CPPWriter(model_h_file).writelines(file_h)
         writers.CPPWriter(model_cc_file).writelines(file_cc)
 
+        logger.info("Created files %s and %s in directory %s" \
+                    % (os.path.split(model_h_file)[-1],
+                       os.path.split(model_cc_file)[-1],
+                       os.path.split(model_h_file)[0]))
+
+
     def read_aloha_template_files(self, ext):
         """Read all ALOHA template files with extension ext, strip them of
         compiler options and namespace options, and return in a list"""
 
         template_files = []
-        for filename in glob.glob(os.path.join(MG5DIR, 'aloha', 'Template', '*.%s' % ext)):
+        for filename in glob.glob(os.path.join(MG5DIR, 'aloha',
+                                               'template_files', '*.%s' % ext)):
             file = open(filename, 'r')
             template_file_string = ""
             while file:

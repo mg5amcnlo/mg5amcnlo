@@ -77,8 +77,8 @@ class IOImportV4Test(unittest.TestCase):
                                                       'propagating':True,
                                                       'is_part':True,
                                                       'self_antipart':False}),
-                                 base_objects.Particle({'name':'T1',
-                                                      'antiname':'T1',
+                                 base_objects.Particle({'name':'t1',
+                                                      'antiname':'t1',
                                                       'spin':5,
                                                       'color':8,
                                                       'mass':'ZERO',
@@ -233,10 +233,11 @@ class IOImportV4Test(unittest.TestCase):
                                      'lorentz':[''],
                                      'couplings':{(0, 0):'MGVX4'},
                                      'orders':{'QED':1}})])
-
-        self.assertEqual(import_v4.read_interactions_v4(fsock_inter,
-                                                        myparts),
-                                                goal_inter_list)
+        
+        result = import_v4.read_interactions_v4(fsock_inter, myparts)
+        self.assertEqual(len(result), len(goal_inter_list))
+        for i in range(len(result)):
+            self.assertEqual(result[i], goal_inter_list[i])
 
 
 class ProcCardV4ReaderTest(unittest.TestCase):
@@ -293,8 +294,8 @@ class ProcCardV4ReaderTest(unittest.TestCase):
                    'add process p p > z z $ a / g, (z > w+ w- $ a / g, w- > mu- vm $ a / g), z > w+ w- $ a / g @4 QED=1 QCD=99',
                    'add process p p > Z Z, Z > W+ W- $a /g @4',
                    'add process p p > Z Z QCD=2 @4',
-                   '# Set up MadEvent directory',
-                   'setup madevent_v4 . -f'] 
+                   '# Output processes to MadEvent directory',
+                   'output -f'] 
         self.assertEqual(len(lines),len(solution))
         for i,command in enumerate(lines):
             self.assertEqual(command,solution[i])

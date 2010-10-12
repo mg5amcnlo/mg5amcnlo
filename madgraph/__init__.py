@@ -23,13 +23,12 @@ MG5DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),
                                                                 os.path.pardir))
 MG4DIR = None
 
-mg4_possibility = [os.path.join(MG5DIR, os.path.pardir),
-                os.path.join(os.getcwd(), os.path.pardir),
-                os.getcwd()]
+mg4_possibility = [MG5DIR, os.path.join(os.getcwd(), os.path.pardir),
+                   os.path.join(MG5DIR, os.path.pardir),
+                   os.getcwd()]
 
 for position in mg4_possibility:
-    if os.path.exists(os.path.join(position, 'MGMEVersion.txt')) and \
-                   os.path.exists(os.path.join(position, 'UpdateNotes.txt')):
+    if os.path.isdir(os.path.join(position, 'Template')):
         MG4DIR = os.path.realpath(position)
         break
 del mg4_possibility

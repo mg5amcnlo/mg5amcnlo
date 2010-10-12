@@ -9,11 +9,12 @@ class WaveFunction(list):
 				  2:6,
 				  3:6}
 	
-	def __init__(self, spin):
+	def __init__(self, spin= None, size=None):
 		"""Init the list with zero value"""
 		
-		self.spin = spin
-		list.__init__(self, [0]*spin_to_size[spin])
+		if spin:
+			size = self.spin_to_size[spin]
+		list.__init__(self, [0]*size)
 		
 
 def ixxxxx(p,fmass,nhel,nsf):

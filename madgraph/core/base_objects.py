@@ -123,7 +123,6 @@ class PhysicsObject(dict):
         with improved format."""
 
         mystr = '{\n'
-
         for prop in self.get_sorted_keys():
             if isinstance(self[prop], str):
                 mystr = mystr + '    \'' + prop + '\': \'' + \
@@ -600,8 +599,6 @@ class InteractionList(PhysicsObjectList):
         Return a list where the first element is the n>0 dictionary and
         the second one is n-1>1."""
 
-        logger.info("Generate reference dictionaries for diagram generation")
-
         ref_dict_to0 = {}
         ref_dict_to1 = {}
 
@@ -620,6 +617,25 @@ class InteractionList(PhysicsObjectList):
             interaction_dict[inter.get('id')] = inter
 
         return interaction_dict
+
+    def synchronize_interactions_with_particles(self, particle_dict):
+        """Make sure that the particles in the interactions are those
+        in the particle_dict, and that there are no interactions
+        refering to particles that don't exist. To be called when the
+        particle_dict is updated in a model.
+        """
+
+        iint = 0
+        while iint < len(self):
+            inter = self[iint]
+            particles = inter.get('particles')
+            try:
+                for ipart, part in enumerate(particles):
+                    particles[ipart] = particle_dict[part.get_pdg_code()]
+                iint += 1
+            except KeyError:
+                # This interaction has particles that no longer exist
+                self.pop(iint)
 
 #===============================================================================
 # Model
@@ -683,7 +699,7 @@ class Model(PhysicsObject):
                                                         type(value)
 
         if name == 'got_majoranas':
-            if not isinstance(value, bool):
+            if not isinstance(value, bool) or value == None:
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a boolean" % \
                                                         type(value)
@@ -704,6 +720,10 @@ class Model(PhysicsObject):
         if (name == 'particle_dict') and not self[name]:
             if self['particles']:
                 self['particle_dict'] = self['particles'].generate_dict()
+            if self['interactions']:
+                self['interactions'].synchronize_interactions_with_particles(\
+                                                          self['particle_dict'])
+                
 
         if (name == 'interaction_dict') and not self[name]:
             if self['interactions']:
@@ -721,8 +741,8 @@ class Model(PhysicsObject):
 
         if name == 'particles':
             # Reset dictionaries
-            self['ref_dict_to0'] = {}
             self['particle_dict'] = {}
+            self['ref_dict_to0'] = {}
             self['got_majoranas'] = None
 
         if name == 'interactions':
@@ -730,22 +750,14 @@ class Model(PhysicsObject):
             self['interaction_dict'] = {}
             self['ref_dict_to1'] = {}
             self['ref_dict_to0'] = {}
+            self['got_majoranas'] = None
 
-        # call the mother routine
-        result = Model.__bases__[0].set(self, name, value)
-        
-        if result:
-            if name == 'particles':
-                # Generate new dictionaries
-                self.get('particle_dict')
-                self.get('got_majoranas')
+        result = Model.__bases__[0].set(self, name, value) # call the mother routine
 
-            if name == 'interactions':
-                # Generate new dictionaries
-                self.get('interaction_dict')
-                self.get('ref_dict_to1')
-                self.get('ref_dict_to0')
-
+        if name == 'particles':
+            # Recreate particle_dict
+            self.get('particle_dict')
+            
         return result
 
     def get_sorted_keys(self):
@@ -772,10 +784,23 @@ class Model(PhysicsObject):
             return None
 
     def check_majoranas(self):
-        """Return True if there are Majorana fermions, False otherwise"""
+        """Return True if there is fermion flow violation, False otherwise"""
 
-        return any([part.is_fermion() and part.get('self_antipart') \
-                    for part in self.get('particles')])
+        if any([part.is_fermion() and part.get('self_antipart') \
+                for part in self.get('particles')]):
+            return True
+
+        # No Majorana particles, but may still be fermion flow
+        # violating interactions
+        for inter in self.get('interactions'):
+            fermions = [p for p in inter.get('particles') if p.is_fermion()]
+            for i in range(0, len(fermions), 2):
+                if fermions[i].get('is_part') == \
+                   fermions[i+1].get('is_part'):
+                    # This is a fermion flow violating interaction
+                    return True
+        # No fermion flow violations
+        return False
 
     def reset_dictionaries(self):
         """Reset all dictionaries and got_majoranas. This is necessary
@@ -793,7 +818,6 @@ class Model(PhysicsObject):
     def pass_particles_name_in_mg_default(self):
         """Change the name of the particles such that all SM and MSSM particles
         follows the MG convention"""
-        logger.info('pass particles name in MadGraph convention')
 
         # Check that default name/antiname is not already use 
         def check_name_free(self, name):
@@ -803,7 +827,7 @@ class Model(PhysicsObject):
             if part: 
                 error_text = \
                 '%s particles with pdg code %s is in conflict with MG ' + \
-                'convention name for particle %s.\n Use --modelname in order ' + \
+                'convention name for particle %s.\n Use -modelname in order ' + \
                 'to use the particles name defined in the model and not the ' + \
                 'MadGraph convention'
                 
@@ -811,27 +835,26 @@ class Model(PhysicsObject):
                                      (part.get_name(), part.get_pdg_code(), pdg)                
 
         default = self.load_default_name()
-        
-        for particle in self['particles']:
-            pdg = particle.get_pdg_code()
-            if pdg not in default.keys():
+
+        for pdg in default.keys():
+            part = self.get_particle(pdg)
+            if not part:
                 continue
-            name = particle.get_name()
-            antiname = particle.get('antiname')
-            
+            antipart = self.get_particle(-pdg)
+            name = part.get_name()
             if name != default[pdg]:
                 check_name_free(self, default[pdg])
-                particle.set('name', default[pdg])
-                if name == antiname:
-                    particle.set('antiname', default[pdg])
-                elif name != default[-1 *pdg]:
-                    check_name_free(self, default[-1 *pdg])
-                    particle.set('antiname', default[-1 *pdg])        
-                continue
-            elif name != antiname and antiname != default[-1 *pdg]:
-                    check_name_free(self, default[-1 *pdg])
-                    particle.set('antiname', default[-1 *pdg])  
-    
+                if part.get('is_part'):
+                    part.set('name', default[pdg])
+                    if antipart:
+                        antipart.set('name', default[pdg])
+                    else:
+                        part.set('antiname', default[pdg])                        
+                else:
+                    part.set('antiname', default[pdg])
+                    if antipart:
+                        antipart.set('antiname', default[pdg])
+                
     @ staticmethod
     def load_default_name():
         """ load the default for name convention """
@@ -850,6 +873,50 @@ class Model(PhysicsObject):
             default[int(args[0])] = args[1].lower()
         
         return default
+
+################################################################################
+# Class for Parameter / Coupling
+################################################################################
+class ModelVariable(object):
+    """A Class for storing the information about coupling/ parameter"""
+    
+    def __init__(self, name, expression, type, depend=()):
+        """Initialize a new parameter/coupling"""
+        
+        self.name = name
+        self.expr = expression # python expression
+        self.type = type # real/complex
+        self.depend = depend # depend on some other parameter -tuple-
+        self.value = None
+    
+    def __eq__(self, other):
+        """Object with same name are identical, If the object is a string we check
+        if the attribute name is equal to this string"""
+        
+        try:
+            return other.name == self.name
+        except:
+            return other == self.name
+
+class ParamCardVariable(ModelVariable):
+    """ A class for storing the information linked to all the parameter 
+    which should be define in the param_card.dat"""
+    
+    depend = ('external',)
+    type = 'real'
+    
+    def __init__(self, name, value, lhablock, lhacode):
+        """Initialize a new ParamCardVariable
+        name: name of the variable
+        value: default numerical value
+        lhablock: name of the block in the param_card.dat
+        lhacode: code associate to the variable
+        """
+        self.name = name
+        self.value = value 
+        self.lhablock = lhablock
+        self.lhacode = lhacode
+
 
 #===============================================================================
 # Classes used in diagram generation and process definition:

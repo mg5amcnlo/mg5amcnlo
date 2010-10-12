@@ -29,8 +29,7 @@ LIBRARY	      = ../libdhelas3.a
 
 MAKEFILE      = Makefile
 
-BASIC_OBJS = ixxxxx.o oxxxxx.o vxxxxx.o sxxxxx.o pxxxxx.o txxxxx.o vxxxxx.o \
-            momntx.o mom2cx.o boostx.o rotxxx.o
+BASIC_OBJS = aloha_functions.o
 
 include ./aloha_file.inc
 
