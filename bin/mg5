@@ -30,7 +30,6 @@ import logging.config
 import subprocess
 import os.path as path
 
-
 # Get the parent directory (mg root) of the script real path (bin)
 # and add it to the current PYTHONPATH
 
