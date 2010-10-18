@@ -178,8 +178,6 @@ class TestCmdShell2(unittest.TestCase):
                           self.do, 'generate > u u~')
         self.assertRaises(MadGraph5Error,
                           self.do, 'generate a|z > b b~')
-        self.assertRaises(MadGraph5Error,
-                          self.do, 'generate p p > z, (z > e+ e-)')
 
     def test_invalid_operations_for_output(self):
         """Test that errors are raised appropriately for output"""

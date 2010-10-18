@@ -510,6 +510,8 @@ class HelpToCmd(object):
         logger.info("   Only checks a subset of permutations.")
         logger.info("gauge: Only check that processes with massless gauge bosons")
         logger.info("   are gauge invariant")
+        logger.info("lorentz_invariance: Only check that the amplitude is lorentz")
+        logger.info("   invariant by comparing the amplitiude in different frames")        
         logger.info("If param_card is given, that param_card is used instead")
         logger.info("   of the default values for the model.")
         logger.info("For process syntax, please see help generate")
@@ -686,9 +688,8 @@ class CheckValidForCmd(object):
         if not self._curr_amps:
             raise self.InvalidCmd("No process generated, please generate a process!")
             
-
         if not os.path.isdir(args[0]):
-            raise self.InvalidCmd( "%s is not a valid directory for export file" % args[1])
+            raise self.InvalidCmd( "%s is not a valid directory for export file" % args[0])
             
     def check_export(self, args):
         """check the validity of line
@@ -1047,8 +1048,28 @@ class CompleteForCmd(CheckValidForCmd):
         completion += [f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
                        f.startswith(text)]
 
-        return completion      
-    
+        return completion
+
+    def model_completion(self, text, process):
+        """ complete the line with model information """
+        while ',' in process:
+            process = process[process.index(',')+1:]
+        args = split_arg(process)
+        couplings = []
+
+        # Force '>' if two initial particles.
+        if len(args) == 2 and args[-1] != '>':
+                return self.list_completion(text, '>')
+            
+        # Add non-particle names
+        if len(args) > 0 and args[-1] != '>':
+            couplings = ['>']
+        if '>' in args and args.index('>') < len(args) - 1:
+            couplings = [c + "=" for c in self._couplings] + \
+                        ['@','$','/','>',',']
+        return self.list_completion(text, self._particle_names + \
+                                    self._multiparticles.keys() + couplings)
+        
             
     def complete_export(self, text, line, begidx, endidx):
         "Complete the export command"
@@ -1077,13 +1098,18 @@ class CompleteForCmd(CheckValidForCmd):
         args = split_arg(line[0:begidx])
         if len(args) > 2 and args[-1] == '@' or args[-1].endswith('='):
             return
-        couplings = []
-        if len(args) > 1 and args[-1] != '>':
-            couplings = ['>']
-        if '>' in args and args.index('>') < len(args) - 1:
-            couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
-        return self.list_completion(text, self._particle_names + \
-                                    self._multiparticles.keys() + couplings)
+
+        try:
+            return self.model_completion(text, ' '.join(args[1:]))
+        except Exception as error:
+            print error
+            
+        #if len(args) > 1 and args[-1] != '>':
+        #    couplings = ['>']
+        #if '>' in args and args.index('>') < len(args) - 1:
+        #    couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
+        #return self.list_completion(text, self._particle_names + \
+        #                            self._multiparticles.keys() + couplings)
         
     def complete_add(self, text, line, begidx, endidx):
         "Complete the add command"
@@ -1115,18 +1141,23 @@ class CompleteForCmd(CheckValidForCmd):
         if len(args) == 1:
             return self.list_completion(text, self._check_opts)
 
+        
+
+
         # Directory continuation
         if args[-1].endswith(os.path.sep):
             return self.path_completion(text,
                                         os.path.join('.',*[a for a in args \
                                                     if a.endswith(os.path.sep)]))
+        # autocompletion for particles/couplings
+        model_comp = self.model_completion(text, ' '.join(args[2:]))
 
         if len(args) == 2:
-            return self.path_completion(text)
+            return model_comp + self.path_completion(text)
 
         if len(args) > 2:
-            return self.complete_generate(text, " ".join(args[2:]),
-                                          begidx, endidx)
+            return model_comp
+            
         
     def complete_tutorial(self, text, line, begidx, endidx):
         "Complete the tutorial command"
@@ -1134,18 +1165,24 @@ class CompleteForCmd(CheckValidForCmd):
         # Format
         if len(split_arg(line[0:begidx])) == 1:
             return self.list_completion(text, self._tutorial_opts)
+        
+    def complete_define(self, text, line, begidx, endidx):
+        """Complete particle information"""
+        return self.model_completion(text, line[6:])
 
     def complete_display(self, text, line, begidx, endidx):
         "Complete the display command"
 
         args = split_arg(line[0:begidx])
-
         # Format
         if len(args) == 1:
             return self.list_completion(text, self._display_opts)
 
-        if len(args) == 2 and arg[0] == 'checks':
+        if len(args) == 2 and args[1] == 'checks':
             return self.list_completion(text, 'failed')
+
+        if len(args) == 2 and args[1] == 'particles':
+            return self.model_completion(text, line[begidx:])
 
     def complete_draw(self, text, line, begidx, endidx):
         "Complete the import command"
@@ -1709,21 +1746,28 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         comparisons = []
         gauge_result = []
         lorentz_result =[]
-
+        nb_processes = 0
+        
         if args[0] in  ['quick', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
                                                         param_card = param_card,
                                                         quick = True)
+            nb_processes += len(comparisons[0])
+            
         if args[0] in  ['gauge', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
                                                       param_card = param_card)
+            nb_processes += len(gauge_result)
+            
         if args[0] in ['lorentz_invariance', 'full']:
             lorentz_result = process_checks.check_lorentz(myprocdef,
                                                       param_card = param_card)
+            nb_processes += len(lorentz_result)
+            
         cpu_time2 = time.time()
 
         logger.info("%i processes checked in %0.3f s" \
-                    % (len(gauge_result) + len(comparisons[0]) + len(lorentz_result),
+                    % (nb_processes,
                       (cpu_time2 - cpu_time1)))
 
         if gauge_result:
@@ -2109,18 +2153,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                              self._curr_model)
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
-            # Set variables for autocomplete
-            self._particle_names = [p.get('name') for p in self._curr_model.get('particles')] + \
-                 [p.get('antiname') for p in self._curr_model.get('particles')]
-            self._couplings = list(set(sum([i.get('orders').keys() for i in \
-                                            self._curr_model.get('interactions')], [])))
-            # Check if we can use case-independent particle names
-            self._use_lower_part_names = \
-                (self._particle_names == \
-                 [p.get('name').lower() for p in self._curr_model.get('particles')] + \
-                 [p.get('antiname').lower() for p in self._curr_model.get('particles')])
-            # Add default multiparticles
-            self.add_default_multiparticles()
+
+            # Do post-processing of model
+            self.process_model()
+
         elif args[0] == 'command':
             if not os.path.isfile(args[1]):
                 raise MadGraph5Error("Path %s is not a valid pathname" % args[1])
@@ -2151,7 +2187,23 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             #convert and excecute the card
             self.import_mg4_proc_card(proc_card)
                                      
+    def process_model(self):
+        """Set variables _particle_names and _couplings for tab
+        completion, defined multiparticles"""
 
+         # Set variables for autocomplete
+        self._particle_names = [p.get('name') for p in self._curr_model.get('particles')] + \
+             [p.get('antiname') for p in self._curr_model.get('particles')]
+        self._couplings = list(set(sum([i.get('orders').keys() for i in \
+                                        self._curr_model.get('interactions')], [])))
+        # Check if we can use case-independent particle names
+        self._use_lower_part_names = \
+            (self._particle_names == \
+             [p.get('name').lower() for p in self._curr_model.get('particles')] + \
+             [p.get('antiname').lower() for p in self._curr_model.get('particles')])
+
+        self.add_default_multiparticles()
+        
     
     def import_mg4_proc_card(self, filepath):
         """ read a V4 proc card, convert it and run it in mg5"""
@@ -2278,7 +2330,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self._curr_fortran_model = \
                   helas_call_writers.FortranHelasCallWriter(self._curr_model)
 
-            self.add_default_multiparticles()
+            # Do post-processing of model
+            self.process_model()
                 
             #save_model.save_model(args[1], self._curr_model)
             if isinstance(self._curr_model, base_objects.Model):
@@ -2313,7 +2366,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     self._curr_amps = amps                    
                     self._curr_model = model
                     logger.info("Model set from process.")
-                    self.add_default_multiparticles()
+                    # Do post-processing of model
+                    self.process_model()
                 self._done_export = None
             else:
                 raise self.RWError('Could not load processes from file %s' % args[1])

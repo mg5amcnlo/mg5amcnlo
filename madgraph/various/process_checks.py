@@ -310,6 +310,10 @@ def evaluate_matrix_element(matrix_element, stored_quantities, helas_writer,
         aloha_routines.append(routine.write(output_dir = None, 
                                             mode='mg5',
                                             language = 'Python'))
+    for routine in aloha_model.external_routines:
+        aloha_routines.append(
+                 open(aloha_model.locate_external(routine, 'Python')).read())
+            
 
     # Define the routines to be available globally
     for routine in aloha_routines:
