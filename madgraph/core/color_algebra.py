@@ -245,12 +245,12 @@ class T(ColorObject):
                         return ColorFactor([col_str1, col_str2])
 
         if len(self) == 2:
-            if isinstance(col_obj, K6B):
-                #delta3(i,j)K6B(m,j,k) = K6B(m,i,k)
-                #delta3(k,j)K6B(m,i,j) = K6B(m,i,k)
+            if isinstance(col_obj, K6Bar):
+                #delta3(i,j)K6Bar(m,j,k) = K6Bar(m,i,k)
+                #delta3(k,j)K6Bar(m,i,j) = K6Bar(m,i,k)
                 if self[1] in col_obj[-2:]:
                     index1 = col_obj[-2:].index(self[1])
-                    return ColorFactor([ColorString([K6B(col_obj[0],
+                    return ColorFactor([ColorString([K6Bar(col_obj[0],
                                                         col_obj[2-index1],
                                                         self[0])])])
             if isinstance(col_obj, K6):
@@ -446,7 +446,7 @@ class delta6(ColorObject):
         """Implement the replacement rules
         delta6(i,j)delta6(j,k) = delta6(i,k)
         delta6(m,n)K6(n,i,j) = K6(m,i,j)
-        delta6(m,n)K6B(m,i,j) = K6B(n,i,j)."""
+        delta6(m,n)K6Bar(m,i,j) = K6Bar(n,i,j)."""
 
         if isinstance(col_obj, delta6):
             #delta6(i,j)delta6(j,k) = delta6(i,k)
@@ -462,10 +462,10 @@ class delta6(ColorObject):
                                                     col_obj[2])])])
                 
 
-        if isinstance(col_obj, K6B):        
-            # delta6(m,n)K6B(m,i,j) = K6B(n,i,j)."""
+        if isinstance(col_obj, K6Bar):        
+            # delta6(m,n)K6Bar(m,i,j) = K6Bar(n,i,j)."""
             if col_obj[0] == self[0]:
-                return ColorFactor([ColorString([K6B(self[1],
+                return ColorFactor([ColorString([K6Bar(self[1],
                                                     col_obj[1],
                                                     col_obj[2])])])
 
@@ -485,13 +485,13 @@ class K6(ColorObject):
 
     def pair_simplify(self, col_obj):
         """Implement the replacement rules
-        K6(m,i,j)K6B(m,k,l) = 1/2(delta3(l,i)delta3(k,j)
+        K6(m,i,j)K6Bar(m,k,l) = 1/2(delta3(l,i)delta3(k,j)
                                   + delta3(k,i)delta3(l,j))
                             = 1/2(T(l,i)T(k,j) + T(k,i)T(l,j))
-        K6(m,i,j)K6B(n,j,i) = delta6(m,n)
-        K6(m,i,j)K6B(n,i,j) = delta6(m,n)."""
+        K6(m,i,j)K6Bar(n,j,i) = delta6(m,n)
+        K6(m,i,j)K6Bar(n,i,j) = delta6(m,n)."""
 
-        if isinstance(col_obj, K6B):
+        if isinstance(col_obj, K6Bar):
 
             m = self[0]
             n = col_obj[0]
@@ -499,7 +499,7 @@ class K6(ColorObject):
             ij1 = self[-2:]
             ij2 = col_obj[-2:]
 
-            # K6(m,i,j)K6B(m,k,l) = 1/2(T(l,i)T(k,j)
+            # K6(m,i,j)K6Bar(m,k,l) = 1/2(T(l,i)T(k,j)
             #                           + T(k,i)T(l,j)
             if m == n:
                 col_str1 = ColorString([T(ij2[1], ij1[0]),
@@ -511,11 +511,11 @@ class K6(ColorObject):
 
                 return ColorFactor([col_str1, col_str2])
 
-            # K6(m,i,j)K6B(n,j,i) = delta6(m,n)
+            # K6(m,i,j)K6Bar(n,j,i) = delta6(m,n)
             if ij1[1] == ij2[0] and ij1[0] == ij2[1]:
                 return ColorFactor([ColorString([delta6(m, n)])])
 
-            # K6(m,i,j)K6B(n,i,j) = delta6(m,n)
+            # K6(m,i,j)K6Bar(n,i,j) = delta6(m,n)
             if ij1[0] == ij2[0] and ij1[1] == ij2[1]:
                 return ColorFactor([ColorString([delta6(m, n)])])
 
@@ -523,17 +523,17 @@ class K6(ColorObject):
         """Complex conjugation. By default, the ordering of color index is
         reversed. Can be overwritten for specific color objects like T,..."""
 
-        return K6B(*self)
+        return K6Bar(*self)
 
 
-class K6B(ColorObject):
-    """K6B, the barred symmetry clebsch coefficient, mapping into the symmetric
+class K6Bar(ColorObject):
+    """K6Bar, the barred symmetry clebsch coefficient, mapping into the symmetric
     tensor."""
 
     def __init__(self, *args):
         """Ensure sextet color objects have strictly 3 indices"""
 
-        super(K6B, self).__init__()
+        super(K6Bar, self).__init__()
         if len(args) != 3:
             raise ValueError, \
                 "sextet color objects must have three indices!"
@@ -558,7 +558,7 @@ class T6(ColorObject):
                 "T6 objects must have three indices!"
 
     def simplify(self):
-        """Implement T6(a,i,j) = 2(K6(i,ii,jj)T(a,jj,kk)K6B(j,kk,ii))"""
+        """Implement T6(a,i,j) = 2(K6(i,ii,jj)T(a,jj,kk)K6Bar(j,kk,ii))"""
 
         # Set new indices according to the Mathematica template
         ii = T6.new_index
@@ -568,7 +568,7 @@ class T6(ColorObject):
         # Create the resulting color objects
         col_string = ColorString([K6(self[1], ii, jj),
                                   T(self[0], jj, kk),
-                                  K6B(self[2], kk, ii)])
+                                  K6Bar(self[2], kk, ii)])
         col_string.coeff = fractions.Fraction(2, 1)
         return ColorFactor([col_string])
 

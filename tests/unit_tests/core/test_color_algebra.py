@@ -206,10 +206,10 @@ class ColorObjectTest(unittest.TestCase):
                          color.ColorFactor([color.ColorString([color.K6(1,103,102)])]))
         self.assertEqual(color.T(102,101).pair_simplify(color.K6(1,103,102)),
                          color.ColorFactor([color.ColorString([color.K6(1,103,101)])]))
-        self.assertEqual(color.T(102,101).pair_simplify(color.K6B(1,101,103)),
-                         color.ColorFactor([color.ColorString([color.K6B(1,103,102)])]))
-        self.assertEqual(color.T(102,101).pair_simplify(color.K6B(1,103,101)),
-                         color.ColorFactor([color.ColorString([color.K6B(1,103,102)])]))
+        self.assertEqual(color.T(102,101).pair_simplify(color.K6Bar(1,101,103)),
+                         color.ColorFactor([color.ColorString([color.K6Bar(1,103,102)])]))
+        self.assertEqual(color.T(102,101).pair_simplify(color.K6Bar(1,103,101)),
+                         color.ColorFactor([color.ColorString([color.K6Bar(1,103,102)])]))
 
     def test_delta6_simplify(self):
         """Test delta6 simplify"""
@@ -227,11 +227,11 @@ class ColorObjectTest(unittest.TestCase):
     def test_K6_objects(self):
         """Test K6 product simplifications"""
 
-        #K6(m,i,j)K6B(m,k,l) = 1/2(T(l,i)T(k,j)
+        #K6(m,i,j)K6Bar(m,k,l) = 1/2(T(l,i)T(k,j)
         #                          + T(k,i)T(l,j)
 
         my_K6 = color.K6(1,101,102)
-        my_K6B = color.K6B(1,103,104)
+        my_K6Bar = color.K6Bar(1,103,104)
 
         col_str1 = color.ColorString([color.T(104,101),
                                       color.T(103,102)])
@@ -240,23 +240,23 @@ class ColorObjectTest(unittest.TestCase):
         col_str1.coeff = fractions.Fraction(1, 2)
         col_str2.coeff = fractions.Fraction(1, 2)
 
-        self.assertEqual(my_K6.pair_simplify(my_K6B),
+        self.assertEqual(my_K6.pair_simplify(my_K6Bar),
                          color.ColorFactor([col_str1, col_str2]))
 
-        #K6(m,i,j)K6B(n,j,i) = delta6(m,n)
+        #K6(m,i,j)K6Bar(n,j,i) = delta6(m,n)
 
         my_K6 = color.K6(1,101,102)
-        my_K6B = color.K6B(2,102,101)
+        my_K6Bar = color.K6Bar(2,102,101)
 
-        self.assertEqual(my_K6.pair_simplify(my_K6B),
+        self.assertEqual(my_K6.pair_simplify(my_K6Bar),
                          color.ColorFactor([\
                          color.ColorString([color.delta6(1,2)])]))
 
-        #K6(m,i,j)K6B(n,i,j) = delta6(m,n).
+        #K6(m,i,j)K6Bar(n,i,j) = delta6(m,n).
         my_K6 = color.K6(1,101,102)
-        my_K6B = color.K6B(2,101,102)
+        my_K6Bar = color.K6Bar(2,101,102)
 
-        self.assertEqual(my_K6.pair_simplify(my_K6B),
+        self.assertEqual(my_K6.pair_simplify(my_K6Bar),
                          color.ColorFactor([\
                          color.ColorString([color.delta6(1,2)])]))
 
@@ -264,7 +264,7 @@ class ColorObjectTest(unittest.TestCase):
     def test_T6_simplify(self):
         """Test T6 simplify"""
 
-        # T6(a,i,j) = 2(K6(i,ii,jj)T(a,jj,kk)K6B(j,kk,ii))
+        # T6(a,i,j) = 2(K6(i,ii,jj)T(a,jj,kk)K6Bar(j,kk,ii))
 
         my_T6 = color.T6(1,101,102)
 
@@ -272,7 +272,7 @@ class ColorObjectTest(unittest.TestCase):
 
         k6 = color.K6(101, 10000, 10001)
         t = color.T(1, 10001, 10002)
-        k6b = color.K6B(102, 10002, 10000)
+        k6b = color.K6Bar(102, 10002, 10000)
         col_string = color.ColorString([k6, t, k6b])
         col_string.coeff = fractions.Fraction(2, 1)
         self.assertEqual(my_T6.simplify(), color.ColorFactor([col_string]))
@@ -281,7 +281,7 @@ class ColorObjectTest(unittest.TestCase):
 
         k6 = color.K6(101, 10003, 10004)
         t = color.T(1, 10004, 10005)
-        k6b = color.K6B(102, 10005, 10003)
+        k6b = color.K6Bar(102, 10005, 10003)
         col_string = color.ColorString([k6, t, k6b])
         col_string.coeff = fractions.Fraction(2, 1)
         self.assertEqual(my_T6.simplify(), color.ColorFactor([col_string]))
@@ -511,7 +511,7 @@ class ColorFactorTest(unittest.TestCase):
                          color.ColorFactor([col_str1, col_str2]))
 
         
-        # K6[1, 101, 102] T[2, 102, 103] T[2, 103, 104] K6B[1, 104, 101]
+        # K6[1, 101, 102] T[2, 102, 103] T[2, 103, 104] K6Bar[1, 104, 101]
         #                 = 1/4 (-1 + Nc) (1 + Nc)^2
         #                 = 1/4 (-1 - Nc + Nc^2 + Nc^3)
 
@@ -519,7 +519,7 @@ class ColorFactorTest(unittest.TestCase):
                     color.ColorString([color.K6(1, 101, 102),
                                        color.T(2, 102, 103),
                                        color.T(2, 103, 104),
-                                       color.K6B(1, 104, 101)])])
+                                       color.K6Bar(1, 104, 101)])])
 
         col_str1 = color.ColorString()
         col_str1.Nc_power = 3
@@ -538,7 +538,7 @@ class ColorFactorTest(unittest.TestCase):
                          color.ColorFactor([col_str1, col_str3,
                                             col_str2, col_str4]))
 
-        # T6[2, 101, 102] T6[2, 102, 103] K6[103, 99, 98] K6B[101, 98, 99]
+        # T6[2, 101, 102] T6[2, 102, 103] K6[103, 99, 98] K6Bar[101, 98, 99]
         #                 = 1/2 (-1 + Nc) (1 + Nc) (2 + Nc)
         #                 = 1/2 (Nc^3 + 2 Nc^2 - Nc - 2)
 
@@ -546,7 +546,7 @@ class ColorFactorTest(unittest.TestCase):
                     color.ColorString([color.T6(2, 101, 102),
                                        color.T6(2, 102, 103),
                                        color.K6(103,99, 98),
-                                       color.K6B(101, 98, 99)])])
+                                       color.K6Bar(101, 98, 99)])])
 
         col_str1 = color.ColorString()
         col_str1.Nc_power = 3
@@ -565,13 +565,13 @@ class ColorFactorTest(unittest.TestCase):
                          color.ColorFactor([col_str2, col_str1, 
                                             col_str3, col_str4]))
 
-        # K6[103, 99, 98] T[80, 98, 100] K6B[103, 100, 97] T[80, 99, 97]
+        # K6[103, 99, 98] T[80, 98, 100] K6Bar[103, 100, 97] T[80, 99, 97]
         #                 = -(1/4) + Nc^2/4
 
         my_color_factor = color.ColorFactor([\
                     color.ColorString([color.K6(103, 99, 98),
                                        color.T(80, 98, 100),
-                                       color.K6B(103, 100, 97),
+                                       color.K6Bar(103, 100, 97),
                                        color.T(80, 99, 97)])])
 
         col_str1 = color.ColorString()

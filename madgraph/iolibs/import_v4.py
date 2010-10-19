@@ -300,7 +300,7 @@ def read_interactions_v4(fsock, ref_part_list):
                 elif colors == [-6, 3, 3]:
                     # Triple glue coupling
                     my_color_string = color.ColorString(\
-                        [color.K6B(0, 1, 2)])
+                        [color.K6Bar(0, 1, 2)])
                     myinter.set('color', [my_color_string])
                 else:
                     logger.warning(\

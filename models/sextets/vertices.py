@@ -341,7 +341,7 @@ V_55 = Vertex(name = 'V_55',
 
 V_56 = Vertex(name = 'V_56',
               particles = [ P.u, P.u, P.six__tilde__ ],
-              color = [ 'K6B(3,1,2)' ],
+              color = [ 'K6Bar(3,1,2)' ],
               lorentz = [ L.FFS1 ],
               couplings = {(0,0):C.GC_27})
 
@@ -353,7 +353,7 @@ V_57 = Vertex(name = 'V_57',
 
 V_58 = Vertex(name = 'V_58',
               particles = [ P.t, P.t, P.six__tilde__ ],
-              color = [ 'K6B(3,1,2)' ],
+              color = [ 'K6Bar(3,1,2)' ],
               lorentz = [ L.FFS1 ],
               couplings = {(0,0):C.GC_28})
 
