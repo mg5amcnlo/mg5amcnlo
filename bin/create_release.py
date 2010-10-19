@@ -113,10 +113,7 @@ if path.exists(filepath):
 
 logging.info("Branching " + MG5DIR + " to directory " + filepath)
 status = subprocess.call(['bzr', 'branch', MG5DIR, filepath])
-if status == 3:
-    logging.error("Please run rm -rf "+filepath)
-    exit()
-elif status:
+if status:
     logging.error("Script stopped")
     exit()
 
@@ -206,8 +203,9 @@ else:
 
 # 4. Create the automatic documentation in the apidoc directory
 
-status1 = subprocess.call(['epydoc', '--html', '-o', 'apidoc', 'madgraph',
-                          os.path.join('models', '*.py')], cwd = filepath)
+status1 = subprocess.call(['epydoc', '--html', '-o', 'apidoc',
+                           'madgraph', 'aloha',
+                           os.path.join('models', '*.py')], cwd = filepath)
 
 if status1:
     info.warning('Non-0 exit code %d from epydoc. Please check output.' % \
