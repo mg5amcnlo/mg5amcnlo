@@ -3710,10 +3710,13 @@ C     Number of configs
         self.assertFileContains('test', "      0\n")
         # Test maxamps.inc
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_maxamps_file(writer, me, fortran_model)
+        # Extract ncolor
+        ncolor = max(1, len(me.get('color_basis')))
+        export_v4.write_maxamps_file(writer, me, fortran_model, ncolor)
         writer.close()
         self.assertFileContains('test',
-                      "      INTEGER    MAXAMPS\n      PARAMETER (MAXAMPS=8)\n")
+                                "      INTEGER    MAXAMPS, MAXFLOW\n" + \
+                                "      PARAMETER (MAXAMPS=8, MAXFLOW=1)\n")
         # Test mg.sym
         writer = writers.FortranWriter(self.give_pos('test'))
         export_v4.write_mg_sym_file(writer, me, fortran_model)
