@@ -71,7 +71,7 @@ class ColorObject(array.array):
                 self[i] = repl_dict[index]
             except KeyError:
                 continue
-
+    
     def create_copy(self):
         """Return a real copy of the current object."""
         return globals()[self.__class__.__name__](*self)
@@ -171,12 +171,11 @@ class T(ColorObject):
 
     def __init__(self, *args):
         """Check for at least two indices"""
-
+        
+        assert len(args) > 1 , "T objects must have at least two indices!"
+        
         super(T, self).__init__()
-        if len(args) < 2:
-            raise ValueError, \
-                "T objects must have at least two indices!"
-
+        
     def simplify(self):
         """Implement T(a,b,c,...,i,i) = Tr(a,b,c,...) and
         T(a,x,b,x,c,i,j) = 1/2(T(a,c,i,j)Tr(b)-1/Nc T(a,b,c,i,j))"""
@@ -262,11 +261,11 @@ class f(ColorObject):
 
     def __init__(self, *args):
         """Ensure f and d objects have strictly 3 indices"""
-
+        
+        assert len(args) == 3, "f and d objects must have three indices!"
+        
         super(f, self).__init__()
-        if len(args) != 3:
-            raise ValueError, \
-                "f and d objects must have three indices!"
+                
 
     def simplify(self):
         """Implement only the replacement rule 

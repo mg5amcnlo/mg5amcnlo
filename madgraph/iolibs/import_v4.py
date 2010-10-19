@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+from madgraph.core import base_objects
 """Methods and classes to import v4 format model files."""
 
 import fractions
@@ -19,14 +20,79 @@ import logging
 import os
 import re
 
+from madgraph import MadGraph5Error, MG4DIR
 
 import madgraph.core.color_algebra as color
+import madgraph.iolibs.files as files
+import madgraph.iolibs.save_load_object as save_load_object
+
 from madgraph.core.base_objects import Particle, ParticleList
 from madgraph.core.base_objects import Interaction, InteractionList
-from madgraph import MadGraph5Error
+
+
 
 
 logger = logging.getLogger('madgraph.import_v4')
+
+#===============================================================================
+# import_v4model
+#===============================================================================
+def import_model(model_path, mgme_dir = MG4DIR):
+    """create a model from a MG4 model directory."""
+
+    # Check for a valid directory
+    model_path = find_model_path(model_path, mgme_dir)
+
+    files_list = [os.path.join(model_path, 'particles.dat'),\
+                  os.path.join(model_path, 'interactions.dat')]
+    
+    for filepath in files_list:
+        if not os.path.isfile(filepath):
+            raise MadGraph5Error,  "%s directory is not a valid v4 model" % \
+                                                                    (model_path)
+                                                                
+    # use pickle files if defined
+    if files.is_uptodate(os.path.join(model_path, 'model.pkl'), files_list):
+        model = save_load_object.load_from_file( \
+                                          os.path.join(model_path, 'model.pkl'))
+        return model, model_path
+
+    model = base_objects.Model()    
+    model.set('particles',files.read_from_file( \
+                                  os.path.join(model_path, 'particles.dat'),
+                                  read_particles_v4))
+    
+    model.set('interactions',files.read_from_file( \
+                                  os.path.join(model_path, 'interactions.dat'),
+                                  read_interactions_v4,
+                                  model['particles']))
+    
+    model.set('name', os.path.split(model_path)[-1])  
+    
+    # save in a pickle files to fasten future usage
+    save_load_object.save_to_file(os.path.join(model_path, 'model.pkl'), model)
+    
+    return model, model_path  
+
+    
+def find_model_path(model_path, mgme_dir):
+    """Find the path to the model, starting with path model_path."""
+
+    if os.path.isdir(model_path):
+        pass
+    elif mgme_dir and os.path.isdir(os.path.join(mgme_dir, 'Models', model_path)):
+        model_path = os.path.join(mgme_dir, 'Models', model_path)
+    elif mgme_dir and os.path.isdir(os.path.join(mgme_dir, 'models',
+                                                 model_path + "_v4")):
+        model_path = os.path.join(mgme_dir, 'models', model_path + "_v4")
+    elif not mgme_dir:
+        error_text = "Path %s is not a valid pathname\n" % model_path
+        error_text += "and no MG_ME installation detected in order to search in Models"
+        raise MadGraph5Error(error_text)
+    else:
+        raise MadGraph5Error("Path %s is not a valid pathname" % model_path)
+
+    return model_path
 
 #===============================================================================
 # read_particles_v4
@@ -48,6 +114,7 @@ def read_particles_v4(fsock):
                   'w': 'wavy',
                   'c': 'curly'}
 
+    logger.info('load particles')
 
     mypartlist = ParticleList()
 
@@ -68,8 +135,8 @@ def read_particles_v4(fsock):
                     "Unvalid initialization string:" + line
             else:
                 try:
-                    mypart.set('name', values[0])
-                    mypart.set('antiname', values[1])
+                    mypart.set('name', values[0].lower())
+                    mypart.set('antiname', values[1].lower())
 
                     if mypart['name'] == mypart['antiname']:
                         mypart['self_antipart'] = True
@@ -119,6 +186,7 @@ def read_interactions_v4(fsock, ref_part_list):
     """Read a list of interactions from stream fsock, using the old v4 format.
     Requires a ParticleList object as an input to recognize particle names."""
 
+    logger.info('load interactions')
     myinterlist = InteractionList()
 
     if not isinstance(ref_part_list, ParticleList):
@@ -137,7 +205,7 @@ def read_interactions_v4(fsock, ref_part_list):
 
             try:
                 for str_name in values:
-                    curr_part = ref_part_list.find_name(str_name)
+                    curr_part = ref_part_list.find_name(str_name.lower())
                     if isinstance(curr_part, Particle):
                         # Look at the total number of strings, stop if 
                         # anyway not enough, required if a variable name 
@@ -153,10 +221,10 @@ def read_interactions_v4(fsock, ref_part_list):
                     raise Interaction.PhysicsObjectError, \
                         "Vertex with less than 3 known particles found."
 
-                # Flip part/antipart of first part for FFV and FFS vertices
+                # Flip part/antipart of first part for FFV, FFS, FFT vertices
                 # according to v4 convention
                 spin_array = [part['spin'] for part in part_list]
-                if spin_array in [[2, 2, 1], [2, 2, 3]]  and \
+                if spin_array[:2] == [2, 2] and \
                    not part_list[0].get('self_antipart'):
                     part_list[0]['is_part'] = not part_list[0]['is_part']
 
@@ -236,11 +304,6 @@ def read_interactions_v4(fsock, ref_part_list):
                 # gggg
                 if pdg_codes == [21, 21, 21, 21]:
                     myinter.set('lorentz', ['gggg1', 'gggg2', 'gggg3'])
-
-                # go-go-g
-                if spin_array == [2, 2, 3] and colors == [8, 8, 8]:
-                    myinter.set('lorentz', ['go'])
-
 
                 # If extra flag, add this to Lorentz    
                 if len(values) > 3 * len(part_list) - 4:
@@ -423,8 +486,8 @@ class ProcCardv4Reader(object):
     
     def extract_command_lines(self, model):
         """Return the MG5 command line corresponding to this proc_card 
-        the MG5 command import model is skyped (since the model should be 
-        loaded -he is one of the argument-)"""
+        the MG5 command import model is skipped (since the model should be 
+        loaded -it is one of the argument-)"""
          
         # extract useful information of the model
         self.extract_info_from_model(model)
@@ -455,8 +518,8 @@ class ProcCardv4Reader(object):
                                   process.mg5_process_line(self.couplings_name))
         
         #finally export the madevent output
-        lines.append('# Set up MadEvent directory')
-        lines.append('setup madevent_v4 . -f')
+        lines.append('# Output processes to MadEvent directory')
+        lines.append('output -f')
         
         return lines
         
@@ -548,8 +611,8 @@ class ProcessInfo(object):
             
 
         # check if we have a MG5 format
-        if line.startswith('/mg5/'):
-            self.line = line[5:]
+        if '/mg5/' in line:
+            self.line = line.replace('/mg5/','')
             self.is_mg5_valid = True
             return
         if ',' in line or '=' in line:

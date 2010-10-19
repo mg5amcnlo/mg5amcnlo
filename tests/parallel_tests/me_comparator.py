@@ -36,6 +36,7 @@ import time
 _file_path = os.path.dirname(os.path.realpath(__file__))
 
 import madgraph.iolibs.template_files as template_files
+import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.cmd_interface as cmd_interface
@@ -85,8 +86,12 @@ class MG4Runner(MERunner):
     """Runner object for the MG4 Matrix Element generator."""
 
     mg4_path = ""
-
+    
+    type='v4'
     name = 'MadGraph v4'
+    compilator ='f77'
+    if misc.which('gfortran'):
+        compilator = 'gfortran'
     model = ''
     orders = {}
     energy = ""
@@ -103,14 +108,23 @@ class MG4Runner(MERunner):
         self.setup_flag = False
 
         # Create a copy of Template
-        if not os.path.isdir(mg4_path):
-            raise IOError, "Path %s is not valid" % str(mg4_path)
+        if not os.path.isdir(os.path.join(mg4_path, "MadGraphII")) or \
+               not os.path.isdir(os.path.join(mg4_path, "Template")) or \
+               not os.path.isdir(os.path.join(mg4_path, "HELAS")):
+            raise IOError, "Path %s is not a valid MG4 path" % str(mg4_path)
+
+        if not os.path.isdir(os.path.join(mg4_path, "Models", self.model)):
+            raise IOError, "No such model directory %s" % \
+                  os.path.join(mg4_path, "Models", self.model)
 
         self.mg4_path = os.path.abspath(mg4_path)
 
         if not temp_dir:
-            temp_dir = "test_" + \
-                    datetime.datetime.now().strftime("%f")
+            i=0
+            while os.path.exists(os.path.join(mg4_path, 
+                                              "test_%s_%s" % (self.type, i))):
+                i += 1
+            temp_dir = "test_%s_%s" % (self.type, i)         
 
         if os.path.exists(os.path.join(mg4_path, temp_dir)):
             raise IOError, "Path %s for test already exist" % \
@@ -217,28 +231,26 @@ class MG4Runner(MERunner):
 
         sys.stdout.write('.')
         sys.stdout.flush()
+        working_dir = os.path.join(self.mg4_path, self.temp_dir_name)
+         
+        shell_name = None
+        directories = glob.glob(os.path.join(working_dir, 'SubProcesses',
+                                  'P%i_*' % proc_id))
+        if directories and os.path.isdir(directories[0]):
+            shell_name = os.path.basename(directories[0])
 
-        shell_name = proc
-
-        shell_name = shell_name.replace(' ', '')
-        shell_name = shell_name.replace('>', '_')
-        shell_name = shell_name.replace('~', 'x')
-        shell_name = "P%i_" % proc_id + shell_name
-
-        logging.info("Working on process %s in dir %s" % (proc,
-                                                          shell_name))
-
-        dir_name = os.path.join(self.mg4_path, self.temp_dir_name, 'SubProcesses', shell_name)
         # If directory doesn't exist, skip and return 0
-        if not os.path.isdir(dir_name):
-            logging.info("Directory %s hasn't been created, skipping process %s" % \
-                            (shell_name, proc))
+        if not shell_name:
+            logging.info("Directory hasn't been created for process %s" % (proc))
             return ((0.0, 0), [])
 
+        logging.info("Working on process %s in dir %s" % (proc, shell_name))
+        
+        dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
         # Run make
         retcode = subprocess.call('make',
-                        cwd=dir_name,
-                        stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
+                        cwd=dir_name)#,
+                        #stdout=open('/dev/null', 'w'))#, stderr=subprocess.STDOUT)
         if retcode != 0:
             logging.info("Error while executing make in %s" % shell_name)
             return ((0.0, 0), [])
@@ -300,6 +312,7 @@ class MG5Runner(MG4Runner):
     mg5_path = ""
 
     name = 'MadGraph v5'
+    type = 'v5'
 
     def setup(self, mg5_path, mg4_path, temp_dir=None):
         """Wrapper for the mg4 setup, also initializing the mg5 path variable"""
@@ -336,9 +349,13 @@ class MG5Runner(MG4Runner):
 
         # Run mg5
         logging.info("Running mg5")
-        cmd_interface.MadGraphCmdShell().run_cmd('import command ' + \
-                            os.path.join(dir_name, 'Cards', 'proc_card_v5.dat'))
-               
+        proc_card = open(os.path.join(dir_name, 'Cards', 'proc_card_v5.dat'), 'r').read()
+        cmd = cmd_interface.MadGraphCmdShell()
+        for line in proc_card.split('\n'):
+            try:
+                cmd.run_cmd(line)
+            except MadGraph5Error:
+                pass
         # Get the ME value
         for i, proc in enumerate(proc_list):
             self.res_list.append(self.get_me_value(proc, i))
@@ -348,18 +365,35 @@ class MG5Runner(MG4Runner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = "import model_v4 %s\n" % os.path.join(self.mg4_path,
-                                                          'Models', model)
-
-        v5_string += "setup standalone_v4 %s -f\n" % \
-                     os.path.join(self.mg4_path, self.temp_dir_name)
+        v5_string = "import model_v4 %s\n" % model
 
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \
                          '@%i' % i + '\n'
-        v5_string += 'export\n'
+        v5_string += "output standalone %s -f\n" % \
+                     os.path.join(self.mg4_path, self.temp_dir_name)
+
+        return v5_string
+
+class MG5_UFO_Runner(MG5Runner):
+    
+    name = 'UFO-ALOHA-MG5'
+    type = 'ufo'
+    
+    def format_mg5_proc_card(self, proc_list, model, orders):
+        """Create a proc_card.dat string following v5 conventions."""
+
+        v5_string = "import model %s \n" % model
+
+        couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
+
+        for i, proc in enumerate(proc_list):
+            v5_string += 'add process ' + proc + ' ' + couplings + \
+                         '@%i' % i + '\n'
+        v5_string += "output standalone %s -f\n" % \
+                     os.path.join(self.mg4_path, self.temp_dir_name)
 
         return v5_string
 
@@ -461,6 +495,9 @@ class MEComparator(object):
     def run_comparison(self, proc_list, model='sm', orders={}, energy=1000):
         """Run the codes and store results."""
 
+        if isinstance(model, basestring):
+            model= [model] * len(self.me_runners)
+
         self.results = []
         self.proc_list = proc_list
 
@@ -468,13 +505,13 @@ class MEComparator(object):
             "Running on %i processes with order: %s, in model %s @ %i GeV" % \
             (len(proc_list),
              ' '.join(["%s=%i" % (k, v) for k, v in orders.items()]),
-             model,
+             '/'.join([onemodel for onemodel in model]),
              energy))
 
-        for runner in self.me_runners:
+        for i,runner in enumerate(self.me_runners):
             cpu_time1 = time.time()
             logging.info("Now running %s" % runner.name)
-            self.results.append(runner.run(proc_list, model, orders, energy))
+            self.results.append(runner.run(proc_list, model[i], orders, energy))
             cpu_time2 = time.time()
             logging.info(" Done in %0.3f s" % (cpu_time2 - cpu_time1))
             logging.info(" (%i/%i with zero ME)" % \
@@ -497,10 +534,16 @@ class MEComparator(object):
         else:
             return mystr + " " * (length - len(mystr))
 
-    def output_result(self, filename=None, tolerance=1e-06, skip_zero=True):
+    def output_result(self, filename=None, tolerance=3e-06, skip_zero=True):
         """Output result as a nicely formated table. If filename is provided,
         write it to the file, else to the screen. Tolerance can be adjusted."""
 
+        proc_col_size = 17
+
+        for proc in self.proc_list:
+            if len(proc) + 1 > proc_col_size:
+                proc_col_size = len(proc) + 1
+        
         col_size = 17
 
         pass_proc = 0
@@ -508,11 +551,11 @@ class MEComparator(object):
 
         failed_proc_list = []
 
-        res_str = self._fixed_string_length("\nProcess", col_size) + \
+        res_str = "\n" + self._fixed_string_length("Process", proc_col_size) + \
                 ''.join([self._fixed_string_length(runner.name, col_size) for \
                            runner in self.me_runners]) + \
                   self._fixed_string_length("Relative diff.", col_size) + \
-                  self._fixed_string_length("Result", col_size)
+                  "Result"
 
         for i, proc in enumerate(self.proc_list):
             list_res = [res[i][0][0] for res in self.results]
@@ -524,7 +567,7 @@ class MEComparator(object):
                 diff = (max(list_res) - min(list_res)) / \
                        (max(list_res) + min(list_res))
 
-            res_str += self._fixed_string_length('\n' + proc, col_size) + \
+            res_str += '\n' + self._fixed_string_length(proc, proc_col_size)+ \
                        ''.join([self._fixed_string_length("%1.10e" % res,
                                                col_size) for res in list_res])
 
@@ -532,11 +575,11 @@ class MEComparator(object):
 
             if diff < tolerance:
                 pass_proc += 1
-                res_str += self._fixed_string_length("Pass", col_size)
+                res_str += "Pass"
             else:
                 fail_proc += 1
                 failed_proc_list.append(proc)
-                res_str += self._fixed_string_length("Fail", col_size)
+                res_str += "Fail"
 
         res_str += "\nSummary: %i/%i passed, %i/%i failed" % \
                     (pass_proc, pass_proc + fail_proc,
@@ -591,7 +634,7 @@ class MEComparator(object):
 
         test_object.assertEqual(fail_str, "Failed for processes:")
 
-def create_proc_list(part_list, initial=2, final=2):
+def create_proc_list(part_list, initial=2, final=2, charge_conservation=True):
     """Helper function to automatically create process lists starting from 
     a particle list."""
 
@@ -603,6 +646,14 @@ def create_proc_list(part_list, initial=2, final=2):
             proc_list.append(sorted_product)
 
     for proc in proc_list:
+        #check charge conservation
+        if charge_conservation:
+            init_plus= ''.join(proc[:initial]).count('+')
+            init_minus=''.join(proc[:initial]).count('-')
+            final_plus=''.join(proc[initial:]).count('+')
+            final_minus=''.join(proc[initial:]).count('-')
+            if init_plus-init_minus-final_plus+final_minus:
+                continue
         proc.insert(initial, '>')
         res_list.append(' '.join(proc))
 
@@ -610,7 +661,7 @@ def create_proc_list(part_list, initial=2, final=2):
 
 def create_proc_list_enhanced(init_part_list, final_part_list_1,
                               final_part_list_2 = [], initial=2, final_1=2,
-                              final_2=1):
+                              final_2=1, charge_conservation=True):
     """Helper function to automatically create process lists starting from 
     a particle list."""
 
@@ -629,9 +680,20 @@ def create_proc_list_enhanced(init_part_list, final_part_list_1,
                 proc_list.append(sorted_product)
 
     for proc in proc_list:
+        #check charge conservation
+        if charge_conservation:
+            init_plus= ''.join(proc[:initial]).count('+')
+            init_minus=''.join(proc[:initial]).count('-')
+            final_plus=''.join(proc[initial:]).count('+')
+            final_minus=''.join(proc[initial:]).count('-')
+            if init_plus-init_minus-final_plus+final_minus:
+                continue
         proc.insert(initial, '>')
         res_list.append(' '.join(proc))
 
     return res_list
+
+
+
 
 

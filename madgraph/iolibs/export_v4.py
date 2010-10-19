@@ -12,7 +12,6 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-
 """Methods and classes to export matrix elements to v4 format."""
 
 import fractions
@@ -28,26 +27,45 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
-import madgraph.iolibs.template_files as Template
-from madgraph import MadGraph5Error 
+import madgraph.iolibs.file_writers as writers
+import madgraph.iolibs.template_files as template_files
+import madgraph.iolibs.ufo_expression_parsers as parsers
 
+import aloha.create_aloha as create_aloha
+
+import models.sm.write_param_card as write_param_card
+from madgraph import MadGraph5Error, MG5DIR
+from madgraph.iolibs.files import cp, ln, mv
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_v4')
 
 #===============================================================================
 # copy the Template in a new directory.
 #===============================================================================
-def copy_v4template(mgme_dir, dir_path, model_dir, clean):
-    """create the directory run_name as a copy of the MadEvent Template
-       and import the model, Helas, and clean the directory 
+def copy_v4template(mgme_dir, dir_path, clean):
+    """create the directory run_name as a copy of the MadEvent
+    Template, and clean the directory
     """
     
     #First copy the full template tree if dir_path doesn't exit
     if not os.path.isdir(dir_path):
+        if not mgme_dir:
+            raise MadGraph5Error, \
+                  "No valid MG_ME path given for MG4 run directory creation."
         logger.info('initialize a new directory: %s' % \
                     os.path.basename(dir_path))
         shutil.copytree(os.path.join(mgme_dir, 'Template'), dir_path, True)
-
+    elif not os.path.isfile(os.path.join(dir_path, 'TemplateVersion.txt')):
+        if not mgme_dir:
+            raise MadGraph5Error, \
+                  "No valid MG_ME path given for MG4 run directory creation."
+    try:
+        shutil.copy(os.path.join(mgme_dir, 'MGMEVersion.txt'), dir_path)
+    except IOError:
+        MG5_version = misc.get_pkg_info()
+        open(os.path.join(dir_path, 'MGMEVersion.txt'), 'w').write( \
+            "5." + MG5_version['version'])
+    
     #Ensure that the Template is clean
     if clean:
         logger.info('remove old information in %s' % os.path.basename(dir_path))
@@ -59,8 +77,8 @@ def copy_v4template(mgme_dir, dir_path, model_dir, clean):
                 subprocess.call([os.path.join('bin', 'clean_template')], \
                                                                    cwd=dir_path)
             except Exception, why:
-                raise MadGraph5Error('Failed to clean correctly Template: \n %s' \
-                                                                          % why)
+                raise MadGraph5Error('Failed to clean correctly %s: \n %s' \
+                                            % (os.path.basename(dir_path),why))
         
         #Write version info
         MG_version = misc.get_pkg_info()
@@ -70,9 +88,9 @@ def copy_v4template(mgme_dir, dir_path, model_dir, clean):
 #===============================================================================
 # copy the Template in a new directory and set up Standalone MG
 #===============================================================================
-def copy_v4standalone(mgme_dir, dir_path, model_dir, clean):
+def copy_v4standalone(mgme_dir, dir_path, clean):
     """create the directory run_name as a copy of the Template,
-       run standalone, import the model and Helas, and clean the directory 
+       run standalone, and clean the directory 
     """
 
     #First copy the full template tree if dir_path doesn't exit
@@ -104,19 +122,8 @@ def copy_v4standalone(mgme_dir, dir_path, model_dir, clean):
         MG_version = misc.get_pkg_info()
         open(os.path.join(dir_path, 'SubProcesses', 'MGVersion.txt'), 'w').write(
                                                           MG_version['version'])
-        export_helas(mgme_dir, dir_path)
 
-def export_helas(mgme_dir, dir_path):
-
-        # Copy the HELAS directory
-        helas_dir = os.path.join(mgme_dir, 'HELAS')
-        for filename in os.listdir(helas_dir): 
-            if os.path.isfile(os.path.join(helas_dir, filename)):
-                shutil.copy2(os.path.join(helas_dir, filename),
-                            os.path.join(dir_path, 'Source', 'DHELAS'))
-        shutil.move(os.path.join(dir_path, 'Source', 'DHELAS', 'Makefile.template'),
-                    os.path.join(dir_path, 'Source', 'DHELAS', 'Makefile'))
-        
+      
 #===============================================================================
 # Make the Helas and Model directories for Standalone directory
 #===============================================================================
@@ -148,8 +155,8 @@ def write_procdef_mg5(file_pos, modelname, process_str):
     """ write an equivalent of the MG4 proc_card in order that all the Madevent
     Perl script of MadEvent4 are still working properly for pure MG5 run."""
     
-    proc_card_template = Template.mg4_proc_card.mg4_template
-    process_template = Template.mg4_proc_card.process_template
+    proc_card_template = template_files.mg4_proc_card.mg4_template
+    process_template = template_files.mg4_proc_card.process_template
     process_text = ''
     coupling = ''
     new_process_content = []
@@ -193,6 +200,7 @@ def finalize_madevent_v4_directory(dir_path, makejpg, history):
     P_dir_list = [proc for proc in os.listdir('.') if os.path.isdir(proc) and \
                                                                 proc[0] == 'P']
     
+    os.system('touch %s/done' % os.path.join(dir_path,'SubProcesses'))   
     devnull = os.open(os.devnull, os.O_RDWR)
     # Convert the poscript in jpg files (if authorize)
     if makejpg:
@@ -258,16 +266,19 @@ def finalize_standalone_v4_directory(dir_path, history):
 #===============================================================================
 # write_matrix_element_v4_standalone
 #===============================================================================
-def write_matrix_element_v4_standalone(fsock, matrix_element, fortran_model):
+def write_matrix_element_v4_standalone(writer, matrix_element, fortran_model):
     """Export a matrix element to a matrix.f file in MG4 standalone format"""
 
     if not matrix_element.get('processes') or \
            not matrix_element.get('diagrams'):
         return 0
 
-    writer = FortranWriter()
+    if not isinstance(writer, writers.FortranWriter):
+        raise writers.FortranWriter.FortranWriterError(\
+            "writer not FortranWriter")
+
     # Set lowercase/uppercase Fortran code
-    FortranWriter.downcase = False
+    writers.FortranWriter.downcase = False
 
     replace_dict = {}
 
@@ -326,24 +337,26 @@ def write_matrix_element_v4_standalone(fsock, matrix_element, fortran_model):
     file = file % replace_dict
 
     # Write the file
-    for line in file.split('\n'):
-        writer.write_fortran_line(fsock, line)
+    writer.writelines(file)
 
     return len(filter(lambda call: call.find('#') != 0, helas_calls))
 
 #===============================================================================
 # write_matrix_element_v4_madevent
 #===============================================================================
-def write_matrix_element_v4_madevent(fsock, matrix_element, fortran_model):
+def write_matrix_element_v4_madevent(writer, matrix_element, fortran_model):
     """Export a matrix element to a matrix.f file in MG4 madevent format"""
 
     if not matrix_element.get('processes') or \
            not matrix_element.get('diagrams'):
         return 0
 
-    writer = FortranWriter()
+    if not isinstance(writer, writers.FortranWriter):
+        raise writers.FortranWriter.FortranWriterError(\
+            "writer not FortranWriter")
+
     # Set lowercase/uppercase Fortran code
-    FortranWriter.downcase = False
+    writers.FortranWriter.downcase = False
 
     replace_dict = {}
 
@@ -402,15 +415,14 @@ def write_matrix_element_v4_madevent(fsock, matrix_element, fortran_model):
     file = file % replace_dict
     
     # Write the file
-    for line in file.split('\n'):
-        writer.write_fortran_line(fsock, line)
+    writer.writelines(file)
 
-    return len(filter(lambda call: call.find('#') != 0, helas_calls))
+    return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor
 
 #===============================================================================
 # write_auto_dsig_file
 #===============================================================================
-def write_auto_dsig_file(fsock, matrix_element, fortran_model):
+def write_auto_dsig_file(writer, matrix_element, fortran_model):
     """Write the auto_dsig.f file for the differential cross section
     calculation, includes pdf call information"""
 
@@ -421,10 +433,8 @@ def write_auto_dsig_file(fsock, matrix_element, fortran_model):
     nexternal, ninitial = matrix_element.get_nexternal_ninitial()
 
     if ninitial < 1 or ninitial > 2:
-        raise FortranWriter.FortranWriterError, \
+        raise writers.FortranWriter.FortranWriterError, \
               """Need ninitial = 1 or 2 to write auto_dsig file"""
-
-    writer = FortranWriter()
 
     replace_dict = {}
 
@@ -453,32 +463,26 @@ def write_auto_dsig_file(fsock, matrix_element, fortran_model):
     file = file % replace_dict
 
     # Write the file
-    for line in file.split('\n'):
-        writer.write_fortran_line(fsock, line)
+    writer.writelines(file)
 
 #===============================================================================
 # write_coloramps_file
 #===============================================================================
-def write_coloramps_file(fsock, matrix_element, fortran_model):
+def write_coloramps_file(writer, matrix_element, fortran_model):
     """Write the coloramps.inc file for MadEvent"""
-
-    writer = FortranWriter()
 
     lines = get_icolamp_lines(matrix_element)
 
     # Write the file
-    for line in lines:
-        writer.write_fortran_line(fsock, line)
+    writer.writelines(lines)
 
     return True
 
 #===============================================================================
 # write_configs_file
 #===============================================================================
-def write_configs_file(fsock, matrix_element, fortran_model):
+def write_configs_file(writer, matrix_element, fortran_model):
     """Write the configs.inc file for MadEvent"""
-
-    writer = FortranWriter()
 
     # Extract number of external particles
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
@@ -536,19 +540,16 @@ def write_configs_file(fsock, matrix_element, fortran_model):
     lines.append("data mapconfig(0)/%d/" % iconfig)
 
     # Write the file
-    for line in lines:
-        writer.write_fortran_line(fsock, line)
+    writer.writelines(lines)
 
     return iconfig, s_and_t_channels
 
 #===============================================================================
 # write_decayBW_file
 #===============================================================================
-def write_decayBW_file(fsock, matrix_element, fortran_model,
+def write_decayBW_file(writer, matrix_element, fortran_model,
                        s_and_t_channels):
     """Write the decayBW.inc file for MadEvent"""
-
-    writer = FortranWriter()
 
     lines = []
 
@@ -565,48 +566,43 @@ def write_decayBW_file(fsock, matrix_element, fortran_model,
                           booldict[leg.get('from_group')]))
 
     # Write the file
-    for line in lines:
-        writer.write_fortran_line(fsock, line)
+    writer.writelines(lines)
 
     return True
 
 #===============================================================================
 # write_dname_file
 #===============================================================================
-def write_dname_file(fsock, matrix_element, fortran_model):
+def write_dname_file(writer, matrix_element, fortran_model):
     """Write the dname.mg file for MG4"""
 
     line = "DIRNAME=P%s" % \
            matrix_element.get('processes')[0].shell_string()
 
     # Write the file
-    fsock.write(line + "\n")
+    writer.write(line + "\n")
 
     return True
 
 #===============================================================================
 # write_iproc_file
 #===============================================================================
-def write_iproc_file(fsock, matrix_element, fortran_model):
+def write_iproc_file(writer, matrix_element, fortran_model):
     """Write the iproc.inc file for MG4"""
-
-    writer = FortranWriter()
 
     line = "%d" % \
            matrix_element.get('processes')[0].get('id')
 
     # Write the file
-    writer.write_fortran_line(fsock, line)
-
+    for line_to_write in writer.write_line(line):
+        writer.write(line_to_write)
     return True
 
 #===============================================================================
 # write_leshouche_file
 #===============================================================================
-def write_leshouche_file(fsock, matrix_element, fortran_model):
+def write_leshouche_file(writer, matrix_element, fortran_model):
     """Write the leshouche.inc file for MG4"""
-
-    writer = FortranWriter()
 
     # Extract number of external particles
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
@@ -652,36 +648,30 @@ def write_leshouche_file(fsock, matrix_element, fortran_model):
                                         for l in legs])))
 
     # Write the file
-    for line in lines:
-        writer.write_fortran_line(fsock, line)
+    writer.writelines(lines)
 
     return True
 
 #===============================================================================
 # write_maxamps_file
 #===============================================================================
-def write_maxamps_file(fsock, matrix_element, fortran_model):
+def write_maxamps_file(writer, matrix_element, fortran_model, ncolor):
     """Write the maxamps.inc file for MG4."""
 
-    writer = FortranWriter()
-
-    file = "       integer    maxamps\n"
-    file = file + "parameter (maxamps=%d)" % \
-           len(matrix_element.get_all_amplitudes())
+    file = "       integer    maxamps, maxflow\n"
+    file = file + "parameter (maxamps=%d, maxflow=%d)" % \
+           (len(matrix_element.get_all_amplitudes()), ncolor)
 
     # Write the file
-    for line in file.split('\n'):
-        writer.write_fortran_line(fsock, line)
+    writer.writelines(file)
 
     return True
 
 #===============================================================================
 # write_mg_sym_file
 #===============================================================================
-def write_mg_sym_file(fsock, matrix_element, fortran_model):
+def write_mg_sym_file(writer, matrix_element, fortran_model):
     """Write the mg.sym file for MadEvent."""
-
-    writer = FortranWriter()
 
     lines = []
 
@@ -715,18 +705,15 @@ def write_mg_sym_file(fsock, matrix_element, fortran_model):
             lines.append(str(number))
 
     # Write the file
-    for line in lines:
-        writer.write_fortran_line(fsock, line)
+    writer.writelines(lines)
 
     return True
 
 #===============================================================================
 # write_ncombs_file
 #===============================================================================
-def write_ncombs_file(fsock, matrix_element, fortran_model):
+def write_ncombs_file(writer, matrix_element, fortran_model):
     """Write the ncombs.inc file for MadEvent."""
-
-    writer = FortranWriter()
 
     # Extract number of external particles
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
@@ -736,19 +723,15 @@ def write_ncombs_file(fsock, matrix_element, fortran_model):
     file = file + "parameter (n_max_cl=%d)" % (2 ** (nexternal + 1))
 
     # Write the file
-
-    for line in file.split('\n'):
-        writer.write_fortran_line(fsock, line)
+    writer.writelines(file)
 
     return True
 
 #===============================================================================
 # write_nexternal_file
 #===============================================================================
-def write_nexternal_file(fsock, matrix_element, fortran_model):
+def write_nexternal_file(writer, matrix_element, fortran_model):
     """Write the nexternal.inc file for MG4"""
-
-    writer = FortranWriter()
 
     replace_dict = {}
 
@@ -764,36 +747,30 @@ def write_nexternal_file(fsock, matrix_element, fortran_model):
       parameter (nincoming=%(ninitial)d)""" % replace_dict
 
     # Write the file
-    for line in file.split('\n'):
-        writer.write_fortran_line(fsock, line)
+    writer.writelines(file)
 
     return True
 
 #===============================================================================
 # write_ngraphs_file
 #===============================================================================
-def write_ngraphs_file(fsock, matrix_element, fortran_model, nconfigs):
+def write_ngraphs_file(writer, matrix_element, fortran_model, nconfigs):
     """Write the ngraphs.inc file for MG4. Needs input from
     write_configs_file."""
-
-    writer = FortranWriter()
 
     file = "       integer    n_max_cg\n"
     file = file + "parameter (n_max_cg=%d)" % nconfigs
 
     # Write the file
-    for line in file.split('\n'):
-        writer.write_fortran_line(fsock, line)
+    writer.writelines(file)
 
     return True
 
 #===============================================================================
 # write_pmass_file
 #===============================================================================
-def write_pmass_file(fsock, matrix_element, fortran_model):
+def write_pmass_file(writer, matrix_element, fortran_model):
     """Write the pmass.inc file for MG4"""
-
-    writer = FortranWriter()
 
     model = matrix_element.get('processes')[0].get('model')
 
@@ -807,19 +784,16 @@ def write_pmass_file(fsock, matrix_element, fortran_model):
                      (wf.get('number_external'), mass))
 
     # Write the file
-    for line in lines:
-        writer.write_fortran_line(fsock, line)
+    writer.writelines(lines)
 
     return True
 
 #===============================================================================
 # write_props_file
 #===============================================================================
-def write_props_file(fsock, matrix_element, fortran_model, s_and_t_channels):
+def write_props_file(writer, matrix_element, fortran_model, s_and_t_channels):
     """Write the props.inc file for MadEvent. Needs input from
     write_configs_file."""
-
-    writer = FortranWriter()
 
     lines = []
 
@@ -851,29 +825,28 @@ def write_props_file(fsock, matrix_element, fortran_model, s_and_t_channels):
                          (leg.get('number'), iconf + 1, pow_part))
 
     # Write the file
-    for line in lines:
-        writer.write_fortran_line(fsock, line)
+    writer.writelines(lines)
 
     return True
 
 #===============================================================================
 # write_subproc
 #===============================================================================
-def write_subproc(fsock, matrix_element, fortran_model):
+def write_subproc(writer, matrix_element, fortran_model):
     """Append this subprocess to the subproc.mg file for MG4"""
 
     line = "P%s" % \
            matrix_element.get('processes')[0].shell_string()
 
     # Write line to file
-    fsock.write(line + "\n")
+    writer.write(line + "\n")
 
     return True
 
 #===============================================================================
 # export the model
 #===============================================================================
-def export_model(model_path, process_path):
+def export_model_files(model_path, process_path):
     """Configure the files/link of the process according to the model"""
     
     # Import the model
@@ -881,8 +854,9 @@ def export_model(model_path, process_path):
         if os.path.isfile(os.path.join(model_path, file)):
             shutil.copy2(os.path.join(model_path, file), \
                                  os.path.join(process_path, 'Source', 'MODEL'))    
-
-
+    make_model_symbolic_link(process_path)
+    
+def make_model_symbolic_link(process_path):
     #make the copy/symbolic link
     model_path = process_path + '/Source/MODEL/'
     ln(model_path + '/ident_card.dat', process_path + '/Cards', log=False)
@@ -894,6 +868,37 @@ def export_model(model_path, process_path):
     ln(model_path + '/coupl.inc', process_path + '/SubProcesses')
     ln(process_path + '/Source/run.inc', process_path + '/SubProcesses', log=False)
 
+#===============================================================================
+# export the helas routine
+#===============================================================================
+def export_helas(helas_path, process_path):
+    """Configure the files/link of the process according to the model"""
+    
+    # Import helas routine
+    for filename in os.listdir(helas_path):
+        filepos = os.path.join(helas_path, filename)
+        if os.path.isfile(filepos):
+            if filepos.endswith('Makefile.template'):
+                ln(filepos, os.path.join(process_path,'Source','DHELAS'),
+                   'Makefile')
+            elif filepos.endswith('Makefile'):
+                pass
+            else:
+                ln(filepos, process_path+'/Source/DHELAS')
+# following lines do the same but whithout symbolic link
+# 
+#def export_helas(mgme_dir, dir_path):
+#
+#        # Copy the HELAS directory
+#        helas_dir = os.path.join(mgme_dir, 'HELAS')
+#        for filename in os.listdir(helas_dir): 
+#            if os.path.isfile(os.path.join(helas_dir, filename)):
+#                shutil.copy2(os.path.join(helas_dir, filename),
+#                            os.path.join(dir_path, 'Source', 'DHELAS'))
+#        shutil.move(os.path.join(dir_path, 'Source', 'DHELAS', 'Makefile.template'),
+#                    os.path.join(dir_path, 'Source', 'DHELAS', 'Makefile'))
+#  
+                
 #===============================================================================
 # generate_subprocess_directory_v4_standalone
 #===============================================================================
@@ -908,6 +913,7 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
     # Create the directory PN_xx_xxxxx in the specified path
     dirpath = os.path.join(path, \
                    "P%s" % matrix_element.get('processes')[0].shell_string())
+
     try:
         os.mkdir(dirpath)
     except os.error as error:
@@ -923,28 +929,25 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
 
     # Create the matrix.f file and the nexternal.inc file
     filename = 'matrix.f'
-    calls = files.write_to_file(filename,
-                                write_matrix_element_v4_standalone,
-                                matrix_element,
-                                fortran_model)
+    calls = write_matrix_element_v4_standalone(\
+        writers.FortranWriter(filename),
+        matrix_element,
+        fortran_model)
 
     filename = 'nexternal.inc'
-    files.write_to_file(filename,
-                        write_nexternal_file,
-                        matrix_element,
-                        fortran_model)
+    write_nexternal_file(writers.FortranWriter(filename),
+                         matrix_element,
+                         fortran_model)
 
     filename = 'pmass.inc'
-    files.write_to_file(filename,
-                        write_pmass_file,
-                        matrix_element,
-                        fortran_model)
+    write_pmass_file(writers.FortranWriter(filename),
+                     matrix_element,
+                     fortran_model)
 
     filename = 'ngraphs.inc'
-    files.write_to_file(filename,
-                        write_ngraphs_file,
-                        matrix_element,
-                        fortran_model,
+    write_ngraphs_file(writers.FortranWriter(filename),
+                       matrix_element,
+                       fortran_model,
                         len(matrix_element.get_all_amplitudes()))
 
     linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
@@ -991,96 +994,84 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 
     # Create the matrix.f file, auto_dsig.f file and all inc files
     filename = 'matrix.f'
-    calls = files.write_to_file(filename,
-                                write_matrix_element_v4_madevent,
-                                matrix_element,
-                                fortran_model)
+    calls, ncolor = \
+           write_matrix_element_v4_madevent(writers.FortranWriter(filename),
+                                            matrix_element,
+                                            fortran_model)
 
     filename = 'auto_dsig.f'
-    files.write_to_file(filename,
-                                write_auto_dsig_file,
-                                matrix_element,
-                                fortran_model)
+    write_auto_dsig_file(writers.FortranWriter(filename),
+                         matrix_element,
+                         fortran_model)
 
     filename = 'coloramps.inc'
-    files.write_to_file(filename,
-                        write_coloramps_file,
-                        matrix_element,
-                        fortran_model)
+    write_coloramps_file(writers.FortranWriter(filename),
+                         matrix_element,
+                         fortran_model)
 
     filename = 'configs.inc'
-    nconfigs, s_and_t_channels = files.write_to_file(filename,
-                        write_configs_file,
-                        matrix_element,
-                        fortran_model)
+    nconfigs, s_and_t_channels = write_configs_file(\
+        writers.FortranWriter(filename),
+        matrix_element,
+        fortran_model)
 
     filename = 'decayBW.inc'
-    files.write_to_file(filename,
-                        write_decayBW_file,
-                        matrix_element,
-                        fortran_model,
+    write_decayBW_file(writers.FortranWriter(filename),
+                       matrix_element,
+                       fortran_model,
                         s_and_t_channels)
 
     filename = 'dname.mg'
-    files.write_to_file(filename,
-                        write_dname_file,
-                        matrix_element,
-                        fortran_model)
+    write_dname_file(writers.FortranWriter(filename),
+                     matrix_element,
+                     fortran_model)
 
     filename = 'iproc.dat'
-    files.write_to_file(filename,
-                        write_iproc_file,
-                        matrix_element,
-                        fortran_model)
+    write_iproc_file(writers.FortranWriter(filename),
+                     matrix_element,
+                     fortran_model)
 
     filename = 'leshouche.inc'
-    files.write_to_file(filename,
-                        write_leshouche_file,
-                        matrix_element,
-                        fortran_model)
+    write_leshouche_file(writers.FortranWriter(filename),
+                         matrix_element,
+                         fortran_model)
 
     filename = 'maxamps.inc'
-    files.write_to_file(filename,
-                        write_maxamps_file,
-                        matrix_element,
-                        fortran_model)
+    write_maxamps_file(writers.FortranWriter(filename),
+                       matrix_element,
+                       fortran_model,
+                       ncolor)
 
     filename = 'mg.sym'
-    files.write_to_file(filename,
-                        write_mg_sym_file,
-                        matrix_element,
-                        fortran_model)
+    write_mg_sym_file(writers.FortranWriter(filename),
+                      matrix_element,
+                      fortran_model)
 
     filename = 'ncombs.inc'
-    files.write_to_file(filename,
-                        write_ncombs_file,
-                        matrix_element,
-                        fortran_model)
+    write_ncombs_file(writers.FortranWriter(filename),
+                      matrix_element,
+                      fortran_model)
 
     filename = 'nexternal.inc'
-    files.write_to_file(filename,
-                        write_nexternal_file,
-                        matrix_element,
-                        fortran_model)
+    write_nexternal_file(writers.FortranWriter(filename),
+                         matrix_element,
+                         fortran_model)
 
     filename = 'ngraphs.inc'
-    files.write_to_file(filename,
-                        write_ngraphs_file,
-                        matrix_element,
-                        fortran_model,
+    write_ngraphs_file(writers.FortranWriter(filename),
+                       matrix_element,
+                       fortran_model,
                         nconfigs)
 
     filename = 'pmass.inc'
-    files.write_to_file(filename,
-                        write_pmass_file,
-                        matrix_element,
-                        fortran_model)
+    write_pmass_file(writers.FortranWriter(filename),
+                     matrix_element,
+                     fortran_model)
 
     filename = 'props.inc'
-    files.write_to_file(filename,
-                        write_props_file,
-                        matrix_element,
-                        fortran_model,
+    write_props_file(writers.FortranWriter(filename),
+                     matrix_element,
+                     fortran_model,
                         s_and_t_channels)
 
     # Generate diagrams
@@ -1155,15 +1146,15 @@ def get_mg5_info_lines():
     info = misc.get_pkg_info()
     info_lines = ""
     if info and info.has_key('version') and  info.has_key('date'):
-        info_lines = "C  Generated by MadGraph 5 v. %s, %s\n" % \
+        info_lines = "#  Generated by MadGraph 5 v. %s, %s\n" % \
                      (info['version'], info['date'])
         info_lines = info_lines + \
-                     "C  By the MadGraph Development Team\n" + \
-                     "C  Please visit us at https://launchpad.net/madgraph5"
+                     "#  By the MadGraph Development Team\n" + \
+                     "#  Please visit us at https://launchpad.net/madgraph5"
     else:
-        info_lines = "C  Generated by MadGraph 5\n" + \
-                     "C  By the MadGraph Development Team\n" + \
-                     "C  Please visit us at https://launchpad.net/madgraph5"        
+        info_lines = "#  Generated by MadGraph 5\n" + \
+                     "#  By the MadGraph Development Team\n" + \
+                     "#  Please visit us at https://launchpad.net/madgraph5"        
 
     return info_lines
 
@@ -1372,549 +1363,6 @@ def get_pdf_lines(matrix_element, ninitial):
     # Remove last line break from pdf_lines
     return pdf_lines[:-1]
 
-#===============================================================================
-# FortranWriter
-#===============================================================================
-class FortranWriter():
-    """Routines for writing fortran lines. Keeps track of indentation
-    and splitting of long lines"""
-
-    class FortranWriterError(Exception):
-        """Exception raised if an error occurs in the definition
-        or the execution of a FortranWriter."""
-        pass
-
-    # Parameters defining the output of the Fortran writer
-    keyword_pairs = {'^if.+then\s*$': ('^endif', 2),
-                     '^do\s+': ('^enddo\s*$', 2),
-                     '^subroutine': ('^end\s*$', 0),
-                     'function': ('^end\s*$', 0)}
-    single_indents = {'^else\s*$':-2,
-                      '^else\s*if.+then\s*$':-2}
-    line_cont_char = '$'
-    comment_char = 'c'
-    downcase = False
-    line_length = 71
-    max_split = 10
-    split_characters = "+-*/,) "
-    comment_split_characters = " "
-
-    # Private variables
-    __indent = 0
-    __keyword_list = []
-    __comment_pattern = re.compile(r"^(\s*#|c$|(c\s+([^=]|$)))", re.IGNORECASE)
-
-    def write_fortran_line(self, fsock, line):
-        """Write a fortran line, with correct indent and line splits"""
-
-        if not isinstance(line, str) or line.find('\n') >= 0:
-            raise self.FortranWriterError, \
-                  "write_fortran_line must have a single line as argument"
-
-        # Check if this line is a comment
-        if self.__comment_pattern.search(line):
-            # This is a comment
-            myline = " " * (5 + self.__indent) + line.lstrip()[1:].lstrip()
-            if FortranWriter.downcase:
-                self.comment_char = self.comment_char.lower()
-            else:
-                self.comment_char = self.comment_char.upper()
-            myline = self.comment_char + myline
-            part = ""
-            post_comment = ""
-            # Break line in appropriate places
-            # defined (in priority order) by the characters in
-            # comment_split_characters
-            res = self.split_line(myline,
-                                  self.comment_split_characters,
-                                  self.comment_char + " " * (5 + self.__indent))
-        else:
-            # This is a regular Fortran line
-
-            # Strip leading spaces from line
-            myline = line.lstrip()
-
-            # Convert to upper or lower case
-            # Here we need to make exception for anything within quotes.
-            (myline, part, post_comment) = myline.partition("!")
-            # Set space between line and post-comment
-            if part:
-                part = "  " + part
-            # Replace all double quotes by single quotes
-            myline = myline.replace('\"', '\'')
-            # Downcase or upcase Fortran code, except for quotes
-            splitline = myline.split('\'')
-            myline = ""
-            i = 0
-            while i < len(splitline):
-                if i % 2 == 1:
-                    # This is a quote - check for escaped \'s
-                    while splitline[i][len(splitline[i]) - 1] == '\\':
-                        splitline[i] = splitline[i] + '\'' + splitline.pop(i + 1)
-                else:
-                    # Otherwise downcase/upcase
-                    if FortranWriter.downcase:
-                        splitline[i] = splitline[i].lower()
-                    else:
-                        splitline[i] = splitline[i].upper()
-                i = i + 1
-
-            myline = "\'".join(splitline).rstrip()
-
-            # Check if line starts with dual keyword and adjust indent 
-            if self.__keyword_list and re.search(self.keyword_pairs[\
-                self.__keyword_list[len(self.__keyword_list) - 1]][0],
-                                               myline.lower()):
-                key = self.__keyword_list.pop()
-                self.__indent = self.__indent - self.keyword_pairs[key][1]
-
-            # Check for else and else if
-            single_indent = 0
-            for key in self.single_indents.keys():
-                if re.search(key, myline.lower()):
-                    self.__indent = self.__indent + self.single_indents[key]
-                    single_indent = -self.single_indents[key]
-                    break
-
-            # Break line in appropriate places
-            # defined (in priority order) by the characters in split_characters
-            res = self.split_line(" " * (6 + self.__indent) + myline,
-                                  self.split_characters,
-                                  " " * 5 + self.line_cont_char + \
-                                  " " * (self.__indent + 1))
-
-            # Check if line starts with keyword and adjust indent for next line
-            for key in self.keyword_pairs.keys():
-                if re.search(key, myline.lower()):
-                    self.__keyword_list.append(key)
-                    self.__indent = self.__indent + self.keyword_pairs[key][1]
-                    break
-
-            # Correct back for else and else if
-            if single_indent != None:
-                self.__indent = self.__indent + single_indent
-                single_indent = None
-
-        # Write line(s) to file
-        fsock.write("\n".join(res) + part + post_comment + "\n")
-
-        return True
-
-    def split_line(self, line, split_characters, line_start):
-        """Split a line if it is longer than self.line_length
-        columns. Split in preferential order according to
-        split_characters, and start each new line with line_start."""
-
-        res_lines = [line]
-
-        while len(res_lines[-1]) > self.line_length:
-            split_at = self.line_length
-            for character in split_characters:
-                index = res_lines[-1][(self.line_length - self.max_split): \
-                                      self.line_length].rfind(character)
-                if index >= 0:
-                    split_at = self.line_length - self.max_split + index
-                    break
-
-            res_lines.append(line_start + \
-                             res_lines[-1][split_at:])
-            res_lines[-2] = res_lines[-2][:split_at]
-
-        return res_lines
-
-#===============================================================================
-# HelasFortranModel
-#===============================================================================
-class HelasFortranModel(helas_objects.HelasModel):
-    """The class for writing Helas calls in Fortran, starting from
-    HelasWavefunctions and HelasAmplitudes.
-
-    Includes the function generate_helas_call, which automatically
-    generates the Fortran Helas call based on the Lorentz structure of
-    the interaction."""
-
-    # Dictionaries used for automatic generation of Helas calls
-    # Dictionaries from spin states to letters in Helas call
-    mother_dict = {1: 'S', 2: 'O', -2: 'I', 3: 'V', 5: 'T'}
-    self_dict = {1: 'H', 2: 'F', -2: 'F', 3: 'J', 5: 'U'}
-    # Dictionaries used for sorting the letters in the Helas call
-    sort_wf = {'O': 0, 'I': 1, 'S': 2, 'T': 3, 'V': 4}
-    sort_amp = {'S': 1, 'V': 2, 'T': 0, 'O': 3, 'I': 4}
-
-    def default_setup(self):
-        """Set up special Helas calls (wavefunctions and amplitudes)
-        that can not be done automatically by generate_helas_call"""
-
-        super(HelasFortranModel, self).default_setup()
-
-        # Add special fortran Helas calls, which are not automatically
-        # generated
-
-        # Gluon 4-vertex division tensor calls ggT for the FR sm and mssm
-
-        key = ((3, 3, 5), 'A')
-
-        call = lambda wf: \
-               "CALL UVVAXX(W(1,%d),W(1,%d),%s,zero,zero,zero,W(1,%d))" % \
-               (wf.get('mothers')[0].get('number'),
-                wf.get('mothers')[1].get('number'),
-
-                wf.get('coupling'),
-                wf.get('number'))
-        self.add_wavefunction(key, call)
-
-        key = ((3, 5, 3), 'A')
-
-        call = lambda wf: \
-               "CALL JVTAXX(W(1,%d),W(1,%d),%s,zero,zero,W(1,%d))" % \
-               (wf.get('mothers')[0].get('number'),
-                wf.get('mothers')[1].get('number'),
-
-                wf.get('coupling'),
-                wf.get('number'))
-        self.add_wavefunction(key, call)
-
-        key = ((3, 3, 5), 'A')
-
-        call = lambda amp: \
-               "CALL VVTAXX(W(1,%d),W(1,%d),W(1,%d),%s,zero,AMP(%d))" % \
-               (amp.get('mothers')[0].get('number'),
-                amp.get('mothers')[1].get('number'),
-                amp.get('mothers')[2].get('number'),
-
-                amp.get('coupling'),
-                amp.get('number'))
-        self.add_amplitude(key, call)
-
-        # SM gluon 4-vertex components
-
-        key = ((3, 3, 3, 3), 'gggg1')
-        call = lambda wf: \
-               "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
-               (wf.get('mothers')[0].get('number'),
-                wf.get('mothers')[1].get('number'),
-                wf.get('mothers')[2].get('number'),
-                wf.get('coupling'),
-                wf.get('number'))
-        self.add_wavefunction(key, call)
-        key = ((3, 3, 3, 3), 'gggg1')
-        call = lambda amp: \
-               "CALL GGGGXX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,AMP(%d))" % \
-               (amp.get('mothers')[0].get('number'),
-                amp.get('mothers')[1].get('number'),
-                amp.get('mothers')[2].get('number'),
-                amp.get('mothers')[3].get('number'),
-                amp.get('coupling'),
-                amp.get('number'))
-        self.add_amplitude(key, call)
-        key = ((3, 3, 3, 3), 'gggg2')
-        call = lambda wf: \
-               "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
-               (wf.get('mothers')[2].get('number'),
-                wf.get('mothers')[0].get('number'),
-                wf.get('mothers')[1].get('number'),
-                wf.get('coupling'),
-                wf.get('number'))
-        self.add_wavefunction(key, call)
-        key = ((3, 3, 3, 3), 'gggg2')
-        call = lambda amp: \
-               "CALL GGGGXX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,AMP(%d))" % \
-               (amp.get('mothers')[2].get('number'),
-                amp.get('mothers')[0].get('number'),
-                amp.get('mothers')[1].get('number'),
-                amp.get('mothers')[3].get('number'),
-                amp.get('coupling'),
-                amp.get('number'))
-        self.add_amplitude(key, call)
-        key = ((3, 3, 3, 3), 'gggg3')
-        call = lambda wf: \
-               "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
-               (wf.get('mothers')[1].get('number'),
-                wf.get('mothers')[2].get('number'),
-                wf.get('mothers')[0].get('number'),
-                wf.get('coupling'),
-                wf.get('number'))
-        self.add_wavefunction(key, call)
-        key = ((3, 3, 3, 3), 'gggg3')
-        call = lambda amp: \
-               "CALL GGGGXX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,AMP(%d))" % \
-               (amp.get('mothers')[1].get('number'),
-                amp.get('mothers')[2].get('number'),
-                amp.get('mothers')[0].get('number'),
-                amp.get('mothers')[3].get('number'),
-                amp.get('coupling'),
-                amp.get('number'))
-        self.add_amplitude(key, call)
-
-    def get_wavefunction_call(self, wavefunction):
-        """Return the function for writing the wavefunction
-        corresponding to the key. If the function doesn't exist,
-        generate_helas_call is called to automatically create the
-        function."""
-
-        val = super(HelasFortranModel, self).get_wavefunction_call(wavefunction)
-
-        if val:
-            return val
-
-        # If function not already existing, try to generate it.
-
-        if len(wavefunction.get('mothers')) > 3:
-            raise self.PhysicsObjectError, \
-                  """Automatic generation of Fortran wavefunctions not
-                  implemented for > 3 mothers"""
-
-        self.generate_helas_call(wavefunction)
-        return super(HelasFortranModel, self).get_wavefunction_call(\
-            wavefunction)
-
-    def get_amplitude_call(self, amplitude):
-        """Return the function for writing the amplitude corresponding
-        to the key. If the function doesn't exist, generate_helas_call
-        is called to automatically create the function."""
-
-        val = super(HelasFortranModel, self).get_amplitude_call(amplitude)
-
-        if val:
-            return val
-
-        # If function not already existing, try to generate it.
-
-        if len(amplitude.get('mothers')) > 4:
-            raise self.PhysicsObjectError, \
-                  """Automatic generation of Fortran amplitudes not
-                  implemented for > 4 mothers"""
-
-        self.generate_helas_call(amplitude)
-        return super(HelasFortranModel, self).get_amplitude_call(amplitude)
-
-    def generate_helas_call(self, argument):
-        """Routine for automatic generation of Fortran Helas calls
-        according to just the spin structure of the interaction.
-
-        First the call string is generated, using a dictionary to go
-        from the spin state of the calling wavefunction and its
-        mothers, or the mothers of the amplitude, to letters.
-
-        Then the call function is generated, as a lambda which fills
-        the call string with the information of the calling
-        wavefunction or amplitude. The call has different structure,
-        depending on the spin of the wavefunction and the number of
-        mothers (multiplicity of the vertex). The mother
-        wavefunctions, when entering the call, must be sorted in the
-        correct way - this is done by the sorted_mothers routine.
-
-        Finally the call function is stored in the relevant
-        dictionary, in order to be able to reuse the function the next
-        time a wavefunction with the same Lorentz structure is needed.
-        """
-
-        if not isinstance(argument, helas_objects.HelasWavefunction) and \
-           not isinstance(argument, helas_objects.HelasAmplitude):
-            raise self.PhysicsObjectError, \
-                  "get_helas_call must be called with wavefunction or amplitude"
-
-        call = "CALL "
-
-        call_function = None
-
-        if isinstance(argument, helas_objects.HelasAmplitude) and \
-           argument.get('interaction_id') == 0:
-            call = "#"
-            call_function = lambda amp: call
-            self.add_amplitude(argument.get_call_key(), call_function)
-            return
-
-        if isinstance(argument, helas_objects.HelasWavefunction) and \
-               not argument.get('mothers'):
-            # String is just IXXXXX, OXXXXX, VXXXXX or SXXXXX
-            call = call + HelasFortranModel.mother_dict[\
-                argument.get_spin_state_number()]
-            # Fill out with X up to 6 positions
-            call = call + 'X' * (11 - len(call))
-            call = call + "(P(0,%d),"
-            if argument.get('spin') != 1:
-                # For non-scalars, need mass and helicity
-                call = call + "%s,NHEL(%d),"
-            call = call + "%+d*IC(%d),W(1,%d))"
-            if argument.get('spin') == 1:
-                call_function = lambda wf: call % \
-                                (wf.get('number_external'),
-                                 # For boson, need initial/final here
-                                 (-1) ** (wf.get('state') == 'initial'),
-                                 wf.get('number_external'),
-                                 wf.get('number'))
-            elif argument.is_boson():
-                call_function = lambda wf: call % \
-                                (wf.get('number_external'),
-                                 wf.get('mass'),
-                                 wf.get('number_external'),
-                                 # For boson, need initial/final here
-                                 (-1) ** (wf.get('state') == 'initial'),
-                                 wf.get('number_external'),
-                                 wf.get('number'))
-            else:
-                call_function = lambda wf: call % \
-                                (wf.get('number_external'),
-                                 wf.get('mass'),
-                                 wf.get('number_external'),
-                                 # For fermions, need particle/antiparticle
-                                 - (-1) ** wf.get_with_flow('is_part'),
-                                 wf.get('number_external'),
-                                 wf.get('number'))
-        else:
-            # String is FOVXXX, FIVXXX, JIOXXX etc.
-            if isinstance(argument, helas_objects.HelasWavefunction):
-                call = call + \
-                       HelasFortranModel.self_dict[\
-                argument.get_spin_state_number()]
-
-            mother_letters = HelasFortranModel.sorted_letters(argument)
-
-            # If Lorentz structure is given, by default add this
-            # to call name
-            addition = argument.get('lorentz')
-
-            # Take care of special case: WWWW or WWVV calls
-            if len(argument.get('lorentz')) > 3 and \
-                   argument.get('lorentz')[:2] == "WW":
-                if argument.get('lorentz')[:4] == "WWWW":
-                    mother_letters = "WWWW"[:len(mother_letters)]
-                if argument.get('lorentz')[:4] == "WWVV":
-                    mother_letters = "W3W3"[:len(mother_letters)]
-                addition = argument.get('lorentz')[4:]
-
-            call = call + mother_letters
-            call = call + addition
-
-            # Check if we need to append a charge conjugation flag
-            if argument.needs_hermitian_conjugate():
-                call = call + 'C'
-
-            if len(call) > 11:
-                raise self.PhysicsObjectError, \
-                      "Call to Helas routine %s should be maximum 6 chars" \
-                      % call[5:]
-
-            # Fill out with X up to 6 positions
-            call = call + 'X' * (11 - len(call)) + '('
-            # Wavefunctions
-            call = call + "W(1,%d)," * len(argument.get('mothers'))
-            # Couplings
-            call = call + "%s,"
-
-
-            if isinstance(argument, helas_objects.HelasWavefunction):
-                # Extra dummy coupling for 4-vector vertices
-                if argument.get('lorentz') == 'WWVV':
-                    # SM W3W3 vertex
-                    call = call + "1D0,"
-                elif argument.get('lorentz') == 'WWWW':
-                    # SM WWWW vertex
-                    call = call + "0D0,"
-                elif argument.get('spin') == 3 and \
-                       [wf.get('spin') for wf in argument.get('mothers')] == \
-                       [3, 3, 3]:
-                    # All other 4-vector vertices (FR) - note that gggg
-                    # has already been defined
-                    call = call + "DUM0,"
-                # Mass and width
-                call = call + "%s,%s,"
-                # New wavefunction
-                call = call + "W(1,%d))"
-            else:
-                # Extra dummy coupling for 4-particle vertices
-                # Need to replace later with the correct type
-                if argument.get('lorentz') == 'WWVV':
-                    # SM W3W3 vertex
-                    call = call + "1D0,"
-                elif argument.get('lorentz') == 'WWWW':
-                    # SM WWWW vertex
-                    call = call + "0D0,"
-                elif [wf.get('spin') for wf in argument.get('mothers')] == \
-                       [3, 3, 3, 3]:
-                    # Other 4-vector vertices (FR) - note that gggg
-                    # has already been defined
-                    call = call + "DUM0,"
-                # Amplitude
-                call = call + "AMP(%d))"
-
-            if isinstance(argument, helas_objects.HelasWavefunction):
-                # Create call for wavefunction
-                if len(argument.get('mothers')) == 2:
-                    call_function = lambda wf: call % \
-                                    (wf.get('mothers')[0].\
-                                     get('number'),
-                                     wf.get('mothers')[1].\
-                                     get('number'),
-                                     wf.get_with_flow('coupling'),
-                                     wf.get('mass'),
-                                     wf.get('width'),
-                                     wf.get('number'))
-                else:
-                    call_function = lambda wf: call % \
-                                    (wf.get('mothers')[0].\
-                                     get('number'),
-                                     wf.get('mothers')[1].\
-                                     get('number'),
-                                     wf.get('mothers')[2].\
-                                     get('number'),
-                                     wf.get_with_flow('coupling'),
-                                     wf.get('mass'),
-                                     wf.get('width'),
-                                     wf.get('number'))
-            else:
-                # Create call for amplitude
-                if len(argument.get('mothers')) == 3:
-                    call_function = lambda amp: call % \
-                                    (amp.get('mothers')[0].\
-                                     get('number'),
-                                     amp.get('mothers')[1].\
-                                     get('number'),
-                                     amp.get('mothers')[2].\
-                                     get('number'),
-
-                                     amp.get('coupling'),
-                                     amp.get('number'))
-                else:
-                    call_function = lambda amp: call % \
-                                    (amp.get('mothers')[0].\
-                                     get('number'),
-                                     amp.get('mothers')[1].\
-                                     get('number'),
-                                     amp.get('mothers')[2].\
-                                     get('number'),
-                                     amp.get('mothers')[3].\
-                                     get('number'),
-                                     amp.get('coupling'),
-                                     amp.get('number'))
-
-        # Add the constructed function to wavefunction or amplitude dictionary
-        if isinstance(argument, helas_objects.HelasWavefunction):
-            self.add_wavefunction(argument.get_call_key(), call_function)
-        else:
-            self.add_amplitude(argument.get_call_key(), call_function)
-
-    # Static helper functions
-
-    @staticmethod
-    def sorted_letters(arg):
-        """Gives a list of letters sorted according to
-        the order of letters in the Fortran Helas calls"""
-
-        if isinstance(arg, helas_objects.HelasWavefunction):
-            return "".join(sorted([HelasFortranModel.mother_dict[\
-            wf.get_spin_state_number()] for wf in arg.get('mothers')],
-                          lambda l1, l2: \
-                          HelasFortranModel.sort_wf[l2] - \
-                          HelasFortranModel.sort_wf[l1]))
-
-        if isinstance(arg, helas_objects.HelasAmplitude):
-            return "".join(sorted([HelasFortranModel.mother_dict[\
-            wf.get_spin_state_number()] for wf in arg.get('mothers')],
-                          lambda l1, l2: \
-                          HelasFortranModel.sort_amp[l2] - \
-                          HelasFortranModel.sort_amp[l1]))
 
 #===============================================================================
 # Global helper methods
@@ -1948,66 +1396,447 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
     return res_str + '*'
 
 
-################################################################################
-## helper function for universal file treatment
-################################################################################
-def format_path(path):
-    """Format the path in local format taking in entry a unix format"""
-    if path[0] != '/':
-        return os.path.join(*path.split('/'))
-    else:
-        return os.path.sep + os.path.join(*path.split('/'))
-def cp(path1, path2, log=True):
-    """ simple cp taking linux or mix entry"""
-    path1 = format_path(path1)
-    path2 = format_path(path2)
-    try:
-        shutil.copy2(path1, path2)
-    except IOError, why:
-        if log:
-            logger.warning(why)
-        
+#===============================================================================
+# Routines to output UFO models in MG4 format
+#===============================================================================
+
+def convert_model_to_mg4(model, output_dir, wanted_lorentz = []):
+    """ Create a full valid MG4 model from a MG5 model (coming from UFO)"""
     
-def mv(path1, path2):
-    """simple mv taking linux or mix format entry"""
-    path1 = format_path(path1)
-    path2 = format_path(path2)
-    try:
-        shutil.move(path1, path2)
-    except:
-        # An error can occur if the files exist at final destination
-        if os.path.isfile(path2):
-            os.remove(path2)
-            shutil.move(path1, path2)
-            return
-        elif os.path.isdir(path2) and os.path.exists(
-                                   os.path.join(path2, os.path.basename(path1))):      
-            path2 = os.path.join(path2, os.path.basename(path1))
-            os.remove(path2)
-            shutil.move(path1, path2)
+    # create the MODEL
+    write_dir=os.path.join(output_dir, 'Source', 'MODEL')
+    model_builder = UFO_model_to_mg4(model, write_dir)
+    model_builder.build()
+    
+    # Create and write ALOHA Routine
+    aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
+    if wanted_lorentz:
+        aloha_model.compute_subset(wanted_lorentz)
+    else:
+        aloha_model.compute_all(save=False)
+    write_dir=os.path.join(output_dir, 'Source', 'DHELAS')
+    aloha_model.write(write_dir, 'Fortran')
+    
+    #copy Helas Template
+    cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
+    for filename in os.listdir(os.path.join(MG5DIR,'aloha','template_files')):
+        if not filename.lower().endswith('.f'):
+            continue
+        cp((MG5DIR + '/aloha/template_files/' + filename), write_dir)
+    create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
+                
+    # Make final link in the Process
+    make_model_symbolic_link(output_dir)
+
+#===============================================================================
+# UFO_model_to_mg4
+#===============================================================================
+
+
+python_to_fortran = lambda x: parsers.UFOExpressionParserFortran().parse(x)
+
+class UFO_model_to_mg4(object):
+    """ A converter of the UFO-MG5 Model to the MG4 format """
+    
+    def __init__(self, model, output_path):
+        """ initialization of the objects """
+        
+        self.model = model
+        self.model_name = model['name']
+        
+        self.dir_path = output_path
+        
+        self.coups_dep = []    # (name, expression, type)
+        self.coups_indep = []  # (name, expression, type)
+        self.params_dep = []   # (name, expression, type)
+        self.params_indep = [] # (name, expression, type)
+        self.params_ext = []   # external parameter
+        self.p_to_f = parsers.UFOExpressionParserFortran()
+        
+    def build(self):
+        """modify the couplings to fit with MG4 convention and creates all the 
+        different files"""
+
+        # Keep only separation in alphaS        
+        keys = self.model['parameters'].keys()
+        keys.sort(key=len)
+        for key in keys:
+            if key == ('external',):
+                self.params_ext += self.model['parameters'][key]
+            elif 'aS' in key:
+                self.params_dep += self.model['parameters'][key]
+            else:
+                self.params_indep += self.model['parameters'][key]
+        # same for couplings
+        keys = self.model['couplings'].keys()
+        keys.sort(key=len)
+        for key, coup_list in self.model['couplings'].items():
+            if 'aS' in key:
+                self.coups_dep += coup_list
+            else:
+                self.coups_indep += coup_list
+                
+        # MG4 use G and not aS as it basic object for alphas related computation
+        #Pass G in the  independant list
+        index = self.params_dep.index('G')
+        self.params_indep.insert(0, self.params_dep.pop(index))
+        index = self.params_dep.index('sqrt__aS')
+        self.params_indep.insert(0, self.params_dep.pop(index))
+
+        # write the files
+        self.write_all()
+
+    def open(self, name, comment='c', format='default'):
+        """ Open the file name in the correct directory and with a valid
+        header."""
+        
+        file_path = os.path.join(self.dir_path, name)
+        
+        if format == 'fortran':
+            fsock = writers.FortranWriter(file_path, 'w')
         else:
-            raise
+            fsock = open(file_path, 'w')
         
-def ln(file_pos, starting_dir='.', name='', log=True):
-    """a simple way to have a symbolic link whithout to have to change directory
-    starting_point is the directory where to write the link
-    file_pos is the file to link
-    WARNING: not the linux convention
-    """
-    file_pos = format_path(file_pos)
-    starting_dir = format_path(starting_dir)
-    if not name:
-        name = os.path.split(file_pos)[1]
+        file.writelines(fsock, comment * 77 + '\n')
+        file.writelines(fsock,'%(comment)s written by the UFO converter\n' % \
+                               {'comment': comment + (6 - len(comment)) *  ' '})
+        file.writelines(fsock, comment * 77 + '\n\n')
+        return fsock       
+
+    
+    def write_all(self):
+        """ write all the files """
+        #write the part related to the external parameter
+        self.create_ident_card()
+        self.create_param_read()
         
-    try:
-        os.symlink(os.path.relpath(file_pos, starting_dir), \
-                        os.path.join(starting_dir, name))
-    except:
-        if log:
-            logger.warning('Could not link %s at position: %s' % (file_pos, \
-                                                os.path.realpath(starting_dir)))
+        #write the definition of the parameter
+        self.create_input()
+        self.create_intparam_def()
+        
+        
+        # definition of the coupling.
+        self.create_coupl_inc()
+        self.create_write_couplings()
+        self.create_couplings()
+        
+        # the makefile
+        self.create_makeinc()
+        self.create_param_write()
+        
+        # The param_card.dat        
+        self.create_param_card()
+        
+
+        # All the standard files
+        self.copy_standard_file()
+    ############################################################################
+    ##  ROUTINE CREATING THE FILES  ############################################
+    ############################################################################
+
+    def copy_standard_file(self):
+        """Copy the standard files for the fortran model."""
+    
+        
+        #copy the library files
+        file_to_link = ['formats.inc', 'lha_read.f', 'makefile','printout.f', \
+                        'rw_para.f', 'testprog.f', 'rw_para.f']
+    
+        for filename in file_to_link:
+            cp( MG5DIR + '/models/template_files/fortran/' + filename, self.dir_path)
+
+    def create_coupl_inc(self):
+        """ write coupling.inc """
+        
+        fsock = self.open('coupl.inc', format='fortran')
+        
+        # Write header
+        header = """double precision G
+                common/strong/ G
+                 
+                double complex gal(2)
+                common/weak/ gal
+
+                double precision DUM0
+                common/FRDUM0/ DUM0
+
+                double precision DUM1
+                common/FRDUM1/ DUM1
+                """        
+        fsock.writelines(header)
+        
+        # Write the Mass definition/ common block
+        masses = [param.name for param in self.params_ext \
+                                                    if param.lhablock == 'MASS']
+        
+        is_mass = lambda name: name[0].lower() == 'm' and len(name)<4
+        masses += [param.name for param in self.params_dep + 
+                            self.params_indep if param.type == 'real'
+                            and is_mass(param.name)]      
+        
+        fsock.writelines('double precision '+','.join(masses)+'\n')
+        fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
+        
+        # Write the Width definition/ common block
+        widths = [param.name for param in self.params_ext \
+                                                   if param.lhablock == 'DECAY']
+        fsock.writelines('double precision '+','.join(widths)+'\n')
+        fsock.writelines('common/widths/ '+','.join(widths)+'\n\n')
+        
+        # Write the Couplings
+        coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep]       
+        fsock.writelines('double complex '+', '.join(coupling_list)+'\n')
+        fsock.writelines('common/couplings/ '+', '.join(coupling_list)+'\n')
+        
+    def create_write_couplings(self):
+        """ write the file coupl_write.inc """
+        
+        fsock = self.open('coupl_write.inc', format='fortran')
+        
+        fsock.writelines("""write(*,*)  ' Couplings of %s'  
+                            write(*,*)  ' ---------------------------------'
+                            write(*,*)  ' '""" % self.model_name)
+        def format(coupl):
+            return 'write(*,2) \'%(name)s = \', %(name)s' % {'name': coupl.name}
+        
+        # Write the Couplings
+        lines = [format(coupl) for coupl in self.coups_dep + self.coups_indep]       
+        fsock.writelines('\n'.join(lines))
+        
+        
+    def create_input(self):
+        """create input.inc containing the definition of the parameters"""
+        
+        fsock = self.open('input.inc', format='fortran')
+        
+        is_valid = lambda name: name!='G' and not (name[0].lower() == 'm' and len(name)<4)
+        
+        real_parameters = [param.name for param in self.params_dep + 
+                            self.params_indep if param.type == 'real'
+                            and is_valid(param.name)]
+        
+        real_parameters += [param.name for param in self.params_ext 
+                            if param.type == 'real'and 
+                               param.lhablock not in ['MASS', 'DECAY']]
+        
+        fsock.writelines('double precision '+','.join(real_parameters)+'\n')
+        fsock.writelines('common/params_R/ '+','.join(real_parameters)+'\n\n')
+        
+        complex_parameters = [param.name for param in self.params_dep + 
+                            self.params_indep if param.type == 'complex']
 
 
+        fsock.writelines('double complex '+','.join(complex_parameters)+'\n')
+        fsock.writelines('common/params_C/ '+','.join(complex_parameters)+'\n\n')                
+    
+    
+
+    def create_intparam_def(self):
+        """ create intparam_definition.inc """
+
+        fsock = self.open('intparam_definition.inc', format='fortran')
+        
+        fsock.write_comments(\
+                "Parameters that should not be recomputed event by event.\n")
+        fsock.writelines("if(readlha) then\n")
+        
+        for param in self.params_indep:
+            fsock.writelines("%s = %s\n" % (param.name,
+                                            self.p_to_f.parse(param.expr)))
+        
+        fsock.writelines('endif')
+        
+        fsock.write_comments('\nParameters that should be recomputed at an event by even basis.\n')
+        for param in self.params_dep:
+            fsock.writelines("%s = %s\n" % (param.name,
+                                            self.p_to_f.parse(param.expr)))
+
+        fsock.write_comments("\nDefinition of the EW coupling used in the write out of aqed\n")
+        fsock.writelines(""" gal(1) = 1d0
+                             gal(2) = 1d0
+                         """)
+
+        fsock.write_comments("\nDefinition of DUM symbols\n")
+        fsock.writelines(""" DUM0 = 0
+                             DUM1 = 1
+                         """)
+    
+    def create_couplings(self):
+        """ create couplings.f and all couplingsX.f """
+        
+        nb_def_by_file = 25
+        
+        self.create_couplings_main(nb_def_by_file)
+        nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file
+        nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
+        
+        for i in range(nb_coup_indep):
+            data = self.coups_indep[nb_def_by_file * i: 
+                             min(len(self.coups_indep), nb_def_by_file * (i+1))]
+            self.create_couplings_part(i + 1, data)
+            
+        for i in range(nb_coup_dep):
+            data = self.coups_dep[nb_def_by_file * i: 
+                               min(len(self.coups_dep), nb_def_by_file * (i+1))]
+            self.create_couplings_part( i + 1 + nb_coup_indep , data)        
+        
+        
+    def create_couplings_main(self, nb_def_by_file=25):
+        """ create couplings.f """
+
+        fsock = self.open('couplings.f', format='fortran')
+        
+        fsock.writelines("""subroutine coup(readlha)
+
+                            implicit none
+                            logical readlha
+                            double precision PI
+                            parameter  (PI=3.141592653589793d0)
+                            
+                            include \'input.inc\'
+                            include \'coupl.inc\'
+                            include \'intparam_definition.inc\'\n\n
+                         """)
+        
+        nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
+        nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
+        
+        fsock.writelines('if (readlha) then\n')
+        fsock.writelines('\n'.join(\
+                    ['call coup%s()' %  (i + 1) for i in range(nb_coup_indep)]))
+        fsock.writelines('''\nendif\n''')
+        
+        fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
+
+        fsock.writelines('\n'.join(\
+                    ['call coup%s()' %  (nb_coup_indep + i + 1) \
+                      for i in range(nb_coup_dep)]))
+        fsock.writelines('''\n return \n end\n''')
+
+
+    def create_couplings_part(self, nb_file, data):
+        """ create couplings[nb_file].f containing information coming from data
+        """
+        
+        fsock = self.open('couplings%s.f' % nb_file, format='fortran')
+        fsock.writelines("""subroutine coup%s()
+        
+          implicit none
+      
+          include 'input.inc'
+          include 'coupl.inc'
+                        """ % nb_file)
+        
+        for coupling in data:            
+            fsock.writelines('%s = %s' % (coupling.name,
+                                          self.p_to_f.parse(coupling.expr)))
+        fsock.writelines('end')
+
+
+    def create_makeinc(self):
+        """create makeinc.inc containing the file to compile """
+        
+        fsock = self.open('makeinc.inc', comment='#')
+        text = 'MODEL = couplings.o lha_read.o printout.o rw_para.o '
+        
+        nb_coup_indep = 1 + len(self.coups_dep) // 25 
+        nb_coup_dep = 1 + len(self.coups_indep) // 25
+        text += ' '.join(['couplings%s.o' % (i+1) \
+                                  for i in range(nb_coup_dep + nb_coup_indep) ])
+        fsock.writelines(text)
+        
+    def create_param_write(self):
+        """ create param_write """
+
+        fsock = self.open('param_write.inc', format='fortran')
+        
+        fsock.writelines("""write(*,*)  ' External Params'
+                            write(*,*)  ' ---------------------------------'
+                            write(*,*)  ' '""")
+        def format(name):
+            return 'write(*,*) \'%(name)s = \', %(name)s' % {'name': name}
+        
+        # Write the external parameter
+        lines = [format(param.name) for param in self.params_ext]       
+        fsock.writelines('\n'.join(lines))        
+        
+        fsock.writelines("""write(*,*)  ' Internal Params'
+                            write(*,*)  ' ---------------------------------'
+                            write(*,*)  ' '""")        
+        lines = [format(data.name) for data in self.params_indep]
+        fsock.writelines('\n'.join(lines))
+        fsock.writelines("""write(*,*)  ' Internal Params evaluated point by point'
+                            write(*,*)  ' ----------------------------------------'
+                            write(*,*)  ' '""")         
+        lines = [format(data.name) for data in self.params_dep]
+        
+        fsock.writelines('\n'.join(lines))                
+        
+ 
+    
+    def create_ident_card(self):
+        """ create the ident_card.dat """
+    
+        def format(parameter):
+            """return the line for the ident_card corresponding to this parameter"""
+            colum = [parameter.lhablock] + \
+                    [str(value) for value in parameter.lhacode] + \
+                    [parameter.name]
+            return ' '.join(colum)+'\n'
+    
+        fsock = self.open('ident_card.dat')
+     
+        external_param = [format(param) for param in self.params_ext]
+        fsock.writelines('\n'.join(external_param))
+
+        
+    def create_param_read(self):    
+        """create param_read"""
+    
+        def format_line(parameter):
+            """return the line for the ident_card corresponding to this 
+            parameter"""
+
+            template = \
+            """ call LHA_get_real(npara,param,value,'%(name)s',%(name)s,%(value)s)""" \
+                % {'name': parameter.name,
+                               'value': self.p_to_f.parse(str(parameter.value))}
+        
+            return template        
+    
+        fsock = self.open('param_read.inc', format='fortran')
+        res_strings = [format_line(param) \
+                          for param in self.params_ext]
+        
+        # Correct width sign for Majorana particles (where the width
+        # and mass need to have the same sign)        
+        for particle in self.model.get('particles'):
+            if particle.is_fermion() and particle.get('self_antipart') and \
+                   particle.get('width').lower() != 'zero':
+                
+                res_strings.append('%(width)s = sign(%(width)s,%(mass)s)' % \
+                 {'width': particle.get('width'), 'mass': particle.get('mass')})
+                
+        
+        fsock.writelines('\n'.join(res_strings))
+
+    def create_param_card(self):
+        """ create the param_card.dat """
+        
+        write_param_card.ParamCardWriter(
+                os.path.join(self.dir_path, 'param_card.dat'),
+                self.params_ext)
+
+#    def search_type(self, expr):
+#        """return the type associate to the expression"""
+#        
+#        for param in self.model.all_parameters:
+#            if param.name == expr:
+#                return param.type
+#        
+#        return CompactifyExpression.search_type(self, expr)
+  
+ 
 
     
     

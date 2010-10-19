@@ -12,11 +12,13 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+from madgraph.iolibs import helas_call_writers
 
 """Unit test library for the helas_objects module"""
 
 import copy
-import unittest
+
+import tests.unit_tests as unittest
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
@@ -49,12 +51,12 @@ class HelasWavefunctionTest(unittest.TestCase):
         self.assertRaises(helas_objects.HelasWavefunction.PhysicsObjectError,
                           helas_objects.HelasWavefunction,
                           wrong_dict)
-        self.assertRaises(helas_objects.HelasWavefunction.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           helas_objects.HelasWavefunction,
                           a_number)
 
         # Test get
-        self.assertRaises(helas_objects.HelasWavefunction.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           mywavefunction.get,
                           a_number)
         self.assertRaises(helas_objects.HelasWavefunction.PhysicsObjectError,
@@ -62,7 +64,7 @@ class HelasWavefunctionTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(helas_objects.HelasWavefunction.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           mywavefunction.set,
                           a_number, 0)
         self.assertRaises(helas_objects.HelasWavefunction.PhysicsObjectError,
@@ -92,6 +94,7 @@ class HelasWavefunctionTest(unittest.TestCase):
             for x in test['wrong_list']:
                 self.assertFalse(temp_wavefunction.set(test['prop'], x))
 
+
 #===============================================================================
 # HelasAmplitudeTest
 #===============================================================================
@@ -116,12 +119,12 @@ class HelasAmplitudeTest(unittest.TestCase):
         self.assertRaises(helas_objects.HelasAmplitude.PhysicsObjectError,
                           helas_objects.HelasAmplitude,
                           wrong_dict)
-        self.assertRaises(helas_objects.HelasAmplitude.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           helas_objects.HelasAmplitude,
                           a_number)
 
         # Test get
-        self.assertRaises(helas_objects.HelasAmplitude.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           myamplitude.get,
                           a_number)
         self.assertRaises(helas_objects.HelasAmplitude.PhysicsObjectError,
@@ -129,7 +132,7 @@ class HelasAmplitudeTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(helas_objects.HelasAmplitude.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           myamplitude.set,
                           a_number, 0)
         self.assertRaises(helas_objects.HelasAmplitude.PhysicsObjectError,
@@ -199,12 +202,12 @@ class HelasDiagramTest(unittest.TestCase):
         self.assertRaises(helas_objects.HelasDiagram.PhysicsObjectError,
                           helas_objects.HelasDiagram,
                           wrong_dict)
-        self.assertRaises(helas_objects.HelasDiagram.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           helas_objects.HelasDiagram,
                           a_number)
 
         # Test get
-        self.assertRaises(helas_objects.HelasDiagram.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           mydiagram.get,
                           a_number)
         self.assertRaises(helas_objects.HelasDiagram.PhysicsObjectError,
@@ -212,7 +215,7 @@ class HelasDiagramTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(helas_objects.HelasDiagram.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           mydiagram.set,
                           a_number, 0)
         self.assertRaises(helas_objects.HelasDiagram.PhysicsObjectError,
@@ -452,12 +455,12 @@ class HelasMatrixElementTest(unittest.TestCase):
         self.assertRaises(helas_objects.HelasMatrixElement.PhysicsObjectError,
                           helas_objects.HelasMatrixElement,
                           wrong_dict)
-        self.assertRaises(helas_objects.HelasMatrixElement.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           helas_objects.HelasMatrixElement,
                           a_number)
 
         # Test get
-        self.assertRaises(helas_objects.HelasMatrixElement.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           mymatrixelement.get,
                           a_number)
         self.assertRaises(helas_objects.HelasMatrixElement.PhysicsObjectError,
@@ -465,7 +468,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(helas_objects.HelasMatrixElement.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           mymatrixelement.set,
                           a_number, 0)
         self.assertRaises(helas_objects.HelasMatrixElement.PhysicsObjectError,
@@ -1776,6 +1779,188 @@ class HelasMatrixElementTest(unittest.TestCase):
         for i, wf in enumerate(me.get_all_wavefunctions()):
             self.assertEqual(wf.get('number'), i + 1)        
 
+    def test_multi_amp_majorana_process(self):
+        """Test fermion clash process x1+ x1+ > w- w- with multiple amps
+        """
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # x1+ and x1-
+        mypartlist.append(base_objects.Particle({'name':'x1+',
+                      'antiname':'x1-',
+                      'spin':2,
+                      'color':1,
+                      'mass':'Mch1',
+                      'width':'Wch1',
+                      'charge':1.,
+                      'pdg_code':1000024,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        x1plus = mypartlist[len(mypartlist) - 1]
+        x1minus = copy.copy(x1plus)
+        x1minus.set('is_part', False)
+
+        # W+ and W-
+        mypartlist.append(base_objects.Particle({'name':'w+',
+                      'antiname':'w-',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MW',
+                      'width':'WW',
+                      'charge':1.,
+                      'pdg_code':24,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        wplus = mypartlist[len(mypartlist) - 1]
+        wminus = copy.copy(wplus)
+        wminus.set('is_part', False)
+
+        # Neutralinos
+        mypartlist.append(base_objects.Particle({'name':'n1',
+                      'antiname':'n1',
+                      'spin':2,
+                      'color':1,
+                      'mass':'Mneu1',
+                      'width':'Wneu1',
+                      'texname':'\chi_0^1',
+                      'antitexname':'\chi_0^1',
+                      'line':'straight',
+                      'charge':0.,
+                      'pdg_code':1000022,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        n1 = mypartlist[len(mypartlist) - 1]
+
+        # Coupling of n1 to w and x1
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [x1minus, \
+                                             n1, \
+                                             wplus]),
+                      'color': [],
+                      'lorentz':['FFV2', 'FFV3'],
+                      'couplings':{(0, 0):'GC_666', (0, 1):'GC_416'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [n1, \
+                                             x1plus, \
+                                             wminus]),
+                      'color': [],
+                      'lorentz':['FFV2', 'FFV3'],
+                      'couplings':{(0, 0):'GC_424', (0, 1):'GC_630'},
+                      'orders':{'QED':1}}))
+
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1000024,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1000024,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':24,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':24,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                           'model':mymodel})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        self.assertEqual(len(myamplitude.get('diagrams')), 2)
+
+        me = helas_objects.HelasMatrixElement(myamplitude,
+                                              gen_color=False)
+
+        helas_writer = helas_call_writers.FortranUFOHelasCallWriter(mymodel)
+
+        self.assertEqual(len(me.get_all_amplitudes()), 8)
+
+        self.assertEqual(len(me.get_all_wavefunctions()), 8)
+
+        for i, amp in enumerate(me.get_all_amplitudes()):
+            self.assertEqual(amp.get('number'), i + 1)
+
+        for i, wf in enumerate(me.get_all_wavefunctions()):
+            self.assertEqual(wf.get('number'), i + 1)        
+
+
+    def test_get_conjugate_index(self):
+        """Test the get_conjugate_index routines"""
+
+        myleg1 = base_objects.Leg({'id':2})
+        myleg2 = base_objects.Leg({'id':2})
+        myleg3 = base_objects.Leg({'id':-11})
+        myleg4 = base_objects.Leg({'id':11})
+
+        wf1 = helas_objects.HelasWavefunction(myleg1, 3, self.mymodel)
+        wf2 = helas_objects.HelasWavefunction(myleg2, 0, self.mymodel)
+        wf3 = helas_objects.HelasWavefunction(myleg3, 0, self.mymodel)
+        wf4 = helas_objects.HelasWavefunction(myleg4, 0, self.mymodel)
+
+        mothers = helas_objects.HelasWavefunctionList([wf2, wf3, wf4])
+
+        wf1.set('mothers', mothers)
+        wf1.set('pdg_codes', [-2,2,-11,11])
+        
+        self.assertEqual(wf1.get_spin_state_number(), 2)
+        self.assertEqual(wf1.find_outgoing_number(), 1)
+        self.assertEqual(wf1.get_conjugate_index(), ())
+
+        wf1.set('fermionflow', -1)
+        self.assertEqual(wf1.get_conjugate_index(), (1,))
+
+        wf2.set('fermionflow', -1)
+        self.assertEqual(wf1.get_conjugate_index(), (1,))
+
+        wf1.set('fermionflow', 1)
+        self.assertEqual(wf1.get_conjugate_index(), (1,))
+
+        wf2.set('fermionflow', 1)
+        wf3.set('fermionflow', -1)
+        self.assertEqual(wf1.get_conjugate_index(), (2,))
+
+        wf4.set('fermionflow', -1)
+        self.assertEqual(wf1.get_conjugate_index(), (2,))
+
+        wf3.set('fermionflow', 1)
+        self.assertEqual(wf1.get_conjugate_index(), (2,))
+
+        wf1.set('fermionflow', -1)
+        self.assertEqual(wf1.get_conjugate_index(), (1, 2))
+
+        myleg5 = base_objects.Leg({'id':2, 'state': False})
+        wf5 = helas_objects.HelasWavefunction(myleg5, 0, self.mymodel)
+
+        mothers.insert(0, wf5)
+        wf4.set('fermionflow', 1)
+
+        amp = helas_objects.HelasAmplitude()
+        amp.set('mothers', mothers)
+
+        self.assertEqual([w.is_fermion() for w in mothers], [True] * 4)
+        self.assertEqual(amp.get_conjugate_index(), ())
+        
+        wf5.set('fermionflow', -1)
+        self.assertEqual(amp.get_conjugate_index(), (1,))
+
+        wf4.set('fermionflow', -1)
+        self.assertEqual(amp.get_conjugate_index(), (1,2))
+
+        wf5.set('fermionflow', 1)
+        self.assertEqual(amp.get_conjugate_index(), (2,))
+
 #===============================================================================
 # HelasDecayChainProcessTest
 #===============================================================================
@@ -2832,495 +3017,3 @@ class HelasMultiProcessTest(unittest.TestCase):
         self.assert_(helas_objects.HelasMatrixElement.\
                      check_equal_decay_processes(\
                        mymatrixelement1, mymatrixelement2))
-
-#===============================================================================
-# HelasModelTest
-#===============================================================================
-class HelasModelTest(unittest.TestCase):
-    """Test class for the HelasModel object"""
-
-    mymodel = helas_objects.HelasModel()
-    mybasemodel = base_objects.Model()
-
-    def setUp(self):
-        self.mymodel.set('name', 'sm')
-
-        # Set up model
-
-        mypartlist = base_objects.ParticleList()
-        myinterlist = base_objects.InteractionList()
-
-        # A gluon
-        mypartlist.append(base_objects.Particle({'name':'g',
-                      'antiname':'g',
-                      'spin':3,
-                      'color':8,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'g',
-                      'antitexname':'g',
-                      'line':'curly',
-                      'charge':0.,
-                      'pdg_code':21,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':True}))
-
-        g = mypartlist[len(mypartlist) - 1]
-
-        # A quark U and its antiparticle
-        mypartlist.append(base_objects.Particle({'name':'u',
-                      'antiname':'u~',
-                      'spin':2,
-                      'color':3,
-                      'mass':'mu',
-                      'width':'zero',
-                      'texname':'u',
-                      'antitexname':'\bar u',
-                      'line':'straight',
-                      'charge':2. / 3.,
-                      'pdg_code':2,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False}))
-        u = mypartlist[len(mypartlist) - 1]
-        antiu = copy.copy(u)
-        antiu.set('is_part', False)
-
-        # A quark D and its antiparticle
-        mypartlist.append(base_objects.Particle({'name':'d',
-                      'antiname':'d~',
-                      'spin':2,
-                      'color':3,
-                      'mass':'mu',
-                      'width':'zero',
-                      'texname':'d',
-                      'antitexname':'\bar d',
-                      'line':'straight',
-                      'charge':-1. / 3.,
-                      'pdg_code':1,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False}))
-        d = mypartlist[len(mypartlist) - 1]
-        antid = copy.copy(d)
-        antid.set('is_part', False)
-
-        # A electron and positron
-        mypartlist.append(base_objects.Particle({'name':'e+',
-                      'antiname':'e-',
-                      'spin':2,
-                      'color':1,
-                      'mass':'me',
-                      'width':'zero',
-                      'texname':'e^+',
-                      'antitexname':'e^-',
-                      'line':'straight',
-                      'charge':-1.,
-                      'pdg_code':11,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False}))
-        eminus = mypartlist[len(mypartlist) - 1]
-        eplus = copy.copy(eminus)
-        eplus.set('is_part', False)
-
-        # A photon
-        mypartlist.append(base_objects.Particle({'name':'a',
-                      'antiname':'a',
-                      'spin':3,
-                      'color':1,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
-                      'line':'wavy',
-                      'charge':0.,
-                      'pdg_code':22,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':True}))
-        a = mypartlist[len(mypartlist) - 1]
-
-        # A T particle
-        mypartlist.append(base_objects.Particle({'name':'T1',
-                      'antiname':'T1',
-                      'spin':5,
-                      'color':1,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'T',
-                      'antitexname':'T',
-                      'line':'double',
-                      'charge':0.,
-                      'pdg_code':8000002,
-                      'propagating':False,
-                      'is_part':True,
-                      'self_antipart':True}))
-        T1 = mypartlist[len(mypartlist) - 1]
-
-        # A U squark and its antiparticle
-        mypartlist.append(base_objects.Particle({'name':'su',
-                      'antiname':'su~',
-                      'spin':1,
-                      'color':3,
-                      'mass':'Musq2',
-                      'width':'Wusq2',
-                      'texname':'\tilde u',
-                      'antitexname':'\bar {\tilde u}',
-                      'line':'dashed',
-                      'charge':2. / 3.,
-                      'pdg_code':1000002,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False}))
-        su = mypartlist[len(mypartlist) - 1]
-        antisu = copy.copy(su)
-        antisu.set('is_part', False)
-
-        # A E slepton and its antiparticle
-        mypartlist.append(base_objects.Particle({'name':'sl2-',
-                      'antiname':'sl2+',
-                      'spin':1,
-                      'color':1,
-                      'mass':'Msl2',
-                      'width':'Wsl2',
-                      'texname':'\tilde e^-',
-                      'antitexname':'\tilde e^+',
-                      'line':'dashed',
-                      'charge':1.,
-                      'pdg_code':1000011,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False}))
-        seminus = mypartlist[len(mypartlist) - 1]
-        seplus = copy.copy(seminus)
-        seplus.set('is_part', False)
-
-        # A neutralino
-        mypartlist.append(base_objects.Particle({'name':'n1',
-                      'antiname':'n1',
-                      'spin':2,
-                      'color':1,
-                      'mass':'Mneu1',
-                      'width':'Wneu1',
-                      'texname':'\chi_0^1',
-                      'antitexname':'\chi_0^1',
-                      'line':'straight',
-                      'charge':0.,
-                      'pdg_code':1000022,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':True}))
-        n1 = mypartlist[len(mypartlist) - 1]
-
-        # W+ and W-
-        mypartlist.append(base_objects.Particle({'name':'W+',
-                      'antiname':'W-',
-                      'spin':3,
-                      'color':1,
-                      'mass':'wmas',
-                      'width':'wwid',
-                      'texname':'W^+',
-                      'antitexname':'W^-',
-                      'line':'wavy',
-                      'charge':1.,
-                      'pdg_code':24,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False}))
-        wplus = mypartlist[len(mypartlist) - 1]
-        wminus = copy.copy(u)
-        wminus.set('is_part', False)
-
-        # Z
-        mypartlist.append(base_objects.Particle({'name':'Z',
-                      'antiname':'Z',
-                      'spin':3,
-                      'color':1,
-                      'mass':'zmas',
-                      'width':'zwid',
-                      'texname':'Z',
-                      'antitexname':'Z',
-                      'line':'wavy',
-                      'charge':1.,
-                      'pdg_code':23,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':True}))
-        z = mypartlist[len(mypartlist) - 1]
-
-        # Gluon and photon couplings to quarks
-        myinterlist.append(base_objects.Interaction({
-                      'id': 3,
-                      'particles': base_objects.ParticleList(\
-                                            [u, \
-                                             antiu, \
-                                             g]),
-                      'color': [],
-                      'lorentz':[''],
-                      'couplings':{(0, 0):'GG'},
-                      'orders':{'QCD':1}}))
-
-        myinterlist.append(base_objects.Interaction({
-                      'id': 4,
-                      'particles': base_objects.ParticleList(\
-                                            [d, \
-                                             antid, \
-                                             a]),
-                      'color': [],
-                      'lorentz':[''],
-                      'couplings':{(0, 0):'MGVX15'},
-                      'orders':{'QED':1}}))
-
-        myinterlist.append(base_objects.Interaction({
-                      'id': 10,
-                      'particles': base_objects.ParticleList(\
-                                            [d, \
-                                             antid, \
-                                             g]),
-                      'color': [],
-                      'lorentz':[''],
-                      'couplings':{(0, 0):'GG'},
-                      'orders':{'QCD':1}}))
-
-        myinterlist.append(base_objects.Interaction({
-                      'id': 11,
-                      'particles': base_objects.ParticleList(\
-                                            [u, \
-                                             antiu, \
-                                             a]),
-                      'color': [],
-                      'lorentz':[''],
-                      'couplings':{(0, 0):'MGVX15'},
-                      'orders':{'QED':1}}))
-
-        # Tgg coupling
-        myinterlist.append(base_objects.Interaction({
-                      'id': 5,
-                      'particles': base_objects.ParticleList(\
-                                            [g, \
-                                             g, \
-                                             T1]),
-                      'color': [],
-                      'lorentz':['A'],
-                      'couplings':{(0, 0):'MGVX2'},
-                      'orders':{'QCD':1}}))
-
-
-        # ggg coupling
-        myinterlist.append(base_objects.Interaction({
-                      'id': 15,
-                      'particles': base_objects.ParticleList(\
-                                            [g, \
-                                             g, \
-                                             g]),
-                      'color': [],
-                      'lorentz':[''],
-                      'couplings':{(0, 0):'MGVX1'},
-                      'orders':{'QCD':1}}))
-
-        # Coupling of e to gamma
-        myinterlist.append(base_objects.Interaction({
-                      'id': 7,
-                      'particles': base_objects.ParticleList(\
-                                            [eminus, \
-                                             eplus, \
-                                             a]),
-                      'color': [],
-                      'lorentz':[''],
-                      'couplings':{(0, 0):'MGVX12'},
-                      'orders':{'QED':1}}))
-
-        # Gluon coupling to su
-        myinterlist.append(base_objects.Interaction({
-                      'id': 105,
-                      'particles': base_objects.ParticleList(\
-                                            [g, \
-                                             su, \
-                                             antisu]),
-                      'color': [],
-                      'lorentz':[''],
-                      'couplings':{(0, 0):'MGVX74'},
-                      'orders':{'QCD':1}}))
-
-        # Coupling of n1 to u and su
-        myinterlist.append(base_objects.Interaction({
-                      'id': 101,
-                      'particles': base_objects.ParticleList(\
-                                            [n1, \
-                                             u, \
-                                             antisu]),
-                      'color': [],
-                      'lorentz':[''],
-                      'couplings':{(0, 0):'MGVX570'},
-                      'orders':{'QED':1}}))
-
-        myinterlist.append(base_objects.Interaction({
-                      'id': 102,
-                      'particles': base_objects.ParticleList(\
-                                            [antiu, \
-                                             n1, \
-                                             su]),
-                      'color': [],
-                      'lorentz':[''],
-                      'couplings':{(0, 0):'MGVX575'},
-                      'orders':{'QED':1}}))
-
-        # Coupling of n1 to e and se
-        myinterlist.append(base_objects.Interaction({
-                      'id': 103,
-                      'particles': base_objects.ParticleList(\
-                                            [n1, \
-                                             eminus, \
-                                             seplus]),
-                      'color': [],
-                      'lorentz':[''],
-                      'couplings':{(0, 0):'MGVX350'},
-                      'orders':{'QED':1}}))
-
-        myinterlist.append(base_objects.Interaction({
-                      'id': 104,
-                      'particles': base_objects.ParticleList(\
-                                            [eplus, \
-                                             n1, \
-                                             seminus]),
-                      'color': [],
-                      'lorentz':[''],
-                      'couplings':{(0, 0):'MGVX494'},
-                      'orders':{'QED':1}}))
-
-        # Coupling of n1 to z
-        myinterlist.append(base_objects.Interaction({
-                      'id': 106,
-                      'particles': base_objects.ParticleList(\
-                                            [n1, \
-                                             n1,
-                                             z]),
-                      'color': [],
-                      'lorentz':[''],
-                      'couplings':{(0, 0):'GZN11'},
-                      'orders':{'QED':1}}))
-
-        # g-gamma-su-subar coupling
-        myinterlist.append(base_objects.Interaction({
-                      'id': 100,
-                      'particles': base_objects.ParticleList(\
-                                            [a,
-                                             g,
-                                             su,
-                                             antisu]),
-                      'color': [],
-                      'lorentz':[''],
-                      'couplings':{(0, 0):'MGVX89'},
-                      'orders':{'QED':1, 'QCD':1}}))
-
-        # w+w-w+w- coupling
-        myinterlist.append(base_objects.Interaction({
-                      'id': 8,
-                      'particles': base_objects.ParticleList(\
-                                            [wplus,
-                                             wminus,
-                                             wplus,
-                                             wminus]),
-                      'color': [],
-                      'lorentz':[''],
-                      'couplings':{(0, 0):'MGVX6'},
-                      'orders':{'QED':2}}))
-
-        # w+w-zz coupling
-        myinterlist.append(base_objects.Interaction({
-                      'id': 9,
-                      'particles': base_objects.ParticleList(\
-                                            [wplus,
-                                             wminus,
-                                             z,
-                                             z]),
-                      'color': [],
-                      'lorentz':[''],
-                      'couplings':{(0, 0):'MGVX8'},
-                      'orders':{'QED':2}}))
-
-
-        self.mybasemodel.set('particles', mypartlist)
-        self.mybasemodel.set('interactions', myinterlist)
-
-    def test_setget_helas_model_correct(self):
-        """Test correct HelasModel object get and set"""
-
-        self.assertEqual(self.mymodel.get('name'), 'sm')
-
-    def test_setget_helas_model_error(self):
-        """Test error raising in HelasModel object get and set"""
-
-        mymodel = helas_objects.HelasModel()
-        not_a_string = 1.
-
-        # General
-        self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
-                          mymodel.get,
-                          not_a_string)
-        self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
-                          mymodel.get,
-                          'wrong_key')
-        self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
-                          mymodel.set,
-                          not_a_string, None)
-        self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
-                          mymodel.set,
-                          'wrong_subclass', None)
-        # add_wavefunction and add_amplitude
-        self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
-                          mymodel.add_wavefunction,
-                          'wrong_subclass', None)
-        self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
-                          mymodel.add_wavefunction,
-                          (1, 2), "not_a_function")
-        self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
-                          mymodel.add_amplitude,
-                          'wrong_subclass', None)
-        self.assertRaises(helas_objects.HelasModel.PhysicsObjectError,
-                          mymodel.add_amplitude,
-                          (1, 2), "not_a_function")
-
-    def test_set_wavefunctions(self):
-        """Test wavefunction dictionary in HelasModel"""
-
-        wavefunctions = {}
-        # IXXXXXX.Key: (spin, state)
-        key1 = (tuple([-2]), '')
-        wavefunctions[key1] = \
-                          lambda wf: 'CALL IXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
-                          (wf.get('number_external'), wf.get('mass'),
-                           wf.get('number_external'), -(-1) ** wf.get_with_flow('is_part'),
-                           wf.get('number_external'), wf.get('number'))
-        # OXXXXXX.Key: (spin, state)
-        key2 = (tuple([2]), '')
-        wavefunctions[key2] = \
-                          lambda wf: 'CALL OXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
-                          (wf.get('number_external'), wf.get('mass'),
-                           wf.get('number_external'), 1 ** wf.get_with_flow('is_part'),
-                           wf.get('number_external'), wf.get('number'))
-
-        self.assert_(self.mymodel.set('wavefunctions', wavefunctions))
-
-        wf = helas_objects.HelasWavefunction()
-        wf.set('particle', -2, self.mybasemodel)
-        wf.set('state', 'incoming')
-        wf.set('interaction_id', 0)
-        wf.set('number_external', 1)
-        wf.set('lorentz', [''])
-        wf.set('number', 40)
-
-        self.assertEqual(wf.get_call_key(), key1)
-
-        goal = 'CALL IXXXXX(P(0,1),mu,NHEL(1),-1*IC(1),W(1,40))'
-        self.assertEqual(self.mymodel.get_wavefunction_call(wf), goal)
-
-        wf.set('fermionflow', -1)
-
-        self.assertEqual(wf.get_call_key(), key2)
-
-        goal = 'CALL OXXXXX(P(0,1),mu,NHEL(1),1*IC(1),W(1,40))'
-        self.assertEqual(self.mymodel.get_wavefunction_call(wf), goal)
-

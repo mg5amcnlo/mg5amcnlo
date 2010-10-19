@@ -12,14 +12,15 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+import madgraph
 
 """Unit test library for the various base objects of the core library"""
 
 import copy
-import unittest
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
+import tests.unit_tests as unittest
 
 #===============================================================================
 # ParticleTest
@@ -77,12 +78,12 @@ class ParticleTest(unittest.TestCase):
         self.assertRaises(base_objects.Particle.PhysicsObjectError,
                           base_objects.Particle,
                           wrong_dict)
-        self.assertRaises(base_objects.Particle.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           base_objects.Particle,
                           a_number)
 
         # Test get
-        self.assertRaises(base_objects.Particle.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.mypart.get,
                           a_number)
         self.assertRaises(base_objects.Particle.PhysicsObjectError,
@@ -90,7 +91,7 @@ class ParticleTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(base_objects.Particle.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.mypart.set,
                           a_number, 0)
         self.assertRaises(base_objects.Particle.PhysicsObjectError,
@@ -212,7 +213,7 @@ class ParticleTest(unittest.TestCase):
         for part in mypartlist:
             self.assertEqual(part, self.mypart)
 
-        self.assertRaises(base_objects.ParticleList.PhysicsObjectListError,
+        self.assertRaises(AssertionError,
                           mypartlist.append,
                           not_a_part)
         # test particle search
@@ -302,12 +303,12 @@ class InteractionTest(unittest.TestCase):
         self.assertRaises(base_objects.Interaction.PhysicsObjectError,
                           base_objects.Interaction,
                           wrong_dict)
-        self.assertRaises(base_objects.Interaction.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           base_objects.Interaction,
                           a_number)
 
         # Test get
-        self.assertRaises(base_objects.Interaction.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.myinter.get,
                           a_number)
         self.assertRaises(base_objects.Interaction.PhysicsObjectError,
@@ -315,7 +316,7 @@ class InteractionTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(base_objects.Interaction.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.myinter.set,
                           a_number, 0)
         self.assertRaises(base_objects.Interaction.PhysicsObjectError,
@@ -477,7 +478,7 @@ class InteractionTest(unittest.TestCase):
 
         # Check error raising
         not_a_inter = 1
-        self.assertRaises(base_objects.InteractionList.PhysicsObjectListError,
+        self.assertRaises(AssertionError,
                           myinterlist.append,
                           not_a_inter)
 
@@ -495,10 +496,11 @@ class ModelTest(unittest.TestCase):
     """Test class for the Model object"""
 
     mymodel = base_objects.Model()
-    myinterlist = base_objects.InteractionList()
-    mypartlist = base_objects.ParticleList()
 
     def setUp(self):
+
+        self.myinterlist = base_objects.InteractionList()
+        self.mypartlist = base_objects.ParticleList()
 
         # Create a model with gluon and top quark + a single interaction
         self.mypartlist.append(base_objects.Particle({'name':'t',
@@ -556,6 +558,22 @@ class ModelTest(unittest.TestCase):
         self.assertEqual(mymodel['interactions'],
                          base_objects.InteractionList())
 
+    def test_get_particle(self):
+        """ test that get_particle is working """
+        
+        obj = self.mymodel.get_particle(6)
+        self.assertEqual(obj['name'], 't')
+        obj = self.mymodel.get_particle(7)
+        self.assertEqual(obj, None)        
+
+    def test_get_interaction(self):
+        """ test that get_particle is working """
+        
+        obj = self.mymodel.get_interaction(1)
+        self.assertEqual(obj['lorentz'], ['L1'])
+        obj = self.mymodel.get_interaction(7)
+        self.assertEqual(obj, None)  
+
     def test_setget_model_correct(self):
         """Test correct Model object get and set"""
 
@@ -587,13 +605,13 @@ class ModelTest(unittest.TestCase):
         not_a_string = 1.
 
         # General
-        self.assertRaises(base_objects.Model.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           mymodel.get,
                           not_a_string)
         self.assertRaises(base_objects.Model.PhysicsObjectError,
                           mymodel.get,
                           'wrong_key')
-        self.assertRaises(base_objects.Model.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           mymodel.set,
                           not_a_string, None)
         self.assertRaises(base_objects.Model.PhysicsObjectError,
@@ -615,6 +633,183 @@ class ModelTest(unittest.TestCase):
         myinterdict = {1:self.myinterlist[0]}
         self.assertEqual(myinterdict, self.mymodel.get('interaction_dict'))
 
+        particles = copy.copy(self.mymodel.get('particles'))
+        particles.append(base_objects.Particle({'name':'a',
+                  'antiname':'a',
+                  'spin':3,
+                  'color':0,
+                  'mass':'zero',
+                  'width':'zero',
+                  'texname':'\gamma',
+                  'antitexname':'\gamma',
+                  'line':'wavy',
+                  'charge':0.,
+                  'pdg_code':22,
+                  'propagating':True,
+                  'self_antipart':True}))
+        self.mymodel.set('particles', particles)
+        mypartdict[22] = particles[2]
+        self.assertEqual(mypartdict, self.mymodel.get('particle_dict'))
+
+        interactions = copy.copy(self.mymodel.get('interactions'))
+        interactions.append(base_objects.Interaction({
+                      'id':2,
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[0], \
+                                             antitop, \
+                                             self.mymodel['particles'][2]]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+        self.mymodel.set('interactions', interactions)
+        myinterdict[2] = interactions[1]
+        self.assertEqual(myinterdict, self.mymodel.get('interaction_dict'))
+        
+    def test_check_majoranas(self):
+        """Test the check_majoranas function"""
+
+        # By default, mymodel has no fermion flow clashes
+        self.assertFalse(self.mymodel.get('got_majoranas'))
+
+        # Add a Majorana particle
+        self.mypartlist.append(base_objects.Particle({'name':'n1',
+                  'antiname':'n1',
+                  'spin':2,
+                  'color':[],
+                  'mass':'mn1',
+                  'width':'wn1',
+                  'line':'straight',
+                  'charge':0.,
+                  'pdg_code':1000022,
+                  'propagating':True,
+                  'self_antipart':True}))
+
+        self.mymodel.set('particles', self.mypartlist)
+        self.assertTrue(self.mymodel.get('got_majoranas'))
+
+        # Remove the Majorana particle again
+        self.mypartlist.pop(-1)
+        self.mymodel.set('particles', self.mypartlist)
+        self.assertFalse(self.mymodel.get('got_majoranas'))
+
+        # Add a new set of particles
+        self.mypartlist.append(base_objects.Particle({'name':'x1',
+                  'antiname':'x1~',
+                  'spin':2,
+                  'color':[],
+                  'mass':'mx1',
+                  'width':'wx1',
+                  'line':'straight',
+                  'charge':0.,
+                  'pdg_code':10024,
+                  'propagating':True,
+                  'self_antipart':False}))
+        
+        self.mypartlist.append(base_objects.Particle({'name':'x2',
+                  'antiname':'x2~',
+                  'spin':2,
+                  'color':[],
+                  'mass':'mx2',
+                  'width':'wx2',
+                  'line':'straight',
+                  'charge':0.,
+                  'pdg_code':10025,
+                  'propagating':True,
+                  'self_antipart':False}))
+
+        self.mypartlist.append(base_objects.Particle({'name':'z',
+                      'antiname':'z',
+                      'spin':3,
+                      'color':[],
+                      'mass':'zero',
+                      'width':'zero',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':32,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        self.mymodel.set('particles', self.mypartlist)
+        
+        # Add a non-fermion clash 4-fermion interaction
+        self.myinterlist.append(base_objects.Interaction({
+                      'id':2,
+                      'particles': base_objects.ParticleList(\
+                                         [self.mymodel.get_particle(10024), \
+                                          self.mymodel.get_particle(-10025), \
+                                          self.mymodel.get_particle(10025), \
+                                          self.mymodel.get_particle(-10024), \
+                                          self.mymodel.get_particle(32)]),
+                      'color': [color.ColorString([color.f(1, 2, 3),
+                                                   color.d(1, 2, 3)])],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        self.mymodel.set('interactions', self.myinterlist)
+        self.assertFalse(self.mymodel.get('got_majoranas'))
+        
+        # Add a fermion clash 4-fermion interaction
+        self.myinterlist.append(base_objects.Interaction({
+                      'id':3,
+                      'particles': base_objects.ParticleList(\
+                                         [self.mymodel.get_particle(10024), \
+                                          self.mymodel.get_particle(-10025), \
+                                          self.mymodel.get_particle(10025), \
+                                          self.mymodel.get_particle(10024), \
+                                          self.mymodel.get_particle(32)]),
+                      'color': [color.ColorString([color.f(1, 2, 3),
+                                                   color.d(1, 2, 3)])],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        self.mymodel.set('interactions', self.myinterlist)
+        self.assertTrue(self.mymodel.get('got_majoranas'))
+
+
+    def test_pass_in_standard_name(self):
+        """Test if we can overwrite the name of the model following MG 
+        convention"""
+        
+        model_name = [(part.get('name'), part.get('antiname')) \
+                                          for part in self.mymodel['particles']]
+
+        model2 = copy.copy(self.mymodel)
+        
+        # check that standard name are not modified
+        model2.pass_particles_name_in_mg_default()
+        model2_name = [(part.get('name'), part.get('antiname')) \
+                                                for part in model2['particles']]
+        self.assertEqual(set(model_name),set(model2_name))
+        
+        # add a particle with non conventional name
+        particles = model2['particles']
+        particles.append(base_objects.Particle({'name':'ee',
+                  'antiname':'eex',
+                  'pdg_code':1}))
+        model2.set('particles', particles)
+
+        model2.pass_particles_name_in_mg_default()
+
+        model2_name = [(part.get('name'), part.get('antiname')) \
+                                                for part in model2['particles']]        
+        self.assertEqual(set(model_name + [('d','d~')]), set(model2_name))
+        
+        # add a particles with non conventional name with the conventional name
+        #associtaed to another particle
+        particles.append(base_objects.Particle({'name':'u',
+                  'antiname':'d~',
+                  'pdg_code':100}))
+        particles.append(base_objects.Particle({'name':'ee',
+                  'antiname':'eex',
+                  'pdg_code':2}))
+        model2.set('particles', particles)
+
+        self.assertRaises(madgraph.MadGraph5Error, \
+                                       model2.pass_particles_name_in_mg_default)
 #===============================================================================
 # LegTest
 #===============================================================================
@@ -658,12 +853,12 @@ class LegTest(unittest.TestCase):
         self.assertRaises(base_objects.Leg.PhysicsObjectError,
                           base_objects.Leg,
                           wrong_dict)
-        self.assertRaises(base_objects.Leg.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           base_objects.Leg,
                           a_number)
 
         # Test get
-        self.assertRaises(base_objects.Leg.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.myleg.get,
                           a_number)
         self.assertRaises(base_objects.Leg.PhysicsObjectError,
@@ -671,7 +866,7 @@ class LegTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(base_objects.Leg.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.myleg.set,
                           a_number, 0)
         self.assertRaises(base_objects.Leg.PhysicsObjectError,
@@ -724,7 +919,7 @@ class LegTest(unittest.TestCase):
         for leg in myleglist:
             self.assertEqual(leg, self.myleg)
 
-        self.assertRaises(base_objects.LegList.PhysicsObjectListError,
+        self.assertRaises(AssertionError,
                           myleglist.append,
                           not_a_leg)
 
@@ -801,12 +996,12 @@ class MultiLegTest(unittest.TestCase):
         self.assertRaises(base_objects.MultiLeg.PhysicsObjectError,
                           base_objects.MultiLeg,
                           wrong_dict)
-        self.assertRaises(base_objects.MultiLeg.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           base_objects.MultiLeg,
                           a_number)
 
         # Test get
-        self.assertRaises(base_objects.MultiLeg.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.my_multi_leg.get,
                           a_number)
         self.assertRaises(base_objects.MultiLeg.PhysicsObjectError,
@@ -814,7 +1009,7 @@ class MultiLegTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(base_objects.MultiLeg.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.my_multi_leg.set,
                           a_number, 0)
         self.assertRaises(base_objects.MultiLeg.PhysicsObjectError,
@@ -862,7 +1057,7 @@ class MultiLegTest(unittest.TestCase):
         for multi_leg in my_multi_leglist:
             self.assertEqual(multi_leg, self.my_multi_leg)
 
-        self.assertRaises(base_objects.MultiLegList.PhysicsObjectListError,
+        self.assertRaises(AssertionError,
                           my_multi_leglist.append,
                           not_a_multi_leg)
 
@@ -911,12 +1106,12 @@ class VertexTest(unittest.TestCase):
         self.assertRaises(base_objects.Vertex.PhysicsObjectError,
                           base_objects.Vertex,
                           wrong_dict)
-        self.assertRaises(base_objects.Vertex.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           base_objects.Vertex,
                           a_number)
 
         # Test get
-        self.assertRaises(base_objects.Vertex.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.myvertex.get,
                           a_number)
         self.assertRaises(base_objects.Vertex.PhysicsObjectError,
@@ -924,7 +1119,7 @@ class VertexTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(base_objects.Vertex.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.myvertex.set,
                           a_number, 0)
         self.assertRaises(base_objects.Vertex.PhysicsObjectError,
@@ -971,7 +1166,7 @@ class VertexTest(unittest.TestCase):
         for vertex in myvertexlist:
             self.assertEqual(vertex, self.myvertex)
 
-        self.assertRaises(base_objects.VertexList.PhysicsObjectListError,
+        self.assertRaises(AssertionError,
                           myvertexlist.append,
                           not_a_vertex)
 
@@ -1022,12 +1217,12 @@ class DiagramTest(unittest.TestCase):
         self.assertRaises(base_objects.Diagram.PhysicsObjectError,
                           base_objects.Diagram,
                           wrong_dict)
-        self.assertRaises(base_objects.Diagram.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           base_objects.Diagram,
                           a_number)
 
         # Test get
-        self.assertRaises(base_objects.Diagram.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.mydiagram.get,
                           a_number)
         self.assertRaises(base_objects.Diagram.PhysicsObjectError,
@@ -1035,7 +1230,7 @@ class DiagramTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(base_objects.Diagram.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.mydiagram.set,
                           a_number, 0)
         self.assertRaises(base_objects.Diagram.PhysicsObjectError,
@@ -1078,7 +1273,7 @@ class DiagramTest(unittest.TestCase):
         for diagram in mydiagramlist:
             self.assertEqual(diagram, self.mydiagram)
 
-        self.assertRaises(base_objects.DiagramList.PhysicsObjectListError,
+        self.assertRaises(AssertionError,
                           mydiagramlist.append,
                           not_a_diagram)
 
@@ -1167,12 +1362,12 @@ class ProcessTest(unittest.TestCase):
         self.assertRaises(base_objects.Process.PhysicsObjectError,
                           base_objects.Process,
                           wrong_dict)
-        self.assertRaises(base_objects.Process.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           base_objects.Process,
                           a_number)
 
         # Test get
-        self.assertRaises(base_objects.Process.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.myprocess.get,
                           a_number)
         self.assertRaises(base_objects.Process.PhysicsObjectError,
@@ -1180,7 +1375,7 @@ class ProcessTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(base_objects.Process.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.myprocess.set,
                           a_number, 0)
         self.assertRaises(base_objects.Process.PhysicsObjectError,
@@ -1228,11 +1423,28 @@ class ProcessTest(unittest.TestCase):
 
         self.assertEqual(goal_str, self.myprocess.nice_string())
 
+    def test_input_string(self):
+        """Test Process nice_string representation"""
+
+        goal_str = "c c > c c c QED=1 QCD=5, (c > c c c c, c > c c c c)"
+
+        decay = copy.copy(self.myprocess)
+        decay.set('legs', copy.deepcopy(decay.get('legs')))
+        decay.get('legs')[1].set('state', True)
+        decay.set('is_decay_chain', True)
+        decay.set('orders', {})
+        decay2 = copy.copy(decay)
+        self.myprocess.set('decay_chains', base_objects.ProcessList([decay]))
+        decay.set('decay_chains', base_objects.ProcessList([decay2]))
+
+        self.assertEqual(goal_str, self.myprocess.input_string())
+
     def test_shell_string(self):
         """Test Process shell_string representation"""
 
         self.myprocess.get('legs')[2].set('id', -3)
-        goal_str = "1_cc_cxcc"
+        self.myprocess.set('id', 2)
+        goal_str = "2_cc_cxcc"
 
         self.assertEqual(goal_str, self.myprocess.shell_string())
 
@@ -1302,12 +1514,12 @@ class ProcessDefinitionTest(unittest.TestCase):
         self.assertRaises(base_objects.ProcessDefinition.PhysicsObjectError,
                           base_objects.ProcessDefinition,
                           wrong_dict)
-        self.assertRaises(base_objects.ProcessDefinition.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           base_objects.ProcessDefinition,
                           a_number)
 
         # Test get
-        self.assertRaises(base_objects.ProcessDefinition.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.my_process_definition.get,
                           a_number)
         self.assertRaises(base_objects.ProcessDefinition.PhysicsObjectError,
@@ -1315,7 +1527,7 @@ class ProcessDefinitionTest(unittest.TestCase):
                           'wrongparam')
 
         # Test set
-        self.assertRaises(base_objects.ProcessDefinition.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           self.my_process_definition.set,
                           a_number, 0)
         self.assertRaises(base_objects.ProcessDefinition.PhysicsObjectError,

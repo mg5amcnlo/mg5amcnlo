@@ -18,13 +18,14 @@ color information for diagrams."""
 
 import copy
 import fractions
-import unittest
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color
+
+import tests.unit_tests as unittest
 
 class ColorAmpTest(unittest.TestCase):
     """Test class for the color_amp module"""

@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+from tests.parallel_tests import me_comparator
 
 """Parallel tests comparing processes between MG4 and MG5.
 """
@@ -31,6 +32,9 @@ from madgraph import MG4DIR, MG5DIR
 
 class TestParallelMG4MG5(unittest.TestCase):
 
+    mg4runner = me_comparator.MG4Runner
+    mg5runner = me_comparator.MG5Runner
+    suffix_name = ''
 
     def setUp(self):
         """Set up paths"""
@@ -44,12 +48,13 @@ class TestParallelMG4MG5(unittest.TestCase):
         my_proc_list = me_comparator.create_proc_list(\
             ['u'],
             initial=2, final=2)
-
+        my_proc_list = ['e+ e- > a > e+ e-', 'h h > h h']
         # Store list of non-zero processes and results in file
-        pickle_file = "mg4_sm_minitest.pkl"
+        pickle_file = "mg4_sm_%sminitest.pkl" % self.suffix_name
         self.compare_MG4_MG5(my_proc_list,
                              orders = {'QED':2, 'QCD':2},
                              filename = "sm_mini.log",
+                             energy = 1000,
                              pickle_file = pickle_file)
 
     def test_mg4_mg5_sm_22(self):
@@ -149,18 +154,18 @@ class TestParallelMG4MG5(unittest.TestCase):
                              filename = "heft_23.log",
                              pickle_file = pickle_file)
 
-
+        
     def compare_MG4_MG5(self, my_proc_list = [], orders = {}, model = 'sm',
                         energy = 500, filename = "", pickle_file = "",
                         tolerance = 1e-06):
         """Run comparison between MG4 and MG5 for the list of processes"""
 
         # Create a MERunner object for MG4
-        my_mg4 = me_comparator.MG4Runner()
+        my_mg4 = self.mg4runner()
         my_mg4.setup(self.mg4_path)
 
         # Create a MERunner object for MG5
-        my_mg5 = me_comparator.MG5Runner()
+        my_mg5 = self.mg5runner()
         my_mg5.setup(self.mg5_path, self.mg4_path)
 
         # Create and setup a comparator
@@ -191,3 +196,14 @@ class TestParallelMG4MG5(unittest.TestCase):
         # Do some cleanup
         my_comp.cleanup()
 
+class TestParallelMG4MG5_UFO(TestParallelMG4MG5):
+    
+    mg5runner = me_comparator.MG5_UFO_Runner
+    suffix_name = 'ufo_'
+    
+    
+    def test_ufo(self):
+        self.test_mg4_mg5_minitest()
+        
+    def test_ufo_sm(self):
+        self.test_mg4_mg5_sm_22()

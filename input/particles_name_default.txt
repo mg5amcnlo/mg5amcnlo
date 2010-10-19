@@ -1,0 +1,110 @@
+################################################################################
+#
+# Copyright (c) 2010 The MadGraph Development team and Contributors
+#
+# This file is a part of the MadGraph 5 project, an application which 
+# automatically generates Feynman diagrams and matrix elements for arbitrary
+# high-energy processes in the Standard Model and beyond.
+#
+# It is subject to the MadGraph license which should accompany this 
+# distribution.
+#
+# For more information, please visit: http://madgraph.phys.ucl.ac.be
+#
+################################################################################
+# pdg_code   standard_name  tex_name (optional)
+#
+# Standard Model
+# quarks
+     1      d     
+    -1      d~
+     2      u
+    -2      u~
+     3      s
+    -3      s~
+     4      c
+    -4      c~
+     5      b
+    -5      b~
+     6      t
+    -6      t~
+# Lepton    
+     11     e-
+    -11     e+
+     12     ve
+    -12     ve~
+     13     mu-   
+    -13     mu+   
+     14     vm
+    -14     vm~
+     15     ta-   
+    -15     ta+   
+     16     vt
+    -16     vt~
+# Boson
+     21     g 
+     22     a            
+     23     z
+     24     w+
+    -24     w-
+# Note that we can't give a name to 25 here,
+# since it is different in SM and MSSM.
+# MSSM Higgs
+     35     h2
+     36     h3
+     37     h+
+    -37     h-
+# MSSM squarks
+ 1000001     dl
+-1000001     dl~
+ 2000001     dr
+-2000001     dr~
+ 1000002     ul
+-1000002     ul~
+ 2000002     ur
+-2000002     ur~
+ 1000003     sl
+-1000003     sl~
+ 2000003     sr
+-2000003     sr~
+ 1000004     cl
+-1000004     cl~
+ 2000004     cr
+-2000004     cr~
+ 1000005     b1
+-1000005     b1~
+ 2000005     b2
+-2000005     b2~
+ 1000006     t1
+-1000006     t1~
+ 2000006     t2
+-2000006     t2~
+# MSSM sleptons
+ 1000011     el-
+-1000011     el+
+ 2000011     er-
+-2000011     er+
+ 1000012     sve
+-1000012     sve~
+ 1000013     mul-
+-1000013     mul+
+ 2000013     mur-
+-2000013     mur+
+ 1000014     svm
+-1000014     svm~
+ 1000015     ta1-
+-1000015     ta1+
+ 2000015     ta2-
+-2000015     ta2+
+ 1000016     svt
+-1000016     svt~
+# MSSM inos
+ 1000021     go
+ 1000022     n1
+ 1000023     n2
+ 1000025     n3
+ 1000035     n4
+ 1000024     x1+
+-1000024     x1-
+ 1000037     x2+
+-1000037     x2-
