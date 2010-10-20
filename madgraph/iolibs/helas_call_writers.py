@@ -331,6 +331,7 @@ class FortranHelasCallWriter(HelasCallWriter):
             # of coupling for one of the two scalars since the HVS
             # is asymmetric in the two scalars
             wavefunction.set_scalar_coupling_sign(self['model'])
+
         val = super(FortranHelasCallWriter, self).get_wavefunction_call(wavefunction)
 
         if val:
@@ -611,6 +612,12 @@ class UFOHelasCallWriter(HelasCallWriter):
         generate_helas_call is called to automatically create the
         function. -UFO ROUTINE-"""
         
+        # Special feature: For octet Majorana fermions, need an extra
+        # minus sign in the FVI (and FSI?) wavefunction in UFO
+        # models. For MG4 models, this is taken care of by calling
+        # different routines (in import_v4.py)
+        wavefunction.set_octet_majorana_coupling_sign()
+
         val = super(UFOHelasCallWriter, self).get_wavefunction_call(wavefunction)
         if val:
             return val

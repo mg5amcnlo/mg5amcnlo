@@ -989,16 +989,10 @@ class CheckValidForCmdWeb(CheckValidForCmd):
     def check_output(self, args):
         """ check the validity of the line"""
         
-        CheckValidForCmd.check_output(self, args)
-        
-        if '/' in args[2]:
-            logger_stderr.warning('Path specification in output are forbidden ' +\
-                                  'in web mode. Pass to \"auto\" option')
-            args[2] = 'auto'
-        
-        if '-f' not in args and '-noclean' not in args:
-            args.append('-f')
-    
+        # In web mode, can only do forced, automatic madevent output
+
+        args[:] = ['madevent', 'auto', '-f']
+
 #===============================================================================
 # CompleteForCmd
 #===============================================================================
@@ -1737,7 +1731,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         # Disable diagram generation logger
         diag_logger = logging.getLogger('madgraph.diagram_generation')
-        old_level = diag_logger.setLevel(logging.WARNING)
+        old_level = diag_logger.getEffectiveLevel()
+        diag_logger.setLevel(logging.WARNING)
 
         # run the check
         cpu_time1 = time.time()

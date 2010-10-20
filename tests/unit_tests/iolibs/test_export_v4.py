@@ -4349,7 +4349,7 @@ CALL OXXXXX(P(0,4),MGO,NHEL(4),+1*IC(4),W(1,4))
 CALL JVVXXX(W(1,1),W(1,2),G,ZERO,ZERO,W(1,5))
 # Amplitude(s) for diagram number 1
 CALL IOVXXX(W(1,3),W(1,4),W(1,5),GGI,AMP(1))
-CALL FVIXXX(W(1,3),W(1,1),-GGI,MGO,WGO,W(1,6))
+CALL FVIXXX(W(1,3),W(1,1),GGI,MGO,WGO,W(1,6))
 # Amplitude(s) for diagram number 2
 CALL IOVXXX(W(1,6),W(1,4),W(1,2),GGI,AMP(2))
 CALL FVOXXX(W(1,4),W(1,1),GGI,MGO,WGO,W(1,7))

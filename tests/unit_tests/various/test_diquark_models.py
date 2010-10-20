@@ -55,7 +55,7 @@ class TestColorSextetModel(unittest.TestCase):
         myleglist.append(base_objects.Leg({'id':2,
                                            'state':False,
                                            'number': 2}))
-        myleglist.append(base_objects.Leg({'id':600001,
+        myleglist.append(base_objects.Leg({'id':9000006,
                                            'state':True,
                                            'number': 3}))
         myleglist.append(base_objects.Leg({'id':21,
@@ -131,7 +131,7 @@ def uu_Dg(P, color_rep, full_model):
        From 0909.2666, Eq. (B.8)
        |Mqq|^2 = 16 lambda^2 g_s^2 N_D (2\tau/(1-\tau)^2 + 1) *
                  (C_F*4/(sin\theta)^2 - C_D)
-       lambda^2=|GC_27|^2, g_s^2=GC_4^2, N_D=6, N_C=3, C_F=4/3, C_D=10/3, 
+       lambda^2=|GC_24|^2, g_s^2=GC_4^2, N_D=6, N_C=3, C_F=4/3, C_D=10/3, 
        (for antitriplet diquark, N_D=3, C_D=4/3) 
        \tau=m_D^2/shat, \cos\theta=p1p4/|p1||p4|"""
 
@@ -151,7 +151,7 @@ def uu_Dg(P, color_rep, full_model):
     cos2theta=dot3(P[0],P[3])**2/(dot3(P[0],P[0])*dot3(P[3],P[3]))
 
     # Calculate matrix element
-    ANS = 16*abs(full_model.get('coupling_dict')['GC_27'])**2*\
+    ANS = 16*abs(full_model.get('coupling_dict')['GC_24'])**2*\
           full_model.get('coupling_dict')['GC_4']**2*N_D*(2*tau/(1-tau)**2 + 1)
     ANS = ANS*(4./3.*4./(1-cos2theta)-C_D)
 
@@ -167,7 +167,7 @@ def gu_uxD(P, color_rep, full_model):
                                        -(3+cos\theta)(1-\tau)) +
                  2C_D(1-4\tau/((1+\tau)(1+\beta\cos\theta)) + 
                       8\tau^2/((1+\tau)^2(1+\beta\cos\theta)^2)))
-       lambda^2=|GC_27|^2, g_s^2=GC_4^2, N_D=6, N_C=3, C_F=4/3, C_D=10/3, 
+       lambda^2=|GC_24|^2, g_s^2=GC_4^2, N_D=6, N_C=3, C_F=4/3, C_D=10/3, 
        (for antitriplet diquark, N_D=3, C_D=4/3) 
        \tau=m_D^2/shat, \cos\theta=p1p3/|p1||p3|, \beta = (1-\tau)/(1+\tau)"""
 
@@ -188,7 +188,7 @@ def gu_uxD(P, color_rep, full_model):
     beta=(1-tau)/(1+tau)
 
     # Calculate matrix element
-    ANS = 8 * abs(full_model.get('coupling_dict')['GC_27'])**2 * \
+    ANS = 8 * abs(full_model.get('coupling_dict')['GC_24'])**2 * \
           full_model.get('coupling_dict')['GC_4']**2 * N_D
     ANS = ANS*(4./3.*(4./(1-costheta)*(1/(1-tau) - 2*tau) \
                       -(3+costheta)*(1-tau)) + \

@@ -345,7 +345,7 @@ class Epsilon(ColorObject):
         e_ijk T(l,k) = e_ikl"""
 
         # e_ijk ae_ilm = T(j,l)T(k,m) - T(j,m)T(k,l)
-        if isinstance(col_obj, Epsilonbar):
+        if isinstance(col_obj, EpsilonBar):
 
             incommon = False
             eps_indices = self[:]
@@ -382,18 +382,18 @@ class Epsilon(ColorObject):
         """Complex conjugation. Overwritten here because complex conjugation
         interchange triplets and antitriplets."""
 
-        return Epsilonbar(*self)
+        return EpsilonBar(*self)
 
-class Epsilonbar(ColorObject):
+class EpsilonBar(ColorObject):
     """Epsilon_ijk color object for three antitriplets"""
 
     def __init__(self, *args):
         """Ensure e_ijk objects have strictly 3 indices"""
 
-        super(Epsilonbar, self).__init__()
+        super(EpsilonBar, self).__init__()
         if len(args) != 3:
             raise ValueError, \
-                "Epsilonbar objects must have three indices!"
+                "EpsilonBar objects must have three indices!"
 
     def pair_simplify(self, col_obj):
         """Implement ebar_ijk T(k,l) = e_ikl"""

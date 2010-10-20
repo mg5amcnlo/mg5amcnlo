@@ -37,6 +37,9 @@ class FRBaseClass(object):
     def __str__(self):
         return self.name
 
+    def nice_string(self):
+        """ return string with the full information """
+        return '\n'.join(['%s \t: %s' %(name, value) for name, value in self.__dict__.items()])
 
     def __repr__(self):
         replacements = [
@@ -159,7 +162,7 @@ class Lorentz(FRBaseClass):
 
     require_args=['name','spins','structure']
     
-    def __init__(self, name, spins, structure, **opt):
+    def __init__(self, name, spins, structure='external', **opt):
         args = (name, spins, structure)
         FRBaseClass.__init__(self, *args, **opt)
 

@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 302 $
+# This file was automatically created by FeynRules $Revision: 347 $
 # Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
-# Date: Tue 31 Aug 2010 16:54:46
+# Date: Wed 20 Oct 2010 11:37:56
 
 
 from __future__ import division
@@ -382,7 +382,7 @@ phi__plus__ = Particle(pdg_code = 251,
 
 phi__minus__ = phi__plus__.anti()
 
-six = Particle(pdg_code = 600001,
+six = Particle(pdg_code = 9000006,
                name = 'six',
                antiname = 'six~',
                spin = 1,
@@ -390,9 +390,9 @@ six = Particle(pdg_code = 600001,
                mass = 'MSIX',
                width = 'WSIX',
                texname = 'six',
-               antitexname = '\\overline{six}',
+               antitexname = 'six',
                line = 'dashed',
-               charge = 4./3.,
+               charge = 4/3,
                LeptonNumber = 0,
                GhostNumber = 0)
 

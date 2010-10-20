@@ -325,6 +325,14 @@ def read_interactions_v4(fsock, ref_part_list):
                 if pdg_codes == [21, 21, 21, 21]:
                     myinter.set('lorentz', ['gggg1', 'gggg2', 'gggg3'])
 
+                # go-go-g
+                # Using the special fvigox routine provides the minus
+                # sign necessary for octet Majorana-vector interactions
+                if spin_array == [2, 2, 3] and colors == [8, 8, 8] and \
+                   part_list[0].get('self_antipart') and \
+                   part_list[1].get('self_antipart'):
+                    myinter.set('lorentz', ['go'])
+
                 # If extra flag, add this to Lorentz    
                 if len(values) > 3 * len(part_list) - 4:
                     myinter.get('lorentz')[0] = \

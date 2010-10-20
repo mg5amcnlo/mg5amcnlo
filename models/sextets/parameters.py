@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 302 $
+# This file was automatically created by FeynRules $Revision: 347 $
 # Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
-# Date: Tue 31 Aug 2010 16:54:46
+# Date: Wed 20 Oct 2010 11:37:56
 
 
 
@@ -57,6 +57,22 @@ ymtau = Parameter(name = 'ymtau',
                   lhablock = 'YUKAWA',
                   lhacode = [ 15 ])
 
+uusix = Parameter(name = 'uusix',
+                  nature = 'external',
+                  type = 'real',
+                  value = 0.1,
+                  texname = '\\text{uusix}',
+                  lhablock = 'FRBlock',
+                  lhacode = [ 1 ])
+
+ttsix = Parameter(name = 'ttsix',
+                  nature = 'external',
+                  type = 'real',
+                  value = 1,
+                  texname = '\\text{ttsix}',
+                  lhablock = 'FRBlock',
+                  lhacode = [ 2 ])
+
 MTA = Parameter(name = 'MTA',
                 nature = 'external',
                 type = 'real',
@@ -98,12 +114,12 @@ MH = Parameter(name = 'MH',
                lhacode = [ 25 ])
 
 MSIX = Parameter(name = 'MSIX',
-                nature = 'external',
-                type = 'real',
-                value = 600.,
-                texname = '\\text{MSIX}',
-                lhablock = 'MASS',
-                lhacode = [ 600001 ])
+                 nature = 'external',
+                 type = 'real',
+                 value = 500,
+                 texname = '\\text{MSIX}',
+                 lhablock = 'MASS',
+                 lhacode = [ 9000006 ])
 
 WT = Parameter(name = 'WT',
                nature = 'external',
@@ -138,12 +154,12 @@ WH = Parameter(name = 'WH',
                lhacode = [ 25 ])
 
 WSIX = Parameter(name = 'WSIX',
-                nature = 'external',
-                type = 'real',
-                value = 1.,
-                texname = '\\text{MSIX}',
-                lhablock = 'DECAY',
-                lhacode = [ 600001 ])
+                 nature = 'external',
+                 type = 'real',
+                 value = 3,
+                 texname = '\\text{WSIX}',
+                 lhablock = 'DECAY',
+                 lhacode = [ 9000006 ])
 
 aEW = Parameter(name = 'aEW',
                 nature = 'internal',
@@ -234,20 +250,4 @@ muH = Parameter(name = 'muH',
                 type = 'real',
                 value = 'cmath.sqrt(lam*v**2)',
                 texname = '\\mu ')
-
-uusix = Parameter(name = 'uusix',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.1,
-                  texname = '\\text{uusix}',
-                  lhablock = 'USRBLOCK',
-                  lhacode = [ 1 ])
-
-ttsix = Parameter(name = 'ttsix',
-                  nature = 'external',
-                  type = 'real',
-                  value = 1.,
-                  texname = '\\text{ttsix}',
-                  lhablock = 'USRBLOCK',
-                  lhacode = [ 2 ])
 
