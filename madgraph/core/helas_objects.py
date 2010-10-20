@@ -410,12 +410,18 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
     def set_octet_majorana_coupling_sign(self):
         """For octet Majorana fermions, need an extra minus sign in
-        the FVI (and FSI?) wavefunction in UFO models."""
+        the FVI (and FSI?) wavefunction in UFO models. Same thing for
+        epsilon^ijk vertices"""
 
         if self.get('color') == 8 and \
                self.get_spin_state_number() == -2 and \
                self.get('self_antipart') and \
                [m.get('color') for m in self.get('mothers')] == [8, 8]:
+            self.set('coupling', '-' + self.get('coupling'))
+        
+        if abs(self.get('color')) == 3 and \
+               self.get_spin_state_number() == -2 and \
+               [abs(m.get('color')) for m in self.get('mothers')] == [3, 3]:
             self.set('coupling', '-' + self.get('coupling'))
         
 
