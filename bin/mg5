@@ -36,10 +36,8 @@ else:
         import os
         history_file = os.path.join(os.environ['HOME'], '.pythonhistory')
         readline.read_history_file(history_file)
-    except IOError:
+    except:
         pass
-
-import atexit
 
 import optparse
 import logging
@@ -112,5 +110,7 @@ else:
     else:
         cmd_interface.MadGraphCmdShell(mgme_dir = options.mgme_dir).cmdloop()
 
- 
-atexit.register(readline.write_history_file, history_file)
+try: 
+    readline.write_history_file(history_file)
+except:
+    pass
