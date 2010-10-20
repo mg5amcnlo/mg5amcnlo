@@ -408,6 +408,16 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 # We need a minus sign in front of the coupling
                 self.set('coupling', '-' + self.get('coupling'))
 
+    def set_octet_majorana_coupling_sign(self):
+        """For octet Majorana fermions, need an extra minus sign in
+        the FVI (and FSI?) wavefunction in UFO models."""
+
+        if self.get('color') == 8 and \
+               self.get_spin_state_number() == -2 and \
+               self.get('self_antipart') and \
+               [m.get('color') for m in self.get('mothers')] == [8, 8]:
+            self.set('coupling', '-' + self.get('coupling'))
+        
 
     def set_state_and_particle(self, model):
         """Set incoming/outgoing state according to mother states and
@@ -2258,13 +2268,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # Sort all mothers according to the order wanted in Helas calls
         for wf in self.get_all_wavefunctions():
             wf.set('mothers', HelasMatrixElement.sorted_mothers(wf))
-            # Special feature: For octet Majorana fermions, need
-            # an extra minus sign in the FVI (and FSI?) wavefunction
-            if wf.get('color') == 8 and \
-                   wf.get_spin_state_number() == -2 and \
-                   wf.get('self_antipart') and \
-                   [m.get('color') for m in wf.get('mothers')] == [8, 8]:
-                wf.set('coupling', '-' + wf.get('coupling'))
         for amp in self.get_all_amplitudes():
             amp.set('mothers', HelasMatrixElement.sorted_mothers(amp))
             amp.set('color_indices', amp.get_color_indices())
