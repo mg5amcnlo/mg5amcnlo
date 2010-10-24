@@ -234,10 +234,12 @@ def read_interactions_v4(fsock, ref_part_list):
                 # Give color structure
                 # Order particles according to color
                 # Don't consider singlets
-                color_parts = sorted(part_list, lambda p1, p2:\
-                                            p1.get_color() - p2.get_color())
-                colors = [part.get_color() for part in color_parts \
-                                                        if part.get_color() !=1]
+                color_parts = sorted(enumerate(part_list), lambda p1, p2:\
+                                     p1[1].get_color() - p2[1].get_color())
+                color_ind = [(i, part.get_color()) for i, part in \
+                             color_parts if part.get_color() !=1]
+                colors = [c for i,c in color_ind]
+                ind = [i for i,c in color_ind]
 
                 # Set color empty by default
                 myinter.set('color', [])
@@ -247,31 +249,31 @@ def read_interactions_v4(fsock, ref_part_list):
                 elif colors == [-3, 3]:
                     # triplet-triplet-singlet coupling
                     myinter.set('color', [color.ColorString(\
-                        [color.T(1, 0)])])
+                        [color.T(ind[1], ind[0])])])
                 elif colors == [8, 8]:
                     # octet-octet-singlet coupling
                     my_cs = color.ColorString(\
-                        [color.Tr(0, 1)])
+                        [color.Tr(ind[0], ind[1])])
                     my_cs.coeff = fractions.Fraction(2)
                     myinter.set('color', [my_cs])
                 elif colors == [-3, 3, 8]:
                     # triplet-triplet-octet coupling
                     myinter.set('color', [color.ColorString(\
-                        [color.T(2, 1, 0)])])
+                        [color.T(ind[2], ind[1], ind[0])])])
                 elif colors == [8, 8, 8]:
                     # Triple glue coupling
                     my_color_string = color.ColorString(\
-                        [color.f(0, 1, 2)])
+                        [color.f(ind[0], ind[1], ind[2])])
                     my_color_string.is_imaginary = True
                     myinter.set('color', [my_color_string])
                 elif colors == [-3, 3, 8, 8]:
                     my_cs1 = color.ColorString(\
-                        [color.T(2, 3, 1, 0)])
+                        [color.T(ind[2], ind[3], ind[1], ind[0])])
                     my_cs2 = color.ColorString(\
-                        [color.T(3, 2, 1, 0)])
+                        [color.T(ind[3], ind[2], ind[1], ind[0])])
                     myinter.set('color', [my_cs1, my_cs2])
                 elif colors == [8, 8, 8, 8]:
-                    # 4-glue / glue-glue-gluino-gluino coupling
+                    # 4-glue coupling
                     cs1 = color.ColorString([color.f(0, 1, -1),
                                                    color.f(2, 3, -1)])
                     #cs1.coeff = fractions.Fraction(-1)
@@ -282,26 +284,6 @@ def read_interactions_v4(fsock, ref_part_list):
                                                    color.f(0, 3, -1)])
                     #cs3.coeff = fractions.Fraction(-1)
                     myinter.set('color', [cs1, cs2, cs3])
-                elif colors == [-6, 6]:
-                    # Triple glue coupling
-                    my_color_string = color.ColorString(\
-                        [color.delta6(1, 0)])
-                    myinter.set('color', [my_color_string])
-                elif colors == [-6, 6, 8]:
-                    # Triple glue coupling
-                    my_color_string = color.ColorString(\
-                        [color.T6(2, 1, 0)])
-                    myinter.set('color', [my_color_string])
-                elif colors == [-3, -3, 6]:
-                    # Triple glue coupling
-                    my_color_string = color.ColorString(\
-                        [color.K6(2, 0, 1)])
-                    myinter.set('color', [my_color_string])
-                elif colors == [-6, 3, 3]:
-                    # Triple glue coupling
-                    my_color_string = color.ColorString(\
-                        [color.K6Bar(0, 1, 2)])
-                    myinter.set('color', [my_color_string])
                 else:
                     logger.warning(\
                         "Color combination %s not yet implemented." % \

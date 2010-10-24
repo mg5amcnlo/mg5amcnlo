@@ -212,7 +212,7 @@ class ColorAmpTest(unittest.TestCase):
         col_dict = my_col_basis.colorize(myamplitude['diagrams'][0],
                                      self.mymodel)
 
-        goal_dict = {(0, 0):color.ColorString([color.T(-1000, 2, 1),
+        goal_dict = {(0, 0):color.ColorString([color.T(-1000, 1, 2),
                                                color.f(3, 4, -1000)])}
 
         self.assertEqual(col_dict, goal_dict)
@@ -221,8 +221,8 @@ class ColorAmpTest(unittest.TestCase):
         col_dict = my_col_basis.colorize(myamplitude['diagrams'][1],
                                      self.mymodel)
 
-        goal_dict = {(0, 0):color.ColorString([color.T(3, -1000, 1),
-                                               color.T(4, 2, -1000)])}
+        goal_dict = {(0, 0):color.ColorString([color.T(3, 1, -1000),
+                                               color.T(4, -1000, 2)])}
 
         self.assertEqual(col_dict, goal_dict)
 
@@ -230,8 +230,8 @@ class ColorAmpTest(unittest.TestCase):
         col_dict = my_col_basis.colorize(myamplitude['diagrams'][2],
                                      self.mymodel)
 
-        goal_dict = {(0, 0):color.ColorString([color.T(4, -1000, 1),
-                                               color.T(3, 2, -1000)])}
+        goal_dict = {(0, 0):color.ColorString([color.T(4, 1, -1000),
+                                               color.T(3,-1000, 2)])}
 
         self.assertEqual(col_dict, goal_dict)
 
@@ -262,8 +262,7 @@ class ColorAmpTest(unittest.TestCase):
         # First diagram with two 3-gluon vertices
         col_dict = my_col_basis.colorize(myamplitude['diagrams'][0],
                                      self.mymodel)
-
-        goal_dict = {(0, 0, 0):color.ColorString([color.T(-1000, 1, 2),
+        goal_dict = {(0, 0, 0):color.ColorString([color.T(-1000, 2, 1),
                                                color.f(3, 4, -1001),
                                                color.f(-1000, -1001, 5)])}
 
@@ -273,13 +272,13 @@ class ColorAmpTest(unittest.TestCase):
         col_dict = my_col_basis.colorize(myamplitude['diagrams'][3],
                                      self.mymodel)
 
-        goal_dict = {(0, 0):color.ColorString([color.T(-1000, 1, 2),
+        goal_dict = {(0, 0):color.ColorString([color.T(-1000, 2, 1),
                                                color.f(-1001, 3, 5),
                                                color.f(-1001, 4, -1000)]),
-                     (0, 1):color.ColorString([color.T(-1000, 1, 2),
+                     (0, 1):color.ColorString([color.T(-1000, 2, 1),
                                                color.f(-1002, 3, -1000),
                                                color.f(-1002, 4, 5)]),
-                     (0, 2):color.ColorString([color.T(-1000, 1, 2),
+                     (0, 2):color.ColorString([color.T(-1000, 2, 1),
                                                color.f(-1003, 3, 4),
                                                color.f(-1003, 5, -1000)])}
 
@@ -316,12 +315,12 @@ class ColorAmpTest(unittest.TestCase):
         # Test the color flow decomposition
         self.assertEqual(new_col_basis.color_flow_decomposition(
                                         {1:3, 2:-3, 3:1, 4:8, 5:8, 6:8}, 2),
-        [{1: [504, 0], 2: [0, 501], 3: [0, 0], 4: [502, 501], 5: [503, 502], 6: [504, 503]},
-         {1: [503, 0], 2: [0, 501], 3: [0, 0], 4: [502, 501], 5: [503, 504], 6: [504, 502]},
-         {1: [504, 0], 2: [0, 501], 3: [0, 0], 4: [502, 503], 5: [503, 501], 6: [504, 502]},
-         {1: [502, 0], 2: [0, 501], 3: [0, 0], 4: [502, 504], 5: [503, 501], 6: [504, 503]},
-         {1: [503, 0], 2: [0, 501], 3: [0, 0], 4: [502, 504], 5: [503, 502], 6: [504, 501]},
-         {1: [502, 0], 2: [0, 501], 3: [0, 0], 4: [502, 503], 5: [503, 504], 6: [504, 501]}])
+        [{1: [0, 501], 2: [504, 0], 3: [0, 0], 4: [502, 501], 5: [503, 502], 6: [504, 503]},
+         {1: [0, 501], 2: [503, 0], 3: [0, 0], 4: [502, 501], 5: [503, 504], 6: [504, 502]},
+         {1: [0, 501], 2: [504, 0], 3: [0, 0], 4: [502, 503], 5: [503, 501], 6: [504, 502]},
+         {1: [0, 501], 2: [502, 0], 3: [0, 0], 4: [502, 504], 5: [503, 501], 6: [504, 503]},
+         {1: [0, 501], 2: [503, 0], 3: [0, 0], 4: [502, 504], 5: [503, 502], 6: [504, 501]},
+         {1: [0, 501], 2: [502, 0], 3: [0, 0], 4: [502, 503], 5: [503, 504], 6: [504, 501]}])
 
     def test_color_flow_string(self):
         """Test the color flow decomposition of various color strings"""

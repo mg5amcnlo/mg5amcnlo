@@ -415,7 +415,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Add minus sign to coupling of color octet Majorana
         # particles to g for FVI vertex
         if self.get('color') == 8 and \
-               self.get_spin_state_number() == -2 and \
+               self.get_spin_state_number() == 2 and \
                self.get('self_antipart') and \
                [m.get('color') for m in self.get('mothers')] == [8, 8]:
             self.set('coupling', '-' + self.get('coupling'))
@@ -823,14 +823,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
             # This is where recursion happens
             vertices.extend(mother.get_base_vertices(\
                                                 wf_dict, vx_list,optimization))
-
-        # Sort mothers according to pdg codes if color eps^{ijk}.
-        if abs(self.get('color')) == 3 and \
-               [abs(m.get('color')) for m in self.get('mothers')] == [3, 3]:
-            mothers, my_index = \
-                     mothers.sort_by_pdg_codes(self.get('pdg_codes'),
-                                               self.get_anti_pdg_code())
-            mothers = mothers[my_index:] + mothers[:my_index]
 
         # Generate last vertex
         legs = base_objects.LegList()
@@ -1621,11 +1613,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
                                                      optimization))
         mothers = self.get('mothers')
 
-        # Sort mothers according to pdg codes if color eps^{ijk}.
-        if [abs(m.get('color')) for m in self.get('mothers')] == [3, 3, 3]:
-            mothers, my_index = \
-                     mothers.sort_by_pdg_codes(self.get('pdg_codes'),
-                                               0)
         # Generate last vertex
         legs = base_objects.LegList()
         for mother in mothers:

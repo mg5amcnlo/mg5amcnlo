@@ -1,0 +1,65 @@
+# This file was automatically created by FeynRules $Revision: 347 $
+# Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
+# Date: Wed 20 Oct 2010 11:36:28
+
+
+# 
+# This is the logfile for the model Epsijk_SM
+
+# Authors: N. Christensen, C. Duhr
+# Model version: 1.1
+# Checking the Lagrangians
+   * All Lagrangians are ok.
+#
+# Particle definitions
+#
+
+   * No particles removed. All particles correspond to GenInt setup.
+
+# Automatically assigned PDG numbers
+   * Assigned PDG number 9000001 to particle ghA
+   * Assigned PDG number 9000002 to particle ghZ
+   * Assigned PDG number 9000003 to particle ghWp
+   * Assigned PDG number 9000004 to particle ghWm
+   * Assigned PDG number 9000005 to particle ghG
+   * Assigned PDG number 9000006 to particle trip
+
+
+# Compulsory PDG codes:
+   * Class SM leptons complete.
+   * Class SM neutrinos complete.
+   * Class SM quarks complete.
+   * Class SM gauge bosons complete.
+#
+# Parameter definitions
+#
+
+   * All parameters are ok.
+
+
+# Vertices
+   * Calling FeynmanRules for 1 Lagrangians.
+   * Number of classes vertices: 34
+   * Number of flavored vertices: 60
+   * Saved vertices in InterfaceRun[ 1 ].
+   * Checked QNumber conservation.
+   * particles.py written.
+   * parameters.py written.
+#
+# Vertex definitions
+#
+
+   * 60 vertices written.
+   * vertices.py written.
+#
+# Lorentz structure definitions
+#
+
+   * 17 lorentz structures written.
+   * lorentz.py written.
+#
+# Coupling definitions
+#
+
+   * 29 couplings written.
+   * couplings.py written.

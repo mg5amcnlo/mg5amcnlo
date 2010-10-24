@@ -106,10 +106,13 @@ class ColorBasis(dict):
         # can be negative for anti particles
 
         color_num_pairs = []
+        pdg_codes = []
 
         for index, leg in enumerate(vertex.get('legs')):
             curr_num = leg.get('number')
-            curr_color = model.get('particle_dict')[leg.get('id')].get_color()
+            curr_part = model.get('particle_dict')[leg.get('id')]
+            curr_color = curr_part.get_color()
+            curr_pdg = curr_part.get_pdg_code()
 
             # If this is the next-to-last vertex and the last vertex is
             # the special identity id=0, start by applying the replacement rule
@@ -123,8 +126,8 @@ class ColorBasis(dict):
             # before an id=0 vertex, replace last index by a new summed index.
             if index == len(vertex.get('legs')) - 1 and \
                 vertex != diagram.get('vertices')[-1]:
-                curr_color = \
-                    model.get('particle_dict')[leg.get('id')].get_anti_color()
+                curr_color = curr_part.get_anti_color()
+                curr_pdg = curr_part.get_anti_pdg_code()
                 if not id0_rep:
                     repl_dict[curr_num] = min_index
                     min_index = min_index - 1
@@ -135,14 +138,25 @@ class ColorBasis(dict):
             except KeyError:
                 pass
 
-            # Discard color singlets
-            if curr_color != 1:
-                color_num_pairs.append((curr_color, curr_num))
+            color_num_pairs.append((curr_color, curr_num))
+            pdg_codes.append(curr_pdg)
 
-        # Order the color/number pairs according to increasing color (assumed
-        # to be the ordering choose in interactions.py). For identical colors,
-        # keep the normal leg ordering.
-        color_num_pairs = sorted(color_num_pairs, lambda p1, p2:p1[0] - p2[0])
+
+        # Order the legs according to the interaction particles
+        interaction_pdgs = [p.get_pdg_code() for p in \
+                            model.get_interaction(vertex.get('id')).\
+                            get('particles')]
+
+        sorted_color_num_pairs = []
+        for i, pdg in enumerate(interaction_pdgs):
+            index = pdg_codes.index(pdg)
+            pdg_codes.pop(index)
+            sorted_color_num_pairs.append(color_num_pairs.pop(index))
+
+        if color_num_pairs:
+            raise base_objects.PhysicsObject.PhysicsObjectError
+
+        color_num_pairs = sorted_color_num_pairs
 
         # Create a list of associated leg number following the same order
         list_numbers = [p[1] for p in color_num_pairs]
@@ -199,6 +213,7 @@ class ColorBasis(dict):
                     new_col_str_chain.product(mod_col_str)
                     new_res_dict[tuple(list(ind_chain) + [i])] = \
                         new_col_str_chain
+
         return (min_index, new_res_dict)
 
 

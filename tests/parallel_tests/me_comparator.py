@@ -41,6 +41,8 @@ import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.cmd_interface as cmd_interface
 
+from madgraph import MadGraph5Error
+
 class MERunner(object):
     """Base class to containing default function to setup, run and access results
     produced with a specific ME generator. 

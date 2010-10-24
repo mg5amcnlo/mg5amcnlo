@@ -33,7 +33,7 @@ import models.model_reader as model_reader
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
 #===============================================================================
-# TestModelReader
+# TestColorSextetModel
 #===============================================================================
 class TestColorSextetModel(unittest.TestCase):
     """Test class for the sextet diquark implementation"""
@@ -84,6 +84,33 @@ class TestColorSextetModel(unittest.TestCase):
 
         self.assertAlmostEqual(mg5_me_value, comparison_value, 12)
 
+    def test_check_u_u_six_g(self):
+        """Test the process u u > six g against literature expression"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False,
+                                           'number': 1}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False,
+                                           'number': 2}))
+        myleglist.append(base_objects.Leg({'id':9000006,
+                                           'state':True,
+                                           'number': 3}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True,
+                                           'number': 4}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        comparison_results, used_lorentz = \
+                            process_checks.check_processes(myproc,
+                                                           quick=True)
+
+        self.assertTrue(comparison_results[0]['passed'])
+
     def disabled_test_gu_to_ux_six(self):
         """Test the process u u > six g against literature expression"""
 
@@ -124,6 +151,89 @@ class TestColorSextetModel(unittest.TestCase):
 
         self.assertAlmostEqual(mg5_me_value, comparison_value, 14)
 
+#===============================================================================
+# TestColorTripletModel
+#===============================================================================
+class TestColorTripletModel(unittest.TestCase):
+    """Test class for the triplet diquark implementation"""
+
+
+    def setUp(self):
+        self.base_model = import_ufo.import_model('triplet_diquarks')
+        self.full_model = model_reader.ModelReader(self.base_model)
+        self.full_model.set_parameters_and_couplings()
+        # Set top quark mass to 0 to compare with literature expression
+        self.full_model.get('parameter_dict')['MT'] = 0.
+        self.full_model.get('parameter_dict')['WT'] = 0.
+
+    
+    def test_ut_to_antitrip_g(self):
+        """Test the process u t > antitrip g against literature expression"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False,
+                                           'number': 1}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                           'state':False,
+                                           'number': 2}))
+        myleglist.append(base_objects.Leg({'id':-9000006,
+                                           'state':True,
+                                           'number': 3}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True,
+                                           'number': 4}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        p, w_rambo = process_checks.get_momenta(myproc, self.full_model)
+        helas_writer = \
+                   helas_call_writers.PythonUFOHelasCallWriter(self.base_model)
+        
+        amplitude = diagram_generation.Amplitude(myproc)
+        matrix_element = helas_objects.HelasMatrixElement(amplitude)
+
+        stored_quantities = {}
+
+        mg5_me_value = process_checks.evaluate_matrix_element(matrix_element,
+                                                           stored_quantities,
+                                                           helas_writer,
+                                                           self.full_model,
+                                                           p)
+
+        comparison_value = uu_Dg(p, 3, self.full_model)
+
+        self.assertAlmostEqual(mg5_me_value, comparison_value, 12)
+
+    def test_check_u_t_antitrip_g(self):
+        """Test the process u u > antitrip g against literature expression"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False,
+                                           'number': 1}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                           'state':False,
+                                           'number': 2}))
+        myleglist.append(base_objects.Leg({'id':-9000006,
+                                           'state':True,
+                                           'number': 3}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True,
+                                           'number': 4}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        comparison_results, used_lorentz = \
+                            process_checks.check_processes(myproc,
+                                                           quick=True)
+
+        self.assertTrue(comparison_results[0]['passed'])
+
 # Global helper functions
 
 def uu_Dg(P, color_rep, full_model):
@@ -138,21 +248,21 @@ def uu_Dg(P, color_rep, full_model):
     if color_rep == 6:
         N_D = 6.
         C_D = 10./3.
+        lamb = abs(full_model.get('coupling_dict')['GC_24'])
+        G = full_model.get('coupling_dict')['GC_4']
     else:
         N_D = 3.
         C_D = 4./3.
+        lamb = abs(full_model.get('coupling_dict')['GC_12'])
+        G = full_model.get('coupling_dict')['GC_4']
 
     # Define auxiliary quantities
     shat=dot(P[0],P[0])+dot(P[1],P[1])+2*dot(P[0],P[1])
-    if color_rep == 6:
-        tau=full_model.get('parameter_dict')['MSIX']**2/shat
-    else:
-        tau=full_model.get('parameter_dict')['MANTI3']**2/shat        
+    tau=full_model.get('parameter_dict')['MSIX']**2/shat
     cos2theta=dot3(P[0],P[3])**2/(dot3(P[0],P[0])*dot3(P[3],P[3]))
 
     # Calculate matrix element
-    ANS = 16*abs(full_model.get('coupling_dict')['GC_24'])**2*\
-          full_model.get('coupling_dict')['GC_4']**2*N_D*(2*tau/(1-tau)**2 + 1)
+    ANS = 16*lamb**2*G**2*N_D*(2*tau/(1-tau)**2 + 1)
     ANS = ANS*(4./3.*4./(1-cos2theta)-C_D)
 
     #   Divide by color and spin factors for final state
