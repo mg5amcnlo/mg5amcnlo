@@ -718,7 +718,9 @@ class Test_DecayModel(unittest.TestCase):
                                   '../input_files/param_card_mssm.dat')
         decay_mssm.read_param_card(param_path)
 
-        goal_groups = [[15, 23, 24, 25, 35, 36, 37],
+        goal_groups = [[1,2,3,4,11,12,13,14, 15, 16,21,22, 
+                        23, 24, 25, 35, 36, 37], # 15 and from 23 are calculated
+                       # others are massless default
                        [1000001, 1000002, 1000003, 1000004, 1000011, 1000012, 1000013, 1000014, 1000015, 1000016, 1000021, 1000022, 1000023, 1000024, 1000025, 1000035, 1000037, 2000001, 2000002, 2000003, 2000004, 2000011, 2000013, 2000015], [1000005, 1000006, 2000005, 2000006], [5, 6]]
         goal_stable_particle_ids = set([(1,2,3,4,11,12,13,14,16,21,22),
                                         (5,),
@@ -809,7 +811,9 @@ class Test_DecayModel(unittest.TestCase):
         decay_mssm.get('interactions').append(new_interaction)
         decay_mssm.get('interactions').append(new_interaction_add_sm)
 
-        goal_groups = set([(15, 23, 24, 25, 35, 36, 37, 2000013),
+        goal_groups = set([(1,2,3,4,11,12,13,14, 15, 16,21,22,
+                            23, 24, 25, 35, 36, 37, 2000013), # 15 and from 23
+                           # are calculated, others are massless default
                            (1000005, 1000006, 2000005, 2000006),
                            (1000015, 1000016, 2000015),                        
                            (1000001, 1000002, 1000003, 1000004, 
@@ -824,7 +828,8 @@ class Test_DecayModel(unittest.TestCase):
 
         # the stable_candidates that should appear in 1st stage of
         # find stable_particles
-        goal_stable_candidates = [[], [1000006], [1000015], [2000001, 2000003],
+        goal_stable_candidates = [[1,2,3,4,11,12,13,14,16,21,22],
+                                  [1000006], [1000015], [2000001, 2000003],
                                   [5], [1000012], [1000014],[2000011]]
         # Group 1,3,4 mixed; group 2, 5, 6 mixed
         goal_stable_particle_ids = set([(1,2,3,4,11,12,13,14,16,21,22),
@@ -902,7 +907,8 @@ class Test_DecayModel(unittest.TestCase):
         decay_objects.MW=  7.9825163827443E+01  # MW
         decay_objects.MH=  1.2000000000000E+02  # MH
         
-        goal_groups_1 = set([(23,25),
+        goal_groups_1 = set([(21,22, 23,25, 8000002), # 23 and 25 are calculated
+                             # others are massless default
                              (1,), (2,), (3,), (4,), (5,), (6,),
                              (11,), (12,), (13,), (14,), (15,), (16,),
                              (24,)])
@@ -933,7 +939,8 @@ class Test_DecayModel(unittest.TestCase):
         full_sm['decay_groups'] = []
         full_sm['stable_particles'] = []
 
-        goal_groups_2 = set([(23,25),
+        goal_groups_2 = set([(12,14,16,21,22, 23,25, 8000002), # 23,25 are
+                             # calculated, others are massless
                              (1,), (2,), (3,), (4,), (5,), (6,),
                              (11,13,15,24)])
         goal_stable_particles_2 = set([(12,14,16,21,22,8000002),

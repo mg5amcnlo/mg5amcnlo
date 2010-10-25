@@ -1705,6 +1705,8 @@ class DecayModel(base_objects.Model):
         # Setup the original 'SM' particles, i.e. particle without mass.
         sm_ids = [p.get('pdg_code') for p in self.get('particles')\
                       if abs(eval(p.get('mass'))) == 0.]
+        self['decay_groups'] = [[p for p in self.get('particles')\
+                                     if abs(eval(p.get('mass'))) == 0.]]
 
         #Read the interaction information and setup
         for inter in self.get('interactions'):
