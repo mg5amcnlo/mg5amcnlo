@@ -1696,6 +1696,9 @@ class DecayModel(base_objects.Model):
         
         # Setup the SM particles and initial decay_groups, reduced_interactions
         self['decay_groups'] = [[]]
+        # self['reduced_interactions'] contains keys in 'id' as interaction id,
+        # 'particle' as the reduced particle content, and 'groupid_list' as
+        # the decay group id list
         self['reduced_interactions'] = []
         sm_ids = []
 
@@ -1875,28 +1878,47 @@ class DecayModel(base_objects.Model):
                     not part.get('pdg_code') in sm_ids:
                 self['decay_groups'].append([part])
 
+        # For conveniences, record the decay_group id in particles of 
+        # reduced interactions
+        for inter in self['reduced_interactions']:
+            inter['groupid_list'] = [[i \
+                                          for i, g in \
+                                          enumerate(self['decay_groups']) \
+                                          if p in g][0] \
+                                         for p in inter['particles']]
+
+        return self['decay_groups']
+
     def find_stable_particles(self):
         """ Find stable particles that are protected by parity conservation
             (massless particle is not included). 
             Algorithm:
             1. Find the lightest massive particle in each group.
-            2. From reduced_interactions to see if they can decay into
-               others.
+            2. For each reduced interaction, the group of the particle which
+               lightest mass is greater than the sum of all other particles 
+               is not (may not be) stable.
+            3. Replace the lightest mass of unstable group as its decay products
+            4. Repeat 2., until no replacement can be made.   
+
         """
 
         # If self['decay_groups'] is None, find_decay_groups first.
         if not self['decay_groups']:
             self.find_decay_groups_general()
 
-        # The list for the stable particle list of all groups
+        # The list for the lightest particle for each groups
+        # The first element is preserved for the SM-like group.
         stable_candidates = [[]]
-        large_group_ids = []
+        # The list for the lightest mass for each groups
+        lightestmass_list = [0.]
+
         # Set the massless particles into stable_particles
         self['stable_particles'] = [[]]
         for p in self.get('particles'):
             if abs(eval(p.get('mass'))) == 0. :
                 p.set('is_stable', True)
                 self['stable_particles'][-1].append(p)
+
         # Find lightest particle in each group.
         # SM-like group is excluded.
         for group in self['decay_groups'][1:]:
@@ -1913,67 +1935,41 @@ class DecayModel(base_objects.Model):
                 elif abs(eval(part.get('mass'))) == \
                         abs(eval(stable_candidates[-1][0].get('mass'))) :
                     stable_candidates[-1].append(part)
+            # Record the lightest mass into lightestmass_list
+            lightestmass_list.append(eval(stable_candidates[-1][0].get('mass')))
 
 
-        for inter in self['reduced_interactions']:
-            # Ids for the groups that particles of this inter belongs to
-            temp_large_group = [[i for i, g in enumerate(self['decay_groups'])\
-                                     if p in g][0] for p in inter['particles']]
-            # If this reduced_interactions is exactly the same as others
-            # in terms of group ids. Skip it.
-            if temp_large_group in large_group_ids:
-                continue
-            # Check if any id is repeated in previous groups
-            for group_id in temp_large_group:
-                for i, g in enumerate(large_group_ids):
-                    # If so, merge it to current group
-                    # This way enable the multi-merge from several previous
-                    # group
-                    if group_id in g:
-                        # Extend current group with non-existing group_id
-                        temp_large_group.extend([p for p in g \
-                                                 if not p in temp_large_group])
-                        # Empty this already merge group ids
-                        large_group_ids[i] = []
+        # Deal with the reduced interaction
+        change = True
+        while change:
+            change = False
+            for inter in self['reduced_interactions']:
+                # Find the minial mass for each particle
+                masslist = [lightestmass_list[inter['groupid_list'][i]] \
+                                for i in range(len(inter['particles']))]
+                
+                # Replace the minial mass to possible decay products
+                for i, m in enumerate(masslist):
+                    if 2*m > sum(masslist):
+                        # Clear the stable_candidates in this group
+                        stable_candidates[inter['groupid_list'][i]] = []
+                        # The lightest mass becomes the mass of decay products.
+                        lightestmass_list[inter['groupid_list'][i]] = \
+                            sum(masslist)-m
+                        change = True
+                        break
 
-            # Add current up-to-date group to large_group_ids
-            large_group_ids.append(temp_large_group)
-
-        for common_group in large_group_ids:
-            # Avoid common_group with no element (already merged)
-            if common_group:
-                # Set initial stable_particles
-                temp_partlist = stable_candidates[common_group[0]]
-                # Go through each group in common_group to find the lightest
-                # particles
-                for group_id in common_group[1:]:
-                    # If the new group has lighter mass, replace the
-                    # temp_partlist
-                    if abs(eval(stable_candidates[group_id][0].get('mass'))) < \
-                            abs(eval(temp_partlist[0].get('mass'))):
-                        temp_partlist = stable_candidates[group_id]
-
-                    # If the new group has stable particle with the equal mass
-                    # append the stable_candidates to temp_partlist
-                    elif abs(eval(stable_candidates[group_id][0].get('mass'))) \
-                            == abs(eval(temp_partlist[0].get('mass'))):
-                        temp_partlist.extend(stable_candidates[group_id])
-
-                # If temp_partlist is not empty, add to stable_particles
-                if temp_partlist:
-                    self['stable_particles'].append(temp_partlist)
-        
-        # Append the stable particles if their group stand alone
-        # (the mixing definition is in large_group_ids)
-        for i, stable_particlelist in enumerate(stable_candidates):
-            # stable_candidates[0] is for SM-like particles
-            if not i in sum(large_group_ids, []) and i != 0:
+        # Append the resulting stable particles
+        for stable_particlelist in stable_candidates:
+            if stable_particlelist:
                 self['stable_particles'].append(stable_particlelist)
 
         # Set the is_stable label for particles in the stable_particles
         for p in sum(self['stable_particles'], []):
             p.set('is_stable', True)
             self.get_particle(p.get_anti_pdg_code()).set('is_stable', True)
+
+
         return self['stable_particles']
 
     def find_channels(self, part, max_partnum):
@@ -2038,12 +2034,16 @@ class DecayModel(base_objects.Model):
             # For stable particles
             else:
                 try:
+                    if abs(self['decaywidth_list'][(part.get('pdg_code'), True)]) == 0.:
+                        ratio = 1
+                    else:
+                        ratio = self['decaywidth_list'][(part.get('pdg_code'), True)]
                     fdata.write(str('%11d    %.4e     %s    %4.2f\n'\
                                         %(part.get('pdg_code'), 
                                           self['decaywidth_list']\
                                               [(part.get('pdg_code'), True)],
                                           'stable    ',
-                                          0.0)))
+                                          ratio)))
                 except KeyError:
                     fdata.write(str('%11d    %.4e     %s    %s\n'\
                                         %(part.get('pdg_code'), 

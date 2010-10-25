@@ -1,0 +1,27 @@
+#This file has been generated automatically by FeynRules
+
+# Version: 1.4   Date: 25. 10. 2010,    11:39
+#This is a special data file which contains particles of the
+# Model.The format for entering new particles is
+#Particle codes taken from http://pdg.lbl.gov/2000/montecarlorpp.pdf
+#Name anti_Name Spin Linetype Mass Width Color Label Model
+#xxx xxxx SFV WSDC str str STO str PDG code
+
+ve ve~ F S ZERO ZERO S ve 12
+vm vm~ F S ZERO ZERO S vm 14
+vt vt~ F S ZERO ZERO S vt 16
+e- e+ F S Me ZERO S e 11
+m- m+ F S MM ZERO S m 13
+tt- tt+ F S MTA ZERO S tt 15
+u u~ F S MU ZERO T u 2
+c c~ F S MC ZERO T c 4
+t t~ F S MT WT T t 6
+d d~ F S MD ZERO T d 1
+s s~ F S MS ZERO T s 3
+b b~ F S MB ZERO T b 5
+a a V W ZERO ZERO S a 22
+z z V W MZ WZ S Z 23
+w+ w- V W MW WW S W 24
+g g V C ZERO ZERO O G 21
+h h S D MH WH S H 25
+T1 T1 T D ZERO ZERO O T1 8000002

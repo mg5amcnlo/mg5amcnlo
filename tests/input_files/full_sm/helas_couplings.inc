@@ -1,0 +1,54 @@
+c This file has been generated automatically by FeynRules
+
+
+c Version: 1.4   Date: 25. 10. 2010,    11:39
+      write(1,11) 'MGVX3',MGVX3
+      write(1,11) 'MGVX1',MGVX1
+      write(1,11) 'MGVX5',MGVX5
+      write(1,11) 'MGVX4',MGVX4
+      write(1,11) 'MGVX7',MGVX7
+      write(1,11) 'MGVX2',MGVX2
+      write(1,11) 'MGVX6',MGVX6
+      write(1,11) 'MGVX8',MGVX8
+      write(1,12) 'MGVX10',MGVX10
+      write(1,12) 'MGVX9',MGVX9
+      write(1,12) 'MGVX12',MGVX12
+      write(1,12) 'MGVX14',MGVX14
+      write(1,12) 'MGVX11',MGVX11
+      write(1,12) 'MGVX13',MGVX13
+      write(1,13) 'MGVX24',MGVX24(1),MGVX24(2)
+      write(1,13) 'MGVX30',MGVX30(1),MGVX30(2)
+      write(1,13) 'MGVX57',MGVX57(1),MGVX57(2)
+      write(1,13) 'MGVX63',MGVX63(1),MGVX63(2)
+      write(1,13) 'MGVX69',MGVX69(1),MGVX69(2)
+      write(1,13) 'MGVX70',MGVX70(1),MGVX70(2)
+      write(1,13) 'MGVX71',MGVX71(1),MGVX71(2)
+      write(1,13) 'MGVX21',MGVX21(1),MGVX21(2)
+      write(1,13) 'MGVX27',MGVX27(1),MGVX27(2)
+      write(1,13) 'MGVX68',MGVX68(1),MGVX68(2)
+      write(1,13) 'MGVX73',MGVX73(1),MGVX73(2)
+      write(1,13) 'MGVX66',MGVX66(1),MGVX66(2)
+      write(1,13) 'MGVX67',MGVX67(1),MGVX67(2)
+      write(1,13) 'MGVX74',MGVX74(1),MGVX74(2)
+      write(1,13) 'MGVX72',MGVX72(1),MGVX72(2)
+      write(1,13) 'MGVX33',MGVX33(1),MGVX33(2)
+      write(1,13) 'MGVX34',MGVX34(1),MGVX34(2)
+      write(1,13) 'MGVX35',MGVX35(1),MGVX35(2)
+      write(1,13) 'MGVX36',MGVX36(1),MGVX36(2)
+      write(1,13) 'MGVX37',MGVX37(1),MGVX37(2)
+      write(1,13) 'MGVX38',MGVX38(1),MGVX38(2)
+      write(1,13) 'MGVX39',MGVX39(1),MGVX39(2)
+      write(1,13) 'MGVX40',MGVX40(1),MGVX40(2)
+      write(1,13) 'MGVX41',MGVX41(1),MGVX41(2)
+      write(1,13) 'MGVX45',MGVX45(1),MGVX45(2)
+      write(1,13) 'MGVX46',MGVX46(1),MGVX46(2)
+      write(1,13) 'MGVX47',MGVX47(1),MGVX47(2)
+      write(1,13) 'MGVX48',MGVX48(1),MGVX48(2)
+      write(1,13) 'MGVX49',MGVX49(1),MGVX49(2)
+      write(1,13) 'MGVX50',MGVX50(1),MGVX50(2)
+      write(1,13) 'MGVX51',MGVX51(1),MGVX51(2)
+      write(1,13) 'MGVX52',MGVX52(1),MGVX52(2)
+      write(1,13) 'MGVX53',MGVX53(1),MGVX53(2)
+      write(1,13) 'MGVX54',MGVX54(1),MGVX54(2)
+      write(1,13) 'MGVX60',MGVX60(1),MGVX60(2)
+      write(1,13) 'GG',GG(1),GG(2)

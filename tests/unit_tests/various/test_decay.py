@@ -27,9 +27,11 @@ import models.import_ufo as import_ufo
 import models.model_reader as model_reader
 import madgraph.iolibs.save_model as save_model
 import madgraph.iolibs.drawing_eps as drawing_eps
+import madgraph.iolibs.import_v4 as import_v4
 from madgraph import MG5DIR
 import decay.decay_objects as decay_objects
 import tests.input_files.import_vertexlist as import_vertexlist
+
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
@@ -706,7 +708,6 @@ class Test_DecayModel(unittest.TestCase):
         for i, group in enumerate(decay_mssm['decay_groups']):
             self.assertEqual(sorted([p.get('pdg_code') for p in group]),
                              goal_groups[i])
-
     def test_find_mssm_decay_groups_general(self):
         """Test finding the decay groups of the MSSM"""
 
@@ -720,7 +721,8 @@ class Test_DecayModel(unittest.TestCase):
         goal_groups = [[15, 23, 24, 25, 35, 36, 37],
                        [1000001, 1000002, 1000003, 1000004, 1000011, 1000012, 1000013, 1000014, 1000015, 1000016, 1000021, 1000022, 1000023, 1000024, 1000025, 1000035, 1000037, 2000001, 2000002, 2000003, 2000004, 2000011, 2000013, 2000015], [1000005, 1000006, 2000005, 2000006], [5, 6]]
         goal_stable_particle_ids = set([(1,2,3,4,11,12,13,14,16,21,22),
-                                        (5,)])
+                                        (5,),
+                                        (1000022,)])
 
         for i, group in enumerate(decay_mssm.get('decay_groups')):
             self.assertEqual(sorted([p.get('pdg_code') for p in group]),
@@ -732,6 +734,7 @@ class Test_DecayModel(unittest.TestCase):
 
         # Reset decay_groups, test the auto run from find_stable_particles
         decay_mssm['decay_groups'] = []
+        
         self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in plist])) for plist in decay_mssm.get('stable_particles')]), goal_stable_particle_ids)
 
             
@@ -747,23 +750,6 @@ class Test_DecayModel(unittest.TestCase):
                                   '../input_files/param_card_mssm.dat')
         decay_mssm.read_param_card(param_path)
         
-        # Set sd4, sd5 quark mass the same as b quark, so that 
-        # degeneracy happens and can be test 
-        # (both particle and anti-particle must be changed)
-        # This reset of particle mass must before the reset of particles
-        # so that the particles of all interactions can change simutaneuosly.
-        decay_mssm.get_particle(2000003)['mass'] = \
-            decay_mssm.get_particle(5).get('mass')
-        decay_mssm.get_particle(2000001)['mass'] = \
-            decay_mssm.get_particle(5).get('mass')
-        decay_mssm.get_particle(1000012)['mass'] = \
-            decay_mssm.get_particle(1000015).get('mass')
-
-        decay_mssm.get_particle(-2000003)['mass'] = \
-            decay_mssm.get_particle(5).get('mass')
-        decay_mssm.get_particle(-2000001)['mass'] = \
-            decay_mssm.get_particle(5).get('mass')
-
         # Set no want particles
         no_want_particle_codes = [1000022, 1000023, 1000024, -1000024, 
                                   1000025, 1000035, 1000037, -1000037]
@@ -783,6 +769,24 @@ class Test_DecayModel(unittest.TestCase):
         
         decay_mssm.set('particles', particles)
         decay_mssm.set('interactions', interactions)
+
+        # Set sd4, sd5 quark mass the same as b quark, so that 
+        # degeneracy happens and can be tested 
+        # (both particle and anti-particle must be changed)
+        # This reset of particle mass must before the reset of particles
+        # so that the particles of all interactions can change simutaneuosly.
+        decay_mssm.get_particle(2000003)['mass'] = \
+            decay_mssm.get_particle(5).get('mass')
+        decay_mssm.get_particle(2000001)['mass'] = \
+            decay_mssm.get_particle(5).get('mass')
+        decay_mssm.get_particle(1000012)['mass'] = \
+            decay_mssm.get_particle(1000015).get('mass')
+
+        decay_mssm.get_particle(-2000003)['mass'] = \
+            decay_mssm.get_particle(5).get('mass')
+        decay_mssm.get_particle(-2000001)['mass'] = \
+            decay_mssm.get_particle(5).get('mass')
+
 
         # New interactions that mix different groups
         new_interaction = base_objects.Interaction({\
@@ -813,34 +817,26 @@ class Test_DecayModel(unittest.TestCase):
                            (5, 6),
                            (1000011, 1000012), 
                            (1000013, 1000014), 
+                           # 2000013 originally should be here, but the
+                           # the new_interaction_add_sm change it to SM group
                            (2000011,)
                            ])
+
         # the stable_candidates that should appear in 1st stage of
         # find stable_particles
         goal_stable_candidates = [[], [1000006], [1000015], [2000001, 2000003],
                                   [5], [1000012], [1000014],[2000011]]
+        # Group 1,3,4 mixed; group 2, 5, 6 mixed
         goal_stable_particle_ids = set([(1,2,3,4,11,12,13,14,16,21,22),
-                                        (5, 2000001, 2000003), # 5 mass = squark
+                                        (1000015,),
+                                        # 5 mass = squark
                                         # will be set later
-                                        (1000012, 1000015),
+                                        (2000001, 2000003),
+                                        (5,),
+                                        (1000012,),
+                                        (1000014,),
                                         # all sleptons are combine
                                         (2000011,)])
-
-
-        # Since particle_dict is a new one after reset of particles,
-        # set the mass again so that when the find_decay_groups_general
-        # use particle_dict, it can get the correct mass.
-        decay_mssm.get_particle(2000003)['mass'] = \
-            decay_mssm.get_particle(5).get('mass')
-        decay_mssm.get_particle(2000001)['mass'] = \
-            decay_mssm.get_particle(5).get('mass')
-        decay_mssm.get_particle(1000012)['mass'] = \
-            decay_mssm.get_particle(1000015).get('mass')
-
-        decay_mssm.get_particle(-2000003)['mass'] = \
-            decay_mssm.get_particle(5).get('mass')
-        decay_mssm.get_particle(-2000001)['mass'] = \
-            decay_mssm.get_particle(5).get('mass')
 
         # Get the decay_groups (this should run find_decay_groups_general)
         # automatically.
@@ -863,13 +859,105 @@ class Test_DecayModel(unittest.TestCase):
         self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in plist])) for plist in decay_mssm['stable_particles']]), goal_stable_particle_ids)
         
         # Test the assignment of is_stable to particles
-        goal_stable_pid = [1,2,3,4,5,11,12,13,14,16,21,22,1000012,1000015,
-                           2000001, 2000003, 2000011]
+        goal_stable_pid = [1,2,3,4,5,11,12,13,14,16,21,22,1000012,1000014,
+                           1000015, 2000001, 2000003, 2000011]
         self.assertEqual(sorted([p.get_pdg_code() \
                                      for p in decay_mssm.get('particles') \
                                      if p.get('is_stable')]), goal_stable_pid)
         self.assertTrue(decay_mssm.get_particle(-goal_stable_pid[0]).get('is_stable'))
 
+    def test_find_full_sm_decay_groups(self):
+        """ Test the algorithm in find stable particle in full sm.
+            First, test the full sm with massive neutrinos.
+            Second, set the neutrinos as massless."""
+
+        # Import the full sm
+        full_sm_base = import_v4.import_model(\
+            os.path.join(MG5DIR,
+                         'tests', 'input_files',
+                         'full_sm'))[0]
+        full_sm = decay_objects.DecayModel(full_sm_base)
+
+
+        # Stage 1: set neutrino masses nonzero
+        full_sm.get_particle(12)['mass'] = '1.0E-6'
+        full_sm.get_particle(14)['mass'] = '1.0E-6'
+        full_sm.get_particle(16)['mass'] = '1.0E-6'
+        full_sm.get_particle(-12)['mass'] = '1.0E-6'
+        full_sm.get_particle(-14)['mass'] = '1.0E-6'
+        full_sm.get_particle(-16)['mass'] = '1.0E-6'
+
+        # Set other particle mass
+        decay_objects.ZERO = 0.
+        decay_objects.MD=  5.0400000000000E-03  # MD
+        decay_objects.MU=  2.5500000000000E-03  # MU
+        decay_objects.MS=  1.0400000000000E-01  # MS
+        decay_objects.MC=  1.4200000000000E+00  # MC
+        decay_objects.MB=  4.7000000000000E+00  # MB
+        decay_objects.MT=  1.7430000000000E+02  # MT
+        decay_objects.Me=  5.1100000000000E-04  # Me
+        decay_objects.MM=  1.0566000000000E-01  # MM
+        decay_objects.MTA=  1.7770000000000E+00  # MTA
+        decay_objects.MZ=  9.1188000000000E+01  # MZ
+        decay_objects.MW=  7.9825163827443E+01  # MW
+        decay_objects.MH=  1.2000000000000E+02  # MH
+        
+        goal_groups_1 = set([(23,25),
+                             (1,), (2,), (3,), (4,), (5,), (6,),
+                             (11,), (12,), (13,), (14,), (15,), (16,),
+                             (24,)])
+        goal_stable_particles_1 = set([(21,22,8000002),
+                                       (2,),
+                                       (11,), (12,), (14,), (16,)])
+
+        # Test decay groups
+        self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in \
+                                            group])) \
+                                  for group in full_sm.get('decay_groups')]),
+                         goal_groups_1)
+        # Test stable particles
+        self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in \
+                                            group])) \
+                                 for group in full_sm.get('stable_particles')]),
+                         goal_stable_particles_1)
+
+
+        # Stage 2: turn off the neutrino mass
+        full_sm.get_particle(12)['mass'] = 'ZERO'
+        full_sm.get_particle(14)['mass'] = 'ZERO'
+        full_sm.get_particle(16)['mass'] = 'ZERO'
+        full_sm.get_particle(-12)['mass'] = 'ZERO'
+        full_sm.get_particle(-14)['mass'] = 'ZERO'
+        full_sm.get_particle(-16)['mass'] = 'ZERO'
+
+        full_sm['decay_groups'] = []
+        full_sm['stable_particles'] = []
+
+        goal_groups_2 = set([(23,25),
+                             (1,), (2,), (3,), (4,), (5,), (6,),
+                             (11,13,15,24)])
+        goal_stable_particles_2 = set([(12,14,16,21,22,8000002),
+                                       (2,),
+                                       (11,)])
+        goal_stable_pid_2 = [2, 11, 12,14,16,21,22,8000002]
+
+        # Test decay groups
+        self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in \
+                                            group])) \
+                                  for group in full_sm.get('decay_groups')]),
+                         goal_groups_2)
+
+        # Test stable particles
+        self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in \
+                                            group])) \
+                                 for group in full_sm.get('stable_particles')]),
+                         goal_stable_particles_2)
+
+        # Test the assignment of is_stable
+        self.assertEqual(sorted([p.get_pdg_code() \
+                                     for p in full_sm.get('particles') \
+                                     if p.get('is_stable')]), goal_stable_pid_2)
+        
 #===============================================================================
 # Test_Channel
 #===============================================================================
