@@ -356,3 +356,17 @@ class TestTestFinder(unittest.TestCase):
         self.testmodule.go_to_initpos()
 
 
+    def test_new_assertAlmostEqual(self):
+        """Test the replacement of assertAlmostEqual"""
+
+        self.assertAlmostEqual(0., 0.00000004)
+        self.assertRaises(AssertionError, self.assertAlmostEqual, 0., 0.00000006)
+        self.assertAlmostEqual(1e-15, 1.0000005e-15)
+        self.assertRaises(AssertionError,
+                          self.assertAlmostEqual, 1e-15, 1.0000006e-15)
+        self.assertAlmostEqual(0.000000004, 0., 8)
+        self.assertRaises(AssertionError, self.assertAlmostEqual,
+                          0.000000006, 0., 8)
+        self.assertAlmostEqual(1.00000004e-15, 1e-15, 8)
+        self.assertRaises(AssertionError,
+                          self.assertAlmostEqual, 1.00000006e-15, 1e-15, 8)

@@ -341,7 +341,7 @@ class AddVariable(list):
             
     def __eq__(self, obj):
         """Define The Equality"""
-        
+
         if self.__class__ != obj.__class__:
             return False
         
@@ -357,6 +357,10 @@ class AddVariable(list):
         
         #Pass all the test
         return True
+    
+    def __ne__(self, obj):
+        """Define the unequality"""
+        return not self.__eq__(obj)
         
     def __str__(self):
         text = ''
@@ -594,6 +598,7 @@ class MultVariable(list):
         
     def __eq__(self, obj):
         """Define When two MultVariable are identical"""
+        
         try:    
             if obj.vartype !=2 or len(self) != len(obj):
                 return False
@@ -605,6 +610,10 @@ class MultVariable(list):
                 if not (var.variable, var.power) in l1:
                     return False
             return True
+    
+    def __ne__(self, obj):
+        """ Define when two Multvariable are not identical"""
+        return not self.__eq__(obj)
                     
     def __str__(self):
         """ String representation """
