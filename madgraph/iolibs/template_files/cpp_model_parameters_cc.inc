@@ -18,7 +18,7 @@
 	return instance;
     }
 
-    void Parameters_%(model_name)s::setIndependentParameters(SLHAReader*& slha){
+    void Parameters_%(model_name)s::setIndependentParameters(SLHAReader& slha){
 	// Define "zero"
 	zero=0;
 	ZERO=0;

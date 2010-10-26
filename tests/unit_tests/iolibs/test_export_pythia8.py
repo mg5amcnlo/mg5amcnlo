@@ -162,8 +162,6 @@ class IOExportPythia8Test(unittest.TestCase,
         self.mymodel.set('interactions', myinterlist)
         self.mymodel.set('name', 'sm')
 
-        self.mycppmodel = helas_call_writer.Pythia8UFOHelasCallWriter(self.mymodel)
-    
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':2,
@@ -203,8 +201,14 @@ class IOExportPythia8Test(unittest.TestCase,
         self.mymatrixelement.get('matrix_elements')[0].\
                                                get('processes').append(myproc)
 
-        self.exporter = export_pythia8.ProcessExporterPythia8(\
-            self.mymatrixelement, self.mycppmodel,
+        self.mycppwriter = helas_call_writer.CPPUFOHelasCallWriter(self.mymodel)
+    
+        self.pythia8_exporter = export_pythia8.ProcessExporterPythia8(\
+            self.mymatrixelement, self.mycppwriter,
+            process_string = "q q~ > q q~")
+        
+        self.cpp_exporter = export_pythia8.ProcessExporterCPP(\
+            self.mymatrixelement, self.mycppwriter,
             process_string = "q q~ > q q~")
         
     tearDown = test_file_writers.CheckFileCreate.clean_files
@@ -635,7 +639,7 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
 """ % misc.get_pkg_info()
 
         exporter = export_pythia8.ProcessExporterPythia8(self.mymatrixelement,
-        self.mycppmodel, process_string = "q q~ > q q~")
+        self.mycppwriter, process_string = "q q~ > q q~")
 
         exporter.write_pythia8_process_cc_file(\
         writers.CPPWriter(self.give_pos('test.cc')))
@@ -647,9 +651,67 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
         """Test writing the .h  and .cc Pythia file for a matrix element"""
 
         export_pythia8.generate_process_files_pythia8(self.mymatrixelement,
-                                                      self.mycppmodel,
+                                                      self.mycppwriter,
                                                       process_string = "q q~ > q q~",
                                                       path = "/tmp")
+        
+        print "Please try compiling the file /tmp/Sigma_sm_qqx_qqx.cc:"
+        print "cd /tmp; g++ -c -I $PATH_TO_PYTHIA8/include Sigma_sm_qqx_qqx.cc.cc"
+
+    def test_write_cpp_process_files(self):
+        """Test writing the .h  and .cc C++ file for a matrix element"""
+
+        model_pkl = os.path.join(MG5DIR, 'models','sm','model.pkl')
+        if os.path.isfile(model_pkl):
+            model = save_load_object.load_from_file(model_pkl)
+        else:
+            model = import_ufo.import_model('sm')
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':model})
+        
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        mymatrixelement = helas_objects.HelasMultiProcess(myamplitude)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':4,
+                                           'state':False,
+                                           'number' : 1}))
+        myleglist.append(base_objects.Leg({'id':-4,
+                                         'state':False,
+                                           'number' : 2}))
+        myleglist.append(base_objects.Leg({'id':4,
+                                         'state':True,
+                                           'number' : 3}))
+        myleglist.append(base_objects.Leg({'id':-4,
+                                         'state':True,
+                                           'number' : 4}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':model})
+
+        mymatrixelement.get('matrix_elements')[0].\
+                                               get('processes').append(myproc)
+
+        mycppwriter = helas_call_writer.CPPUFOHelasCallWriter(model)
+    
+        export_pythia8.generate_process_files_cpp(mymatrixelement,
+                                                  mycppwriter,
+                                                  process_string = "q q~ > q q~",
+                                                  path = "/tmp")
         
         print "Please try compiling the file /tmp/Sigma_sm_qqx_qqx.cc:"
         print "cd /tmp; g++ -c -I $PATH_TO_PYTHIA8/include Sigma_sm_qqx_qqx.cc.cc"
@@ -749,13 +811,13 @@ class ExportUFOModelCPPTest(unittest.TestCase,
     created_files = [
                     ]
 
-    def disabled_setUp(self):
+    def setUp(self):
 
-        model_pkl = os.path.join(MG5DIR, 'models','mssm','model.pkl')
+        model_pkl = os.path.join(MG5DIR, 'models','sm','model.pkl')
         if os.path.isfile(model_pkl):
             self.model = save_load_object.load_from_file(model_pkl)
         else:
-            self.model = import_ufo.import_model('mssm')
+            self.model = import_ufo.import_model('sm')
         self.model_builder = export_pythia8.UFOModelConverterCPP(\
                                                             self.model, "/tmp")
         
@@ -816,7 +878,7 @@ class ExportUFOModelCPPTest(unittest.TestCase,
         for indep_coup in self.model_builder.coups_indep: 
             self.assertFalse(g_expr.search(indep_coup.expr))
 
-    def disabled_test_write_parameter_files(self):
+    def test_write_parameter_files(self):
         """Test writing the model parameter .h and.cc files"""
 
         self.model_builder.write_parameter_class_files()        

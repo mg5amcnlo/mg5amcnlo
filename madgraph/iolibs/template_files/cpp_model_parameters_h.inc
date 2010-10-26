@@ -25,7 +25,7 @@ double zero, ZERO;
 %(dependent_couplings)s
 
 // Set parameters that are unchanged during the run
-void setIndependentParameters(SLHAReader*& slha);
+void setIndependentParameters(SLHAReader& slha);
 // Set couplings that are unchanged during the run
 void setIndependentCouplings();
 // Set parameters that are changed event by event

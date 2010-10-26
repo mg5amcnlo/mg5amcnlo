@@ -45,6 +45,23 @@ logger = logging.getLogger('madgraph.export_pythia8')
 
 
 #===============================================================================
+# generate_process_files_cpp
+#===============================================================================
+def generate_process_files_cpp(multi_matrix_element, cpp_helas_call_writer,
+                               process_string = "", path = os.getcwd()):
+
+    """Generate the .h and .cc files needed for C++ Standalone, for the
+    processes described by multi_matrix_element"""
+
+    process_exporter_cpp = ProcessExporterCPP(multi_matrix_element,
+                                              cpp_helas_call_writer,
+                                              process_string,
+                                              path)
+
+    process_exporter_cpp.generate_process_files_cpp()
+
+
+#===============================================================================
 # generate_process_files_pythia8
 #===============================================================================
 def generate_process_files_pythia8(multi_matrix_element, cpp_helas_call_writer,
@@ -273,6 +290,7 @@ class ProcessExporterCPP(object):
         replace_dict['process_definition'] = process_definition
 
         process = self.processes[0]
+
         replace_dict['nexternal'] = self.nexternal
         replace_dict['nprocesses'] = len(self.matrix_elements)
 
@@ -390,36 +408,10 @@ class ProcessExporterCPP(object):
 
         initProc_lines = []
 
-        initProc_lines.append("// Set massive/massless matrix elements for c/b/mu/tau")
-        # Add lines to set c/b/tau/mu kinematics massive/massless
-        if not self.model.get_particle(4) or \
-               self.model.get_particle(4).get('mass').lower() == 'zero':
-            cMassiveME = "0."
-        else:
-            cMassiveME = "particleDataPtr->m0(4)"
-        initProc_lines.append("mcME = %s;" % cMassiveME)
-        if not self.model.get_particle(5) or \
-               self.model.get_particle(5).get('mass').lower() == 'zero':
-            bMassiveME = "0."
-        else:
-            bMassiveME = "particleDataPtr->m0(5)"
-        initProc_lines.append("mbME = %s;" % bMassiveME)
-        if not self.model.get_particle(13) or \
-               self.model.get_particle(13).get('mass').lower() == 'zero':
-            muMassiveME = "0."
-        else:
-            muMassiveME = "particleDataPtr->m0(13)"
-        initProc_lines.append("mmuME = %s;" % muMassiveME)
-        if not self.model.get_particle(15) or \
-               self.model.get_particle(15).get('mass').lower() == 'zero':
-            tauMassiveME = "0."
-        else:
-            tauMassiveME = "particleDataPtr->m0(15)"
-        initProc_lines.append("mtauME = %s;" % tauMassiveME)
-            
-        for i, me in enumerate(self.matrix_elements):
-            initProc_lines.append("jamp2[%d] = new double[%d];" % \
-                                  (i, len(color_amplitudes[i])))
+        initProc_lines.append("// Set external particle masses for this matrix element")
+
+        for part in matrix_element.get_external_wavefunctions():
+            initProc_lines.append("mME.push_back(pars->%s);" % part.get('mass'))
 
         return "\n".join(initProc_lines)
 
@@ -1320,13 +1312,13 @@ class UFOModelConverterCPP(object):
             # Read value from the slha variable
             expression = ""
             if len(param.lhacode) == 1:
-                expression = "slha->get_block_entry(\"%s\", %d, %e);" % \
+                expression = "slha.get_block_entry(\"%s\", %d, %e);" % \
                              (param.lhablock.lower(), param.lhacode[0],
                               param.value)
             elif len(param.lhacode) == 2:
                 expression = "indices[0] = %d;\nindices[1] = %d;\n" % \
                              (param.lhacode[0], param.lhacode[1])
-                expression += "%s=slha->get_block_entry(\"%s\", indices, %e);" \
+                expression += "%s=slha.get_block_entry(\"%s\", indices, %e);" \
                               % (param.name, param.lhablock.lower(), param.value)
             else:
                 raise MadGraph5Error("Only support for SLHA blocks with 1 or 2 indices")
