@@ -12,7 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-"""All the UFO MODEL"""
+"""All models for MG5, in particular UFO models (by FeynRules)"""
 
 import os
 import sys

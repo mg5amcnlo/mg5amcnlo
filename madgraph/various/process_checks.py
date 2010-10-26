@@ -12,8 +12,8 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-
 """Unit test library for the export Python format routines"""
+from __future__ import division
 
 import array
 import copy
@@ -239,7 +239,7 @@ def check_already_checked(is_ids, fs_ids, sorted_ids, process, model,
 # Helper function evaluate_matrix_element
 #===============================================================================
 def evaluate_matrix_element(matrix_element, stored_quantities, helas_writer,
-                            full_model, p = None, gauge_check = False):
+                        full_model, p = None, gauge_check = False, auth_skipping=True):
     """Calculate the matrix element and evaluate it for a phase space point"""
 
     process = matrix_element.get('processes')[0]
@@ -248,7 +248,7 @@ def evaluate_matrix_element(matrix_element, stored_quantities, helas_writer,
     if "matrix_elements" not in stored_quantities:
         stored_quantities['matrix_elements'] = []
 
-    if matrix_element in stored_quantities['matrix_elements']:
+    if auth_skipping and matrix_element in stored_quantities['matrix_elements']:
         # Exactly the same matrix element has been tested
         logger.info("Skipping %s, " % process.nice_string() + \
                     "identical matrix element already tested" \
@@ -310,6 +310,10 @@ def evaluate_matrix_element(matrix_element, stored_quantities, helas_writer,
         aloha_routines.append(routine.write(output_dir = None, 
                                             mode='mg5',
                                             language = 'Python'))
+    for routine in aloha_model.external_routines:
+        aloha_routines.append(
+                 open(aloha_model.locate_external(routine, 'Python')).read())
+            
 
     # Define the routines to be available globally
     for routine in aloha_routines:
@@ -413,6 +417,10 @@ def check_processes(processes, param_card = None, quick = []):
             comparison_results.append(res)
 
     return comparison_results, stored_quantities["used_lorentz"]
+
+
+
+
 
 def check_process(process, stored_quantities, helas_writer, full_model, quick):
     """Check the helas calls for a process by generating the process
@@ -590,13 +598,12 @@ def output_comparisons(comparison_results):
 def fixed_string_length(mystr, length):
     """Helper function to fix the length of a string by cutting it 
     or adding extra space."""
-
+    
     if len(mystr) > length:
         return mystr[0:length]
     else:
         return mystr + " " * (length - len(mystr))
-
-
+    
 
 #===============================================================================
 # check_gauge
@@ -655,12 +662,12 @@ def check_gauge(processes, param_card = None):
     # For each process, make sure we have set up leg numbers:
     for process in processes:
         # Check if we already checked process
-        if check_already_checked([l.get('id') for l in process.get('legs') if \
-                                  not l.get('state')],
-                                 [l.get('id') for l in process.get('legs') if \
-                                  l.get('state')],
-                                 sorted_ids, process, model):
-            continue
+        #if check_already_checked([l.get('id') for l in process.get('legs') if \
+        #                          not l.get('state')],
+        ##                         [l.get('id') for l in process.get('legs') if \
+        #                          l.get('state')],
+        #                         sorted_ids, process, model):
+        #    continue
         
         # Get process result
         result = check_gauge_process(process, stored_quantities,
@@ -708,17 +715,22 @@ def check_gauge_process(process, stored_quantities, helas_writer, full_model):
     matrix_element = helas_objects.HelasMatrixElement(amplitude,
                                                       gen_color = False)
 
-    res = evaluate_matrix_element(matrix_element, stored_quantities,
+    brsvalue = evaluate_matrix_element(matrix_element, stored_quantities,
                                   helas_writer, full_model, gauge_check = True)
-    return (process.base_string(), res)
+
+    matrix_element = helas_objects.HelasMatrixElement(amplitude,
+                                                      gen_color = False)    
+    mvalue = evaluate_matrix_element(matrix_element, stored_quantities,
+                                  helas_writer, full_model, gauge_check = False)
+    if mvalue:
+        return (process.base_string(), mvalue, brsvalue)
     
 
 def output_gauge(comparison_results):
     """Present the results of a comparison in a nice list format"""
 
     proc_col_size = 17
-
-    for proc, value in comparison_results:
+    for proc, mvalue, brsvalue in comparison_results:
         if len(proc) + 1 > proc_col_size:
             proc_col_size = len(proc) + 1
 
@@ -731,14 +743,19 @@ def output_gauge(comparison_results):
     no_check_proc_list = []
 
     res_str = fixed_string_length("Process", proc_col_size) + \
-              fixed_string_length("value", col_size) + \
+              fixed_string_length("matrix", col_size) + \
+              fixed_string_length("BRS", col_size) + \
+              fixed_string_length("ratio", col_size) + \
               "Result"
 
-    for proc, value in comparison_results:
+    for proc, mvalue, brsvalue in comparison_results:
+        ratio = (brsvalue/mvalue)
         res_str += '\n' + fixed_string_length(proc, proc_col_size) + \
-                    fixed_string_length("%1.10e" % value, col_size)
-                    
-        if value > 1e-16:
+                    fixed_string_length("%1.10e" % mvalue, col_size)+ \
+                    fixed_string_length("%1.10e" % brsvalue, col_size)+ \
+                    fixed_string_length("%1.10e" % ratio, col_size)
+         
+        if ratio > 1e-10:
             fail_proc += 1
             failed_proc_list.append(proc)
             res_str += "Failed"
@@ -755,3 +772,212 @@ def output_gauge(comparison_results):
 
     return res_str
 
+#===============================================================================
+# check_lorentz
+#===============================================================================
+def check_lorentz(processes, param_card = None):
+    """ Check if the square matrix element (sum over helicity) is lorentz 
+        invariant by boosting the impulsion with different value."""
+    
+    if isinstance(processes, base_objects.ProcessDefinition):
+        # Generate a list of unique processes
+        # Extract IS and FS ids
+        multiprocess = processes
+
+        model = multiprocess.get('model')
+        
+        # Writer for the Python matrix elements
+        helas_writer = helas_call_writer.PythonUFOHelasCallWriter(model)
+    
+        # Read a param_card and calculate couplings
+        full_model = model_reader.ModelReader(model)
+        full_model.set_parameters_and_couplings(param_card)
+        # Set all widths to zero for lorentz check
+        for particle in full_model.get('particles'):
+            if particle.get('width') != 'ZERO':
+                full_model.get('parameter_dict')[particle.get('width')] = 0.
+        stored_quantities = {}
+        return run_multiprocs_no_crossings(check_lorentz_process,
+                                           multiprocess,
+                                           stored_quantities,
+                                           helas_writer,
+                                           full_model)
+    elif isinstance(processes, base_objects.Process):
+        processes = base_objects.ProcessList([processes])
+    elif isinstance(processes, base_objects.ProcessList):
+        pass
+    else:
+        raise MadGraph5Error("processes is of non-supported format")
+
+    assert processes, "No processes given"
+
+    model = processes[0].get('model')
+
+    # Read a param_card and calculate couplings
+    full_model = model_reader.ModelReader(model)
+
+    full_model.set_parameters_and_couplings(param_card)
+
+    # Write the matrix element(s) in Python
+    helas_writer = helas_call_writer.PythonUFOHelasCallWriter(model)
+    
+    stored_quantities = {}
+    comparison_results = []
+
+    # For each process, make sure we have set up leg numbers:
+    for process in processes:
+        # Check if we already checked process
+        #if check_already_checked([l.get('id') for l in process.get('legs') if \
+        #                          not l.get('state')],
+        ##                         [l.get('id') for l in process.get('legs') if \
+        #                          l.get('state')],
+        #                         sorted_ids, process, model):
+        #    continue
+        
+        # Get process result
+        result = check_lorentz_process(process, stored_quantities,
+                                     helas_writer, full_model)
+        if result:
+            comparison_results.append(result)
+            
+    return comparison_results
+
+
+def check_lorentz_process(process, stored_quantities, helas_writer, full_model):
+    """Check gauge invariance for the process, unless it is already done."""
+
+    amp_results = []
+    model = process.get('model')
+
+    for i, leg in enumerate(process.get('legs')):
+        leg.set('number', i+1)
+
+    logger.info("Checking gauge %s" % \
+                process.nice_string().replace('Process', 'process'))
+
+    legs = process.get('legs')
+    # Generate a process with these legs
+    # Generate the amplitude for this process
+    amplitude = diagram_generation.Amplitude(process)
+    if not amplitude.get('diagrams'):
+        # This process has no diagrams; go to next process
+        logging.info("No diagrams for %s" % \
+                         process.nice_string().replace('Process', 'process'))
+        return None
+
+    # Generate phase space point to use
+    p, w_rambo = get_momenta(process, full_model)
+
+    # Generate the HelasMatrixElement for the process
+    matrix_element = helas_objects.HelasMatrixElement(amplitude,
+                                                      gen_color = True)
+
+    first_value = evaluate_matrix_element(matrix_element, stored_quantities,
+                                  helas_writer, full_model, p=p)
+
+    if first_value:
+        amp_results = [first_value]
+    else:
+        return  (process.base_string(), 'pass')
+    
+    for boost in range(1,4):
+        boost_p = boost_impulsion(p, boost)
+        
+        amp_results.append(evaluate_matrix_element(matrix_element, 
+                                                   stored_quantities,
+                                  helas_writer, full_model, p=boost_p,
+                                  auth_skipping=False))
+        
+    return (process.base_string(), amp_results)
+
+
+
+def boost_impulsion(p, boost_direction=1, beta=0.5):
+    """boost the set of impulsion in the 'boost direction' by the 'beta' 
+       factor"""
+    boost_p = []    
+    gamma = 1/ math.sqrt(1 - beta**2)
+    for imp in p:
+        bosst_p = imp[boost_direction]
+        E, px, py, pz = imp
+        boost_imp = []
+        # Energy:
+        boost_imp.append(gamma * E - gamma * beta * bosst_p)
+        # PX
+        if boost_direction == 1:
+            boost_imp.append(-gamma * beta * E + gamma * px)
+        else: 
+            boost_imp.append(px)
+        # PY
+        if boost_direction == 2:
+            boost_imp.append(-gamma * beta * E + gamma * py)
+        else: 
+            boost_imp.append(py)    
+        # PZ
+        if boost_direction == 3:
+            boost_imp.append(-gamma * beta * E + gamma * pz)
+        else: 
+            boost_imp.append(pz) 
+        #Add the impulsion to the list
+        boost_p.append(boost_imp)                   
+            
+    return boost_p
+
+def output_lorentz_inv(comparison_results):
+    """Present the results of a comparison in a nice list format"""
+
+    proc_col_size = 17
+
+    for proc, values in comparison_results:
+        if len(proc) + 1 > proc_col_size:
+            proc_col_size = len(proc) + 1
+
+    col_size = 17
+
+    pass_proc = 0
+    fail_proc = 0
+    no_check_proc = 0
+
+    failed_proc_list = []
+    no_check_proc_list = []
+
+    res_str = fixed_string_length("Process", proc_col_size) + \
+              fixed_string_length("Min element", col_size) + \
+              fixed_string_length("Max element", col_size) + \
+              fixed_string_length("Relative diff.", col_size) + \
+              "Result"
+
+    for proc, values in comparison_results:
+        
+        if values == 'pass':
+            no_check_proc += 1
+            no_check_proc_list.append(proc)
+            continue
+        
+        min_val = min(values)
+        max_val = max(values)
+        diff = (max_val - min_val) / max_val 
+        
+        res_str += '\n' + fixed_string_length(proc, proc_col_size) + \
+                   fixed_string_length("%1.10e" % min_val, col_size) + \
+                   fixed_string_length("%1.10e" % max_val, col_size) + \
+                   fixed_string_length("%1.10e" % diff, col_size)
+                   
+        if diff < 1e-8:
+            pass_proc += 1
+            res_str += "Passed"
+        else:
+            fail_proc += 1
+            failed_proc_list.append(proc)
+            res_str += "Failed"
+
+    res_str += "\nSummary: %i/%i passed, %i/%i failed" % \
+                (pass_proc, pass_proc + fail_proc,
+                 fail_proc, pass_proc + fail_proc)
+
+    if fail_proc != 0:
+        res_str += "\nFailed processes: %s" % ', '.join(failed_proc_list)
+    if no_check_proc:
+        res_str += "\nNot checked processes: %s" % ', '.join(no_check_proc_list)
+    return res_str        
+        

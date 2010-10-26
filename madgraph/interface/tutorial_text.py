@@ -28,13 +28,14 @@ a) How to generate a process
 b) How to create output for MadEvent
 
 Let's start with the first point, how to generate a process:
-mg5>generate p p > t t~ QED=0
+mg5>generate p p > t t~
 Note that a space is mandatory between the particle names.
 """
 
 generate = """
 You have just generated a new process.
-
+Note that the coupling order \"QED=0\" was automatically added by MG5
+to avoid non-QCD diagrams which have negligible contribution.
 You can find more information on supported syntax by using:
 mg5>help generate
 To list all defined processes, type
@@ -46,7 +47,7 @@ mg5>display particles
 mg5>display multiparticles
 
 If you want to add a second process, use the add process command:
-mg5>add process p p > W+ j QED=1, W+ > l+ vl @2
+mg5>add process p p > W+ j, W+ > l+ vl @2
 This adds a decay chain process, with the W+ decaying
 leptonically.
 
@@ -141,7 +142,7 @@ should be ./my_mg5_cmd.dat. In order to load a history file and
 execute the commands in it, you can do:
 mg5>import command my_mg5_cmd.dat
 or from the shell:
-./madgraph5/bin/mg5 my_mg5_cmd.dat
+./bin/mg5 my_mg5_cmd.dat
 
 It is also possible to display this file directly from MG5 by
 launching a shell command. For example:

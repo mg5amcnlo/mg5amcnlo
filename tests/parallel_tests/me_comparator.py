@@ -108,8 +108,14 @@ class MG4Runner(MERunner):
         self.setup_flag = False
 
         # Create a copy of Template
-        if not os.path.isdir(mg4_path):
-            raise IOError, "Path %s is not valid" % str(mg4_path)
+        if not os.path.isdir(os.path.join(mg4_path, "MadGraphII")) or \
+               not os.path.isdir(os.path.join(mg4_path, "Template")) or \
+               not os.path.isdir(os.path.join(mg4_path, "HELAS")):
+            raise IOError, "Path %s is not a valid MG4 path" % str(mg4_path)
+
+        if not os.path.isdir(os.path.join(mg4_path, "Models", self.model)):
+            raise IOError, "No such model directory %s" % \
+                  os.path.join(mg4_path, "Models", self.model)
 
         self.mg4_path = os.path.abspath(mg4_path)
 
@@ -343,9 +349,13 @@ class MG5Runner(MG4Runner):
 
         # Run mg5
         logging.info("Running mg5")
-        cmd_interface.MadGraphCmdShell().run_cmd('import command ' + \
-                            os.path.join(dir_name, 'Cards', 'proc_card_v5.dat'))
-               
+        proc_card = open(os.path.join(dir_name, 'Cards', 'proc_card_v5.dat'), 'r').read()
+        cmd = cmd_interface.MadGraphCmdShell()
+        for line in proc_card.split('\n'):
+            try:
+                cmd.run_cmd(line)
+            except MadGraph5Error:
+                pass
         # Get the ME value
         for i, proc in enumerate(proc_list):
             self.res_list.append(self.get_me_value(proc, i))
@@ -355,15 +365,14 @@ class MG5Runner(MG4Runner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = "import model_v4 %s\n" % os.path.join(self.mg4_path,
-                                                          'Models', model)
+        v5_string = "import model_v4 %s\n" % model
 
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \
                          '@%i' % i + '\n'
-        v5_string += "output standalone_v4 %s -f\n" % \
+        v5_string += "output standalone %s -f\n" % \
                      os.path.join(self.mg4_path, self.temp_dir_name)
 
         return v5_string
@@ -383,7 +392,7 @@ class MG5_UFO_Runner(MG5Runner):
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \
                          '@%i' % i + '\n'
-        v5_string += "output standalone_v4 %s -f\n" % \
+        v5_string += "output standalone %s -f\n" % \
                      os.path.join(self.mg4_path, self.temp_dir_name)
 
         return v5_string

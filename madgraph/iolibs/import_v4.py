@@ -82,6 +82,9 @@ def find_model_path(model_path, mgme_dir):
         pass
     elif mgme_dir and os.path.isdir(os.path.join(mgme_dir, 'Models', model_path)):
         model_path = os.path.join(mgme_dir, 'Models', model_path)
+    elif mgme_dir and os.path.isdir(os.path.join(mgme_dir, 'models',
+                                                 model_path + "_v4")):
+        model_path = os.path.join(mgme_dir, 'models', model_path + "_v4")
     elif not mgme_dir:
         error_text = "Path %s is not a valid pathname\n" % model_path
         error_text += "and no MG_ME installation detected in order to search in Models"
@@ -218,10 +221,10 @@ def read_interactions_v4(fsock, ref_part_list):
                     raise Interaction.PhysicsObjectError, \
                         "Vertex with less than 3 known particles found."
 
-                # Flip part/antipart of first part for FFV and FFS vertices
+                # Flip part/antipart of first part for FFV, FFS, FFT vertices
                 # according to v4 convention
                 spin_array = [part['spin'] for part in part_list]
-                if spin_array in [[2, 2, 1], [2, 2, 3]]  and \
+                if spin_array[:2] == [2, 2] and \
                    not part_list[0].get('self_antipart'):
                     part_list[0]['is_part'] = not part_list[0]['is_part']
 
@@ -301,6 +304,14 @@ def read_interactions_v4(fsock, ref_part_list):
                 # gggg
                 if pdg_codes == [21, 21, 21, 21]:
                     myinter.set('lorentz', ['gggg1', 'gggg2', 'gggg3'])
+
+                # go-go-g
+                # Using the special fvigox routine provides the minus
+                # sign necessary for octet Majorana-vector interactions
+                if spin_array == [2, 2, 3] and colors == [8, 8, 8] and \
+                   part_list[0].get('self_antipart') and \
+                   part_list[1].get('self_antipart'):
+                    myinter.set('lorentz', ['go'])
 
                 # If extra flag, add this to Lorentz    
                 if len(values) > 3 * len(part_list) - 4:
@@ -608,8 +619,8 @@ class ProcessInfo(object):
             
 
         # check if we have a MG5 format
-        if line.startswith('/mg5/'):
-            self.line = line[5:]
+        if '/mg5/' in line:
+            self.line = line.replace('/mg5/','')
             self.is_mg5_valid = True
             return
         if ',' in line or '=' in line:

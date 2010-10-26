@@ -15,6 +15,7 @@
 """ How to import a UFO model to the MG5 format """
 
 
+import fractions
 import logging
 import os
 import re
@@ -59,9 +60,13 @@ def import_model(model_name):
         
     # use pickle files if defined and up-to-date
     if files.is_uptodate(os.path.join(model_path, 'model.pkl'), files_list):
-        model = save_load_object.load_from_file( \
+        try:
+            model = save_load_object.load_from_file( \
                                           os.path.join(model_path, 'model.pkl'))
-        return model
+        except Exception:
+            logger.info('failed to load model from pickle file. Try importing UFO from File')
+        else:
+            return model
 
     # Load basic information
     ufo_model = ufomodels.load_model(model_name)
@@ -89,6 +94,8 @@ def import_model(model_name):
 class UFOMG5Converter(object):
     """Convert a UFO model to the MG5 format"""
 
+    use_lower_part_names = False
+
     def __init__(self, model, auto=False):
         """ initialize empty list for particles/interactions """
         
@@ -98,7 +105,6 @@ class UFOMG5Converter(object):
         self.model.set('particles', self.particles)
         self.model.set('interactions', self.interactions)
         
-        
         self.ufomodel = model
         
         if auto:
@@ -107,11 +113,19 @@ class UFOMG5Converter(object):
     def load_model(self):
         """load the different of the model first particles then interactions"""
 
-        logger.info('load particle')
+        logger.info('load particles')
+        # Check if multiple particles have the same name but different case.
+        # Otherwise, we can use lowercase particle names.
+        if len(set([p.name for p in self.ufomodel.all_particles] + \
+                   [p.antiname for p in self.ufomodel.all_particles])) == \
+           len(set([p.name.lower() for p in self.ufomodel.all_particles] + \
+                   [p.antiname.lower() for p in self.ufomodel.all_particles])):
+            self.use_lower_part_names = True
+
         for particle_info in self.ufomodel.all_particles:            
             self.add_particle(particle_info)
             
-        logger.info('load vertex')
+        logger.info('load vertices')
         for interaction_info in self.ufomodel.all_vertices:
             self.add_interaction(interaction_info)
         
@@ -144,7 +158,10 @@ class UFOMG5Converter(object):
             if key in base_objects.Particle.sorted_keys:
                 nb_property +=1
                 if key in ['name', 'antiname']:
-                    particle.set(key, value.lower())
+                    if self.use_lower_part_names:
+                        particle.set(key, value.lower())
+                    else:
+                        particle.set(key, value)
                 elif key == 'charge':
                     particle.set(key, float(value))
                 else:
@@ -200,22 +217,38 @@ class UFOMG5Converter(object):
 
         # add to the interactions
         self.interactions.append(interaction)
-        
-    @staticmethod
-    def treat_color(data_string, interaction_info):
+    
+    _pat_T = re.compile(r'T\((?P<first>\d*),(?P<second>\d*)\)')
+    _pat_id = re.compile(r'Identity\((?P<first>\d*),(?P<second>\d*)\)')
+    
+    def treat_color(self, data_string, interaction_info):
         """ convert the string to ColorStirng"""
-        original = copy.copy(data_string)
-        # Change identity in color.TC        
-        p = re.compile(r'''Identity\((?P<first>\d*),(?P<second>\d*)\)''')
-        #data_string = p.sub('color.T(\g<first>,\g<second>)', data_string)
-        pattern = p.search(data_string)
-        if pattern:
-            particle = interaction_info.particles[int(pattern.group('first'))-1]
-            if particle.color < 0 :
-                data_string = p.sub('color.T(\g<second>,\g<first>)', data_string)
-            else:
-                data_string = p.sub('color.T(\g<first>,\g<second>)', data_string)
         
+        #original = copy.copy(data_string)
+        #data_string = p.sub('color.T(\g<first>,\g<second>)', data_string)
+        
+        
+        output = []
+        factor = 1
+        for term in data_string.split('*'):
+            pattern = self._pat_id.search(term)
+            if pattern:
+                particle = interaction_info.particles[int(pattern.group('first'))-1]
+                if particle.color == -3 :
+                    output.append(self._pat_id.sub('color.T(\g<second>,\g<first>)', term))
+                elif particle.color == 3:
+                    output.append(self._pat_id.sub('color.T(\g<first>,\g<second>)', term))
+                elif particle.color == 8:
+                    output.append(self._pat_id.sub('color.Tr(\g<first>,\g<second>)', term))
+                    factor *= 2
+                else:
+                    raise MadGraph5Error, \
+                          "Unknown use of Identity for particle with color %d" \
+                          % particle.color
+            else:
+                output.append(term)
+        data_string = '*'.join(output)
+
         # Change convention for summed indices
         p = re.compile(r'''\'\w(?P<number>\d+)\'''')
         data_string = p.sub('-\g<number>', data_string)
@@ -231,9 +264,11 @@ class UFOMG5Converter(object):
 #            p = re.compile(r'''(?P<prefix>[^-@])(?P<nb>%s)(?P<postfix>\D)''' % j)
 #            data_string = p.sub('\g<prefix>@%s\g<postfix>' % i, data_string)
 #        data_string = data_string.replace('@','')                    
+
         output = data_string.split('*')
         output = color.ColorString([eval(data) \
                                               for data in output if data !='1'])
+        output.coeff = fractions.Fraction(factor)
         for col_obj in output:
             col_obj.replace_indices(new_indices)
         
@@ -248,7 +283,7 @@ class OrganizeModelExpression:
     
     # regular expression to shorten the expressions
     complex_number = re.compile(r'''complex\((?P<real>[^,\(\)]+),(?P<imag>[^,\(\)]+)\)''')
-    expo_expr = re.compile(r'''(?P<expr>\w+)\s*\*\*\s*(?P<expo>\d+)''')
+    expo_expr = re.compile(r'''(?P<expr>[\w.]+)\s*\*\*\s*(?P<expo>\d+)''')
     cmath_expr = re.compile(r'''cmath.(?P<operation>\w+)\((?P<expr>\w+)\)''')
     #operation is usualy sqrt / sin / cos / tan
     conj_expr = re.compile(r'''complexconjugate\((?P<expr>\w+)\)''')
@@ -400,6 +435,9 @@ class OrganizeModelExpression:
         output = '%s__exp__%s' % (expr, exponent)
         old_expr = '%s**%s' % (expr,exponent)
 
+        if expr.startswith('cmath'):
+            return old_expr
+        
         if expr.isdigit():
             output = '_' + output #prevent to start with a number
             new_param = base_objects.ModelVariable(output, old_expr,'real')
@@ -411,7 +449,7 @@ class OrganizeModelExpression:
         return output
         
     def shorten_cmath(self, matchobj):
-        """add the short expression, and retrun the nice string associate"""
+        """add the short expression, and return the nice string associate"""
         
         expr = matchobj.group('expr')
         operation = matchobj.group('operation')

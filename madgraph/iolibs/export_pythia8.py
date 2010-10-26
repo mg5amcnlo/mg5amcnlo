@@ -1274,11 +1274,11 @@ class UFOModelConverterCPP(object):
     def write_files(self):
         """Create all necessary files"""
 
-        # Write parameter (and coupling) class files
-        self.write_parameter_class_files()
-
         # Write Helas Routines
         self.write_aloha_routines()
+
+        # Write parameter (and coupling) class files
+        self.write_parameter_class_files()
 
     # Routines for preparing parameters and couplings from the model
 
@@ -1414,6 +1414,11 @@ class UFOModelConverterCPP(object):
                                          'template_files',copy_file),
                             self.dir_path)
 
+        logger.info("Created files %s and %s in directory %s" \
+                    % (os.path.split(parameter_h_file)[-1],
+                       os.path.split(parameter_cc_file)[-1],
+                       os.path.split(parameter_h_file)[0]))
+
     def write_parameters(self, params):
         """Write out the definitions of parameters"""
 
@@ -1509,6 +1514,12 @@ class UFOModelConverterCPP(object):
         # Write the files
         writers.CPPWriter(model_h_file).writelines(file_h)
         writers.CPPWriter(model_cc_file).writelines(file_cc)
+
+        logger.info("Created files %s and %s in directory %s" \
+                    % (os.path.split(model_h_file)[-1],
+                       os.path.split(model_cc_file)[-1],
+                       os.path.split(model_h_file)[0]))
+
 
     def read_aloha_template_files(self, ext):
         """Read all ALOHA template files with extension ext, strip them of

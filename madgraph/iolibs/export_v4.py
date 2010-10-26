@@ -55,12 +55,16 @@ def copy_v4template(mgme_dir, dir_path, clean):
         logger.info('initialize a new directory: %s' % \
                     os.path.basename(dir_path))
         shutil.copytree(os.path.join(mgme_dir, 'Template'), dir_path, True)
-        shutil.copy(os.path.join(mgme_dir, 'MGMEVersion.txt'), dir_path)
-    elif not os.path.isfile(os.path.join(dir_path, 'MGMEVersion.txt')):
+    elif not os.path.isfile(os.path.join(dir_path, 'TemplateVersion.txt')):
         if not mgme_dir:
             raise MadGraph5Error, \
                   "No valid MG_ME path given for MG4 run directory creation."
+    try:
         shutil.copy(os.path.join(mgme_dir, 'MGMEVersion.txt'), dir_path)
+    except IOError:
+        MG5_version = misc.get_pkg_info()
+        open(os.path.join(dir_path, 'MGMEVersion.txt'), 'w').write( \
+            "5." + MG5_version['version'])
     
     #Ensure that the Template is clean
     if clean:
@@ -413,7 +417,7 @@ def write_matrix_element_v4_madevent(writer, matrix_element, fortran_model):
     # Write the file
     writer.writelines(file)
 
-    return len(filter(lambda call: call.find('#') != 0, helas_calls))
+    return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor
 
 #===============================================================================
 # write_auto_dsig_file
@@ -651,12 +655,12 @@ def write_leshouche_file(writer, matrix_element, fortran_model):
 #===============================================================================
 # write_maxamps_file
 #===============================================================================
-def write_maxamps_file(writer, matrix_element, fortran_model):
+def write_maxamps_file(writer, matrix_element, fortran_model, ncolor):
     """Write the maxamps.inc file for MG4."""
 
-    file = "       integer    maxamps\n"
-    file = file + "parameter (maxamps=%d)" % \
-           len(matrix_element.get_all_amplitudes())
+    file = "       integer    maxamps, maxflow\n"
+    file = file + "parameter (maxamps=%d, maxflow=%d)" % \
+           (len(matrix_element.get_all_amplitudes()), ncolor)
 
     # Write the file
     writer.writelines(file)
@@ -990,9 +994,10 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 
     # Create the matrix.f file, auto_dsig.f file and all inc files
     filename = 'matrix.f'
-    calls = write_matrix_element_v4_madevent(writers.FortranWriter(filename),
-                                             matrix_element,
-                                             fortran_model)
+    calls, ncolor = \
+           write_matrix_element_v4_madevent(writers.FortranWriter(filename),
+                                            matrix_element,
+                                            fortran_model)
 
     filename = 'auto_dsig.f'
     write_auto_dsig_file(writers.FortranWriter(filename),
@@ -1034,7 +1039,8 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     filename = 'maxamps.inc'
     write_maxamps_file(writers.FortranWriter(filename),
                        matrix_element,
-                       fortran_model)
+                       fortran_model,
+                       ncolor)
 
     filename = 'mg.sym'
     write_mg_sym_file(writers.FortranWriter(filename),
@@ -1409,8 +1415,7 @@ def convert_model_to_mg4(model, output_dir, wanted_lorentz = []):
     else:
         aloha_model.compute_all(save=False)
     write_dir=os.path.join(output_dir, 'Source', 'DHELAS')
-    for abstracthelas in dict(aloha_model).values():
-        abstracthelas.write(write_dir, language='Fortran')
+    aloha_model.write(write_dir, 'Fortran')
     
     #copy Helas Template
     cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')

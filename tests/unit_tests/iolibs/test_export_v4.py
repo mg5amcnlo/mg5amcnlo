@@ -3710,10 +3710,13 @@ C     Number of configs
         self.assertFileContains('test', "      0\n")
         # Test maxamps.inc
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_maxamps_file(writer, me, fortran_model)
+        # Extract ncolor
+        ncolor = max(1, len(me.get('color_basis')))
+        export_v4.write_maxamps_file(writer, me, fortran_model, ncolor)
         writer.close()
         self.assertFileContains('test',
-                      "      INTEGER    MAXAMPS\n      PARAMETER (MAXAMPS=8)\n")
+                                "      INTEGER    MAXAMPS, MAXFLOW\n" + \
+                                "      PARAMETER (MAXAMPS=8, MAXFLOW=1)\n")
         # Test mg.sym
         writer = writers.FortranWriter(self.give_pos('test'))
         export_v4.write_mg_sym_file(writer, me, fortran_model)
@@ -4344,7 +4347,7 @@ CALL OXXXXX(P(0,4),MGO,NHEL(4),+1*IC(4),W(1,4))
 CALL JVVXXX(W(1,1),W(1,2),G,ZERO,ZERO,W(1,5))
 # Amplitude(s) for diagram number 1
 CALL IOVXXX(W(1,3),W(1,4),W(1,5),GGI,AMP(1))
-CALL FVIXXX(W(1,3),W(1,1),-GGI,MGO,WGO,W(1,6))
+CALL FVIXXX(W(1,3),W(1,1),GGI,MGO,WGO,W(1,6))
 # Amplitude(s) for diagram number 2
 CALL IOVXXX(W(1,6),W(1,4),W(1,2),GGI,AMP(2))
 CALL FVOXXX(W(1,4),W(1,1),GGI,MGO,WGO,W(1,7))

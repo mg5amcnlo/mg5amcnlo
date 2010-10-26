@@ -524,7 +524,9 @@ class TestMultVariable(unittest.TestCase):
         #test with other type of obj
         self.assertNotEqual(self.mult1, 32)
         self.assertNotEqual(self.mult1, self.var1)
-        self.assertNotEqual(self.mult1, self.var1 + self.var2)
+        prov = self.var1 + self.var2
+        self.assertNotEqual(self.mult1, prov )
+        
                 
     def testsummultmul(self):
         """Test the sum of two MultVariable"""

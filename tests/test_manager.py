@@ -27,13 +27,18 @@
    the NAME can contain regular expression (in python re standard format)
 """
 
+import sys
+
+if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
+    sys.exit('MadGraph 5 works only with python 2.6 or later (but not python 3.X).\n\
+               Please upgrate your version of python.')
+
 import inspect
 import logging
 import logging.config
 import optparse
 import os
 import re
-import sys
 import unittest
 
 

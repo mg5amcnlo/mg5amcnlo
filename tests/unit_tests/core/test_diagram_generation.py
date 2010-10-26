@@ -25,6 +25,7 @@ import tests.unit_tests as unittest
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
+from madgraph import MadGraph5Error
 
 #===============================================================================
 # AmplitudeTest
@@ -2062,14 +2063,14 @@ class MultiProcessTest(unittest.TestCase):
                       'self_antipart':True}))
 
         # A electron and positron
-        mypartlist.append(base_objects.Particle({'name':'e+',
-                      'antiname':'e-',
+        mypartlist.append(base_objects.Particle({'name':'e-',
+                      'antiname':'e+',
                       'spin':2,
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'e^+',
-                      'antitexname':'e^-',
+                      'texname':'e^-',
+                      'antitexname':'e^+',
                       'line':'straight',
                       'charge':-1.,
                       'pdg_code':11,
@@ -2345,8 +2346,10 @@ class MultiProcessTest(unittest.TestCase):
             my_multi_leglist[0].set('state', False)
             my_multi_leglist[1].set('state', False)
 
-            my_process_definition = base_objects.ProcessDefinition({'legs':my_multi_leglist,
-                                                                    'model':self.mymodel})
+            my_process_definition = base_objects.ProcessDefinition({\
+                                                     'legs':my_multi_leglist,
+                                                     'model':self.mymodel,
+                                                     'orders': {'QED': nfs}})
             my_multiprocess = diagram_generation.MultiProcess(\
                 {'process_definitions':\
                  base_objects.ProcessDefinitionList([my_process_definition])})
@@ -2368,6 +2371,97 @@ class MultiProcessTest(unittest.TestCase):
             #print 'pp > ',nfs,'j (p,j = ', p, '):'
             #print 'Valid processes: ',len(filter(lambda item: item[1] > 0, valid_procs))
             #print 'Attempted processes: ',len(amplitudes)
+
+    def test_find_maximal_non_qcd_order(self):
+        """Test find_maximal_non_qcd_order for different configurations
+        """
+
+        # First try p p > e+ e- + nj
+
+        max_fs = 5
+
+        p = [21, 1, -1, 2, -2]
+
+        my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': True});
+
+        for nfs in range(2, max_fs + 1):
+
+            # Define the multiprocess
+            my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * (nfs)])
+
+            my_multi_leglist[0].set('state', False)
+            my_multi_leglist[1].set('state', False)
+            
+            my_multi_leglist.append(base_objects.MultiLeg({'ids': [11],
+                                                           'state': True}))
+            my_multi_leglist.append(base_objects.MultiLeg({'ids': [-11],
+                                                           'state': True}))
+
+            my_process_definition = base_objects.ProcessDefinition({'legs':my_multi_leglist,
+                                                                    'model':self.mymodel})
+
+            # Check coupling orders for process
+            self.assertEqual(diagram_generation.MultiProcess.\
+                             find_maximal_non_qcd_order(my_process_definition),
+                             {"QED":2})
+
+        # Now check p p > a > p p
+        max_fs = 3
+        
+        for nfs in range(2, max_fs + 1):
+            # Define the multiprocess
+            my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for \
+                                               leg in [my_multi_leg] * (2+nfs)])
+            my_multi_leglist[0].set('state', False)
+            my_multi_leglist[1].set('state', False)
+            my_process_definition = base_objects.ProcessDefinition({\
+                                                  'legs':my_multi_leglist,
+                                                  'model':self.mymodel,
+                                                  'required_s_channels':[22]})
+
+            self.assertEqual(diagram_generation.MultiProcess.\
+                             find_maximal_non_qcd_order(my_process_definition),
+                             {'QED': 2})
+        
+        # Now check p p > a|g > p p
+        max_fs = 3
+        
+        for nfs in range(2, max_fs + 1):
+            # Define the multiprocess
+            my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for \
+                                               leg in [my_multi_leg] * (2+nfs)])
+            my_multi_leglist[0].set('state', False)
+            my_multi_leglist[1].set('state', False)
+            my_process_definition = base_objects.ProcessDefinition({\
+                                             'legs':my_multi_leglist,
+                                             'model':self.mymodel,
+                                             'required_s_channels':[[22],[21]]})
+
+            self.assertEqual(diagram_generation.MultiProcess.\
+                             find_maximal_non_qcd_order(my_process_definition),
+                             {'QED': 0})
+        
+
+        # Check that we don't get any couplings when we have multiple
+        # non-QCD orders.
+
+        myoldinterlist = self.mymodel.get('interactions')
+        myinterlist = copy.copy(myoldinterlist)
+        myinterlist.append(base_objects.Interaction({
+                      'id': 8,
+                      'particles': base_objects.ParticleList(\
+                                            []),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'SQED':1}}))
+
+        self.mymodel.set('interactions', myinterlist)
+        self.assertEqual(diagram_generation.MultiProcess.\
+                         find_maximal_non_qcd_order(my_process_definition),
+                         {})
+        
+        self.mymodel.set('interactions', myoldinterlist)
 
     def test_multiparticle_pp_nj_with_required_s_channel(self):
         """Setting up and testing pp > nj with required photon s-channel
@@ -2447,3 +2541,32 @@ class MultiProcessTest(unittest.TestCase):
             if nfs <= 3:
                 self.assertEqual(valid_procs, goal_valid_procs[nfs - 2])
 
+    def test_wrong_multiparticle(self):
+        """Check that an exception is raised for empty multipart amplitudes"""
+        
+        max_fs = 2 # 3
+
+        p = [-1, -2]
+        j = [ 1,  2]
+
+        my_multi_init = base_objects.MultiLeg({'ids': p, 'state': False});
+        my_multi_final = base_objects.MultiLeg({'ids': j, 'state': True});
+        goal_number_processes = [0, 0]
+        
+        for nfs in range(2, max_fs + 1):
+            # Define the multiprocess
+            my_multi_leglist = base_objects.MultiLegList(
+                          [copy.copy(leg) for leg in [my_multi_init] * 2] + \
+                          [copy.copy(leg) for leg in [my_multi_final] * nfs]
+                          )
+
+            my_process_definition = base_objects.ProcessDefinition({'legs':my_multi_leglist,
+                                                                    'model':self.mymodel}
+                                                                  )
+            my_multiprocess = diagram_generation.MultiProcess(\
+                {'process_definitions':\
+                 base_objects.ProcessDefinitionList([my_process_definition])})
+
+            if nfs <= 3:
+                self.assertRaises(MadGraph5Error,
+                                  my_multiprocess.get, 'amplitudes')
