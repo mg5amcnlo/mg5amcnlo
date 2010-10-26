@@ -1938,7 +1938,7 @@ class DecayModel(base_objects.Model):
                         abs(eval(stable_candidates[-1][0].get('mass'))) :
                     stable_candidates[-1].append(part)
             # Record the lightest mass into lightestmass_list
-            lightestmass_list.append(eval(stable_candidates[-1][0].get('mass')))
+            lightestmass_list.append(abs(eval(stable_candidates[-1][0].get('mass'))))
 
 
         # Deal with the reduced interaction
@@ -1971,8 +1971,71 @@ class DecayModel(base_objects.Model):
             p.set('is_stable', True)
             self.get_particle(p.get_anti_pdg_code()).set('is_stable', True)
 
+        # Run the advance find_stable_particles to ensure that
+        # all stable particles are found
+        self.find_stable_particles_advance()
 
         return self['stable_particles']
+
+    def find_stable_particles_advance(self):
+        """ Find all stable particles. 
+            Algorithm:
+            1. For each interaction, if one particle has mass larger than 
+               the other, than this particle's mass is replaced by 
+               the sum of its decay products' masses. 
+               The 'is_stable' label of this particle is False.
+               
+            2. Repeat 1., until no change was made after the whole check.
+            3. Particles that have never been labeled as unstable are now
+               stable particles.
+        """
+
+        # Record the mass of all particles
+        # Record whether particles can decay through stable_list
+        mass={}
+        stable_list = {}
+        for part in self.get('particles'):
+            mass[part.get('pdg_code')] = abs(eval(part.get('mass')))
+            stable_list[part.get('pdg_code')] = True
+
+        # Record minimal mass for avioding round-off error.
+        m_min = min([m for i,m in mass.items() if m > 0.])
+
+        # Start the iteration
+        change = True
+        while change:
+            change = False
+            for inter in self['interactions']:
+                total_m = sum([mass[p.get('pdg_code')] \
+                                   for p in inter['particles']])
+
+                # Skip interaction with total_m = 0
+                if total_m == 0.:
+                    continue
+
+                # Find possible decay for each particle
+                for part in inter['particles']:
+                    # If not stable particle yet.
+                    if not part.get('is_stable'):
+                        # This condition is to prevent round-off error.
+                        if (2*mass[part.get('pdg_code')]-total_m) > 0.5*m_min:
+                            
+                            mass[part.get('pdg_code')] = \
+                                total_m - mass[part.get('pdg_code')]
+                            part['is_stable'] = False
+                            stable_list[part.get('pdg_code')] = False
+                            change = True
+                            break
+
+        # Record the stable particle
+        for part in self.get('particles'):
+            if stable_list[part.get('pdg_code')]:               
+                part.set('is_stable', True)
+                self.get_particle(part.get_anti_pdg_code()).set('is_stable', 
+                                                                True)
+                if not part in sum(self['stable_particles'], []):
+                    self['stable_particles'].append([part])
+
 
     def find_channels(self, part, max_partnum):
         """ Function that find channels for a particle.

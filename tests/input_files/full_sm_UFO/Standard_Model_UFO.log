@@ -1,0 +1,64 @@
+# This file was automatically created by FeynRules $Revision: 356 $
+# Mathematica version: 7.0 for Microsoft Windows (32-bit) (November 10, 2008)
+# Date: Tue 26 Oct 2010 21:29:04
+
+
+# 
+# This is the logfile for the model Standard Model
+
+# Authors: N. Christensen, C. Duhr
+# Model version: 1.1
+# Checking the Lagrangians
+   * All Lagrangians are ok.
+#
+# Particle definitions
+#
+
+   * No particles removed. All particles correspond to GenInt setup.
+
+# Automatically assigned PDG numbers
+   * Assigned PDG number 9000001 to particle ghA
+   * Assigned PDG number 9000002 to particle ghZ
+   * Assigned PDG number 9000003 to particle ghWp
+   * Assigned PDG number 9000004 to particle ghWm
+   * Assigned PDG number 9000005 to particle ghG
+
+
+# Compulsory PDG codes:
+   * Class SM leptons complete.
+   * Class SM neutrinos complete.
+   * Class SM quarks complete.
+   * Class SM gauge bosons complete.
+#
+# Parameter definitions
+#
+
+   * All parameters are ok.
+
+
+# Vertices
+   * Calling FeynmanRules for 4 Lagrangians.
+   * Number of classes vertices: 30
+   * Number of flavored vertices: 74
+   * Saved vertices in InterfaceRun[ 1 ].
+   * Checked QNumber conservation.
+   * particles.py written.
+   * parameters.py written.
+#
+# Vertex definitions
+#
+
+   * 74 vertices written.
+   * vertices.py written.
+#
+# Lorentz structure definitions
+#
+
+   * 16 lorentz structures written.
+   * lorentz.py written.
+#
+# Coupling definitions
+#
+
+   * 51 couplings written.
+   * couplings.py written.

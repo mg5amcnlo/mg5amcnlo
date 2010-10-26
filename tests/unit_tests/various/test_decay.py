@@ -871,48 +871,46 @@ class Test_DecayModel(unittest.TestCase):
                                      if p.get('is_stable')]), goal_stable_pid)
         self.assertTrue(decay_mssm.get_particle(-goal_stable_pid[0]).get('is_stable'))
 
+        # Test the advance search of stable particles
+        for p in decay_mssm['particles']:
+            p['is_stable'] = False
+        decay_mssm['stable_particles'] = []
+        decay_mssm.find_stable_particles_advance()
+        self.assertEqual(sorted([p.get_pdg_code() \
+                                     for p in decay_mssm.get('particles') \
+                                     if p.get('is_stable')]), goal_stable_pid)
+
+        goal_stable_particles_ad = set([(1,),(2,),(3,),(4,),(5,),
+                                        (11,),(12,),(13,),(14,),(16,),
+                                        (21,),(22,),
+                                        (1000012,),(1000014,),(1000015,),
+                                        (2000001,),( 2000003,),( 2000011,)])
+        self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in plist])) for plist in decay_mssm['stable_particles']]), goal_stable_particles_ad)
+        
     def test_find_full_sm_decay_groups(self):
         """ Test the algorithm in find stable particle in full sm.
             First, test the full sm with massive neutrinos.
             Second, set the neutrinos as massless."""
 
-        # Import the full sm
-        full_sm_base = import_v4.import_model(\
+        # Import the full sm with param_card
+        full_sm_base = import_ufo.import_model(\
             os.path.join(MG5DIR,
                          'tests', 'input_files',
-                         'full_sm'))[0]
+                         'full_sm_UFO'))
         full_sm = decay_objects.DecayModel(full_sm_base)
-
-
-        # Stage 1: set neutrino masses nonzero
-        full_sm.get_particle(12)['mass'] = '1.0E-6'
-        full_sm.get_particle(14)['mass'] = '1.0E-6'
-        full_sm.get_particle(16)['mass'] = '1.0E-6'
-        full_sm.get_particle(-12)['mass'] = '1.0E-6'
-        full_sm.get_particle(-14)['mass'] = '1.0E-6'
-        full_sm.get_particle(-16)['mass'] = '1.0E-6'
-
-        # Set other particle mass
-        decay_objects.ZERO = 0.
-        decay_objects.MD=  5.0400000000000E-03  # MD
-        decay_objects.MU=  2.5500000000000E-03  # MU
-        decay_objects.MS=  1.0400000000000E-01  # MS
-        decay_objects.MC=  1.4200000000000E+00  # MC
-        decay_objects.MB=  4.7000000000000E+00  # MB
-        decay_objects.MT=  1.7430000000000E+02  # MT
-        decay_objects.Me=  5.1100000000000E-04  # Me
-        decay_objects.MM=  1.0566000000000E-01  # MM
-        decay_objects.MTA=  1.7770000000000E+00  # MTA
-        decay_objects.MZ=  9.1188000000000E+01  # MZ
-        decay_objects.MW=  7.9825163827443E+01  # MW
-        decay_objects.MH=  1.2000000000000E+02  # MH
+        param_path = os.path.join(_file_path,
+                                  '../input_files/param_card_full_sm.dat')
+        full_sm.read_param_card(param_path)
         
-        goal_groups_1 = set([(21,22, 23,25, 8000002), # 23 and 25 are calculated
+
+        # Stage 1: nonzero neutrino masses 
+
+        goal_groups_1 = set([(21,22, 23,25), # 23 and 25 are calculated
                              # others are massless default
                              (1,), (2,), (3,), (4,), (5,), (6,),
                              (11,), (12,), (13,), (14,), (15,), (16,),
                              (24,)])
-        goal_stable_particles_1 = set([(21,22,8000002),
+        goal_stable_particles_1 = set([(21,22),
                                        (2,),
                                        (11,), (12,), (14,), (16,)])
 
@@ -939,14 +937,14 @@ class Test_DecayModel(unittest.TestCase):
         full_sm['decay_groups'] = []
         full_sm['stable_particles'] = []
 
-        goal_groups_2 = set([(12,14,16,21,22, 23,25, 8000002), # 23,25 are
+        goal_groups_2 = set([(12,14,16,21,22, 23,25), # 23,25 are
                              # calculated, others are massless
                              (1,), (2,), (3,), (4,), (5,), (6,),
                              (11,13,15,24)])
-        goal_stable_particles_2 = set([(12,14,16,21,22,8000002),
+        goal_stable_particles_2 = set([(12,14,16,21,22),
                                        (2,),
                                        (11,)])
-        goal_stable_pid_2 = [2, 11, 12,14,16,21,22,8000002]
+        goal_stable_pid_2 = [2, 11, 12,14,16,21,22]
 
         # Test decay groups
         self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in \
@@ -964,7 +962,52 @@ class Test_DecayModel(unittest.TestCase):
         self.assertEqual(sorted([p.get_pdg_code() \
                                      for p in full_sm.get('particles') \
                                      if p.get('is_stable')]), goal_stable_pid_2)
+
+
+    def test_find_full_sm_decay_groups_advance(self):
+        """ Test the algorithm in find_stable_particles_advance in full sm.
+            First, test the full sm with massive neutrinos.
+            Second, set the neutrinos as massless."""
+
+        # Import the full sm with param_card
+        full_sm_base = import_ufo.import_model(\
+            os.path.join(MG5DIR,
+                         'tests', 'input_files',
+                         'full_sm_UFO'))
+        full_sm = decay_objects.DecayModel(full_sm_base)
+        param_path = os.path.join(_file_path,
+                                  '../input_files/param_card_full_sm.dat')
+        full_sm.read_param_card(param_path)
+
+        # Stage 1: nonzero neutrino masses 
+        goal_stable_pid_1 = [2, 11, 12,14,16,21,22]
+        full_sm.find_stable_particles_advance()
         
+        # Test the assignment of is_stable
+        self.assertEqual(sorted([p.get_pdg_code() \
+                                     for p in full_sm.get('particles') \
+                                     if p.get('is_stable')]), goal_stable_pid_1)
+        
+        
+        # Stage 2: turn off the neutrino mass
+        full_sm.get_particle(12)['mass'] = 'ZERO'
+        full_sm.get_particle(14)['mass'] = 'ZERO'
+        full_sm.get_particle(16)['mass'] = 'ZERO'
+        full_sm.get_particle(-12)['mass'] = 'ZERO'
+        full_sm.get_particle(-14)['mass'] = 'ZERO'
+        full_sm.get_particle(-16)['mass'] = 'ZERO'
+
+        full_sm['decay_groups'] = []
+        full_sm['stable_particles'] = []
+
+        goal_stable_pid_2 = [2, 11, 12,14,16,21,22]
+        
+        # Test the assignment of is_stable
+        self.assertEqual(sorted([p.get_pdg_code() \
+                                     for p in full_sm.get('particles') \
+                                     if p.get('is_stable')]), goal_stable_pid_2)
+        
+
 #===============================================================================
 # Test_Channel
 #===============================================================================
