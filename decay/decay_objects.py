@@ -1999,7 +1999,7 @@ class DecayModel(base_objects.Model):
             stable_list[part.get('pdg_code')] = True
 
         # Record minimal mass for avioding round-off error.
-        m_min = min([m for i,m in mass.items() if m > 0.])
+        m_min = min(min([m for i,m in mass.items() if m > 0.]), 10**(-6))
 
         # Start the iteration
         change = True
@@ -2018,8 +2018,7 @@ class DecayModel(base_objects.Model):
                     # If not stable particle yet.
                     if not part.get('is_stable'):
                         # This condition is to prevent round-off error.
-                        if (2*mass[part.get('pdg_code')]-total_m) > 0.5*m_min:
-                            
+                        if (2*mass[part.get('pdg_code')]-total_m) > m_min:
                             mass[part.get('pdg_code')] = \
                                 total_m - mass[part.get('pdg_code')]
                             part['is_stable'] = False

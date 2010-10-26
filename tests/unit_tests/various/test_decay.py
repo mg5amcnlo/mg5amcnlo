@@ -936,6 +936,8 @@ class Test_DecayModel(unittest.TestCase):
 
         full_sm['decay_groups'] = []
         full_sm['stable_particles'] = []
+        for p in full_sm['particles']:
+            p['is_stable'] = False
 
         goal_groups_2 = set([(12,14,16,21,22, 23,25), # 23,25 are
                              # calculated, others are massless
@@ -999,6 +1001,9 @@ class Test_DecayModel(unittest.TestCase):
 
         full_sm['decay_groups'] = []
         full_sm['stable_particles'] = []
+        for p in full_sm['particles']:
+            p['is_stable'] = False
+        full_sm.find_stable_particles_advance()
 
         goal_stable_pid_2 = [2, 11, 12,14,16,21,22]
         
