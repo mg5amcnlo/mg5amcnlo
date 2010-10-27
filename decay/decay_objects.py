@@ -2018,7 +2018,14 @@ class DecayModel(base_objects.Model):
                     # If not stable particle yet.
                     if not part.get('is_stable'):
                         # This condition is to prevent round-off error.
-                        if (2*mass[part.get('pdg_code')]-total_m) > m_min:
+                        if (2*mass[part.get('pdg_code')]-total_m) > \
+                                10**3*mass[part.get('pdg_code')]*\
+                                sys.float_info.epsilon:
+                            print (inter['id'], part.get('pdg_code'),
+                                   2*mass[part.get('pdg_code')],
+                                   total_m,
+                                   (2*mass[part.get('pdg_code')]-total_m),
+                                   mass[part.get('pdg_code')]*sys.float_info.epsilon)
                             mass[part.get('pdg_code')] = \
                                 total_m - mass[part.get('pdg_code')]
                             part['is_stable'] = False
