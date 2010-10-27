@@ -26,7 +26,7 @@ import tests.unit_tests as unittest
 import aloha.aloha_writers as aloha_writers
 import aloha.create_aloha as create_aloha
 
-import madgraph.iolibs.export_pythia8 as export_pythia8
+import madgraph.iolibs.export_cpp as export_cpp
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.helas_call_writers as helas_call_writer
 import models.import_ufo as import_ufo
@@ -203,11 +203,11 @@ class IOExportPythia8Test(unittest.TestCase,
 
         self.mycppwriter = helas_call_writer.CPPUFOHelasCallWriter(self.mymodel)
     
-        self.pythia8_exporter = export_pythia8.ProcessExporterPythia8(\
+        self.pythia8_exporter = export_cpp.ProcessExporterPythia8(\
             self.mymatrixelement, self.mycppwriter,
             process_string = "q q~ > q q~")
         
-        self.cpp_exporter = export_pythia8.ProcessExporterCPP(\
+        self.cpp_exporter = export_cpp.ProcessExporterCPP(\
             self.mymatrixelement, self.mycppwriter,
             process_string = "q q~ > q q~")
         
@@ -638,7 +638,7 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
 }  // end namespace Pythia
 """ % misc.get_pkg_info()
 
-        exporter = export_pythia8.ProcessExporterPythia8(self.mymatrixelement,
+        exporter = export_cpp.ProcessExporterPythia8(self.mymatrixelement,
         self.mycppwriter, process_string = "q q~ > q q~")
 
         exporter.write_pythia8_process_cc_file(\
@@ -650,7 +650,7 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
     def disabled_test_write_process_files(self):
         """Test writing the .h  and .cc Pythia file for a matrix element"""
 
-        export_pythia8.generate_process_files_pythia8(self.mymatrixelement,
+        export_cpp.generate_process_files_pythia8(self.mymatrixelement,
                                                       self.mycppwriter,
                                                       process_string = "q q~ > q q~",
                                                       path = "/tmp")
@@ -708,7 +708,7 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
 
         mycppwriter = helas_call_writer.CPPUFOHelasCallWriter(model)
     
-        export_pythia8.generate_process_files_cpp(mymatrixelement,
+        export_cpp.generate_process_files_cpp(mymatrixelement,
                                                   mycppwriter,
                                                   process_string = "q q~ > q q~",
                                                   path = "/tmp")
@@ -733,7 +733,7 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
             self.model = save_load_object.load_from_file(model_pkl)
         else:
             self.model = import_ufo.import_model('sm')
-        self.model_builder = export_pythia8.UFOModelConverterPythia8(\
+        self.model_builder = export_cpp.UFOModelConverterPythia8(\
                                                             self.model, "/tmp")
         
         test_file_writers.CheckFileCreate.clean_files
@@ -818,7 +818,7 @@ class ExportUFOModelCPPTest(unittest.TestCase,
             self.model = save_load_object.load_from_file(model_pkl)
         else:
             self.model = import_ufo.import_model('sm')
-        self.model_builder = export_pythia8.UFOModelConverterCPP(\
+        self.model_builder = export_cpp.UFOModelConverterCPP(\
                                                             self.model, "/tmp")
         
         test_file_writers.CheckFileCreate.clean_files

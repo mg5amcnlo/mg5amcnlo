@@ -197,6 +197,8 @@ void Sigma2ff2fftgmZ::setIdColAcol() {
   if ( (abs(id1)!=9&&id1<0)||(abs(id1 )==10 &&    id2 < 0) ) 
     swapColAcol( ) ;
 
+  template< double > > hej;
+
 }    """.split("\n")
 
         goal_string = """#ifndef Pythia8_SigmaEW_H
@@ -264,6 +266,8 @@ void Sigma2ff2fftgmZ::setIdColAcol()
 
   if ((abs(id1) != 9 && id1 < 0) || (abs(id1) == 10 && id2 < 0))
     swapColAcol(); 
+
+  template<double> > hej; 
 
 }
 """

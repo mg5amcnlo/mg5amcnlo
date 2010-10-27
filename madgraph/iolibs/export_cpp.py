@@ -13,8 +13,8 @@
 #
 ################################################################################
 
-"""Methods and classes to export models and matrix elements to Pythia8
-format."""
+"""Methods and classes to export models and matrix elements to Pythia 8
+and C++ Standalone format."""
 
 import fractions
 import glob
@@ -36,6 +36,7 @@ import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
 from madgraph import MadGraph5Error, MG5DIR
+from madgraph.iolibs.files import cp, ln, mv
 
 import aloha.create_aloha as create_aloha
 import aloha.aloha_writers as aloha_writers
@@ -44,39 +45,136 @@ _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_pythia8')
 
 
+
+
 #===============================================================================
-# generate_process_files_cpp
+# setup_cpp_standalone_dir
 #===============================================================================
-def generate_process_files_cpp(multi_matrix_element, cpp_helas_call_writer,
-                               process_string = "", path = os.getcwd()):
+def setup_cpp_standalone_dir(dirpath, model):
+    """Prepare export_dir as standalone_cpp directory, including:
+    src (for RAMBO, model and ALOHA files + makefile)
+    lib (with compiled libraries from src)
+    SubProcesses (with check_sa.cpp + makefile and Pxxxxx directories)
+    """
 
-    """Generate the .h and .cc files needed for C++ Standalone, for the
-    processes described by multi_matrix_element"""
+    cwd = os.getcwd()
 
-    process_exporter_cpp = ProcessExporterCPP(multi_matrix_element,
-                                              cpp_helas_call_writer,
-                                              process_string,
-                                              path)
+    try:
+        os.mkdir(dirpath)
+    except os.error as error:
+        logger.warning(error.strerror + " " + dirpath)
+    
+    try:
+        os.chdir(dirpath)
+    except os.error:
+        logger.error('Could not cd to directory %s' % dirpath)
+        return 0
 
+    logger.info('Creating subdirectories in directory %s' % dirpath)
+
+    try:
+        os.mkdir('src')
+    except os.error as error:
+        logger.warning(error.strerror + " " + dirpath)
+    
+    try:
+        os.mkdir('lib')
+    except os.error as error:
+        logger.warning(error.strerror + " " + dirpath)
+    
+    try:
+        os.mkdir('Cards')
+    except os.error as error:
+        logger.warning(error.strerror + " " + dirpath)
+    
+    try:
+        os.mkdir('SubProcesses')
+    except os.error as error:
+        logger.warning(error.strerror + " " + dirpath)
+
+    # Write param_card
+    open(os.path.join("Cards","param_card.dat"), 'w').write(\
+        model.write_param_card())
+
+    src_files = ['rambo.h', 'rambo.cc', 'read_slha.h', 'read_slha.cc']
+    
+    # Copy the needed src files
+    for f in src_files:
+        cp(_file_path + 'iolibs/template_files/' + f, 'src')
+
+    # Copy src Makefile
+    makefile = read_template_file('Makefile_sa_cpp_src') % \
+                                           {'model': model.get('name')}
+    open(os.path.join('src', 'Makefile'), 'w').write(makefile)
+
+    # Copy SubProcesses files
+    cp(_file_path + 'iolibs/template_files/check_sa.cpp', 'SubProcesses')
+
+    # Copy SubProcesses Makefile
+    makefile = read_template_file('Makefile_sa_cpp_sp') % \
+                                           {'model': model.get('name')}
+    open(os.path.join('SubProcesses', 'Makefile'), 'w').write(makefile)
+
+    # Return to original PWD
+    os.chdir(cwd)
+
+#===============================================================================
+# generate_subprocess_directory_standalone_cpp
+#===============================================================================
+def generate_subprocess_directory_standalone_cpp(matrix_element,
+                                                 cpp_helas_call_writer,
+                                                 path = os.getcwd()):
+
+    """Generate the Pxxxxx directory for a subprocess in C++ standalone,
+    including the necessary .h and .cc files"""
+
+    cwd = os.getcwd()
+
+    # Create the process_exporter
+    process_exporter_cpp = ProcessExporterCPP(matrix_element,
+                                              cpp_helas_call_writer)
+
+    # Create the directory PN_xx_xxxxx in the specified path
+    dirpath = os.path.join(path, \
+                   "P%d_%s" % (process_exporter_cpp.process_number,
+                               process_exporter_cpp.process_name))
+
+    try:
+        os.mkdir(dirpath)
+    except os.error as error:
+        logger.warning(error.strerror + " " + dirpath)
+
+    try:
+        os.chdir(dirpath)
+    except os.error:
+        logger.error('Could not cd to directory %s' % dirpath)
+        return 0
+
+    logger.info('Creating files in directory %s' % dirpath)
+
+    process_exporter_cpp.path = dirpath
+    # Create the process .h and .cc files
     process_exporter_cpp.generate_process_files_cpp()
 
+    linkfiles = ['check_sa.cpp', 'Makefile']
 
-#===============================================================================
-# generate_process_files_pythia8
-#===============================================================================
-def generate_process_files_pythia8(multi_matrix_element, cpp_helas_call_writer,
-                                   process_string = "", path = os.getcwd()):
+    
+    for file in linkfiles:
+        ln('../%s' % file)
 
-    """Generate the .h and .cc files needed for Pythia 8, for the
-    processes described by multi_matrix_element"""
+    # Return to original PWD
+    os.chdir(cwd)
 
-    process_exporter_pythia8 = ProcessExporterPythia8(multi_matrix_element,
-                                                      cpp_helas_call_writer,
-                                                      process_string,
-                                                      path)
+    return
 
-    process_exporter_pythia8.generate_process_files_pythia8()
+def make_model_cpp(dir_path):
+    """Make the model library in a C++ standalone directory"""
 
+    source_dir = os.path.join(dir_path, "src")
+    # Run standalone
+    logger.info("Running make for src")
+    subprocess.call(['make'],
+                    stdout = open(os.devnull, 'w'), cwd=source_dir)
 
 #===============================================================================
 # ProcessExporterCPP
@@ -96,12 +194,21 @@ class ProcessExporterCPP(object):
     class ProcessExporterCPPError(Exception):
         pass
     
-    def __init__(self, multi_matrix_element, cpp_helas_call_writer, process_string = "",
+    def __init__(self, matrix_elements, cpp_helas_call_writer, process_string = "",
                  path = os.getcwd()):
         """Initiate with matrix elements, helas call writer, process
         string, path. Generate the process .h and .cc files."""
 
-        self.matrix_elements = multi_matrix_element.get('matrix_elements')
+        if isinstance(matrix_elements, helas_objects.HelasMultiProcess):
+            self.matrix_elements = matrix_elements.get('matrix_elements')
+        elif isinstance(matrix_elements, helas_objects.HelasMatrixElement):
+            self.matrix_elements = \
+                         helas_objects.HelasMatrixElementList([matrix_elements])
+        elif isinstance(matrix_elements, helas_objects.HelasMatrixElementList):
+            self.matrix_elements = matrix_elements
+        else:
+            raise base_objects.PhysicsObject.PhysicsObjectError,\
+                  "Wrong object type for matrix_elements"
 
         if not self.matrix_elements:
             raise MadGraph5Error("No matrix elements to export")
@@ -114,11 +221,12 @@ class ProcessExporterCPP(object):
         if process_string:
             self.process_string = process_string
         else:
-            self.process_string = self.processes.base_string()
+            self.process_string = self.processes[0].base_string()
 
         self.process_name = self.get_process_name()
 
         self.path = path
+        self.process_number = self.processes[0].get('id')
         self.helas_call_writer = cpp_helas_call_writer
 
         if not isinstance(self.helas_call_writer, helas_call_writers.CPPUFOHelasCallWriter):
@@ -182,14 +290,14 @@ class ProcessExporterCPP(object):
 
         pathdir = os.getcwd()
 
-        logger.info('Creating files %s.h and %s.cc in directory %s' % \
-                    (self.process_name, self.process_name, self.path))
+        logger.info('Creating files CPPProcess.h and CPPProcess.cc in' +\
+                    ' directory %s' % self.path)
 
         # Create the files
-        filename = '%s.h' % self.process_name
+        filename = 'CPPProcess.h'
         self.write_process_h_file(writers.CPPWriter(filename))
 
-        filename = '%s.cc' % self.process_name
+        filename = 'CPPProcess.cc'
         self.write_process_cc_file(writers.CPPWriter(filename))
 
         os.chdir(cwd)
@@ -281,6 +389,9 @@ class ProcessExporterCPP(object):
         # Extract number of external particles
         replace_dict['nfinal'] = self.nfinal
 
+        # Extract number of external particles
+        replace_dict['ninitial'] = self.ninitial
+
         # Extract process class name (for the moment same as file name)
         replace_dict['process_class_name'] = self.process_name
 
@@ -291,6 +402,7 @@ class ProcessExporterCPP(object):
 
         process = self.processes[0]
 
+        replace_dict['process_code'] = self.process_number
         replace_dict['nexternal'] = self.nexternal
         replace_dict['nprocesses'] = len(self.matrix_elements)
 
@@ -344,7 +456,8 @@ class ProcessExporterCPP(object):
                             self.matrix_elements]
 
         replace_dict['initProc_lines'] = \
-                                     self.get_initProc_lines(color_amplitudes)
+                                self.get_initProc_lines(self.matrix_elements[0],
+                                                        color_amplitudes)
         replace_dict['reset_jamp_lines'] = \
                                      self.get_reset_jamp_lines(color_amplitudes)
         replace_dict['sigmaKin_lines'] = \
@@ -403,7 +516,7 @@ class ProcessExporterCPP(object):
                          for process in matrix_element.get('processes')])
 
 
-    def get_initProc_lines(self, color_amplitudes):
+    def get_initProc_lines(self, matrix_element, color_amplitudes):
         """Get initProc_lines for function definition for Pythia 8 .cc file"""
 
         initProc_lines = []
@@ -412,6 +525,9 @@ class ProcessExporterCPP(object):
 
         for part in matrix_element.get_external_wavefunctions():
             initProc_lines.append("mME.push_back(pars->%s);" % part.get('mass'))
+        for i, colamp in enumerate(color_amplitudes):
+            initProc_lines.append("jamp2[%d] = new double[%d];" % \
+                                  (i, len(colamp)))
 
         return "\n".join(initProc_lines)
 
@@ -498,8 +614,7 @@ class ProcessExporterCPP(object):
         ret_lines = []
         if self.single_helicities:
             ret_lines.append(\
-                "void %s::calculate_wavefunctions(const int hel[]){" % \
-                self.process_name)
+                "void CPPProcess::calculate_wavefunctions(const int hel[]){")
             ret_lines.append("// Calculate wavefunctions for all processes")
             ret_lines.append(self.get_calculate_wavefunctions(\
                 self.wavefunctions))
@@ -728,6 +843,23 @@ class ProcessExporterCPP(object):
         return "\n".join(res_list)
 
 #===============================================================================
+# generate_process_files_pythia8
+#===============================================================================
+def generate_process_files_pythia8(multi_matrix_element, cpp_helas_call_writer,
+                                   process_string = "", path = os.getcwd()):
+
+    """Generate the .h and .cc files needed for Pythia 8, for the
+    processes described by multi_matrix_element"""
+
+    process_exporter_pythia8 = ProcessExporterPythia8(multi_matrix_element,
+                                                      cpp_helas_call_writer,
+                                                      process_string,
+                                                      path)
+
+    process_exporter_pythia8.generate_process_files_pythia8()
+
+
+#===============================================================================
 # ProcessExporterPythia8
 #===============================================================================
 class ProcessExporterPythia8(ProcessExporterCPP):
@@ -787,10 +919,11 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         if self.single_helicities:
             replace_dict['all_sigma_kin_definitions'] = \
                           """// Calculate wavefunctions
-                          void calculate_wavefunctions(const int hel[]);
+                          void %s::calculate_wavefunctions(const int hel[]);
                           static const int nwavefuncs = %d;
                           std::complex<double> w[nwavefuncs][18];""" % \
-                                                    len(self.wavefunctions)
+                                                    (self.process_name,
+                                                     len(self.wavefunctions))
             replace_dict['all_matrix_definitions'] = \
                            "\n".join(["double matrix_%s();" % \
                                       me.get('processes')[0].shell_string().\
@@ -1225,6 +1358,19 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
     return res_str + '*'
 
 #===============================================================================
+# Routines to output UFO models in C++ format
+#===============================================================================
+
+def convert_model_to_cpp(model, output_dir, wanted_lorentz = []):
+    """Create a full valid Pythia 8 model from an MG5 model (coming from UFO)"""
+
+    # create the model parameter files
+    model_builder = UFOModelConverterCPP(model,
+                                         os.path.join(output_dir, 'src'),
+                                         wanted_lorentz)
+    model_builder.write_files()
+
+#===============================================================================
 # UFOModelConverterCPP
 #===============================================================================
 
@@ -1250,13 +1396,16 @@ class UFOModelConverterCPP(object):
 
     copy_files = ["read_slha.h", "read_slha.cc"]
 
-    def __init__(self, model, output_path):
+    def __init__(self, model, output_path, wanted_lorentz = []):
         """ initialization of the objects """
 
         self.model = model
         self.model_name = model['name']
 
         self.dir_path = output_path
+
+        # List of needed ALOHA routines
+        self.wanted_lorentz = wanted_lorentz
 
         # For dependent couplings, only want to update the ones
         # actually used in each process. For other couplings and
@@ -1495,7 +1644,10 @@ class UFOModelConverterCPP(object):
 
         aloha_model = create_aloha.AbstractALOHAModel(\
                                          self.model.get('name'))
-        aloha_model.compute_all(save=False)
+        if self.wanted_lorentz:
+            aloha_model.compute_subset(self.wanted_lorentz)
+        else:
+            aloha_model.compute_all(save=False)
         for abstracthelas in dict(aloha_model).values():
             aloha_writer = aloha_writers.ALOHAWriterForCPP(abstracthelas,
                                                         self.dir_path)

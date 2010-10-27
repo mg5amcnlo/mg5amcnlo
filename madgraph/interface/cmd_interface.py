@@ -43,7 +43,7 @@ import madgraph.core.drawing as draw_lib
 import madgraph.core.helas_objects as helas_objects
 
 import madgraph.iolibs.drawing_eps as draw
-import madgraph.iolibs.export_pythia8 as export_pythia8
+import madgraph.iolibs.export_cpp as export_cpp
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
@@ -476,15 +476,18 @@ class HelpToCmd(object):
         logger.info("-- Output any generated process(es) to file.")
         logger.info("   mode: Default mode is madevent. Default path is \'.\'.")
         logger.info("   If mode is madevent or standalone, create a copy of")
-        logger.info("   the V4 Template in the MG_ME directory, with the model and")
-        logger.info("   Helas set up appropriately.")
+        logger.info("     the V4 Template in the MG_ME directory, with the model and")
+        logger.info("     Helas set up appropriately.")
         logger.info("   - If mode is standalone, the directory will be in")
         logger.info("     Standalone format, otherwise in MadEvent format.")
         logger.info("   - If mode is matrix, output the matrix.f files for all")
         logger.info("     generated processes in directory \"name\".")
-        logger.info("   - If mode is pythia8, output the .h and .cc files for the")
-        logger.info("     processes in Pythia 8 format in directory \"name\".")
-        logger.info("   - If mode is pythia8_model, output the .h and .cc files for")
+        logger.info("   If mode is standalone_cpp, output the .h and .cc files")
+        logger.info("     for the processes and model files in standalone C++")
+        logger.info("     format in directory \"name\".")
+        logger.info("   If mode is pythia8, output the .h and .cc files for")
+        logger.info("     the processes in Pythia 8 format in directory \"name\".")
+        logger.info("   If mode is pythia8_model, output the .h and .cc files for")
         logger.info("     for the model parameters and Aloha functions for the model.")
         logger.info("   name: The name of the copy of Template.")
         logger.info("   If you put '.' instead of a name, your pwd will be used.")
@@ -862,7 +865,7 @@ class CheckValidForCmd(object):
             path = args.pop(0)
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
-                     ['madevent', 'standalone']:
+                     ['madevent', 'standalone', 'standalone_cpp']:
                 self.get_default_path()
             else:
                 self._export_dir = path
@@ -893,6 +896,11 @@ class CheckValidForCmd(object):
                                                name_dir(i))
         elif self._export_format == 'standalone':
             name_dir = lambda i: 'PROC_SA_%s_%s' % \
+                                    (self._curr_model['name'], i)
+            auto_path = lambda i: os.path.join(self.writing_dir,
+                                               name_dir(i))                
+        elif self._export_format == 'standalone_cpp':
+            name_dir = lambda i: 'PROC_SA_CPP_%s_%s' % \
                                     (self._curr_model['name'], i)
             auto_path = lambda i: os.path.join(self.writing_dir,
                                                name_dir(i))                
@@ -1369,8 +1377,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _check_opts = ['full', 'quick', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
     _v4_export_formats = ['madevent', 'standalone','matrix'] 
-    _export_formats = _v4_export_formats + ['pythia8',
-                       'pythia8_model']
+    _export_formats = _v4_export_formats + ['standalone_cpp',
+                                            'pythia8', 'pythia8_model']
 
 
     # Variables to store object information
@@ -1380,6 +1388,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _curr_fortran_model = None
     _curr_cpp_model = None
     _done_export = False
+
+    # Variables to store state information
     _multiparticles = {}
     _generate_info = "" # store the first generated process
     _model_format = None
@@ -2146,6 +2156,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self._curr_fortran_model = \
                       helas_call_writers.FortranUFOHelasCallWriter(\
                                                              self._curr_model)
+                self._curr_cpp_model = \
+                      helas_call_writers.CPPUFOHelasCallWriter(\
+                                                             self._curr_model)
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
 
@@ -2420,6 +2433,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         elif self._export_format == 'standalone':
             export_v4.copy_v4standalone(self._mgme_dir, self._export_dir,
                                         not noclean)
+        elif self._export_format == 'standalone_cpp':
+            export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
         elif not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
 
@@ -2462,7 +2477,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         if self._export_format == 'pythia8_model':
             cpu_time1 = time.time()
-            export_pythia8.convert_model_to_pythia8(\
+            export_cpp.convert_model_to_pythia8(\
                             self._curr_model, self._export_dir)
             cpu_time2 = time.time()
             logger.info(("Exported UFO model to Pythia 8 format in %0.3f s") \
@@ -2482,9 +2497,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         nojpeg = '-nojpeg' in args
 
         path = self._export_dir
-        if self._export_format in ['madevent', 'standalone']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
             path = os.path.join(path, 'SubProcesses')
-
+            
         if self._export_format == 'madevent':
             for me in self._curr_matrix_elements.get('matrix_elements'):
                 calls = calls + \
@@ -2521,11 +2536,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     me, self._curr_fortran_model)
                 
         if self._export_format == 'pythia8':
-            self._curr_cpp_model = \
-                  helas_call_writers.Pythia8UFOHelasCallWriter(self._curr_model)
-            export_pythia8.generate_process_files_pythia8(\
+            export_cpp.generate_process_files_pythia8(\
                             self._curr_matrix_elements, self._curr_cpp_model,
                             process_string = self._generate_info, path = path)
+                
+        if self._export_format == 'standalone_cpp':
+            print "path: ", path
+            for me in self._curr_matrix_elements.get('matrix_elements'):
+                export_cpp.generate_subprocess_directory_standalone_cpp(\
+                              self._curr_matrix_elements, self._curr_cpp_model,
+                              path = path)
                 
         logger.info(("Generated helas calls for %d subprocesses " + \
               "(%d diagrams) in %0.3f s") % \
@@ -2545,7 +2565,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Remember that we have done export
         self._done_export = (self._export_dir, self._export_format)
 
-        if self._export_format in ['madevent', 'standalone']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
             # Automatically run finalize
             options = []
             if nojpeg:
@@ -2582,6 +2602,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             export_v4.convert_model_to_mg4(self._curr_model,
                                            os.path.join(self._export_dir),
                                            wanted_lorentz)
+        if self._export_format == 'standalone_cpp':
+            logger.info('Export UFO model to C++ format')
+            # wanted_lorentz are the lorentz structures which are
+            # actually used in the wavefunctions and amplitudes in
+            # these processes
+            wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
+            export_cpp.convert_model_to_cpp(self._curr_model,
+                                            os.path.join(self._export_dir),
+                                            wanted_lorentz)
+            export_cpp.make_model_cpp(self._export_dir)
 
         if self._export_format == 'madevent':
             os.system('touch %s/done' % os.path.join(self._export_dir,

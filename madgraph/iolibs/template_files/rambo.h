@@ -17,7 +17,7 @@ class Random
 
 double rn(int idummy);
 
-vector<vector<double> > get_momenta(int ninitial, double energy, 
+vector<double*> get_momenta(int ninitial, double energy, 
 				    vector<double> masses, double& wgt);
 
-vector< vector<double> > rambo(double et, vector<double>& xm, double& wt);
+vector<double*> rambo(double et, vector<double>& xm, double& wt);

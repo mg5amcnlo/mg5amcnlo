@@ -77,8 +77,8 @@ double rn(int idummy){
   return ran;
 }
 
-vector<vector<double> > get_momenta(int ninitial, double energy, 
-				    vector<double> masses, double& wgt)
+vector<double*> get_momenta(int ninitial, double energy, 
+			    vector<double> masses, double& wgt)
 {
 //---- auxiliary function to change convention between madgraph and rambo
 //---- four momenta. 	  
@@ -89,11 +89,14 @@ vector<vector<double> > get_momenta(int ninitial, double energy,
 
   if (ninitial == 1){
 // Momenta for the incoming particle
-    vector<vector<double> > p(1, vector<double>(4, 0.));
+    vector<double*> p(1, new double[4]);
     p[0][0] = m1;
+    p[0][1] = 0.;
+    p[0][2] = 0.;
+    p[0][3] = 0.;
 
     vector<double> finalmasses(++masses.begin(), masses.end());
-    vector<vector<double> > p_rambo = rambo(m1, finalmasses, wgt);
+    vector<double*> p_rambo = rambo(m1, finalmasses, wgt);
     p.insert(++p.begin(), p_rambo.begin(), p_rambo.end());
 
     return p;
@@ -114,26 +117,31 @@ vector<vector<double> > get_momenta(int ninitial, double energy,
   double energy1 = sqrt(pow(mom,2)+pow(m1,2));
   double energy2 = sqrt(pow(mom,2)+pow(m2,2));
 // Set momenta for incoming particles
-  vector<vector<double> > p(2, vector<double>(4, 0.));
+  vector<double*> p(1, new double[4]);
   p[0][0] = energy1;
+  p[0][1] = 0;
+  p[0][2] = 0;
   p[0][3] = mom;
+  p.push_back(new double[4]);
   p[1][0] = energy2;
+  p[1][1] = 0;
+  p[1][2] = 0;
   p[1][3] = -mom;
   
   if (nfinal == 1){
-    p.push_back(vector<double>(4, 0.));
+    p.push_back(new double[4]);
     p[2][0] = energy;
     wgt = 1;
     return p;
   }
   vector<double> finalmasses(++(++masses.begin()), masses.end());
-  vector<vector<double> > p_rambo = rambo(energy, finalmasses, wgt);
+  vector<double*> p_rambo = rambo(energy, finalmasses, wgt);
   p.insert(++(++p.begin()), p_rambo.begin(), p_rambo.end());
   return p;
 }
 
 
-vector< vector<double> > rambo(double et, vector<double>& xm, double& wt){
+vector<double*> rambo(double et, vector<double>& xm, double& wt){
 /**********************************************************************
  *                       rambo                                         *
  *    ra(ndom)  m(omenta)  b(eautifully)  o(rganized)                  *
@@ -149,8 +157,8 @@ vector< vector<double> > rambo(double et, vector<double>& xm, double& wt){
  *    p  = particle momenta ( dim=(4,nexternal-nincoming) )            *
  *    wt = weight of the event                                         *
  ***********************************************************************/
-	       int n = xm.size();
-  vector< vector<double> > q(n, vector<double>(4)), p(n, vector<double>(4));
+  int n = xm.size();
+  vector<double*> q, p;
   vector<double> z(n), r(4), b(3), p2(n), xm2(n), e(n), v(n);
   static vector<int> iwarn(5, 0);
   static double acc = 1e-14;
@@ -158,6 +166,10 @@ vector< vector<double> > rambo(double et, vector<double>& xm, double& wt){
   static double twopi=8.*atan(1.);
   static double po2log=log(twopi/4.);
 
+  for(int i=0; i < n; i++){
+    q.push_back(new double[4]);
+    p.push_back(new double[4]);
+  }
 // initialization step: factorials for the phase space weight
   if(ibegin==0){
     ibegin=1;
