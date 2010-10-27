@@ -221,6 +221,9 @@ def check_already_checked(is_ids, fs_ids, sorted_ids, process, model,
     # Add this process to tested_processes
     sorted_ids.append(ids)
 
+    # Skip adding antiprocess below, since might be relevant too
+    return False
+
     # Add also antiprocess, since these are identical
     if id_anti_id_dict:
         anti_ids = sorted([id_anti_id_dict[id] \

@@ -202,13 +202,13 @@ class ColorObjectTest(unittest.TestCase):
     def test_delta3_pair_simplify(self):
         """Test delta3 simplify"""
 
-        self.assertEqual(color.T(101,102).pair_simplify(color.K6(1,101,103)),
+        self.assertEqual(color.K6(1,101,103).pair_simplify(color.T(101,102)),
                          color.ColorFactor([color.ColorString([color.K6(1,103,102)])]))
-        self.assertEqual(color.T(102,101).pair_simplify(color.K6(1,103,102)),
+        self.assertEqual(color.K6(1,103,102).pair_simplify(color.T(102,101)),
                          color.ColorFactor([color.ColorString([color.K6(1,103,101)])]))
-        self.assertEqual(color.T(102,101).pair_simplify(color.K6Bar(1,101,103)),
+        self.assertEqual(color.K6Bar(1,101,103).pair_simplify(color.T(102,101)),
                          color.ColorFactor([color.ColorString([color.K6Bar(1,103,102)])]))
-        self.assertEqual(color.T(102,101).pair_simplify(color.K6Bar(1,103,101)),
+        self.assertEqual(color.K6Bar(1,103,101).pair_simplify(color.T(102,101)),
                          color.ColorFactor([color.ColorString([color.K6Bar(1,103,102)])]))
 
     def test_delta6_simplify(self):
@@ -221,7 +221,7 @@ class ColorObjectTest(unittest.TestCase):
         col_str2 = color.ColorString()
         col_str2.Nc_power = 1
         col_str2.coeff = fractions.Fraction(1, 2)
-        self.assertEqual(color.delta6(1, 1).simplify(),
+        self.assertEqual(color.T6(1, 1).simplify(),
                          color.ColorFactor([col_str1, col_str2]))
 
     def test_K6_objects(self):
@@ -250,7 +250,7 @@ class ColorObjectTest(unittest.TestCase):
 
         self.assertEqual(my_K6.pair_simplify(my_K6Bar),
                          color.ColorFactor([\
-                         color.ColorString([color.delta6(1,2)])]))
+                         color.ColorString([color.T6(1,2)])]))
 
         #K6(m,i,j)K6Bar(n,i,j) = delta6(m,n).
         my_K6 = color.K6(1,101,102)
@@ -258,7 +258,7 @@ class ColorObjectTest(unittest.TestCase):
 
         self.assertEqual(my_K6.pair_simplify(my_K6Bar),
                          color.ColorFactor([\
-                         color.ColorString([color.delta6(1,2)])]))
+                         color.ColorString([color.T6(1,2)])]))
 
 
     def test_T6_simplify(self):
@@ -483,7 +483,7 @@ class ColorFactorTest(unittest.TestCase):
                     color.ColorString([color.T6(2, 101, 102),
                                        color.T6(2, 102, 103)])])
 
-        col_str1 = color.ColorString([color.delta6(101,103)])
+        col_str1 = color.ColorString([color.T6(101,103)])
         col_str1.Nc_power = 1
         col_str2 = copy.copy(col_str1)
         col_str2.Nc_power = 0

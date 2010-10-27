@@ -238,6 +238,10 @@ class UFOMG5Converter(object):
                     output.append(self._pat_id.sub('color.T(\g<second>,\g<first>)', term))
                 elif particle.color == 3:
                     output.append(self._pat_id.sub('color.T(\g<first>,\g<second>)', term))
+                elif particle.color == -6 :
+                    output.append(self._pat_id.sub('color.T6(\g<second>,\g<first>)', term))
+                elif particle.color == 6:
+                    output.append(self._pat_id.sub('color.T6(\g<first>,\g<second>)', term))
                 elif particle.color == 8:
                     output.append(self._pat_id.sub('color.Tr(\g<first>,\g<second>)', term))
                     factor *= 2

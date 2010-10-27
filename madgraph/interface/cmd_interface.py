@@ -501,16 +501,15 @@ class HelpToCmd(object):
 
         logger.info("syntax: check " + "|".join(self._check_opts) + " [param_card] process_definition")
         logger.info("-- check a process or set of processes. Options:")
-        logger.info("full: Checks that the model and MG5 are working properly")
-        logger.info("   by generating the all permutations of the process and")
-        logger.info("   checking that the result of calculating the resulting")
-        logger.info("   matrix elements give the same result. For processes with")
-        logger.info("   gauge bosons, check gauge invariance.")
-        logger.info("quick: A faster version of the above checks.")
-        logger.info("   Only checks a subset of permutations.")
-        logger.info("gauge: Only check that processes with massless gauge bosons")
+        logger.info("full: Perform all three checks described below:")
+        logger.info("   permutation, gauge and lorentz_invariance.")
+        logger.info("permutation: Check that the model and MG5 are working")
+        logger.info("   properly by generating permutations of the process and")
+        logger.info("   checking that the resulting matrix elements give the")
+        logger.info("   same value.")
+        logger.info("gauge: Check that processes with massless gauge bosons")
         logger.info("   are gauge invariant")
-        logger.info("lorentz_invariance: Only check that the amplitude is lorentz")
+        logger.info("lorentz_invariance: Check that the amplitude is lorentz")
         logger.info("   invariant by comparing the amplitiude in different frames")        
         logger.info("If param_card is given, that param_card is used instead")
         logger.info("   of the default values for the model.")
@@ -1366,7 +1365,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _tutorial_opts = ['start', 'stop']
-    _check_opts = ['full', 'quick', 'gauge', 'lorentz_invariance']
+    _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
     _v4_export_formats = ['madevent', 'standalone','matrix'] 
     _export_formats = _v4_export_formats + ['pythia8',
@@ -1743,7 +1742,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         lorentz_result =[]
         nb_processes = 0
         
-        if args[0] in  ['quick', 'full']:
+        if args[0] in  ['permutation', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
                                                         param_card = param_card,
                                                         quick = True)
@@ -1765,18 +1764,23 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     % (nb_processes,
                       (cpu_time2 - cpu_time1)))
 
+        text = ""
+
         if gauge_result:
-            logger.info('gauge results:')
-            logger.info(process_checks.output_gauge(gauge_result))
+            text += 'Gauge results:\n'
+            text += process_checks.output_gauge(gauge_result) + '\n'
 
         if lorentz_result:
-            logger.info('lorentz invariance results:')
-            logger.info(process_checks.output_lorentz_inv(lorentz_result))
+            text += 'Lorentz invariance results:\n'
+            text += process_checks.output_lorentz_inv(lorentz_result) + '\n'
 
         if comparisons:
-            logger.info(process_checks.output_comparisons(comparisons[0]))
+            text += 'Process permutation results:\n'
+            text += process_checks.output_comparisons(comparisonqs[0]) + '\n'
             self._comparisons = comparisons
 
+        logger.info(text)
+        pydoc.pager(text)
         # Restore diagram logger
         diag_logger.setLevel(old_level)
 
