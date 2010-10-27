@@ -866,7 +866,7 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
             # Wavefunctions
             call = call + "w[%d]," * len(argument.get('mothers'))
             # Couplings
-            call = call + "pars->%s,"
+            call = call + "%s,"
 
             if isinstance(argument, helas_objects.HelasWavefunction):
                 # Create call for wavefunction
@@ -874,7 +874,8 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
                 #CALL L_4_011(W(1,%d),W(1,%d),%s,%s, %s, W(1,%d))
                 call_function = lambda wf: call % \
                     (tuple([mother.get('number')-1 for mother in wf.get('mothers')]) + \
-                    (wf.get_with_flow('coupling'),
+                    (CPPUFOHelasCallWriter.format_coupling(\
+                                     wf.get_with_flow('coupling')),
                                      wf.get('mass'),
                                      wf.get('width'),
                                      wf.get('number')-1))
@@ -884,14 +885,24 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
                 call_function = lambda amp: call % \
                                 (tuple([mother.get('number')-1
                                           for mother in amp.get('mothers')]) + \
-                                (amp.get('coupling'),
-                                amp.get('number')-1))
+                                (CPPUFOHelasCallWriter.format_coupling(\
+                                 amp.get('coupling')),
+                                 amp.get('number')-1))
                 
         # Add the constructed function to wavefunction or amplitude dictionary
         if isinstance(argument, helas_objects.HelasWavefunction):
             self.add_wavefunction(argument.get_call_key(), call_function)
         else:
             self.add_amplitude(argument.get_call_key(), call_function)
+
+    @staticmethod
+    def format_coupling(coupling):
+        """Format the coupling so any minus signs are put in front"""
+
+        if coupling.startswith('-'):
+            return "-pars->" + coupling[1:]
+        else:
+            return "pars->" + coupling
 
 #===============================================================================
 # PythonUFOHelasCallWriter

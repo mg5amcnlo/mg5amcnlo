@@ -1,4 +1,4 @@
-double CPPProcess::matrix_%(proc_name)s(%(matrix_args)s) { 
+double %(process_class_name)s::matrix_%(proc_name)s(%(matrix_args)s) { 
 %(all_wavefunction_calls)s
 // Local variables
 const int ngraphs = %(ngraphs)d;

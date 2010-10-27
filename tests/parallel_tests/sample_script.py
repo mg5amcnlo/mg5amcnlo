@@ -58,20 +58,24 @@ if '__main__' == __name__:
                                                   final=2)
 
     # Create a MERunner object for MG4
-    my_mg4 = me_comparator.MG4Runner()
-    my_mg4.setup(mg4_path)
+    #my_mg4 = me_comparator.MG4Runner()
+    #my_mg4.setup(mg4_path)
 
     # Create a MERunner object for MG5
     my_mg5 = me_comparator.MG5Runner()
     my_mg5.setup(mg5_path, mg4_path)
 
     # Create a MERunner object for UFO-ALOHA-MG5
-    my_mg5_ufo = me_comparator.MG5_UFO_Runner()
-    my_mg5_ufo.setup(mg5_path, mg4_path)
+    #my_mg5_ufo = me_comparator.MG5_UFO_Runner()
+    #my_mg5_ufo.setup(mg5_path, mg4_path)
+
+    # Create a MERunner object for C++
+    my_mg5_cpp = me_comparator.MG5_CPP_Runner()
+    my_mg5_cpp.setup(mg5_path, mg4_path)
 
     # Create and setup a comparator
     my_comp = me_comparator.MEComparator()
-    my_comp.set_me_runners(my_mg5, my_mg5_ufo, my_mg4)
+    my_comp.set_me_runners(my_mg5_cpp, my_mg5)
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
@@ -80,11 +84,13 @@ if '__main__' == __name__:
     # Do some cleanup
     #my_comp.cleanup()
 
+    filename = "mssm_results.log"
+
     # Print the output
-    my_comp.output_result(filename='mssm_results.log')
+    my_comp.output_result(filename=filename)
 
     
-    pydoc.pager(file('mssm_results.log','r').read())
+    pydoc.pager(file(filename,'r').read())
 
     # Print a list of non zero processes
     #print my_comp.get_non_zero_processes()

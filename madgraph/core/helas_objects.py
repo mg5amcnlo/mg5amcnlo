@@ -3204,6 +3204,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 self.get_all_wavefunctions() + self.get_all_amplitudes() \
                 if wa.get('interaction_id') != 0]
         
+    def get_used_couplings(self):
+        """Return a list with all couplings used by this
+        HelasMatrixElement."""
+
+        return [wa.get('coupling') for wa in \
+                self.get_all_wavefunctions() + self.get_all_amplitudes() \
+                if wa.get('interaction_id') != 0]
 
     @staticmethod
     def check_equal_decay_processes(decay1, decay2):
@@ -3860,3 +3867,15 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             helas_list.extend(me.get_used_lorentz())
 
         return list(set(helas_list))
+
+    def get_used_couplings(self):
+        """Return a list with all couplings used by this
+        HelasMatrixElement."""
+
+        coupling_list = []
+
+        for me in self.get('matrix_elements'):
+            coupling_list.extend(me.get_used_couplings())
+
+        return list(set(coupling_list))
+    

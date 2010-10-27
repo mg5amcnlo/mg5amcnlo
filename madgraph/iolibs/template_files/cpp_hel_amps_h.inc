@@ -1,5 +1,5 @@
 //==========================================================================
-// This file has been automatically generated for C++
+// This file has been automatically generated for %(output_name)s
 %(info_lines)s
 //==========================================================================
 
@@ -11,8 +11,8 @@
 
 using namespace std;
 
-namespace MG5_%(model_name)s {
+namespace %(namespace)s_%(model_name)s {
 %(function_declarations)s
-} // end namespace MG5_%(model_name)s
+} // end namespace %(namespace)s_%(model_name)s
 
 #endif // hel_amps_%(model_name)s_H

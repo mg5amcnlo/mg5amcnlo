@@ -138,7 +138,6 @@ def generate_subprocess_directory_standalone_cpp(matrix_element,
     dirpath = os.path.join(path, \
                    "P%d_%s" % (process_exporter_cpp.process_number,
                                process_exporter_cpp.process_name))
-
     try:
         os.mkdir(dirpath)
     except os.error as error:
@@ -154,7 +153,7 @@ def generate_subprocess_directory_standalone_cpp(matrix_element,
 
     process_exporter_cpp.path = dirpath
     # Create the process .h and .cc files
-    process_exporter_cpp.generate_process_files_cpp()
+    process_exporter_cpp.generate_process_files()
 
     linkfiles = ['check_sa.cpp', 'Makefile']
 
@@ -224,6 +223,7 @@ class ProcessExporterCPP(object):
             self.process_string = self.processes[0].base_string()
 
         self.process_name = self.get_process_name()
+        self.process_class = "CPPProcess"
 
         self.path = path
         self.process_number = self.processes[0].get('id')
@@ -277,9 +277,19 @@ class ProcessExporterCPP(object):
             # Redefined the equality back to the original
             helas_objects.HelasWavefunction.__eq__ = wf_equal
 
-    # Methods for generation of process files for Pythia 8
+    # Methods for generation of process files for C++
 
-    def generate_process_files_cpp(self):
+    def generate_process_files(self):
+        """Generate the .h and .cc files needed for C++, for the
+        processes described by multi_matrix_element"""
+
+        cwd = os.getcwd()
+
+        os.chdir(self.path)
+
+        pathdir = os.getcwd()
+
+    def generate_process_files(self):
 
         """Generate the .h and .cc files needed for Pythia 8, for the
         processes described by multi_matrix_element"""
@@ -290,14 +300,15 @@ class ProcessExporterCPP(object):
 
         pathdir = os.getcwd()
 
-        logger.info('Creating files CPPProcess.h and CPPProcess.cc in' +\
-                    ' directory %s' % self.path)
+        logger.info('Creating files %(process)s.h and %(process)s.cc in' % \
+                    {'process': self.process_class} +\
+                    ' directory %(dir)s' % {'dir': self.path})
 
         # Create the files
-        filename = 'CPPProcess.h'
+        filename = '%s.h' % self.process_class
         self.write_process_h_file(writers.CPPWriter(filename))
 
-        filename = 'CPPProcess.cc'
+        filename = '%s.cc' % self.process_class
         self.write_process_cc_file(writers.CPPWriter(filename))
 
         os.chdir(cwd)
@@ -466,7 +477,8 @@ class ProcessExporterCPP(object):
                                      self.get_sigmaHat_lines()
 
         replace_dict['all_sigmaKin'] = \
-                                  self.get_all_sigmaKin_lines(color_amplitudes)
+                                  self.get_all_sigmaKin_lines(color_amplitudes,
+                                                              'CPPProcess')
 
         file = read_template_file(self.process_definition_template) %\
                replace_dict
@@ -608,13 +620,14 @@ class ProcessExporterCPP(object):
                               replace("0_", "") for \
                               me in self.matrix_elements])
 
-    def get_all_sigmaKin_lines(self, color_amplitudes):
+    def get_all_sigmaKin_lines(self, color_amplitudes, class_name):
         """Get sigmaKin_process for all subprocesses for Pythia 8 .cc file"""
 
         ret_lines = []
         if self.single_helicities:
             ret_lines.append(\
-                "void CPPProcess::calculate_wavefunctions(const int hel[]){")
+                "void %s::calculate_wavefunctions(const int hel[]){" % \
+                class_name)
             ret_lines.append("// Calculate wavefunctions for all processes")
             ret_lines.append(self.get_calculate_wavefunctions(\
                 self.wavefunctions))
@@ -623,7 +636,8 @@ class ProcessExporterCPP(object):
             ret_lines.extend([self.get_sigmaKin_single_process(i, me) \
                                   for i, me in enumerate(self.matrix_elements)])
         ret_lines.extend([self.get_matrix_single_process(i, me,
-                                                      color_amplitudes[i]) \
+                                                         color_amplitudes[i],
+                                                         class_name) \
                                 for i, me in enumerate(self.matrix_elements)])
         return "\n".join(ret_lines)
 
@@ -660,7 +674,8 @@ class ProcessExporterCPP(object):
 
         return file
 
-    def get_matrix_single_process(self, i, matrix_element, color_amplitudes):
+    def get_matrix_single_process(self, i, matrix_element, color_amplitudes,
+                                  class_name):
         """Write matrix() for each process"""
 
         # Write matrix() for the process
@@ -684,7 +699,7 @@ class ProcessExporterCPP(object):
                          self.get_calculate_wavefunctions(wavefunctions)
 
         # Process name
-        replace_dict['process_class_name'] = self.process_name
+        replace_dict['process_class_name'] = class_name
         
         # Process number
         replace_dict['proc_number'] = i
@@ -780,7 +795,8 @@ class ProcessExporterCPP(object):
         rows in chunks of size n."""
 
         if not matrix_element.get('color_matrix'):
-            return ["static const double denom[1] = {1.};", "static const double cf[1][1] = {1.};"]
+            return "\n".join(["static const double denom[1] = {1.};",
+                              "static const double cf[1][1] = {1.};"])
         else:
             color_denominators = matrix_element.get('color_matrix').\
                                                  get_line_denominators()
@@ -856,7 +872,7 @@ def generate_process_files_pythia8(multi_matrix_element, cpp_helas_call_writer,
                                                       process_string,
                                                       path)
 
-    process_exporter_pythia8.generate_process_files_pythia8()
+    process_exporter_pythia8.generate_process_files()
 
 
 #===============================================================================
@@ -873,7 +889,13 @@ class ProcessExporterPythia8(ProcessExporterCPP):
     process_definition_template = 'pythia8_process_function_definitions.inc'
     process_wavefunction_template = 'pythia8_process_wavefunctions.inc'
     process_sigmaKin_function_template = 'pythia8_process_sigmaKin_function.inc'
+    def __init__(self, *args, **opts):
+        """Set process class name"""
 
+        super(ProcessExporterPythia8, self).__init__(*args, **opts)
+
+        self.process_class = self.process_name
+        
     # Methods for generation of process files for Pythia 8
 
     #===========================================================================
@@ -915,15 +937,14 @@ class ProcessExporterPythia8(ProcessExporterCPP):
 
         replace_dict['nexternal'] = self.nexternal
         replace_dict['nprocesses'] = len(self.matrix_elements)
-
+        
         if self.single_helicities:
             replace_dict['all_sigma_kin_definitions'] = \
                           """// Calculate wavefunctions
-                          void %s::calculate_wavefunctions(const int hel[]);
+                          void calculate_wavefunctions(const int hel[]);
                           static const int nwavefuncs = %d;
                           std::complex<double> w[nwavefuncs][18];""" % \
-                                                    (self.process_name,
-                                                     len(self.wavefunctions))
+                                                    len(self.wavefunctions)
             replace_dict['all_matrix_definitions'] = \
                            "\n".join(["double matrix_%s();" % \
                                       me.get('processes')[0].shell_string().\
@@ -982,7 +1003,8 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                                        self.get_weightDecay_lines()    
 
         replace_dict['all_sigmaKin'] = \
-                                  self.get_all_sigmaKin_lines(color_amplitudes)
+                                  self.get_all_sigmaKin_lines(color_amplitudes,
+                                                              self.process_name)
 
         file = read_template_file('pythia8_process_function_definitions.inc') %\
                replace_dict
@@ -1361,13 +1383,15 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
 # Routines to output UFO models in C++ format
 #===============================================================================
 
-def convert_model_to_cpp(model, output_dir, wanted_lorentz = []):
+def convert_model_to_cpp(model, output_dir, wanted_lorentz = [],
+                         wanted_couplings = []):
     """Create a full valid Pythia 8 model from an MG5 model (coming from UFO)"""
 
     # create the model parameter files
     model_builder = UFOModelConverterCPP(model,
                                          os.path.join(output_dir, 'src'),
-                                         wanted_lorentz)
+                                         wanted_lorentz,
+                                         wanted_couplings)
     model_builder.write_files()
 
 #===============================================================================
@@ -1376,6 +1400,10 @@ def convert_model_to_cpp(model, output_dir, wanted_lorentz = []):
 
 class UFOModelConverterCPP(object):
     """ A converter of the UFO-MG5 Model to the C++ format """
+
+    # Static variables (for inheritance)
+    output_name = 'C++ Standalone'
+    namespace = 'MG5'
 
     # Dictionary from Python type to C++ type
     type_dict = {"real": "double",
@@ -1396,7 +1424,8 @@ class UFOModelConverterCPP(object):
 
     copy_files = ["read_slha.h", "read_slha.cc"]
 
-    def __init__(self, model, output_path, wanted_lorentz = []):
+    def __init__(self, model, output_path, wanted_lorentz = [],
+                 wanted_couplings = []):
         """ initialization of the objects """
 
         self.model = model
@@ -1418,7 +1447,7 @@ class UFOModelConverterCPP(object):
 
         # Prepare parameters and couplings for writeout in C++
         self.prepare_parameters()
-        self.prepare_couplings()
+        self.prepare_couplings(wanted_couplings)
 
     def write_files(self):
         """Create all necessary files"""
@@ -1476,7 +1505,7 @@ class UFOModelConverterCPP(object):
                                                               expression,
                                                               'real'))
             
-    def prepare_couplings(self):
+    def prepare_couplings(self, wanted_couplings = []):
         """Extract the couplings from the model, and store them in
         the two lists coups_indep and coups_dep"""
 
@@ -1486,16 +1515,20 @@ class UFOModelConverterCPP(object):
         for key, coup_list in self.model['couplings'].items():
             if "aS" in key:
                 for c in coup_list:
-                    self.coups_dep[c.name] = base_objects.ModelVariable(c.name,
-                                                                       c.expr,
-                                                                       c.type,
-                                                                       c.depend)
+                    if not wanted_couplings or c.name in wanted_couplings:
+                        self.coups_dep[c.name] = base_objects.ModelVariable(\
+                                                                   c.name,
+                                                                   c.expr,
+                                                                   c.type,
+                                                                   c.depend)
             else:
                 for c in coup_list:
-                    self.coups_indep.append(base_objects.ModelVariable(c.name,
-                                                                      c.expr,
-                                                                      c.type,
-                                                                      c.depend))
+                    if not wanted_couplings or c.name in wanted_couplings:
+                        self.coups_indep.append(base_objects.ModelVariable(\
+                                                                   c.name,
+                                                                   c.expr,
+                                                                   c.type,
+                                                                   c.depend))
 
         # Convert coupling expressions from Python to C++
         for coup in self.coups_dep.values() + self.coups_indep:
@@ -1634,7 +1667,9 @@ class UFOModelConverterCPP(object):
 
         replace_dict = {}
 
+        replace_dict['output_name'] = self.output_name
         replace_dict['info_lines'] = get_mg5_info_lines()
+        replace_dict['namespace'] = self.namespace
         replace_dict['model_name'] = self.model.get('name')
 
         # Read in the template .h and .cc files, stripped of compiler
@@ -1741,6 +1776,10 @@ def convert_model_to_pythia8(model, output_dir):
 class UFOModelConverterPythia8(UFOModelConverterCPP):
     """ A converter of the UFO-MG5 Model to the Pythia 8 format """
 
+    # Static variables (for inheritance)
+    output_name = 'Pythia 8'
+    namespace = 'Pythia8'
+
     # Dictionaries for expression of MG5 SM parameters into Pythia 8
     slha_to_expr = {('SMINPUTS', (1,)): '1./csm->alphaEM(pow(pd->m0(23),2))',
                     ('SMINPUTS', (2,)): 'M_PI*csm->alphaEM(pow(pd->m0(23),2))*pow(pd->m0(23),2)/(sqrt(2.)*pow(pd->m0(24),2)*(pow(pd->m0(23),2)-pow(pd->m0(24),2)))',
@@ -1751,8 +1790,6 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
     # Template files to use
     param_template_h = 'pythia8_model_parameters_h.inc'
     param_template_cc = 'pythia8_model_parameters_cc.inc'
-    aloha_template_h = 'pythia8_hel_amps_h.inc'
-    aloha_template_cc = 'pythia8_hel_amps_cc.inc'
 
     def prepare_parameters(self):
         """Extract the model parameters from Pythia 8, and store them in

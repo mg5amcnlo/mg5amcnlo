@@ -2541,10 +2541,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                             process_string = self._generate_info, path = path)
                 
         if self._export_format == 'standalone_cpp':
-            print "path: ", path
             for me in self._curr_matrix_elements.get('matrix_elements'):
                 export_cpp.generate_subprocess_directory_standalone_cpp(\
-                              self._curr_matrix_elements, self._curr_cpp_model,
+                              me, self._curr_cpp_model,
                               path = path)
                 
         logger.info(("Generated helas calls for %d subprocesses " + \
@@ -2599,18 +2598,22 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # actually used in the wavefunctions and amplitudes in
             # these processes
             wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
+            wanted_couplings = self._curr_matrix_elements.get_used_couplings()
             export_v4.convert_model_to_mg4(self._curr_model,
                                            os.path.join(self._export_dir),
-                                           wanted_lorentz)
+                                           wanted_lorentz,
+                                           wanted_couplings)
         if self._export_format == 'standalone_cpp':
             logger.info('Export UFO model to C++ format')
             # wanted_lorentz are the lorentz structures which are
             # actually used in the wavefunctions and amplitudes in
             # these processes
             wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
+            wanted_couplings = self._curr_matrix_elements.get_used_couplings()
             export_cpp.convert_model_to_cpp(self._curr_model,
                                             os.path.join(self._export_dir),
-                                            wanted_lorentz)
+                                            wanted_lorentz,
+                                            wanted_couplings)
             export_cpp.make_model_cpp(self._export_dir)
 
         if self._export_format == 'madevent':

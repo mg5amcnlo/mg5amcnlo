@@ -38,7 +38,7 @@ int main(int argc, char** argv){
 
   // Display matrix elements
   for(int i=0; i<process.nprocesses;i++)
-    cout << "Matrix element = " 
+    cout << " Matrix element = " 
 	 << setiosflags(ios::fixed) << setprecision(17)
 	 << matrix_elements[i]
 	 << " GeV^" << -(2*process.nexternal-8) << endl;
