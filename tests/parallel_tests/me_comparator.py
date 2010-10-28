@@ -108,8 +108,7 @@ class MG4Runner(MERunner):
         self.setup_flag = False
 
         # Create a copy of Template
-        if not os.path.isdir(os.path.join(mg4_path, "MadGraphII")) or \
-               not os.path.isdir(os.path.join(mg4_path, "Template")) or \
+        if not os.path.isdir(os.path.join(mg4_path, "Template")) or \
                not os.path.isdir(os.path.join(mg4_path, "HELAS")):
             raise IOError, "Path %s is not a valid MG4 path" % str(mg4_path)
 
@@ -287,8 +286,6 @@ class MG4Runner(MERunner):
             if match_value:
                 value = float(match_value.group('value'))
                 gev_pow = int(match_value.group('pow'))
-
-        print "RE values: ", value, gev_pow, res_p
 
         return ((value, gev_pow), res_p)
 

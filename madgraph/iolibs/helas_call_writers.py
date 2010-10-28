@@ -857,7 +857,7 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
             # Check if we need to append a charge conjugation flag
             c_flag = '' 
             if argument.needs_hermitian_conjugate():
-                c_flag = 'c1' # MG5 not configure for 4F vertex
+                c_flag = 'C1' # MG5 not configure for 4F vertex
 
             call = '%s%s_%s' % (argument.get('lorentz'), c_flag, outgoing)
 
