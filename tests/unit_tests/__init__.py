@@ -32,6 +32,9 @@ class TestCase(unittest.TestCase):
         """Redefine the stupid unittest.assertAlmostEqual to act on
         significance instead of decimal places"""
 
+        if 'msg' not in arg:
+            arg['msg'] = '%s != %s within %s digits' % (a, b, 7 )
+
         magarg = a or b
         if not magarg or a - b == 0:
             # Both a and b are 0 or they are identical

@@ -777,7 +777,7 @@ def output_gauge(comparison_results):
 #===============================================================================
 def check_lorentz(processes, param_card = None):
     """ Check if the square matrix element (sum over helicity) is lorentz 
-        invariant by boosting the impulsion with different value."""
+        invariant by boosting the momenta with different value."""
     
     if isinstance(processes, base_objects.ProcessDefinition):
         # Generate a list of unique processes
@@ -881,7 +881,7 @@ def check_lorentz_process(process, stored_quantities, helas_writer, full_model):
         return  (process.base_string(), 'pass')
     
     for boost in range(1,4):
-        boost_p = boost_impulsion(p, boost)
+        boost_p = boost_momenta(p, boost)
         
         amp_results.append(evaluate_matrix_element(matrix_element, 
                                                    stored_quantities,
@@ -892,8 +892,8 @@ def check_lorentz_process(process, stored_quantities, helas_writer, full_model):
 
 
 
-def boost_impulsion(p, boost_direction=1, beta=0.5):
-    """boost the set of impulsion in the 'boost direction' by the 'beta' 
+def boost_momenta(p, boost_direction=1, beta=0.5):
+    """boost the set momenta in the 'boost direction' by the 'beta' 
        factor"""
     boost_p = []    
     gamma = 1/ math.sqrt(1 - beta**2)
@@ -918,7 +918,7 @@ def boost_impulsion(p, boost_direction=1, beta=0.5):
             boost_imp.append(-gamma * beta * E + gamma * pz)
         else: 
             boost_imp.append(pz) 
-        #Add the impulsion to the list
+        #Add the momenta to the list
         boost_p.append(boost_imp)                   
             
     return boost_p
