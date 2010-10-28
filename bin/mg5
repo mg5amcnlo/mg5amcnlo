@@ -23,6 +23,22 @@ import sys
 if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
     sys.exit('MadGraph 5 works only with python 2.6 or later (but not python 3.X).\n\
                Please upgrate your version of python.')
+
+# tab completion and history
+try:
+    import readline
+except ImportError:
+    print "For tab completion and history, install module readline."
+else:
+    import rlcompleter
+    readline.parse_and_bind("tab: complete")
+    try:
+        import os
+        history_file = os.path.join(os.environ['HOME'], '.pythonhistory')
+        readline.read_history_file(history_file)
+    except:
+        pass
+
 import optparse
 import logging
 import logging.config
@@ -94,3 +110,7 @@ else:
     else:
         cmd_interface.MadGraphCmdShell(mgme_dir = options.mgme_dir).cmdloop()
 
+try: 
+    readline.write_history_file(history_file)
+except:
+    pass

@@ -417,7 +417,7 @@ def write_matrix_element_v4_madevent(writer, matrix_element, fortran_model):
     # Write the file
     writer.writelines(file)
 
-    return len(filter(lambda call: call.find('#') != 0, helas_calls))
+    return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor
 
 #===============================================================================
 # write_auto_dsig_file
@@ -655,12 +655,12 @@ def write_leshouche_file(writer, matrix_element, fortran_model):
 #===============================================================================
 # write_maxamps_file
 #===============================================================================
-def write_maxamps_file(writer, matrix_element, fortran_model):
+def write_maxamps_file(writer, matrix_element, fortran_model, ncolor):
     """Write the maxamps.inc file for MG4."""
 
-    file = "       integer    maxamps\n"
-    file = file + "parameter (maxamps=%d)" % \
-           len(matrix_element.get_all_amplitudes())
+    file = "       integer    maxamps, maxflow\n"
+    file = file + "parameter (maxamps=%d, maxflow=%d)" % \
+           (len(matrix_element.get_all_amplitudes()), ncolor)
 
     # Write the file
     writer.writelines(file)
@@ -994,9 +994,10 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 
     # Create the matrix.f file, auto_dsig.f file and all inc files
     filename = 'matrix.f'
-    calls = write_matrix_element_v4_madevent(writers.FortranWriter(filename),
-                                             matrix_element,
-                                             fortran_model)
+    calls, ncolor = \
+           write_matrix_element_v4_madevent(writers.FortranWriter(filename),
+                                            matrix_element,
+                                            fortran_model)
 
     filename = 'auto_dsig.f'
     write_auto_dsig_file(writers.FortranWriter(filename),
@@ -1038,7 +1039,8 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     filename = 'maxamps.inc'
     write_maxamps_file(writers.FortranWriter(filename),
                        matrix_element,
-                       fortran_model)
+                       fortran_model,
+                       ncolor)
 
     filename = 'mg.sym'
     write_mg_sym_file(writers.FortranWriter(filename),

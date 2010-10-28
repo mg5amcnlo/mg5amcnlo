@@ -15,6 +15,7 @@
 """ How to import a UFO model to the MG5 format """
 
 
+import fractions
 import logging
 import os
 import re
@@ -217,8 +218,8 @@ class UFOMG5Converter(object):
 
 
     
-    _pat_T = re.compile(r'''T\((?P<first>\d*),(?P<second>\d*)\)''')
-    _pat_id = re.compile(r'''Identity\((?P<first>\d*),(?P<second>\d*)\)''')
+    _pat_T = re.compile(r'T\((?P<first>\d*),(?P<second>\d*)\)')
+    _pat_id = re.compile(r'Identity\((?P<first>\d*),(?P<second>\d*)\)')
     
     def treat_color(self, data_string, interaction_info):
         """ convert the string to ColorStirng"""
@@ -228,14 +229,22 @@ class UFOMG5Converter(object):
         
         
         output = []
+        factor = 1
         for term in data_string.split('*'):
             pattern = self._pat_id.search(term)
             if pattern:
-                particle = interaction_info.particles[int(pattern.group('second'))-1]
-                if particle.color > 0 :
+                particle = interaction_info.particles[int(pattern.group('first'))-1]
+                if particle.color == -3 :
                     output.append(self._pat_id.sub('color.T(\g<second>,\g<first>)', term))
-                else:
+                elif particle.color == 3:
                     output.append(self._pat_id.sub('color.T(\g<first>,\g<second>)', term))
+                elif particle.color == 8:
+                    output.append(self._pat_id.sub('color.Tr(\g<first>,\g<second>)', term))
+                    factor *= 2
+                else:
+                    raise MadGraph5Error, \
+                          "Unknown use of Identity for particle with color %d" \
+                          % particle.color
             else:
                 output.append(term)
         data_string = '*'.join(output)
@@ -255,9 +264,11 @@ class UFOMG5Converter(object):
 #            p = re.compile(r'''(?P<prefix>[^-@])(?P<nb>%s)(?P<postfix>\D)''' % j)
 #            data_string = p.sub('\g<prefix>@%s\g<postfix>' % i, data_string)
 #        data_string = data_string.replace('@','')                    
+
         output = data_string.split('*')
         output = color.ColorString([eval(data) \
                                               for data in output if data !='1'])
+        output.coeff = fractions.Fraction(factor)
         for col_obj in output:
             col_obj.replace_indices(new_indices)
         

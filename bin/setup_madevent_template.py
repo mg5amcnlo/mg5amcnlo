@@ -27,11 +27,6 @@ MadGraph 5. It performs the following actions:
 """
 
 import sys
-
-if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
-    sys.exit('MadGraph 5 works only with python 2.6 or later (but not python 3.X).\n\
-               Please upgrate your version of python.')
-
 import glob
 import optparse
 import logging
@@ -94,6 +89,10 @@ helas_path = path.join(mgme_dir, 'HELAS')
 # 1. Copy the Template either from a valid MG_ME directory in the path
 # or given by the -d flag, and remove the bin/newprocess file
 
+if path.isdir(path.join(filepath, 'Template')):
+    logging.info("Removing existing Template directory")
+    shutil.rmtree(path.join(filepath, 'Template'))
+
 logging.info("Copying " + template_path)
 try:
     shutil.copytree(template_path, path.join(filepath, 'Template'), symlinks = True)
@@ -110,6 +109,12 @@ for i in range(6):
         break
     for cvs_dir in cvs_dirs:
         shutil.rmtree(cvs_dir)
+
+# Copy the HELAS directory
+
+if path.isdir(path.join(filepath, 'HELAS')):
+    logging.info("Removing existing HELAS directory")
+    shutil.rmtree(path.join(filepath, 'HELAS'))
 
 logging.info("Copying " + helas_path)
 try:

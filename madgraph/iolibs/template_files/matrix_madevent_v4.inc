@@ -42,7 +42,7 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-    Double Precision amp2(maxamps), jamp2(0:maxamps)
+    Double Precision amp2(maxamps), jamp2(0:maxflow)
     common/to_amps/  amp2,       jamp2
     
     character*79         hel_buff
@@ -77,7 +77,6 @@ C ----------
     IF (multi_channel) THEN
         DO IHEL=1,NGRAPHS
             amp2(ihel)=0d0
-            jamp2(ihel)=0d0
         ENDDO
         DO IHEL=1,int(jamp2(0))
             jamp2(ihel)=0d0
@@ -179,7 +178,7 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-    Double Precision amp2(maxamps), jamp2(0:maxamps)
+    Double Precision amp2(maxamps), jamp2(0:maxflow)
     common/to_amps/  amp2,       jamp2
     include 'coupl.inc'
 C  

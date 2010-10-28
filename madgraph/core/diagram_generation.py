@@ -1024,8 +1024,8 @@ class MultiProcess(base_objects.PhysicsObject):
 
             logger.info("Trying coupling order %s=%d" % (coupling,
                                                          max_order_now))
-
-            oldloglevel = logger.setLevel(logging.WARNING)
+            oldloglevel = logger.getEffectiveLevel()
+            logger.setLevel(logging.WARNING)
 
             # failed_procs are processes that have already failed
             # based on crossing symmetry

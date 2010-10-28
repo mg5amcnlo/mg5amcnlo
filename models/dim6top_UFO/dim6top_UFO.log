@@ -1,0 +1,66 @@
+# This file was automatically created by FeynRules $Revision: 327 $
+# Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
+# Date: Thu 28 Oct 2010 02:34:47
+
+
+# 
+# This is the logfile for the model dim6top
+
+# Authors: C. Degrande
+# Model version: 1.0
+# Checking the Lagrangians
+   * All Lagrangians are ok.
+#
+# Particle definitions
+#
+
+   * No particles removed. All particles correspond to GenInt setup.
+
+# Automatically assigned PDG numbers
+   * Assigned PDG number 9000001 to particle ghA
+   * Assigned PDG number 9000002 to particle ghZ
+   * Assigned PDG number 9000003 to particle ghWp
+   * Assigned PDG number 9000004 to particle ghWm
+   * Assigned PDG number 9000005 to particle ghG
+
+
+# Compulsory PDG codes:
+   * Class SM leptons complete.
+   * Class SM neutrinos complete.
+   * Class SM quarks complete.
+   * Class SM gauge bosons complete.
+#
+# Parameter definitions
+#
+
+   * All parameters are ok.
+
+
+# Vertices
+   * Calling FeynmanRules for 1 Lagrangians.
+   * Number of classes vertices: 34
+   * Number of flavored vertices: 77
+   * Saved vertices in InterfaceRun[ 1 ].
+   * Checked QNumber conservation.
+   * particles.py written.
+   * parameters.py written.
+#
+# Vertex definitions
+#
+
+   * 77 vertices written.
+   * vertices.py written.
+#
+# Lorentz structure definitions
+#
+
+   * 22 lorentz structures written.
+   * lorentz.py written.
+#
+# Coupling definitions
+#
+
+   >>>> Non positive interaction order QED found for coupling GC_33.
+   >>>> Non positive interaction order QED found for coupling GC_34.
+   * 55 couplings written.
+   * couplings.py written.

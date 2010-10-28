@@ -88,7 +88,7 @@ def append_to_file(filename, myfunct, *args):
 #===============================================================================
 # check piclke validity
 #===============================================================================
-def is_uptodate(picklefile, path_list=None, min_time=1287135673):
+def is_uptodate(picklefile, path_list=None, min_time=1287570442):
     """Check if the pickle files is uptodate compare to a list of files. 
     If no files are given, the pickle files is checked against it\' current 
     directory"""
@@ -102,7 +102,7 @@ def is_uptodate(picklefile, path_list=None, min_time=1287135673):
                                                             os.listdir(dirpath)]
     
     assert type(path_list) == list, 'is_update expect a list of files'
-      
+    
     pickle_date = os.path.getctime(picklefile)
     if pickle_date < min_time:
         return False
