@@ -222,8 +222,8 @@ class Amplitude(base_objects.PhysicsObject):
             # For decay chain legs, we want everything to combine to
             # the initial leg. This is done by only allowing the
             # initial leg to combine as a final identity.
-            ref_dict_to0 = {(part.get_pdg_code(),part.get_anti_pdg_code()):0,
-                            (part.get_anti_pdg_code(),part.get_pdg_code()):0}
+            ref_dict_to0 = {(part.get_pdg_code(),part.get_anti_pdg_code()):[0],
+                            (part.get_anti_pdg_code(),part.get_pdg_code()):[0]}
             # Need to set initial leg from_group to None, to make sure
             # it can only be combined at the end.
             leglist[0].set('from_group', None)
@@ -336,15 +336,17 @@ class Amplitude(base_objects.PhysicsObject):
         # Special treatment for decay chain legs
         if curr_leglist.can_combine_to_0(ref_dict_to0, is_decay_proc):
             # Extract the interaction id associated to the vertex 
-            vertex_id = ref_dict_to0[tuple(sorted([leg.get('id') for \
+            vertex_ids = ref_dict_to0[tuple(sorted([leg.get('id') for \
                                                    leg in curr_leglist]))]
 
-            final_vertex = base_objects.Vertex({'legs':curr_leglist,
-                                                'id':vertex_id})
+            final_vertices = [base_objects.Vertex({'legs':curr_leglist,
+                                                   'id':vertex_id}) for \
+                              vertex_id in vertex_ids]
             # Check for coupling orders. If orders < 0, skip vertex
-            if self.reduce_orders(coupling_orders, model,
-                                  [final_vertex.get('id')]) != False:
-                res.append([final_vertex])
+            for final_vertex in final_vertices:
+                if self.reduce_orders(coupling_orders, model,
+                                      [final_vertex.get('id')]) != False:
+                    res.append([final_vertex])
         # Stop condition 2: if the leglist contained exactly two particles,
         # return the result, if any, and stop.
         if len(curr_leglist) == 2:
@@ -521,9 +523,8 @@ class Amplitude(base_objects.PhysicsObject):
 
                     # Build the leg object which will replace the combination:
                     # 1) leg ids is as given in the ref_dict
-                    leg_ids = [elem[0] for elem in \
-                           ref_dict_to1[tuple(sorted([leg.get('id') \
-                                               for leg in entry]))]]
+                    leg_vert_ids = ref_dict_to1[tuple(sorted([leg.get('id') \
+                                               for leg in entry]))]
                     # 2) number is the minimum of leg numbers involved in the
                     # combination
                     number = min([leg.get('number') for leg in entry])
@@ -538,22 +539,19 @@ class Amplitude(base_objects.PhysicsObject):
 
                     # Create and add the object
                     mylegs = [base_objects.Leg(
-                                    {'id':leg_id,
+                                    {'id':leg_id[0],
                                      'number':number,
                                      'state':state,
                                      'from_group':True}) \
-                                    for leg_id in leg_ids]
+                                    for leg_id in leg_vert_ids]
                     reduced_list.append(mylegs)
 
 
                     # Create and add the corresponding vertex
                     # Extract vertex ids corresponding to the various legs
                     # in mylegs
-                    vert_ids = [elem[1] for elem in \
-                           ref_dict_to1[tuple(sorted([leg.get('id') \
-                                               for leg in entry]))]]
                     vlist = base_objects.VertexList()
-                    for myleg in mylegs:
+                    for ileg, myleg in enumerate(mylegs):
                         # Start with the considered combination...
                         myleglist = base_objects.LegList(list(entry))
                         # ... and complete with legs after reducing
@@ -561,7 +559,7 @@ class Amplitude(base_objects.PhysicsObject):
                         # ... and consider the correct vertex id
                         vlist.append(base_objects.Vertex(
                                          {'legs':myleglist,
-                                          'id':vert_ids[mylegs.index(myleg)]}))
+                                          'id':leg_vert_ids[ileg][1]}))
 
                     vertex_list.append(vlist)
 
