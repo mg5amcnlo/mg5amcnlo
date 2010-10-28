@@ -340,7 +340,10 @@ def evaluate_matrix_element(matrix_element, stored_quantities, helas_writer,
         p, w_rambo = get_momenta(process, full_model)
 
     # Evaluate the matrix element for the momenta p
-    return eval("Matrix().smatrix(p, full_model)")
+    matrix = Matrix()
+    me_value = matrix.smatrix(p, full_model)
+
+    return me_value, matrix.amp2
     
 #===============================================================================
 # check_processes
@@ -505,7 +508,7 @@ def check_process(process, stored_quantities, helas_writer, full_model, quick):
         if res == None:
             break
 
-        values.append(res)
+        values.append(res[0])
 
         # Check if we failed badly (1% is already bad) - in that
         # case done for this process
@@ -723,7 +726,7 @@ def check_gauge_process(process, stored_quantities, helas_writer, full_model):
     mvalue = evaluate_matrix_element(matrix_element, stored_quantities,
                                   helas_writer, full_model, gauge_check = False)
     if mvalue:
-        return (process.base_string(), mvalue, brsvalue)
+        return (process.base_string(), mvalue[0], brsvalue[0])
     
 
 def output_gauge(comparison_results):
@@ -876,7 +879,7 @@ def check_lorentz_process(process, stored_quantities, helas_writer, full_model):
                                   helas_writer, full_model, p=p)
 
     if first_value:
-        amp_results = [first_value]
+        amp_results = [first_value[0]]
     else:
         return  (process.base_string(), 'pass')
     
@@ -886,7 +889,7 @@ def check_lorentz_process(process, stored_quantities, helas_writer, full_model):
         amp_results.append(evaluate_matrix_element(matrix_element, 
                                                    stored_quantities,
                                   helas_writer, full_model, p=boost_p,
-                                  auth_skipping=False))
+                                  auth_skipping=False)[0])
         
     return (process.base_string(), amp_results)
 

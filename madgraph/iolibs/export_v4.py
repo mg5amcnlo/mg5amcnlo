@@ -1395,6 +1395,12 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
 
     return res_str + '*'
 
+def check_symmetry_of_diagrams(matrix_element):
+    """Check if diagrams are identical by comparing the amplitude^2
+    value for a given phase space point between different diagrams
+    with different permutations of identical final state particles"""
+
+    pass
 
 #===============================================================================
 # Routines to output UFO models in MG4 format

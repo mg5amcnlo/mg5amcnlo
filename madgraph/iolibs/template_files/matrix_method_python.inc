@@ -25,6 +25,7 @@ class Matrix(object):
         # ----------
         # BEGIN CODE
         # ----------
+        self.amp2 = [0] * %(ngraphs)d
         ans = 0.
         for hel in helicities:
             t = self.matrix(p, hel, model)
@@ -66,6 +67,9 @@ class Matrix(object):
 
         jamp = [None] * ncolor
         %(jamp_lines)s
+
+        self.amp2 = [self.amp2[i] + abs(amp[i]*amp[i].conjugate()) for i in \
+                     range(ngraphs)]
 
         matrix = 0.
         for i in range(ncolor):
