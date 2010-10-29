@@ -621,6 +621,102 @@ class AmplitudeList(base_objects.PhysicsObjectList):
 
         return isinstance(obj, Amplitude)
 
+    def find_process_classes(self):
+        """Find all different process classes, classified according to
+        initial state and final state. For initial state, we
+        differentiate fermions, antifermions, gluons, and masses. For
+        final state, only masses."""
+
+        model = self[0].get('process').get('model')
+        proc_classes = []
+        amplitude_classes = {}
+
+        for iamp, amplitude in enumerate(self):
+            is_parts = [model.get_particle(l.get('id')) for l in \
+                        amplitude.get('process').get('legs') if not \
+                        l.get('state')]
+            fs_parts = [model.get_particle(l.get('id')) for l in \
+                        amplitude.get('process').get('legs') if l.get('state')]
+            diagrams = amplitude.get('diagrams')
+            #couplings = set(sum([d.get('orders').keys() for d in diagrams], []))
+            #actual_orders = dict([(key, max([d.get('orders')[key] for d in \
+            #                            diagrams if key in d.get('orders')])) \
+            #                       for key in couplings])
+            proc_class = [ [(p.is_fermion(), p.get('is_part')) for p in \
+                            is_parts], [p.get('mass') for p in \
+                                        is_parts + fs_parts]]
+            try:
+                amplitude_classes[iamp] = proc_classes.index(proc_class)
+            except ValueError:
+                proc_classes.append(proc_class)
+                amplitude_classes[iamp] = proc_classes.index(proc_class)
+
+        return amplitude_classes
+
+    def find_mapping_diagrams(self, proc_classes, class_num):
+        """Find all unique diagrams for all processes in a given
+        process class, and the mapping of their diagrams unto this
+        unique diagram."""
+
+        model = self[0].get('process').get('model')
+        # mapping_diagrams: The configurations for the non-reducable
+        # diagram topologies
+        mapping_diagrams = []
+        # diagram_maps: A dict from amplitude number to list of
+        # diagram maps, pointing to the mapping_diagrams (starting at
+        # 1). Diagrams with multi-particle vertices will have 0.
+        diagram_maps = {}
+        masswidth_to_pdg = {}
+
+        for iamp, amplitude in enumerate(self):
+            if proc_classes[iamp] != class_num:
+                continue
+            diagrams = amplitude.get('diagrams')
+            # Check the minimal number of legs we need to include in order
+            # to make sure we'll have some valid configurations
+            min_legs = min([max([len(v.get('legs')) for v in \
+                                   d.get('vertices') if v.get('id') > 0]) \
+                              for d in diagrams])
+            diagram_maps[iamp] = []
+            for diagram in diagrams:
+                # Only use diagrams with all vertices == min_legs
+                if any([len(v.get('legs')) > min_legs \
+                        for v in diagram.get('vertices') if v.get('id') > 0]):
+                    diagram_maps[iamp].append(0)
+                    continue
+                # This stuff is to fill the masswidth_to_pdg dict -
+                # use the first particle we find with a given mass
+                done = False
+                while not done:
+                    done = True
+                    try:
+                        # Create the equivalent diagram, in the format
+                        # [[((ext_number1, mass_width_id1), ..., )],
+                        #  ...]                 (for each vertex)
+                        equiv_diag = [[(l.get('number'),
+                                        masswidth_to_pdg[\
+                                            (model.get_particle(l.get('id')).\
+                                                 get('mass'),
+                                             model.get_particle(l.get('id')).\
+                                                 get('width'))]) \
+                                       for l in v.get('legs')] \
+                                      for v in diagram.get('vertices')]
+                    except KeyError:
+                        masswidth_to_pdg[(model.get_particle(l.get('id')).\
+                                             get('mass'),
+                                          model.get_particle(l.get('id')).\
+                                             get('width'))] = l.get('id')
+                        done = False
+                try:
+                    diagram_maps[iamp].append(mapping_diagrams.index(\
+                                                                equiv_diag) + 1)
+                except ValueError:
+                    mapping_diagrams.append(equiv_diag)
+                    diagram_maps[iamp].append(mapping_diagrams.index(\
+                                                                equiv_diag) + 1)
+
+        return mapping_diagrams, diagram_maps
+
 #===============================================================================
 # DecayChainAmplitude
 #===============================================================================

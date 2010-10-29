@@ -389,6 +389,10 @@ def write_matrix_element_v4_madevent(writer, matrix_element, fortran_model):
     ngraphs = matrix_element.get_number_of_amplitudes()
     replace_dict['ngraphs'] = ngraphs
 
+    # Extract ndiags
+    ndiags = len(matrix_element.get('diagrams'))
+    replace_dict['ndiags'] = ndiags
+
     # Extract nwavefuncs
     nwavefuncs = matrix_element.get_number_of_wavefunctions()
     replace_dict['nwavefuncs'] = nwavefuncs
@@ -405,6 +409,10 @@ def write_matrix_element_v4_madevent(writer, matrix_element, fortran_model):
     helas_calls = fortran_model.get_matrix_element_calls(\
                 matrix_element)
     replace_dict['helas_calls'] = "\n".join(helas_calls)
+
+    # Extract amp2 lines
+    amp2_lines = get_amp2_lines(matrix_element)
+    replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
 
     # Extract JAMP lines
     jamp_lines = get_JAMP_lines(matrix_element)
@@ -962,6 +970,7 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
     if not calls:
         calls = 0
     return calls
+
 #===============================================================================
 # generate_subprocess_directory_v4_madevent
 #===============================================================================
@@ -970,6 +979,181 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
                                               path=os.getcwd()):
     """Generate the Pxxxxx directory for a subprocess in MG4 madevent,
     including the necessary matrix.f and various helper files"""
+
+    cwd = os.getcwd()
+
+    os.chdir(path)
+
+    pathdir = os.getcwd()
+
+    # Create the directory PN_xx_xxxxx in the specified path
+    subprocdir = "P%s" % matrix_element.get('processes')[0].shell_string()
+    try:
+        os.mkdir(subprocdir)
+    except os.error as error:
+        logger.warning(error.strerror + " " + subprocdir)
+
+    try:
+        os.chdir(subprocdir)
+    except os.error:
+        logger.error('Could not cd to directory %s' % subprocdir)
+        return 0
+
+    logger.info('Creating files in directory %s' % subprocdir)
+
+    # Create the matrix.f file, auto_dsig.f file and all inc files
+    filename = 'matrix.f'
+    calls, ncolor = \
+           write_matrix_element_v4_madevent(writers.FortranWriter(filename),
+                                            matrix_element,
+                                            fortran_model)
+
+    filename = 'auto_dsig.f'
+    write_auto_dsig_file(writers.FortranWriter(filename),
+                         matrix_element,
+                         fortran_model)
+
+    filename = 'coloramps.inc'
+    write_coloramps_file(writers.FortranWriter(filename),
+                         matrix_element,
+                         fortran_model)
+
+    filename = 'configs.inc'
+    nconfigs, s_and_t_channels = write_configs_file(\
+        writers.FortranWriter(filename),
+        matrix_element,
+        fortran_model)
+
+    filename = 'decayBW.inc'
+    write_decayBW_file(writers.FortranWriter(filename),
+                       matrix_element,
+                       fortran_model,
+                        s_and_t_channels)
+
+    filename = 'dname.mg'
+    write_dname_file(writers.FortranWriter(filename),
+                     matrix_element,
+                     fortran_model)
+
+    filename = 'iproc.dat'
+    write_iproc_file(writers.FortranWriter(filename),
+                     matrix_element,
+                     fortran_model)
+
+    filename = 'leshouche.inc'
+    write_leshouche_file(writers.FortranWriter(filename),
+                         matrix_element,
+                         fortran_model)
+
+    filename = 'maxamps.inc'
+    write_maxamps_file(writers.FortranWriter(filename),
+                       matrix_element,
+                       fortran_model,
+                       ncolor)
+
+    filename = 'mg.sym'
+    write_mg_sym_file(writers.FortranWriter(filename),
+                      matrix_element,
+                      fortran_model)
+
+    filename = 'ncombs.inc'
+    write_ncombs_file(writers.FortranWriter(filename),
+                      matrix_element,
+                      fortran_model)
+
+    filename = 'nexternal.inc'
+    write_nexternal_file(writers.FortranWriter(filename),
+                         matrix_element,
+                         fortran_model)
+
+    filename = 'ngraphs.inc'
+    write_ngraphs_file(writers.FortranWriter(filename),
+                       matrix_element,
+                       fortran_model,
+                        nconfigs)
+
+    filename = 'pmass.inc'
+    write_pmass_file(writers.FortranWriter(filename),
+                     matrix_element,
+                     fortran_model)
+
+    filename = 'props.inc'
+    write_props_file(writers.FortranWriter(filename),
+                     matrix_element,
+                     fortran_model,
+                        s_and_t_channels)
+
+    # Generate diagrams
+    filename = "matrix.ps"
+    plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+                                         get('diagrams'),
+                                      filename,
+                                      model=matrix_element.get('processes')[0].\
+                                         get('model'),
+                                      amplitude='')
+    logger.info("Generating Feynman diagrams for " + \
+                 matrix_element.get('processes')[0].nice_string())
+    plot.draw()
+
+    # Generate jpgs -> pass in make_html
+    #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
+
+    linkfiles = ['addmothers.f',
+                 'cluster.f',
+                 'cluster.inc',
+                 'coupl.inc',
+                 'cuts.f',
+                 'cuts.inc',
+                 'driver.f',
+                 'genps.f',
+                 'genps.inc',
+                 'initcluster.f',
+                 'makefile',
+                 'message.inc',
+                 'myamp.f',
+                 'reweight.f',
+                 'run.inc',
+                 'setcuts.f',
+                 'setscales.f',
+                 'sudakov.inc',
+                 'symmetry.f',
+                 'unwgt.f']
+
+    for file in linkfiles:
+        ln('../' + file , '.')
+    
+    #import nexternal/leshouch in Source
+    ln('nexternal.inc', '../../Source', log=False)
+    ln('leshouche.inc', '../../Source', log=False)
+
+    # Return to SubProcesses dir
+    os.chdir(pathdir)
+
+    # Add subprocess to subproc.mg
+    filename = 'subproc.mg'
+    files.append_to_file(filename,
+                        write_subproc,
+                        matrix_element,
+                        fortran_model)
+    # Generate info page
+    os.system(os.path.join('..', 'bin', 'gen_infohtml-pl'))
+
+    # Return to original dir
+    os.chdir(cwd)
+
+    if not calls:
+        calls = 0
+    return calls
+
+#===============================================================================
+# generate_subprocess_directory_v4_madevent
+#===============================================================================
+def generate_multi_subprocess_directory_v4_madevent(subproc_group,
+                                                    fortran_model,
+                                                    path=os.getcwd()):
+    """Generate the Pn directory for a subprocess group in MadEvent,
+    including the necessary matrix_N.f files, configs.inc and various
+    other helper files"""
 
     cwd = os.getcwd()
 
@@ -1254,6 +1438,19 @@ def get_icolamp_lines(matrix_element):
                                        bool_list])))
 
     return ret_list
+
+def get_amp2_lines(matrix_element):
+    """Return the amp2(i) = sum(amp for diag(i))^2 lines"""
+
+    ret_lines = []
+    for idiag, diag in enumerate(matrix_element.get('diagrams')):
+        ret_lines.append("AMP2(%d)=%s" % (idiag+1,
+                         "+".join(["AMP(%d)" % a.get('number') for a in \
+                                   diag.get('amplitudes')])))
+        ret_lines.append("AMP2(%(num)d)=AMP2(%(num)d)*dconjg(AMP2(%(num)d))" \
+                         % {'num': idiag + 1})
+
+    return ret_lines
 
 def get_JAMP_lines(matrix_element):
     """Return the JAMP = sum(fermionfactor * AMP(i)) lines"""

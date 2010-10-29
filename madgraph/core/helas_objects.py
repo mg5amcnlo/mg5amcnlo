@@ -3729,7 +3729,8 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         """Default values for all properties"""
 
         self['matrix_elements'] = HelasMatrixElementList()
-
+        self['amplitude_map'] = {}
+        
     def filter(self, name, value):
         """Filter for valid process property values."""
 
@@ -3737,13 +3738,17 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             if not isinstance(value, HelasMatrixElementList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid HelasMatrixElementList object" % str(value)
+        if name == 'amplitude_map':
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid dict object" % str(value)
 
         return True
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return ['matrix_elements']
+        return ['matrix_elements', 'amplitude_map']
 
     def __init__(self, argument=None):
         """Allow initialization with AmplitudeList"""
@@ -3781,7 +3786,12 @@ class HelasMultiProcess(base_objects.PhysicsObject):
 
         matrix_elements = self.get('matrix_elements')
 
+        # Keep track of how the amplitudes map into matrix elements
+        amplitude_map = dict([(i,-1) for i in range(len(amplitudes))])
+        iamp = -1
+        
         while amplitudes:
+            iamp += 1
             # Pop the amplitude to save memory space
             amplitude = amplitudes.pop(0)
             if isinstance(amplitude, diagram_generation.DecayChainAmplitude):
@@ -3801,8 +3811,10 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     # If an identical matrix element is already in the list,
                     # then simply add this process to the list of
                     # processes for that matrix element
-                    other_processes = matrix_elements[\
-                    matrix_elements.index(matrix_element)].get('processes')
+                    me_index = matrix_elements.index(matrix_element)
+                    other_processes = matrix_elements[me_index].get('processes')
+                    # Keep track of the mapping
+                    amplitude_map[iamp] = me_index
                     logger.info("Combining process with %s" % \
                       other_processes[0].nice_string().replace('Process: ', ''))
                     other_processes.extend(matrix_element.get('processes'))
@@ -3812,6 +3824,9 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     if matrix_element.get('processes') and \
                            matrix_element.get('diagrams'):
                         matrix_elements.append(matrix_element)
+
+                        # Keep track of the mapping
+                        amplitude_map[iamp] = len(matrix_elements) - 1
 
                         # Always create an empty color basis, and the
                         # list of raw colorize objects (before
@@ -3848,7 +3863,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                 matrix_element.set('color_matrix',
                                    list_color_matrices[col_index])
             
-
+        self.set('amplitude_map', amplitude_map)
 
     def get_used_lorentz(self):
         """Return a list of (lorentz_name, conjugate, outgoing) with

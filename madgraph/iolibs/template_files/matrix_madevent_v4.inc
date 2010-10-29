@@ -33,7 +33,7 @@ C
     INTEGER IHEL,IDEN
     INTEGER IPROC,JC(NEXTERNAL), I
     LOGICAL GOODHEL(NCOMB)
-    INTEGER NGRAPHS
+    INTEGER NGRAPHS,NDIAGS
     REAL*8 hwgt, xtot, xtry, xrej, xr, yfrac(0:ncomb)
     INTEGER idum, ngood, igood(ncomb), jhel, j, jj
     LOGICAL warned
@@ -61,7 +61,7 @@ C
     DATA warned, isum_hel/.false.,0/
     DATA multi_channel/.true./
     SAVE yfrac, igood, jhel
-    DATA NGRAPHS /%(ngraphs)d/          
+    DATA NDIAGS /%(ndiags)d/          
     DATA jamp2(0) /%(ncolor)d/          
     DATA GOODHEL/THEL*.FALSE./
 %(helicity_lines)s
@@ -75,7 +75,7 @@ C ----------
     ENDDO
      
     IF (multi_channel) THEN
-        DO IHEL=1,NGRAPHS
+        DO IHEL=1,NDIAGS
             amp2(ihel)=0d0
         ENDDO
         DO IHEL=1,int(jamp2(0))
@@ -153,8 +153,8 @@ C
 C  
 C CONSTANTS
 C  
-    INTEGER    NGRAPHS,    NEIGEN 
-    PARAMETER (NGRAPHS=%(ngraphs)d,NEIGEN=  1) 
+    INTEGER    NGRAPHS,    NDIAGS
+    PARAMETER (NGRAPHS=%(ngraphs)d,NDIAGS=%(ndiags)d) 
     include 'genps.inc'
     include 'nexternal.inc'
     include 'maxamps.inc'
@@ -196,11 +196,9 @@ C ----------
         DO J = 1, NCOLOR
             ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
         ENDDO
-        MATRIX =MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
+        MATRIX=MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
     ENDDO
-    Do I = 1, NGRAPHS
-        amp2(i)=amp2(i)+amp(i)*dconjg(amp(i))
-    Enddo
+%(amp2_lines)s
     Do I = 1, NCOLOR
         Jamp2(i)=Jamp2(i)+Jamp(i)*dconjg(Jamp(i))
     Enddo
