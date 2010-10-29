@@ -141,6 +141,13 @@ class ColorBasis(dict):
             color_num_pairs.append((curr_color, curr_num))
             pdg_codes.append(curr_pdg)
 
+        if vertex != diagram.get('vertices')[-1]:
+            # Put the resulting wavefunction first, to make
+            # wavefunction call more natural
+            last_color_num = color_num_pairs.pop(-1)
+            color_num_pairs.insert(0, last_color_num)
+            last_pdg = pdg_codes.pop(-1)
+            pdg_codes.insert(0, last_pdg)
 
         # Order the legs according to the interaction particles
         interaction_pdgs = [p.get_pdg_code() for p in \

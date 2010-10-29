@@ -1776,7 +1776,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         if comparisons:
             text += 'Process permutation results:\n'
-            text += process_checks.output_comparisons(comparisonqs[0]) + '\n'
+            text += process_checks.output_comparisons(comparisons[0]) + '\n'
             self._comparisons = comparisons
 
         logger.info(text)
