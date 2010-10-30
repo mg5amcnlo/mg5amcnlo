@@ -1,0 +1,69 @@
+MadGraph/MadEvent 4.0
+By Fabio Maltoni, Tim Stelzer and the CP3 development team
+
+http://madgraph.phys.ucl.ac.be/
+http://madgraph.hep.uiuc.edu/
+http://madgraph.roma2.infn.it/
+
+Information on the process to be generated is found in the file
+index.html in this directory, which should be viewed using your web
+browser. If the file index.html is missing, you need to generate a
+process. Please refer to the README file one directory above this
+(MG_ME_V?.?.?/) for instructions on how to generate a process.
+
+
+To generate events:
+-------------------
+
+1) Specify the model parameters. The model parameters include masses
+and widths for the particles and coupling constants. They are given by
+the file param_card.dat in the Cards directory. Although it is
+possible to edit this file manually, this is not recommended since
+there are dependencies among the parameters which need to be taken
+into account. Instead the param_card.dat should be generated using one
+of the Calculators found on the MG/ME homepages (stated above).  Click
+Calculators, choose model and follow the instructions. Place the
+resulting param_card.dat in the Cards directory.
+
+2) Specify the run parameters. The run parameters includes collider
+type and energy, choice of parton distribution functions and scales.
+They are given by the file run_card.dat in the Cards directory. This
+file should be edited manually, following the syntax given in the
+example file.
+**Warning!** For several reasons, avoid running more than 100,000
+events per run. Instead perform several runs to reach the luminosity
+you need. Subsequent runs automatically update the random seed, so the
+results from different runs are statistically independent.
+
+3) Run bin/generate_events to generate the events and calculate the
+cross-section.
+
+4) Follow the generation and look at the results in the file
+HTML/crossx.html, using your web browser.
+
+5) If you want to run Pythia and/or PGS/Delphes on the events,
+download the Pythia/PGS package (and Delphes) and untar one directory
+above this (the MG_ME directory) and run make. Make sure the cards
+pythia_card.dat and pgs_card.dat are present in the Cards/ directory.
+If this is the case, Pythia and PGS will automatically be run by
+generate_events, or, for an existing run, use bin/run_pythia and
+bin/run_pgs.
+
+
+To use LHAPDF with MadGraph/MadEvent
+------------------------------------
+
+Please follow the steps below to run MadEvent with LHAPDF support:
+
+1) Download and compile LHAPDF
+
+2) Link (or copy) the following files from the LHAPDF directory to the lib/ directory:
+- libLHAPDF.a
+- libLHAPDF.so and libLHAPDF.so.0 (if you are running dynamic compilation for a grid pack)
+- PDFsets
+
+3) Set the pdlabel and define the LHA pdf number you want to use in your run_card.dat
+ 'lhapdf'    = pdlabel     ! PDF set
+ 10042       = lhaid       ! PDF number used ONLY for LHAPDF
+
+4) Run generate_events (or run.sh/...) as usual

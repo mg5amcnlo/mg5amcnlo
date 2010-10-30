@@ -1,0 +1,15 @@
+F77   = f77
+FFLAGS= -O -ffixed-line-length-132
+LIBDIR = ../../lib/
+PROG   = check
+LINKLIBS =  -L../../lib/ -ldhelas3 -lmodel 
+LIBS = $(LIBDIR)libdhelas3.a $(LIBDIR)libmodel.a 
+PROCESS=  check_sa.o matrix.o
+ 
+%.o : %.f
+	$(F77) $(FFLAGS) -c $<
+
+$(PROG): $(PROCESS)  makefile $(LIBS)
+	$(F77) $(FFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
+
+driver.f: nexternal.inc pmass.inc ngraphs.inc coupl.inc

@@ -1,0 +1,115 @@
+# ----------------------------------------------------------------------------
+#
+# Makefile for DHELAS 3.0 library
+# Feb. 28, 2001
+#
+# ----------------------------------------------------------------------------
+#
+# Use a TAB to precede shell commands (e.g., f90, ar, etc).
+# Note: this Makefile uses features that *may not*
+# be supported by make utilities other than GNU make.
+#
+# ----------------------------------------------------------------------------
+# coupsm.F and coupsm.inc are not to be included if HELAS is used with 
+# the 2003 version of MadEvent
+# ----------------------------------------------------------------------------
+
+FC            = f77
+
+FFLAGS        = -O -fPIC -I.
+
+LD	      = ld
+
+DEST	      = ../
+
+EXTHDRS	      =
+
+HDRS	      =
+
+INSTALL	      = /etc/install
+
+LIBRARY	      = ../libdhelas3.so
+
+MAKEFILE      = Makefile
+
+OBJS	      =	httsxx.o hstlxx.o hvvshx.o \
+		vvvtlx.o jvvtlx.o uvvvlx.o sstlxx.o usslxx.o \
+		hvvhxx.o hvvvxx.o httxxx.o \
+		vvsshx.o jvsshx.o ttssxx.o utssxx.o \
+		ttsxxx.o jvvsxx.o vvvsxx.o jvshxx.o utsxxx.o \
+		vvshxx.o jvtxxx.o vvtxxx.o uvvxxx.o \
+		momntx.o mom2cx.o boostx.o rotxxx.o \
+		ixxxxx.o oxxxxx.o vxxxxx.o sxxxxx.o \
+		iovxxx.o fvixxx.o fvoxxx.o jioxxx.o j3xxxx.o \
+		iosxxx.o fsixxx.o fsoxxx.o hioxxx.o \
+		vvvxxx.o jvvxxx.o gggxxx.o jggxxx.o \
+		vvsxxx.o jvsxxx.o hvvxxx.o \
+		vssxxx.o jssxxx.o hvsxxx.o \
+		sssxxx.o hssxxx.o \
+		wwwwxx.o jwwwxx.o w3w3xx.o jw3wxx.o \
+		ggggxx.o jgggxx.o \
+		vvssxx.o jvssxx.o hvvsxx.o \
+		ssssxx.o hsssxx.o \
+		eaixxx.o eaoxxx.o jeexxx.o \
+		ioscxx.o fsicxx.o fsocxx.o hiocxx.o \
+		iovcxx.o fvicxx.o fvocxx.o jiocxx.o \
+		iovdmx.o fvidmx.o fvodmx.o jiodmx.o \
+		iosgld.o fsigld.o fsogld.o hiogld.o \
+		iovgld.o fvigld.o fvogld.o jiogld.o \
+		txxxxx.o txxxx2.o \
+		iotxkk.o iovtkk.o vvtxkk.o ftixkk.o ftoxkk.o \
+                iovkxx.o vvvkxx.o jiokxx.o jvvkxx.o
+
+PRINT	      = pr
+
+SHELL	      = /bin/sh
+
+SYSHDRS	      =
+
+MFLAGS        = -e
+
+#.F.o:
+%.o : %.F
+	$(FC) $(FFLAGS) -c $<
+
+%.o : %.f
+	$(FC) $(FFLAGS) -c $<
+
+all:		$(LIBRARY)
+
+helas:
+		-rm -f *.o
+		export FFLAGS='-O -fPIC +cpp' && \
+		export LIBRARY=libdhelas3.so && \
+		$(MAKE) $(MFLAGS)
+
+helas_check:
+		-rm -f *.o
+		export FFLAGS='-O -fPIC +cpp -DHELAS_CHECK' && \
+		export LIBRARY=libdhelas3_check.so && \
+		$(MAKE) $(MFLAGS)
+
+install-helas:
+		export LIBRARY=libdhelas3.so && \
+		$(MAKE) $(MFLAGS) install	
+
+install-helas_check:
+		export LIBRARY=libdhelas3.so && \
+		$(MAKE) $(MFLAGS) install	
+
+$(LIBRARY):	$(OBJS)
+		@echo  "Loading $(LIBRARY) ... "
+		@g77 -shared -o $(LIBRARY) $(OBJS)
+		@echo "done"
+
+clean:;		@rm -f $(OBJS) core
+
+clobber:;	@rm -f $(OBJS) $(LIBRARY) core tags
+
+install:	$(LIBRARY)
+	        @echo Installing $(LIBRARY) in $(DEST)
+	        @if [ $(DEST) != . ]; then \
+	        (rm -f $(DEST)/$(LIBRARY); $(INSTALL) -f $(DEST) $(LIBRARY)); fi
+
+$(DEST)/$(LIBRARY): $(SRCS) $(HDRS) $(EXTHDRS)
+	        @$(MAKE) -f $(MAKEFILE) ROOT=$(ROOT) DEST=$(DEST) install
