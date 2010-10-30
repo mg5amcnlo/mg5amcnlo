@@ -642,9 +642,10 @@ class AmplitudeList(base_objects.PhysicsObjectList):
             #actual_orders = dict([(key, max([d.get('orders')[key] for d in \
             #                            diagrams if key in d.get('orders')])) \
             #                       for key in couplings])
-            proc_class = [ [(p.is_fermion(), p.get('is_part')) for p in \
-                            is_parts], [p.get('mass') for p in \
-                                        is_parts + fs_parts]]
+            proc_class = [ [(p.is_fermion(), p.get('is_part')) \
+                            for p in is_parts],
+                           [(p.get('mass'), p.get('color') != 1) for p in \
+                            is_parts + fs_parts]]
             try:
                 amplitude_classes[iamp] = proc_classes.index(proc_class)
             except ValueError:

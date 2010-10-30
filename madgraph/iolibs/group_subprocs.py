@@ -148,7 +148,8 @@ class SubProcessGroup(base_objects.PhysicsObject):
         name = ""
         for beam in beam:
             part = process.get('model').get_particle(beam)
-            if part.get('mass').lower() == 'zero' and part.is_fermion():
+            if part.get('mass').lower() == 'zero' and part.is_fermion() and \
+                   part.get('color') != 1:
                 name += "q"
                 if not part.get('is_part'):
                     name +="bar"
@@ -158,7 +159,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
         name += "_"
         for fs_part in fs:
             part = process.get('model').get_particle(fs_part)
-            if part.get('mass').lower() == 'zero':
+            if part.get('mass').lower() == 'zero' and part.get('color') != 1:
                 name += "j"
             else:
                 name += part.get_name().replace('~', 'bar').\
