@@ -1,4 +1,4 @@
-      SUBROUTINE SMATRIX(P,ANS)
+SUBROUTINE SMATRIX%(proc_id)s(P,ANS)
 C  
 %(info_lines)s
 C 
@@ -19,6 +19,8 @@ C
     Include 'maxamps.inc'
     INTEGER                 NCOMB         
     PARAMETER (             NCOMB=%(ncomb)d)
+    INTEGER    NGRAPHS,    NDIAGS
+    PARAMETER (NGRAPHS=%(ngraphs)d,NDIAGS=%(ndiags)d) 
     INTEGER    THEL
     PARAMETER (THEL=NCOMB)
 C  
@@ -33,7 +35,6 @@ C
     INTEGER IHEL,IDEN
     INTEGER IPROC,JC(NEXTERNAL), I
     LOGICAL GOODHEL(NCOMB)
-    INTEGER NGRAPHS,NDIAGS
     REAL*8 hwgt, xtot, xtry, xrej, xr, yfrac(0:ncomb)
     INTEGER idum, ngood, igood(ncomb), jhel, j, jj
     LOGICAL warned
@@ -61,7 +62,6 @@ C
     DATA warned, isum_hel/.false.,0/
     DATA multi_channel/.true./
     SAVE yfrac, igood, jhel
-    DATA NDIAGS /%(ndiags)d/          
     DATA jamp2(0) /%(ncolor)d/          
     DATA GOODHEL/THEL*.FALSE./
 %(helicity_lines)s
@@ -140,7 +140,7 @@ C ----------
     END
  
  
-REAL*8 FUNCTION MATRIX(P,NHEL,IC)
+REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC)
 C  
 %(info_lines)s
 C
@@ -158,7 +158,7 @@ C
     include 'genps.inc'
     include 'nexternal.inc'
     include 'maxamps.inc'
-    INTEGER    NWAVEFUNCS     , NCOLOR
+    INTEGER    NWAVEFUNCS,     NCOLOR
     PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
     REAL*8     ZERO
     PARAMETER (ZERO=0D0)

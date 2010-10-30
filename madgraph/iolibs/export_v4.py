@@ -22,10 +22,12 @@ import re
 import shutil
 import subprocess
 
+import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
+import madgraph.iolibs.group_subprocs as group_subprocs
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.template_files as template_files
@@ -344,7 +346,8 @@ def write_matrix_element_v4_standalone(writer, matrix_element, fortran_model):
 #===============================================================================
 # write_matrix_element_v4_madevent
 #===============================================================================
-def write_matrix_element_v4_madevent(writer, matrix_element, fortran_model):
+def write_matrix_element_v4_madevent(writer, matrix_element, fortran_model,
+                                     proc_id = ""):
     """Export a matrix element to a matrix.f file in MG4 madevent format"""
 
     if not matrix_element.get('processes') or \
@@ -367,6 +370,9 @@ def write_matrix_element_v4_madevent(writer, matrix_element, fortran_model):
     # Extract process info lines
     process_lines = get_process_info_lines(matrix_element)
     replace_dict['process_lines'] = process_lines
+
+    # Set proc_id
+    replace_dict['proc_id'] = proc_id
 
     # Extract ncomb
     ncomb = matrix_element.get_helicity_combinations()
@@ -430,7 +436,7 @@ def write_matrix_element_v4_madevent(writer, matrix_element, fortran_model):
 #===============================================================================
 # write_auto_dsig_file
 #===============================================================================
-def write_auto_dsig_file(writer, matrix_element, fortran_model):
+def write_auto_dsig_file(writer, matrix_element, fortran_model, proc_id):
     """Write the auto_dsig.f file for the differential cross section
     calculation, includes pdf call information"""
 
@@ -454,6 +460,10 @@ def write_auto_dsig_file(writer, matrix_element, fortran_model):
     process_lines = get_process_info_lines(matrix_element)
     replace_dict['process_lines'] = process_lines
 
+    # Set proc_id
+    replace_dict['proc_id'] = proc_id
+
+    # Extract pdf lines
     pdf_lines = get_pdf_lines(matrix_element, ninitial)
     replace_dict['pdf_lines'] = pdf_lines
 
@@ -663,12 +673,12 @@ def write_leshouche_file(writer, matrix_element, fortran_model):
 #===============================================================================
 # write_maxamps_file
 #===============================================================================
-def write_maxamps_file(writer, matrix_element, fortran_model, ncolor):
+def write_maxamps_file(writer, fortran_model, maxamps, maxflows):
     """Write the maxamps.inc file for MG4."""
 
     file = "       integer    maxamps, maxflow\n"
     file = file + "parameter (maxamps=%d, maxflow=%d)" % \
-           (len(matrix_element.get_all_amplitudes()), ncolor)
+           (maxamps, maxflows)
 
     # Write the file
     writer.writelines(file)
@@ -1047,8 +1057,8 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 
     filename = 'maxamps.inc'
     write_maxamps_file(writers.FortranWriter(filename),
-                       matrix_element,
                        fortran_model,
+                       len(matrix_element.get_all_amplitudes()),
                        ncolor)
 
     filename = 'mg.sym'
@@ -1148,12 +1158,16 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 #===============================================================================
 # generate_subprocess_directory_v4_madevent
 #===============================================================================
-def generate_multi_subprocess_directory_v4_madevent(subproc_group,
+def generate_subprocess_group_directory_v4_madevent(subproc_group,
                                                     fortran_model,
                                                     path=os.getcwd()):
     """Generate the Pn directory for a subprocess group in MadEvent,
     including the necessary matrix_N.f files, configs.inc and various
     other helper files"""
+
+    if not isinstance(subproc_group, group_subprocs.SubProcessGroup):
+        raise base_objects.PhysicsObject.PhysicsObjectError,\
+              "subproc_group object not SubProcessGroup"
 
     cwd = os.getcwd()
 
@@ -1161,8 +1175,9 @@ def generate_multi_subprocess_directory_v4_madevent(subproc_group,
 
     pathdir = os.getcwd()
 
-    # Create the directory PN_xx_xxxxx in the specified path
-    subprocdir = "P%s" % matrix_element.get('processes')[0].shell_string()
+    # Create the directory PN in the specified path
+    subprocdir = "P%d_%s" % (subproc_group.get('number'),
+                             subproc_group.get('name'))
     try:
         os.mkdir(subprocdir)
     except os.error as error:
@@ -1176,18 +1191,47 @@ def generate_multi_subprocess_directory_v4_madevent(subproc_group,
 
     logger.info('Creating files in directory %s' % subprocdir)
 
-    # Create the matrix.f file, auto_dsig.f file and all inc files
-    filename = 'matrix.f'
-    calls, ncolor = \
-           write_matrix_element_v4_madevent(writers.FortranWriter(filename),
-                                            matrix_element,
-                                            fortran_model)
+    # Create the matrix.f files, auto_dsig.f files and all inc files
+    # for all subprocesses in the group
 
-    filename = 'auto_dsig.f'
-    write_auto_dsig_file(writers.FortranWriter(filename),
-                         matrix_element,
-                         fortran_model)
+    maxamps = 0
+    maxflows = 0
+    tot_calls = 0
 
+    for ime, matrix_element in \
+            enumerate(subproc_group.get('multi_matrix').get('matrix_elements')):
+        filename = 'matrix%d.f' % (ime+1)
+        calls, ncolor = \
+               write_matrix_element_v4_madevent(writers.FortranWriter(filename),
+                                                matrix_element,
+                                                fortran_model,
+                                                str(ime+1))
+
+        filename = 'auto_dsig%d.f' % (ime+1)
+        write_auto_dsig_file(writers.FortranWriter(filename),
+                             matrix_element,
+                             fortran_model,
+                             str(ime+1))
+
+        # Keep track of needed quantities
+        tot_calls += int(calls)
+        maxflows = max(maxflows, ncolor)
+        maxamps = max(maxamps, len(matrix_element.get_all_amplitudes()))
+
+        # Draw diagrams
+        filename = "matrix%d.ps" % (ime+1)
+        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+                                                                get('diagrams'),
+                                          filename,
+                                          model = \
+                                            matrix_element.get('processes')[0].\
+                                                                   get('model'),
+                                          amplitude='')
+        logger.info("Generating Feynman diagrams for " + \
+                     matrix_element.get('processes')[0].nice_string())
+        plot.draw()
+
+        
     filename = 'coloramps.inc'
     write_coloramps_file(writers.FortranWriter(filename),
                          matrix_element,
@@ -1222,9 +1266,9 @@ def generate_multi_subprocess_directory_v4_madevent(subproc_group,
 
     filename = 'maxamps.inc'
     write_maxamps_file(writers.FortranWriter(filename),
-                       matrix_element,
                        fortran_model,
-                       ncolor)
+                       maxamps,
+                       maxflows)
 
     filename = 'mg.sym'
     write_mg_sym_file(writers.FortranWriter(filename),
@@ -1256,19 +1300,7 @@ def generate_multi_subprocess_directory_v4_madevent(subproc_group,
     write_props_file(writers.FortranWriter(filename),
                      matrix_element,
                      fortran_model,
-                        s_and_t_channels)
-
-    # Generate diagrams
-    filename = "matrix.ps"
-    plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
-                                         get('diagrams'),
-                                      filename,
-                                      model=matrix_element.get('processes')[0].\
-                                         get('model'),
-                                      amplitude='')
-    logger.info("Generating Feynman diagrams for " + \
-                 matrix_element.get('processes')[0].nice_string())
-    plot.draw()
+                     s_and_t_channels)
 
     # Generate jpgs -> pass in make_html
     #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
@@ -1316,9 +1348,9 @@ def generate_multi_subprocess_directory_v4_madevent(subproc_group,
     # Return to original dir
     os.chdir(cwd)
 
-    if not calls:
-        calls = 0
-    return calls
+    if not tot_calls:
+        tot_calls = 0
+    return tot_calls
 
 #===============================================================================
 # Helper functions

@@ -57,7 +57,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
         self['amplitudes'] = diagram_generation.AmplitudeList()
         self['mapping_diagrams'] = []
         self['diagram_maps'] = {}
-        self['matrix_elements'] = helas_objects.HelasMultiProcess()
+        self['multi_matrix'] = helas_objects.HelasMultiProcess()
 
     def filter(self, name, value):
         """Filter for valid property values."""
@@ -82,7 +82,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid dict" % str(value)
-        if name == 'matrix_elements':
+        if name == 'multi_matrix':
             if not isinstance(value, helas_objects.HelasMultiProcess):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid HelasMultiProcess" % str(value)
@@ -92,14 +92,14 @@ class SubProcessGroup(base_objects.PhysicsObject):
         """Return diagram property names as a nicely sorted list."""
 
         return ['number', 'name', 'amplitudes', 'mapping_diagrams',
-                'diagram_maps', 'matrix_elements']
+                'diagram_maps', 'multi_matrix']
 
     # Enhanced get function
     def get(self, name):
         """Get the value of the property name."""
 
-        if name == 'matrix_elements' and not self[name].get('matrix_elements'):
-            self.generate_matrix_elements()
+        if name == 'multi_matrix' and not self[name].get('matrix_elements'):
+            self.generate_multi_matrix()
         
         if name in ['mapping_diagrams', 'diagram_maps'] and not self[name]:
             self.set_mapping_diagrams()
@@ -123,7 +123,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
         self.set('mapping_diagrams', mapping_diagrams)
         self.set('diagram_maps', diagram_maps)
 
-    def generate_matrix_elements(self):
+    def generate_multi_matrix(self):
         """Create a HelasMultiProcess corresponding to the amplitudes
         in self"""
 
@@ -133,16 +133,44 @@ class SubProcessGroup(base_objects.PhysicsObject):
 
         self.set_mapping_diagrams()
 
-        self['matrix_elements'] = helas_objects.HelasMultiProcess(\
+        self['multi_matrix'] = helas_objects.HelasMultiProcess(\
             self.get('amplitudes'))
 
         self.rearrange_diagram_maps()
+
+    def generate_name(self):
+        """Generate a convenient name for the group, based on IS and
+        masses"""
+
+        process = self.get('amplitudes')[0].get('process')
+        beam = [l.get('id') for l in process.get('legs') if not l.get('state')]
+        fs = [l.get('id') for l in process.get('legs') if l.get('state')]
+        name = ""
+        for beam in beam:
+            part = process.get('model').get_particle(beam)
+            if part.get('mass').lower() == 'zero' and part.is_fermion():
+                name += "q"
+                if not part.get('is_part'):
+                    name +="bar"
+            else:
+                name += part.get_name().replace('~', 'bar').\
+                            replace('+', 'p').replace('-', 'm')
+        name += "_"
+        for fs_part in fs:
+            part = process.get('model').get_particle(fs_part)
+            if part.get('mass').lower() == 'zero':
+                name += "j"
+            else:
+                name += part.get_name().replace('~', 'bar').\
+                            replace('+', 'p').replace('-', 'm')
+        
+        return name
 
     def rearrange_diagram_maps(self):
         """Rearrange the diagram_maps according to the matrix elements in
         the HelasMultiProcess"""
 
-        amplitude_map = self.get('matrix_elements').get('amplitude_map')
+        amplitude_map = self.get('multi_matrix').get('amplitude_map')
         new_diagram_maps = {}
         for key in amplitude_map:
             new_diagram_maps[amplitude_map[key]] = self.get('diagram_maps')[key]
@@ -155,7 +183,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
         into subprocess groups"""
 
         if not isinstance(amplitudes, diagram_generation.AmplitudeList):
-            raise SubProcessGroupList.PhysicsObjectError, \
+            raise SubProcessGroup.PhysicsObjectError, \
                   "Argument to group_amplitudes must be AmplitudeList"
 
         process_classes = amplitudes.find_process_classes()
@@ -169,6 +197,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
             group.set('amplitudes',
                       diagram_generation.AmplitudeList([amplitudes[i] for i in \
                                                         amp_nums]))
+            group.set('name', group.generate_name())
             ret_list.append(group)
 
         return ret_list

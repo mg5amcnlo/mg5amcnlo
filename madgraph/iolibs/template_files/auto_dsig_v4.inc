@@ -1,4 +1,4 @@
-      DOUBLE PRECISION FUNCTION DSIG(PP,WGT)
+DOUBLE PRECISION FUNCTION DSIG%(proc_id)s(PP,WGT)
 C ****************************************************
 C
 %(info_lines)s
@@ -63,7 +63,7 @@ C ----------
       DSIG=0D0
       IF (PASSCUTS(PP)) THEN
 %(pdf_lines)s
-         CALL SMATRIX(PP,DSIGUU)                                              
+         CALL SMATRIX%(proc_id)s(PP,DSIGUU)                                              
          dsiguu=dsiguu*rewgt(PP)
          If (dsiguu.lt.1d199) then
          dsig=%(dsig_line)s

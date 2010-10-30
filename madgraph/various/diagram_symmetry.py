@@ -59,8 +59,9 @@ logger = logging.getLogger('madgraph.various.diagram_symmetry')
 #===============================================================================
 
 def find_symmetry(matrix_element):
-    """Find symmetries between diagrams by comparing hte squared
-    amplitudes for all permutations of identical particles"""
+    """Find symmetries between amplitudes by comparing the squared
+    amplitudes for all permutations of identical particles. Note that
+    also multi-particle vertices are included here."""
 
     process = matrix_element.get('processes')[0]
     base_model = process.get('model')

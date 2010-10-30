@@ -48,6 +48,7 @@ import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.files as files
+import madgraph.iolibs.group_subprocs as group_subprocs
 import madgraph.iolibs.import_v4 as import_v4
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
@@ -862,7 +863,7 @@ class CheckValidForCmd(object):
             path = args.pop(0)
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
-                     ['madevent', 'standalone']:
+                     ['madevent', 'madevent_group', 'standalone']:
                 self.get_default_path()
             else:
                 self._export_dir = path
@@ -871,9 +872,9 @@ class CheckValidForCmd(object):
             # No valid path
             self.get_default_path()
 
-        if self._export_format in ['madevent', 'standalone'] and \
-           not self._mgme_dir and \
-           os.path.realpath(self._export_dir) != os.path.realpath('.'):
+        if self._export_format in ['madevent', 'madevent_group', 'standalone'] \
+               and not self._mgme_dir and \
+               os.path.realpath(self._export_dir) != os.path.realpath('.'):
             raise MadGraph5Error, \
                   "To generate a new MG4 directory, you need a valid MG_ME path"
 
@@ -886,7 +887,7 @@ class CheckValidForCmd(object):
     def get_default_path(self):
         """Set self._export_dir to the default (\'auto\') path"""
         
-        if self._export_format == 'madevent':
+        if self._export_format.startswith('madevent'):
             name_dir = lambda i: 'PROC_%s_%s' % \
                                     (self._curr_model['name'], i)
             auto_path = lambda i: os.path.join(self.writing_dir,
@@ -1368,7 +1369,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _tutorial_opts = ['start', 'stop']
     _check_opts = ['full', 'quick', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
-    _v4_export_formats = ['madevent', 'standalone','matrix'] 
+    _v4_export_formats = ['madevent', 'madevent_group', 'standalone','matrix'] 
     _export_formats = _v4_export_formats + ['pythia8',
                        'pythia8_model']
 
@@ -2414,7 +2415,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 raise MadGraph5Error('Stopped by user request')
 
         # Make a Template Copy
-        if self._export_format == 'madevent':
+        if self._export_format.startswith('madevent'):
             export_v4.copy_v4template(self._mgme_dir, self._export_dir,
                                       not noclean)
         elif self._export_format == 'standalone':
@@ -2476,13 +2477,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                     self._export_dir)
             return        
 
-        ndiags, cpu_time = generate_matrix_elements(self)
+        if self._export_format != 'madevent_group':
+            ndiags, cpu_time = generate_matrix_elements(self)
+
         calls = 0
 
         nojpeg = '-nojpeg' in args
 
         path = self._export_dir
-        if self._export_format in ['madevent', 'standalone']:
+        if self._export_format in ['madevent', 'madevent_group', 'standalone']:
             path = os.path.join(path, 'SubProcesses')
 
         if self._export_format == 'madevent':
@@ -2490,6 +2493,30 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 calls = calls + \
                         export_v4.generate_subprocess_directory_v4_madevent(\
                             me, self._curr_fortran_model, path)
+            
+            card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
+                                     'procdef_mg5.dat')
+            if self._generate_info:
+                export_v4.write_procdef_mg5(card_path,
+                                self._curr_model['name'],
+                                self._generate_info)
+                try:
+                    cmd.Cmd.onecmd(self, 'history .')
+                except:
+                    pass
+                
+        if self._export_format == 'madevent_group':
+            nojpeg = True
+            ndiags = 0
+            cpu_time1 = time.time()
+            for me_group in group_subprocs.SubProcessGroup.group_amplitudes(\
+                                  self._curr_amps):
+                calls = calls + \
+                     export_v4.generate_subprocess_group_directory_v4_madevent(\
+                            me_group, self._curr_fortran_model, path)
+                ndiags += sum([len(me.get('diagrams')) for me in \
+                           me_group.get('multi_matrix').get('matrix_elements')])
+            cpu_time = time.time() - cpu_time1
             
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
                                      'procdef_mg5.dat')
@@ -2545,7 +2572,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Remember that we have done export
         self._done_export = (self._export_dir, self._export_format)
 
-        if self._export_format in ['madevent', 'standalone']:
+        if self._export_format in ['madevent', 'madevent_group', 'standalone']:
             # Automatically run finalize
             options = []
             if nojpeg:
@@ -2573,7 +2600,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             export_v4.export_model_files(self._model_v4_path, self._export_dir)
             export_v4.export_helas(os.path.join(self._mgme_dir,'HELAS'),
                                    self._export_dir)
-        elif self._export_format in ['madevent', 'standalone']:
+        elif self._export_format in ['madevent', 'madevent_group', 'standalone']:
             logger.info('Export UFO model to MG4 format')
             # wanted_lorentz are the lorentz structures which are
             # actually used in the wavefunctions and amplitudes in
@@ -2583,7 +2610,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                            os.path.join(self._export_dir),
                                            wanted_lorentz)
 
-        if self._export_format == 'madevent':
+        if self._export_format.startswith('madevent'):
             os.system('touch %s/done' % os.path.join(self._export_dir,
                                                      'SubProcesses'))        
             export_v4.finalize_madevent_v4_directory(self._export_dir, makejpg,
@@ -2596,7 +2623,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                      self.history)
 
         logger.info('Output to directory ' + self._export_dir + ' done.')
-        if self._export_format == 'madevent':
+        if self._export_format.startswith('madevent'):
             logger.info('Please see ' + self._export_dir + '/README')
             logger.info('for information about how to generate events from this process.')
 
