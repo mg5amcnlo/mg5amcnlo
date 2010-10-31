@@ -146,8 +146,7 @@ class MG4Runner(MERunner):
     def check_path(self, mg4_path):
         """Check the path for necessary directories"""
 
-        if not os.path.isdir(os.path.join(mg4_path, "MadGraphII")) or \
-               not os.path.isdir(os.path.join(mg4_path, "Template")) or \
+        if not os.path.isdir(os.path.join(mg4_path, "Template")) or \
                not os.path.isdir(os.path.join(mg4_path, "HELAS")):
             raise IOError, "Path %s is not a valid MG4 path" % str(mg4_path)
 
@@ -366,7 +365,7 @@ class MG5Runner(MG4Runner):
             try:
                 cmd.run_cmd(line)
             except MadGraph5Error:
-                pass
+                raise Exception
         # Get the ME value
         for i, proc in enumerate(proc_list):
             self.res_list.append(self.get_me_value(proc, i))
