@@ -1910,9 +1910,8 @@ def make_unique(doubletlist):
     Note that this is a slow implementation, so don't use if speed 
     is needed"""
 
-    if not isinstance(doubletlist, list):
-        raise PhysicsObject.PhysicsObjectError,\
-              "Argument to make_unique must be list"
+    assert isinstance(doubletlist, list), \
+           "Argument to make_unique must be list"
     
 
     uniquelist = []

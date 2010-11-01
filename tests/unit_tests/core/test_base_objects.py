@@ -619,9 +619,9 @@ class ModelTest(unittest.TestCase):
                           'wrong_subclass', None)
 
         # For each subclass
-        self.assertRaises(base_objects.PhysicsObject.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           mymodel.set, 'particles', not_a_string)
-        self.assertRaises(base_objects.PhysicsObject.PhysicsObjectError,
+        self.assertRaises(AssertionError,
                           mymodel.set, 'interactions', not_a_string)
 
     def test_dictionaries(self):
