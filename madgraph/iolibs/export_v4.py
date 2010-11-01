@@ -436,7 +436,7 @@ def write_matrix_element_v4_madevent(writer, matrix_element, fortran_model,
 #===============================================================================
 # write_auto_dsig_file
 #===============================================================================
-def write_auto_dsig_file(writer, matrix_element, fortran_model, proc_id):
+def write_auto_dsig_file(writer, matrix_element, fortran_model, proc_id = ""):
     """Write the auto_dsig.f file for the differential cross section
     calculation, includes pdf call information"""
 
@@ -563,6 +563,73 @@ def write_configs_file(writer, matrix_element, fortran_model):
     return iconfig, s_and_t_channels
 
 #===============================================================================
+# write_configs_file
+#===============================================================================
+def write_group_configs_file(writer, subproc_group, fortran_model):
+    """Write the configs.inc file with topology information for a
+    subprocess group"""
+
+    # Extract number of external particles
+    (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+
+    lines = []
+
+    iconfig = 0
+
+    s_and_t_channels = []
+
+    for idiag, diag in enumerate(matrix_element.get('base_amplitude').\
+                                                get('diagrams')):
+        if any([len(vert.get('legs')) > 3 for vert in diag.get('vertices')]):
+            # Only 3-vertices allowed in configs.inc
+            continue
+        iconfig = iconfig + 1
+        helas_diag = matrix_element.get('diagrams')[idiag]
+        amp_number = helas_diag.get('amplitudes')[0].get('number')
+        lines.append("# Diagram %d, Amplitude %d" % \
+                     (helas_diag.get('number'), amp_number))
+        # Correspondance between the config and the amplitudes
+        lines.append("data mapconfig(%d)/%d/" % (iconfig, amp_number))
+
+        # Need to reorganize the topology so that we start with all
+        # final state external particles and work our way inwards
+
+        schannels, tchannels = helas_diag.get('amplitudes')[0].\
+                                     get_s_and_t_channels(ninitial)
+
+        s_and_t_channels.append([schannels, tchannels])
+
+        # Write out propagators for s-channel and t-channel vertices
+        allchannels = schannels
+        if len(tchannels) > 1:
+            # Write out tchannels only if there are any non-trivial ones
+            allchannels = schannels + tchannels
+
+        for vert in allchannels:
+            daughters = [leg.get('number') for leg in vert.get('legs')[:-1]]
+            last_leg = vert.get('legs')[-1]
+            lines.append("data (iforest(i,%d,%d),i=1,%d)/%s/" % \
+                         (last_leg.get('number'), iconfig, len(daughters),
+                          ",".join([str(d) for d in daughters])))
+            if vert in schannels:
+                lines.append("data sprop(%d,%d)/%d/" % \
+                             (last_leg.get('number'), iconfig,
+                              last_leg.get('id')))
+            elif vert in tchannels[:-1]:
+                lines.append("data tprid(%d,%d)/%d/" % \
+                             (last_leg.get('number'), iconfig,
+                              last_leg.get('id')))
+
+    # Write out number of configs
+    lines.append("# Number of configs")
+    lines.append("data mapconfig(0)/%d/" % iconfig)
+
+    # Write the file
+    writer.writelines(lines)
+
+    return iconfig, s_and_t_channels
+
+#===============================================================================
 # write_decayBW_file
 #===============================================================================
 def write_decayBW_file(writer, matrix_element, fortran_model,
@@ -591,11 +658,10 @@ def write_decayBW_file(writer, matrix_element, fortran_model,
 #===============================================================================
 # write_dname_file
 #===============================================================================
-def write_dname_file(writer, matrix_element, fortran_model):
+def write_dname_file(writer, dir_name, fortran_model):
     """Write the dname.mg file for MG4"""
 
-    line = "DIRNAME=P%s" % \
-           matrix_element.get('processes')[0].shell_string()
+    line = "DIRNAME=P%s" % dir_name
 
     # Write the file
     writer.write(line + "\n")
@@ -730,11 +796,8 @@ def write_mg_sym_file(writer, matrix_element, fortran_model):
 #===============================================================================
 # write_ncombs_file
 #===============================================================================
-def write_ncombs_file(writer, matrix_element, fortran_model):
+def write_ncombs_file(writer, nexternal, fortran_model):
     """Write the ncombs.inc file for MadEvent."""
-
-    # Extract number of external particles
-    (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
     # ncomb (used for clustering) is 2^(nexternal + 1)
     file = "       integer    n_max_cl\n"
@@ -748,13 +811,11 @@ def write_ncombs_file(writer, matrix_element, fortran_model):
 #===============================================================================
 # write_nexternal_file
 #===============================================================================
-def write_nexternal_file(writer, matrix_element, fortran_model):
+def write_nexternal_file(writer, nexternal, ninitial, fortran_model):
     """Write the nexternal.inc file for MG4"""
 
     replace_dict = {}
 
-    # Extract number of external particles
-    (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
     replace_dict['nexternal'] = nexternal
     replace_dict['ninitial'] = ninitial
 
@@ -772,7 +833,7 @@ def write_nexternal_file(writer, matrix_element, fortran_model):
 #===============================================================================
 # write_ngraphs_file
 #===============================================================================
-def write_ngraphs_file(writer, matrix_element, fortran_model, nconfigs):
+def write_ngraphs_file(writer, fortran_model, nconfigs):
     """Write the ngraphs.inc file for MG4. Needs input from
     write_configs_file."""
 
@@ -850,14 +911,11 @@ def write_props_file(writer, matrix_element, fortran_model, s_and_t_channels):
 #===============================================================================
 # write_subproc
 #===============================================================================
-def write_subproc(writer, matrix_element, fortran_model):
+def write_subproc(writer, subprocdir, fortran_model):
     """Append this subprocess to the subproc.mg file for MG4"""
 
-    line = "P%s" % \
-           matrix_element.get('processes')[0].shell_string()
-
     # Write line to file
-    writer.write(line + "\n")
+    writer.write(subprocdir + "\n")
 
     return True
 
@@ -945,6 +1003,9 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
 
     logger.info('Creating files in directory %s' % dirpath)
 
+    # Extract number of external particles
+    (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+
     # Create the matrix.f file and the nexternal.inc file
     filename = 'matrix.f'
     calls = write_matrix_element_v4_standalone(\
@@ -954,7 +1015,7 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
 
     filename = 'nexternal.inc'
     write_nexternal_file(writers.FortranWriter(filename),
-                         matrix_element,
+                         nexternal, ninitial,
                          fortran_model)
 
     filename = 'pmass.inc'
@@ -964,9 +1025,8 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
 
     filename = 'ngraphs.inc'
     write_ngraphs_file(writers.FortranWriter(filename),
-                       matrix_element,
                        fortran_model,
-                        len(matrix_element.get_all_amplitudes()))
+                       len(matrix_element.get_all_amplitudes()))
 
     linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
 
@@ -1011,6 +1071,9 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 
     logger.info('Creating files in directory %s' % subprocdir)
 
+    # Extract number of external particles
+    (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+
     # Create the matrix.f file, auto_dsig.f file and all inc files
     filename = 'matrix.f'
     calls, ncolor = \
@@ -1042,7 +1105,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 
     filename = 'dname.mg'
     write_dname_file(writers.FortranWriter(filename),
-                     matrix_element,
+                     matrix_element.get('processes')[0].shell_string(),
                      fortran_model)
 
     filename = 'iproc.dat'
@@ -1068,19 +1131,18 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 
     filename = 'ncombs.inc'
     write_ncombs_file(writers.FortranWriter(filename),
-                      matrix_element,
+                      nexternal,
                       fortran_model)
 
     filename = 'nexternal.inc'
     write_nexternal_file(writers.FortranWriter(filename),
-                         matrix_element,
+                         nexternal, ninitial,
                          fortran_model)
 
     filename = 'ngraphs.inc'
     write_ngraphs_file(writers.FortranWriter(filename),
-                       matrix_element,
                        fortran_model,
-                        nconfigs)
+                       nconfigs)
 
     filename = 'pmass.inc'
     write_pmass_file(writers.FortranWriter(filename),
@@ -1091,7 +1153,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     write_props_file(writers.FortranWriter(filename),
                      matrix_element,
                      fortran_model,
-                        s_and_t_channels)
+                     s_and_t_channels)
 
     # Generate diagrams
     filename = "matrix.ps"
@@ -1142,9 +1204,9 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     # Add subprocess to subproc.mg
     filename = 'subproc.mg'
     files.append_to_file(filename,
-                        write_subproc,
-                        matrix_element,
-                        fortran_model)
+                         write_subproc,
+                         subprocdir,
+                         fortran_model)
     # Generate info page
     os.system(os.path.join('..', 'bin', 'gen_infohtml-pl'))
 
@@ -1231,27 +1293,29 @@ def generate_subprocess_group_directory_v4_madevent(subproc_group,
                      matrix_element.get('processes')[0].nice_string())
         plot.draw()
 
-        
-    filename = 'coloramps.inc'
-    write_coloramps_file(writers.FortranWriter(filename),
-                         matrix_element,
-                         fortran_model)
+    # Extract number of external particles
+    (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+
+    #filename = 'coloramps.inc'
+    #write_coloramps_file(writers.FortranWriter(filename),
+    #                     matrix_element,
+    #                     fortran_model)
 
     filename = 'configs.inc'
-    nconfigs, s_and_t_channels = write_configs_file(\
+    nconfigs, s_and_t_channels = write_group_configs_file(\
         writers.FortranWriter(filename),
-        matrix_element,
+        subproc_group,
         fortran_model)
 
     filename = 'decayBW.inc'
-    write_decayBW_file(writers.FortranWriter(filename),
-                       matrix_element,
-                       fortran_model,
-                        s_and_t_channels)
+    write_group_decayBW_file(writers.FortranWriter(filename),
+                             subproc_group,
+                             fortran_model,
+                             s_and_t_channels)
 
     filename = 'dname.mg'
     write_dname_file(writers.FortranWriter(filename),
-                     matrix_element,
+                     subprocdir,
                      fortran_model)
 
     filename = 'iproc.dat'
@@ -1260,9 +1324,9 @@ def generate_subprocess_group_directory_v4_madevent(subproc_group,
                      fortran_model)
 
     filename = 'leshouche.inc'
-    write_leshouche_file(writers.FortranWriter(filename),
-                         matrix_element,
-                         fortran_model)
+    write_group_leshouche_file(writers.FortranWriter(filename),
+                               matrix_element,
+                               fortran_model)
 
     filename = 'maxamps.inc'
     write_maxamps_file(writers.FortranWriter(filename),
@@ -1270,26 +1334,25 @@ def generate_subprocess_group_directory_v4_madevent(subproc_group,
                        maxamps,
                        maxflows)
 
-    filename = 'mg.sym'
-    write_mg_sym_file(writers.FortranWriter(filename),
-                      matrix_element,
-                      fortran_model)
+    #filename = 'mg.sym'
+    #write_mg_sym_file(writers.FortranWriter(filename),
+    #                  matrix_element,
+    #                  fortran_model)
 
     filename = 'ncombs.inc'
     write_ncombs_file(writers.FortranWriter(filename),
-                      matrix_element,
+                      nexternal,
                       fortran_model)
 
     filename = 'nexternal.inc'
     write_nexternal_file(writers.FortranWriter(filename),
-                         matrix_element,
+                         nexternal, ninitial,
                          fortran_model)
 
     filename = 'ngraphs.inc'
     write_ngraphs_file(writers.FortranWriter(filename),
-                       matrix_element,
                        fortran_model,
-                        nconfigs)
+                       nconfigs)
 
     filename = 'pmass.inc'
     write_pmass_file(writers.FortranWriter(filename),
@@ -1339,9 +1402,9 @@ def generate_subprocess_group_directory_v4_madevent(subproc_group,
     # Add subprocess to subproc.mg
     filename = 'subproc.mg'
     files.append_to_file(filename,
-                        write_subproc,
-                        matrix_element,
-                        fortran_model)
+                         write_subproc,
+                         subprocdir,
+                         fortran_model)
     # Generate info page
     os.system(os.path.join('..', 'bin', 'gen_infohtml-pl'))
 
@@ -1476,10 +1539,10 @@ def get_amp2_lines(matrix_element):
 
     ret_lines = []
     for idiag, diag in enumerate(matrix_element.get('diagrams')):
-        ret_lines.append("AMP2(%d)=%s" % (idiag+1,
+        ret_lines.append("AMP2TMP=%s" %
                          "+".join(["AMP(%d)" % a.get('number') for a in \
-                                   diag.get('amplitudes')])))
-        ret_lines.append("AMP2(%(num)d)=AMP2(%(num)d)*dconjg(AMP2(%(num)d))" \
+                                   diag.get('amplitudes')]))
+        ret_lines.append("AMP2(%(num)d)=AMP2TMP*dconjg(AMP2TMP)" \
                          % {'num': idiag + 1})
 
     return ret_lines

@@ -3700,7 +3700,9 @@ C     Number of configs
 
         # Test dname.mg
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_dname_file(writer, me, fortran_model)
+        export_v4.write_dname_file(writer,
+                                   me.get('processes')[0].shell_string(),
+                                   fortran_model)
         writer.close()
         self.assertFileContains('test', "DIRNAME=P0_emep_n1n1_n1_emsl2pa_n1_emsl2pa\n")
         # Test iproc.inc
@@ -3712,7 +3714,10 @@ C     Number of configs
         writer = writers.FortranWriter(self.give_pos('test'))
         # Extract ncolor
         ncolor = max(1, len(me.get('color_basis')))
-        export_v4.write_maxamps_file(writer, me, fortran_model, ncolor)
+        export_v4.write_maxamps_file(writer,
+                                     fortran_model,
+                                     len(me.get_all_amplitudes()),
+                                     ncolor)
         writer.close()
         self.assertFileContains('test',
                                 "      INTEGER    MAXAMPS, MAXFLOW\n" + \
@@ -3732,15 +3737,17 @@ C     Number of configs
       5
       8\n""")
         # Test ncombs.inc
+        nexternal, ninitial = me.get_nexternal_ninitial()
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_ncombs_file(writer, me, fortran_model)
+        export_v4.write_ncombs_file(writer, nexternal, fortran_model)
         writer.close()
         self.assertFileContains('test',
                          """      INTEGER    N_MAX_CL
       PARAMETER (N_MAX_CL=512)\n""")
         # Test nexternal.inc
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_nexternal_file(writer, me, fortran_model)
+        export_v4.write_nexternal_file(writer, nexternal, ninitial,
+                                       fortran_model)
         writer.close()
         self.assertFileContains('test',
                          """      INTEGER    NEXTERNAL
@@ -3749,7 +3756,7 @@ C     Number of configs
       PARAMETER (NINCOMING=2)\n""")
         # Test ngraphs.inc
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_ngraphs_file(writer, me, fortran_model, nconfig)
+        export_v4.write_ngraphs_file(writer, fortran_model, nconfig)
         writer.close()
         self.assertFileContains('test',
                          """      INTEGER    N_MAX_CG

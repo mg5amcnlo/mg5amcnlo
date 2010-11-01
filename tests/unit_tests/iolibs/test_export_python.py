@@ -222,7 +222,7 @@ class IOExportPythonTest(unittest.TestCase):
 
     def smatrix(self,p, model):
         #  
-        #  MadGraph 5 v. %(version)s, %(date)s
+        #  MadGraph 5 v. 0.5.0, 2010-09-23
         #  By the MadGraph Development Team
         #  Please visit us at https://launchpad.net/madgraph5
         # 
@@ -264,6 +264,7 @@ class IOExportPythonTest(unittest.TestCase):
         # ----------
         # BEGIN CODE
         # ----------
+        self.amp2 = [0] * 10
         ans = 0.
         for hel in helicities:
             t = self.matrix(p, hel, model)
@@ -273,7 +274,7 @@ class IOExportPythonTest(unittest.TestCase):
 
     def matrix(self, p, hel, model):
         #  
-        #  MadGraph 5 v. %(version)s, %(date)s
+        #  MadGraph 5 v. 0.5.0, 2010-09-23
         #  By the MadGraph Development Team
         #  Please visit us at https://launchpad.net/madgraph5
         #
@@ -338,6 +339,9 @@ class IOExportPythonTest(unittest.TestCase):
         jamp = [None] * ncolor
         jamp[0] = +1./6.*amp[0]-amp[1]-amp[2]-amp[3]-amp[4]+1./2.*amp[5]
         jamp[1] = -1./2.*amp[0]-1./6.*amp[5]+amp[6]+amp[7]+amp[8]+amp[9]
+
+        self.amp2 = [self.amp2[i] + abs(amp[i]*amp[i].conjugate()) for i in \\
+                     range(ngraphs)]
 
         matrix = 0.
         for i in range(ncolor):

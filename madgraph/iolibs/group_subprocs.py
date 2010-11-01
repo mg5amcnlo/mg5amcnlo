@@ -115,10 +115,8 @@ class SubProcessGroup(base_objects.PhysicsObject):
                   "Need amplitudes to set mapping_diagrams"
 
         # All amplitudes are already in the same class
-        process_classes = dict([(i, 0) for i in \
-                                range(len(self.get('amplitudes')))])
         mapping_diagrams, diagram_maps = \
-              self.get('amplitudes').find_mapping_diagrams(process_classes, 0)
+              self.find_mapping_diagrams()
 
         self.set('mapping_diagrams', mapping_diagrams)
         self.set('diagram_maps', diagram_maps)
@@ -178,16 +176,130 @@ class SubProcessGroup(base_objects.PhysicsObject):
 
         self.set("diagram_maps", new_diagram_maps)
 
+    def get_nexternal_ninitial(self):
+        """Get number of external and initial particles for this group"""
+
+        assert self.get('multi_matrix').get('matrix_elements'), \
+               "Need matrix element to call get_nexternal_ninitial"
+
+        return self.get('multi_matrix').get('matrix_elements')[0].\
+               get_nexternal_ninitial()
+
+    def find_mapping_diagrams(self):
+        """Find all unique diagrams for all processes in this
+        process class, and the mapping of their diagrams unto this
+        unique diagram."""
+
+        assert self.get('amplitudes'), \
+               "Need amplitudes to run find_mapping_diagrams"
+
+        amplitudes = self.get('amplitudes')
+        model = amplitudes[0].get('process').get('model')
+        # mapping_diagrams: The configurations for the non-reducable
+        # diagram topologies
+        mapping_diagrams = []
+        # diagram_maps: A dict from amplitude number to list of
+        # diagram maps, pointing to the mapping_diagrams (starting at
+        # 1). Diagrams with multi-particle vertices will have 0.
+        diagram_maps = {}
+        masswidth_to_pdg = {}
+
+        for iamp, amplitude in enumerate(amplitudes):
+            diagrams = amplitude.get('diagrams')
+            # Check the minimal number of legs we need to include in order
+            # to make sure we'll have some valid configurations
+            min_legs = min([max([len(v.get('legs')) for v in \
+                                   d.get('vertices') if v.get('id') > 0]) \
+                              for d in diagrams])
+            diagram_maps[iamp] = []
+            for diagram in diagrams:
+                # Only use diagrams with all vertices == min_legs
+                if any([len(v.get('legs')) > min_legs \
+                        for v in diagram.get('vertices') if v.get('id') > 0]):
+                    diagram_maps[iamp].append(0)
+                    continue
+                # Create the equivalent diagram, in the format
+                # [[((ext_number1, mass_width_id1), ..., )],
+                #  ...]                 (for each vertex)
+                equiv_diag = [[(l.get('number'),
+                                    (model.get_particle(l.get('id')).\
+                                         get('mass'),
+                                     model.get_particle(l.get('id')).\
+                                         get('width'))) \
+                               for l in v.get('legs')] \
+                              for v in diagram.get('vertices')]
+                try:
+                    diagram_maps[iamp].append(mapping_diagrams.index(\
+                                                                equiv_diag) + 1)
+                except ValueError:
+                    mapping_diagrams.append(equiv_diag)
+                    diagram_maps[iamp].append(mapping_diagrams.index(\
+                                                                equiv_diag) + 1)
+
+        return mapping_diagrams, diagram_maps
+
+    def get_subproc_diagrams_for_config(self, config):
+        """Find the diagrams (number + 1) for all subprocesses
+        corresponding to this config number. Return 0 for subprocesses
+        without corresponding diagram."""
+
+        assert self.get('amplitudes'), \
+               "Need amplitudes to run find_mapping_diagrams"
+
+        amplitudes = self.get('amplitudes')
+        model = amplitudes[0].get('process').get('model')
+        # mapping_diagrams: The configurations for the non-reducable
+        # diagram topologies
+        mapping_diagrams = []
+        # diagram_maps: A dict from amplitude number to list of
+        # diagram maps, pointing to the mapping_diagrams (starting at
+        # 1). Diagrams with multi-particle vertices will have 0.
+        diagram_maps = {}
+        masswidth_to_pdg = {}
+
+        for iamp, amplitude in enumerate(amplitudes):
+            diagrams = amplitude.get('diagrams')
+            # Check the minimal number of legs we need to include in order
+            # to make sure we'll have some valid configurations
+            min_legs = min([max([len(v.get('legs')) for v in \
+                                   d.get('vertices') if v.get('id') > 0]) \
+                              for d in diagrams])
+            diagram_maps[iamp] = []
+            for diagram in diagrams:
+                # Only use diagrams with all vertices == min_legs
+                if any([len(v.get('legs')) > min_legs \
+                        for v in diagram.get('vertices') if v.get('id') > 0]):
+                    diagram_maps[iamp].append(0)
+                    continue
+                # Create the equivalent diagram, in the format
+                # [[((ext_number1, mass_width_id1), ..., )],
+                #  ...]                 (for each vertex)
+                equiv_diag = [[(l.get('number'),
+                                    (model.get_particle(l.get('id')).\
+                                         get('mass'),
+                                     model.get_particle(l.get('id')).\
+                                         get('width'))) \
+                               for l in v.get('legs')] \
+                              for v in diagram.get('vertices')]
+                try:
+                    diagram_maps[iamp].append(mapping_diagrams.index(\
+                                                                equiv_diag) + 1)
+                except ValueError:
+                    mapping_diagrams.append(equiv_diag)
+                    diagram_maps[iamp].append(mapping_diagrams.index(\
+                                                                equiv_diag) + 1)
+
+        return mapping_diagrams, diagram_maps
+
     @staticmethod
     def group_amplitudes(amplitudes):
         """Return a SubProcessGroupList with the amplitudes divided
         into subprocess groups"""
 
-        if not isinstance(amplitudes, diagram_generation.AmplitudeList):
-            raise SubProcessGroup.PhysicsObjectError, \
+        assert isinstance(amplitudes, diagram_generation.AmplitudeList), \
                   "Argument to group_amplitudes must be AmplitudeList"
 
-        process_classes = amplitudes.find_process_classes()
+        process_classes = SubProcessGroup.find_process_classes(amplitudes)
         ret_list = SubProcessGroupList()
         process_class_numbers = sorted(list(set(process_classes.values())))
         for inum, num in enumerate(process_class_numbers):
@@ -202,6 +314,43 @@ class SubProcessGroup(base_objects.PhysicsObject):
             ret_list.append(group)
 
         return ret_list
+
+    @staticmethod
+    def find_process_classes(amplitudes):
+        """Find all different process classes, classified according to
+        initial state and final state. For initial state, we
+        differentiate fermions, antifermions, gluons, and masses. For
+        final state, only masses."""
+
+        assert isinstance(amplitudes, diagram_generation.AmplitudeList), \
+                  "Argument to find_process_classes must be AmplitudeList"
+
+        model = amplitudes[0].get('process').get('model')
+        proc_classes = []
+        amplitude_classes = {}
+
+        for iamp, amplitude in enumerate(amplitudes):
+            is_parts = [model.get_particle(l.get('id')) for l in \
+                        amplitude.get('process').get('legs') if not \
+                        l.get('state')]
+            fs_parts = [model.get_particle(l.get('id')) for l in \
+                        amplitude.get('process').get('legs') if l.get('state')]
+            diagrams = amplitude.get('diagrams')
+            #couplings = set(sum([d.get('orders').keys() for d in diagrams], []))
+            #actual_orders = dict([(key, max([d.get('orders')[key] for d in \
+            #                            diagrams if key in d.get('orders')])) \
+            #                       for key in couplings])
+            proc_class = [ [(p.is_fermion(), p.get('is_part')) \
+                            for p in is_parts],
+                           [(p.get('mass'), p.get('color') != 1) for p in \
+                            is_parts + fs_parts]]
+            try:
+                amplitude_classes[iamp] = proc_classes.index(proc_class)
+            except ValueError:
+                proc_classes.append(proc_class)
+                amplitude_classes[iamp] = proc_classes.index(proc_class)
+
+        return amplitude_classes
 
 #===============================================================================
 # SubProcessGroupList

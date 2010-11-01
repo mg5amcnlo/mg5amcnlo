@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 import sys, os
-sys.path+=['../'*i+'./Source/MadWeight_File/Python' for i in range(0,2)]
-sys.path+=['../'*i+'Template/Source/MadWeight_File/Python' for i in range(0,2)]
-import mod_file, MW_param
+sys.path+=[os.path.realpath(__file__)]
+import mod_file
 
 def mod_dir_to_gfortran(directory):
     #define global regular expression
@@ -57,6 +56,20 @@ def rm_file_extension( ext, dirname, names):
     [os.remove(os.path.join(dirname, name)) for name in names if name.endswith(ext)]
 
 
+def go_to_main_dir():
+    """ move to main position """
+    pos=os.getcwd()
+    last=pos.split(os.sep)[-1]
+    if last=='bin':
+        os.chdir(os.pardir)
+        return
+    
+    list_dir=os.listdir('./')
+    if 'bin' in list_dir:
+        return
+    else:
+        sys.exit('Error: script must be executed from the main, bin or Python directory')
+
 
     
 if "__main__"==__name__:
@@ -72,6 +85,6 @@ if "__main__"==__name__:
     else:
         directory=['..']
 
-    MW_param.go_to_main_dir()
+    go_to_main_dir()
     mod_dir_to_gfortran(directory)
     rm_old_compile_file()

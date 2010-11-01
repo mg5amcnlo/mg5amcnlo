@@ -326,7 +326,7 @@ class TestCmdShell2(unittest.TestCase):
                                                'lib', 'libpdf.a')))
         # Check that gensym compiles
         status = subprocess.call(['make', 'gensym'],
-                                 stdout=devnull, stderr=devnull, 
+                                 stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_epem_epem'))
         self.assertEqual(status, 0)
@@ -336,13 +336,13 @@ class TestCmdShell2(unittest.TestCase):
                                                     'gensym')))
         # Check that gensym runs
         status = subprocess.call('./gensym', 
-                                 stdout=devnull, stderr=devnull,
+                                 stdout=devnull,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_epem_epem'), shell=True)
         self.assertEqual(status, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
-                                 stdout=devnull, stderr=devnull, 
+                                 stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_epem_epem'))
         self.assertEqual(status, 0)
