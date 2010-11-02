@@ -208,13 +208,15 @@ class SubProcessGroup(base_objects.PhysicsObject):
             diagrams = amplitude.get('diagrams')
             # Check the minimal number of legs we need to include in order
             # to make sure we'll have some valid configurations
-            min_legs = min([max([len(v.get('legs')) for v in \
-                                   d.get('vertices') if v.get('id') > 0]) \
-                              for d in diagrams])
+            #max_legs = min([max([len(v.get('legs')) for v in \
+            #                       d.get('vertices') if v.get('id') > 0]) \
+            #                  for d in diagrams])
+            # For now, just use 3-vertices. Will need to fix in MadEvent
+            max_legs = 3
             diagram_maps[iamp] = []
             for diagram in diagrams:
                 # Only use diagrams with all vertices == min_legs
-                if any([len(v.get('legs')) > min_legs \
+                if any([len(v.get('legs')) > max_legs \
                         for v in diagram.get('vertices') if v.get('id') > 0]):
                     diagram_maps[iamp].append(0)
                     continue

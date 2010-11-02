@@ -171,38 +171,38 @@ C
       LOGICAL GOODHEL(NCOMB)
       DATA NTRY/0/
       DATA GOODHEL/NCOMB*.FALSE./
-      DATA (NHEL(IHEL,   1),IHEL=1,5) /-1,-1,-1,-1,-1/
-      DATA (NHEL(IHEL,   2),IHEL=1,5) /-1,-1,-1,-1, 1/
-      DATA (NHEL(IHEL,   3),IHEL=1,5) /-1,-1,-1, 1,-1/
-      DATA (NHEL(IHEL,   4),IHEL=1,5) /-1,-1,-1, 1, 1/
-      DATA (NHEL(IHEL,   5),IHEL=1,5) /-1,-1, 1,-1,-1/
-      DATA (NHEL(IHEL,   6),IHEL=1,5) /-1,-1, 1,-1, 1/
-      DATA (NHEL(IHEL,   7),IHEL=1,5) /-1,-1, 1, 1,-1/
-      DATA (NHEL(IHEL,   8),IHEL=1,5) /-1,-1, 1, 1, 1/
-      DATA (NHEL(IHEL,   9),IHEL=1,5) /-1, 1,-1,-1,-1/
-      DATA (NHEL(IHEL,  10),IHEL=1,5) /-1, 1,-1,-1, 1/
-      DATA (NHEL(IHEL,  11),IHEL=1,5) /-1, 1,-1, 1,-1/
-      DATA (NHEL(IHEL,  12),IHEL=1,5) /-1, 1,-1, 1, 1/
-      DATA (NHEL(IHEL,  13),IHEL=1,5) /-1, 1, 1,-1,-1/
-      DATA (NHEL(IHEL,  14),IHEL=1,5) /-1, 1, 1,-1, 1/
-      DATA (NHEL(IHEL,  15),IHEL=1,5) /-1, 1, 1, 1,-1/
-      DATA (NHEL(IHEL,  16),IHEL=1,5) /-1, 1, 1, 1, 1/
-      DATA (NHEL(IHEL,  17),IHEL=1,5) / 1,-1,-1,-1,-1/
-      DATA (NHEL(IHEL,  18),IHEL=1,5) / 1,-1,-1,-1, 1/
-      DATA (NHEL(IHEL,  19),IHEL=1,5) / 1,-1,-1, 1,-1/
-      DATA (NHEL(IHEL,  20),IHEL=1,5) / 1,-1,-1, 1, 1/
-      DATA (NHEL(IHEL,  21),IHEL=1,5) / 1,-1, 1,-1,-1/
-      DATA (NHEL(IHEL,  22),IHEL=1,5) / 1,-1, 1,-1, 1/
-      DATA (NHEL(IHEL,  23),IHEL=1,5) / 1,-1, 1, 1,-1/
-      DATA (NHEL(IHEL,  24),IHEL=1,5) / 1,-1, 1, 1, 1/
-      DATA (NHEL(IHEL,  25),IHEL=1,5) / 1, 1,-1,-1,-1/
-      DATA (NHEL(IHEL,  26),IHEL=1,5) / 1, 1,-1,-1, 1/
-      DATA (NHEL(IHEL,  27),IHEL=1,5) / 1, 1,-1, 1,-1/
-      DATA (NHEL(IHEL,  28),IHEL=1,5) / 1, 1,-1, 1, 1/
-      DATA (NHEL(IHEL,  29),IHEL=1,5) / 1, 1, 1,-1,-1/
-      DATA (NHEL(IHEL,  30),IHEL=1,5) / 1, 1, 1,-1, 1/
-      DATA (NHEL(IHEL,  31),IHEL=1,5) / 1, 1, 1, 1,-1/
-      DATA (NHEL(IHEL,  32),IHEL=1,5) / 1, 1, 1, 1, 1/
+      DATA (NHEL(I,   1),I=1,5) /-1,-1,-1,-1,-1/
+      DATA (NHEL(I,   2),I=1,5) /-1,-1,-1,-1, 1/
+      DATA (NHEL(I,   3),I=1,5) /-1,-1,-1, 1,-1/
+      DATA (NHEL(I,   4),I=1,5) /-1,-1,-1, 1, 1/
+      DATA (NHEL(I,   5),I=1,5) /-1,-1, 1,-1,-1/
+      DATA (NHEL(I,   6),I=1,5) /-1,-1, 1,-1, 1/
+      DATA (NHEL(I,   7),I=1,5) /-1,-1, 1, 1,-1/
+      DATA (NHEL(I,   8),I=1,5) /-1,-1, 1, 1, 1/
+      DATA (NHEL(I,   9),I=1,5) /-1, 1,-1,-1,-1/
+      DATA (NHEL(I,  10),I=1,5) /-1, 1,-1,-1, 1/
+      DATA (NHEL(I,  11),I=1,5) /-1, 1,-1, 1,-1/
+      DATA (NHEL(I,  12),I=1,5) /-1, 1,-1, 1, 1/
+      DATA (NHEL(I,  13),I=1,5) /-1, 1, 1,-1,-1/
+      DATA (NHEL(I,  14),I=1,5) /-1, 1, 1,-1, 1/
+      DATA (NHEL(I,  15),I=1,5) /-1, 1, 1, 1,-1/
+      DATA (NHEL(I,  16),I=1,5) /-1, 1, 1, 1, 1/
+      DATA (NHEL(I,  17),I=1,5) / 1,-1,-1,-1,-1/
+      DATA (NHEL(I,  18),I=1,5) / 1,-1,-1,-1, 1/
+      DATA (NHEL(I,  19),I=1,5) / 1,-1,-1, 1,-1/
+      DATA (NHEL(I,  20),I=1,5) / 1,-1,-1, 1, 1/
+      DATA (NHEL(I,  21),I=1,5) / 1,-1, 1,-1,-1/
+      DATA (NHEL(I,  22),I=1,5) / 1,-1, 1,-1, 1/
+      DATA (NHEL(I,  23),I=1,5) / 1,-1, 1, 1,-1/
+      DATA (NHEL(I,  24),I=1,5) / 1,-1, 1, 1, 1/
+      DATA (NHEL(I,  25),I=1,5) / 1, 1,-1,-1,-1/
+      DATA (NHEL(I,  26),I=1,5) / 1, 1,-1,-1, 1/
+      DATA (NHEL(I,  27),I=1,5) / 1, 1,-1, 1,-1/
+      DATA (NHEL(I,  28),I=1,5) / 1, 1,-1, 1, 1/
+      DATA (NHEL(I,  29),I=1,5) / 1, 1, 1,-1,-1/
+      DATA (NHEL(I,  30),I=1,5) / 1, 1, 1,-1, 1/
+      DATA (NHEL(I,  31),I=1,5) / 1, 1, 1, 1,-1/
+      DATA (NHEL(I,  32),I=1,5) / 1, 1, 1, 1, 1/
       DATA IDEN/24/
 C     ----------
 C     BEGIN CODE

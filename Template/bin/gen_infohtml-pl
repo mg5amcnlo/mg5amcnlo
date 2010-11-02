@@ -58,7 +58,7 @@ sub writeHtmlProcessPage {
 	  @tlines = grep /NGRAPHS=/, @lines;
 	  foreach $one (@tlines) {
 	    ($before,$after) = split /=/,$one;
-	    ($before,$one) = split /,/,$after;
+	    ($before,$one) = split /\)/,$after;
 	    print PAGE "<TD> $before </TD> \n";
 	    $totdiag+=$before;
 	    close(FILE2);

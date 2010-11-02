@@ -61,18 +61,18 @@ C
 C ----------
 C BEGIN CODE
 C ----------
-      DSIG=0D0
+      DSIG%(proc_id)s=0D0
       IF (PASSCUTS(PP)) THEN
 %(pdf_lines)s
          CALL SMATRIX%(proc_id)s(PP,DSIGUU)                                              
-         dsiguu=dsiguu*rewgt(PP)
-         If (dsiguu.lt.1d199) then
-         dsig=%(dsig_line)s
-         else
+         DSIGUU=DSIGUU*REWGT(PP)
+         IF (DSIGUU.LT.1D199) THEN
+         DSIG%(proc_id)s=%(dsig_line)s
+         ELSE
              write(*,*) "Error in matrix element"
-             dsiguu=0d0
-             dsig=0d0
-         endif
-	 call unwgt(pp,%(dsig_line)s*wgt,%(numproc)d)
+             DSIGUU=0D0
+             DSIG%(proc_id)s=0D0
+         ENDIF
+	 CALL UNWGT(PP,%(dsig_line)s*WGT,%(numproc)d)
       ENDIF
       END

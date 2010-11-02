@@ -399,6 +399,24 @@ def write_matrix_element_v4_madevent(writer, matrix_element, fortran_model,
     ndiags = len(matrix_element.get('diagrams'))
     replace_dict['ndiags'] = ndiags
 
+    if proc_id:
+        # Set lines for subprocess group version
+        # Set define_iconfigs_lines
+        replace_dict['define_iconfigs_lines'] = \
+             """INTEGER ISUBDIAG(MAXSPROC)
+             COMMON/TO_SUB_DIAG/ISUBDIAG"""    
+        # Set set_amp2_line
+        replace_dict['set_amp2_line'] = "ANS=ANS*AMP2(ISUBDIAG(%s))/XTOT" % \
+                                        proc_id
+    else:
+        # Standard running
+        # Set define_iconfigs_lines
+        replace_dict['define_iconfigs_lines'] = \
+             """INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
+             COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG"""
+        # Set set_amp2_line
+        replace_dict['set_amp2_line'] = "ANS=ANS*AMP2(MAPCONFIG(ICONFIG))/XTOT"
+
     # Extract nwavefuncs
     nwavefuncs = matrix_element.get_number_of_wavefunctions()
     replace_dict['nwavefuncs'] = nwavefuncs
@@ -1486,7 +1504,7 @@ def get_helicity_lines(matrix_element):
         int_list = [i, len(helicities)]
         int_list.extend(helicities)
         helicity_line_list.append(\
-            ("DATA (NHEL(IHEL,%4r),IHEL=1,%d) /" + \
+            ("DATA (NHEL(I,%4r),I=1,%d) /" + \
              ",".join(['%2r'] * len(helicities)) + "/") % tuple(int_list))
 
     return "\n".join(helicity_line_list)
@@ -1498,7 +1516,7 @@ def get_ic_line(matrix_element):
     nexternal = matrix_element.get_nexternal_ninitial()[0]
     int_list = range(1, nexternal + 1)
 
-    return "DATA (IC(IHEL,1),IHEL=1,%i) /%s/" % (nexternal,
+    return "DATA (IC(I,1),I=1,%i) /%s/" % (nexternal,
                                                  ",".join([str(i) for \
                                                            i in int_list]))
 
@@ -1578,6 +1596,8 @@ def get_amp2_lines(matrix_element, config_map = []):
         # Combine the diagrams with identical topologies
         config_to_diag_dict = {}
         for idiag, diag in enumerate(matrix_element.get('diagrams')):
+            if config_map[idiag] == 0:
+                continue
             try:
                 config_to_diag_dict[config_map[idiag]].append(idiag)
             except KeyError:
@@ -1587,9 +1607,8 @@ def get_amp2_lines(matrix_element, config_map = []):
         # belonging to different diagrams with identical propagator
         # properties.  Note that we need to use AMP2 number
         # corresponding to the first diagram number used for that AMP2.
-        iamp2 = 0
         for config in config_to_diag_dict.keys():
-            iamp2 += 1
+
             line = "AMP2(%d)=" % (config_to_diag_dict[config][0] + 1)
             
             line += "+".join(["(%(amps)s)*dconjg(%(amps)s)" % \
@@ -1600,6 +1619,17 @@ def get_amp2_lines(matrix_element, config_map = []):
         ret_lines.sort()
     else:
         for idiag, diag in enumerate(matrix_element.get('diagrams')):
+            # Ignore any diagrams with 4-particle vertices.  The
+            # easiest way to get this info is to use the
+            # get_s_and_t_channels function, which collects all
+            # vertices corresponding to this diagram.
+            schannels, tchannels = diag.get('amplitudes')[0].\
+                                         get_s_and_t_channels(2)
+            allchannels = schannels + tchannels
+            if not allchannels or \
+                   any([len(vert.get('legs')) > 3 for vert in allchannels]):
+                continue
+            # Now write out the expression for AMP2
             line = "AMP2(%d)=" % (idiag + 1)
             line += "%(amps)s*dconjg(%(amps)s)" % \
                     {"amps": "+".join(["AMP(%d)" % a.get('number') for \
