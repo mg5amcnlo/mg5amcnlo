@@ -139,7 +139,7 @@ c      write(*,*) 'storing Events'
       maxwgt = 0d0
       end
 
-      SUBROUTINE unwgt(px,wgt)
+      SUBROUTINE unwgt(px,wgt,numproc)
 C**************************************************************************
 C     Determines if event should be written based on its weight
 C**************************************************************************
@@ -153,6 +153,7 @@ c
 c     Arguments
 c
       double precision px(0:3,nexternal),wgt
+      integer numproc
 c
 c     Local
 c
@@ -201,9 +202,9 @@ C-----
 c            call write_event(p,uwgt)
 c            write(29,'(2e15.5)') matrix,wgt
 c $B$ S-COMMENT_C $B$
-            call write_leshouche(p,uwgt)
+            call write_leshouche(p,uwgt,numproc)
          elseif (xwgt .gt. 0d0 .and. nw .lt. 5) then
-            call write_leshouche(p,wgt/twgt*1d-6)
+            call write_leshouche(p,wgt/twgt*1d-6,numproc)
 c $E$ S-COMMENT_C $E$
          endif
          maxwgt=max(maxwgt,xwgt)
@@ -349,7 +350,7 @@ c
 c      close(lun)
       end
 
-      SUBROUTINE write_leshouche(p,wgt)
+      SUBROUTINE write_leshouche(p,wgt,numproc)
 C**************************************************************************
 C     Writes out information for event
 C**************************************************************************
@@ -369,6 +370,7 @@ c
 c     Arguments
 c
       double precision p(0:3,nexternal),wgt
+      integer numproc
 c
 c     Local
 c
@@ -380,9 +382,9 @@ c
       double precision pboost(0:3),pb(0:4,-nexternal+3:2*nexternal-3),eta
       double precision ptcltmp(nexternal)
 
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
 
       integer isym(nexternal,99), nsym, jsym
 
@@ -485,11 +487,11 @@ c
 c     Fill jpart color and particle info
 c
       do i=1,nexternal
-         jpart(1,isym(i,jsym)) = idup(i,ip)
-         jpart(2,isym(i,jsym)) = mothup(1,i,ip)
-         jpart(3,isym(i,jsym)) = mothup(2,i,ip)
-         jpart(4,isym(i,jsym)) = icolup(1,i,ic)
-         jpart(5,isym(i,jsym)) = icolup(2,i,ic)
+         jpart(1,isym(i,jsym)) = idup(i,ip,numproc)
+         jpart(2,isym(i,jsym)) = mothup(1,i)
+         jpart(3,isym(i,jsym)) = mothup(2,i)
+         jpart(4,isym(i,jsym)) = icolup(1,i,ic,numproc)
+         jpart(5,isym(i,jsym)) = icolup(2,i,ic,numproc)
          jpart(6,isym(i,jsym)) = 1
       enddo
       do i=1,nincoming
@@ -533,7 +535,8 @@ c      Add mass information in pb(4)
 c
 c     Add info on resonant mothers
 c
-      call addmothers(ip,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,npart)
+      call addmothers(ip,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,
+     $                npart,numproc)
 
 c
 c     Write events to lun

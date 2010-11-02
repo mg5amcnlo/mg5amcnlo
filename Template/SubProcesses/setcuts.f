@@ -62,9 +62,9 @@ c
 c     les houches accord stuff to identify neutrinos
 c
       include 'maxamps.inc'
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
 C
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
@@ -121,82 +121,82 @@ c
 
 c-do not apply cuts to these
          if (pmass(i).gt.20d0)     do_cuts(i)=.false.  ! no cuts on top,W,Z,H
-         if (abs(idup(i,1)).eq.12) do_cuts(i)=.false.  ! no cuts on ve ve~
-         if (abs(idup(i,1)).eq.14) do_cuts(i)=.false.  ! no cuts on vm vm~
-         if (abs(idup(i,1)).eq.16) do_cuts(i)=.false.  ! no cuts on vt vt~
+         if (abs(idup(i,1,1)).eq.12) do_cuts(i)=.false.  ! no cuts on ve ve~
+         if (abs(idup(i,1,1)).eq.14) do_cuts(i)=.false.  ! no cuts on vm vm~
+         if (abs(idup(i,1,1)).eq.16) do_cuts(i)=.false.  ! no cuts on vt vt~
 c-flavor-jets
-         if (abs(idup(i,1)).le.min(maxjetflavor,5)) then
+         if (abs(idup(i,1,1)).le.min(maxjetflavor,5)) then
               is_a_j(i)=.true.
-c              write(*,*)'jet:ithe pdg is ',abs(idup(i,1)),' maxflavor=',maxjetflavor
-         else if (abs(idup(i,1)).ge.maxjetflavor+1 .and. abs(idup(i,1)).le.5) then
+c              write(*,*)'jet:ithe pdg is ',abs(idup(i,1,1)),' maxflavor=',maxjetflavor
+         else if (abs(idup(i,1,1)).ge.maxjetflavor+1 .and. abs(idup(i,1,1)).le.5) then
               is_a_b(i)=.true.
-c              write(*,*)'bjet:the pdg is ',abs(idup(i,1)),' maxflavor=',maxjetflavor
+c              write(*,*)'bjet:the pdg is ',abs(idup(i,1,1)),' maxflavor=',maxjetflavor
          endif
 
-         if (abs(idup(i,1)).eq.21)  is_a_j(i)=.true. ! gluon is a jet
+         if (abs(idup(i,1,1)).eq.21)  is_a_j(i)=.true. ! gluon is a jet
 c-charged-leptons
-         if (abs(idup(i,1)).eq.11)  is_a_l(i)=.true. ! e+  e-
-         if (abs(idup(i,1)).eq.13)  is_a_l(i)=.true. ! mu+ mu-
-         if (abs(idup(i,1)).eq.15)  is_a_l(i)=.true. ! ta+ ta-
+         if (abs(idup(i,1,1)).eq.11)  is_a_l(i)=.true. ! e+  e-
+         if (abs(idup(i,1,1)).eq.13)  is_a_l(i)=.true. ! mu+ mu-
+         if (abs(idup(i,1,1)).eq.15)  is_a_l(i)=.true. ! ta+ ta-
 c-b-quarks
-c         if (abs(idup(i,1)).eq.5)   is_a_b(i)=.true. ! b b~
+c         if (abs(idup(i,1,1)).eq.5)   is_a_b(i)=.true. ! b b~
 c-photon
-         if (idup(i,1).eq.22)   is_a_a(i)=.true. ! photon
+         if (idup(i,1,1).eq.22)   is_a_a(i)=.true. ! photon
 c-neutrino's for missing et
-         if (abs(idup(i,1)).eq.12) is_a_nu(i)=.true.  ! no cuts on ve ve~
-         if (abs(idup(i,1)).eq.14) is_a_nu(i)=.true.  ! no cuts on vm vm~
-         if (abs(idup(i,1)).eq.16) is_a_nu(i)=.true.  ! no cuts on vt vt~
+         if (abs(idup(i,1,1)).eq.12) is_a_nu(i)=.true.  ! no cuts on ve ve~
+         if (abs(idup(i,1,1)).eq.14) is_a_nu(i)=.true.  ! no cuts on vm vm~
+         if (abs(idup(i,1,1)).eq.16) is_a_nu(i)=.true.  ! no cuts on vt vt~
          if (pmass(i).gt.10d0)     is_heavy(i)=.true. ! heavy fs particle
 c-onium
-         if (idup(i,1).eq.441)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1).eq.10441)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1).eq.100441)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1).eq.443)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1).eq.10443)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1).eq.20443)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1).eq.100443)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1).eq.30443)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1).eq.9000443)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1).eq.9010443)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1).eq.9020443)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1).eq.445)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1).eq.9000445)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,1).eq.441)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,1).eq.10441)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,1).eq.100441)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,1).eq.443)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,1).eq.10443)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,1).eq.20443)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,1).eq.100443)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,1).eq.30443)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,1).eq.9000443)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,1).eq.9010443)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,1).eq.9020443)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,1).eq.445)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,1).eq.9000445)   is_a_onium(i)=.true. ! charmonium
 
-         if (idup(i,1).eq.551)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.10551)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.100551)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.110551)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.200551)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.210551)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.10553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.20553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.30553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.100553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.110553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.120553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.130553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.200553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.210553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.220553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.300553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.9000553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.9010553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.555)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.10555)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.20555)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.100555)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.110555)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.200555)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.557)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1).eq.100557)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.551)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.10551)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.100551)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.110551)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.200551)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.210551)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.10553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.20553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.30553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.100553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.110553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.120553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.130553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.200553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.210553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.220553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.300553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.9000553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.9010553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.555)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.10555)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.20555)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.100555)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.110555)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.200555)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.557)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,1).eq.100557)   is_a_onium(i)=.true. ! bottomonium
 
-         if (idup(i,1).eq.541)   is_a_onium(i)=.true. ! Bc
-         if (idup(i,1).eq.10541)   is_a_onium(i)=.true. ! Bc
-         if (idup(i,1).eq.543)   is_a_onium(i)=.true. ! Bc
-         if (idup(i,1).eq.10543)   is_a_onium(i)=.true. ! Bc
-         if (idup(i,1).eq.20543)   is_a_onium(i)=.true. ! Bc
-         if (idup(i,1).eq.545)   is_a_onium(i)=.true. ! Bc
+         if (idup(i,1,1).eq.541)   is_a_onium(i)=.true. ! Bc
+         if (idup(i,1,1).eq.10541)   is_a_onium(i)=.true. ! Bc
+         if (idup(i,1,1).eq.543)   is_a_onium(i)=.true. ! Bc
+         if (idup(i,1,1).eq.10543)   is_a_onium(i)=.true. ! Bc
+         if (idup(i,1,1).eq.20543)   is_a_onium(i)=.true. ! Bc
+         if (idup(i,1,1).eq.545)   is_a_onium(i)=.true. ! Bc
       enddo
 
 c
@@ -309,16 +309,16 @@ c
                if(is_a_a(i).and.is_a_a(j)) s_min(j,i)=mmaa*dabs(mmaa)  
                if( is_a_b(i).and.is_a_b(j) ) s_min(j,i)=mmbb*dabs(mmbb)     
                if((is_a_l(i).and.is_a_l(j)).and.
-     &            (abs(idup(i,1)).eq.abs(idup(j,1))).and.
-     &            (idup(i,1)*idup(j,1).lt.0)) 
+     &            (abs(idup(i,1,1)).eq.abs(idup(j,1,1))).and.
+     &            (idup(i,1,1)*idup(j,1,1).lt.0)) 
      &            s_min(j,i)=mmll*dabs(mmll)  !only on l+l- pairs (same flavour) 
 
                if(is_a_j(i).and.is_a_j(j)) s_max(j,i)=mmjjmax*dabs(mmjjmax)   
                if(is_a_a(i).and.is_a_a(j)) s_max(j,i)=mmaamax*dabs(mmaamax)  
                if( is_a_b(i).and.is_a_b(j) ) s_max(j,i)=mmbbmax*dabs(mmbbmax)     
                if((is_a_l(i).and.is_a_l(j)).and.
-     &            (abs(idup(i,1)).eq.abs(idup(j,1))).and.
-     &            (idup(i,1)*idup(j,1).lt.0)) 
+     &            (abs(idup(i,1,1)).eq.abs(idup(j,1,1))).and.
+     &            (idup(i,1,1)*idup(j,1,1).lt.0)) 
      &            s_max(j,i)=mmllmax*dabs(mmllmax)  !only on l+l- pairs (same flavour)
 
             endif
@@ -447,9 +447,9 @@ c**************************************************
       integer i,j,k
       logical foundpartner
       include 'maxamps.inc'
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
 
       do i=3,nexternal
@@ -466,17 +466,17 @@ c**************************************************
                if(iforest(1,k,j).eq.i.and.iforest(2,k,j).gt.2.or.
      $              iforest(2,k,j).eq.i.and.iforest(1,k,j).gt.2)then
                   foundpartner=.true.
-                  if(iabs(idup(iforest(2,k,j),1)).le.maxjetflavor.or.
-     $                 idup(iforest(2,k,j),1).eq.21.or.
-     $                 iabs(idup(iforest(2,k,j),1)).le.maxjetflavor.or.
-     $                 idup(iforest(2,k,j),1).eq.21)then
+                  if(iabs(idup(iforest(2,k,j),1,1)).le.maxjetflavor.or.
+     $                 idup(iforest(2,k,j),1,1).eq.21.or.
+     $                 iabs(idup(iforest(2,k,j),1,1)).le.maxjetflavor.or.
+     $                 idup(iforest(2,k,j),1,1).eq.21)then
                      xqcutij(iforest(2,k,j),iforest(1,k,j))=xqcut
                      xqcutij(iforest(1,k,j),iforest(2,k,j))=xqcut
                   endif
                endif
             enddo
-            if(.not.foundpartner.and.(iabs(idup(i,1)).le.maxjetflavor.or.
-     $           idup(i,1).eq.21)) xqcuti(i)=max(0d0,sqrt(xqcut**2-pmass(i)**2))
+            if(.not.foundpartner.and.(iabs(idup(i,1,1)).le.maxjetflavor.or.
+     $           idup(i,1,1).eq.21)) xqcuti(i)=max(0d0,sqrt(xqcut**2-pmass(i)**2))
          enddo
       enddo
 

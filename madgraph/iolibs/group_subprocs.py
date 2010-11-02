@@ -238,58 +238,36 @@ class SubProcessGroup(base_objects.PhysicsObject):
 
         return mapping_diagrams, diagram_maps
 
-    def get_subproc_diagrams_for_config(self, config):
+    def get_subproc_diagrams_for_config(self, iconfig):
         """Find the diagrams (number + 1) for all subprocesses
         corresponding to this config number. Return 0 for subprocesses
-        without corresponding diagram."""
+        without corresponding diagram. Note that the iconfig should
+        start at 0."""
 
-        assert self.get('amplitudes'), \
-               "Need amplitudes to run find_mapping_diagrams"
+        assert self.get('diagram_maps'), \
+               "Need diagram_maps to run get_subproc_diagrams_for_config"
 
-        amplitudes = self.get('amplitudes')
-        model = amplitudes[0].get('process').get('model')
-        # mapping_diagrams: The configurations for the non-reducable
-        # diagram topologies
-        mapping_diagrams = []
-        # diagram_maps: A dict from amplitude number to list of
-        # diagram maps, pointing to the mapping_diagrams (starting at
-        # 1). Diagrams with multi-particle vertices will have 0.
-        diagram_maps = {}
-        masswidth_to_pdg = {}
+        subproc_diagrams = []
+        for iproc in \
+                range(len(self.get('multi_matrix').get('matrix_elements'))):
+            try:
+                subproc_diagrams.append(self.get('diagram_maps')[iproc].\
+                                        index(iconfig + 1) + 1)
+            except ValueError:
+                subproc_diagrams.append(0)
 
-        for iamp, amplitude in enumerate(amplitudes):
-            diagrams = amplitude.get('diagrams')
-            # Check the minimal number of legs we need to include in order
-            # to make sure we'll have some valid configurations
-            min_legs = min([max([len(v.get('legs')) for v in \
-                                   d.get('vertices') if v.get('id') > 0]) \
-                              for d in diagrams])
-            diagram_maps[iamp] = []
-            for diagram in diagrams:
-                # Only use diagrams with all vertices == min_legs
-                if any([len(v.get('legs')) > min_legs \
-                        for v in diagram.get('vertices') if v.get('id') > 0]):
-                    diagram_maps[iamp].append(0)
-                    continue
-                # Create the equivalent diagram, in the format
-                # [[((ext_number1, mass_width_id1), ..., )],
-                #  ...]                 (for each vertex)
-                equiv_diag = [[(l.get('number'),
-                                    (model.get_particle(l.get('id')).\
-                                         get('mass'),
-                                     model.get_particle(l.get('id')).\
-                                         get('width'))) \
-                               for l in v.get('legs')] \
-                              for v in diagram.get('vertices')]
-                try:
-                    diagram_maps[iamp].append(mapping_diagrams.index(\
-                                                                equiv_diag) + 1)
-                except ValueError:
-                    mapping_diagrams.append(equiv_diag)
-                    diagram_maps[iamp].append(mapping_diagrams.index(\
-                                                                equiv_diag) + 1)
+        return subproc_diagrams
 
-        return mapping_diagrams, diagram_maps
+    def get_diagrams_for_configs(self):
+        """Get a list of all diagrams_for_configs"""
+
+        subproc_diagrams_for_config = []
+        for iconf in range(len(self.get('mapping_diagrams'))):
+            subproc_diagrams_for_config.append(\
+                  self.get_subproc_diagrams_for_config(iconf))
+
+        return subproc_diagrams_for_config
+    
 
     @staticmethod
     def group_amplitudes(amplitudes):

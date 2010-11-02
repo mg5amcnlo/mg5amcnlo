@@ -1,4 +1,5 @@
-      subroutine addmothers(ip,jpart,pb,isym,jsym,rscale,aqcd,aqed,buff,npart)
+      subroutine addmothers(ip,jpart,pb,isym,jsym,rscale,aqcd,aqed,buff,
+     $                      npart,numproc)
 
       implicit none
       include 'genps.inc'
@@ -9,7 +10,7 @@
       include 'run.inc'
       include 'maxamps.inc'
 
-      integer jpart(7,-nexternal+3:2*nexternal-3),npart,ip
+      integer jpart(7,-nexternal+3:2*nexternal-3),npart,ip,numproc
       double precision pb(0:4,-nexternal+3:2*nexternal-3)
       double precision rscale,aqcd,aqed,targetamp(maxamps)
       character*140 buff
@@ -47,9 +48,9 @@
       common/to_mconfigs/mapconfig, this_config
       integer iconfig,igraph
 
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
 
       include 'coloramps.inc'
@@ -120,8 +121,8 @@ c      print *,'Chose color flow ',ic
       if(targetamp(nc).eq.0) ic=0
       do i=1,nexternal
          if(ic.gt.0) then
-            icolalt(1,isym(i,jsym))=icolup(1,i,ic)
-            icolalt(2,isym(i,jsym))=icolup(2,i,ic)
+            icolalt(1,isym(i,jsym))=icolup(1,i,ic,numproc)
+            icolalt(2,isym(i,jsym))=icolup(2,i,ic,numproc)
          else
             icolalt(1,i)=jpart(4,i)
             icolalt(2,i)=jpart(5,i)

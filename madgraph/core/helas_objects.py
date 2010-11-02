@@ -2987,7 +2987,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 identical_indices[leg.get('id')] = 1
         self["identical_particle_factor"] = reduce(lambda x, y: x * y,
                                           [ math.factorial(val) for val in \
-                                            identical_indices.values() ])
+                                            identical_indices.values() ], 1)
 
     def get_base_amplitude(self):
         """Generate a diagram_generation.Amplitude from a

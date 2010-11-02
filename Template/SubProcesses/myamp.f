@@ -138,9 +138,9 @@ c
       
       include 'coupl.inc'
 
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
 
       logical gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
@@ -210,7 +210,7 @@ c           Only allow onshell if no "decay" to identical particle
               do j=1,2
                 ida(j)=iforest(j,i,iconfig)
                 if((ida(j).lt.0.and.sprop(i,iconfig).eq.sprop(ida(j),iconfig))
-     $             .or.(ida(j).gt.0.and.sprop(i,iconfig).eq.IDUP(ida(j),1)))
+     $             .or.(ida(j).gt.0.and.sprop(i,iconfig).eq.IDUP(ida(j),1,1)))
      $             idenpart=ida(j)
               enddo
 c           Always remove if daughter final-state

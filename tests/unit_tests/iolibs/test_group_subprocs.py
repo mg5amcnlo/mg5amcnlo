@@ -276,6 +276,18 @@ class SubProcessGroupTest(unittest.TestCase):
                           3: [2, 2, 6], 4: [3, 3, 5]},
                          {0: [1, 1, 2, 3, 3, 4], 1: [1, 1, 2], 2: [3, 3, 4]}]]
         
+        diags_for_config = [[[[2, 1], [3, 2], [4, 3]],
+                             [[1], [2], [3]], [[1], [2], [3]], [[1], [2], [3]],
+                             [[1, 1, 0], [3, 3, 0], [4, 0, 1], [6, 0, 3]],
+                             [[1, 1, 1, 0, 0], [2, 4, 0, 1, 0],
+                              [3, 0, 0, 0, 1], [0, 3, 3, 0, 0],
+                              [0, 6, 0, 3, 0], [0, 0, 0, 0, 3]],
+                             [[1], [2], [3]],
+                             [[1, 1, 1, 0, 0], [2, 0, 0, 1, 0],
+                              [3, 4, 0, 0, 1], [0, 3, 3, 0, 0],
+                              [0, 6, 0, 0, 3], [0, 0, 0, 3, 0]],
+                             [[1, 1, 0], [3, 3, 0], [4, 0, 1], [6, 0, 3]]]]
+        
         for nfs in range(2, max_fs + 1):
 
             # Define the multiprocess
@@ -306,7 +318,11 @@ class SubProcessGroupTest(unittest.TestCase):
                 group.get('multi_matrix')
                 self.assertEqual(group.get('diagram_maps'),
                                  diagram_maps[nfs-2][igroup])
-                
+                for iconfig, config in enumerate(group.get('mapping_diagrams')):
+                    self.assertEqual(group.get_subproc_diagrams_for_config(\
+                                                          iconfig),
+                                     diags_for_config[nfs-2][igroup][iconfig])
+                    
     def test_find_process_classes_and_mapping_diagrams(self):
         """Test the find_process_classes and find_mapping_diagrams function."""
 

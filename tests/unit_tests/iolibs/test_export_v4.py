@@ -25,6 +25,7 @@ import tests.unit_tests as unittest
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.file_writers as writers
+import madgraph.iolibs.group_subprocs as group_subprocs
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
@@ -333,6 +334,275 @@ C     Amplitude(s) for diagram number 6
         self.assertEqual(export_v4.coeff(-1,
                                          fractions.Fraction(3, 5),
                                          True, -2), '-1./15.*complex(0,1)*')
+
+
+    def test_export_matrix_element_v4_madevent_group(self):
+        """Test the result of exporting a subprocess group matrix element"""
+
+        # Setup a model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        g = mypartlist[-1]
+
+        # A quark U and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[-1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        # A quark D and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'d',
+                      'antiname':'d~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'d',
+                      'antitexname':'\bar d',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':1,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        d = mypartlist[-1]
+        antid = copy.copy(d)
+        antid.set('is_part', False)
+
+        # A photon
+        mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        a = mypartlist[-1]
+
+        # A Z
+        mypartlist.append(base_objects.Particle({'name':'z',
+                      'antiname':'z',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MZ',
+                      'width':'WZ',
+                      'texname':'Z',
+                      'antitexname':'Z',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':23,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        z = mypartlist[-1]
+
+        # Gluon and photon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             a]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [antid, \
+                                             d, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [antid, \
+                                             d, \
+                                             a]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        # 3 gluon vertiex
+        myinterlist.append(base_objects.Interaction({
+                      'id': 5,
+                      'particles': base_objects.ParticleList(\
+                                            [g] * 3),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'G'},
+                      'orders':{'QCD':1}}))
+
+        # Coupling of Z to quarks
+        
+        myinterlist.append(base_objects.Interaction({
+                      'id': 6,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             z]),
+                      'color': [],
+                      'lorentz':['L1', 'L2'],
+                      'couplings':{(0, 0):'GUZ1', (0, 1):'GUZ2'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 7,
+                      'particles': base_objects.ParticleList(\
+                                            [antid, \
+                                             d, \
+                                             z]),
+                      'color': [],
+                      'lorentz':['L1', 'L2'],
+                      'couplings':{(0, 0):'GDZ1', (0, 0):'GDZ2'},
+                      'orders':{'QED':1}}))
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)        
+
+        procs = [[2,-2,21,21], [2,-2,2,-2]]
+        amplitudes = diagram_generation.AmplitudeList()
+
+        for proc in procs:
+            # Define the multiprocess
+            my_leglist = base_objects.LegList([\
+                base_objects.Leg({'id': id, 'state': True}) for id in proc])
+
+            my_leglist[0].set('state', False)
+            my_leglist[1].set('state', False)
+
+            my_process = base_objects.Process({'legs':my_leglist,
+                                               'model':mymodel})
+            my_amplitude = diagram_generation.Amplitude(my_process)
+            amplitudes.append(my_amplitude)
+
+        # Calculate diagrams for all processes
+
+        subprocess_group = group_subprocs.SubProcessGroup.\
+                           group_amplitudes(amplitudes)[0]
+
+        # Test amp2 lines
+        
+        amp2_lines = \
+                 export_v4.get_amp2_lines(subprocess_group.get('multi_matrix').\
+                                        get('matrix_elements')[1],
+                                        subprocess_group.get('diagram_maps')[1])
+        self.assertEqual(amp2_lines,
+                         ['AMP2(1)=(AMP(1))*dconjg(AMP(1))+(AMP(2))*dconjg(AMP(2))',
+                          'AMP2(3)=(AMP(3)+AMP(4)+AMP(5)+AMP(6))*dconjg(AMP(3)+AMP(4)+AMP(5)+AMP(6))',
+                          'AMP2(4)=(AMP(7))*dconjg(AMP(7))+(AMP(8))*dconjg(AMP(8))',
+                          'AMP2(6)=(AMP(9)+AMP(10)+AMP(11)+AMP(12))*dconjg(AMP(9)+AMP(10)+AMP(11)+AMP(12))'])
+
+        # Test configs.inc
+
+        export_v4.write_group_configs_file(\
+            writers.FortranWriter(self.give_pos('test')),
+            subprocess_group,
+            subprocess_group.get_diagrams_for_configs(),
+            self.myfortranmodel)
+
+        goal_configs = """C     Diagram 1
+      DATA MAPCONFIG(1)/1/
+      DATA (IFOREST(I,-1,1),I=1,2)/4,3/
+      DATA SPROP(-1,1)/21/
+C     Diagram 2
+      DATA MAPCONFIG(2)/2/
+      DATA (IFOREST(I,-1,2),I=1,2)/1,3/
+      DATA TPRID(-1,2)/-2/
+      DATA (IFOREST(I,-2,2),I=1,2)/-1,4/
+C     Diagram 3
+      DATA MAPCONFIG(3)/3/
+      DATA (IFOREST(I,-1,3),I=1,2)/1,4/
+      DATA TPRID(-1,3)/-2/
+      DATA (IFOREST(I,-2,3),I=1,2)/-1,3/
+C     Diagram 4
+      DATA MAPCONFIG(4)/4/
+      DATA (IFOREST(I,-1,4),I=1,2)/4,3/
+      DATA SPROP(-1,4)/23/
+C     Diagram 5
+      DATA MAPCONFIG(5)/5/
+      DATA (IFOREST(I,-1,5),I=1,2)/1,3/
+      DATA TPRID(-1,5)/23/
+      DATA (IFOREST(I,-2,5),I=1,2)/-1,4/
+C     Number of configs
+      DATA MAPCONFIG(0)/5/
+"""
+        self.assertFileContains('test', goal_configs)
+
+        # Test configs.inc
+
+        export_v4.write_config_subproc_map_file(\
+            writers.FortranWriter(self.give_pos('test')),
+            self.myfortranmodel,
+            subprocess_group.get_diagrams_for_configs())
+
+        goal_confsub = """      DATA (CONFSUB(I,1),I=1,2)/1,1/
+      DATA (CONFSUB(I,2),I=1,2)/2,4/
+      DATA (CONFSUB(I,3),I=1,2)/3,0/
+      DATA (CONFSUB(I,4),I=1,2)/0,3/
+      DATA (CONFSUB(I,5),I=1,2)/0,6/
+"""
+        
+        #print open(self.give_pos('test')).read()
+        self.assertFileContains('test', goal_confsub)
 
 
 #===============================================================================
@@ -701,21 +971,21 @@ JAMP(6)=+1./4.*(-1./3.*AMP(1)-1./3.*AMP(2)-AMP(5)-AMP(6)-AMP(8)-AMP(11)-AMP(13)-
         writer.close()
 
         self.assertFileContains('leshouche',
-                         """      DATA (IDUP(I,1),I=1,6)/2,-2,2,-2,2,-2/
-      DATA (MOTHUP(1,I,  1),I=1, 6)/  0,  0,  1,  1,  1,  1/
-      DATA (MOTHUP(2,I,  1),I=1, 6)/  0,  0,  2,  2,  2,  2/
-      DATA (ICOLUP(1,I,  1),I=1, 6)/501,  0,502,  0,503,  0/
-      DATA (ICOLUP(2,I,  1),I=1, 6)/  0,501,  0,502,  0,503/
-      DATA (ICOLUP(1,I,  2),I=1, 6)/501,  0,502,  0,503,  0/
-      DATA (ICOLUP(2,I,  2),I=1, 6)/  0,501,  0,503,  0,502/
-      DATA (ICOLUP(1,I,  3),I=1, 6)/502,  0,502,  0,503,  0/
-      DATA (ICOLUP(2,I,  3),I=1, 6)/  0,501,  0,501,  0,503/
-      DATA (ICOLUP(1,I,  4),I=1, 6)/503,  0,502,  0,503,  0/
-      DATA (ICOLUP(2,I,  4),I=1, 6)/  0,501,  0,501,  0,502/
-      DATA (ICOLUP(1,I,  5),I=1, 6)/502,  0,502,  0,503,  0/
-      DATA (ICOLUP(2,I,  5),I=1, 6)/  0,501,  0,503,  0,501/
-      DATA (ICOLUP(1,I,  6),I=1, 6)/503,  0,502,  0,503,  0/
-      DATA (ICOLUP(2,I,  6),I=1, 6)/  0,501,  0,502,  0,501/
+                         """      DATA (IDUP(I,1,1),I=1,6)/2,-2,2,-2,2,-2/
+      DATA (MOTHUP(1,I),I=1, 6)/  0,  0,  1,  1,  1,  1/
+      DATA (MOTHUP(2,I),I=1, 6)/  0,  0,  2,  2,  2,  2/
+      DATA (ICOLUP(1,I,1,1),I=1, 6)/501,  0,502,  0,503,  0/
+      DATA (ICOLUP(2,I,1,1),I=1, 6)/  0,501,  0,502,  0,503/
+      DATA (ICOLUP(1,I,2,1),I=1, 6)/501,  0,502,  0,503,  0/
+      DATA (ICOLUP(2,I,2,1),I=1, 6)/  0,501,  0,503,  0,502/
+      DATA (ICOLUP(1,I,3,1),I=1, 6)/502,  0,502,  0,503,  0/
+      DATA (ICOLUP(2,I,3,1),I=1, 6)/  0,501,  0,501,  0,503/
+      DATA (ICOLUP(1,I,4,1),I=1, 6)/503,  0,502,  0,503,  0/
+      DATA (ICOLUP(2,I,4,1),I=1, 6)/  0,501,  0,501,  0,502/
+      DATA (ICOLUP(1,I,5,1),I=1, 6)/502,  0,502,  0,503,  0/
+      DATA (ICOLUP(2,I,5,1),I=1, 6)/  0,501,  0,503,  0,501/
+      DATA (ICOLUP(1,I,6,1),I=1, 6)/503,  0,502,  0,503,  0/
+      DATA (ICOLUP(2,I,6,1),I=1, 6)/  0,501,  0,502,  0,501/
 """)
 
         # Test pdf output (for auto_dsig.f)
@@ -3544,7 +3814,7 @@ CALL IOSXXX(W(1,28),W(1,2),W(1,27),MGVX350,AMP(8))""")
         writer.close()
         
         self.assertFileContains('test',
-                         """C     Diagram 1, Amplitude 1
+                         """C     Diagram 1
       DATA MAPCONFIG(1)/1/
       DATA (IFOREST(I,-1,1),I=1,2)/8,6/
       DATA SPROP(-1,1)/11/
@@ -3557,7 +3827,7 @@ CALL IOSXXX(W(1,28),W(1,2),W(1,27),MGVX350,AMP(8))""")
       DATA (IFOREST(I,-5,1),I=1,2)/1,-4/
       DATA TPRID(-5,1)/-1000011/
       DATA (IFOREST(I,-6,1),I=1,2)/-5,-2/
-C     Diagram 2, Amplitude 2
+C     Diagram 2
       DATA MAPCONFIG(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/8,7/
       DATA SPROP(-1,2)/-1000011/
@@ -3570,7 +3840,7 @@ C     Diagram 2, Amplitude 2
       DATA (IFOREST(I,-5,2),I=1,2)/1,-4/
       DATA TPRID(-5,2)/-1000011/
       DATA (IFOREST(I,-6,2),I=1,2)/-5,-2/
-C     Diagram 3, Amplitude 3
+C     Diagram 3
       DATA MAPCONFIG(3)/3/
       DATA (IFOREST(I,-1,3),I=1,2)/8,6/
       DATA SPROP(-1,3)/11/
@@ -3583,7 +3853,7 @@ C     Diagram 3, Amplitude 3
       DATA (IFOREST(I,-5,3),I=1,2)/1,-4/
       DATA TPRID(-5,3)/-1000011/
       DATA (IFOREST(I,-6,3),I=1,2)/-5,-2/
-C     Diagram 4, Amplitude 4
+C     Diagram 4
       DATA MAPCONFIG(4)/4/
       DATA (IFOREST(I,-1,4),I=1,2)/8,7/
       DATA SPROP(-1,4)/-1000011/
@@ -3596,7 +3866,7 @@ C     Diagram 4, Amplitude 4
       DATA (IFOREST(I,-5,4),I=1,2)/1,-4/
       DATA TPRID(-5,4)/-1000011/
       DATA (IFOREST(I,-6,4),I=1,2)/-5,-2/
-C     Diagram 5, Amplitude 5
+C     Diagram 5
       DATA MAPCONFIG(5)/5/
       DATA (IFOREST(I,-1,5),I=1,2)/5,3/
       DATA SPROP(-1,5)/11/
@@ -3609,7 +3879,7 @@ C     Diagram 5, Amplitude 5
       DATA (IFOREST(I,-5,5),I=1,2)/1,-4/
       DATA TPRID(-5,5)/-1000011/
       DATA (IFOREST(I,-6,5),I=1,2)/-5,-2/
-C     Diagram 6, Amplitude 6
+C     Diagram 6
       DATA MAPCONFIG(6)/6/
       DATA (IFOREST(I,-1,6),I=1,2)/5,3/
       DATA SPROP(-1,6)/11/
@@ -3622,7 +3892,7 @@ C     Diagram 6, Amplitude 6
       DATA (IFOREST(I,-5,6),I=1,2)/1,-4/
       DATA TPRID(-5,6)/-1000011/
       DATA (IFOREST(I,-6,6),I=1,2)/-5,-2/
-C     Diagram 7, Amplitude 7
+C     Diagram 7
       DATA MAPCONFIG(7)/7/
       DATA (IFOREST(I,-1,7),I=1,2)/5,4/
       DATA SPROP(-1,7)/-1000011/
@@ -3635,7 +3905,7 @@ C     Diagram 7, Amplitude 7
       DATA (IFOREST(I,-5,7),I=1,2)/1,-4/
       DATA TPRID(-5,7)/-1000011/
       DATA (IFOREST(I,-6,7),I=1,2)/-5,-2/
-C     Diagram 8, Amplitude 8
+C     Diagram 8
       DATA MAPCONFIG(8)/8/
       DATA (IFOREST(I,-1,8),I=1,2)/5,4/
       DATA SPROP(-1,8)/-1000011/
@@ -3656,7 +3926,6 @@ C     Number of configs
 
         # Test decayBW file
         export_v4.write_decayBW_file(writer,
-                                     me,
                                      myfortranmodel,
                                      s_and_t_channels)
 
@@ -3707,7 +3976,9 @@ C     Number of configs
         self.assertFileContains('test', "DIRNAME=P0_emep_n1n1_n1_emsl2pa_n1_emsl2pa\n")
         # Test iproc.inc
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_iproc_file(writer, me, fortran_model)
+        export_v4.write_iproc_file(writer,
+                                   me.get('processes')[0].get('id'),
+                                   fortran_model)
         writer.close()
         self.assertFileContains('test', "      0\n")
         # Test maxamps.inc
@@ -3717,11 +3988,15 @@ C     Number of configs
         export_v4.write_maxamps_file(writer,
                                      fortran_model,
                                      len(me.get_all_amplitudes()),
-                                     ncolor)
+                                     ncolor,
+                                     len(me.get('processes')),
+                                     1)
         writer.close()
         self.assertFileContains('test',
-                                "      INTEGER    MAXAMPS, MAXFLOW\n" + \
-                                "      PARAMETER (MAXAMPS=8, MAXFLOW=1)\n")
+                                "      INTEGER    MAXAMPS, MAXFLOW, " + \
+                                "MAXPROC, MAXSPROC\n" + \
+                                "      PARAMETER (MAXAMPS=8, MAXFLOW=1)\n" + \
+                                "      PARAMETER (MAXPROC=1, MAXSPROC=1)\n")
         # Test mg.sym
         writer = writers.FortranWriter(self.give_pos('test'))
         export_v4.write_mg_sym_file(writer, me, fortran_model)

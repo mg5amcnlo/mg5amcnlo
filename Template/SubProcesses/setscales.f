@@ -17,9 +17,9 @@ c
 
       integer i
       include 'maxamps.inc'
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
       include 'run.inc'
 
@@ -59,7 +59,7 @@ c      do i=3,nexternal
 c         rscale=max(rscale,pmass(i)**2)
 c      enddo
 c      do i=3,nexternal
-c         if(iabs(idup(i,1)).le.5.or.idup(i,1).eq.21.or.pmass(i).eq.0d0)then
+c         if(iabs(idup(i,1,1)).le.5.or.idup(i,1,1).eq.21.or.pmass(i).eq.0d0)then
 c            rscale=rscale+pt(p(0,i))**2
 c         endif
 c      enddo

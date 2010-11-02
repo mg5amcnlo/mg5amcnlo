@@ -364,9 +364,9 @@ C   local variables
       real*8 q2bck(2)
       save q2bck
       include 'maxamps.inc'
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
       double precision asref, pt2prev(n_max_cl),pt2min
       integer n, icmp, ibeam(2), iqcd(0:2)!, ilast(0:nexternal)
@@ -428,7 +428,7 @@ c   fill particle information
       icmp=ishft(1,nexternal+1)-2
       do i=1,nexternal
         idmap(i)=ishft(1,i)
-        ipdg(idmap(i))=idup(i,1)
+        ipdg(idmap(i))=idup(i,1,1)
         if(btest(mlevel,3))
      $     write(*,*) i,' got id ',idmap(i),' -> ',ipdg(idmap(i))
       enddo
@@ -632,6 +632,7 @@ c**************************************************
       include 'cluster.inc'
       include 'run.inc'
       include 'coupl.inc'
+      include 'maxamps.inc'
 C   
 C   ARGUMENTS 
 C   
@@ -655,10 +656,9 @@ C   local variables
       real*8 xptj,xptb,xpta,xptl,xmtc
       real*8 xetamin,xqcut,deltaeta
       common /to_specxpt/xptj,xptb,xpta,xptl,xmtc,xetamin,xqcut,deltaeta
-      include 'maxamps.inc'
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
       double precision asref, pt2prev(n_max_cl),pt2pdf(n_max_cl),pt2min
       integer n, icmp, ibeam(2), iqcd(0:2)!, ilast(0:nexternal)
@@ -736,7 +736,7 @@ c   fill particle information
       icmp=ishft(1,nexternal+1)-2
       do i=1,nexternal
         idmap(i)=ishft(1,i)
-        ipdg(idmap(i))=idup(i,iprocset)
+        ipdg(idmap(i))=idup(i,iprocset,1)
         if(btest(mlevel,3))
      $     write(*,*) i,' got id ',idmap(i),' -> ',ipdg(idmap(i))
       enddo

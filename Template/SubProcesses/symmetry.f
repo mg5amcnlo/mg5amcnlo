@@ -265,9 +265,9 @@ c
 c     local
 c
       integer i
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
 c
 c     Process info
 c
@@ -277,7 +277,7 @@ c Begin Code
 c-----
       check_swap=.true.
       do i=1,nexternal
-         if (idup(i,1) .ne. idup(ic(i),1)) check_swap=.false.
+         if (idup(i,1,1) .ne. idup(ic(i),1,1)) check_swap=.false.
       enddo
       end
 

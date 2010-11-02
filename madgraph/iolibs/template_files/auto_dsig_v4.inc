@@ -18,6 +18,7 @@ C CONSTANTS
 C  
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'maxamps.inc'
       DOUBLE PRECISION       CONV
       PARAMETER (CONV=389379.66*1000)  !CONV TO PICOBARNS
       REAL*8     PI
@@ -72,6 +73,6 @@ C ----------
              dsiguu=0d0
              dsig=0d0
          endif
-         call unwgt(pp,%(dsig_line)s*wgt)
+	 call unwgt(pp,%(dsig_line)s*wgt,%(numproc)d)
       ENDIF
       END
