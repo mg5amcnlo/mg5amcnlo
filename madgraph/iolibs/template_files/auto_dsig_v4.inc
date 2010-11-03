@@ -1,4 +1,4 @@
-DOUBLE PRECISION FUNCTION DSIG%(proc_id)s(PP,WGT)
+DOUBLE PRECISION FUNCTION DSIG%(proc_id)s(PP,WGT,IMODE)
 C ****************************************************
 C
 %(info_lines)s
@@ -9,6 +9,7 @@ C     RETURNS DIFFERENTIAL CROSS SECTION
 C     Input:
 C             pp    4 momentum of external particles
 C             wgt   weight from Monte Carlo
+C             imode 0 run, 1 init, 2 finalize
 C     Output:
 C             Amplitude squared and summed
 C ****************************************************
@@ -27,10 +28,11 @@ C
 C ARGUMENTS 
 C  
       DOUBLE PRECISION PP(0:3,NEXTERNAL), WGT
+      INTEGER IMODE
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER I, ICROSS,ITYPE,LP
+      INTEGER I,ITYPE,LP
       DOUBLE PRECISION u1,ub1,d1,db1,c1,cb1,s1,sb1,b1,bb1
       DOUBLE PRECISION u2,ub2,d2,db2,c2,cb2,s2,sb2,b2,bb2
       DOUBLE PRECISION g1,g2
@@ -57,12 +59,15 @@ C
       DATA u2,ub2,d2,db2,c2,cb2,s2,sb2,b2,bb2/10*1d0/
       DATA a1,g1/2*1d0/
       DATA a2,g2/2*1d0/
-      DATA IPROC,ICROSS/1,1/
 C ----------
 C BEGIN CODE
 C ----------
       DSIG%(proc_id)s=0D0
-      IF (PASSCUTS(PP)) THEN
+
+C   Only run if IMODE is 0
+      IF(IMODE.NE.0) RETURN
+
+%(passcuts_begin)s
 %(pdf_lines)s
          CALL SMATRIX%(proc_id)s(PP,DSIGUU)                                              
          DSIGUU=DSIGUU*REWGT(PP)
@@ -74,5 +79,5 @@ C ----------
              DSIG%(proc_id)s=0D0
          ENDIF
 	 CALL UNWGT(PP,%(dsig_line)s*WGT,%(numproc)d)
-      ENDIF
+%(passcuts_end)s
       END

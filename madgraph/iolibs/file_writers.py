@@ -108,6 +108,7 @@ class FortranWriter(FileWriter):
                      'function': ('^end\s*$', 0)}
     single_indents = {'^else\s*$':-2,
                       '^else\s*if.+then\s*$':-2}
+    number_re = re.compile('^(?P<num>\d+)\s+(?P<rest>.*)')
     line_cont_char = '$'
     comment_char = 'c'
     downcase = False
@@ -146,6 +147,13 @@ class FortranWriter(FileWriter):
 
             # Strip leading spaces from line
             myline = line.lstrip()
+
+            # Check if line starts with number
+            num_group = self.number_re.search(myline)
+            num = ""
+            if num_group:
+                num = num_group.group('num')
+                myline = num_group.group('rest')
 
             # Convert to upper or lower case
             # Here we need to make exception for anything within quotes.
@@ -190,7 +198,8 @@ class FortranWriter(FileWriter):
 
             # Break line in appropriate places
             # defined (in priority order) by the characters in split_characters
-            res = self.split_line(" " * (6 + self.__indent) + myline,
+            res = self.split_line(" " + num + \
+                                  " " * (5 + self.__indent - len(num)) + myline,
                                   self.split_characters,
                                   " " * 5 + self.line_cont_char + \
                                   " " * (self.__indent + 1))

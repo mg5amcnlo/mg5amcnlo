@@ -403,10 +403,10 @@ def write_matrix_element_v4_madevent(writer, matrix_element, fortran_model,
         # Set lines for subprocess group version
         # Set define_iconfigs_lines
         replace_dict['define_iconfigs_lines'] = \
-             """INTEGER ISUBDIAG(MAXSPROC)
-             COMMON/TO_SUB_DIAG/ISUBDIAG"""    
+             """INTEGER SUBDIAG(MAXSPROC)
+             COMMON/TO_SUB_DIAG/SUBDIAG"""    
         # Set set_amp2_line
-        replace_dict['set_amp2_line'] = "ANS=ANS*AMP2(ISUBDIAG(%s))/XTOT" % \
+        replace_dict['set_amp2_line'] = "ANS=ANS*AMP2(SUBDIAG(%s))/XTOT" % \
                                         proc_id
     else:
         # Standard running
@@ -483,6 +483,11 @@ def write_auto_dsig_file(writer, matrix_element, fortran_model, proc_id = ""):
     replace_dict['numproc'] = 1
     if proc_id:
         replace_dict['numproc'] = int(proc_id)
+        replace_dict['passcuts_begin'] = ""
+        replace_dict['passcuts_end'] = ""
+    else:
+        replace_dict['passcuts_begin'] = "IF (PASSCUTS(PP)) THEN"
+        replace_dict['passcuts_end'] = "ENDIF"
 
     # Extract pdf lines
     pdf_lines = get_pdf_lines(matrix_element, ninitial)
@@ -499,6 +504,48 @@ def write_auto_dsig_file(writer, matrix_element, fortran_model, proc_id = ""):
 
     file = open(os.path.join(_file_path, \
                       'iolibs/template_files/auto_dsig_v4.inc')).read()
+    file = file % replace_dict
+
+    # Write the file
+    writer.writelines(file)
+
+#===============================================================================
+# write_super_auto_dsig_file
+#===============================================================================
+def write_super_auto_dsig_file(writer, subproc_group, fortran_model):
+    """Write the auto_dsig.f file selecting between the subprocesses
+    in subprocess group mode"""
+
+    replace_dict = {}
+
+    # Extract version number and date from VERSION file
+    info_lines = get_mg5_info_lines()
+    replace_dict['info_lines'] = info_lines
+
+    matrix_elements = subproc_group.get('multi_matrix').get('matrix_elements')
+
+    # Extract process info lines
+    process_lines = '\n'.join([get_process_info_lines(me) for me in \
+                               matrix_elements])
+    replace_dict['process_lines'] = process_lines
+
+    # Generate dsig definition line
+    dsig_def_line = "DOUBLE PRECISION " + \
+                    ",".join(["DSIG%d" % (iproc + 1) for iproc in \
+                              range(len(matrix_elements))])
+    replace_dict["dsig_def_line"] = dsig_def_line
+
+    # Generate dsig process lines
+    call_dsig_proc_lines = []
+    for iproc in range(len(matrix_elements)):
+        call_dsig_proc_lines.append(\
+            "IF(IPROC.EQ.%(num)d) DSIG=DSIG%(num)d(PP,WGT,0) ! %(proc)s" % \
+            {"num": iproc + 1,
+             "proc": matrix_elements[iproc].get('processes')[0].base_string()})
+    replace_dict['call_dsig_proc_lines'] = "\n".join(call_dsig_proc_lines)
+    
+    file = open(os.path.join(_file_path, \
+                   'iolibs/template_files/super_auto_dsig_group_v4.inc')).read()
     file = file % replace_dict
 
     # Write the file
@@ -939,6 +986,22 @@ def write_props_file(writer, matrix_element, fortran_model, s_and_t_channels):
     return True
 
 #===============================================================================
+# write_default_symswap_file
+#===============================================================================
+def write_default_symswap_file(writer, fortran_model, nexternal):
+    """Write the symswap.inc file for MG4 without symmetry"""
+
+    lines = []
+    lines.append("data(isym(i,1),i=1,nexternal)/%s/" % \
+                 ",".join([str(i+1) for i in range(nexternal)]))
+    lines.append("data nsym/1/")
+
+    # Write the file
+    writer.writelines(lines)
+
+    return True
+
+#===============================================================================
 # write_subproc
 #===============================================================================
 def write_subproc(writer, subprocdir, fortran_model):
@@ -1186,6 +1249,11 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
                      fortran_model,
                      s_and_t_channels)
 
+    filename = 'symswap.inc'
+    write_default_symswap_file(writers.FortranWriter(filename),
+                               fortran_model,
+                               nexternal)
+    
     # Generate diagrams
     filename = "matrix.ps"
     plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
@@ -1249,7 +1317,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     return calls
 
 #===============================================================================
-# generate_subprocess_directory_v4_madevent
+# generate_subprocess_group_directory_v4_madevent
 #===============================================================================
 def generate_subprocess_group_directory_v4_madevent(subproc_group,
                                                     fortran_model,
@@ -1297,8 +1365,8 @@ def generate_subprocess_group_directory_v4_madevent(subproc_group,
             enumerate(matrix_elements):
         filename = 'matrix%d.f' % (ime+1)
         calls, ncolor = \
-           write_matrix_element_v4_madevent(writers.FortranWriter(filename),
-                                            matrix_element,
+           write_matrix_element_v4_madevent(writers.FortranWriter(filename), 
+                                           matrix_element,
                                             fortran_model,
                                             str(ime+1),
                                             subproc_group.get('diagram_maps')[\
@@ -1331,16 +1399,21 @@ def generate_subprocess_group_directory_v4_madevent(subproc_group,
     # Extract number of external particles
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
-    #filename = 'coloramps.inc'
-    #write_coloramps_file(writers.FortranWriter(filename),
-    #                     matrix_element,
-    #                     fortran_model)
+    filename = 'coloramps.inc'
+    write_coloramps_file(writers.FortranWriter(filename),
+                         matrix_element,
+                         fortran_model)
 
     # Generate a list of diagrams corresponding to each configuration
     # [[d1, d2, ...,dn],...] where 1,2,...,n is the subprocess number
     # If a subprocess has no diagrams for this config, the number is 0
     
     subproc_diagrams_for_config = subproc_group.get_diagrams_for_configs()
+
+    filename = 'auto_dsig.f'
+    write_super_auto_dsig_file(writers.FortranWriter(filename),
+                               subproc_group,
+                               fortran_model)
 
     filename = 'config_subproc_map.inc'
     write_config_subproc_map_file(writers.FortranWriter(filename),
@@ -1414,7 +1487,12 @@ def generate_subprocess_group_directory_v4_madevent(subproc_group,
                      matrix_element,
                      fortran_model,
                      s_and_t_channels)
-
+    
+    filename = 'symswap.inc'
+    write_default_symswap_file(writers.FortranWriter(filename),
+                               fortran_model,
+                               nexternal)
+    
     # Generate jpgs -> pass in make_html
     #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
 
@@ -1602,19 +1680,19 @@ def get_amp2_lines(matrix_element, config_map = []):
                 config_to_diag_dict[config_map[idiag]].append(idiag)
             except KeyError:
                 config_to_diag_dict[config_map[idiag]] = [idiag]
-        # Write out the AMP2s, by summing the amplitude for amplitudes
-        # from the same diagram, and summing squares for amplitudes
-        # belonging to different diagrams with identical propagator
-        # properties.  Note that we need to use AMP2 number
-        # corresponding to the first diagram number used for that AMP2.
+        # Write out the AMP2s summing squares of amplitudes belonging
+        # to eiher the same diagram or different diagrams with
+        # identical propagator properties.  Note that we need to use
+        # AMP2 number corresponding to the first diagram number used
+        # for that AMP2.
         for config in config_to_diag_dict.keys():
 
             line = "AMP2(%d)=" % (config_to_diag_dict[config][0] + 1)
             
-            line += "+".join(["(%(amps)s)*dconjg(%(amps)s)" % \
-                            {"amps": "+".join(["AMP(%d)" % a.get('number') for \
-                                     a in diagrams[idiag].get('amplitudes')])} \
-                                     for idiag in config_to_diag_dict[config]])
+            line += "+".join(["AMP(%(num)d)*dconjg(AMP(%(num)d))" % \
+                              {"num": a.get('number')} for a in \
+                              sum([diagrams[idiag].get('amplitudes') for \
+                                   idiag in config_to_diag_dict[config]], [])])
             ret_lines.append(line)
         ret_lines.sort()
     else:
@@ -1629,11 +1707,12 @@ def get_amp2_lines(matrix_element, config_map = []):
             if not allchannels or \
                    any([len(vert.get('legs')) > 3 for vert in allchannels]):
                 continue
-            # Now write out the expression for AMP2
+            # Now write out the expression for AMP2, meaning the sum of
+            # squared amplitudes belonging to the same diagram
             line = "AMP2(%d)=" % (idiag + 1)
-            line += "%(amps)s*dconjg(%(amps)s)" % \
-                    {"amps": "+".join(["AMP(%d)" % a.get('number') for \
-                                       a in diag.get('amplitudes')])}
+            line += "+".join(["AMP(%(num)d)*dconjg(AMP(%(num)d))" % \
+                              {"num": a.get('number')} for a in \
+                              diag.get('amplitudes')])
             ret_lines.append(line)
     
     return ret_lines

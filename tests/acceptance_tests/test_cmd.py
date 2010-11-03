@@ -114,8 +114,9 @@ class TestCmdShell2(unittest.TestCase):
         
     def tearDown(self):
         """ basic destruction after have run """
-        if os.path.exists(self.out_dir):
-            shutil.rmtree(self.out_dir)
+        pass
+        #if os.path.exists(self.out_dir):
+        #    shutil.rmtree(self.out_dir)
     
     join_path = TestCmdShell1.join_path
 
@@ -309,7 +310,7 @@ class TestCmdShell2(unittest.TestCase):
         devnull = open(os.devnull,'w')
         # Check that the Source directory compiles
         status = subprocess.call(['make'],
-                                 stdout=devnull, stderr=devnull, 
+                                 stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'Source'))
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
@@ -349,6 +350,61 @@ class TestCmdShell2(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_epem_epem',
+                                                    'madevent')))
+        
+    def test_madevent_subproc_group(self):
+        """Test MadEvent output using the SubProcess group functionality"""
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmdir(self.out_dir)
+
+        self.do('import model sm')
+        self.do('define p = g u u~ d d~')
+        self.do('generate g g > p p')
+        self.do('output madevent_group %s ' % self.out_dir)
+        devnull = open(os.devnull,'w')
+        # Check that the Source directory compiles
+        status = subprocess.call(['make'],
+                                 stdout=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'Source'))
+        self.assertEqual(status, 0)
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libdhelas3.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libmodel.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libgeneric.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libcernlib.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libdsample.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libpdf.a')))
+        # Check that gensym compiles
+        status = subprocess.call(['make', 'gensym'],
+                                 stdout=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                                  'P1_gg_jj'))
+        self.assertEqual(status, 0)
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P1_gg_jj',
+                                                    'gensym')))
+        # Check that gensym runs
+        status = subprocess.call('./gensym', 
+                                 stdout=devnull,
+                                 cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                                  'P1_gg_jj'), shell=True)
+        self.assertEqual(status, 0)
+        # Check that madevent compiles
+        status = subprocess.call(['make', 'madevent'],
+                                 stdout=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                                  'P1_gg_jj'))
+        self.assertEqual(status, 0)
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P1_gg_jj',
                                                     'madevent')))
         
     def test_ufo_standard_sm(self):

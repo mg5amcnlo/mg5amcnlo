@@ -23,7 +23,7 @@ c
 c Local
 c
       double precision x(maxinvar),wgt,p(4*maxdim/3+14)
-      double precision tdem, chi2
+      double precision tdem, chi2, dum
       integer ievent,kevent,nwrite,iter,nun
       integer jmax,i,j,ipole
       integer itmax_adjust
@@ -127,7 +127,7 @@ c
             call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ninvar,wgt,x,p)
             if (pass_point(p)) then
                xzoomfact = 1d0
-               fx = dsig(p,wgt) !Evaluate function
+               fx = dsig(p,wgt,0) !Evaluate function
                if (xzoomfact .gt. 0d0) then
                   wgt = wgt*fx*xzoomfact
                else
@@ -223,10 +223,15 @@ c     the grid, and 4 more to try and get the appropriate number of
 c     unweighted events.
 c
       write(*,*) "Status",accur, cur_it, itmax
-      if (accur .ge. 0d0 .or. cur_it .gt. itmax+3)  return
-
+      if (accur .ge. 0d0 .or. cur_it .gt. itmax+3) then
+c     Call finalize dsig to write selproc file in subproc group mode
+        dum=dsig(p,wgt,3)
+        return
+      endif
       if (neventswritten .gt. -accur) then
          write(*,*) "We found enough events",neventswritten, -accur*1000*tmean
+c     Call finalize dsig to write selproc file in subproc group mode
+         dum=dsig(p,wgt,3)
          return
       endif
       
@@ -282,7 +287,7 @@ c
             call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ninvar,wgt,x,p)
             if (pass_point(p)) then
                xzoomfact = 1d0
-               fx = dsig(p,wgt) !Evaluate function
+               fx = dsig(p,wgt,0) !Evaluate function
                if (xzoomfact .gt. 0d0) then
                   wgt = wgt*fx*xzoomfact
                else
@@ -365,6 +370,9 @@ c      do i=1,cur_it-1
          close(66)
 
       endif      
+c   Call finalize dsig to write selproc file in subproc group mode
+      dum=dsig(p,wgt,3)
+
       end
 
       subroutine sample_fullx(ndim,ncall,itmax,dsig,ninvar,nconfigs)
@@ -488,7 +496,7 @@ c
             call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ninvar,wgt,x,p)
             if (pass_point(p)) then
                xzoomfact = 1d0
-               fx = dsig(p,wgt) !Evaluate function
+               fx = dsig(p,wgt,0) !Evaluate function
                if (xzoomfact .gt. 0d0) then
                   wgt = wgt*fx*xzoomfact
                else
@@ -1372,7 +1380,7 @@ c
 c     Local
 c
       integer i, j, k, knt, non_zero, nun
-      double precision vol,xnmin,xnmax,tot
+      double precision vol,xnmin,xnmax,tot,xdum
       double precision rc, dr, xo, xn, x(maxinvar), dum(ng)
       save vol,knt
       double precision  chi2
@@ -1385,10 +1393,10 @@ c
 c
 c     External
 c
-      double precision binwidth,xbin
+      double precision binwidth,xbin,dsig
       logical rebin
       integer n_unwgted
-      external binwidth,xbin,rebin,n_unwgted
+      external binwidth,xbin,dsig,rebin,n_unwgted
 c
 c     Global
 c
@@ -1620,6 +1628,8 @@ c               call sample_writehtm()
             enddo
             if (configs .gt. 1)
      &           write(*,'(8f10.5)') (psect(i)/tot, i=1,configs)
+c     Now update weights in dsig (needed for subprocess group mode)
+            xdum=dsig(0,0,2)
 c
 c     Now set things up for generating unweighted events
 c

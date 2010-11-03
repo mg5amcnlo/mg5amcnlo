@@ -10,15 +10,20 @@ LINKLIBS =  -L../../lib/ -ldhelas3 -ldsample -lmodel -lgeneric -lpdf -lcernlib
 LIBS = $(LIBDIR)libdhelas3.a $(LIBDIR)libdsample.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a $(LIBDIR)libmodel.a $(LIBDIR)libcernlib.a
 
 
-PROCESS= driver.o myamp.o auto_dsig.o genps.o matrix.o unwgt.o setcuts.o cuts.o cluster.o reweight.o initcluster.o addmothers.o setscales.o
-SYMMETRY = myamp.o genps.o matrix.o  initcluster.o setscales.o reweight.o
+PROCESS= driver.o myamp.o genps.o unwgt.o setcuts.o \
+         cuts.o cluster.o reweight.o initcluster.o addmothers.o setscales.o \
+         $(patsubst %.f,%.o,$(wildcard auto_dsig*.f)) \
+         $(patsubst %.f,%.o,$(wildcard matrix*.f))
+SYMMETRY = myamp.o genps.o initcluster.o setscales.o reweight.o\
+           $(patsubst %.f,%.o,$(wildcard matrix*.f))
+
 # $B$ obj_for_MW $E$ !this is a tag for MadWeight. Don't edit this line
 
 %.o : %.f
 	$(F77) $(FFLAGS) -c $<
 
 # $B$ main_make $B$ !this is a tag for MadWeight. Don't edit this line
-$(PROG): $(PROCESS)  makefile $(LIBS)
+$(PROG): $(PROCESS) auto_dsig.o makefile $(LIBS)
 	$(F77) $(FFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
 # $E$ main_make $E$ !this is a tag for MadWeight. Don't edit this line
 

@@ -33,13 +33,12 @@ C
 C LOCAL VARIABLES 
 C  
     INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
-    REAL*8 T,MATRIX
+    REAL*8 T,MATRIX%(proc_id)s
     INTEGER I,IDEN
     INTEGER IPROC,JC(NEXTERNAL),II
     LOGICAL GOODHEL(NCOMB)
     REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
     INTEGER IDUM, NGOOD, IGOOD(NCOMB), JHEL, J, JJ
-    LOGICAL WARNED
     REAL     XRAN1
     EXTERNAL XRAN1
 C  
@@ -60,10 +59,7 @@ C
 %(define_iconfigs_lines)s
     DATA NTRY,IDUM /0,-1/
     DATA XTRY, XREJ, NGOOD /0,0,0/
-    DATA WARNED, ISUM_HEL/.FALSE.,0/
-    DATA MULTI_CHANNEL/.TRUE./
     SAVE YFRAC, IGOOD, JHEL
-    DATA JAMP2(0) /%(ncolor)d/          
     DATA GOODHEL/THEL*.FALSE./
 %(helicity_lines)s
 %(den_factor_line)s
@@ -79,6 +75,7 @@ C ----------
         DO I=1,NDIAGS
             AMP2(I)=0D0
         ENDDO
+        JAMP2(0)=%(ncolor)d
         DO I=1,INT(JAMP2(0))
             JAMP2(I)=0D0
         ENDDO
@@ -88,7 +85,7 @@ C ----------
     IF (ISUM_HEL .EQ. 0 .OR. NTRY .LT. 10) THEN
         DO I=1,NCOMB
            IF (GOODHEL(I) .OR. NTRY .LT. 2) THEN
-               T=MATRIX(P ,NHEL(1,I),JC(1))            
+               T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
              DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
                  T=T*ABS(POL(JJ))
@@ -112,7 +109,7 @@ C ----------
             IF (JHEL .GT. NGOOD) JHEL=1
             HWGT = REAL(NGOOD)/REAL(ISUM_HEL)
             I = IGOOD(JHEL)
-            T=MATRIX(P ,NHEL(1,I),JC(1))            
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
             DO JJ=1,nincoming
               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
                 T=T*ABS(POL(JJ))
@@ -191,13 +188,13 @@ C BEGIN CODE
 C ----------
 %(helas_calls)s
 %(jamp_lines)s
-    MATRIX = 0.D0 
+    MATRIX%(proc_id)s = 0.D0 
     DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)
         DO J = 1, NCOLOR
             ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
         ENDDO
-        MATRIX=MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
+        MATRIX%(proc_id)s=MATRIX%(proc_id)s+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
     ENDDO
 %(amp2_lines)s
     Do I = 1, NCOLOR

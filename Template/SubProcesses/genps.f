@@ -104,7 +104,7 @@ c
       integer nparticles,nfinal
       double precision jac,sjac,pswgt,pwgt(maxconfigs),flux
       double precision tprb, mtot
-      double precision stot, xtau
+      double precision stot, xtau, dum
 
       integer sprop(-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
@@ -122,7 +122,7 @@ c
 c
 c     External
 c
-      double precision lambda,dot
+      double precision lambda,dot,dsig
       logical passcuts
 c
 c     Global
@@ -227,6 +227,9 @@ c            i = isym(k)
                endif
             enddo
          enddo
+
+c     Initialize dsig (needed for subprocess group running mode)
+         dum=dsig(0,0,1)
 
       else
          do i=1,11

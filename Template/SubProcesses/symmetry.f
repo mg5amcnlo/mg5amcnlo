@@ -104,121 +104,13 @@ c
 
       open(unit=lun,file='symswap.inc',status='unknown')
 
-c     
-c     Get momentum configuration
-c
-      do i = 1,23   !Not needed, but ok
-      ntry = 1
-      wgt=1d0
-      call x_to_f_arg(ndim,iconfig,minconfig,maxconfig,ninvar,wgt,x,p)
-      do while ((.not. pass_point(p) .or. wgt .lt. 0 .or. p(0,1) .le. 0d0) .and. ntry .lt. 1000)
-         call x_to_f_arg(ndim,iconfig,minconfig,maxconfig,ninvar,wgt,x,p)
-         ntry=ntry+1
-      enddo
-      call smatrix(p,fx) 
-c      write(*,*) i,ntry,fx
-c      do j=1,nexternal
-c         write(*,'(2i3,4e15.5)') i,j,(p(k,j),k=0,3)
-c      enddo
-      
-      enddo
-      nconfigs = mapconfig(0)
-c
-c     Get and save base amplitudes
-c
-      do j = 1 , mapconfig(mapconfig(0))
-         saveamp(j)=amp2(j)
-      enddo
-      do j=1,nexternal
-         write(*,'(i4,4e15.5)') j,(p(i,j),i=0,3)
-      enddo
 c
 c     Start using all configurations
 c
       do j=1,mapconfig(0)
          use_config(j) = 1
       enddo
-c
-c     Swap amplitudes looking for matches
-c
-      nswitch = 1
-      do k=1,nexternal
-         ic(k,1)=k
-      enddo
-      nmatch = 0
-      mtc=.false.
-      nsym = 1
-      write(lun,'(a,i2,a$)') '       data (isym(i,',nsym,'),i=1,nexternal) /1 '
-      do i=2,nexternal
-         write(lun,'(a,i2$)') ",",ic(i,1)
-c         write(*,'(a,i2$)') ",",ic(i,1)
-      enddo
-c      write(*,*)
-      write(lun,'(a)') "/"
-      call nexper(nexternal-2,ic(3,1),mtc,even)
-c      write(*,*) 'mtc',mtc, (ic(i,1),i=1,nexternal)
-      do while(mtc)
-         call nexper(nexternal-2,ic(3,1),mtc,even)
-c         write(*,*) 'mtc',mtc, (ic(i,1),i=1,nexternal)
-         do j=3,nexternal
-            ic(j,1)=ic(j,1)+2
-         enddo
-         if (mtc) then
-             CALL SWITCHMOM(P,P1,IC(1,1),JC,NEXTERNAL)
-c
-c     Now check if it is a valid swap to make
-c
 
-         if (check_swap(ic(1,1))) then
-            write(*,*) 'Good swap', (ic(i,1),i=1,nexternal)
-            nsym=nsym+1
-            write(lun,'(a,i2,a$)') '       data (isym(i,',nsym,'),i=1,nexternal) /1 '
-            do i=2,nexternal
-               write(lun,'(a,i2$)') ",",ic(i,1)
-            enddo
-            write(lun,'(a)') "/"
-
-            call smatrix(p1,fx) 
-c            write(*,*) 'dsig=',fx
-c         write(*,'(7i6)') i,(ic(k,i),k=1,nexternal)
-c         do n = i+1,nswitch
-c            CALL SWITCHMOM(P,P1,IC(1,n),JC,NEXTERNAL)
-c            call smatrix(p1,fx)
-c
-c        Look for matches, but only for diagrams < current diagram
-c     
-         do j=2,mapconfig(0)
-            do k=1,j-1
-               diff = abs((amp2(mapconfig(j)) - saveamp(mapconfig(k)))/
-     $              (amp2(mapconfig(j))+1d-99))
-               if (diff .lt. 1d-8 ) then
-c                  write(*,*) "Found match graph",mapconfig(j),mapconfig(k),diff
-                  if (use_config(j) .gt. 0 ) then  !Not found yet
-                     nmatch=nmatch+1
-                     if (use_config(k) .gt. 0) then !Match is real config
-                        use_config(k)=use_config(k)+use_config(j)
-                        use_config(j)=-k
-                     else
-                        ibase = -use_config(k)
-                        use_config(ibase) = use_config(ibase)+use_config(j)
-                        use_config(j) = -ibase
-                     endif
-                  endif
-               endif
-            enddo
-         enddo
-         else
-            write(*,*) 'Bad swap', (ic(i,1),i=1,nexternal)
-         endif   !Good Swap
-         endif   !Real Swap
-         do j=3,nexternal
-            ic(j,1)=ic(j,1)-2
-         enddo
-      enddo
-      write(lun,*) '      data nsym /',nsym,'/'
-      close(lun)
-      write(*,*) 'Found ',nmatch, ' matches. ',mapconfig(0)-nmatch,
-     $     ' channels remain for integration.'
       call write_bash(mapconfig,use_config,pwidth,icomp,iforest)
       call write_input(j)
       end
@@ -229,120 +121,26 @@ c     Dummy routine
 c**********************************************************************
       end
 
-      subroutine write_symswap
-c***********************************************************************
-c     This information is used to symmeterize identical particle
-c     data
-c***********************************************************************
-c      implicit none
-c      
-c      open(unit=lun,file='symswap.inc',status='unknown')
-c      write(lun,*) '      data nsym /1/'
-c      write(lun,'(a$)') '       data (isym(i,1),i=1,nexternal) /1 '
-c      do i=2,nexternal
-c         write(lun,'(a,i2$)') ",",i
-c      enddo
-c      write(lun,'(a)') "/"
-c      close(lun)
-      end
-
-      logical function check_swap(ic)
-c**************************************************************************
-c     check that only identical particles were swapped
-c**************************************************************************
-      implicit none
-c
-c     Constants
-c
-      include 'genps.inc'
-      include 'nexternal.inc'
-      include 'maxamps.inc'
-c
-c     Arguments
-c
-      integer ic(nexternal)
-c
-c     local
-c
-      integer i
-      integer idup(nexternal,maxproc,maxsproc)
-      integer mothup(2,nexternal)
-      integer icolup(2,nexternal,maxflow,maxsproc)
-c
-c     Process info
-c
-      include 'leshouche.inc'
-c------
-c Begin Code
-c-----
-      check_swap=.true.
-      do i=1,nexternal
-         if (idup(i,1,1) .ne. idup(ic(i),1,1)) check_swap=.false.
-      enddo
-      end
-
-      subroutine nexper(n,a,mtc,even)
-c*******************************************************************************
-c     Gives all permutations for a group
-c http://www.cs.sunysb.edu/~algorith/implement/wilf/distrib/processed/nexper_2.f
-c next permutation of {1,...,n}. Ref NW p 59.
-c*******************************************************************************
-      integer a(n),s,d
-      logical mtc,even
-      if(mtc)goto 10
-      nm3=n-3
-      do 1 i=1,n
- 1        a(i)=i
-      mtc=.true.
- 5     even=.true.
-      if(n.eq.1)goto 8
- 6     if(a(n).ne.1.or.a(1).ne.2+mod(n,2))return
-      if(n.le.3)goto 8
-      do 7 i=1,nm3
-      if(a(i+1).ne.a(i)+1)return
- 7     continue
- 8      mtc=.false.
+      double precision function dsig(pp,wgt,imode)
+c**********************************************************************
+c     Dummy routine
+c**********************************************************************
+      integer pp,wgt,imode
+      dsig=0d0
       return
- 10    if(n.eq.1)goto 27
-      if(.not.even)goto 20
-      ia=a(1)
-      a(1)=a(2)
-      a(2)=ia
-      even=.false.
-      goto 6
- 20    s=0
-      do 26 i1=2,n
- 25       ia=a(i1)
-      i=i1-1
-      d=0
-      do 30 j=1,i
- 30       if(a(j).gt.ia) d=d+1
-      s=d+s
-      if(d.ne.i*mod(s,2)) goto 35
- 26    continue
- 27     a(1)=0
-      goto 8
- 35    m=mod(s+1,2)*(n+1)
-      do 40 j=1,i
-      if(isign(1,a(j)-ia).eq.isign(1,a(j)-m))goto 40
-      m=a(j)
-      l=j
- 40    continue
-      a(l)=ia
-      a(i1)=m
-      even=.true.
-      return
-      end
-
-
-      integer function n_unwgted()
-c
-c     dummy routine
-c     
-      n_unwgted = 1
       end
 
       subroutine clear_events()
+c**********************************************************************
+c     Dummy routine
+c**********************************************************************
+      end
+
+      integer function n_unwgted()
+c**********************************************************************
+c     Dummy routine
+c**********************************************************************
+      n_unwgted = 1
       end
 
        subroutine write_input(nconfigs)
