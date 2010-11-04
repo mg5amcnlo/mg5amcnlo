@@ -1628,8 +1628,6 @@ c               call sample_writehtm()
             enddo
             if (configs .gt. 1)
      &           write(*,'(8f10.5)') (psect(i)/tot, i=1,configs)
-c     Now update weights in dsig (needed for subprocess group mode)
-            xdum=dsig(0,0,2)
 c
 c     Now set things up for generating unweighted events
 c
@@ -1974,7 +1972,9 @@ c              and start fresh
 c
 c                  nun = n_unwgted()
 c                  write(*,*) 'Estimated unweighted events ', nun
-                  call clear_Events
+              call clear_Events
+c           Update weights in dsig (needed for subprocess group mode)
+              xdum=dsig(0,0,2)
             endif
          endif
       else

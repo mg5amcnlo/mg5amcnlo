@@ -101,7 +101,7 @@ C     Reweight PROCSEL according to the actual weigths
         SUMPROB=0D0
         TOTWGT=0D0
 c     Take into account only channels with at least LIMEVTS events
-        LIMEVTS=100
+        LIMEVTS=300
         DO I=1,MAXSPROC
           IF(NUMEVTS(I).GE.LIMEVTS)THEN
             TOTWGT=TOTWGT+SUMWGT(I)
