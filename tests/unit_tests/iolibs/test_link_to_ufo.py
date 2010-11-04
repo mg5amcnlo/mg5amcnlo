@@ -163,6 +163,20 @@ class TestUFOExpressionParsers(unittest.TestCase):
         self.assertTrue(isinstance(converted, str))
         self.assertEqual(converted, '1.5')        
         
-
+class TestImportUFO(unittest.TestCase):
+    """ check if we can import properly a model """
+    
+    def test_simple_import(self):
+        """ check that basic quantity are define """
+        model = import_ufo.import_model('sm')
+    
+        self.assertNotEqual(model.get('particles'),None)
+        self.assertNotEqual(model.get('particles'),[], "empty particles list")
+    
+        self.assertNotEqual(model.get('interactions'),None)
+        self.assertNotEqual(model.get('interactions'),[])    
+        
+        
+        print 'test model', model.get('particles')
 
 

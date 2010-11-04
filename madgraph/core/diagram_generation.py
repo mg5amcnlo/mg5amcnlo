@@ -157,8 +157,12 @@ class Amplitude(base_objects.PhysicsObject):
             except KeyError:
                 process.get('orders')[key] = process.get('overall_orders')[key]
 
-        assert model.get('particles') and model.get('interactions'), \
-                  "%s is missing particles or interactions" % repr(model)
+        assert model.get('particles'), \
+           "particles are missing in model: %s" %  model.get('particles')
+         
+        assert model.get('interactions'), \
+               "interactions are missing in model" 
+                  
 
         res = base_objects.DiagramList()
 
