@@ -33,6 +33,7 @@ import madgraph.iolibs.misc as misc
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.template_files as Template
 import madgraph.iolibs.ufo_expression_parsers as parsers
+import madgraph.iolibs.group_subprocs as group_subprocs
 from madgraph import MadGraph5Error, MG5DIR
 
 import aloha.create_aloha as create_aloha
@@ -56,8 +57,14 @@ class ProcessExporterPython(object):
         """Initiate with matrix elements, helas call writer.
         Generate the process matrix element functions as strings."""
 
+        self.config_maps = {}
         if isinstance(matrix_elements, helas_objects.HelasMultiProcess):
             self.matrix_elements = matrix_elements.get('matrix_elements')
+        elif isinstance(matrix_elements,
+                        group_subprocs.SubProcessGroup):
+            self.config_maps = matrix_elements.get('diagram_maps')
+            self.matrix_elements = matrix_elements.get('multi_matrix').\
+                                   get('matrix_elements')
         elif isinstance(matrix_elements,
                         helas_objects.HelasMatrixElementList):
             self.matrix_elements = matrix_elements
@@ -92,7 +99,7 @@ class ProcessExporterPython(object):
         info_lines = self.get_mg5_info_lines()
         replace_dict['info_lines'] = info_lines
 
-        for matrix_element in self.matrix_elements:
+        for ime, matrix_element in enumerate(self.matrix_elements):
             process_string = matrix_element.get('processes')[0].shell_string()
             if process_string in self.matrix_methods:
                 continue
@@ -124,6 +131,10 @@ class ProcessExporterPython(object):
             ngraphs = matrix_element.get_number_of_amplitudes()
             replace_dict['ngraphs'] = ngraphs
 
+            # Extract ndiags
+            ndiags = len(matrix_element.get('diagrams'))
+            replace_dict['ndiags'] = ndiags
+
             # Extract nwavefuncs
             nwavefuncs = matrix_element.get_number_of_wavefunctions()
             replace_dict['nwavefuncs'] = nwavefuncs
@@ -150,6 +161,11 @@ class ProcessExporterPython(object):
             # Extract JAMP lines
             jamp_lines = self.get_jamp_lines(matrix_element)
             replace_dict['jamp_lines'] = "\n        ".join(jamp_lines)
+
+            # Extract amp2 lines
+            amp2_lines = self.get_amp2_lines(matrix_element,
+                                        self.config_maps.setdefault(ime, []))
+            replace_dict['amp2_lines'] = '\n        '.join(amp2_lines)
 
             method_file = open(os.path.join(_file_path, \
                        'iolibs/template_files/matrix_method_python.inc')).read()
@@ -242,6 +258,62 @@ class ProcessExporterPython(object):
             res_list.append(res)
 
         return res_list
+
+    def get_amp2_lines(self, matrix_element, config_map = []):
+        """Return the amp2(i) = sum(amp for diag(i))^2 lines"""
+
+        ret_lines = []
+        if config_map:
+            # In this case, we need to sum up all amplitudes that have
+            # identical topologies, as given by the config_map (which
+            # gives the topology/config for each of the diagrams
+            diagrams = matrix_element.get('diagrams')
+            # Combine the diagrams with identical topologies
+            config_to_diag_dict = {}
+            for idiag, diag in enumerate(matrix_element.get('diagrams')):
+                if config_map[idiag] == 0:
+                    continue
+                try:
+                    config_to_diag_dict[config_map[idiag]].append(idiag)
+                except KeyError:
+                    config_to_diag_dict[config_map[idiag]] = [idiag]
+            # Write out the AMP2s summing squares of amplitudes belonging
+            # to eiher the same diagram or different diagrams with
+            # identical propagator properties.  Note that we need to use
+            # AMP2 number corresponding to the first diagram number used
+            # for that AMP2.
+            for config in config_to_diag_dict.keys():
+
+                line = "self.amp2[%d]+=" % (config_to_diag_dict[config][0])
+
+                line += "+".join(["abs(amp[%(num)d]*amp[%(num)d].conjugate())" % \
+                                  {"num": a.get('number')-1} for a in \
+                                  sum([diagrams[idiag].get('amplitudes') for \
+                                       idiag in config_to_diag_dict[config]],
+                                      [])])
+                ret_lines.append(line)
+            ret_lines.sort()
+        else:
+            for idiag, diag in enumerate(matrix_element.get('diagrams')):
+                # Ignore any diagrams with 4-particle vertices.  The
+                # easiest way to get this info is to use the
+                # get_s_and_t_channels function, which collects all
+                # vertices corresponding to this diagram.
+                schannels, tchannels = diag.get('amplitudes')[0].\
+                                             get_s_and_t_channels(2)
+                allchannels = schannels + tchannels
+                if not allchannels or \
+                       any([len(vert.get('legs')) > 3 for vert in allchannels]):
+                    continue
+                # Now write out the expression for AMP2, meaning the sum of
+                # squared amplitudes belonging to the same diagram
+                line = "self.amp2[%d]+=" % (idiag)
+                line += "+".join(["abs(amp[%(num)d]*amp[%(num)d].conjugate())" % \
+                                  {"num": a.get('number')-1} for a in \
+                                  diag.get('amplitudes')])
+                ret_lines.append(line)
+
+        return ret_lines
 
     def get_mg5_info_lines(self):
         """Return info lines for MG5, suitable to place at beginning of

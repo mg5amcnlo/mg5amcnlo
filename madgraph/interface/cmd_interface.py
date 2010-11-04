@@ -1369,7 +1369,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _tutorial_opts = ['start', 'stop']
     _check_opts = ['full', 'quick', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
-    _v4_export_formats = ['madevent', 'madevent_group', 'standalone','matrix'] 
+    _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
     _export_formats = _v4_export_formats + ['pythia8',
                        'pythia8_model']
 

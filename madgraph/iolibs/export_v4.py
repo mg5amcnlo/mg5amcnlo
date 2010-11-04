@@ -404,21 +404,22 @@ def write_matrix_element_v4_madevent(writer, matrix_element, fortran_model,
     ndiags = len(matrix_element.get('diagrams'))
     replace_dict['ndiags'] = ndiags
 
+    # Set define_iconfigs_lines
+    replace_dict['define_iconfigs_lines'] = \
+         """INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
+         COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG"""
+
     if proc_id:
         # Set lines for subprocess group version
         # Set define_iconfigs_lines
-        replace_dict['define_iconfigs_lines'] = \
-             """INTEGER SUBDIAG(MAXSPROC)
+        replace_dict['define_iconfigs_lines'] += \
+             """\nINTEGER SUBDIAG(MAXSPROC)
              COMMON/TO_SUB_DIAG/SUBDIAG"""    
         # Set set_amp2_line
         replace_dict['set_amp2_line'] = "ANS=ANS*AMP2(SUBDIAG(%s))/XTOT" % \
                                         proc_id
     else:
         # Standard running
-        # Set define_iconfigs_lines
-        replace_dict['define_iconfigs_lines'] = \
-             """INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
-             COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG"""
         # Set set_amp2_line
         replace_dict['set_amp2_line'] = "ANS=ANS*AMP2(MAPCONFIG(ICONFIG))/XTOT"
 

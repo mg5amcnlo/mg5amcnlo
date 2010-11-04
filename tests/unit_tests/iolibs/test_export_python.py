@@ -28,7 +28,8 @@ import aloha.create_aloha as create_aloha
 
 import madgraph.iolibs.export_python as export_python
 import madgraph.iolibs.file_writers as writers
-import madgraph.iolibs.helas_call_writers as helas_call_writer
+import madgraph.iolibs.group_subprocs as group_subprocs
+import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.import_ufo as import_ufo
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
@@ -163,7 +164,7 @@ class IOExportPythonTest(unittest.TestCase):
         self.mymodel.set('interactions', myinterlist)
         self.mymodel.set('name', 'sm')
 
-        self.mypythonmodel = helas_call_writer.PythonUFOHelasCallWriter(self.mymodel)
+        self.mypythonmodel = helas_call_writers.PythonUFOHelasCallWriter(self.mymodel)
     
         myleglist = base_objects.LegList()
 
@@ -239,6 +240,7 @@ class IOExportPythonTest(unittest.TestCase):
         # CONSTANTS
         #  
         nexternal = 4
+        ndiags = 4
         ncomb = 16
         #  
         # LOCAL VARIABLES 
@@ -264,7 +266,7 @@ class IOExportPythonTest(unittest.TestCase):
         # ----------
         # BEGIN CODE
         # ----------
-        self.amp2 = [0] * 10
+        self.amp2 = [0.] * ndiags
         ans = 0.
         for hel in helicities:
             t = self.matrix(p, hel, model)
@@ -340,8 +342,10 @@ class IOExportPythonTest(unittest.TestCase):
         jamp[0] = +1./6.*amp[0]-amp[1]-amp[2]-amp[3]-amp[4]+1./2.*amp[5]
         jamp[1] = -1./2.*amp[0]-1./6.*amp[5]+amp[6]+amp[7]+amp[8]+amp[9]
 
-        self.amp2 = [self.amp2[i] + abs(amp[i]*amp[i].conjugate()) for i in \\
-                     range(ngraphs)]
+        self.amp2[0]+=abs(amp[0]*amp[0].conjugate())
+        self.amp2[1]+=abs(amp[1]*amp[1].conjugate())+abs(amp[2]*amp[2].conjugate())+abs(amp[3]*amp[3].conjugate())+abs(amp[4]*amp[4].conjugate())
+        self.amp2[2]+=abs(amp[5]*amp[5].conjugate())
+        self.amp2[3]+=abs(amp[6]*amp[6].conjugate())+abs(amp[7]*amp[7].conjugate())+abs(amp[8]*amp[8].conjugate())+abs(amp[9]*amp[9].conjugate())
 
         matrix = 0.
         for i in range(ncolor):
@@ -414,7 +418,7 @@ class IOExportPythonTest(unittest.TestCase):
             exec(routine, globals())
 
         # Write the matrix element(s) in Python
-        mypythonmodel = helas_call_writer.PythonUFOHelasCallWriter(\
+        mypythonmodel = helas_call_writers.PythonUFOHelasCallWriter(\
                                                              model)
         exporter = export_python.ProcessExporterPython(\
                                                      mymatrixelement,
@@ -444,4 +448,223 @@ class IOExportPythonTest(unittest.TestCase):
             self.assertTrue(abs(value-answer)/answer < 1e-6,
                             "Value is: %.9e should be %.9e" % \
                             (abs(value), answer))
+
+
+    def test_export_matrix_element_python_madevent_group(self):
+        """Test the result of exporting a subprocess group matrix element"""
+
+        # Setup a model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        g = mypartlist[-1]
+
+        # A quark U and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[-1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        # A quark D and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'d',
+                      'antiname':'d~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'d',
+                      'antitexname':'\bar d',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':1,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        d = mypartlist[-1]
+        antid = copy.copy(d)
+        antid.set('is_part', False)
+
+        # A photon
+        mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        a = mypartlist[-1]
+
+        # A Z
+        mypartlist.append(base_objects.Particle({'name':'z',
+                      'antiname':'z',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MZ',
+                      'width':'WZ',
+                      'texname':'Z',
+                      'antitexname':'Z',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':23,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        z = mypartlist[-1]
+
+        # Gluon and photon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             a]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [antid, \
+                                             d, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [antid, \
+                                             d, \
+                                             a]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        # 3 gluon vertiex
+        myinterlist.append(base_objects.Interaction({
+                      'id': 5,
+                      'particles': base_objects.ParticleList(\
+                                            [g] * 3),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'G'},
+                      'orders':{'QCD':1}}))
+
+        # Coupling of Z to quarks
+        
+        myinterlist.append(base_objects.Interaction({
+                      'id': 6,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             z]),
+                      'color': [],
+                      'lorentz':['L1', 'L2'],
+                      'couplings':{(0, 0):'GUZ1', (0, 1):'GUZ2'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 7,
+                      'particles': base_objects.ParticleList(\
+                                            [antid, \
+                                             d, \
+                                             z]),
+                      'color': [],
+                      'lorentz':['L1', 'L2'],
+                      'couplings':{(0, 0):'GDZ1', (0, 0):'GDZ2'},
+                      'orders':{'QED':1}}))
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)        
+
+        procs = [[2,-2,21,21], [2,-2,2,-2]]
+        amplitudes = diagram_generation.AmplitudeList()
+
+        for proc in procs:
+            # Define the multiprocess
+            my_leglist = base_objects.LegList([\
+                base_objects.Leg({'id': id, 'state': True}) for id in proc])
+
+            my_leglist[0].set('state', False)
+            my_leglist[1].set('state', False)
+
+            my_process = base_objects.Process({'legs':my_leglist,
+                                               'model':mymodel})
+            my_amplitude = diagram_generation.Amplitude(my_process)
+            amplitudes.append(my_amplitude)
+
+        # Calculate diagrams for all processes
+
+        subprocess_group = group_subprocs.SubProcessGroup.\
+                           group_amplitudes(amplitudes)[0]
+
+        # Test amp2 lines
+        helas_writer = helas_call_writers.PythonUFOHelasCallWriter(mymodel)
+        python_exporter = export_python.ProcessExporterPython(subprocess_group,
+                                                              helas_writer)
+
+        amp2_lines = \
+                 python_exporter.get_amp2_lines(subprocess_group.get('multi_matrix').\
+                                        get('matrix_elements')[1],
+                                        subprocess_group.get('diagram_maps')[1])
+        self.assertEqual(amp2_lines,
+                         ['self.amp2[0]+=abs(amp[0]*amp[0].conjugate())+abs(amp[1]*amp[1].conjugate())',
+                          'self.amp2[2]+=abs(amp[2]*amp[2].conjugate())+abs(amp[3]*amp[3].conjugate())+abs(amp[4]*amp[4].conjugate())+abs(amp[5]*amp[5].conjugate())',
+                          'self.amp2[3]+=abs(amp[6]*amp[6].conjugate())+abs(amp[7]*amp[7].conjugate())',
+                          'self.amp2[5]+=abs(amp[8]*amp[8].conjugate())+abs(amp[9]*amp[9].conjugate())+abs(amp[10]*amp[10].conjugate())+abs(amp[11]*amp[11].conjugate())'])
 

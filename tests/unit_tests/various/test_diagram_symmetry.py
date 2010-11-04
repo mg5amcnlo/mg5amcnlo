@@ -94,9 +94,9 @@ class TestDiagramSymmetry(unittest.TestCase):
 
         symmetry, nperm = diagram_symmetry.find_symmetry(matrix_element)
 
-        self.assertEqual(len([s for s in symmetry if s > 0]), 5)
+        self.assertEqual(len([s for s in symmetry if s > 0]), 4)
 
         self.assertEqual(symmetry,
-                         [3, -1, -1, 3, -4, -4, 6, -7, 3, -7, -7, -9, -7, -7, -9,
-                          3 , -16, -16])
+                         [3, -1, -1, 0, 6, -5, 3, -5, -5, -7, -5, -5, -7,
+                          3 , -14, -14])
 

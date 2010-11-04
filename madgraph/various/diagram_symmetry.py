@@ -97,7 +97,13 @@ def find_symmetry(matrix_element):
             break
         me_value, amp2 = res
         # Make a list with (8-pos value, magnitude) to easily compare
-        amp2mag = [int(math.floor(math.log10(abs(a)))) for a in amp2]
+        amp2mag = []
+        for a in amp2:
+            if a > 0:
+                amp2mag.append(int(math.floor(math.log10(abs(a)))))
+            else:
+                amp2mag.append(0)
+        
         amp2 = [(int(a*10**(8-am)), am) for (a, am) in zip(amp2, amp2mag)]
         if not symmetry:
             # Initiate symmetry with all 1:s
@@ -106,6 +112,9 @@ def find_symmetry(matrix_element):
             amp2start = amp2
             continue
         for i, val in enumerate(amp2):
+            if val == (0,0):
+                symmetry[i] = 0
+                continue
             # Only compare with diagrams below this one
             if val in amp2start[:i]:
                 ind = amp2start.index(val)
