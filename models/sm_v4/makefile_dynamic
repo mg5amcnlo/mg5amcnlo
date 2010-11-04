@@ -1,0 +1,24 @@
+# ----------------------------------------------------------------------------
+#
+# Makefile for MODEL directory
+# Jan 25 2006
+#
+# ----------------------------------------------------------------------------
+
+
+F77           = f77
+FFLAGS        = -O -fPIC -ffixed-line-length-132
+LIBRARY	      = ../libmodel.so
+LIBDIR        = ../../lib/
+MODEL         = printout.o couplings.o
+
+.f.o: ; $(F77) $(FFLAGS) -c $*.f
+
+all: $(LIBDIR)libmodel.so
+
+$(LIBDIR)libmodel.so: $(MODEL)
+	g77 -shared -o libmodel.so $(MODEL)
+	mv libmodel.so  $(LIBDIR)
+
+smcalc: 
+	$(F77) $(FFLAGS) SMCalc.f -o smcalc 

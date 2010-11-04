@@ -44,7 +44,7 @@ logger = logging.getLogger('madgraph.export_v4')
 #===============================================================================
 # copy the Template in a new directory.
 #===============================================================================
-def copy_v4template(mgme_dir, dir_path, clean):
+def copy_v4template(mgme_dir, dir_path, clean, v4_model = False):
     """create the directory run_name as a copy of the MadEvent
     Template, and clean the directory
     """
@@ -86,6 +86,11 @@ def copy_v4template(mgme_dir, dir_path, clean):
         MG_version = misc.get_pkg_info()
         open(os.path.join(dir_path, 'SubProcesses', 'MGVersion.txt'), 'w').write(
                                                           MG_version['version'])
+    # If the model is v4 model, use old symmetry.f
+    if v4_model and \
+       os.path.isfile(os.path.join(dir_path, 'SubProcesses', 'symmetry_v4.f')):
+        shutil.move(os.path.join(dir_path, 'SubProcesses', 'symmetry_v4.f'),
+                    os.path.join(dir_path, 'SubProcesses', 'symmetry.f'))
         
 #===============================================================================
 # copy the Template in a new directory and set up Standalone MG

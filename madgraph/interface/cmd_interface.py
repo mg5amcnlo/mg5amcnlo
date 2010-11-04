@@ -2417,7 +2417,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Make a Template Copy
         if self._export_format.startswith('madevent'):
             export_v4.copy_v4template(self._mgme_dir, self._export_dir,
-                                      not noclean)
+                                      not noclean, self._model_v4_path)
         elif self._export_format == 'standalone':
             export_v4.copy_v4standalone(self._mgme_dir, self._export_dir,
                                         not noclean)
