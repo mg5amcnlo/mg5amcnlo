@@ -104,17 +104,18 @@ c     Take into account only channels with at least LIMEVTS events
         LIMEVTS=100
         DO I=1,MAXSPROC
           IF(NUMEVTS(I).GE.LIMEVTS)THEN
-            TOTWGT=TOTWGT+SUMWGT(I)/NUMEVTS(I)
+            TOTWGT=TOTWGT+SUMWGT(I)
             SUMPROB=SUMPROB+SELPROC(I)
           ENDIF
         ENDDO
+c     Update SELPROC
         DO I=1,MAXSPROC
           IF(NUMEVTS(I).GE.LIMEVTS)THEN
-            SELPROC(I)=SUMWGT(I)/NUMEVTS(I)/TOTWGT*SUMPROB
+            SELPROC(I)=SUMWGT(I)/TOTWGT*SUMPROB
           ENDIF
         ENDDO
         WRITE(*,*)'Selection weights after reweight:',(SELPROC(I),I=1,MAXSPROC)
-        WRITE(*,*)'Cross sections:',(SUMWGT(I)/NUMEVTS(I),I=1,MAXSPROC)
+        WRITE(*,*)'Summed weights:',(SUMWGT(I),I=1,MAXSPROC)
         WRITE(*,*)'Events:',(NUMEVTS(I),I=1,MAXSPROC)
 
       ELSE IF(IMODE.EQ.3)THEN
@@ -122,7 +123,6 @@ C     Write out weight file
         LUN=NEXTUNOPEN()
         OPEN(UNIT=LUN,FILE='selproc.dat',STATUS='UNKNOWN')
         WRITE(LUN,*) (SELPROC(I),I=1,MAXSPROC)
-        WRITE(LUN,*) (SUMWGT(I)/NUMEVTS(I),I=1,MAXSPROC)
         CLOSE(LUN)
         RETURN
       ENDIF
@@ -143,15 +143,15 @@ C     Select among the subprocesses based on SELPROC
  10     CONTINUE
 
         IF(IPROC.EQ.0) RETURN
-        
+
+C     Update weigth w.r.t SELPROC
+        WGT=WGT/SELPROC(IPROC)
+
 %(call_dsig_proc_lines)s
 
         SUMWGT(IPROC)=SUMWGT(IPROC)+DSIG*WGT
         NUMEVTS(IPROC)=NUMEVTS(IPROC)+1
         
-C     Update weigth w.r.t SELPROC
-        WGT=WGT/SELPROC(IPROC)
-
       ENDIF
       RETURN
       END
