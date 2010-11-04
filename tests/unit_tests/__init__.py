@@ -14,6 +14,7 @@
 ################################################################################
 
 import unittest
+import math
 
 TestLoader = unittest.TestLoader
 
@@ -26,3 +27,24 @@ class TestCase(unittest.TestCase):
             if error == AssertionError:
                 return
         unittest.TestCase.assertRaises(self, error, *opt)
+
+    def assertAlmostEqual(self, a, b, *opt, **arg):
+        """Redefine the stupid unittest.assertAlmostEqual to act on
+        significance instead of decimal places"""
+
+        if 'msg' not in arg:
+            arg['msg'] = '%s != %s within %s digits' % (a, b, 7 )
+
+        magarg = a or b
+        if not magarg or a - b == 0:
+            # Both a and b are 0 or they are identical
+            return
+        if not (a and b):
+            # One of a or b is 0
+            unittest.TestCase.assertAlmostEqual(self, a, b, *opt, **arg)
+            return
+        # Compare significant digits
+        magnitude = math.floor(math.log10(abs(magarg))) + 1
+        unittest.TestCase.assertAlmostEqual(self, a/10**magnitude,
+                                            b/10**magnitude, *opt, **arg)
+        

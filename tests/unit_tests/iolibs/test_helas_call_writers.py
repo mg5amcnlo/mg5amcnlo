@@ -529,6 +529,10 @@ class HelasModelTest(HelasModelTestSetup):
         goal = 'CALL OXXXXX(P(0,1),mu,NHEL(1),1*IC(1),W(1,40))'
         self.assertEqual(self.mymodel.get_wavefunction_call(wf), goal)
 
+        del wavefunctions[key1]
+        del wavefunctions[key2]
+        
+
 #===============================================================================
 # FortranHelasCallWriterTest
 #===============================================================================

@@ -129,7 +129,7 @@ def cp(path1, path2, log=True):
     path1 = format_path(path1)
     path2 = format_path(path2)
     try:
-        shutil.copy2(path1, path2)
+        shutil.copy(path1, path2)
     except IOError, why:
         if log:
             logger.warning(why)

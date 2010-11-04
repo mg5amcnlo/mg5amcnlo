@@ -190,7 +190,172 @@ class TestMatrixElementChecker(unittest.TestCase):
         comparison = process_checks.check_lorentz(myproc)
         self.assertNotAlmostEqual(max(comparison[0][1]), min(comparison[0][1]))
 
-
+#===============================================================================
+# TestLorentzInvariance
+#===============================================================================
+class TestLorentzInvariance(unittest.TestCase):
+    """Test class for the Lorentz Invariance and boost_momenta"""
+    
+    def setUp(self):
+        self.base_model = import_ufo.import_model('mssm')
         
+    def test_boost_momenta(self):
+        """check if the momenta are boosted correctly by checking invariant mass
+        """    
+        
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':-11,
+                                           'state':False,
+                                           'number': 1}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                           'state':False,
+                                           'number': 2}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                           'state':True,
+                                           'number': 3}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                           'state':True,
+                                           'number': 4}))
+        myleglist.append(base_objects.Leg({'id':23,
+                                           'state':True,
+                                           'number': 5}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        full_model = model_reader.ModelReader(self.base_model)
+        full_model.set_parameters_and_couplings()
+        p, w_rambo = process_checks.get_momenta(myproc, full_model)
+
+        def invariant_mass(p1, p2):
+            #helping function to compute invariant mass
+            return p1[0] * p2[0] - p1[1] * p2[1] - p1[2] * p2[2] -p1[3] * p2[3]
+
+        # Compute invariant mass on the initial set of impulsion
+        invariant_mass_result = []
+        for p1 in p:
+            for p2 in p: 
+                m12 = invariant_mass(p1, p2)
+                if abs(m12) < 1e-8:
+                    m12=0
+                invariant_mass_result.append(m12)
+        
+        # Compute invariant mass on a x direction boost
+        invariant_mass_boost=[]
+        p_boost = process_checks.boost_momenta(p)
+        for p1 in p_boost:
+            for p2 in p_boost: 
+                m12 = invariant_mass(p1, p2)
+                invariant_mass_boost.append(m12)  
+                     
+        for i in range(len(invariant_mass_boost)):
+            self.assertAlmostEqual(invariant_mass_boost[i], 
+                                   invariant_mass_result[i])
+
+        # Compute invariant mass on a y direction boost
+        invariant_mass_boost=[]
+        p_boost = process_checks.boost_momenta(p, boost_direction=2)
+        for p1 in p_boost:
+            for p2 in p_boost: 
+                m12 = invariant_mass(p1, p2)
+                invariant_mass_boost.append(m12)  
+                     
+        for i in range(len(invariant_mass_boost)):
+            self.assertAlmostEqual(invariant_mass_boost[i], 
+                                   invariant_mass_result[i])
+    
+        # Compute invariant mass on a z direction boost
+        invariant_mass_boost=[]
+        p_boost = process_checks.boost_momenta(p, boost_direction=3, beta=0.8)
+        for p1 in p:
+            for p2 in p: 
+                m12 = invariant_mass(p1, p2)
+                invariant_mass_boost.append(m12)  
+                     
+        for i in range(len(invariant_mass_boost)):
+            self.assertAlmostEqual(invariant_mass_boost[i], 
+                                   invariant_mass_result[i])    
+    
+
+    def test_boost_momenta_gluino(self):
+        """check if the momenta are boosted correctly by checking invariant mass
+        in the case of massive final state
+        """    
+        
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':False,
+                                           'number': 1}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':False,
+                                           'number': 2}))
+        myleglist.append(base_objects.Leg({'id':1000021,
+                                           'state':True,
+                                           'number': 3}))
+        myleglist.append(base_objects.Leg({'id':1000021,
+                                           'state':True,
+                                           'number': 4}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        full_model = model_reader.ModelReader(self.base_model)
+        full_model.set_parameters_and_couplings()
+        p, w_rambo = process_checks.get_momenta(myproc, full_model)
+
+        def invariant_mass(p1, p2):
+            #helping function to compute invariant mass
+            return p1[0] * p2[0] - p1[1] * p2[1] - p1[2] * p2[2] -p1[3] * p2[3]
+
+        # Compute invariant mass on the initial set of impulsion
+        invariant_mass_result = []
+        for p1 in p:
+            for p2 in p: 
+                m12 = invariant_mass(p1, p2)
+                if abs(m12) < 1e-8:
+                    m12=0
+                invariant_mass_result.append(m12)
+                self.assertTrue(m12 >= 0)
+        
+        # Compute invariant mass on a x direction boost
+        invariant_mass_boost=[]
+        p_boost = process_checks.boost_momenta(p)
+        for p1 in p_boost:
+            for p2 in p_boost: 
+                m12 = invariant_mass(p1, p2)
+                invariant_mass_boost.append(m12)  
+                     
+        for i in range(len(invariant_mass_boost)):
+            self.assertAlmostEqual(invariant_mass_boost[i], 
+                                   invariant_mass_result[i])
+        
+        # Compute invariant mass on a y direction boost
+        invariant_mass_boost=[]
+        p_boost = process_checks.boost_momenta(p, boost_direction=2)
+        for p1 in p_boost:
+            for p2 in p_boost: 
+                m12 = invariant_mass(p1, p2)
+                invariant_mass_boost.append(m12)  
+                     
+        for i in range(len(invariant_mass_boost)):
+            self.assertAlmostEqual(invariant_mass_boost[i], 
+                                   invariant_mass_result[i])
+    
+        # Compute invariant mass on a z direction boost
+        invariant_mass_boost=[]
+        p_boost = process_checks.boost_momenta(p, boost_direction=3, beta=0.8)
+        for p1 in p_boost:
+            for p2 in p_boost: 
+                m12 = invariant_mass(p1, p2)
+                invariant_mass_boost.append(m12)  
+                     
+        for i in range(len(invariant_mass_boost)):
+            self.assertAlmostEqual(invariant_mass_boost[i], 
+                                   invariant_mass_result[i])    
+
+
+
 if __name__ == '__main__':
     unittest.unittest.main()
