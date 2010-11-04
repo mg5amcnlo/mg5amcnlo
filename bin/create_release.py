@@ -22,18 +22,6 @@ following actions:
 1. bzr branch the present directory to a new directory
    MadGraph5_vVERSION
 
-2. Copy the Template and HELAS directories, either from the present
-   directory or from a valid MG_ME directory in the path or given by the
-   -d flag, and remove the bin/newprocess file
-
-   *WARNING* Note that it is your responsibility to make sure this
-   Template is up-to-date!!
-
-
-3. Copy all v4 model directories from the present directory and/or
-   from an MG_ME directory as specified in point 2. to the models
-   directory (with names modelname_v4)
-
 4. Create the automatic documentation in the apidoc directory
 
 5. Remove the .bzr directory
@@ -71,8 +59,6 @@ usage = "usage: %prog [options] [FILE] "
 parser = optparse.OptionParser(usage=usage)
 parser.add_option("-l", "--logging", default='INFO',
                   help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
-parser.add_option("-d", "--mgme_dir", default='', dest = 'mgme_dir',
-                  help="Use MG_ME directory MGME_DIR")
 (options, args) = parser.parse_args()
 if len(args) == 0:
     args = ''
@@ -80,28 +66,6 @@ if len(args) == 0:
 # Set logging level according to the logging level given by options
 logging.basicConfig(level=vars(logging)[options.logging],
                     format="%(message)s")
-
-# If an MG_ME dir is given in the options, use that dir for Template
-# and v4 models
-
-mgme_dir = options.mgme_dir
-
-# Set Template directory path
-
-if mgme_dir and path.isdir(path.join(mgme_dir, 'Template')) \
-   and path.isdir(path.join(mgme_dir, 'HELAS')):
-    template_path = path.join(mgme_dir, 'Template')
-    helas_path = path.join(mgme_dir, 'HELAS')
-elif MG4DIR and path.isdir(path.join(MG4DIR, 'Template')) \
-    and path.isdir(path.join(MG4DIR, 'HELAS')):
-    template_path = path.join(MG4DIR, 'Template')
-    helas_path = path.join(MG4DIR, 'HELAS')
-else:
-    logging.error("Error: Could not find the Template directory in the path")
-    logging.error("       Please supply MG_ME path using the -d option")
-    exit()
-
-
     
 # 1. bzr branch the present directory to a new directory
 #    MadGraph5_vVERSION
@@ -117,101 +81,22 @@ if status:
     logging.error("Script stopped")
     exit()
 
-# 2. Copy the Template either from the present directory or from a valid
-#    MG_ME directory in the path or given by the -d flag, and remove the
-#    bin/newprocess file
+# 2. Create the automatic documentation in the apidoc directory
 
-logging.info("Copying " + template_path)
-shutil.copytree(template_path, path.join(filepath, 'Template'), symlinks = True)
-if path.exists(path.join(filepath, 'Template', 'bin', 'newprocess')):
-    os.remove(path.join(filepath, 'Template', 'bin', 'newprocess'))
-# Remove CVS directories
-for i in range(6):
-    cvs_dirs = glob.glob(path.join(filepath,
-                                   path.join('Template', *(['*']*i)), 'CVS'))
-    if not cvs_dirs:
-        break
-    for cvs_dir in cvs_dirs:
-        shutil.rmtree(cvs_dir)
-logging.info("Copying " + helas_path)
 try:
-    shutil.copytree(helas_path, path.join(filepath, 'HELAS'), symlinks = True)
-except OSError as error:
-    logging.error("Error while copying HELAS directory: " + error.strerror)
-    exit()
-# Remove CVS directories
-for i in range(3):
-    cvs_dirs = glob.glob(path.join(filepath,
-                                   path.join('HELAS', *(['*']*i)), 'CVS'))
-    if not cvs_dirs:
-        break
-    for cvs_dir in cvs_dirs:
-        shutil.rmtree(cvs_dir)
-
-# 3. Copy all v4 model directories from the present directory and/or
-#    from an MG_ME directory as specified in point 2. to the models
-#    directory (with names modelname_v4)
-
-model_path = ""
-if mgme_dir:
-    if path.isdir(path.join(mgme_dir, 'Models')):
-        model_path = path.join(mgme_dir, 'Models')
-elif MG4DIR and path.isdir(path.join(MG4DIR, 'Models')):
-    model_path = path.join(MG4DIR, 'Models')
-
-if model_path:
-    logging.info("Copying v4 models from " + model_path + ":")
-    for mdir in [d for d in glob.glob(path.join(model_path, "*")) \
-                 if path.isdir(d) and \
-                 path.exists(path.join(d, "particles.dat"))]:
-        modelname = path.split(mdir)[-1]
-        new_m_path = path.join(filepath, 'models', modelname + "_v4")
-        logging.info(mdir + " -> " + new_m_path)
-        shutil.copytree(mdir, new_m_path)
-        if path.exists(path.join(new_m_path, "model.pkl")):
-            os.remove(path.join(new_m_path, "model.pkl"))
-        # Remove CVS directories
-        for i in range(2):
-            cvs_dirs = glob.glob(path.join(path.join(new_m_path, *(['*']*i)),
-                                           'CVS'))
-            if not cvs_dirs:
-                break
-            for cvs_dir in cvs_dirs:
-                shutil.rmtree(cvs_dir)
-
-else:
-    v4_models = [d for d in glob.glob(path.join(MG5DIR, "models", "*_v4")) \
-                 if path.isdir(d) and \
-                 path.exists(path.join(d, "particles.dat"))]
-
-    logging.info("Copying v4 models from " + path.join(MG5DIR, "models") + ":")
-    for mdir in v4_models:
-        modelname = path.split(mdir)[-1]
-        new_m_path = path.join(filepath, 'models', modelname)
-        try:
-            shutil.copytree(mdir, new_m_path)
-            logging.info(mdir + " -> " + new_m_path)
-        except OSError:
-            logging.warning("Directory " + new_m_path + \
-                            " already exists, not copied.")
-        if path.exists(path.join(new_m_path, "model.pkl")):
-            os.remove(path.join(new_m_path, "model.pkl"))
-        if path.exists(path.join(new_m_path, "model.pkl")):
-            os.remove(path.join(new_m_path, "model.pkl"))
-    if not v4_models:
-        logging.info("No v4 models in " + path.join(MG5DIR, "models"))
-
-# 4. Create the automatic documentation in the apidoc directory
-
-status1 = subprocess.call(['epydoc', '--html', '-o', 'apidoc',
-                           'madgraph', 'aloha',
-                           os.path.join('models', '*.py')], cwd = filepath)
+    status1 = subprocess.call(['epydoc', '--html', '-o', 'apidoc',
+                               'madgraph', 'aloha',
+                               os.path.join('models', '*.py')], cwd = filepath)
+except:
+    info.error("Error while trying to run epydoc. Do you have it installed?")
+    info.error("Execution cancelled.")
+    sys.exit()
 
 if status1:
     info.warning('Non-0 exit code %d from epydoc. Please check output.' % \
                  status)
 
-# 5. Remove the .bzr directory and the create_release.py file,
+# 3. Remove the .bzr directory and the create_release.py file,
 #    take care of README files.
 
 shutil.rmtree(path.join(filepath, '.bzr'))
