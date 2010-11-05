@@ -1910,7 +1910,7 @@ def make_unique(doubletlist):
     Note that this is a slow implementation, so don't use if speed 
     is needed"""
 
-    assert isinstance(doubletlist, list), \
+    assert isinstance(doubletlist, list) or doubletlist is None, \
            "Argument to make_unique must be list"
     
 
