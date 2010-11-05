@@ -743,7 +743,7 @@ class Model(PhysicsObject):
 
         if name == 'particles':
             # Ensure no doublets in particle list
-            value = ParticleList(make_unique(value))
+            make_unique(value)
             # Reset dictionaries
             self['particle_dict'] = {}
             self['ref_dict_to0'] = {}
@@ -751,7 +751,7 @@ class Model(PhysicsObject):
 
         if name == 'interactions':
             # Ensure no doublets in interaction list
-            value = InteractionList(make_unique(value))
+            make_unique(value)
             # Reset dictionaries
             self['interaction_dict'] = {}
             self['ref_dict_to1'] = {}
@@ -1919,4 +1919,4 @@ def make_unique(doubletlist):
         if elem not in uniquelist:
             uniquelist.append(elem)
 
-    return uniquelist
+    doubletlist[:] = uniquelist[:]

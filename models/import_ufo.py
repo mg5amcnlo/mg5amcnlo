@@ -180,7 +180,6 @@ class UFOMG5Converter(object):
         # Add the particles to the list
         self.particles.append(particle)
 
-
     def add_interaction(self, interaction_info):
         """add an interaction in the MG5 model. interaction_info is the 
         UFO vertices information."""

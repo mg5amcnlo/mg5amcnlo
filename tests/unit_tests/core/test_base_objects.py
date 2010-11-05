@@ -1654,6 +1654,6 @@ class HelperTest(unittest.TestCase):
         """Test the make_unique function"""
 
         doubletlist = [4, 6, 2, 4, 6, 2, 2, 2]
-
-        self.assertEqual(base_objects.make_unique(doubletlist),
+        base_objects.make_unique(doubletlist)
+        self.assertEqual(doubletlist,
                          [4, 6, 2])

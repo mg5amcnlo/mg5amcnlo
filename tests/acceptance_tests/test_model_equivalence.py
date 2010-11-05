@@ -126,7 +126,6 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         """Test the UFO and MG4 MSSM model correspond to the same model """
         
         # import UFO model
-        import models.mssm as model
         ufo_model = import_ufo.import_model('mssm')
         #converter = import_ufo.UFOMG5Converter(model)
         #ufo_model = converter.load_model()
