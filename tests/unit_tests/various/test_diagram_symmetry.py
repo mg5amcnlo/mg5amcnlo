@@ -25,7 +25,9 @@ import tests.unit_tests as unittest
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
+import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.various.diagram_symmetry as diagram_symmetry
+import madgraph.various.process_checks as process_checks
 import models.import_ufo as import_ufo
 import models.model_reader as model_reader
 
@@ -64,8 +66,35 @@ class TestDiagramSymmetry(unittest.TestCase):
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude)
 
-        self.assertEqual(diagram_symmetry.find_symmetry(matrix_element)[0],
-                         [6,-1,-1,-1,-1,-1])
+        symmetry, perms, ident_perms = \
+                                diagram_symmetry.find_symmetry(matrix_element)
+
+        self.assertEqual(symmetry, [6,-1,-1,-1,-1,-1])
+
+        # Check that the momentum assignments work
+        process = matrix_element.get('processes')[0]
+        full_model = model_reader.ModelReader(self.base_model)
+        full_model.set_parameters_and_couplings()
+        stored_quantities = {}
+        helas_writer = helas_call_writers.PythonUFOHelasCallWriter(\
+                                                               self.base_model)
+
+        
+        p, w_rambo = process_checks.get_momenta(process, full_model)
+        me_value, amp2_org = process_checks.evaluate_matrix_element(\
+                                          matrix_element,stored_quantities,
+                                          helas_writer, full_model, p)
+
+        for isym, (sym, perm) in enumerate(zip(symmetry, perms)):
+            new_p = [p[i] for i in perm]
+            stored_quantities['matrix_elements'] = []
+            me_value, amp2 = process_checks.evaluate_matrix_element(\
+                                              matrix_element,stored_quantities,
+                                              helas_writer, full_model, new_p)
+            if sym > 0:
+                continue
+            self.assertAlmostEqual(amp2[isym], amp2_org[-sym-1])
+        
 
     def test_find_symmetry_udbar_ggg(self):
         """Test the find_symmetry function"""
@@ -92,7 +121,7 @@ class TestDiagramSymmetry(unittest.TestCase):
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude)
 
-        symmetry, nperm = diagram_symmetry.find_symmetry(matrix_element)
+        symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(matrix_element)
 
         self.assertEqual(len([s for s in symmetry if s > 0]), 4)
 

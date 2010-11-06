@@ -82,10 +82,12 @@ def find_symmetry(matrix_element):
     me_values = []
     final_states = [l.get('id') for l in process.get('legs')[ninitial:]]
     nperm = 0
+    ident_perms = []
     for perm in itertools.permutations(range(ninitial, nexternal)):
         if [process.get('legs')[i].get('id') for i in perm] != final_states:
             # Non-identical particles permutated
             continue
+        ident_perms.append([0,1]+list(perm))
         nperm += 1
         new_p = p[:ninitial] + [p[i] for i in perm]
         # Reset matrix_elements, otherwise won't run again
@@ -106,32 +108,30 @@ def find_symmetry(matrix_element):
         
         amp2 = [(int(a*10**(8-am)), am) for (a, am) in zip(amp2, amp2mag)]
         if not symmetry:
+            # This is the first iteration - initialize lists
             # Initiate symmetry with all 1:s
             symmetry = [1 for i in range(len(amp2))]
             # Store initial amplitudes
             amp2start = amp2
+            # Initialize list of permutations
+            perms = [range(nexternal) for i in range(len(amp2))]
             continue
         for i, val in enumerate(amp2):
             if val == (0,0):
+                # If amp2 is 0, just set symmetry to 0
                 symmetry[i] = 0
                 continue
             # Only compare with diagrams below this one
             if val in amp2start[:i]:
                 ind = amp2start.index(val)
-                if symmetry[i] > 0:
-                    if symmetry[ind] > 0:
-                        symmetry[ind] += symmetry[i]
-                        if symmetry[i] > 1:
-                            # Go through and replace with new diagram
-                            while -(i+1) in symmetry:
-                                symmetry[symmetry.index(-(i+1))] = -(ind+1)
-                        symmetry[i] = -(ind+1)
-                    else:
-                        symmetry[-symmetry[ind]-1] += symmetry[i]
-                        if symmetry[i] > 1:
-                            # Go through and replace with new diagram
-                            while -(i+1) in symmetry:
-                                symmetry[symmetry.index(-(i+1))] = symmetry[ind]
-                        symmetry[i] = symmetry[ind]
-                    
-    return symmetry, nperm
+                # Replace if 1) this amp is unmatched (symmetry[i] > 0) or
+                # 2) this amp is matched but matched to an amp larger
+                # than ind
+                if symmetry[ind] > 0 and \
+                   (symmetry[i] > 0 or \
+                    symmetry[i] < 0 and -symmetry[i] > ind + 1):
+                    symmetry[i] = -(ind+1)
+                    perms[i] = [0, 1] + list(perm)
+                    symmetry[ind] += 1
+
+    return (symmetry, perms, ident_perms)

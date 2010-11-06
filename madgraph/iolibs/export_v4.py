@@ -32,6 +32,7 @@ import madgraph.iolibs.misc as misc
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
+import madgraph.various.diagram_symmetry as diagram_symmetry
 
 import aloha.create_aloha as create_aloha
 
@@ -994,6 +995,26 @@ def write_props_file(writer, matrix_element, fortran_model, s_and_t_channels):
 #===============================================================================
 # write_default_symswap_file
 #===============================================================================
+def write_symswap_file(writer, matrix_element, fortran_model, nexternal):
+    """Write the symswap.inc file for MG4 by comparing diagrams using
+    the internal matrix element value functionality."""
+
+    symmetry = diagram_symmetry.find_symmetry(matrix_element)
+
+    lines = []
+
+    lines.append("data(isym(i,1),i=1,nexternal)/%s/" % \
+                 ",".join([str(i+1) for i in range(nexternal)]))
+    lines.append("data nsym/1/")
+    
+    # Write the file
+    writer.writelines(lines)
+
+    return True
+
+#===============================================================================
+# write_default_symswap_file
+#===============================================================================
 def write_default_symswap_file(writer, fortran_model, nexternal):
     """Write the symswap.inc file for MG4 without symmetry"""
 
@@ -1256,9 +1277,11 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
                      s_and_t_channels)
 
     filename = 'symswap.inc'
-    write_default_symswap_file(writers.FortranWriter(filename),
-                               fortran_model,
-                               nexternal)
+    if matrix_element.get('processes')[0].get('model').get('parameters'):
+        write_symswap_file(writers.FortranWriter(filename),
+                           matrix_element,
+                           fortran_model,
+                           nexternal)
     
     # Generate diagrams
     filename = "matrix.ps"

@@ -28,7 +28,7 @@ import aloha.aloha_writers as aloha_writers
 import aloha.create_aloha as create_aloha
 
 import madgraph.iolibs.export_python as export_python
-import madgraph.iolibs.helas_call_writers as helas_call_writer
+import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.import_ufo as import_ufo
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
@@ -328,7 +328,7 @@ def evaluate_matrix_element(matrix_element, stored_quantities, helas_writer,
     try:
         matrix_methods = exporter.get_python_matrix_methods(\
             gauge_check=gauge_check)
-    except helas_call_writer.HelasWriterError, error:
+    except helas_call_writers.HelasWriterError, error:
         logger.info(error)
         return None
 
@@ -360,7 +360,7 @@ def check_processes(processes, param_card = None, quick = []):
         model = multiprocess.get('model')
 
         # Writer for the Python matrix elements
-        helas_writer = helas_call_writer.PythonUFOHelasCallWriter(model)
+        helas_writer = helas_call_writers.PythonUFOHelasCallWriter(model)
     
         # Read a param_card and calculate couplings
         full_model = model_reader.ModelReader(model)
@@ -395,7 +395,7 @@ def check_processes(processes, param_card = None, quick = []):
     full_model.set_parameters_and_couplings(param_card)
 
     # Write the matrix element(s) in Python
-    helas_writer = helas_call_writer.PythonUFOHelasCallWriter(model)
+    helas_writer = helas_call_writers.PythonUFOHelasCallWriter(model)
 
     # Keep track of tested processes, matrix elements, color and already
     # initiated Lorentz routines, to reuse as much as possible
@@ -625,7 +625,7 @@ def check_gauge(processes, param_card = None):
         model = multiprocess.get('model')
         
         # Writer for the Python matrix elements
-        helas_writer = helas_call_writer.PythonUFOHelasCallWriter(model)
+        helas_writer = helas_call_writers.PythonUFOHelasCallWriter(model)
     
         # Read a param_card and calculate couplings
         full_model = model_reader.ModelReader(model)
@@ -657,7 +657,7 @@ def check_gauge(processes, param_card = None):
     full_model.set_parameters_and_couplings(param_card)
 
     # Write the matrix element(s) in Python
-    helas_writer = helas_call_writer.PythonUFOHelasCallWriter(model)
+    helas_writer = helas_call_writers.PythonUFOHelasCallWriter(model)
     
     stored_quantities = {}
     comparison_results = []
@@ -790,7 +790,7 @@ def check_lorentz(processes, param_card = None):
         model = multiprocess.get('model')
         
         # Writer for the Python matrix elements
-        helas_writer = helas_call_writer.PythonUFOHelasCallWriter(model)
+        helas_writer = helas_call_writers.PythonUFOHelasCallWriter(model)
     
         # Read a param_card and calculate couplings
         full_model = model_reader.ModelReader(model)
@@ -822,7 +822,7 @@ def check_lorentz(processes, param_card = None):
     full_model.set_parameters_and_couplings(param_card)
 
     # Write the matrix element(s) in Python
-    helas_writer = helas_call_writer.PythonUFOHelasCallWriter(model)
+    helas_writer = helas_call_writers.PythonUFOHelasCallWriter(model)
     
     stored_quantities = {}
     comparison_results = []
