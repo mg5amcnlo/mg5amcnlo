@@ -105,7 +105,9 @@ def copy_v4standalone(mgme_dir, dir_path, clean):
 
     try:
         subprocess.call([os.path.join('bin', 'standalone')],
-                        stdout = os.open(os.devnull, os.O_RDWR), cwd=dir_path)
+                        stdout = os.open(os.devnull, os.O_RDWR),
+                        stderr = os.open(os.devnull, os.O_RDWR),
+                        cwd=dir_path)
     except OSError:
         # Probably standalone already called
         pass

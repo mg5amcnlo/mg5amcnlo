@@ -102,6 +102,9 @@ class UFOMG5Converter(object):
         self.particles = base_objects.ParticleList()
         self.interactions = base_objects.InteractionList()
         self.model = base_objects.Model()
+        self.model.set('particles', self.particles)
+        self.model.set('interactions', self.interactions)
+        
         self.ufomodel = model
         
         if auto:
@@ -121,17 +124,10 @@ class UFOMG5Converter(object):
 
         for particle_info in self.ufomodel.all_particles:            
             self.add_particle(particle_info)
-
-        self.model.set('particles', self.particles)
-
-
+            
         logger.info('load vertices')
         for interaction_info in self.ufomodel.all_vertices:
             self.add_interaction(interaction_info)
-        
-        self.model.set('interactions', self.interactions)
-        
-        
         
         return self.model
         
@@ -180,6 +176,7 @@ class UFOMG5Converter(object):
         # Add the particles to the list
         self.particles.append(particle)
 
+
     def add_interaction(self, interaction_info):
         """add an interaction in the MG5 model. interaction_info is the 
         UFO vertices information."""
@@ -202,8 +199,8 @@ class UFOMG5Converter(object):
                                     interaction_info.color]
         
         order_to_int={}
-        for key, coupling in interaction_info.couplings.items():
         
+        for key, coupling in interaction_info.couplings.items():
             order = tuple(coupling.order.items())
             if order in order_to_int:
                 order_to_int[order].get('couplings')[key] = coupling.name
