@@ -159,14 +159,14 @@ logging.info("Getting Models from cvs")
 status = subprocess.call(['cvs', 
                           '-d',
                           ':pserver:anonymous@cp3wks05.fynu.ucl.ac.be:/usr/local/CVS',
-                          'checkout', '-d', 'Models', 'MG_ME/Models'],
+                          'checkout', '-d', 'Models_new', 'MG_ME/Models'],
                          stdout = devnull, stderr = devnull,
                          cwd = filepath)
 if status:
     logging.error("CVS checkout failed, exiting")
     exit()
 
-model_path = os.path.join(filepath, "Models")
+model_path = os.path.join(filepath, "Models_new")
 
 logging.info("Copying v4 models from " + model_path + ":")
 nmodels = 0
@@ -188,7 +188,7 @@ for mdir in [d for d in glob.glob(path.join(model_path, "*")) \
         for cvs_dir in cvs_dirs:
             shutil.rmtree(cvs_dir)
 
-shutil.rmtree(os.path.join(filepath, "Models"))
+shutil.rmtree(os.path.join(filepath, "Models_new"))
 logging.info("Copied %d v4 models." % nmodels)
 
 # 4. Create the automatic documentation in the apidoc directory

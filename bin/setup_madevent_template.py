@@ -177,14 +177,14 @@ else:
     status = subprocess.call(['cvs', 
                               '-d',
                               ':pserver:anonymous@cp3wks05.fynu.ucl.ac.be:/usr/local/CVS',
-                              'checkout', '-d', 'Models', 'MG_ME/Models'],
+                              'checkout', '-d', 'Models_new', 'MG_ME/Models'],
                              stdout = devnull, stderr = devnull,
                              cwd = filepath)
     if status:
         logging.error("CVS checkout failed, exiting")
         exit()
 
-    model_path = os.path.join(filepath, "Models")
+    model_path = os.path.join(filepath, "Models_new")
 
 logging.info("Remove existing v4 models")
 for mdir in [d for d in glob.glob(path.join('models', "*_v4")) \
@@ -217,6 +217,6 @@ for mdir in [d for d in glob.glob(path.join(model_path, "*")) \
             shutil.rmtree(cvs_dir)
 
 if not mgme_dir:
-    shutil.rmtree(os.path.join(filepath, "Models"))
+    shutil.rmtree(os.path.join(filepath, "Models_new"))
     
 logging.info("Done. Please enjoy MadGraph/MadEvent 5.")
