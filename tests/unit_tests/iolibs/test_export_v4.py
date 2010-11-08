@@ -31,6 +31,7 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_algebra as color
+import madgraph.various.diagram_symmetry as diagram_symmetry
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 import tests.unit_tests.iolibs.test_helas_call_writers as \
                                             test_helas_call_writers
@@ -556,8 +557,7 @@ C     Amplitude(s) for diagram number 6
         export_v4.write_group_configs_file(\
             writers.FortranWriter(self.give_pos('test')),
             subprocess_group,
-            subprocess_group.get_diagrams_for_configs(),
-            self.myfortranmodel)
+            subprocess_group.get_diagrams_for_configs())
 
         goal_configs = """C     Diagram 1
       DATA MAPCONFIG(1)/1/
@@ -591,7 +591,6 @@ C     Number of configs
 
         export_v4.write_config_subproc_map_file(\
             writers.FortranWriter(self.give_pos('test')),
-            self.myfortranmodel,
             subprocess_group.get_diagrams_for_configs())
 
         goal_confsub = """      DATA (CONFSUB(I,1),I=1,2)/1,1/
@@ -967,7 +966,7 @@ JAMP(6)=+1./4.*(-1./3.*AMP(1)-1./3.*AMP(2)-AMP(5)-AMP(6)-AMP(8)-AMP(11)-AMP(13)-
 
         # Test leshouche.inc output
         writer = writers.FortranWriter(self.give_pos('leshouche'))
-        export_v4.write_leshouche_file(writer, matrix_element, fortran_model)
+        export_v4.write_leshouche_file(writer, matrix_element)
         writer.close()
 
         self.assertFileContains('leshouche',
@@ -1006,7 +1005,7 @@ PD(IPROC)=PD(IPROC-1) + u1*ub2""")
 
         # Test mg.sym
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_mg_sym_file(writer, matrix_element, fortran_model)
+        export_v4.write_mg_sym_file(writer, matrix_element)
         writer.close()
         
         self.assertFileContains('test',
@@ -2857,7 +2856,7 @@ CALL IOVXXX(W(1,25),W(1,23),W(1,2),GAL,AMP(7))
 CALL IOVXXX(W(1,26),W(1,23),W(1,2),GAL,AMP(8))""")
 
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_pmass_file(writer, me, myfortranmodel)
+        export_v4.write_pmass_file(writer, me)
         writer.close()
         self.assertFileContains('test',"""      PMASS(1)=ZERO
       PMASS(2)=ZERO
@@ -3341,7 +3340,7 @@ CALL VVVXXX(W(1,2),W(1,26),W(1,38),GG,AMP(215))
 CALL VVVXXX(W(1,2),W(1,26),W(1,39),GG,AMP(216))""")
 
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_pmass_file(writer, me, myfortranmodel)
+        export_v4.write_pmass_file(writer, me)
         writer.close()
 
         self.assertFileContains('test',"""      PMASS(1)=ZERO
@@ -3809,8 +3808,7 @@ CALL IOSXXX(W(1,28),W(1,2),W(1,27),MGVX350,AMP(8))""")
 
         # Test configs file
         nconfig, s_and_t_channels = export_v4.write_configs_file(writer,
-                                     me,
-                                     myfortranmodel)
+                                     me)
         writer.close()
         
         self.assertFileContains('test',
@@ -3926,7 +3924,6 @@ C     Number of configs
 
         # Test decayBW file
         export_v4.write_decayBW_file(writer,
-                                     myfortranmodel,
                                      s_and_t_channels)
 
         writer.close()
@@ -3970,15 +3967,13 @@ C     Number of configs
         # Test dname.mg
         writer = writers.FortranWriter(self.give_pos('test'))
         export_v4.write_dname_file(writer,
-                                   me.get('processes')[0].shell_string(),
-                                   fortran_model)
+                                   me.get('processes')[0].shell_string())
         writer.close()
         self.assertFileContains('test', "DIRNAME=P0_emep_n1n1_n1_emsl2pa_n1_emsl2pa\n")
         # Test iproc.inc
         writer = writers.FortranWriter(self.give_pos('test'))
         export_v4.write_iproc_file(writer,
-                                   me.get('processes')[0].get('id'),
-                                   fortran_model)
+                                   me.get('processes')[0].get('id'))
         writer.close()
         self.assertFileContains('test', "      0\n")
         # Test maxamps.inc
@@ -3986,7 +3981,6 @@ C     Number of configs
         # Extract ncolor
         ncolor = max(1, len(me.get('color_basis')))
         export_v4.write_maxamps_file(writer,
-                                     fortran_model,
                                      len(me.get_all_amplitudes()),
                                      ncolor,
                                      len(me.get('processes')),
@@ -3999,7 +3993,7 @@ C     Number of configs
                                 "      PARAMETER (MAXPROC=1, MAXSPROC=1)\n")
         # Test mg.sym
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_mg_sym_file(writer, me, fortran_model)
+        export_v4.write_mg_sym_file(writer, me)
         writer.close()
         self.assertFileContains('test', """      3
       2
@@ -4014,15 +4008,14 @@ C     Number of configs
         # Test ncombs.inc
         nexternal, ninitial = me.get_nexternal_ninitial()
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_ncombs_file(writer, nexternal, fortran_model)
+        export_v4.write_ncombs_file(writer, nexternal)
         writer.close()
         self.assertFileContains('test',
                          """      INTEGER    N_MAX_CL
       PARAMETER (N_MAX_CL=512)\n""")
         # Test nexternal.inc
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_nexternal_file(writer, nexternal, ninitial,
-                                       fortran_model)
+        export_v4.write_nexternal_file(writer, nexternal, ninitial)
         writer.close()
         self.assertFileContains('test',
                          """      INTEGER    NEXTERNAL
@@ -4031,14 +4024,14 @@ C     Number of configs
       PARAMETER (NINCOMING=2)\n""")
         # Test ngraphs.inc
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_ngraphs_file(writer, fortran_model, nconfig)
+        export_v4.write_ngraphs_file(writer, nconfig)
         writer.close()
         self.assertFileContains('test',
                          """      INTEGER    N_MAX_CG
       PARAMETER (N_MAX_CG=8)\n""")
         # Test props.inc
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_props_file(writer, me, fortran_model, s_and_t_channels)
+        export_v4.write_props_file(writer, me, s_and_t_channels)
         writer.close()
         self.assertFileContains('test',
                          """      PMASS(-1,1)  = ZERO

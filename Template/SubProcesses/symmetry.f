@@ -41,7 +41,7 @@ c
       integer ncall,itmax,nconfigs,ntry, ngraphs
       integer ic(nexternal,maxswitch), jc(12),nswitch
       double precision saveamp(maxamps)
-      integer nmatch, ibase
+      integer nmatch, ibase, idum
       logical mtc, even
 
 c
@@ -91,24 +91,16 @@ c      if (icomp .gt. 3 .or. icomp .lt. 0) icomp=0
       call setcuts               !Sets up cuts 
       call printout
       call run_printout
-c
-      ndim = 22
-      ncall = 10000
-      itmax = 10
-      ninvar = 35
-      nconfigs = 1
-      iconfig=1
       include 'props.inc'
-      call sample_init(ndim,ncall,itmax,ninvar,nconfigs)
-
-      open(unit=lun,file='symswap.inc',status='unknown')
 
 c
-c     Start using all configurations
+c     Start reading use_config from symfact.dat written by MG5
 c
+      open(unit=25, file='symfact.dat', status='old')
       do j=1,mapconfig(0)
-         use_config(j) = 1
+         read(25,*) idum, use_config(j)
       enddo
+      close(25)
 
       call write_bash(mapconfig,use_config,pwidth,icomp,iforest)
       call write_input(j)

@@ -63,6 +63,8 @@ def find_symmetry(matrix_element):
     amplitudes for all permutations of identical particles. Note that
     also multi-particle vertices are included here."""
 
+    logging.info("Finding symmetric diagrams")
+
     process = matrix_element.get('processes')[0]
     base_model = process.get('model')
     full_model = model_reader.ModelReader(base_model)

@@ -2489,11 +2489,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             path = os.path.join(path, 'SubProcesses')
 
         if self._export_format == 'madevent':
+            cpu_time1 = time.time()
             for me in self._curr_matrix_elements.get('matrix_elements'):
                 calls = calls + \
                         export_v4.generate_subprocess_directory_v4_madevent(\
                             me, self._curr_fortran_model, path)
             
+            cpu_time2 = time.time() - cpu_time1
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
                                      'procdef_mg5.dat')
             if self._generate_info:
@@ -2536,6 +2538,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                             me, self._curr_fortran_model, path)
             
         if self._export_format == 'matrix':
+            cpu_time1 = time.time()
             for me in self._curr_matrix_elements.get('matrix_elements'):
                 filename = os.path.join(path, 'matrix_' + \
                            me.get('processes')[0].shell_string() + ".f")
@@ -2546,7 +2549,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 calls = calls + export_v4.write_matrix_element_v4_standalone(\
                     writers.FortranWriter(filename),\
                     me, self._curr_fortran_model)
-                
+            cpu_time2 = time.time() - cpu_time1
+
         if self._export_format == 'pythia8':
             self._curr_cpp_model = \
                   helas_call_writers.Pythia8UFOHelasCallWriter(self._curr_model)
@@ -2560,8 +2564,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                ndiags, cpu_time))
 
         if calls:
-            logger.info("Wrote %d helas calls" % calls)
-
+            if "cpu_time2" in locals():
+                logger.info("Wrote files for %d helas calls in %0.3f s" % \
+                            (calls, cpu_time2))
+            else:
+                logger.info("Wrote %d helas calls" % calls)
         # Replace the amplitudes with the actual amplitudes from the
         # matrix elements, which allows proper diagram drawing also of
         # decay chain processes

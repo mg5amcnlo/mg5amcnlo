@@ -249,9 +249,8 @@ def evaluate_matrix_element(matrix_element, stored_quantities, helas_writer,
     if "matrix_elements" not in stored_quantities:
         stored_quantities['matrix_elements'] = []
         matrix_methods = {}
-    elif reuse and "Matrix_%s" % process.shell_string() in globals() and p:
-        print "Reusing matrix element"
 
+    if reuse and "Matrix_%s" % process.shell_string() in globals() and p:
         # Evaluate the matrix element for the momenta p
         matrix = eval("Matrix_%s()" % process.shell_string())
         me_value = matrix.smatrix(p, full_model)
@@ -265,8 +264,6 @@ def evaluate_matrix_element(matrix_element, stored_quantities, helas_writer,
                     "identical matrix element already tested" \
                     )
         return None
-
-    print "Not reusing matrix element"
 
     stored_quantities['matrix_elements'].append(matrix_element)
 
