@@ -91,10 +91,10 @@ def find_symmetry(matrix_element):
         nperm += 1
         new_p = p[:ninitial] + [p[i] for i in perm]
         # Reset matrix_elements, otherwise won't run again
-        stored_quantities['matrix_elements'] = []
         res = process_checks.evaluate_matrix_element(\
                                               matrix_element,stored_quantities,
-                                              helas_writer, full_model, new_p)
+                                              helas_writer, full_model, new_p,
+                                              reuse = True)
         if not res:
             break
         me_value, amp2 = res

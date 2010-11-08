@@ -239,7 +239,8 @@ def check_already_checked(is_ids, fs_ids, sorted_ids, process, model,
 # Helper function evaluate_matrix_element
 #===============================================================================
 def evaluate_matrix_element(matrix_element, stored_quantities, helas_writer,
-                        full_model, p = None, gauge_check = False, auth_skipping=True):
+                            full_model, p = None, gauge_check = False,
+                            auth_skipping = True, reuse = False):
     """Calculate the matrix element and evaluate it for a phase space point"""
 
     process = matrix_element.get('processes')[0]
@@ -247,13 +248,25 @@ def evaluate_matrix_element(matrix_element, stored_quantities, helas_writer,
 
     if "matrix_elements" not in stored_quantities:
         stored_quantities['matrix_elements'] = []
+        matrix_methods = {}
+    elif reuse and "Matrix_%s" % process.shell_string() in globals() and p:
+        print "Reusing matrix element"
 
-    if auth_skipping and matrix_element in stored_quantities['matrix_elements']:
+        # Evaluate the matrix element for the momenta p
+        matrix = eval("Matrix_%s()" % process.shell_string())
+        me_value = matrix.smatrix(p, full_model)
+
+        return me_value, matrix.amp2        
+
+    if auth_skipping and matrix_element in \
+           stored_quantities['matrix_elements']:
         # Exactly the same matrix element has been tested
         logger.info("Skipping %s, " % process.nice_string() + \
                     "identical matrix element already tested" \
                     )
         return None
+
+    print "Not reusing matrix element"
 
     stored_quantities['matrix_elements'].append(matrix_element)
 
@@ -332,15 +345,19 @@ def evaluate_matrix_element(matrix_element, stored_quantities, helas_writer,
         logger.info(error)
         return None
 
-    # Define the routines (locally is enough)
-    exec(matrix_methods[process.shell_string()])
+    if reuse:
+        # Define the routines (globally)
+        exec(matrix_methods[process.shell_string()], globals())
+    else:
+        # Define the routines (locally is enough)
+        exec(matrix_methods[process.shell_string()])
 
     # Generate phase space point to use
     if not p:
         p, w_rambo = get_momenta(process, full_model)
 
     # Evaluate the matrix element for the momenta p
-    matrix = Matrix()
+    matrix = eval("Matrix_%s()" % process.shell_string())
     me_value = matrix.smatrix(p, full_model)
 
     return me_value, matrix.amp2

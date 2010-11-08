@@ -219,7 +219,7 @@ class IOExportPythonTest(unittest.TestCase):
         """Test getting the matrix methods for Python for a matrix element."""
         
         goal_method = (\
-"""class Matrix(object):
+"""class Matrix_0_uux_uux(object):
 
     def smatrix(self,p, model):
         #  
@@ -444,7 +444,7 @@ class IOExportPythonTest(unittest.TestCase):
             # Define Python matrix element for process
             exec(matrix_methods[process])
             # Calculate the matrix element for the momentum p
-            value = eval("Matrix().smatrix(p, full_model)")
+            value = eval("Matrix_0_epem_aaa().smatrix(p, full_model)")
             self.assertTrue(abs(value-answer)/answer < 1e-6,
                             "Value is: %.9e should be %.9e" % \
                             (abs(value), answer))

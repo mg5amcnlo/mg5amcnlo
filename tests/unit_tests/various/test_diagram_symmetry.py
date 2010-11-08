@@ -91,7 +91,7 @@ class TestDiagramSymmetry(unittest.TestCase):
             me_value, amp2 = process_checks.evaluate_matrix_element(\
                                               matrix_element,stored_quantities,
                                               helas_writer, full_model, new_p)
-            if sym > 0:
+            if sym >= 0:
                 continue
             self.assertAlmostEqual(amp2[isym], amp2_org[-sym-1])
         
@@ -129,3 +129,28 @@ class TestDiagramSymmetry(unittest.TestCase):
                          [3, -1, -1, 0, 6, -5, 3, -5, -5, -7, -5, -5, -7,
                           3 , -14, -14])
 
+        # Check that the momentum assignments work
+        process = matrix_element.get('processes')[0]
+        full_model = model_reader.ModelReader(self.base_model)
+        full_model.set_parameters_and_couplings()
+        stored_quantities = {}
+        helas_writer = helas_call_writers.PythonUFOHelasCallWriter(\
+                                                               self.base_model)
+
+        
+        p, w_rambo = process_checks.get_momenta(process, full_model)
+        me_value, amp2_org = process_checks.evaluate_matrix_element(\
+                                          matrix_element,stored_quantities,
+                                          helas_writer, full_model, p,
+                                          reuse = True)
+
+        for isym, (sym, perm) in enumerate(zip(symmetry, perms)):
+            new_p = [p[i] for i in perm]
+            me_value, amp2 = process_checks.evaluate_matrix_element(\
+                                              matrix_element,stored_quantities,
+                                              helas_writer, full_model, new_p,
+                                              reuse = True)
+            if sym >= 0:
+                continue
+            self.assertAlmostEqual(amp2[isym], amp2_org[-sym-1])
+        
