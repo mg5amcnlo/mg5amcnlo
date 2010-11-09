@@ -1,4 +1,4 @@
-F77   = f77
+gfortran   = gfortran
 FFLAGS= -O -ffixed-line-length-132
 LIBDIR = ../../lib/
 PROG   = check
@@ -9,11 +9,11 @@ PROCESS=  check_dip.o matrix.o $(patsubst %.f,%.o,$(wildcard dipol*.f)) transfor
 PROCESS1= check_intdip.o matrix.o $(patsubst %.f,%.o,$(wildcard dipol*.f)) transform.o finiteterms.o intdipoles.o transformint.o epsterms.o
  
 %.o : %.f
-	$(F77) $(FFLAGS) -c $<
+	$(gfortran) $(FFLAGS) -c $<
 
 $(PROG): $(PROCESS)  makefile $(LIBS)
-	$(F77) $(FFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
+	$(gfortran) $(FFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
 $(PROG1): $(PROCESS1)  makefile $(LIBS)
-	$(F77) $(FFLAGS) -o $(PROG1) $(PROCESS1) $(LINKLIBS)	
+	$(gfortran) $(FFLAGS) -o $(PROG1) $(PROCESS1) $(LINKLIBS)	
 
 driver.f: nexternal.inc pmass.inc ngraphs.inc coupl.inc

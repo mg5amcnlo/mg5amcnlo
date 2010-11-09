@@ -6,13 +6,13 @@
 # ----------------------------------------------------------------------------
 
 
-F77           = gfortran
+gfortran           = gfortran
 FFLAGS        = -O
 LIBRARY       = ../libpdf.a
 LIBDIR        = ../../lib/
 PDF           = pdfwrap_lhapdf.o pdf_lhapdf.o pdg2pdf_lhapdf.o opendata.o
 
-.f.o: ; $(F77) $(FFLAGS) -c $*.f
+.f.o: ; $(gfortran) $(FFLAGS) -c $*.f
 
 all: $(LIBDIR)libpdf.a
 

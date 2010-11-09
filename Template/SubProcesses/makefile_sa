@@ -1,4 +1,4 @@
-F77   = f77
+gfortran   = gfortran
 FFLAGS= -O -ffixed-line-length-132
 LIBDIR = ../../lib/
 PROG   = check
@@ -7,9 +7,9 @@ LIBS = $(LIBDIR)libdhelas3.a $(LIBDIR)libmodel.a
 PROCESS=  check_sa.o matrix.o
  
 %.o : %.f
-	$(F77) $(FFLAGS) -c $<
+	$(gfortran) $(FFLAGS) -c $<
 
 $(PROG): $(PROCESS)  makefile $(LIBS)
-	$(F77) $(FFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
+	$(gfortran) $(FFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
 
 driver.f: nexternal.inc pmass.inc ngraphs.inc coupl.inc

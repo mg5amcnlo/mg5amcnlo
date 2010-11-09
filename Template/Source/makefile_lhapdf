@@ -1,4 +1,4 @@
-F77   = gfortran
+gfortran   = gfortran
 FFLAGS= -O -ffixed-line-length-132
 #FFLAGS= -O 
 LIBDIR= ../lib/
@@ -25,29 +25,29 @@ GENSUDGRID = gensudgrid.o is-sud.o setrun_gen.o rw_routines.o open_file.o
 # $B$ add_def $E$ !this is a tag for add library GENERIC_MW  in MadWeight compilation
 
 
-.f.o: ; $(F77) $(FFLAGS) -c $*.f
+.f.o: ; $(gfortran) $(FFLAGS) -c $*.f
 
 # $B$ mod_all $B$ !this is a tag for modify main compilation in MadWeight compilation. Don't edit this line
 all: $(LIBDIR)libdhelas3.a $(LIBDIR)libdsample.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a  $(LIBDIR)libmodel.a $(LIBDIR)libcernlib.a
-# $E$ mod_all $E$ !this is a tag for modify main compilation in MadWeight compilation. Don't edit this line
+#  $E$ mod_all $E$ !this is a tag for modify main compilation in MadWeight compilation. Don't edit this line
 
 scaled.dat:
 	combine_events
 
 #$(BINDIR)write_banner:  $(BANNER) 
-#	$(F77) $(FFLAGS) -o write_banner $(BANNER) $(LIBDIR)/libmodel.a $(LIBDIR)/libpdf.a 
+#	$(gfortran) $(FFLAGS) -o write_banner $(BANNER) $(LIBDIR)/libmodel.a $(LIBDIR)/libpdf.a 
 #	mv write_banner $(BINDIR)
 
 #$(BINDIR)scale_events: scale_events.o rw_events.o
-#	$(F77) $(FFLAGS) -o scale_events scale_events.o rw_events.o
+#	$(gfortran) $(FFLAGS) -o scale_events scale_events.o rw_events.o
 #	mv scale_events $(BINDIR)
 
 #$(BINDIR)select_events: select_events.o rw_events.o
-#	$(F77) $(FFLAGS) -o select_events select_events.o rw_events.o
+#	$(gfortran) $(FFLAGS) -o select_events select_events.o rw_events.o
 #	mv select_events $(BINDIR)
 
 $(BINDIR)sum_html: sum_html.o 
-	$(F77) $(FFLAGS) -o sum_html sum_html.o   
+	$(gfortran) $(FFLAGS) -o sum_html sum_html.o   
 	mv sum_html $(BINDIR)
 
 $(LIBDIR)libdhelas3.a: DHELAS
@@ -81,13 +81,13 @@ dsample.o: dsample.f genps.inc
 setrun.o: setrun.f nexternal.inc leshouche.inc
 
 $(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o
-	$(F77) $(FFLAGS) -o gen_ximprove gen_ximprove.o ranmar.o rw_routines.o open_file.o
+	$(gfortran) $(FFLAGS) -o gen_ximprove gen_ximprove.o ranmar.o rw_routines.o open_file.o
 	mv gen_ximprove $(BINDIR)
 
 $(BINDIR)combine_events: $(COMBINE)
-	$(F77) $(FFLAGS) -o combine_events $(COMBINE) $(LIBDIR)libmodel.a $(LIBDIR)libpdf.a $(LIBDIR)libLHAPDF.a -lstdc++
+	$(gfortran) $(FFLAGS) -o combine_events $(COMBINE) $(LIBDIR)libmodel.a $(LIBDIR)libpdf.a $(LIBDIR)libLHAPDF.a -lstdc++
 	mv combine_events $(BINDIR)
 
 $(BINDIR)gensudgrid: $(GENSUDGRID) $(LIBDIR)libpdf.a $(LIBDIR)libcernlib.a 
-	$(F77) $(FFLAGS) -o gensudgrid $^ $(LIBDIR)libLHAPDF.a -lstdc++
+	$(gfortran) $(FFLAGS) -o gensudgrid $^ $(LIBDIR)libLHAPDF.a -lstdc++
 	mv gensudgrid $(BINDIR)

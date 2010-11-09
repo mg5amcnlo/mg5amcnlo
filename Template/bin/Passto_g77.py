@@ -5,7 +5,7 @@ import mod_file
 
 def mod_dir_to_gfortran(directory):
     #define global regular expression
-    rule={'S-REGEXP_f77+gfortran+re.I':'','S-REGEXP_g77+gfortran+re.I':''}
+    rule={'S-REGEXP_gfortran+g77+re.I':''}
 
     if type(directory)!=list:
         directory=[directory]
