@@ -32,7 +32,7 @@ echo "Transforming standard template in standalone version"
 cd $main
 mkdir temp
 mv ./bin/setup_model-pl ./temp/
-mv ./bin/Passto_gfortran.py ./temp/
+mv ./bin/Passto_g77.py ./temp/
 mv ./bin/mod_file.py ./temp/
 mv ./Cards/proc_card.dat ./temp/
 mv ./SubProcesses/makefile_sa ./temp/makefile
@@ -43,7 +43,7 @@ mkdir Source/MODEL
 mkdir Source/DHELAS
 
 mv ./temp/setup_model-pl ./bin/
-mv ./temp/Passto_gfortran.py ./bin/
+mv ./temp/Passto_g77.py ./bin/
 mv ./temp/mod_file.py ./bin/
 mv ./temp/proc_card.dat ./Cards/
 mv ./temp/makefile ./SubProcesses/

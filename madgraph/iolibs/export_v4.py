@@ -144,9 +144,9 @@ def make_v4standalone(dir_path):
     source_dir = os.path.join(dir_path, "Source")
     # Run standalone
     logger.info("Running make for Helas")
-    if misc.which('gfortran'):
-        logger.info('use gfortran')
-        subprocess.call(['python','./bin/Passto_gfortran.py'], cwd=dir_path, \
+    if not misc.which('gfortran') and misc.which('g77'):
+        logger.info('use g77')
+        subprocess.call(['python','./bin/Passto_g77.py'], cwd=dir_path, \
                         stdout = open(os.devnull, 'w')) 
     
     subprocess.call(['make', '../lib/libdhelas3.a'],

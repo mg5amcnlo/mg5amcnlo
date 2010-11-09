@@ -101,7 +101,6 @@ if status1:
 
 shutil.rmtree(path.join(filepath, '.bzr'))
 os.remove(path.join(filepath, 'bin', 'create_release.py'))
-os.remove(path.join(filepath, 'bin', 'setup_madevent_template.py'))
 os.remove(path.join(filepath, 'README.developer'))
 shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
 
