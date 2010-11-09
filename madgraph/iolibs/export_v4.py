@@ -597,8 +597,8 @@ def write_configs_file(writer, matrix_element):
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
     return write_configs_file_from_diagrams(writer,
-                                         matrix_element.get('diagrams'),
-                                         ninitial)
+                                            matrix_element.get('diagrams'),
+                                            nexternal, ninitial)
 
 #===============================================================================
 # write_group_configs_file
@@ -620,12 +620,12 @@ def write_group_configs_file(writer, subproc_group, diagrams_for_config):
     (nexternal, ninitial) = subproc_group.get_nexternal_ninitial()
 
     return write_configs_file_from_diagrams(writer, diagrams,
-                                            ninitial)
+                                            nexternal, ninitial)
 
 #===============================================================================
 # write_configs_file_from_diagrams
 #===============================================================================
-def write_configs_file_from_diagrams(writer, diagrams, ninitial):
+def write_configs_file_from_diagrams(writer, diagrams, nexternal, ninitial):
     """Write the actual configs.inc file"""
 
     lines = []
@@ -648,8 +648,8 @@ def write_configs_file_from_diagrams(writer, diagrams, ninitial):
             # Write out tchannels only if there are any non-trivial ones
             allchannels = schannels + tchannels
 
-        if not allchannels or \
-               any([len(vert.get('legs')) > 3 for vert in allchannels]):
+        if len(schannels) < (nexternal-ninitial-1) and \
+               (ninitial == 1 or len(allchannels) < (nexternal-ninitial)):
             # For now, only 3-vertices allowed in configs.inc
             continue
         
@@ -1706,6 +1706,8 @@ def get_icolamp_lines(matrix_element):
 def get_amp2_lines(matrix_element, config_map = []):
     """Return the amp2(i) = sum(amp for diag(i))^2 lines"""
 
+    nexternal, ninitial = matrix_element.get_nexternal_ninitial()
+
     ret_lines = []
     if config_map:
         # In this case, we need to sum up all amplitudes that have
@@ -1745,8 +1747,8 @@ def get_amp2_lines(matrix_element, config_map = []):
             schannels, tchannels = diag.get('amplitudes')[0].\
                                          get_s_and_t_channels(2)
             allchannels = schannels + tchannels
-            if not allchannels or \
-                   any([len(vert.get('legs')) > 3 for vert in allchannels]):
+            if len(schannels) < (nexternal-ninitial-1) and \
+                   (ninitial == 1 or len(allchannels) < (nexternal-ninitial)):
                 continue
             # Now write out the expression for AMP2, meaning the sum of
             # squared amplitudes belonging to the same diagram
