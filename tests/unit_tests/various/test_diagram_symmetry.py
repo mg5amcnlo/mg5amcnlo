@@ -125,7 +125,7 @@ class TestDiagramSymmetry(unittest.TestCase):
         self.assertEqual(len([s for s in symmetry if s > 0]), 12)
 
         self.assertEqual(symmetry,
-                         [3, -1, 1, -1, 1, 6, -6, 1, 3, 1, -6, 1, -9, 1, -23, 1, -23, 1, -6, -6, -9, -6, 3])
+                         [1, -1, 1, -1, 1, 1, -6, 1, 1, 1, -6, 1, -9, 1, -23, 1, -23, 1, -6, -6, -9, -6, 1])
 
         # Check that the momentum assignments work
         matrix_element = \

@@ -546,7 +546,7 @@ def write_super_auto_dsig_file(writer, subproc_group):
     call_dsig_proc_lines = []
     for iproc in range(len(matrix_elements)):
         call_dsig_proc_lines.append(\
-            "IF(IPROC.EQ.%(num)d) DSIG=DSIG%(num)d(PP,WGT,0) ! %(proc)s" % \
+            "IF(IPROC.EQ.%(num)d) DSIG=DSIG%(num)d(P1,WGT,0) ! %(proc)s" % \
             {"num": iproc + 1,
              "proc": matrix_elements[iproc].get('processes')[0].base_string()})
     replace_dict['call_dsig_proc_lines'] = "\n".join(call_dsig_proc_lines)

@@ -286,14 +286,15 @@ class SubProcessGroup(base_objects.PhysicsObject):
         process_classes = SubProcessGroup.find_process_classes(amplitudes)
         ret_list = SubProcessGroupList()
         process_class_numbers = sorted(list(set(process_classes.values())))
-        for inum, num in enumerate(process_class_numbers):
+        for num in process_class_numbers:
             amp_nums = [key for (key, val) in process_classes.items() if \
                           val == num]
             group = SubProcessGroup()
-            group.set('number', inum+1)
             group.set('amplitudes',
                       diagram_generation.AmplitudeList([amplitudes[i] for i in \
                                                         amp_nums]))
+            group.set('number', group.get('amplitudes')[0].get('process').\
+                                                                     get('id'))
             group.set('name', group.generate_name())
             ret_list.append(group)
 
@@ -327,7 +328,8 @@ class SubProcessGroup(base_objects.PhysicsObject):
             proc_class = [ [(p.is_fermion(), p.get('is_part')) \
                             for p in is_parts],
                            [(p.get('mass'), p.get('color') != 1) for p in \
-                            is_parts + fs_parts]]
+                            is_parts + fs_parts],
+                           amplitude.get('process').get('id')]
             try:
                 amplitude_classes[iamp] = proc_classes.index(proc_class)
             except ValueError:

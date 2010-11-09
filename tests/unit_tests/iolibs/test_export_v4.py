@@ -630,7 +630,7 @@ C     Number of configs
         symmetry, perms, ident_perms = \
                   diagram_symmetry.find_symmetry(subprocess_group)
 
-        self.assertEqual(symmetry, [1,2,-2,1,1])
+        self.assertEqual(symmetry, [1,1,-2,1,1])
         self.assertEqual(perms,
                          [[0,1,2,3],[0,1,2,3],[0,1,3,2],[0,1,2,3],[0,1,2,3]])
         self.assertEqual(ident_perms,

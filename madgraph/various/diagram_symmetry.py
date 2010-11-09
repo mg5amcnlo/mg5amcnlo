@@ -209,6 +209,9 @@ def find_symmetry_subproc_group(subproc_group):
     for iconf in range(len(subproc_group.get('mapping_diagrams'))):
         all_symmetry.setdefault(iconf+1, 1)
         all_perms.setdefault(iconf+1, range(nexternal))
+        # Since we don't want to multiply by symmetry factor here, set to 1
+        if all_symmetry[iconf+1] > 1:
+            all_symmetry[iconf+1] = 1
 
     symmetry = [all_symmetry[key] for key in sorted(all_symmetry.keys())]
     perms = [all_perms[key] for key in sorted(all_perms.keys())]
@@ -235,7 +238,7 @@ def find_matrix_elements_for_configs(subproc_group):
                          for i in range(n_mes) if diagram_list[i] > 0])
         max_mes = [i for i in range(n_mes) if \
                    matrix_elements[i].get('identical_particle_factor') == \
-                   max_ident and diagram_list[i] > 0]# and  max_ident > 1]
+                   max_ident and diagram_list[i] > 0 and  max_ident > 1]
         for me in max_mes:
             me_config_dict.setdefault(me, [iconf+1]).append(iconf + 1)
 

@@ -359,7 +359,7 @@ class TestCmdShell2(unittest.TestCase):
 
         self.do('import model sm')
         self.do('define p = g u u~ d d~')
-        self.do('generate g g > p p')
+        self.do('generate g g > p p @2')
         self.do('output madevent_group %s ' % self.out_dir)
         devnull = open(os.devnull,'w')
         # Check that the Source directory compiles
@@ -383,27 +383,27 @@ class TestCmdShell2(unittest.TestCase):
         status = subprocess.call(['make', 'gensym'],
                                  stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                                  'P1_gg_jj'))
+                                                  'P2_gg_jj'))
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P1_gg_jj',
+                                                    'P2_gg_jj',
                                                     'gensym')))
         # Check that gensym runs
         status = subprocess.call('./gensym', 
                                  stdout=devnull,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                                  'P1_gg_jj'), shell=True)
+                                                  'P2_gg_jj'), shell=True)
         self.assertEqual(status, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
                                  stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                                  'P1_gg_jj'))
+                                                  'P2_gg_jj'))
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P1_gg_jj',
+                                                    'P2_gg_jj',
                                                     'madevent')))
         
     def test_ufo_standard_sm(self):
