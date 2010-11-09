@@ -254,6 +254,7 @@ class SubProcessGroupTest(unittest.TestCase):
         self.mymodel = base_objects.Model()
         self.mymodel.set('particles', mypartlist)
         self.mymodel.set('interactions', myinterlist)        
+        self.mymodel.set('name', 'sm')
 
     def test_group_subprocs_and_get_diagram_maps(self):
         """Test grouping subprocs and generating HelasMatrixElements"""

@@ -26,6 +26,7 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.helas_call_writers as helas_call_writers
+import madgraph.iolibs.group_subprocs as group_subprocs
 import madgraph.various.diagram_symmetry as diagram_symmetry
 import madgraph.various.process_checks as process_checks
 import models.import_ufo as import_ufo
@@ -83,53 +84,52 @@ class TestDiagramSymmetry(unittest.TestCase):
         p, w_rambo = process_checks.get_momenta(process, full_model)
         me_value, amp2_org = process_checks.evaluate_matrix_element(\
                                           matrix_element,stored_quantities,
-                                          helas_writer, full_model, p)
+                                          helas_writer, full_model, p,
+                                          reuse = True)
 
         for isym, (sym, perm) in enumerate(zip(symmetry, perms)):
             new_p = [p[i] for i in perm]
-            stored_quantities['matrix_elements'] = []
-            me_value, amp2 = process_checks.evaluate_matrix_element(\
-                                              matrix_element,stored_quantities,
-                                              helas_writer, full_model, new_p)
             if sym >= 0:
                 continue
+            me_value, amp2 = process_checks.evaluate_matrix_element(\
+                                              matrix_element,stored_quantities,
+                                              helas_writer, full_model, new_p,
+                                              reuse = True)
             self.assertAlmostEqual(amp2[isym], amp2_org[-sym-1])
         
 
-    def test_find_symmetry_udbar_ggg(self):
-        """Test the find_symmetry function"""
+    def test_find_symmetry_udbar_ggg_with_subprocess_group(self):
+        """Test the find_symmetry function for subprocess groups"""
 
-        myleglist = base_objects.LegList()
+        procs = [[2,-2,2,-2,21], [2,-2,21,21,21]]
+        amplitudes = diagram_generation.AmplitudeList()
 
-        myleglist.append(base_objects.Leg({'id':2,
-                                           'state':False}))
-        myleglist.append(base_objects.Leg({'id':-2,
-                                           'state':False}))
-        #myleglist.append(base_objects.Leg({'id':24,
-        #                                   'state':True}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                           'state':True}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                           'state':True}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                           'state':True}))
+        for proc in procs:
+            # Define the multiprocess
+            my_leglist = base_objects.LegList([\
+                base_objects.Leg({'id': id, 'state': True}) for id in proc])
 
-        myproc = base_objects.Process({'legs':myleglist,
-                                       'model':self.base_model})
+            my_leglist[0].set('state', False)
+            my_leglist[1].set('state', False)
 
-        myamplitude = diagram_generation.Amplitude(myproc)
+            my_process = base_objects.Process({'legs':my_leglist,
+                                               'model':self.base_model})
+            my_amplitude = diagram_generation.Amplitude(my_process)
+            amplitudes.append(my_amplitude)
 
-        matrix_element = helas_objects.HelasMatrixElement(myamplitude)
+        subproc_group = \
+                  group_subprocs.SubProcessGroup.group_amplitudes(amplitudes)[0]
 
-        symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(matrix_element)
+        symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(subproc_group)
 
-        self.assertEqual(len([s for s in symmetry if s > 0]), 4)
+        self.assertEqual(len([s for s in symmetry if s > 0]), 12)
 
         self.assertEqual(symmetry,
-                         [3, -1, -1, 0, 6, -5, 3, -5, -5, -7, -5, -5, -7,
-                          3 , -14, -14])
+                         [3, -1, 1, -1, 1, 6, -6, 1, 3, 1, -6, 1, -9, 1, -23, 1, -23, 1, -6, -6, -9, -6, 3])
 
         # Check that the momentum assignments work
+        matrix_element = \
+                     subproc_group.get('multi_matrix').get('matrix_elements')[1]
         process = matrix_element.get('processes')[0]
         full_model = model_reader.ModelReader(self.base_model)
         full_model.set_parameters_and_couplings()
@@ -146,11 +146,13 @@ class TestDiagramSymmetry(unittest.TestCase):
 
         for isym, (sym, perm) in enumerate(zip(symmetry, perms)):
             new_p = [p[i] for i in perm]
+            if sym >= 0:
+                continue
+            iamp = subproc_group.get('diagram_maps')[1].index(isym+1)
+            isymamp = subproc_group.get('diagram_maps')[1].index(-sym)
             me_value, amp2 = process_checks.evaluate_matrix_element(\
                                               matrix_element,stored_quantities,
                                               helas_writer, full_model, new_p,
                                               reuse = True)
-            if sym >= 0:
-                continue
-            self.assertAlmostEqual(amp2[isym], amp2_org[-sym-1])
+            self.assertAlmostEqual(amp2[iamp], amp2_org[isymamp])
         

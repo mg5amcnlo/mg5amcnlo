@@ -877,6 +877,19 @@ def write_mg_sym_file(writer, matrix_element):
     return True
 
 #===============================================================================
+# write_mg_sym_file
+#===============================================================================
+def write_default_mg_sym_file(writer):
+    """Write the mg.sym file for MadEvent."""
+
+    lines = "0"
+
+    # Write the file
+    writer.writelines(lines)
+
+    return True
+
+#===============================================================================
 # write_ncombs_file
 #===============================================================================
 def write_ncombs_file(writer, nexternal):
@@ -1003,7 +1016,7 @@ def write_symswap_file(writer, ident_perms):
     # Write out lines for symswap.inc file (used to permute the
     # external leg momenta
     for iperm, perm in enumerate(ident_perms):
-        lines.append("data(isym(i,%d),i=1,nexternal)/%s/" % \
+        lines.append("data (isym(i,%d),i=1,nexternal)/%s/" % \
                      (iperm+1, ",".join([str(i+1) for i in perm])))
     lines.append("data nsym/%d/" % len(ident_perms))
     
@@ -1030,15 +1043,16 @@ def write_symfact_file(writer, symmetry):
     return True
 
 #===============================================================================
-# write_default_symswap_file
+# write_symperms_file
 #===============================================================================
-def write_default_symswap_file(writer, nexternal):
-    """Write the symswap.inc file for MG4 without symmetry"""
+def write_symperms_file(writer, perms):
+    """Write the symperms.inc file for subprocess group, used for
+    symmetric configurations"""
 
     lines = []
-    lines.append("data(isym(i,1),i=1,nexternal)/%s/" % \
-                 ",".join([str(i+1) for i in range(nexternal)]))
-    lines.append("data nsym/1/")
+    for iperm, perm in enumerate(perms):
+        lines.append("data (perms(i,%d),i=1,nexternal)/%s/" % \
+                     (iperm+1, ",".join([str(i+1) for i in perm])))
 
     # Write the file
     writer.writelines(lines)
@@ -1246,7 +1260,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 
     filename = 'maxamps.inc'
     write_maxamps_file(writers.FortranWriter(filename),
-                       len(matrix_element.get_all_amplitudes()),
+                       len(matrix_element.get('diagrams')),
                        ncolor,
                        len(matrix_element.get('processes')),
                        1)
@@ -1414,7 +1428,7 @@ def generate_subprocess_group_directory_v4_madevent(subproc_group,
         # Keep track of needed quantities
         tot_calls += int(calls)
         maxflows = max(maxflows, ncolor)
-        maxamps = max(maxamps, len(matrix_element.get_all_amplitudes()))
+        maxamps = max(maxamps, len(matrix_element.get('diagrams')))
 
         # Draw diagrams
         filename = "matrix%d.ps" % (ime+1)
@@ -1440,7 +1454,7 @@ def generate_subprocess_group_directory_v4_madevent(subproc_group,
     # [[d1, d2, ...,dn],...] where 1,2,...,n is the subprocess number
     # If a subprocess has no diagrams for this config, the number is 0
     
-    subproc_diagrams_for_config = subproc_group.get_diagrams_for_configs()
+    subproc_diagrams_for_config = subproc_group.get('diagrams_for_configs')
 
     filename = 'auto_dsig.f'
     write_super_auto_dsig_file(writers.FortranWriter(filename),
@@ -1480,10 +1494,9 @@ def generate_subprocess_group_directory_v4_madevent(subproc_group,
                             matrix_elements]),
                        len(matrix_elements))
 
-    # Note that mg.sym is not relevant for now
+    # Note that mg.sym is not relevant for this case
     filename = 'mg.sym'
-    write_mg_sym_file(writers.FortranWriter(filename),
-                      matrix_element)
+    write_default_mg_sym_file(writers.FortranWriter(filename))
 
     filename = 'ncombs.inc'
     write_ncombs_file(writers.FortranWriter(filename),
@@ -1506,10 +1519,22 @@ def generate_subprocess_group_directory_v4_madevent(subproc_group,
                      matrix_element,
                      s_and_t_channels)
     
+    # Find config symmetries and permutations
+    symmetry, perms, ident_perms = \
+              diagram_symmetry.find_symmetry(subproc_group)
+
     filename = 'symswap.inc'
-    write_default_symswap_file(writers.FortranWriter(filename),
-                               nexternal)
-    
+    write_symswap_file(writers.FortranWriter(filename),
+                       ident_perms)
+
+    filename = 'symfact.dat'
+    write_symfact_file(writers.FortranWriter(filename),
+                       symmetry)
+
+    filename = 'symperms.inc'
+    write_symperms_file(writers.FortranWriter(filename),
+                       perms)
+
     # Generate jpgs -> pass in make_html
     #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
 

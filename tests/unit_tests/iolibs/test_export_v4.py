@@ -444,7 +444,7 @@ C     Amplitude(s) for diagram number 6
                                              u, \
                                              g]),
                       'color': [],
-                      'lorentz':['L1'],
+                      'lorentz':['FFV1'],
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
 
@@ -455,7 +455,7 @@ C     Amplitude(s) for diagram number 6
                                              u, \
                                              a]),
                       'color': [],
-                      'lorentz':['L1'],
+                      'lorentz':['FFV1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
 
@@ -466,7 +466,7 @@ C     Amplitude(s) for diagram number 6
                                              d, \
                                              g]),
                       'color': [],
-                      'lorentz':['L1'],
+                      'lorentz':['FFV1'],
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
 
@@ -477,7 +477,7 @@ C     Amplitude(s) for diagram number 6
                                              d, \
                                              a]),
                       'color': [],
-                      'lorentz':['L1'],
+                      'lorentz':['FFV1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
 
@@ -487,7 +487,7 @@ C     Amplitude(s) for diagram number 6
                       'particles': base_objects.ParticleList(\
                                             [g] * 3),
                       'color': [],
-                      'lorentz':['L1'],
+                      'lorentz':['VVV1'],
                       'couplings':{(0, 0):'G'},
                       'orders':{'QCD':1}}))
 
@@ -500,7 +500,7 @@ C     Amplitude(s) for diagram number 6
                                              u, \
                                              z]),
                       'color': [],
-                      'lorentz':['L1', 'L2'],
+                      'lorentz':['FFV1', 'FFV2'],
                       'couplings':{(0, 0):'GUZ1', (0, 1):'GUZ2'},
                       'orders':{'QED':1}}))
 
@@ -511,15 +511,35 @@ C     Amplitude(s) for diagram number 6
                                              d, \
                                              z]),
                       'color': [],
-                      'lorentz':['L1', 'L2'],
+                      'lorentz':['FFV1', 'FFV2'],
                       'couplings':{(0, 0):'GDZ1', (0, 0):'GDZ2'},
                       'orders':{'QED':1}}))
 
         mymodel = base_objects.Model()
         mymodel.set('particles', mypartlist)
         mymodel.set('interactions', myinterlist)        
+        mymodel.set('name', 'sm')
 
-        procs = [[2,-2,21,21], [2,-2,2,-2]]
+        # Set parameters
+        external_parameters = [\
+            base_objects.ParamCardVariable('zero', 0.,'DUM', 1),
+            base_objects.ParamCardVariable('MZ', 91.,'MASS', 23),
+            base_objects.ParamCardVariable('WZ', 2.,'DECAY', 23)]
+        couplings = [\
+            base_objects.ModelVariable('GQQ', '1.', 'complex'),
+            base_objects.ModelVariable('GQED', '0.1', 'complex'),
+            base_objects.ModelVariable('G', '1.', 'complex'),
+            base_objects.ModelVariable('GUZ1', '0.1', 'complex'),
+            base_objects.ModelVariable('GUZ2', '0.1', 'complex'),
+            base_objects.ModelVariable('GDZ1', '0.05', 'complex'),
+            base_objects.ModelVariable('GDZ2', '0.05', 'complex')]
+        mymodel.set('parameters', {('external',): external_parameters})
+        mymodel.set('couplings', {(): couplings})
+        mymodel.set('functions', [])
+                    
+
+
+        procs = [[2,-2,21,21], [2,-2,2,-2], [2,-2,1,-1]]
         amplitudes = diagram_generation.AmplitudeList()
 
         for proc in procs:
@@ -557,7 +577,7 @@ C     Amplitude(s) for diagram number 6
         export_v4.write_group_configs_file(\
             writers.FortranWriter(self.give_pos('test')),
             subprocess_group,
-            subprocess_group.get_diagrams_for_configs())
+            subprocess_group.get('diagrams_for_configs'))
 
         goal_configs = """C     Diagram 1
       DATA MAPCONFIG(1)/1/
@@ -591,18 +611,30 @@ C     Number of configs
 
         export_v4.write_config_subproc_map_file(\
             writers.FortranWriter(self.give_pos('test')),
-            subprocess_group.get_diagrams_for_configs())
+            subprocess_group.get('diagrams_for_configs'))
 
-        goal_confsub = """      DATA (CONFSUB(I,1),I=1,2)/1,1/
-      DATA (CONFSUB(I,2),I=1,2)/2,4/
-      DATA (CONFSUB(I,3),I=1,2)/3,0/
-      DATA (CONFSUB(I,4),I=1,2)/0,3/
-      DATA (CONFSUB(I,5),I=1,2)/0,6/
+        goal_confsub = """      DATA (CONFSUB(I,1),I=1,3)/1,1,1/
+      DATA (CONFSUB(I,2),I=1,3)/2,4,0/
+      DATA (CONFSUB(I,3),I=1,3)/3,0,0/
+      DATA (CONFSUB(I,4),I=1,3)/0,3,3/
+      DATA (CONFSUB(I,5),I=1,3)/0,6,0/
 """
         
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal_confsub)
 
+        self.assertEqual(\
+            diagram_symmetry.find_matrix_elements_for_configs(subprocess_group),
+            ([0], {0:[1,2,3]}))
+
+        symmetry, perms, ident_perms = \
+                  diagram_symmetry.find_symmetry(subprocess_group)
+
+        self.assertEqual(symmetry, [1,2,-2,1,1])
+        self.assertEqual(perms,
+                         [[0,1,2,3],[0,1,2,3],[0,1,3,2],[0,1,2,3],[0,1,2,3]])
+        self.assertEqual(ident_perms,
+                         [[0,1,2,3]])
 
 #===============================================================================
 # FullHelasOutputTest

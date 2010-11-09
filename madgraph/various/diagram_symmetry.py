@@ -1,6 +1,6 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2010 The MadGraph Development team and Contributors
 #
 # This file is a part of the MadGraph 5 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
@@ -12,7 +12,10 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-"""Unit test library for the export Python format routines"""
+
+"""Module for calculation of symmetries between diagrams, by
+evaluating amp2 values for permutations of modementa."""
+
 from __future__ import division
 
 import array
@@ -28,6 +31,7 @@ import aloha.aloha_writers as aloha_writers
 import aloha.create_aloha as create_aloha
 
 import madgraph.iolibs.export_python as export_python
+import madgraph.iolibs.group_subprocs as group_subprocs
 import madgraph.iolibs.helas_call_writers as helas_call_writer
 import models.import_ufo as import_ufo
 import madgraph.iolibs.misc as misc
@@ -60,8 +64,18 @@ logger = logging.getLogger('madgraph.various.diagram_symmetry')
 
 def find_symmetry(matrix_element):
     """Find symmetries between amplitudes by comparing the squared
-    amplitudes for all permutations of identical particles. Note that
-    also multi-particle vertices are included here."""
+    amplitudes for all permutations of identical particles.
+    
+    Return list of positive number corresponding to number of
+    symmetric diagrams and negative numbers corresponding to the
+    equivalent diagram (for e+e->3a, get [6, -1, -1, -1, -1, -1]),
+    list of the corresponding permutations needed, and list of all
+    permutations of identical particles.
+    For amp2s which are 0 (e.g. multiparticle vertices), return 0 in
+    symmetry list."""
+
+    if isinstance(matrix_element, group_subprocs.SubProcessGroup):
+        return find_symmetry_subproc_group(matrix_element)
 
     logging.info("Finding symmetric diagrams")
 
@@ -137,3 +151,119 @@ def find_symmetry(matrix_element):
                     symmetry[ind] += 1
 
     return (symmetry, perms, ident_perms)
+
+def find_symmetry_subproc_group(subproc_group):
+    """Find symmetries between the configs in the subprocess group.
+    For each config, find all matrix elements with maximum identical
+    particle factor. Then take minimal set of these matrix elements,
+    and determine symmetries based on these."""
+
+    assert isinstance(subproc_group, group_subprocs.SubProcessGroup),\
+           "Argument to find_symmetry_subproc_group has to be SubProcessGroup"
+
+    matrix_elements = subproc_group.get('multi_matrix').get('matrix_elements')
+
+    contributing_mes, me_config_dict = \
+                      find_matrix_elements_for_configs(subproc_group)
+
+    nexternal, ninitial = matrix_elements[0].get_nexternal_ninitial()
+
+    all_symmetry = {}
+    all_perms = {}
+
+    for me_number in contributing_mes:
+        diagram_config_map = dict([(i,n) for i,n in \
+                       enumerate(subproc_group.get('diagram_maps')[me_number]) \
+                                   if n > 0])
+        symmetry, perms, ident_perms = find_symmetry(matrix_elements[me_number])
+        
+        # Go through symmetries and remove those for any diagrams
+        # where this ME is not supposed to contribute
+        for isym, sym_config in enumerate(symmetry):
+            if sym_config == 0:
+                continue
+            config = diagram_config_map[isym]
+            if config not in me_config_dict[me_number] or \
+               sym_config < 0 and diagram_config_map[-sym_config-1] not in \
+               me_config_dict[me_number]:
+                symmetry[isym] = 1
+                perms[isym]=range(nexternal)
+                if sym_config < 0 and diagram_config_map[-sym_config-1] in \
+                       me_config_dict[me_number]:
+                    symmetry[-sym_config-1] -= 1
+
+        # Now update the maps all_symmetry and all_perms
+        for isym, (perm, sym_config) in enumerate(zip(perms, symmetry)):
+            if sym_config in [0,1]:
+                continue
+            config = diagram_config_map[isym]
+
+            all_perms[config] = perm
+
+            if sym_config > 0:
+                all_symmetry[config] = sym_config
+            else:
+                all_symmetry[config] = -diagram_config_map[-sym_config-1]
+
+    # Fill up all_symmetry and all_perms also for configs that have no symmetry
+    for iconf in range(len(subproc_group.get('mapping_diagrams'))):
+        all_symmetry.setdefault(iconf+1, 1)
+        all_perms.setdefault(iconf+1, range(nexternal))
+
+    symmetry = [all_symmetry[key] for key in sorted(all_symmetry.keys())]
+    perms = [all_perms[key] for key in sorted(all_perms.keys())]
+
+    return symmetry, perms, [perms[0]]
+        
+
+def find_matrix_elements_for_configs(subproc_group):
+    """For each config, find all matrix elements with maximum identical
+    particle factor. Then take minimal set of these matrix elements."""
+
+    matrix_elements = subproc_group.get('multi_matrix').get('matrix_elements')
+
+    n_mes = len(matrix_elements)
+
+    me_config_dict = {}
+
+    # Find the MEs with maximum ident factor corresponding to each config.
+    # Only include MEs with identical particles (otherwise no contribution)
+    for iconf, diagram_list in \
+                           enumerate(subproc_group.get('diagrams_for_configs')):
+        # Add list of MEs with maximum ident factor contributing to this config
+        max_ident = max([matrix_elements[i].get('identical_particle_factor') \
+                         for i in range(n_mes) if diagram_list[i] > 0])
+        max_mes = [i for i in range(n_mes) if \
+                   matrix_elements[i].get('identical_particle_factor') == \
+                   max_ident and diagram_list[i] > 0]# and  max_ident > 1]
+        for me in max_mes:
+            me_config_dict.setdefault(me, [iconf+1]).append(iconf + 1)
+
+    # Make set of the configs
+    for me in me_config_dict:
+        me_config_dict[me] = sorted(set(me_config_dict[me]))
+
+    # Sort MEs according to 1) ident factor, 2) number of configs they
+    # contribute to
+    def me_sort(me1, me2):
+        return (matrix_elements[me2].get('identical_particle_factor') \
+                - matrix_elements[me1].get('identical_particle_factor'))\
+                or (len(me_config_dict[me2]) - len(me_config_dict[me1]))
+
+    sorted_mes = sorted([me for me in me_config_dict], me_sort)
+
+    # Reduce to minimal set of matrix elements
+    latest_me = 0
+    checked_configs = []
+    while latest_me < len(sorted_mes):
+        checked_configs.extend(me_config_dict[sorted_mes[latest_me]])
+        for me in sorted_mes[latest_me+1:]:
+            me_config_dict[me] = [conf for conf in me_config_dict[me] if \
+                                  conf not in checked_configs]
+            if me_config_dict[me] == []:
+                del me_config_dict[me]
+        # Re-sort MEs
+        sorted_mes = sorted([me for me in me_config_dict], me_sort)
+        latest_me += 1
+
+    return sorted_mes, me_config_dict    

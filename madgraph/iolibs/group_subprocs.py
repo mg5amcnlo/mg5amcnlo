@@ -55,9 +55,10 @@ class SubProcessGroup(base_objects.PhysicsObject):
         self['number'] = 0
         self['name'] = ""
         self['amplitudes'] = diagram_generation.AmplitudeList()
+        self['multi_matrix'] = helas_objects.HelasMultiProcess()
         self['mapping_diagrams'] = []
         self['diagram_maps'] = {}
-        self['multi_matrix'] = helas_objects.HelasMultiProcess()
+        self['diagrams_for_configs'] = []
 
     def filter(self, name, value):
         """Filter for valid property values."""
@@ -74,7 +75,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
             if not isinstance(value, diagram_generation.AmplitudeList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid amplitudelist" % str(value)
-        if name == 'mapping_diagrams':
+        if name in ['mapping_diagrams', 'diagrams_for_configs']:
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list" % str(value)
@@ -103,6 +104,9 @@ class SubProcessGroup(base_objects.PhysicsObject):
         
         if name in ['mapping_diagrams', 'diagram_maps'] and not self[name]:
             self.set_mapping_diagrams()
+        
+        if name in ['diagrams_for_configs'] and not self[name]:
+            self.set_diagrams_for_configs()
         
         return super(SubProcessGroup, self).get(name)
 
@@ -242,7 +246,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
 
     def get_subproc_diagrams_for_config(self, iconfig):
         """Find the diagrams (number + 1) for all subprocesses
-        corresponding to this config number. Return 0 for subprocesses
+        corresponding to config number iconfig. Return 0 for subprocesses
         without corresponding diagram. Note that the iconfig should
         start at 0."""
 
@@ -260,7 +264,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
 
         return subproc_diagrams
 
-    def get_diagrams_for_configs(self):
+    def set_diagrams_for_configs(self):
         """Get a list of all diagrams_for_configs"""
 
         subproc_diagrams_for_config = []
@@ -268,7 +272,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
             subproc_diagrams_for_config.append(\
                   self.get_subproc_diagrams_for_config(iconf))
 
-        return subproc_diagrams_for_config
+        self['diagrams_for_configs'] = subproc_diagrams_for_config
     
 
     @staticmethod
