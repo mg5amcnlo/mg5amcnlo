@@ -2516,8 +2516,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 calls = calls + \
                      export_v4.generate_subprocess_group_directory_v4_madevent(\
                             me_group, self._curr_fortran_model, path)
+                matrix_elements = \
+                             me_group.get('multi_matrix').get('matrix_elements')
                 ndiags += sum([len(me.get('diagrams')) for me in \
-                           me_group.get('multi_matrix').get('matrix_elements')])
+                           matrix_elements])
+                self._curr_matrix_elements.get('matrix_elements').\
+                                                         extend(matrix_elements)
             cpu_time = time.time() - cpu_time1
             
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \

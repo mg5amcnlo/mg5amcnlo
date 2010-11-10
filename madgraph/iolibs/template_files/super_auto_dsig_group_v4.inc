@@ -96,6 +96,10 @@ C     Read in symfact file and store used permutations in SYMCONF
         ENDDO
         SYMCONF(0)=IPROC
         CLOSE(LUN)
+        WRITE(*,*)'Using configs with permutations:'
+        DO J=1,SYMCONF(0)
+          WRITE(*,'(I4,a,5I3,a)') SYMCONF(J),'  (',(PERMS(I,J),I=1,NEXTERNAL),')'
+        ENDDO
         GOTO 20
  10     WRITE(*,*)'Error opening symfact.dat. No permutations will be used.'
 C     Read in weight file

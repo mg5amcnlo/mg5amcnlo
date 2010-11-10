@@ -506,7 +506,7 @@ c Begin Code
 c-----
       do i=1,nexternal
          do j=0,3
-            p(j,ic(i))=p1(j,i)
+            p(j,i)=p1(j,ic(i))
          enddo
       enddo
       do i=1,nexternal

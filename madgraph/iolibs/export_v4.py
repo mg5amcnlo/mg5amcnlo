@@ -648,8 +648,7 @@ def write_configs_file_from_diagrams(writer, diagrams, nexternal, ninitial):
             # Write out tchannels only if there are any non-trivial ones
             allchannels = schannels + tchannels
 
-        if len(schannels) < (nexternal-ninitial-1) and \
-               (ninitial == 1 or len(allchannels) < (nexternal-ninitial)):
+        if max(helas_diag.get_vertex_leg_numbers()) > 3:
             # For now, only 3-vertices allowed in configs.inc
             continue
         
@@ -1730,7 +1729,8 @@ def get_amp2_lines(matrix_element, config_map = []):
         # for that AMP2.
         for config in config_to_diag_dict.keys():
 
-            line = "AMP2(%d)=" % (config_to_diag_dict[config][0] + 1)
+            line = "AMP2(%(num)d)=AMP2(%(num)d)+" % \
+                   {"num": (config_to_diag_dict[config][0] + 1)}
             
             line += "+".join(["AMP(%(num)d)*dconjg(AMP(%(num)d))" % \
                               {"num": a.get('number')} for a in \
@@ -1740,19 +1740,12 @@ def get_amp2_lines(matrix_element, config_map = []):
         ret_lines.sort()
     else:
         for idiag, diag in enumerate(matrix_element.get('diagrams')):
-            # Ignore any diagrams with 4-particle vertices.  The
-            # easiest way to get this info is to use the
-            # get_s_and_t_channels function, which collects all
-            # vertices corresponding to this diagram.
-            schannels, tchannels = diag.get('amplitudes')[0].\
-                                         get_s_and_t_channels(2)
-            allchannels = schannels + tchannels
-            if len(schannels) < (nexternal-ninitial-1) and \
-                   (ninitial == 1 or len(allchannels) < (nexternal-ninitial)):
+            # Ignore any diagrams with 4-particle vertices.
+            if max(diag.get_vertex_leg_numbers()) > 3:
                 continue
             # Now write out the expression for AMP2, meaning the sum of
             # squared amplitudes belonging to the same diagram
-            line = "AMP2(%d)=" % (idiag + 1)
+            line = "AMP2(%(num)d)=AMP2(%(num)d)+" % {"num": (idiag + 1)}
             line += "+".join(["AMP(%(num)d)*dconjg(AMP(%(num)d))" % \
                               {"num": a.get('number')} for a in \
                               diag.get('amplitudes')])

@@ -1032,6 +1032,18 @@ class HelasWavefunction(base_objects.PhysicsObject):
         else:
             return ()
 
+    def get_vertex_leg_numbers(self):
+        """Get a list of the number of legs in vertices in this diagram"""
+
+        if not self.get('mothers'):
+            return []
+
+        vertex_leg_numbers = [len(self.get('mothers')) + 1]
+        for mother in self.get('mothers'):
+            vertex_leg_numbers.extend(mother.get_vertex_leg_numbers())
+
+        return vertex_leg_numbers
+
     # Overloaded operators
 
     def __eq__(self, other):
@@ -1756,6 +1768,15 @@ class HelasAmplitude(base_objects.PhysicsObject):
         else:
             return ()
 
+    def get_vertex_leg_numbers(self):
+        """Get a list of the number of legs in vertices in this diagram"""
+
+        vertex_leg_numbers = [len(self.get('mothers'))]
+        for mother in self.get('mothers'):
+            vertex_leg_numbers.extend(mother.get_vertex_leg_numbers())
+
+        return vertex_leg_numbers
+
     # Comparison between different amplitudes, to allow check for
     # identical processes. Note that we are then not interested in
     # interaction id, but in all other properties.
@@ -1850,6 +1871,10 @@ class HelasDiagram(base_objects.PhysicsObject):
 
         return coupling_orders
 
+    def get_vertex_leg_numbers(self):
+        """Get a list of the number of legs in vertices in this diagram"""
+
+        return self.get('amplitudes')[0].get_vertex_leg_numbers()
 
 #===============================================================================
 # HelasDiagramList

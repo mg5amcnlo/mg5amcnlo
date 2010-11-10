@@ -47,6 +47,9 @@ c
 c
 c     Global
 c
+      integer           isum_hel
+      logical                   multi_channel
+      common/to_matrix/isum_hel, multi_channel
       Double Precision amp2(maxamps), jamp2(0:maxflow)
       common/to_amps/  amp2,       jamp2
       include 'coupl.inc'
@@ -66,6 +69,8 @@ c     DATA
 c
       integer tprid(-max_branch:-1,lmaxconfigs)
       include 'configs.inc'
+
+      multi_channel=.true.
 
 c-----
 c  Begin Code

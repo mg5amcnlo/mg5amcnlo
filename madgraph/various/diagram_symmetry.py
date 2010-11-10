@@ -77,7 +77,27 @@ def find_symmetry(matrix_element):
     if isinstance(matrix_element, group_subprocs.SubProcessGroup):
         return find_symmetry_subproc_group(matrix_element)
 
-    logging.info("Finding symmetric diagrams")
+    (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+
+    # Prepare the symmetry vector with non-used amp2s (due to
+    # multiparticle vertices)
+    symmetry = []
+    for diag in matrix_element.get('diagrams'):
+        if max(diag.get_vertex_leg_numbers()) > 3:
+            # Ignore any diagrams with 4-particle vertices
+            symmetry.append(0)
+        else:
+            symmetry.append(1)
+
+    # Check for matrix elements with no identical particles
+    if matrix_element.get("identical_particle_factor") == 1:
+        return symmetry, \
+               [range(nexternal)]*len(symmetry),\
+               [range(nexternal)]
+
+    logging.info("Finding symmetric diagrams for process %s" % \
+                 matrix_element.get('processes')[0].nice_string().\
+                 replace("Process: ", ""))
 
     process = matrix_element.get('processes')[0]
     base_model = process.get('model')
@@ -86,18 +106,16 @@ def find_symmetry(matrix_element):
     # Get phase space point
     p, w_rambo = process_checks.get_momenta(process, full_model)
     
-    (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
-
     # Writer for the Python matrix elements
     helas_writer = helas_call_writer.PythonUFOHelasCallWriter(base_model)
 
     # Check matrix element value for all permutations
-    stored_quantities = {}
+    if not "stored_quantities" in globals():
+        globals()["stored_quantities"] = {}
     amp2start = []
-    symmetry = []
-    me_values = []
     final_states = [l.get('id') for l in process.get('legs')[ninitial:]]
     nperm = 0
+    perms = []
     ident_perms = []
     for perm in itertools.permutations(range(ninitial, nexternal)):
         if [process.get('legs')[i].get('id') for i in perm] != final_states:
@@ -123,7 +141,7 @@ def find_symmetry(matrix_element):
                 amp2mag.append(0)
         
         amp2 = [(int(a*10**(8-am)), am) for (a, am) in zip(amp2, amp2mag)]
-        if not symmetry:
+        if not perms:
             # This is the first iteration - initialize lists
             # Initiate symmetry with all 1:s
             symmetry = [1 for i in range(len(amp2))]
