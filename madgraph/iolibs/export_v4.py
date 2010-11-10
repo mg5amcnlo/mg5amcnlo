@@ -140,15 +140,8 @@ def make_v4standalone(dir_path):
     everything for running standalone
     """
     
-
     source_dir = os.path.join(dir_path, "Source")
-    # Run standalone
     logger.info("Running make for Helas")
-    if not misc.which('gfortran') and misc.which('g77'):
-        logger.info('use g77')
-        subprocess.call(['python','./bin/Passto_g77.py'], cwd=dir_path, \
-                        stdout = open(os.devnull, 'w')) 
-    
     subprocess.call(['make', '../lib/libdhelas3.a'],
                     stdout = open(os.devnull, 'w'), cwd=source_dir)
     logger.info("Running make for Model")
@@ -203,6 +196,11 @@ def finalize_madevent_v4_directory(dir_path, makejpg, history):
     """Finalize ME v4 directory by creating jpeg diagrams, html
     pages,proc_card_mg5.dat and madevent.tar.gz."""
 
+    if not misc.which('g77'):
+        logger.info('Change makefiles to use gfortran')
+        subprocess.call(['python','./bin/Passto_gfortran.py'], cwd=dir_path, \
+                        stdout = open(os.devnull, 'w')) 
+    
     old_pos = os.getcwd()
     os.chdir(os.path.join(dir_path, 'SubProcesses'))
     P_dir_list = [proc for proc in os.listdir('.') if os.path.isdir(proc) and \
@@ -262,6 +260,13 @@ def finalize_madevent_v4_directory(dir_path, makejpg, history):
 #===============================================================================
 def finalize_standalone_v4_directory(dir_path, history):
     """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
+
+    if not misc.which('g77'):
+        logger.info('Change makefiles to use gfortran')
+        subprocess.call(['python','./bin/Passto_gfortran.py'], cwd=dir_path, \
+                        stdout = open(os.devnull, 'w')) 
+    
+    make_v4standalone(dir_path)
 
     # Write command history as proc_card_mg5
     if os.path.isdir(os.path.join(dir_path, 'Cards')):

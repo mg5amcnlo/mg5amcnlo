@@ -2628,7 +2628,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                      [self.history_header] + \
                                                      self.history)
         elif self._export_format == 'standalone':
-            export_v4.make_v4standalone(self._export_dir)
             export_v4.finalize_standalone_v4_directory(self._export_dir,
                                                      [self.history_header] + \
                                                      self.history)

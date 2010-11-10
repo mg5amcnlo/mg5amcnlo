@@ -1,5 +1,5 @@
 # Note that optimization doesn't work on all machines
-gfortran           = gfortran
+g77           = g77
 FFLAGS        = -fPIC
 LIBRARY	= libcernlib.so
 LIBDIR  = ../../lib/
@@ -8,8 +8,8 @@ SOURCES = abend.o dlsqp2.o lenocc.o mtlprt.o mtlset.o radmul.o
 all: $(LIBDIR)$(LIBRARY)
 
 %.o : %.f makefile
-	$(gfortran) $(FFLAGS) -c $<
+	$(g77) $(FFLAGS) -c $<
 
 $(LIBDIR)$(LIBRARY): $(SOURCES)
-	gfortran -shared -o $(LIBRARY) $^
+	g77 -shared -o $(LIBRARY) $^
 	mv $(LIBRARY) $(LIBDIR)

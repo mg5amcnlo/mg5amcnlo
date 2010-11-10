@@ -14,7 +14,7 @@
 # the 2003 version of MadEvent
 # ----------------------------------------------------------------------------
 
-FC            = gfortran
+FC            = g77
 
 FFLAGS        = -O -fPIC -I.
 
@@ -99,7 +99,7 @@ install-helas_check:
 
 $(LIBRARY):	$(OBJS)
 		@echo  "Loading $(LIBRARY) ... "
-		@gfortran -shared -o $(LIBRARY) $(OBJS)
+		@g77 -shared -o $(LIBRARY) $(OBJS)
 		@echo "done"
 
 clean:;		@rm -f $(OBJS) core

@@ -1,4 +1,4 @@
-gfortran   = gfortran
+g77   = g77
 FFLAGS= -O -fPIC -ffixed-line-length-132
 #FFLAGS = -g -ffixed-line-length-132
 LIBDIR = ../../lib/
@@ -13,18 +13,18 @@ SYMMETRY = myamp.o genps.o matrix.o  initcluster.o setscales.o reweight.o projec
 # $B$ obj_for_MW $E$ !this is a tag for MadWeight. Don't edit this line
 
 %.o : %.f
-	$(gfortran) $(FFLAGS) -c $<
+	$(g77) $(FFLAGS) -c $<
 
 # $B$ main_make $B$ !this is a tag for MadWeight. Don't edit this line
 $(PROG): $(PROCESS)  makefile $(LIBS)
-	$(gfortran) $(FFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
-#  $E$ main_make $E$ !this is a tag for MadWeight. Don't edit this line
+	$(g77) $(FFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
+#    $E$ main_make $E$ !this is a tag for MadWeight. Don't edit this line
 
 symmetry.dat: mg.sym gensym
 	./gensym
 
 gensym: symmetry.o genps.inc setcuts.o cuts.o cluster.o $(SYMMETRY) configs.inc  
-	$(gfortran) $(FFLAGS) -o gensym symmetry.o setcuts.o cuts.o cluster.o $(SYMMETRY) $(LINKLIBS)
+	$(g77) $(FFLAGS) -o gensym symmetry.o setcuts.o cuts.o cluster.o $(SYMMETRY) $(LINKLIBS)
 
 driver.f: genps.inc 
 

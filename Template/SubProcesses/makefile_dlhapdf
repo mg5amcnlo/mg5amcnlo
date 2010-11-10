@@ -1,4 +1,4 @@
-gfortran   = gfortran
+g77   = g77
 FFLAGS= -O -fPIC -ffixed-line-length-132
 #FFLAGS = -g -ffixed-line-length-132
 LIBDIR = ../../lib/
@@ -12,16 +12,16 @@ PROCESS= driver.o myamp.o auto_dsig.o genps.o matrix.o unwgt.o setcuts.o cuts.o 
 SYMMETRY = myamp.o genps.o matrix.o  initcluster.o setscales.o reweight.o 
 
 %.o : %.f
-	$(gfortran) $(FFLAGS) -c $<
+	$(g77) $(FFLAGS) -c $<
 
 $(PROG): $(PROCESS)  makefile $(LIBS)
-	$(gfortran) $(FFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
+	$(g77) $(FFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
 
 symmetry.dat: mg.sym gensym
 	./gensym
 
 gensym: symmetry.o genps.inc setcuts.o cuts.o cluster.o $(SYMMETRY) configs.inc  
-	$(gfortran) $(FFLAGS) -o gensym symmetry.o setcuts.o cuts.o cluster.o $(SYMMETRY) $(LINKLIBS)
+	$(g77) $(FFLAGS) -o gensym symmetry.o setcuts.o cuts.o cluster.o $(SYMMETRY) $(LINKLIBS)
 
 driver.f: genps.inc 
 

@@ -6,13 +6,13 @@
 # ----------------------------------------------------------------------------
 
 
-gfortran           = gfortran
+g77           = g77
 FFLAGS        = -O -ffixed-line-length-132
 LIBRARY	      = ../libmodel.a
 LIBDIR        = ../../lib/
 MODEL         = printout.o couplings.o
 
-.f.o: ; $(gfortran) $(FFLAGS) -c $*.f
+.f.o: ; $(g77) $(FFLAGS) -c $*.f
 
 all: $(LIBDIR)libmodel.a
 
@@ -22,4 +22,4 @@ $(LIBDIR)libmodel.a: $(MODEL)
 	mv libmodel.a  $(LIBDIR)
 
 smcalc: 
-	$(gfortran) $(FFLAGS) SMCalc.f -o smcalc 
+	$(g77) $(FFLAGS) SMCalc.f -o smcalc 
