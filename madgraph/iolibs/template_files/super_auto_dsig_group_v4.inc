@@ -98,7 +98,7 @@ C     Read in symfact file and store used permutations in SYMCONF
         CLOSE(LUN)
         WRITE(*,*)'Using configs with permutations:'
         DO J=1,SYMCONF(0)
-          WRITE(*,'(I4,a,5I3,a)') SYMCONF(J),'  (',(PERMS(I,J),I=1,NEXTERNAL),')'
+          WRITE(*,'(I4,a,%(nexternal)dI3,a)') SYMCONF(J),'  (',(PERMS(I,J),I=1,NEXTERNAL),')'
         ENDDO
         GOTO 20
  10     WRITE(*,*)'Error opening symfact.dat. No permutations will be used.'

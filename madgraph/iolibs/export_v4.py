@@ -536,6 +536,9 @@ def write_super_auto_dsig_file(writer, subproc_group):
                                matrix_elements])
     replace_dict['process_lines'] = process_lines
 
+    nexternal, ninitial = matrix_elements[0].get_nexternal_ninitial()
+    replace_dict['nexternal'] = nexternal
+
     # Generate dsig definition line
     dsig_def_line = "DOUBLE PRECISION " + \
                     ",".join(["DSIG%d" % (iproc + 1) for iproc in \
