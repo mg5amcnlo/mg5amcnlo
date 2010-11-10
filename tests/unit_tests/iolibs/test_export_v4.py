@@ -567,11 +567,11 @@ C     Amplitude(s) for diagram number 6
                                         get('matrix_elements')[1],
                                         subprocess_group.get('diagram_maps')[1])
         self.assertEqual(amp2_lines,
-                         ['AMP2(1)=AMP(1)*dconjg(AMP(1))+AMP(2)*dconjg(AMP(2))',
-                          'AMP2(3)=AMP(3)*dconjg(AMP(3))+AMP(4)*dconjg(AMP(4))+AMP(5)*dconjg(AMP(5))+AMP(6)*dconjg(AMP(6))',
-                          'AMP2(4)=AMP(7)*dconjg(AMP(7))+AMP(8)*dconjg(AMP(8))',
-                          'AMP2(6)=AMP(9)*dconjg(AMP(9))+AMP(10)*dconjg(AMP(10))+AMP(11)*dconjg(AMP(11))+AMP(12)*dconjg(AMP(12))'])
-
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))+AMP(2)*dconjg(AMP(2))',
+                          'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))+AMP(4)*dconjg(AMP(4))+AMP(5)*dconjg(AMP(5))+AMP(6)*dconjg(AMP(6))',
+                          'AMP2(4)=AMP2(4)+AMP(7)*dconjg(AMP(7))+AMP(8)*dconjg(AMP(8))',
+                          'AMP2(6)=AMP2(6)+AMP(9)*dconjg(AMP(9))+AMP(10)*dconjg(AMP(10))+AMP(11)*dconjg(AMP(11))+AMP(12)*dconjg(AMP(12))'])
+        
         # Test configs.inc
 
         export_v4.write_group_configs_file(\

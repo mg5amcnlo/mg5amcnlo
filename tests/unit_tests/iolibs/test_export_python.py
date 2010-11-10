@@ -223,7 +223,7 @@ class IOExportPythonTest(unittest.TestCase):
 
     def smatrix(self,p, model):
         #  
-        #  MadGraph 5 v. 0.5.0, 2010-09-23
+        #  MadGraph 5 v. %(version)s, %(date)s
         #  By the MadGraph Development Team
         #  Please visit us at https://launchpad.net/madgraph5
         # 
@@ -276,7 +276,7 @@ class IOExportPythonTest(unittest.TestCase):
 
     def matrix(self, p, hel, model):
         #  
-        #  MadGraph 5 v. 0.5.0, 2010-09-23
+        #  MadGraph 5 v. %(version)s, %(date)s
         #  By the MadGraph Development Team
         #  Please visit us at https://launchpad.net/madgraph5
         #
