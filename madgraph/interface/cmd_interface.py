@@ -884,6 +884,14 @@ class CheckValidForCmd(object):
             text = 'No processes generated. Please generate a process first.'
             raise self.InvalidCmd(text)
 
+        # Decay chain processes not yet implemented for madevent_group
+        # output
+        if self._export_format == 'madevent_group' and \
+           any([isinstance(a, diagram_generation.DecayChainAmplitude) for \
+               a in self._curr_amps]):
+            text = 'Sorry, madevent_group output can not handle decay chains'
+            raise self.InvalidCmd(text)
+
     def get_default_path(self):
         """Set self._export_dir to the default (\'auto\') path"""
         
@@ -1682,7 +1690,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self.check_draw(args)
         
         # Check if we plot a decay chain 
-        if ',' in self._generate_info and not self._done_export:
+        if any([isinstance(a, diagram_generation.DecayChainAmplitude) for \
+               a in self._curr_amps]) and not self._done_export:
             warn = 'WARNING: You try to draw decay chain diagrams without first running output.\n'
             warn += '\t  The decay processes will be drawn separately'
             logger.warning(warn)
