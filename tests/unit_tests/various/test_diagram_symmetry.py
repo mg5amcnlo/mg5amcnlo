@@ -156,3 +156,54 @@ class TestDiagramSymmetry(unittest.TestCase):
                                               reuse = True)
             self.assertAlmostEqual(amp2[iamp], amp2_org[isymamp])
         
+    def test_rotate_momenta(self):
+        """Test that matrix element and amp2 identical for rotated momenta"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        myamp = diagram_generation.Amplitude(myproc)
+
+        matrix_element = helas_objects.HelasMatrixElement(myamp)
+
+        full_model = model_reader.ModelReader(self.base_model)
+        full_model.set_parameters_and_couplings()
+
+        p, w_rambo = process_checks.get_momenta(myproc, full_model)
+
+        stored_quantities = {}
+        helas_writer = helas_call_writers.PythonUFOHelasCallWriter(\
+                                                               self.base_model)
+        me_val, amp2 = process_checks.evaluate_matrix_element(\
+                                          matrix_element,stored_quantities,
+                                          helas_writer, full_model, p,
+                                          reuse = True)
+        # Rotate momenta around x axis
+        for mom in p:
+            mom[2] = -mom[2]
+            mom[3] = -mom[3]
+
+        new_me_val, new_amp2 = process_checks.evaluate_matrix_element(\
+                                          matrix_element,stored_quantities,
+                                          helas_writer, full_model, p,
+                                          reuse = True)
+
+        self.assertAlmostEqual(me_val, new_me_val, 12)
+
+        for amp, new_amp in zip(amp2, new_amp2):
+            self.assertAlmostEqual(amp, new_amp, 12)
+            
+        

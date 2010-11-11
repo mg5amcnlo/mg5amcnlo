@@ -1924,6 +1924,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # generation, drawing etc. For decay chain processes, this is
         # the Amplitude which corresponds to the combined process.
         self['base_amplitude'] = None
+        # has_mirror_process is True if the same process but with the
+        # two incoming particles interchanged has been generated
+        self['has_mirror_process'] = False
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
@@ -1953,6 +1956,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                    isinstance(value, diagram_generation.Amplitude):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid Amplitude object" % str(value)
+        if name == 'has_mirror_process':
+            if not isinstance(value, bool):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid boolean" % str(value)
         return True
 
     def get_sorted_keys(self):
@@ -1960,7 +1967,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         return ['processes', 'identical_particle_factor',
                 'diagrams', 'color_basis', 'color_matrix',
-                'base_amplitude']
+                'base_amplitude', 'has_mirror_process']
 
     # Enhanced get function
     def get(self, name):
@@ -1983,6 +1990,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             if isinstance(amplitude, diagram_generation.Amplitude):
                 super(HelasMatrixElement, self).__init__()
                 self.get('processes').append(amplitude.get('process'))
+                self.set('has_mirror_process',
+                         amplitude.get('has_mirror_process'))
                 self.generate_helas_diagrams(amplitude, optimization, decay_ids)
                 self.calculate_fermionfactors()
                 self.calculate_identical_particle_factors()
@@ -2015,6 +2024,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # Except in case of decay processes: then also initial state
         # must be the same
         if self['processes'] and not other['processes'] or \
+               self['has_mirror_process'] != other['has_mirror_process'] or \
                self['processes'] and \
                self['processes'][0]['id'] != other['processes'][0]['id'] or \
                self['processes'][0]['is_decay_chain'] or \

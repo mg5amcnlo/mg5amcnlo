@@ -92,7 +92,7 @@ class TestMatrixElementChecker(unittest.TestCase):
                 self.assertTrue(abs(mom[i]) > 0.)
 
     def test_comparison_for_process(self):
-        """Test the get_momenta function"""
+        """Test check process for e+ e- > a Z"""
 
         myleglist = base_objects.LegList()
 
@@ -122,7 +122,7 @@ class TestMatrixElementChecker(unittest.TestCase):
         self.assertNotEqual(max(comparison[0][1]), min(comparison[0][1]))
         
     def test_comparison_for_multiprocess(self):
-        """Test the get_momenta function"""
+        """Test check process for multiprocess"""
 
         myleglist = base_objects.MultiLegList()
 
@@ -156,7 +156,7 @@ class TestMatrixElementChecker(unittest.TestCase):
                 self.assertAlmostEqual(max(comparison[1]), min(comparison[1]))
 
     def test_failed_process(self):
-        """Test the get_momenta function"""
+        """Test that check process fails for wrong color-Lorentz."""
 
         # Change 4g interaction so color and lorentz don't agree
         gggg = self.base_model.get_interaction(3)

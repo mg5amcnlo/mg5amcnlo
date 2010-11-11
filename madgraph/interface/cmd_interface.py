@@ -876,7 +876,9 @@ class CheckValidForCmd(object):
             self._export_format = args.pop(0)
 
         if self._model_v4_path and \
-                             self._export_format not in self._v4_export_formats:
+               (self._export_format not in self._v4_export_formats or \
+                'group_subprocesses_output' in self._options and \
+                self._options['group_subprocesses_output']):
             text = " The Model imported (MG4 format) does not contain enough\n "
             text += " information for this type of output. In order to create\n"
             text += " output for " + args[0] + ", you have to use a UFO model.\n"
@@ -889,7 +891,7 @@ class CheckValidForCmd(object):
             path = args.pop(0)
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
-                     ['madevent', 'madevent_group', 'standalone']:
+                     ['madevent', 'standalone']:
                 self.get_default_path()
             else:
                 self._export_dir = path
@@ -898,7 +900,7 @@ class CheckValidForCmd(object):
             # No valid path
             self.get_default_path()
 
-        if self._export_format in ['madevent', 'madevent_group', 'standalone'] \
+        if self._export_format in ['madevent', 'standalone'] \
                and not self._mgme_dir and \
                os.path.realpath(self._export_dir) != os.path.realpath('.'):
             raise MadGraph5Error, \
@@ -910,12 +912,15 @@ class CheckValidForCmd(object):
             text = 'No processes generated. Please generate a process first.'
             raise self.InvalidCmd(text)
 
-        # Decay chain processes not yet implemented for madevent_group
-        # output
-        if self._export_format == 'madevent_group' and \
+        # Decay chain processes not yet implemented for subprocess
+        # group output
+        if self._export_format == 'madevent' and \
+           'group_subprocesses_output' in self._options and \
+           self._options['group_subprocesses_output'] and \
            any([isinstance(a, diagram_generation.DecayChainAmplitude) for \
                a in self._curr_amps]):
-            text = 'Sorry, madevent_group output can not handle decay chains'
+            text = 'Sorry, subprocess group output can not handle decay chains.'
+            text += ' Please set group_subprocesses_output to False.'
             raise self.InvalidCmd(text)
 
     def get_default_path(self):
@@ -1421,7 +1426,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _check_opts = ['full', 'quick', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
-    _export_formats = _v4_export_formats + ['madevent_group', 'pythia8',
+    _export_formats = _v4_export_formats + ['pythia8',
                        'pythia8_model']
     _set_options = ['group_mirror_processes', 'group_subprocesses_output',
                     'ignore_six_quark_processes']
@@ -1513,7 +1518,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 cpu_time1 = time.time()
                 
                 # Generate processes
-                myproc = diagram_generation.MultiProcess(myprocdef)
+                collect_mirror_procs = \
+                                 "group_mirror_processes" in self._options and \
+                                 self._options['group_mirror_processes']
+
+                myproc = diagram_generation.MultiProcess(myprocdef,
+                                                         collect_mirror_procs =\
+                                                         collect_mirror_procs)
                     
                 for amp in myproc.get('amplitudes'):
                     if amp not in self._curr_amps:
@@ -1864,7 +1875,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         cpu_time1 = time.time()
         # Generate processes
-        myproc = diagram_generation.MultiProcess(myprocdef)
+        collect_mirror_procs = "group_mirror_processes" in self._options and \
+                               self._options['group_mirror_processes']
+
+        myproc = diagram_generation.MultiProcess(myprocdef,
+                                                 collect_mirror_procs = \
+                                                 collect_mirror_procs)
         self._curr_amps = myproc.get('amplitudes')
         cpu_time2 = time.time()
 
@@ -2561,7 +2577,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                     self._export_dir)
             return        
 
-        if self._export_format != 'madevent_group':
+        if 'group_subprocesses_output' not in self._options or \
+               not self._options['group_subprocesses_output']:
+            # Do not generate matrix elements, since this is done by the
+            # SubProcessGroup objects
             ndiags, cpu_time = generate_matrix_elements(self)
 
         calls = 0
@@ -2569,45 +2588,37 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         nojpeg = '-nojpeg' in args
 
         path = self._export_dir
-        if self._export_format in ['madevent', 'madevent_group', 'standalone']:
+        if self._export_format in ['madevent', 'standalone']:
             path = os.path.join(path, 'SubProcesses')
 
         if self._export_format == 'madevent':
-            cpu_time1 = time.time()
-            for me in self._curr_matrix_elements.get('matrix_elements'):
-                calls = calls + \
-                        export_v4.generate_subprocess_directory_v4_madevent(\
-                            me, self._curr_fortran_model, path)
-            
-            cpu_time2 = time.time() - cpu_time1
-            card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
-                                     'procdef_mg5.dat')
-            if self._generate_info:
-                export_v4.write_procdef_mg5(card_path,
-                                self._curr_model['name'],
-                                self._generate_info)
-                try:
-                    cmd.Cmd.onecmd(self, 'history .')
-                except:
-                    pass
-                
-        if self._export_format == 'madevent_group':
-            nojpeg = True
-            ndiags = 0
-            cpu_time1 = time.time()
-            for me_group in group_subprocs.SubProcessGroup.group_amplitudes(\
-                                  self._curr_amps):
-                calls = calls + \
-                     export_v4.generate_subprocess_group_directory_v4_madevent(\
-                            me_group, self._curr_fortran_model, path)
-                matrix_elements = \
-                             me_group.get('multi_matrix').get('matrix_elements')
-                ndiags += sum([len(me.get('diagrams')) for me in \
-                           matrix_elements])
-                self._curr_matrix_elements.get('matrix_elements').\
-                                                         extend(matrix_elements)
-            cpu_time = time.time() - cpu_time1
-            
+            if 'group_subprocesses_output' in self._options and \
+                   self._options['group_subprocesses_output']:
+                nojpeg = True
+                ndiags = 0
+                cpu_time1 = time.time()
+                for me_group in group_subprocs.SubProcessGroup.group_amplitudes(\
+                                      self._curr_amps):
+                    calls = calls + \
+                         export_v4.generate_subprocess_group_directory_v4_madevent(\
+                                me_group, self._curr_fortran_model, path)
+                    matrix_elements = \
+                                 me_group.get('multi_matrix').get('matrix_elements')
+                    ndiags += sum([len(me.get('diagrams')) for me in \
+                               matrix_elements])
+                    self._curr_matrix_elements.get('matrix_elements').\
+                                                             extend(matrix_elements)
+                cpu_time = time.time() - cpu_time1
+            else:
+                cpu_time1 = time.time()
+                for me in self._curr_matrix_elements.get('matrix_elements'):
+                    calls = calls + \
+                            export_v4.generate_subprocess_directory_v4_madevent(\
+                                me, self._curr_fortran_model, path)
+
+                cpu_time2 = time.time() - cpu_time1
+
+            # Write the procdef_mg5.dat file with process info
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
                                      'procdef_mg5.dat')
             if self._generate_info:
@@ -2667,7 +2678,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Remember that we have done export
         self._done_export = (self._export_dir, self._export_format)
 
-        if self._export_format in ['madevent', 'madevent_group', 'standalone']:
+        if self._export_format in ['madevent', 'standalone']:
             # Automatically run finalize
             options = []
             if nojpeg:
@@ -2695,7 +2706,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             export_v4.export_model_files(self._model_v4_path, self._export_dir)
             export_v4.export_helas(os.path.join(self._mgme_dir,'HELAS'),
                                    self._export_dir)
-        elif self._export_format in ['madevent', 'madevent_group', 'standalone']:
+        elif self._export_format in ['madevent', 'standalone']:
             logger.info('Export UFO model to MG4 format')
             # wanted_lorentz are the lorentz structures which are
             # actually used in the wavefunctions and amplitudes in
