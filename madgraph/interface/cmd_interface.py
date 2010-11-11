@@ -588,6 +588,10 @@ class HelpToCmd(object):
     def help_draw(self):
         _draw_parser.print_help()
 
+    def help_set(self):
+        logger.info("syntax: set %s arguments" % "|".join(self._set_options))
+        logger.info("-- set some options for generation or output")
+
     def help_shell(self):
         logger.info("syntax: shell CMD (or ! CMD)")
         logger.info("-- run the shell command CMD and catch output")
@@ -839,6 +843,28 @@ class CheckValidForCmd(object):
             self.help_save()
             raise self.InvalidCmd('wrong \"save\" format')
     
+    def check_set(self, args):
+        """ check the validity of the line"""
+        
+        if len(args) < 2:
+            self.help_set()
+            raise self.InvalidCmd('set needs an option and an argument')
+
+        if args[0] not in self._set_options:
+            self.help_set()
+            raise self.InvalidCmd('Possible options for set are %s' % \
+                                  self._set_options)
+
+        if args[0] in ['group_mirror_processes',
+                       'group_subprocesses_output']:
+            if args[1] not in ['False', 'True']:
+                raise self.InvalidCmd('%s needs argument False or True' % \
+                                      args[0])
+        if args[0] in ['ignore_six_quark_processes']:
+            if args[1] not in self._multiparticles.keys():
+                raise self.InvalidCmd('ignore_six_quark_processes needs ' + \
+                                      'a multiparticle name as argument')
+            
     def check_output(self, args):
         """ check the validity of the line"""
         
@@ -1285,6 +1311,23 @@ class CompleteForCmd(CheckValidForCmd):
             return self.list_completion(text, content)
 
 
+    def complete_set(self, text, line, begidx, endidx):
+        "Complete the set command"
+
+        args = split_arg(line[0:begidx])
+
+        # Format
+        if len(args) == 1:
+            return self.list_completion(text, self._set_options)
+
+        if len(args) == 2:
+            if args[1] in ['group_mirror_processes',
+                           'group_subprocesses_output']:
+                return self.list_completion(text, ['False', 'True'])
+            
+            if args[1] in ['ignore_six_quark_processes']:
+                return self.list_completion(text, self._multiparticles.keys())
+        
     def complete_shell(self, text, line, begidx, endidx):
         """ add path for shell """
 
@@ -1380,8 +1423,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
     _export_formats = _v4_export_formats + ['madevent_group', 'pythia8',
                        'pythia8_model']
-
-
+    _set_options = ['group_mirror_processes', 'group_subprocesses_output',
+                    'ignore_six_quark_processes']
+                    
     # Variables to store object information
     _curr_model = None  #base_objects.Model()
     _curr_amps = diagram_generation.AmplitudeList()
@@ -1390,6 +1434,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _curr_cpp_model = None
     _done_export = False
     _multiparticles = {}
+    _options = {}
     _generate_info = "" # store the first generated process
     _model_format = None
     _model_v4_path = None
@@ -2397,7 +2442,37 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     logger.info('Saved processes to file %s' % args[1])
             else:
                 raise self.InvalidCmd('No processes to save!')
-            
+    
+    # Set an option
+    def do_set(self, line):
+        """Set an option, which will be default for coming generations/outputs
+        """
+
+        args = split_arg(line)
+        
+        # Check the validity of the arguments
+        self.check_set(args)
+
+        if args[0] == 'group_mirror_processes':            
+            self._options[args[0]] = eval(args[1])
+            logger.info('Set group_mirror_processes to %s' % \
+                        str(self._options[args[0]]))
+        if args[0] == 'ignore_six_quark_processes':
+            self._options[args[0]] = list(set([abs(p) for p in \
+                                      self._multiparticles[args[1]]\
+                                      if self._curr_model.get_particle(p).\
+                                      is_fermion() and \
+                                      self._curr_model.get_particle(abs(p)).\
+                                      get('color') == 3]))
+            logger.info('Ignore processes with >= 6 quarks (%s)' % \
+                        ",".join([\
+                            self._curr_model.get_particle(q).get('name') \
+                            for q in self._options[args[0]]]))
+        if args[0] == 'group_subprocesses_output':
+            self._options[args[0]] = eval(args[1])
+            logger.info('Set group_subprocesses_output to %s' % \
+                        str(self._options[args[0]]))
+
     def do_output(self, line):
         """Initialize a new Template or reinitialize one"""
         
