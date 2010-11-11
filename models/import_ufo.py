@@ -200,29 +200,31 @@ class UFOMG5Converter(object):
         
         order_to_int={}
         
-        for key, coupling in interaction_info.couplings.items():
-            order = tuple(coupling.order.items())
-            if order in order_to_int:
-                order_to_int[order].get('couplings')[key] = coupling.name
-            else:
-                # Initialize a new interaction with a new id tag
-                interaction = base_objects.Interaction({'id':len(self.interactions)+1})                
-                interaction.set('particles', particles)              
-                interaction.set('lorentz', lorentz)
-                interaction.set('couplings', {key: coupling.name})
-                interaction.set('orders', coupling.order)            
-                interaction.set('color', colors)
-                order_to_int[order] = interaction
-                # add to the interactions
-                self.interactions.append(interaction)
-
+        for key, couplings in interaction_info.couplings.items():
+            if not isinstance(couplings, list):
+                couplings = [couplings]
+            for coupling in couplings:
+                order = tuple(coupling.order.items())
+                if order in order_to_int:
+                    order_to_int[order].get('couplings')[key] = coupling.name
+                else:
+                    # Initialize a new interaction with a new id tag
+                    interaction = base_objects.Interaction({'id':len(self.interactions)+1})                
+                    interaction.set('particles', particles)              
+                    interaction.set('lorentz', lorentz)
+                    interaction.set('couplings', {key: coupling.name})
+                    interaction.set('orders', coupling.order)            
+                    interaction.set('color', colors)
+                    order_to_int[order] = interaction
+                    # add to the interactions
+                    self.interactions.append(interaction)
 
     
     _pat_T = re.compile(r'T\((?P<first>\d*),(?P<second>\d*)\)')
     _pat_id = re.compile(r'Identity\((?P<first>\d*),(?P<second>\d*)\)')
     
     def treat_color(self, data_string, interaction_info):
-        """ convert the string to ColorStirng"""
+        """ convert the string to ColorString"""
         
         #original = copy.copy(data_string)
         #data_string = p.sub('color.T(\g<first>,\g<second>)', data_string)
