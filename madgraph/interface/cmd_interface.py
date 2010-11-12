@@ -855,8 +855,7 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd('Possible options for set are %s' % \
                                   self._set_options)
 
-        if args[0] in ['group_mirror_processes',
-                       'group_subprocesses_output']:
+        if args[0] in ['group_subprocesses_output']:
             if args[1] not in ['False', 'True']:
                 raise self.InvalidCmd('%s needs argument False or True' % \
                                       args[0])
@@ -1326,8 +1325,7 @@ class CompleteForCmd(CheckValidForCmd):
             return self.list_completion(text, self._set_options)
 
         if len(args) == 2:
-            if args[1] in ['group_mirror_processes',
-                           'group_subprocesses_output']:
+            if args[1] in ['group_subprocesses_output']:
                 return self.list_completion(text, ['False', 'True'])
             
             if args[1] in ['ignore_six_quark_processes']:
@@ -1428,7 +1426,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
     _export_formats = _v4_export_formats + ['pythia8',
                        'pythia8_model']
-    _set_options = ['group_mirror_processes', 'group_subprocesses_output',
+    _set_options = ['group_subprocesses_output',
                     'ignore_six_quark_processes']
                     
     # Variables to store object information
@@ -1519,8 +1517,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 
                 # Generate processes
                 collect_mirror_procs = \
-                                 "group_mirror_processes" in self._options and \
-                                 self._options['group_mirror_processes']
+                                 "group_subprocesses_output" in self._options \
+                                 and self._options['group_subprocesses_output']
 
                 myproc = diagram_generation.MultiProcess(myprocdef,
                                                          collect_mirror_procs =\
@@ -1875,8 +1873,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         cpu_time1 = time.time()
         # Generate processes
-        collect_mirror_procs = "group_mirror_processes" in self._options and \
-                               self._options['group_mirror_processes']
+        collect_mirror_procs = "group_subprocesses_output" in self._options \
+                               and self._options['group_subprocesses_output']
 
         myproc = diagram_generation.MultiProcess(myprocdef,
                                                  collect_mirror_procs = \
@@ -2392,7 +2390,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             else:
                 # This is a v4 model
                 self._model_v4_path = import_v4.find_model_path(\
-                    self._curr_model.get('name'), self._mgme_dir)
+                    self._curr_model.get('name').replace("_v4", ""),
+                    self._mgme_dir)
                 self._curr_fortran_model = \
                   helas_call_writers.FortranHelasCallWriter(self._curr_model)
 
@@ -2418,7 +2417,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     if not model.get('parameters'):
                         # This is a v4 model.  Look for path.
                         self._model_v4_path = import_v4.find_model_path(\
-                                   model.get('name'), self._mgme_dir)
+                               model.get('name').replace("_v4", ""),
+                               self._mgme_dir)
                         self._curr_fortran_model = \
                                 helas_call_writers.FortranHelasCallWriter(\
                                                               model)
@@ -2469,10 +2469,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Check the validity of the arguments
         self.check_set(args)
 
-        if args[0] == 'group_mirror_processes':            
-            self._options[args[0]] = eval(args[1])
-            logger.info('Set group_mirror_processes to %s' % \
-                        str(self._options[args[0]]))
         if args[0] == 'ignore_six_quark_processes':
             self._options[args[0]] = list(set([abs(p) for p in \
                                       self._multiparticles[args[1]]\

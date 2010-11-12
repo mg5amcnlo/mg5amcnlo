@@ -50,6 +50,7 @@ C
       INTEGER              IPROC
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SubProc/ PD, IPROC
+%(define_subdiag_lines)s
       include 'coupl.inc'
       include 'run.inc'
 C  

@@ -881,10 +881,10 @@ class MultiProcess(base_objects.PhysicsObject):
         
         model = process_definition['model']
         
-        isids = [leg['ids'] for leg in \
-                 filter(lambda leg: leg['state'] == False, process_definition['legs'])]
-        fsids = [leg['ids'] for leg in \
-                 filter(lambda leg: leg['state'] == True, process_definition['legs'])]
+        isids = [leg['ids'] for leg in process_definition['legs'] \
+                 if leg['state'] == False]
+        fsids = [leg['ids'] for leg in process_definition['legs'] \
+                 if leg['state'] == True]
 
         # Generate all combinations for the initial state
         

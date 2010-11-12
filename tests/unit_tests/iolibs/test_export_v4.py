@@ -25,6 +25,7 @@ import tests.unit_tests as unittest
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.file_writers as writers
+import madgraph.iolibs.files as files
 import madgraph.iolibs.group_subprocs as group_subprocs
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.core.base_objects as base_objects
@@ -635,6 +636,18 @@ C     Number of configs
                          [[0,1,2,3],[0,1,2,3],[0,1,3,2],[0,1,2,3],[0,1,2,3]])
         self.assertEqual(ident_perms,
                          [[0,1,2,3]])
+
+        # Test processes.dat
+
+        files.write_to_file(self.give_pos('test'),
+                            export_v4.write_processes_file,
+                            subprocess_group)
+
+        goal_processes = """1     u u~ > g g
+2     u u~ > u u~
+3     u u~ > d d~"""
+        
+        self.assertFileContains('test', goal_processes)
 
 #===============================================================================
 # FullHelasOutputTest

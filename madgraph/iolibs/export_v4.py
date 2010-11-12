@@ -419,8 +419,8 @@ def write_matrix_element_v4_madevent(writer, matrix_element, fortran_model,
         # Set lines for subprocess group version
         # Set define_iconfigs_lines
         replace_dict['define_iconfigs_lines'] += \
-             """\nINTEGER SUBDIAG(MAXSPROC)
-             COMMON/TO_SUB_DIAG/SUBDIAG"""    
+             """\nINTEGER SUBDIAG(MAXSPROC),IB(2)
+             COMMON/TO_SUB_DIAG/SUBDIAG,IB"""    
         # Set set_amp2_line
         replace_dict['set_amp2_line'] = "ANS=ANS*AMP2(SUBDIAG(%s))/XTOT" % \
                                         proc_id
@@ -501,8 +501,17 @@ def write_auto_dsig_file(writer, matrix_element, proc_id = ""):
         replace_dict['passcuts_begin'] = "IF (PASSCUTS(PP)) THEN"
         replace_dict['passcuts_end'] = "ENDIF"
 
+    if proc_id:
+        # Set lines for subprocess group version
+        # Set define_iconfigs_lines
+        replace_dict['define_subdiag_lines'] = \
+             """\nINTEGER SUBDIAG(MAXSPROC),IB(2)
+             COMMON/TO_SUB_DIAG/SUBDIAG,IB"""    
+    else:
+        replace_dict['define_subdiag_lines'] = ""
+
     # Extract pdf lines
-    pdf_lines = get_pdf_lines(matrix_element, ninitial)
+    pdf_lines = get_pdf_lines(matrix_element, ninitial, proc_id != "")
     replace_dict['pdf_lines'] = pdf_lines
 
     if ninitial == 1:
@@ -565,6 +574,23 @@ def write_super_auto_dsig_file(writer, subproc_group):
 
     # Write the file
     writer.writelines(file)
+
+#===============================================================================
+# write_super_auto_dsig_file
+#===============================================================================
+def write_mirrorprocs(writer, subproc_group):
+    """Write the mirrorprocs.inc file determining which processes have
+    IS mirror process in subprocess group mode."""
+
+    lines = []
+    bool_dict = {True: '.true.', False: '.false.'}
+    matrix_elements = subproc_group.get('multi_matrix').get('matrix_elements')
+    lines.append("DATA (MIRRORPROCS(I),I=1,%d)/%s/" % \
+                 (len(matrix_elements),
+                  ",".join([bool_dict[me.get('has_mirror_process')] for \
+                            me in matrix_elements])))
+    # Write the file
+    writer.writelines(lines)
 
 #===============================================================================
 # write_coloramps_file
@@ -1008,6 +1034,25 @@ def write_props_file(writer, matrix_element, s_and_t_channels):
 
     # Write the file
     writer.writelines(lines)
+
+    return True
+
+#===============================================================================
+# write_processes_file
+#===============================================================================
+def write_processes_file(writer, subproc_group):
+    """Write the processes.dat file with info about the subprocesses
+    in this group."""
+
+    lines = []
+
+    for ime, me in \
+        enumerate(subproc_group.get('multi_matrix').get('matrix_elements')):
+        lines.append("%s %s" % (str(ime+1) + " " * (5-len(str(ime+1))),
+                                me.get('processes')[0].base_string()))
+
+    # Write the file
+    writer.write("\n".join(lines))
 
     return True
 
@@ -1505,6 +1550,10 @@ def generate_subprocess_group_directory_v4_madevent(subproc_group,
     filename = 'mg.sym'
     write_default_mg_sym_file(writers.FortranWriter(filename))
 
+    filename = 'mirrorprocs.inc'
+    write_mirrorprocs(writers.FortranWriter(filename),
+                      subproc_group)
+
     filename = 'ncombs.inc'
     write_ncombs_file(writers.FortranWriter(filename),
                       nexternal)
@@ -1525,6 +1574,11 @@ def generate_subprocess_group_directory_v4_madevent(subproc_group,
     write_props_file(writers.FortranWriter(filename),
                      matrix_element,
                      s_and_t_channels)
+    
+    filename = 'processes.dat'
+    files.write_to_file(filename,
+                        write_processes_file,
+                        subproc_group)
     
     # Find config symmetries and permutations
     symmetry, perms, ident_perms = \
@@ -1802,7 +1856,7 @@ def get_JAMP_lines(matrix_element):
 
     return res_list
 
-def get_pdf_lines(matrix_element, ninitial):
+def get_pdf_lines(matrix_element, ninitial, subproc_group = False):
     """Generate the PDF lines for the auto_dsig.f file"""
 
     processes = matrix_element.get('processes')
@@ -1836,18 +1890,31 @@ def get_pdf_lines(matrix_element, ninitial):
 
         # Get PDF values for the different initial states
         for i, init_states in enumerate(initial_states):
-            pdf_lines = pdf_lines + \
-                   "IF (ABS(LPP(%d)) .GE. 1) THEN\nLP=SIGN(1,LPP(%d))\n" \
-                         % (i + 1, i + 1)
+            if subproc_group:
+                pdf_lines = pdf_lines + \
+                       "IF (ABS(LPP(IB(%d))).GE.1) THEN\nLP=SIGN(1,LPP(IB(%d)))\n" \
+                             % (i + 1, i + 1)
+            else:
+                pdf_lines = pdf_lines + \
+                       "IF (ABS(LPP(%d)) .GE. 1) THEN\nLP=SIGN(1,LPP(%d))\n" \
+                             % (i + 1, i + 1)
 
             for initial_state in init_states:
                 if initial_state in pdf_codes.keys():
-                    pdf_lines = pdf_lines + \
-                                ("%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP," + \
-                                 "XBK(%d),DSQRT(Q2FACT(%d)))\n") % \
-                                 (pdf_codes[initial_state],
-                                  i + 1, i + 1, pdgtopdf[initial_state],
-                                  i + 1, i + 1)
+                    if subproc_group:
+                        pdf_lines = pdf_lines + \
+                                    ("%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP," + \
+                                     "XBK(IB(%d)),DSQRT(Q2FACT(IB(%d))))\n") % \
+                                     (pdf_codes[initial_state],
+                                      i + 1, i + 1, pdgtopdf[initial_state],
+                                      i + 1, i + 1)
+                    else:
+                        pdf_lines = pdf_lines + \
+                                    ("%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP," + \
+                                     "XBK(%d),DSQRT(Q2FACT(%d)))\n") % \
+                                     (pdf_codes[initial_state],
+                                      i + 1, i + 1, pdgtopdf[initial_state],
+                                      i + 1, i + 1)
             pdf_lines = pdf_lines + "ENDIF\n"
 
         # Add up PDFs for the different initial state particles

@@ -360,7 +360,9 @@ class TestCmdShell2(unittest.TestCase):
         self.do('import model sm')
         self.do('define p = g u u~ d d~')
         self.do('generate g g > p p @2')
-        self.do('output madevent_group %s ' % self.out_dir)
+        self.do('set group_subprocesses_output True')
+        self.do('output madevent %s ' % self.out_dir)
+        self.do('set group_subprocesses_output False')
         devnull = open(os.devnull,'w')
         # Check that the Source directory compiles
         status = subprocess.call(['make'],
