@@ -14,6 +14,7 @@
 ################################################################################
 """Methods and classes to export matrix elements to v4 format."""
 
+import copy
 import fractions
 import glob
 import logging
@@ -1048,8 +1049,16 @@ def write_processes_file(writer, subproc_group):
 
     for ime, me in \
         enumerate(subproc_group.get('multi_matrix').get('matrix_elements')):
-        lines.append("%s %s" % (str(ime+1) + " " * (5-len(str(ime+1))),
+        lines.append("%s %s" % (str(ime+1) + " " * (7-len(str(ime+1))),
                                 me.get('processes')[0].base_string()))
+        if me.get('has_mirror_process'):
+            mirror_proc = copy.copy(me.get('processes')[0])
+            legs = copy.copy(mirror_proc.get('legs'))
+            legs.insert(0, legs.pop(1))
+            mirror_proc.set("legs", legs)
+            lines.append("mirror  %s" % mirror_proc.base_string())
+        else:
+            lines.append("mirror  none")
 
     # Write the file
     writer.write("\n".join(lines))
