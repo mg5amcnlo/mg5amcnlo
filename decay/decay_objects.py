@@ -124,8 +124,24 @@ class DecayParticle(base_objects.Particle):
         self['decay_channels'] = {}
         self['decay_amplitudes'] = {}
         self['apx_decaywidth'] = 0.
+        self['apx_decaywidth_err'] = 0.
         
-    
+    def get(self, name):
+        """ Evaluate some special properties first if the user request. """
+
+        if name == 'apx_decaywidth' \
+                and not self[name] \
+                and not self['is_stable']:
+            self.update_decay_attributes()
+            return self[name]
+        elif name == 'apx_decaywidth_err' and not self[name]:
+            self.estimate_width_error()
+            return self[name]
+        else:
+            # call the mother routine
+            return DecayParticle.__bases__[0].get(self, name)
+
+
     def check_vertex_condition(self, partnum, onshell, 
                               value = base_objects.VertexList(), model = {}):
         """Check the validity of decay condition, including,
@@ -313,7 +329,6 @@ class DecayParticle(base_objects.Particle):
         """Filter for valid DecayParticle vertexlist."""
         
         if name == 'decay_vertexlist' or name == 'decay_channels':
-
             #Value must be a dictionary.
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
@@ -355,14 +370,106 @@ class DecayParticle(base_objects.Particle):
                 raise self.PhysicsObjectError, \
                     "Propery %s should be int type." % name
 
-        if name == 'apx_decaywidth':
-            if not isinstance(value, float):
+        # Check apx_decaywidth and apx_decaywidth_err
+        if name == 'apx_decaywidth' or name == 'apx_decaywidth_err':
+            if not isinstance(value, float) and not isinstance(value, int):
                 raise self.PhysicsObjectError, \
-                    "Propery %s should be float type." % name
+                    "Decay width or width error %s must be float type." % str(value)
 
         super(DecayParticle, self).filter(name, value)
 
         return True
+
+    def reset_decay_attributes(self):
+        """ Reset the apx_decaywidth, apx_decaywidth_err, and
+            branching ratio of the amplitudes in this particle.
+            It is necessary when the channels are changed, 
+            e.g. find next level."""
+
+        # Reset decay width and its error
+        self['apx_decaywidth'] = 0.
+        self['apx_decaywidth_err'] = 0.
+        
+        # Reset the branching ratio inside amplitudes
+        for n, amplist in self['decay_amplitudes'].items():
+            for amp in amplist:
+                amp.reset_width_br()
+
+    def update_decay_attributes(self):
+        """ This function will sum all the estimated width for nextlevel to
+            provide the error of current width."""
+        
+        # Reset the related properties
+        self.reset_decay_attributes()
+
+        # Update the total width
+        for n, amplist in self['decay_amplitudes'].items():
+            for amp in amplist:
+                # Do not calculate the br in this moment
+                amp.get('apx_decaywidth')
+                self['apx_decaywidth'] += amp.get('apx_decaywidth')
+
+        # Update the branching ratio now with the right total width
+        for n, amplist in self['decay_amplitudes'].items():
+            for amp in amplist:
+                amp.get('apx_br')
+
+        # Update the apx_decaywidth_err
+        self.estimate_width_error()
+
+    def estimate_width_error(self):
+        """ This function will estimate the width error from the highest order
+            off-shell channels."""
+
+        if self['apx_decaywidth']:
+            final_level = max([k[0] for k, i in self['decay_channels'].items()])
+
+            # Do not recalculate the apx_decaywidth_nextlevel here
+            err = sum([c['apx_decaywidth_nextlevel'] \
+                           for c in self.get_channels(final_level, False)])/ \
+                           self['apx_decaywidth']
+        else:
+            err = 0.
+
+        self['apx_decaywidth_err'] = err
+
+        return err
+
+    def decaytable_string(self, format='normal'):
+        """ Output the string for the decay table.
+            If format is 'full', all the channels in the process will be
+            printed."""        
+
+        seperator = str('#'*80)
+        output = '\n'+seperator
+        output += str('\n#\n#\tPDG\t\tWIDTH\t\tERROR\n')
+        output += str('DECAY\t%8d\t%.5e     %.3e  #%s decay\n') \
+            %(self.get('pdg_code'), 
+              self.get('apx_decaywidth'),
+              self.get('apx_decaywidth_err'),
+              self.get('name'))
+        output += seperator
+        # Write the decay table from 2-body decay.
+        n = 2
+        while n:
+            if n in self.get('decay_amplitudes').keys():
+                # Do not print empty amplitudes
+                if len(self.get_amplitudes(n)):
+                    # Titie line
+                    output += '\n#\tBR\tNDA       '
+                    # ID (ID1, ID2, ID3...)
+                    output += '        '.join(['ID%d' %(i+1) for i in range(n)])
+                    # main content
+                    output += '\n%s' \
+                        % self.get_amplitudes(n).decaytable_string(format)
+
+                # Increase n to nextlevel    
+                n += 1
+            else:
+                break
+
+        return output+'\n#\n#'
+        
 
     def get_vertexlist(self, partnum ,onshell):
         """Return the n-body decay vertexlist.
@@ -863,40 +970,11 @@ class DecayParticle(base_objects.Particle):
         # Calculate the apx_decaywidth and apx_br for every amplitude.
         for amp in self.get_amplitudes(clevel):
             amp.get('apx_decaywidth')
+            amp.get('apx_br')
         self.get_amplitudes(clevel).sort(amplitudecmp_width)
 
 
-    def calculate_branch_ratio(self):
-        """ Calculate the branch ratio of the decay channels of this particle.
-            Find channels and calculate width before running this,
-            otherwise their is no branch ratio."""
-
-        if self['apx_decaywidth']:
-            for key, clist in self['decay_channels'].items():
-                if key[1]:
-                    for c in clist:
-                        c['apx_br'] = \
-                            c.get('apx_decaywidth')/self['apx_decaywidth'] *100
-        else:
-            logger.info('Particle %d is stable, branch ratio is not available.'\
-                            % self.get('pdg_code'))
-
-
-    def estimate_width_error(self):
-        """ This function will sum all the estimated width for nextlevel to
-            provide the error of current width."""
-
-        if self['apx_decaywidth']:
-            final_level = max([k[0] for k, i in self['decay_channels'].items()])
-            err = sum([c['apx_decaywidth_nextlevel'] \
-                           for c in self.get_channels(final_level, False)])/ \
-                           self['apx_decaywidth']
-        else:
-            err = 0
-
-        return err
-
-    # This helper function is useless in current algorithm...
+    # This helper function is obselete in current algorithm...
     def generate_configlist(self, channel, partnum, model):
         """ Helper function to generate all the configuration to add
             vertetices to channel to create a channel with final 
@@ -2021,11 +2099,6 @@ class DecayModel(base_objects.Model):
                         if (2*mass[part.get('pdg_code')]-total_m) > \
                                 10**3*mass[part.get('pdg_code')]*\
                                 sys.float_info.epsilon:
-                            print (inter['id'], part.get('pdg_code'),
-                                   2*mass[part.get('pdg_code')],
-                                   total_m,
-                                   (2*mass[part.get('pdg_code')]-total_m),
-                                   mass[part.get('pdg_code')]*sys.float_info.epsilon)
                             mass[part.get('pdg_code')] = \
                                 total_m - mass[part.get('pdg_code')]
                             part['is_stable'] = False
@@ -2068,10 +2141,45 @@ class DecayModel(base_objects.Model):
         for clevel in range(2, max_partnum+1):
             for part in self.get('particles'):
                 part.find_channels_nextlevel(self)
+
+        self.write_summary_decay_table()
+
+
+    def find_all_channels_smart(self, precision):
+        """ Function that find channels for all particles in this model.
+            Call the function in DecayParticle.
+            Decay channels more than three final particles are searched
+            when the precision is not satisfied."""
+        # If vertexlist has not been found before, run model.find_vertexlist
+        if not self['vertexlist_found']:
+            logger.info("Vertexlist of this model has not been searched."+ \
+                "Automatically run the model.find_vertexlist()")
+            self.find_vertexlist()
+
+        # Find stable particles of this model
+        self.get('stable_particles')
+
+        # Run the width of all particles from 2 body decay.
+        for clevel in range(2, 4):
+            for part in self.get('particles'):
+                part.find_channels_nextlevel(self)
+
+        for part in self.get('particles'):
+            clevel = 3
+            err = sum([c.get('apx_decaywidth_nextlevel') for c in part.get_channels(clevel, False)])
+            if err > precision:
+                pass
+
+            part.find_channels_nextlevel(self)
+
+    def write_summary_decay_table(self):
+        """ Write a table to list the total width of all the particles
+            and compare to the value in param_card."""
     
         # Write the result to decaywidth_MODELNAME.dat in 'decay' directory
         path = os.path.join(MG5DIR, 'decay')
-        fdata = open(os.path.join(path, ('decaywidth_'+self['name']+'.dat')),
+        fdata = open(os.path.join(path, 
+                                  (self['name']+'_decay_summary.dat')),
                      'w')
         fdata.write(str('DECAY WIDTH COMPARISON \n') +\
                     str('model: %s \n' %self['name']) +\
@@ -2108,7 +2216,7 @@ class DecayModel(base_objects.Model):
                     if abs(self['decaywidth_list'][(part.get('pdg_code'), True)]) == 0.:
                         ratio = 1
                     else:
-                        ratio = self['decaywidth_list'][(part.get('pdg_code'), True)]
+                        ratio = 0
                     fdata.write(str('%11d    %.4e     %s    %4.2f\n'\
                                         %(part.get('pdg_code'), 
                                           self['decaywidth_list']\
@@ -2124,17 +2232,31 @@ class DecayModel(base_objects.Model):
                                           )))
         fdata.close()
 
-    def write_decay_table(self, name = ''):
+
+    def write_decay_table(self, format='normal',name = ''):
         """ Functions that write the decay table of all the particles 
             in this model that including the channel information and 
             branch ratio (call the estimate_width_error automatically 
             in the execution) in a file."""
+        # Raise error if format is wrong
+        if not format in ['normal','full']:
+            raise PhysicsObjectError,\
+                "The format must be \'normal\' or \'full\'." % str(name)
 
         # Write the result to decaywidth_MODELNAME.dat in 'decay' directory
         path = os.path.join(MG5DIR, 'decay')
+
         if not name:
-            fdata = open(os.path.join(path,('decaytable_'+self['name']+'.dat')),
-                         'w')
+            if format == 'normal':
+                fdata = open(os.path.join(path,
+                                          (self['name']+'_decaytable.dat')),
+                             'w')
+
+            elif format == 'full':
+                fdata = open(os.path.join(path,
+                                          (self['name']+'_decaytable_full.dat')),
+                             'w')
+
         elif isinstance(name, str):
             fdata = open(os.path.join(path, name),'w')
         else:
@@ -2152,24 +2274,7 @@ class DecayModel(base_objects.Model):
         for p in self['particles']:
             # Write the table only for particles with finite width.
             if p.get('apx_decaywidth'):
-                p.calculate_branch_ratio()
-                nonspart += ('\n'+seperator)
-                nonspart += str(\
-                    'PARTICLE : %d  \nWIDTH    : %.4e  \nEST. ERR.: %.4f %%\n'\
-                        %(p.get('pdg_code'), 
-                          p.get('apx_decaywidth'),
-                          p.estimate_width_error()*100 ))
-                nonspart += seperator
-                # Write the decay table from 2-body decay.
-                n = 2
-                while n:
-                    try:
-                        nonspart += (str('%d-body decay: \n' %n) +\
-                                         p.get_channels(n, True).nice_string()+\
-                                         '\n')
-                        n += 1
-                    except KeyError:
-                        break
+                nonspart += p.decaytable_string(format)                
             else:
                 if p.get('is_stable'):
                     spart += str('%8d    %9s \n' % (p.get('pdg_code'), 'Yes'))
@@ -2181,32 +2286,6 @@ class DecayModel(base_objects.Model):
         fdata.write(nonspart)
         fdata.close()
 
-    def find_all_channels_smart(self, precision):
-        """ Function that find channels for all particles in this model.
-            Call the function in DecayParticle.
-            Decay channels more than three final particles are searched
-            when the precision is not satisfied."""
-        # If vertexlist has not been found before, run model.find_vertexlist
-        if not self['vertexlist_found']:
-            logger.info("Vertexlist of this model has not been searched."+ \
-                "Automatically run the model.find_vertexlist()")
-            self.find_vertexlist()
-
-        # Find stable particles of this model
-        self.get('stable_particles')
-
-        # Run the width of all particles from 2 body decay.
-        for clevel in range(2, 4):
-            for part in self.get('particles'):
-                part.find_channels_nextlevel(self)
-
-        for part in self.get('particles'):
-            clevel = 3
-            err = sum([c.get('apx_decaywidth_nextlevel') for c in part.get_channels(clevel, False)])
-            if err > precision:
-                pass
-
-            part.find_channels_nextlevel(self)
 
     def find_nextlevel_ratio(self):
         """ Find the ratio of matrix element square for channels decay to
@@ -2282,7 +2361,7 @@ class Channel(base_objects.Diagram):
         """ Check the onshell condition before the user get it. """
         
         if name == 'onshell':
-            print "It is suggested to get onshell property from get_onshell function"
+            logger.info("It is suggested to get onshell property from get_onshell function")
 
         return super(Channel, self).get(name)
 
@@ -2640,7 +2719,7 @@ class Channel(base_objects.Diagram):
                 # Total energy of this vertex
                 q_total = 0
                 # Color multiplcity
-                color_multi = []
+                color_list = []
                 # Assign value to apx_m except the mother leg (last leg)
                 for leg in vert['legs'][:-1]:
                     # Case for final legs
@@ -2656,7 +2735,7 @@ class Channel(base_objects.Diagram):
                         q_total += q_dict[(leg.get('id'), leg.get('number'))]
 
                     # Record the color content
-                    color_multi.append(model.get_particle(leg.get('id')).\
+                    color_list.append(model.get_particle(leg.get('id')).\
                                            get('color'))
                 # The energy for mother leg is sum of the energy of its product.
                 # Set the q_dict
@@ -2678,11 +2757,32 @@ class Channel(base_objects.Diagram):
                             abs(vert.get('id'))]['couplings'].items()])
 
                 # Find the correct color factor
-                if model.get_particle(vert.get('legs')[-1].get('id')).\
-                        get('color') ==1:
-                    if min(color_multi) == 3:
-                        apx_m *= 3.
-
+                if any([i != 1 for i in color_list]):
+                    # Color multiplicity
+                    # the final number is the color of initial particle of
+                    # the vertex.
+                    color_multi = {(3,3,1):3,
+                                   (1,3,3):1,
+                                   (3,3,8):1,
+                                   (3,8,3):3,
+                                   (1,1,3,3):1,
+                                   (1,3,3,1):3,
+                                   # TBC
+                                   (3,3,8,1):3,
+                                   (1,3,8,3):3,
+                                   (1,3,3,8):1,
+                                   (3,3,8,3):3,
+                                   (3,3,3,8):3,
+                                   (3,3,8,8):3,
+                                   (3,8,8,3):3,
+                                   }
+                    color_list.sort()
+                    color_list.append(model.get_particle(vert.get('legs')[-1].get('id')).get('color'))
+                    color_tuple = tuple(color_list)
+                    try:
+                        apx_m *= color_multi[color_tuple]
+                    except KeyError:
+                        logger.warning("Color structure %s in interaction %d is not included!" %(color_tuple, vert.get('id')))
         # A quick estimate of the next-level decay of a off-shell decay
         # Consider all legs are onshell.
         else:
@@ -2955,12 +3055,14 @@ class DecayAmplitude(diagram_generation.Amplitude):
                         "%s is not a valid Process object." % str(value)
             # Reset the width and br
             self.reset_width_br()
+
         if name == 'diagrams':
             if not isinstance(value, ChannelList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid ChannelList object." % str(value)
             # Reset the width and br
             self.reset_width_br()
+
         if name == 'apx_decaywidth' and name == 'apx_br':
             if not isinstance(value, float):
                 raise self.PhysicsObjectError, \
@@ -2971,20 +3073,11 @@ class DecayAmplitude(diagram_generation.Amplitude):
     def get(self, name):
         """Get the value of the property name."""
 
-        # When apx_decaywidth is request, recalculate it if needed.
+        # When apx_decaywidth is requested, recalculate it if needed.
         # Calculate br in the same time.
         if name == 'apx_decaywidth' and not self[name]:
             self['apx_decaywidth'] = sum([c.get('apx_decaywidth') \
                                   for c in self['diagrams']])
-            try:
-                self['apx_br'] = self['apx_decaywidth']/ \
-                    self['process']['model'].\
-                    get_particle(self['diagrams'][0].get_initial_id()).\
-                    get('apx_decaywidth')
-            except ZeroDivisionError:
-                logger.warning("Try to get branch ratio from a zero width particle %s. No action proceed." % self['process']['model'].\
-                              get_particle(self['diagrams'][0].get_initial_id()).\
-                                get('name'))
 
         # If apx_br is requested, recalculate from the apx_decaywidth if needed.
         if name == 'apx_br' and not self[name]:
@@ -3012,6 +3105,34 @@ class DecayAmplitude(diagram_generation.Amplitude):
         
         self['apx_decaywidth'] = 0.
         self['apx_br'] = 0.
+
+    def decaytable_string(self, format='normal'):
+        """ Write the string in the format for decay table.
+            format = 'normal': show only branching ratio
+                   = 'full'  : show branching ratio and all the channels."""
+
+        output='   %.5e   %d' %(self.get('apx_br'),
+                                len(self['process']['legs'])-1)
+        output += ''.join(['%11d' %leg.get('id') \
+                               for leg in self['process']['legs'][1:]])
+        output += '   #Br(%s)\n' %self.get('process').input_string()
+        
+        # Output the channels if format is full
+        if format=='full':
+            # Set indent of the beginning for channels
+            output += self.get('diagrams').nice_string(6)
+
+        # Return process only, get rid off the final \n
+        elif format == 'normal':
+            return output[:-1]
+
+        # Raise error if format is wrong
+        else:
+            raise self.PhysicsObjectError,\
+                "Format %s must be \'normal\' or \'full\'." % str(format)
+
+        # Return output for full format case.
+        return output
         
 #===============================================================================
 # DecayAmplitudeList: An Amplitude like object contain Process and Channels
@@ -3027,6 +3148,13 @@ class DecayAmplitudeList(diagram_generation.AmplitudeList):
     def nice_string(self):
         """ Nice string from Amplitude """
         mystr = '\n'.join([a.nice_string() for a in self])
+
+        return mystr
+
+    def decaytable_string(self, format='normal'):
+        """ Decaytable string for Amplitudes """
+
+        mystr = '\n'.join([a.decaytable_string(format) for a in self])
 
         return mystr
 

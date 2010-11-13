@@ -127,7 +127,9 @@ class Test_DecayParticle(unittest.TestCase):
                            (3, True) : self.my_3bodyvertexlist},
                        'is_stable': False,
                        'vertexlist_found': False,
-                       'max_vertexorder': 0
+                       'max_vertexorder': 0,
+                       'apx_decaywidth': 0.,
+                       'apx_decaywidth_err': 0.
                        }
 
         self.mypart = decay_objects.DecayParticle(self.mydict)
@@ -230,6 +232,12 @@ class Test_DecayParticle(unittest.TestCase):
                        {'prop':'max_vertexorder',
                         'right_list':[3, 4, 0],
                         'wrong_list':['a', 'true', None]},
+                       {'prop':'apx_decaywidth',
+                        'right_list':[3., 4.5, 0.2],
+                        'wrong_list':['a', [12,2], None]},
+                       {'prop':'apx_decaywidth_err',
+                        'right_list':[3., 4.5, 0.2],
+                        'wrong_list':['a', [12,2], None]},
                        {'prop':'decay_vertexlist',
                         'right_list':[{(2, False):self.my_2bodyvertexlist,
                                        (2, True) :self.my_2bodyvertexlist,
@@ -350,6 +358,31 @@ class Test_DecayParticle(unittest.TestCase):
                              , self.mypart.set_vertexlist, partnum, False, item)
                 
 
+    def test_set_decaywidth(self):
+        """ Test for the reset and update of apx_decaywidth, branching ratio
+            for amplitudes, and apx_decaywidth_err."""
+
+        self.my_testmodel.find_all_channels(3)
+        tquark = self.my_testmodel.get_particle(6)
+        amp = tquark.get_amplitudes(2)[0]
+        old_width = amp.get('apx_decaywidth')
+
+        # Add a new channel to tquark
+        tquark.get_amplitudes(2).append(amp)
+
+        # Total width doubles. And the branching ratio should be 0.5
+        tquark.update_decay_attributes()
+        self.assertAlmostEqual(tquark.get('apx_decaywidth'),old_width*2)
+        self.assertAlmostEqual(amp.get('apx_br'), 0.5)
+
+        # Test the estimate_width_error
+        w = self.my_testmodel.get_particle(24)
+        width_err = w.get('apx_decaywidth_err')
+        offshell_clist = w.get_channels(3, False)
+        w.get_channels(3, False).extend(offshell_clist)
+
+        w.update_decay_attributes()
+        self.assertAlmostEqual(w.get('apx_decaywidth_err'),width_err*2)
 
     def test_find_vertexlist(self):
         """ Test for the find_vertexlist function and 
@@ -1701,13 +1734,13 @@ class Test_Channel(unittest.TestCase):
         #for part in model.get('particles'):
         #    print part['pdg_code'], part['decay_width']
 
-        particle.calculate_branch_ratio()
+        #particle.calculate_branch_ratio()
         #print decay_objects.MT, decay_objects.MW
         #print decay_objects.GC_857, decay_objects.GC_733, decay_objects.GC_437, decay_objects.GC_665
-        print particle.estimate_width_error()
-        print len(particle.get_channels(3, False))
-        print particle.get_channels(3, False)[0].nice_string(),\
-            particle.get('apx_decaywidth')
+        #print particle.estimate_width_error()
+        #print len(particle.get_channels(3, False))
+        #print particle.get_channels(3, False)[0].nice_string(),\
+        #    particle.get('apx_decaywidth')
 
 
 #===============================================================================
@@ -1751,49 +1784,6 @@ class Test_DecayAmplitude(unittest.TestCase):
         #save_model.save_model(os.path.join(MG5DIR, 'tests/input_files', 
         #self.my_testmodel['name']), self.my_testmodel)
     
-        full_vertexlist = import_vertexlist.full_vertexlist
-        vert_0 = base_objects.Vertex({'id': 0, 'legs': base_objects.LegList([\
-                    base_objects.Leg({'id':25, 'number':1, 'state': False}), \
-                    base_objects.Leg({'id':25, 'number':2})])})
-        vert_1 = copy.deepcopy(full_vertexlist[(40, 25)])
-        vert_1['legs'][0]['number'] = 2
-        vert_1['legs'][1]['number'] = 3
-        vert_1['legs'][2]['number'] = 2
-        vert_2 = copy.deepcopy(full_vertexlist[(35, 6)])
-        vert_2['id'] = -vert_2['id']
-        vert_2['legs'][0]['number'] = 2
-        vert_2['legs'][0]['id'] = -vert_2['legs'][0]['id']
-        vert_2['legs'][1]['number'] = 4
-        vert_2['legs'][1]['id'] = -vert_2['legs'][1]['id']
-        vert_2['legs'][2]['number'] = 2
-        vert_2['legs'][2]['id'] = -vert_2['legs'][2]['id']
-        vert_3 = copy.deepcopy(full_vertexlist[(35, 6)])
-        vert_3['legs'][0]['number'] = 3
-        vert_3['legs'][1]['number'] = 5
-        vert_3['legs'][2]['number'] = 3
-        vert_4 = copy.deepcopy(full_vertexlist[(44, 24)])
-        vert_4['id'] = -vert_4['id']
-        vert_4['legs'][0]['number'] = 4
-        vert_4['legs'][0]['id'] = -vert_4['legs'][0]['id']
-        vert_4['legs'][1]['number'] = 6
-        vert_4['legs'][1]['id'] = -vert_4['legs'][1]['id']
-        vert_4['legs'][2]['number'] = 4
-        vert_4['legs'][2]['id'] = -vert_4['legs'][2]['id']
-        vert_5 = copy.deepcopy(full_vertexlist[(44, 24)])
-        vert_5['legs'][0]['number'] = 5
-        vert_5['legs'][1]['number'] = 7
-        vert_5['legs'][2]['number'] = 5
-
-        #temp_vertices = base_objects.VertexList
-        self.h_tt_bbmmvv = decay_objects.Channel({'vertices': \
-                                             base_objects.VertexList([
-                                             vert_5, vert_4, vert_3, vert_2, \
-                                             vert_1, vert_0])})
-
-        #print self.h_tt_bbmmvv.nice_string()
-        #pic = drawing_eps.EpsDiagramDrawer(self.h_tt_bbmmvv, 'h_tt_bbmmvv', self.my_testmodel)
-        #pic.draw()
-
 
     def test_init_setget(self):
         """ Test the set and get function of"""
@@ -1906,8 +1896,30 @@ class Test_DecayAmplitude(unittest.TestCase):
         higgs.group_channels_2_amplitudes(4, self.my_testmodel)
         #print higgs.get_amplitudes(4).nice_string()
         amplt_h_mmvv.get('apx_decaywidth')
+        amplt_h_mmvv.get('apx_br')
         self.assertTrue(amplt_h_mmvv in higgs.get_amplitudes(4))
-        
+
+    def test_decaytable_string(self):
+        """ Test the decaytable_string """
+
+        # Setup higgs and lower its mass
+        higgs = self.my_testmodel.get_particle(25)
+        decay_objects.MH = 50
+
+        # Set channels and amplitude
+        self.my_testmodel.find_all_channels(4)
+        amp_list = higgs.get_amplitudes(4)
+        # Test for exception
+        self.assertRaises(decay_objects.DecayAmplitude.PhysicsObjectError,
+                          amp_list.decaytable_string,'wrongformat')
+        # Test for type
+        self.assertTrue(isinstance(amp_list.decaytable_string('full'), str))
+        self.assertTrue(isinstance(amp_list.decaytable_string(), str))
+
+        # Test for decaytable_string from DecayParticle
+        self.assertTrue(isinstance(higgs.decaytable_string(), str))
+
+        self.my_testmodel.write_decay_table('full', 'mysmallmodel')
 
 if __name__ == '__main__':
     unittest.unittest.main()
