@@ -1739,6 +1739,14 @@ class Test_Channel(unittest.TestCase):
 
         model.read_MG4_param_card_decay(MG4_param_path_2)
 
+        # Write decay summary and the table
+        # file name 1: default name
+        #model.write_summary_decay_table()
+        #model.write_decay_table('cmp')
+        # file name 2: for test mssm
+        model.write_summary_decay_table('mssm_decay_summary_test.dat')
+        model.write_decay_table('cmp', 'mssm_decaytable_test.dat')
+
         # Test if the calculated ratio is float or None
         for part in model.get('particles'):
             n_max = len(part['decay_amplitudes'].keys())
@@ -1751,15 +1759,7 @@ class Test_Channel(unittest.TestCase):
         self.assertAlmostEqual(0.78950006*0.57480138,
                                particle.get_amplitude([-5,5])['exa_decaywidth'])
 
-        # File name for test mssm
-        model.write_summary_decay_table('mssm_decay_summary_test.dat')
-        model.write_decay_table('cmp', 'mssm_decaytable_test.dat')
-        # Ordinary file names
-        #model.write_summary_decay_table()
-        #model.write_decay_table('cmp')
         
-
-
         #for part in model.get('particles'):
         #    print part['pdg_code'], part['decay_width']
 
