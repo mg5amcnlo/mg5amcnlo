@@ -459,6 +459,8 @@ class DecayParticle(base_objects.Particle):
                     output += '\n#\tBR\tNDA       '
                     # ID (ID1, ID2, ID3...)
                     output += '        '.join(['ID%d' %(i+1) for i in range(n)])
+                    if format == 'cmp':
+                        output += '\tratio'
                     # main content
                     output += '\n%s' \
                         % self.get_amplitudes(n).decaytable_string(format)
@@ -642,16 +644,47 @@ class DecayParticle(base_objects.Particle):
             raise self.PhysicsObjectError, \
                 "The input must be a list of diagrams."
 
+    def get_amplitude(self, final_ids):
+        """Return the amplitude with the given final pids.
+           If no suitable amplitude is found, retun None.
+        """
+        if not isinstance(final_ids, list):
+            raise self.PhysicsObjectError,\
+                "The final particle ids %s must be a list of integer." \
+                %str(final_ids)
+
+        if any([not isinstance(i, int) for i in final_ids]):
+            raise self.PhysicsObjectError,\
+                "The final particle ids %s must be a list of integer." \
+                %str(final_ids)
+
+        final_ids.sort()
+        # Search in the amplitude list of given final particle number
+        if self.get_amplitudes(len(final_ids)):
+            for amp in self.get_amplitudes(len(final_ids)):
+                ref_list = [l['id'] \
+                                for l in amp.get('process').get_final_legs()]
+                ref_list.sort()
+                if ref_list == final_ids:
+                    return amp
+                
+        return None
+
     def get_amplitudes(self, partnum):
         """Return the n-body decay amplitudes.
            partnum = n.
+           If the amplitudes do not exist, return none.
         """
         #check the validity of arguments
         if not isinstance(partnum, int):
             raise self.PhysicsObjectError, \
                 "The particle number %s must be an integer."  %str(partnum)
 
-        return self.get('decay_amplitudes')[partnum]
+        try:
+            return self.get('decay_amplitudes')[partnum]
+        except KeyError:
+            logger.info('The amplitudes for final particle number % d do not exist' % partnum)
+            return None
 
     def set_amplitudes(self, partnum, value):
         """Set the n_body decay_amplitudes.
@@ -972,7 +1005,6 @@ class DecayParticle(base_objects.Particle):
             amp.get('apx_decaywidth')
             amp.get('apx_br')
         self.get_amplitudes(clevel).sort(amplitudecmp_width)
-
 
     # This helper function is obselete in current algorithm...
     def generate_configlist(self, channel, partnum, model):
@@ -2142,7 +2174,6 @@ class DecayModel(base_objects.Model):
             for part in self.get('particles'):
                 part.find_channels_nextlevel(self)
 
-        self.write_summary_decay_table()
 
 
     def find_all_channels_smart(self, precision):
@@ -2172,15 +2203,22 @@ class DecayModel(base_objects.Model):
 
             part.find_channels_nextlevel(self)
 
-    def write_summary_decay_table(self):
+    def write_summary_decay_table(self, name=''):
         """ Write a table to list the total width of all the particles
             and compare to the value in param_card."""
     
         # Write the result to decaywidth_MODELNAME.dat in 'decay' directory
         path = os.path.join(MG5DIR, 'decay')
-        fdata = open(os.path.join(path, 
-                                  (self['name']+'_decay_summary.dat')),
-                     'w')
+        if not name:
+            fdata = open(os.path.join(path, 
+                                      (self['name']+'_decay_summary.dat')),
+                         'w')
+        elif isinstance(name, str):
+            fdata = open(os.path.join(path, name),'w')
+        else:
+            raise PhysicsObjectError,\
+                "The file name of the decay table must be str." % str(name)
+
         fdata.write(str('DECAY WIDTH COMPARISON \n') +\
                     str('model: %s \n' %self['name']) +\
                     str('#'*50 + '\n')+\
@@ -2238,23 +2276,26 @@ class DecayModel(base_objects.Model):
             in this model that including the channel information and 
             branch ratio (call the estimate_width_error automatically 
             in the execution) in a file."""
+
+        # The list of current allowing formats
+        allow_formats = ['normal','full','cmp']
+
         # Raise error if format is wrong
-        if not format in ['normal','full']:
-            raise PhysicsObjectError,\
+        if not format in allow_formats:
+            raise self.PhysicsObjectError,\
                 "The format must be \'normal\' or \'full\'." % str(name)
 
         # Write the result to decaywidth_MODELNAME.dat in 'decay' directory
         path = os.path.join(MG5DIR, 'decay')
 
         if not name:
-            if format == 'normal':
-                fdata = open(os.path.join(path,
-                                          (self['name']+'_decaytable.dat')),
-                             'w')
-
-            elif format == 'full':
+            if format == 'full':
                 fdata = open(os.path.join(path,
                                           (self['name']+'_decaytable_full.dat')),
+                             'w')
+            else:
+                fdata = open(os.path.join(path,
+                                          (self['name']+'_decaytable.dat')),
                              'w')
 
         elif isinstance(name, str):
@@ -2292,6 +2333,93 @@ class DecayModel(base_objects.Model):
             next level."""
 
         pass
+
+    # Helper Function for reading MG4 param_card
+    # And compare with our apx_decaywidth
+    def read_MG4_param_card_decay(self, param_card):
+        """Read the decay width in MG4 param_card and 
+           compare the width with our estimation."""
+
+        if not os.path.isfile(param_card):
+            raise MadGraph5Error, \
+                "No such file %s" % param_card
+    
+        # Read in param_card
+        param_lines = open(param_card, 'r').read().split('\n')
+
+        # Define regular expressions
+        re_decay = re.compile(\
+            "^decay\s+(?P<pid>\d+)\s+(?P<value>-*\d+\.\d+e(\+|-)\d+)\s*")
+        re_two_body_decay = re.compile(\
+            "^\s+(?P<br>-*\d+\.\d+e(\+|-)\d+)\s+(?P<nda>\d+)\s+(?P<pid1>-*\d+)\s+(?P<pid2>-*\d+)")
+        re_three_body_decay = re.compile(\
+            "^\s+(?P<br>-*\d+\.\d+e(\+|-)\d+)\s+(?P<nda>\d+)\s+(?P<pid1>-*\d+)\s+(?P<pid2>-*\d+)\s+(?P<pid3>-*\d+)")
+
+        # Define the decay pid, total width
+        pid = 0
+        total_width = 0
+
+        # Go through lines in param_card
+        for line in param_lines:
+            if not line.strip() or line[0] == '#':
+                continue
+            line = line.lower()
+            # Look for decay blocks
+            decay_match = re_decay.match(line)
+            if decay_match:
+                pid = int(decay_match.group('pid'))
+                total_width = float(decay_match.group('value'))
+                self['decaywidth_list'][(pid, True)] = total_width
+                continue
+            # If no decay pid available, skip this line.
+            if not pid:
+                continue
+
+            two_body_match = re_two_body_decay.match(line)
+            three_body_match = re_three_body_decay.match(line)
+
+            # Check three_body first!
+            # Otherwise it will always to be two body.
+            if three_body_match:
+                # record the pids and br
+                pid1 = int(three_body_match.group('pid1'))
+                pid2 = int(three_body_match.group('pid2'))
+                pid3 = int(three_body_match.group('pid3'))
+
+                br = float(three_body_match.group('br'))
+                final_ids = [pid1, pid2, pid3]
+                amp = self.get_particle(pid).get_amplitude(final_ids)
+                # If amplitude is found, record the ratio
+                if amp:
+                    amp['exa_decaywidth'] = br*total_width
+                # If not found, show this info
+                else:
+                    logger.info('No amplitude for %d -> %d %d %d is found.' %\
+                                       (pid, pid1, pid2, pid3))
+
+                # Jump to next line. Do not match the two_body_decay
+                continue
+
+            # If not three-body, check two-body
+            if two_body_match:
+                # record the pids and br
+                pid1 = int(two_body_match.group('pid1'))
+                pid2 = int(two_body_match.group('pid2'))
+                br = float(two_body_match.group('br'))
+                final_ids = [pid1, pid2]
+                amp = self.get_particle(pid).get_amplitude(final_ids)
+                # If amplitude is found, record the ratio
+                if amp:
+                    amp['exa_decaywidth'] = br*total_width
+                # If not found, show this info
+                else:
+                    logger.info('No amplitude for %d -> %d %d is found.' %\
+                                       (pid, pid1, pid2))
+
+                # Jump to next line. Do not match the three_body_decay
+                continue
+
+
 #===============================================================================
 # Channel: A specialized Diagram object for decay
 #===============================================================================
@@ -3006,7 +3134,8 @@ class DecayAmplitude(diagram_generation.Amplitude):
         with the same final states and create a Process object to describe it.
         This could used to generate HELAS amplitude."""
 
-    sorted_keys = ['process', 'diagrams', 'apx_decaywidth', 'apx_br']
+    sorted_keys = ['process', 'diagrams', 'apx_decaywidth', 'apx_br',
+                   'exa_decaywidth']
 
     def default_setup(self):
         """Default values for all properties. Property 'diagrams' is now
@@ -3016,7 +3145,7 @@ class DecayAmplitude(diagram_generation.Amplitude):
         self['diagrams'] = ChannelList()
         self['apx_decaywidth'] = 0.
         self['apx_br'] = 0.
-        
+        self['exa_decaywidth'] = False
 
     def __init__(self, argument=None, model=None):
         """ Allow initialization with a Channel and DecayModel to create 
@@ -3068,6 +3197,11 @@ class DecayAmplitude(diagram_generation.Amplitude):
                 raise self.PhysicsObjectError, \
                         "%s is not a float." % str(value)
 
+        if name == 'exa_decaywidth':
+            if not isinstance(value, float) and not isinstance(value,bool):
+                raise self.PhysicsObjectError, \
+                        "%s is not a float." % str(value)
+
         return True
 
     def get(self, name):
@@ -3115,6 +3249,13 @@ class DecayAmplitude(diagram_generation.Amplitude):
                                 len(self['process']['legs'])-1)
         output += ''.join(['%11d' %leg.get('id') \
                                for leg in self['process']['legs'][1:]])
+
+        if format == 'cmp':
+            if self.get('exa_decaywidth'):
+                output += '\t%4.2f' % (self.get('apx_decaywidth')/self.get('exa_decaywidth'))
+            else:
+                output += '\tN/A'
+
         output += '   #Br(%s)\n' %self.get('process').input_string()
         
         # Output the channels if format is full
@@ -3123,7 +3264,7 @@ class DecayAmplitude(diagram_generation.Amplitude):
             output += self.get('diagrams').nice_string(6)
 
         # Return process only, get rid off the final \n
-        elif format == 'normal':
+        elif format == 'normal' or format == 'cmp':
             return output[:-1]
 
         # Raise error if format is wrong

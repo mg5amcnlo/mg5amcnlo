@@ -1044,7 +1044,7 @@ class Test_DecayModel(unittest.TestCase):
         self.assertEqual(sorted([p.get_pdg_code() \
                                      for p in full_sm.get('particles') \
                                      if p.get('is_stable')]), goal_stable_pid_2)
-        
+            
 
 #===============================================================================
 # Test_Channel
@@ -1720,17 +1720,46 @@ class Test_Channel(unittest.TestCase):
         #print channel_2.get_apx_decaywidth_nextlevel(model)
         #print channel_2.nice_string()
 
-    def test_apx_decaywidth_full(self):
-        """ The test to show the estimation of decay width."""
+    def test_apx_decaywidth_full_read_MG4_paramcard(self):
+        """ The test to show the estimation of decay width.
+            and also read the param_card of MG4. """
 
         model_base = import_ufo.import_model('mssm')
-        param_path = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
+        # Read MG5 param_card
+        param_path_1 = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
+        param_path_2 = os.path.join(_file_path,'../input_files/param_card_mssm_test.dat')
         model = decay_objects.DecayModel(model_base)
-        model.read_param_card(param_path)
+        model.read_param_card(param_path_2)
         
         model.find_all_channels(3)
-        model.write_decay_table()
-        particle = model.get_particle(1000025)
+        
+        # Read MG4 param_card
+        MG4_param_path_1 = os.path.join(MG5DIR,'../Calculators/mssm/param_card_0.dat')
+        MG4_param_path_2 = os.path.join(MG5DIR,'../Calculators/mssm/param_card_test.dat')
+
+        model.read_MG4_param_card_decay(MG4_param_path_2)
+
+        # Test if the calculated ratio is float or None
+        for part in model.get('particles'):
+            n_max = len(part['decay_amplitudes'].keys())
+            for n in range(2,n_max+2):
+                for amp in part.get_amplitudes(n):
+                    self.assertTrue(isinstance(amp['exa_decaywidth'], bool) or \
+                                        isinstance(amp['exa_decaywidth'], float))
+
+        particle = model.get_particle(35)
+        self.assertAlmostEqual(0.78950006*0.57480138,
+                               particle.get_amplitude([-5,5])['exa_decaywidth'])
+
+        # File name for test mssm
+        model.write_summary_decay_table('mssm_decay_summary_test.dat')
+        model.write_decay_table('cmp', 'mssm_decaytable_test.dat')
+        # Ordinary file names
+        #model.write_summary_decay_table()
+        #model.write_decay_table('cmp')
+        
+
+
         #for part in model.get('particles'):
         #    print part['pdg_code'], part['decay_width']
 
@@ -1741,6 +1770,8 @@ class Test_Channel(unittest.TestCase):
         #print len(particle.get_channels(3, False))
         #print particle.get_channels(3, False)[0].nice_string(),\
         #    particle.get('apx_decaywidth')
+
+
 
 
 #===============================================================================
@@ -1794,7 +1825,7 @@ class Test_DecayAmplitude(unittest.TestCase):
 
         # Set channels
         self.my_testmodel.find_all_channels(4)
-        print higgs.get_channels(4, True).nice_string()
+        #print higgs.get_channels(4, True).nice_string()
         h_mmvv_1 = higgs.get_channels(4, True)[5]
         h_mmvv_2 = higgs.get_channels(4, True)[9]
 
@@ -1804,6 +1835,7 @@ class Test_DecayAmplitude(unittest.TestCase):
         # goal id list for legs in process
         goal_id_list = [-12, -11, 11, 12, 25]
         self.assertEqual(sorted([l.get('id') for l in amplt_h_mmvv.get('process').get('legs')]), goal_id_list)
+
         # Check the legs in process
         for l in amplt_h_mmvv.get('process').get('legs'):
             if l.get('id') != 25:
@@ -1818,6 +1850,7 @@ class Test_DecayAmplitude(unittest.TestCase):
         goal_width += h_mmvv_2.get('apx_decaywidth')
         amplt_h_mmvv.get('diagrams').append(h_mmvv_2)
         amplt_h_mmvv.reset_width_br()
+
         # Test if the reset works.
         self.assertEqual(amplt_h_mmvv['apx_decaywidth'], 0.)
         # Test the get for decaywidth and branch ratio.
@@ -1855,9 +1888,11 @@ class Test_DecayAmplitude(unittest.TestCase):
         higgs.set_amplitudes(4, decay_objects.DecayAmplitudeList())
         self.assertEqual(higgs.get_amplitudes(4), 
                          decay_objects.DecayAmplitudeList())
+
         # Test the set from normal list of Amplitude
         higgs.set_amplitudes(4, [amplt_h_mmvv])
         self.assertEqual(higgs.get_amplitudes(4), my_amplist)
+        self.assertEqual(higgs.get_amplitudes(6), None)
 
         # Test for exceptions
         self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
@@ -1868,6 +1903,21 @@ class Test_DecayAmplitude(unittest.TestCase):
         self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
                           higgs.set_amplitudes,
                           4, decay_objects.DecayAmplitude())
+
+        # Test for get_amplitude
+        #higgs.get_amplitudes(4)
+        self.assertEqual(higgs.get_amplitude([12, -11, -12, 11]),
+                         amplt_h_mmvv)
+        self.assertEqual(higgs.get_amplitude([-12, -12, 11, 12]),
+                         None)
+
+        # Test for exception
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          higgs.get_amplitude,
+                          'Non-list')
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          higgs.get_amplitude,
+                          ['a', 1.23])
 
     def test_group_channels2amplitudes(self):
         """ Test the group_channels_2_amplitudes function."""
