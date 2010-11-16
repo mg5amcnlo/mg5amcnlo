@@ -1724,18 +1724,21 @@ class Test_Channel(unittest.TestCase):
         """ The test to show the estimation of decay width.
             and also read the param_card of MG4. """
 
+        # Read mssm
         model_base = import_ufo.import_model('mssm')
+        model = decay_objects.DecayModel(model_base)
+
         # Read MG5 param_card
         param_path_1 = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
         param_path_2 = os.path.join(_file_path,'../input_files/param_card_mssm_test.dat')
-        model = decay_objects.DecayModel(model_base)
         model.read_param_card(param_path_2)
         
+        # Find channels before read MG4 param_card
         model.find_all_channels(3)
-        
+       
         # Read MG4 param_card
-        MG4_param_path_1 = os.path.join(MG5DIR,'../Calculators/mssm/param_card_0.dat')
-        MG4_param_path_2 = os.path.join(MG5DIR,'../Calculators/mssm/param_card_test.dat')
+        MG4_param_path_1 = os.path.join(_file_path,'../input_files/param_card_0.dat')
+        MG4_param_path_2 = os.path.join(_file_path,'../input_files/param_card_test.dat')
 
         model.read_MG4_param_card_decay(MG4_param_path_2)
 
