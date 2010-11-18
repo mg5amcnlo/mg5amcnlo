@@ -596,11 +596,49 @@ def write_mirrorprocs(writer, subproc_group):
 #===============================================================================
 # write_coloramps_file
 #===============================================================================
-def write_coloramps_file(writer, matrix_element):
+def write_coloramps_file(writer, mapconfigs, matrix_element):
     """Write the coloramps.inc file for MadEvent"""
 
-    lines = get_icolamp_lines(matrix_element)
+    lines = get_icolamp_lines(mapconfigs, matrix_element, 1)
+    lines.insert(0, "logical icolamp(%d,%d,1)" % \
+                    (max(len(matrix_element.get('color_basis').keys()), 1),
+                     len(mapconfigs)))
 
+
+    # Write the file
+    writer.writelines(lines)
+
+    return True
+
+#===============================================================================
+# write_coloramps_group_file
+#===============================================================================
+def write_coloramps_group_file(writer, diagrams_for_config, maxflows,
+                               matrix_elements):
+    """Write the coloramps.inc file for MadEvent in Subprocess group mode"""
+
+    # Create a map from subprocess (matrix element) to a list of the diagrams corresponding to each config
+    
+    lines = []
+
+    subproc_to_confdiag = {}
+    for config in diagrams_for_config:
+        for subproc, diag in enumerate(config):
+            try:
+                subproc_to_confdiag[subproc].append(diag)
+            except KeyError:
+                subproc_to_confdiag[subproc] = [diag]
+
+    for subproc in sorted(subproc_to_confdiag.keys()):
+        lines.extend(get_icolamp_lines(subproc_to_confdiag[subproc],
+                                       matrix_elements[subproc],
+                                       subproc + 1))
+        
+    lines.insert(0, "logical icolamp(%d,%d,%d)" % \
+                    (maxflows,
+                     len(diagrams_for_config),
+                     len(matrix_elements)))
+    
     # Write the file
     writer.writelines(lines)
 
@@ -631,9 +669,13 @@ def write_configs_file(writer, matrix_element):
     # Extract number of external particles
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
-    return write_configs_file_from_diagrams(writer,
-                                            matrix_element.get('diagrams'),
-                                            nexternal, ninitial)
+    configs = [(i+1, d) for i,d in enumerate(matrix_element.get('diagrams')) \
+               if max(d.get_vertex_leg_numbers()) == 3]
+    mapconfigs = [c[0] for c in configs]
+    return mapconfigs, write_configs_file_from_diagrams(writer,
+                                                        [c[1] for c in configs],
+                                                        mapconfigs,
+                                                        nexternal, ninitial)
 
 #===============================================================================
 # write_group_configs_file
@@ -654,14 +696,19 @@ def write_group_configs_file(writer, subproc_group, diagrams_for_config):
     # Extract number of external particles
     (nexternal, ninitial) = subproc_group.get_nexternal_ninitial()
 
-    return write_configs_file_from_diagrams(writer, diagrams,
+    return len(diagrams), \
+           write_configs_file_from_diagrams(writer, diagrams,
+                                            range(1, len(diagrams) + 1),
                                             nexternal, ninitial)
 
 #===============================================================================
 # write_configs_file_from_diagrams
 #===============================================================================
-def write_configs_file_from_diagrams(writer, diagrams, nexternal, ninitial):
-    """Write the actual configs.inc file"""
+def write_configs_file_from_diagrams(writer, configs, mapconfigs,
+                                     nexternal, ninitial):
+    """Write the actual configs.inc file.
+    configs is the diagrams corresponding to configs,
+    mapconfigs gives the diagram number for each config."""
 
     lines = []
 
@@ -669,7 +716,7 @@ def write_configs_file_from_diagrams(writer, diagrams, nexternal, ninitial):
 
     s_and_t_channels = []
 
-    for idiag, helas_diag in enumerate(diagrams):
+    for iconfig, helas_diag in enumerate(configs):
         # Need to reorganize the topology so that we start with all
         # final state external particles and work our way inwards
 
@@ -683,40 +730,36 @@ def write_configs_file_from_diagrams(writer, diagrams, nexternal, ninitial):
             # Write out tchannels only if there are any non-trivial ones
             allchannels = schannels + tchannels
 
-        if max(helas_diag.get_vertex_leg_numbers()) > 3:
-            # For now, only 3-vertices allowed in configs.inc
-            continue
-        
         # Write out propagators for s-channel and t-channel vertices
 
-        iconfig = iconfig + 1
-        lines.append("# Diagram %d" % (idiag + 1))
+        lines.append("# Diagram %d" % (mapconfigs[iconfig]))
         # Correspondance between the config and the diagram = amp2
-        lines.append("data mapconfig(%d)/%d/" % (iconfig, idiag + 1))
+        lines.append("data mapconfig(%d)/%d/" % (iconfig + 1,
+                                                 mapconfigs[iconfig]))
 
         for vert in allchannels:
             daughters = [leg.get('number') for leg in vert.get('legs')[:-1]]
             last_leg = vert.get('legs')[-1]
             lines.append("data (iforest(i,%d,%d),i=1,%d)/%s/" % \
-                         (last_leg.get('number'), iconfig, len(daughters),
+                         (last_leg.get('number'), iconfig + 1, len(daughters),
                           ",".join([str(d) for d in daughters])))
             if vert in schannels:
                 lines.append("data sprop(%d,%d)/%d/" % \
-                             (last_leg.get('number'), iconfig,
+                             (last_leg.get('number'), iconfig + 1,
                               last_leg.get('id')))
             elif vert in tchannels[:-1]:
                 lines.append("data tprid(%d,%d)/%d/" % \
-                             (last_leg.get('number'), iconfig,
+                             (last_leg.get('number'), iconfig + 1,
                               last_leg.get('id')))
 
     # Write out number of configs
     lines.append("# Number of configs")
-    lines.append("data mapconfig(0)/%d/" % iconfig)
+    lines.append("data mapconfig(0)/%d/" % len(configs))
 
     # Write the file
     writer.writelines(lines)
 
-    return iconfig, s_and_t_channels
+    return s_and_t_channels
 
 #===============================================================================
 # write_decayBW_file
@@ -1294,14 +1337,15 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     write_auto_dsig_file(writers.FortranWriter(filename),
                          matrix_element)
 
-    filename = 'coloramps.inc'
-    write_coloramps_file(writers.FortranWriter(filename),
-                         matrix_element)
-
     filename = 'configs.inc'
-    nconfigs, s_and_t_channels = write_configs_file(\
+    mapconfigs, s_and_t_channels = write_configs_file(\
         writers.FortranWriter(filename),
         matrix_element)
+
+    filename = 'coloramps.inc'
+    write_coloramps_file(writers.FortranWriter(filename),
+                         mapconfigs,
+                         matrix_element)
 
     filename = 'decayBW.inc'
     write_decayBW_file(writers.FortranWriter(filename),
@@ -1340,7 +1384,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 
     filename = 'ngraphs.inc'
     write_ngraphs_file(writers.FortranWriter(filename),
-                       nconfigs)
+                       len(mapconfigs))
 
     filename = 'pmass.inc'
     write_pmass_file(writers.FortranWriter(filename),
@@ -1475,7 +1519,7 @@ def generate_subprocess_group_directory_v4_madevent(subproc_group,
         filename = 'matrix%d.f' % (ime+1)
         calls, ncolor = \
            write_matrix_element_v4_madevent(writers.FortranWriter(filename), 
-                                           matrix_element,
+                                            matrix_element,
                                             fortran_model,
                                             str(ime+1),
                                             subproc_group.get('diagram_maps')[\
@@ -1507,10 +1551,6 @@ def generate_subprocess_group_directory_v4_madevent(subproc_group,
     # Extract number of external particles
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
-    filename = 'coloramps.inc'
-    write_coloramps_file(writers.FortranWriter(filename),
-                         matrix_element)
-
     # Generate a list of diagrams corresponding to each configuration
     # [[d1, d2, ...,dn],...] where 1,2,...,n is the subprocess number
     # If a subprocess has no diagrams for this config, the number is 0
@@ -1520,6 +1560,12 @@ def generate_subprocess_group_directory_v4_madevent(subproc_group,
     filename = 'auto_dsig.f'
     write_super_auto_dsig_file(writers.FortranWriter(filename),
                                subproc_group)
+
+    filename = 'coloramps.inc'
+    write_coloramps_group_file(writers.FortranWriter(filename),
+                               subproc_diagrams_for_config,
+                               maxflows,
+                               matrix_elements)
 
     filename = 'config_subproc_map.inc'
     write_config_subproc_map_file(writers.FortranWriter(filename),
@@ -1742,33 +1788,50 @@ def get_den_factor_line(matrix_element):
     return "DATA IDEN/%2r/" % \
            matrix_element.get_denominator_factor()
 
-def get_icolamp_lines(matrix_element):
-    """Return the ICOLAMP matrix, showing which AMPs are parts of
-    which JAMPs."""
+def get_icolamp_lines(mapconfigs, matrix_element, num_matrix_element):
+    """Return the ICOLAMP matrix, showing which JAMPs contribute to
+    which configs (diagrams)."""
 
     ret_list = []
 
     booldict = {False: ".false.", True: ".true."}
 
-    amplitudes = matrix_element.get_all_amplitudes()
+    if not matrix_element.get('color_basis'):
+        # No color, so only one color factor. Simply write a ".true." 
+        # for each config (i.e., each diagram with only 3 particle
+        # vertices
+        configs = len(mapconfigs)
+        ret_list.append("DATA(icolamp(1,i,%d),i=1,%d)/%s/" % \
+                        (num_matrix_element, configs,
+                         ','.join([".true." for i in range(configs)])))
+        return ret_list
 
-    color_amplitudes = matrix_element.get_color_amplitudes()
+    # There is a color basis - create a list showing which JAMPs have
+    # contributions to which configs
 
-    ret_list.append("logical icolamp(%d,%d)" % \
-                    (len(amplitudes), len(color_amplitudes)))
+    # Crate dictionary between diagram number and JAMP number
+    diag_jamp = {}
+    for ijamp, col_basis_elem in \
+            enumerate(sorted(matrix_element.get('color_basis').keys())):
+        for diag_tuple in matrix_element.get('color_basis')[col_basis_elem]:
+            diag_num = diag_tuple[0] + 1
+            # Add this JAMP number to this diag_num
+            diag_jamp[diag_num] = diag_jamp.setdefault(diag_num, []) + \
+                                [ijamp+1]
 
-    for icolor, coeff_list in enumerate(color_amplitudes):
+    colamps = ijamp + 1
 
-        # List of amplitude numbers used in this JAMP
-        amp_list = [amp_number for (dummy, amp_number) in coeff_list]
+    for iconfig, num_diag in enumerate(mapconfigs):        
+        if num_diag == 0:
+            continue
 
         # List of True or False 
-        bool_list = [(i + 1 in amp_list) for i in \
-                          range(len(amplitudes))]
+        bool_list = [(i + 1 in diag_jamp[num_diag]) for i in \
+                          range(colamps)]
         # Add line
-        ret_list.append("DATA(icolamp(i,%d),i=1,%d)/%s/" % \
-                            (icolor + 1, len(bool_list),
-                             ','.join(["%s" % booldict[i] for i in \
+        ret_list.append("DATA(icolamp(i,%d,%d),i=1,%d)/%s/" % \
+                            (iconfig+1, num_matrix_element, colamps,
+                             ','.join(["%s" % booldict[b] for b in \
                                        bool_list])))
 
     return ret_list

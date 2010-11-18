@@ -23,7 +23,6 @@ $server = $ENV{'SERVER_NAME'};
 #  get the name of the directory
 #
   my $fullname=qx(pwd);
-  print $fullname;
   my @temp=split /\//,$fullname;
   my @couplings;
 #  foreach $ciccio (@temp){

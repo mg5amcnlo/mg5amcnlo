@@ -1,4 +1,4 @@
-##############################################################################
+################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
 #
@@ -1519,10 +1519,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 collect_mirror_procs = \
                                  "group_subprocesses_output" in self._options \
                                  and self._options['group_subprocesses_output']
+                ignore_six_quark_processes = \
+                               self._options['ignore_six_quark_processes'] if \
+                               "ignore_six_quark_processes" in self._options \
+                               else []
 
                 myproc = diagram_generation.MultiProcess(myprocdef,
-                                                         collect_mirror_procs =\
-                                                         collect_mirror_procs)
+                                              collect_mirror_procs =\
+                                              collect_mirror_procs,
+                                              ignore_six_quark_processes = \
+                                              ignore_six_quark_processes)
                     
                 for amp in myproc.get('amplitudes'):
                     if amp not in self._curr_amps:
@@ -1875,10 +1881,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Generate processes
         collect_mirror_procs = "group_subprocesses_output" in self._options \
                                and self._options['group_subprocesses_output']
+        ignore_six_quark_processes = \
+                            self._options['ignore_six_quark_processes'] if \
+                            "ignore_six_quark_processes" in self._options \
+                            else []
 
         myproc = diagram_generation.MultiProcess(myprocdef,
-                                                 collect_mirror_procs = \
-                                                 collect_mirror_procs)
+                                              collect_mirror_procs = \
+                                              collect_mirror_procs,
+                                              ignore_six_quark_processes = \
+                                              ignore_six_quark_processes)
         self._curr_amps = myproc.get('amplitudes')
         cpu_time2 = time.time()
 

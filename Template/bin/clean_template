@@ -24,12 +24,14 @@ fi
 
 #	Clear out any old information/directories
 
-rm -f *.html >& /dev/null
 cp -p HTML/info-default.html HTML/info.html
 rm -f bin/plot_events >& /dev/null
 rm -f bin/scale_events >& /dev/null
 rm -f bin/sum_html >& /dev/null
 rm -f bin/select_events >& /dev/null
+
+bin/gen_cardhtml-pl
+
 if [[ ! -d lib ]]; then
     echo "Error: lib directory not found"
     exit
@@ -49,6 +51,7 @@ rm -f Source/DECAY/*.o >& /dev/null
 rm -f Source/nexternal.inc >& /dev/null
 rm -f Source/leshouche.inc >& /dev/null
 rm -f Source/coupl.inc >& /dev/null
+
 
 # MG5 info are copied inside the Python script 
 

@@ -67,6 +67,9 @@ rm proc_log.txt >& /dev/null
 echo "Started `date`" >  ./proc_log.txt
 echo "Running..."
 
+cp -p HTML/thinking.gif HTML/card.jpg
+rm SubProcesses/done >& /dev/null
+
 $gen_card >& /dev/null
 
 # launch the mg5 program
@@ -74,7 +77,6 @@ if [[ $card_use == '4' ]]; then
 # Run ./mg5 with stderr going to both the file proc_log.txt and to terminal
 # output. See http://acs.lbl.gov/~ksb/Scratch/sh_redir_pipe.html
     ((echo import proc_v4 ./Cards/proc_card.dat | $mgdir/mg5 3>&1 1>&2 2>&3) | tee /dev/tty) >> proc_log.txt 2>&1
-    exit
 elif [[ $card_use == '5' ]]; then
 # Run ./mg5 with stderr going to both the file proc_log.txt and to terminal
 # output. See http://acs.lbl.gov/~ksb/Scratch/sh_redir_pipe.html
@@ -94,4 +96,12 @@ if [[  $tag == "--web"  ]]; then
 fi
 rm generating
 echo 'done'
+
+# Check that generation worked
+if [[ ! -e SubProcesses/subproc.mg ]]; then
+
+    cp -p HTML/stop.jpg HTML/card.jpg
+    echo "No diagrams for this process!"
+fi
+
 $gen_card >& /dev/null

@@ -31,7 +31,7 @@ C
 C   
 C LOCAL VARIABLES 
 C  
-      INTEGER I,J,K,LUN,IDUM,IPROC,ICONF,IMIRROR,JC(NEXTERNAL)
+      INTEGER I,J,K,LUN,IDUM,ICONF,IMIRROR,JC(NEXTERNAL)
       DATA IDUM/0/
       LOGICAL FIRST_TIME
       DATA FIRST_TIME/.TRUE./
@@ -79,6 +79,9 @@ C   IB gives which beam is which (for mirror processes)
 C   ICONFIG has this config number
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
+C     IPROC has the present process number
+      INTEGER IPROC
+      COMMON/TO_IPROC/IPROC
 C ----------
 C BEGIN CODE
 C ----------
@@ -137,6 +140,7 @@ C     Set SELPROC democratically
         DO J=1,SYMCONF(0)
           WRITE(*,'(100E12.4)')((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
+        RETURN
       ELSE IF(IMODE.EQ.2)THEN
 C     Reweight PROCSEL according to the actual weigths
         SUMPROB=0D0
@@ -175,8 +179,7 @@ c     Update SELPROC
         DO J=1,SYMCONF(0)
           WRITE(*,'(100I12)')((NUMEVTS(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
-        
-
+        RETURN
       ELSE IF(IMODE.EQ.3)THEN
 C     Write out weight file
         LUN=NEXTUNOPEN()
@@ -187,6 +190,8 @@ C     Write out weight file
         CLOSE(LUN)
         RETURN
       ENDIF
+
+C   IMODE.EQ.0, regular run mode
 
       IF (PASSCUTS(PP)) THEN
 C     Select among the subprocesses based on SELPROC

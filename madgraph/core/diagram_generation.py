@@ -784,9 +784,14 @@ class MultiProcess(base_objects.PhysicsObject):
         # DecayChainAmplitudeList, depending on whether there are
         # decay chains in the process definitions or not.
         self['amplitudes'] = AmplitudeList()
+        # Flag for whether to combine IS mirror processes together
         self['collect_mirror_procs'] = False
+        # List of quark flavors where we ignore processes with at
+        # least 6 quarks (three quark lines)
+        self['ignore_six_quark_processes'] = []
 
-    def __init__(self, argument=None, collect_mirror_procs = False):
+    def __init__(self, argument=None, collect_mirror_procs = False,
+                 ignore_six_quark_processes = []):
         """Allow initialization with ProcessDefinition or
         ProcessDefinitionList"""
 
@@ -804,6 +809,7 @@ class MultiProcess(base_objects.PhysicsObject):
             super(MultiProcess, self).__init__()
 
         self['collect_mirror_procs'] = collect_mirror_procs
+        self['ignore_six_quark_processes'] = ignore_six_quark_processes
         
         if isinstance(argument, base_objects.ProcessDefinition) or \
                isinstance(argument, base_objects.ProcessDefinitionList):
@@ -829,6 +835,11 @@ class MultiProcess(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid boolean" % str(value)
 
+        if name == 'ignore_six_quark_processes':
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list" % str(value)
+
         return True
 
     def get(self, name):
@@ -843,8 +854,9 @@ class MultiProcess(base_objects.PhysicsObject):
                         DecayChainAmplitude(process_def))
                 else:
                     self['amplitudes'].extend(\
-                        MultiProcess.generate_multi_amplitudes(process_def,
-                                             self.get('collect_mirror_procs')))
+                       MultiProcess.generate_multi_amplitudes(process_def,
+                                       self.get('collect_mirror_procs'),
+                                       self.get('ignore_six_quark_processes')))
 
         return MultiProcess.__bases__[0].get(self, name) # call the mother routine
 
@@ -855,7 +867,8 @@ class MultiProcess(base_objects.PhysicsObject):
 
     @staticmethod
     def generate_multi_amplitudes(process_definition,
-                                  collect_mirror_procs = False):
+                                  collect_mirror_procs = False,
+                                  ignore_six_quark_processes = []):
         """Generate amplitudes in a semi-efficient way.
         Make use of crossing symmetry for processes that fail diagram
         generation, but not for processes that succeed diagram
@@ -917,6 +930,13 @@ class MultiProcess(base_objects.PhysicsObject):
 
                 # Check for crossed processes
                 sorted_legs = tuple(sorted(legs.get_outgoing_id_list(model)))
+
+                # Check for six-quark processes
+                if ignore_six_quark_processes and \
+                       len([i for i in sorted_legs if abs(i) in \
+                            ignore_six_quark_processes]) >= 6:
+                    continue
+                    
                 # Check if crossed process has already failed,
                 # in that case don't check process
                 if sorted_legs in failed_procs:

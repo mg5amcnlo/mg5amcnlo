@@ -20,8 +20,8 @@
       integer ito(-nexternal+3:nexternal),iseed
       integer icolalt(2,-nexternal+3:2*nexternal-3)
       double precision qicl(-nexternal+3:2*nexternal-3), factpm
-      double precision xtarget
-      data iseed/-1/
+      real xtarget
+      data iseed/0/
 
       double precision ZERO
       parameter (ZERO=0d0)
@@ -44,9 +44,8 @@
       integer sprop(-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       common/to_sprop/sprop,tprid
-      integer            mapconfig(0:lmaxconfigs), this_config
-      common/to_mconfigs/mapconfig, this_config
-      integer iconfig,igraph
+      integer            mapconfig(0:lmaxconfigs), iconfig
+      common/to_mconfigs/mapconfig, iconfig
 
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
@@ -58,10 +57,16 @@
       logical             OnBW(-nexternal:0)     !Set if event is on B.W.
       common/to_BWEvents/ OnBW
 
+C     iproc has the present process number
+      integer iproc
+      common/to_iproc/iproc
+      data iproc/1/
+
 c      integer ncols,ncolflow(maxamps),ncolalt(maxamps),icorg
 c      common/to_colstats/ncols,ncolflow,ncolalt,icorg
 
-      double precision pt,ran1
+      double precision pt
+      real ran1
       external pt,ran1
 
       if (first_time) then
@@ -74,12 +79,6 @@ c      common/to_colstats/ncols,ncolflow,ncolalt,icorg
 c   
 c   Choose the config (diagram) which was actually used to produce the event
 c   
-      iconfig=mincfig
-      if(maxcfig-mincfig.ne.0) then
-        write(*,*) 'Error! Cannot cmaxcfig != mincfig: ',maxcfig,mincfig
-        return
-      endif
-
 c   ...unless the diagram is passed in igscl(1); then use that diagram
 c      if (igscl(0).ne.0) then
 c        if (btest(mlevel,3)) then
@@ -92,20 +91,19 @@ c
 c    Choose a color flow which is certain to work with the propagator
 c    structure of the chosen diagram and use that as an alternative
 c   
-      igraph=mapconfig(iconfig)
 
-      nc = jamp2(0)
+      nc = int(jamp2(0))
       if(nc.gt.0)then
-      if(icolamp(igraph,1)) then
+      if(icolamp(1,iconfig,iproc)) then
         targetamp(1)=jamp2(1)
-c        print *,'Color flow 1 allowed for graph ',igraph
+c        print *,'Color flow 1 allowed for config ',iconfig
       else
         targetamp(1)=0d0
       endif
       do ic =2,nc
-        if(icolamp(igraph,ic))then
+        if(icolamp(ic,iconfig,iproc))then
           targetamp(ic) = jamp2(ic)+targetamp(ic-1)
-c          print *,'Color flow ',ic,' allowed for graph ',igraph
+c          print *,'Color flow ',ic,' allowed for config ',iconfig
         else
           targetamp(ic)=targetamp(ic-1)
         endif
