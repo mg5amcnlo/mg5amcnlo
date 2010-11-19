@@ -105,7 +105,9 @@ def copy_v4standalone(mgme_dir, dir_path, clean):
 
     try:
         subprocess.call([os.path.join('bin', 'standalone')],
-                        stdout = os.open(os.devnull, os.O_RDWR), cwd=dir_path)
+                        stdout = os.open(os.devnull, os.O_RDWR),
+                        stderr = os.open(os.devnull, os.O_RDWR),
+                        cwd=dir_path)
     except OSError:
         # Probably standalone already called
         pass
@@ -972,9 +974,16 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     including the necessary matrix.f and various helper files"""
 
     cwd = os.getcwd()
-
-    os.chdir(path)
-
+    try:
+        os.chdir(path)
+    except OSError, error:
+        error_msg = "The directory %s should exist in order to be able " % path + \
+                    "to \"export\" in it. If you see this error message by " + \
+                    "typing the command \"export\" please consider to use " + \
+                    "instead the command \"output\". "
+        raise MadGraph5Error, error_msg 
+        
+         
     pathdir = os.getcwd()
 
     # Create the directory PN_xx_xxxxx in the specified path

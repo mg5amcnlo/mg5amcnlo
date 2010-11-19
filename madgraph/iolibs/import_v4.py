@@ -80,11 +80,11 @@ def find_model_path(model_path, mgme_dir):
 
     if os.path.isdir(model_path):
         pass
-    elif mgme_dir and os.path.isdir(os.path.join(mgme_dir, 'Models', model_path)):
-        model_path = os.path.join(mgme_dir, 'Models', model_path)
     elif mgme_dir and os.path.isdir(os.path.join(mgme_dir, 'models',
                                                  model_path + "_v4")):
         model_path = os.path.join(mgme_dir, 'models', model_path + "_v4")
+    elif mgme_dir and os.path.isdir(os.path.join(mgme_dir, 'Models', model_path)):
+        model_path = os.path.join(mgme_dir, 'Models', model_path)
     elif not mgme_dir:
         error_text = "Path %s is not a valid pathname\n" % model_path
         error_text += "and no MG_ME installation detected in order to search in Models"

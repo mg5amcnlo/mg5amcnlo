@@ -111,7 +111,7 @@ class TestMatrixElementChecker(unittest.TestCase):
         comparison = process_checks.check_processes(myproc)[0][0]
 
         self.assertEqual(len(comparison['values']), 8)
-        self.assertTrue(max(comparison['values']) - min(comparison['values']) > 0.)
+        self.assertTrue(comparison['values'][0] > 0)
         self.assertTrue(comparison['passed'])
 
         comparison = process_checks.check_gauge(myproc)

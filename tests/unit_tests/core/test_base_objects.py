@@ -205,7 +205,7 @@ class ParticleTest(unittest.TestCase):
         """Test particle list initialization, search and dict generation
         functions."""
 
-        mylist = [self.mypart] * 10
+        mylist = [self.mypart]
         mypartlist = base_objects.ParticleList(mylist)
 
         not_a_part = 1
@@ -230,7 +230,7 @@ class ParticleTest(unittest.TestCase):
 
         self.assertEqual(mydict, mypartlist.generate_dict())
 
-        my_ref_dict = {(6, -6):0, (-6, 6):0}
+        my_ref_dict = {(6, -6):[0], (-6, 6):[0]}
 
         self.assertEqual(my_ref_dict, mypartlist.generate_ref_dict())
 
@@ -400,13 +400,13 @@ class InteractionTest(unittest.TestCase):
 
         myinter.generate_dict_entries(ref_dict_to0, ref_dict_to1)
 
-        goal_ref_dict_to0 = { (-2, 1, 3, 4):0}
+        goal_ref_dict_to0 = { (-2, 1, 3, 4):[0]}
 
         self.assertEqual(ref_dict_to0, goal_ref_dict_to0)
 
         # Check it still work if I add a 3-interaction
 
-        myinterlist = base_objects.InteractionList([myinter] * 10)
+        myinterlist = base_objects.InteractionList([myinter])
 
         add_inter = base_objects.Interaction()
         add_inter.set('particles', base_objects.ParticleList([part1,
@@ -414,7 +414,7 @@ class InteractionTest(unittest.TestCase):
                                                               part3]))
         myinterlist.append(add_inter)
 
-        goal_ref_dict_to0[(-2, 1, 3)] = 0
+        goal_ref_dict_to0[(-2, 1, 3)] = [0]
 
         self.assertEqual(myinterlist.generate_ref_dict()[0], goal_ref_dict_to0)
 
@@ -619,8 +619,10 @@ class ModelTest(unittest.TestCase):
                           'wrong_subclass', None)
 
         # For each subclass
-        self.assertFalse(mymodel.set('particles', not_a_string))
-        self.assertFalse(mymodel.set('interactions', not_a_string))
+        self.assertRaises(AssertionError,
+                          mymodel.set, 'particles', not_a_string)
+        self.assertRaises(AssertionError,
+                          mymodel.set, 'interactions', not_a_string)
 
     def test_dictionaries(self):
         """Test particle dictionary in Model"""
@@ -666,6 +668,81 @@ class ModelTest(unittest.TestCase):
         myinterdict[2] = interactions[1]
         self.assertEqual(myinterdict, self.mymodel.get('interaction_dict'))
         
+    def test_ref_dict_multiple_interactions(self):
+        """Test ref_dicts with multiple interactions with same particles"""
+
+        myinterlist = base_objects.InteractionList()
+        mypartlist = base_objects.ParticleList()
+
+        # Create a model with gluon and top quark + a single interaction
+        mypartlist.append(base_objects.Particle({'name':'t',
+                  'antiname':'t~',
+                  'spin':2,
+                  'color':3,
+                  'mass':'mt',
+                  'width':'wt',
+                  'texname':'t',
+                  'antitexname':'\\overline{t}',
+                  'line':'straight',
+                  'charge':2. / 3.,
+                  'pdg_code':6,
+                  'propagating':True,
+                  'self_antipart':False}))
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        antit = copy.copy(mypartlist[0])
+        antit.set('is_part', False)
+
+        myinterlist.append(base_objects.Interaction({
+                      'id':1,
+                      'particles': base_objects.ParticleList(\
+                                            [mypartlist[0], \
+                                             antit, \
+                                             mypartlist[1]]),
+                      'color': [color.ColorString([color.f(1, 2, 3),
+                                                   color.d(1, 2, 3)])],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id':2,
+                      'particles': base_objects.ParticleList(\
+                                            [mypartlist[0], \
+                                             antit, \
+                                             mypartlist[1]]),
+                      'color': [color.ColorString([color.f(1, 2, 3),
+                                                   color.d(1, 2, 3)])],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ2'},
+                      'orders':{'QED':1}}))
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+
+        self.assertEqual(mymodel.get('ref_dict_to0'),
+                         {(-6, 6, 21): [1, 2], (6, -6): [0],
+                          (21, 21): [0], (-6, 6): [0]})
+
+        self.assertEqual(mymodel.get('ref_dict_to1'),
+                         {(-6, 21): [(-6, 1), (-6, 2)],
+                          (-6, 6): [(21, 1), (21, 2)],
+                          (6, 21): [(6, 1), (6, 2)]})
+
     def test_check_majoranas(self):
         """Test the check_majoranas function"""
 
@@ -1566,3 +1643,17 @@ class ProcessDefinitionTest(unittest.TestCase):
         goal = goal + "    \'decay_chains\': []\n}"
         self.assertEqual(goal, str(self.my_process_definition))
 
+#===============================================================================
+# HelperTest
+#===============================================================================
+class HelperTest(unittest.TestCase):
+    """Test class for helper functions"""
+
+
+    def test_make_unique(self):
+        """Test the make_unique function"""
+
+        doubletlist = [4, 6, 2, 4, 6, 2, 2, 2]
+        base_objects.make_unique(doubletlist)
+        self.assertEqual(doubletlist,
+                         [4, 6, 2])

@@ -181,9 +181,6 @@ class UFOMG5Converter(object):
         """add an interaction in the MG5 model. interaction_info is the 
         UFO vertices information."""
         
-        # Initialize a new interaction with a new id tag
-        interaction = base_objects.Interaction({'id':len(self.interactions)+1})
-        
         # Import particles content:
         particles = [self.model.get_particle(particle.pdg_code) \
                                     for particle in interaction_info.particles]
@@ -194,35 +191,40 @@ class UFOMG5Converter(object):
             
         particles = base_objects.ParticleList(particles)
         
-        interaction.set('particles', particles)       
-        
         # Import Lorentz content:
-        names = [helas.name for helas in interaction_info.lorentz]
-        interaction.set('lorentz', names)
+        lorentz = [helas.name for helas in interaction_info.lorentz]
         
-        # Import couplings/order information:
-        mg5_coupling = {}
-        mg5_order = {}
-        for key, value in interaction_info.couplings.items():
-            mg5_coupling[key] = value.name
-            mg5_order.update(value.order)
-        interaction.set('couplings', mg5_coupling)
-        interaction.set('orders', mg5_order)
-
         # Import color information:
         colors = [self.treat_color(color_obj, interaction_info) for color_obj in \
                                     interaction_info.color]
         
-        interaction.set('color', colors)
+        order_to_int={}
+        
+        for key, couplings in interaction_info.couplings.items():
+            if not isinstance(couplings, list):
+                couplings = [couplings]
+            for coupling in couplings:
+                order = tuple(coupling.order.items())
+                if order in order_to_int:
+                    order_to_int[order].get('couplings')[key] = coupling.name
+                else:
+                    # Initialize a new interaction with a new id tag
+                    interaction = base_objects.Interaction({'id':len(self.interactions)+1})                
+                    interaction.set('particles', particles)              
+                    interaction.set('lorentz', lorentz)
+                    interaction.set('couplings', {key: coupling.name})
+                    interaction.set('orders', coupling.order)            
+                    interaction.set('color', colors)
+                    order_to_int[order] = interaction
+                    # add to the interactions
+                    self.interactions.append(interaction)
 
-        # add to the interactions
-        self.interactions.append(interaction)
     
     _pat_T = re.compile(r'T\((?P<first>\d*),(?P<second>\d*)\)')
     _pat_id = re.compile(r'Identity\((?P<first>\d*),(?P<second>\d*)\)')
     
     def treat_color(self, data_string, interaction_info):
-        """ convert the string to ColorStirng"""
+        """ convert the string to ColorString"""
         
         #original = copy.copy(data_string)
         #data_string = p.sub('color.T(\g<first>,\g<second>)', data_string)

@@ -2321,7 +2321,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             else:
                 # This is a v4 model
                 self._model_v4_path = import_v4.find_model_path(\
-                    self._curr_model.get('name'), self._mgme_dir)
+                    self._curr_model.get('name').replace("_v4", ""),
+                    self._mgme_dir)
                 self._curr_fortran_model = \
                   helas_call_writers.FortranHelasCallWriter(self._curr_model)
 
@@ -2347,7 +2348,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     if not model.get('parameters'):
                         # This is a v4 model.  Look for path.
                         self._model_v4_path = import_v4.find_model_path(\
-                                   model.get('name'), self._mgme_dir)
+                                   model.get('name').replace("_v4", ""),
+                                   self._mgme_dir)
                         self._curr_fortran_model = \
                                 helas_call_writers.FortranHelasCallWriter(\
                                                               model)

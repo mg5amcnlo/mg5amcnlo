@@ -401,8 +401,8 @@ class ParticleList(PhysicsObjectList):
         ref_dict_to0 = {}
 
         for part in self:
-            ref_dict_to0[(part.get_pdg_code(), part.get_anti_pdg_code())] = 0
-            ref_dict_to0[(part.get_anti_pdg_code(), part.get_pdg_code())] = 0
+            ref_dict_to0[(part.get_pdg_code(), part.get_anti_pdg_code())] = [0]
+            ref_dict_to0[(part.get_anti_pdg_code(), part.get_pdg_code())] = [0]
 
         return ref_dict_to0
 
@@ -538,7 +538,9 @@ class Interaction(PhysicsObject):
 
         pdg_tuple = tuple(sorted([p.get_pdg_code() for p in self['particles']]))
         if pdg_tuple not in ref_dict_to0.keys():
-            ref_dict_to0[pdg_tuple] = self['id']
+            ref_dict_to0[pdg_tuple] = [self['id']]
+        else:
+            ref_dict_to0[pdg_tuple].append(self['id'])
 
         # Create n-1>1 entries. Note that, in the n-1 > 1 dictionary,
         # the n-1 entries should have opposite sign as compared to
@@ -740,12 +742,16 @@ class Model(PhysicsObject):
         regenerate dictionaries."""
 
         if name == 'particles':
+            # Ensure no doublets in particle list
+            make_unique(value)
             # Reset dictionaries
             self['particle_dict'] = {}
             self['ref_dict_to0'] = {}
             self['got_majoranas'] = None
 
         if name == 'interactions':
+            # Ensure no doublets in interaction list
+            make_unique(value)
             # Reset dictionaries
             self['interaction_dict'] = {}
             self['ref_dict_to1'] = {}
@@ -1894,3 +1900,23 @@ class ProcessDefinitionList(PhysicsObjectList):
         """Test if object obj is a valid ProcessDefinition for the list."""
 
         return isinstance(obj, ProcessDefinition)
+
+#===============================================================================
+# Global helper functions
+#===============================================================================
+
+def make_unique(doubletlist):
+    """Make sure there are no doublets in the list doubletlist.
+    Note that this is a slow implementation, so don't use if speed 
+    is needed"""
+
+    assert isinstance(doubletlist, list), \
+           "Argument to make_unique must be list"
+    
+
+    uniquelist = []
+    for elem in doubletlist:
+        if elem not in uniquelist:
+            uniquelist.append(elem)
+
+    doubletlist[:] = uniquelist[:]

@@ -71,8 +71,6 @@ usage = "usage: %prog [options] [FILE] "
 parser = optparse.OptionParser(usage=usage)
 parser.add_option("-l", "--logging", default='INFO',
                   help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
-parser.add_option("-d", "--mgme_dir", default='', dest = 'mgme_dir',
-                  help="Use MG_ME directory MGME_DIR")
 (options, args) = parser.parse_args()
 if len(args) == 0:
     args = ''
@@ -81,32 +79,11 @@ if len(args) == 0:
 logging.basicConfig(level=vars(logging)[options.logging],
                     format="%(message)s")
 
-# If an MG_ME dir is given in the options, use that dir for Template
-# and v4 models
-
-mgme_dir = options.mgme_dir
-
-# Set Template directory path
-
-if mgme_dir and path.isdir(path.join(mgme_dir, 'Template')) \
-   and path.isdir(path.join(mgme_dir, 'HELAS')):
-    template_path = path.join(mgme_dir, 'Template')
-    helas_path = path.join(mgme_dir, 'HELAS')
-elif MG4DIR and path.isdir(path.join(MG4DIR, 'Template')) \
-    and path.isdir(path.join(MG4DIR, 'HELAS')):
-    template_path = path.join(MG4DIR, 'Template')
-    helas_path = path.join(MG4DIR, 'HELAS')
-else:
-    logging.error("Error: Could not find the Template directory in the path")
-    logging.error("       Please supply MG_ME path using the -d option")
-    exit()
-
-
-    
 # 1. bzr branch the present directory to a new directory
 #    MadGraph5_vVERSION
 
-filepath = "MadGraph5_v" + misc.get_pkg_info()['version']
+filepath = "MadGraph5_v" + misc.get_pkg_info()['version'].replace(".", "_")
+filename = "MadGraph5_v" + misc.get_pkg_info()['version'] + ".tar.gz"
 if path.exists(filepath):
     logging.info("Removing existing directory " + filepath)
     shutil.rmtree(filepath)
@@ -114,17 +91,35 @@ if path.exists(filepath):
 logging.info("Branching " + MG5DIR + " to directory " + filepath)
 status = subprocess.call(['bzr', 'branch', MG5DIR, filepath])
 if status:
-    logging.error("Script stopped")
+    logging.error("bzr branch failed. Script stopped")
     exit()
 
 # 2. Copy the Template either from the present directory or from a valid
 #    MG_ME directory in the path or given by the -d flag, and remove the
 #    bin/newprocess file
 
-logging.info("Copying " + template_path)
-shutil.copytree(template_path, path.join(filepath, 'Template'), symlinks = True)
+devnull = os.open(os.devnull, os.O_RDWR)
+
+logging.info("Getting Template from cvs")
+status = subprocess.call(['cvs', 
+                          '-d',
+                          ':pserver:anonymous@cp3wks05.fynu.ucl.ac.be:/usr/local/CVS',
+                          'checkout', '-d', 'Template', 'MG_ME/Template'],
+                         stdout = devnull, stderr = devnull,
+                         cwd = filepath)
+if status:
+    logging.error("CVS checkout failed, exiting")
+    exit()
+
 if path.exists(path.join(filepath, 'Template', 'bin', 'newprocess')):
     os.remove(path.join(filepath, 'Template', 'bin', 'newprocess'))
+if path.exists(path.join(filepath, 'Template', 'bin', 'newprocess_sa')):
+    os.remove(path.join(filepath, 'Template', 'bin', 'newprocess_sa'))
+if path.exists(path.join(filepath, 'Template', 'bin', 'newprocess_dip')):
+    os.remove(path.join(filepath, 'Template', 'bin', 'newprocess_dip'))
+if path.exists(path.join(filepath, 'Template', 'bin', 'newprocess_dip_qed')):
+    os.remove(path.join(filepath, 'Template', 'bin', 'newprocess_dip_qed'))
+
 # Remove CVS directories
 for i in range(6):
     cvs_dirs = glob.glob(path.join(filepath,
@@ -133,12 +128,18 @@ for i in range(6):
         break
     for cvs_dir in cvs_dirs:
         shutil.rmtree(cvs_dir)
-logging.info("Copying " + helas_path)
-try:
-    shutil.copytree(helas_path, path.join(filepath, 'HELAS'), symlinks = True)
-except OSError as error:
-    logging.error("Error while copying HELAS directory: " + error.strerror)
+
+logging.info("Getting HELAS from cvs")
+status = subprocess.call(['cvs', 
+                          '-d',
+                          ':pserver:anonymous@cp3wks05.fynu.ucl.ac.be:/usr/local/CVS',
+                          'checkout', '-d', 'HELAS', 'MG_ME/HELAS'],
+                         stdout = devnull, stderr = devnull,
+                         cwd = filepath)
+if status:
+    logging.error("CVS checkout failed, exiting")
     exit()
+
 # Remove CVS directories
 for i in range(3):
     cvs_dirs = glob.glob(path.join(filepath,
@@ -153,63 +154,58 @@ for i in range(3):
 #    directory (with names modelname_v4)
 
 model_path = ""
-if mgme_dir:
-    if path.isdir(path.join(mgme_dir, 'Models')):
-        model_path = path.join(mgme_dir, 'Models')
-elif MG4DIR and path.isdir(path.join(MG4DIR, 'Models')):
-    model_path = path.join(MG4DIR, 'Models')
 
-if model_path:
-    logging.info("Copying v4 models from " + model_path + ":")
-    for mdir in [d for d in glob.glob(path.join(model_path, "*")) \
-                 if path.isdir(d) and \
-                 path.exists(path.join(d, "particles.dat"))]:
-        modelname = path.split(mdir)[-1]
-        new_m_path = path.join(filepath, 'models', modelname + "_v4")
-        logging.info(mdir + " -> " + new_m_path)
-        shutil.copytree(mdir, new_m_path)
-        if path.exists(path.join(new_m_path, "model.pkl")):
-            os.remove(path.join(new_m_path, "model.pkl"))
-        # Remove CVS directories
-        for i in range(2):
-            cvs_dirs = glob.glob(path.join(path.join(new_m_path, *(['*']*i)),
-                                           'CVS'))
-            if not cvs_dirs:
-                break
-            for cvs_dir in cvs_dirs:
-                shutil.rmtree(cvs_dir)
+logging.info("Getting Models from cvs")
+status = subprocess.call(['cvs', 
+                          '-d',
+                          ':pserver:anonymous@cp3wks05.fynu.ucl.ac.be:/usr/local/CVS',
+                          'checkout', '-d', 'Models_new', 'MG_ME/Models'],
+                         stdout = devnull, stderr = devnull,
+                         cwd = filepath)
+if status:
+    logging.error("CVS checkout failed, exiting")
+    exit()
 
-else:
-    v4_models = [d for d in glob.glob(path.join(MG5DIR, "models", "*_v4")) \
-                 if path.isdir(d) and \
-                 path.exists(path.join(d, "particles.dat"))]
+model_path = os.path.join(filepath, "Models_new")
 
-    logging.info("Copying v4 models from " + path.join(MG5DIR, "models") + ":")
-    for mdir in v4_models:
-        modelname = path.split(mdir)[-1]
-        new_m_path = path.join(filepath, 'models', modelname)
-        try:
-            shutil.copytree(mdir, new_m_path)
-            logging.info(mdir + " -> " + new_m_path)
-        except OSError:
-            logging.warning("Directory " + new_m_path + \
-                            " already exists, not copied.")
-        if path.exists(path.join(new_m_path, "model.pkl")):
-            os.remove(path.join(new_m_path, "model.pkl"))
-        if path.exists(path.join(new_m_path, "model.pkl")):
-            os.remove(path.join(new_m_path, "model.pkl"))
-    if not v4_models:
-        logging.info("No v4 models in " + path.join(MG5DIR, "models"))
+logging.info("Copying v4 models from " + model_path + ":")
+nmodels = 0
+for mdir in [d for d in glob.glob(path.join(model_path, "*")) \
+             if path.isdir(d) and \
+             path.exists(path.join(d, "particles.dat"))]:
+    modelname = path.split(mdir)[-1]
+    new_m_path = path.join(filepath, 'models', modelname + "_v4")
+    shutil.copytree(mdir, new_m_path)
+    nmodels += 1
+    if path.exists(path.join(new_m_path, "model.pkl")):
+        os.remove(path.join(new_m_path, "model.pkl"))
+    # Remove CVS directories
+    for i in range(2):
+        cvs_dirs = glob.glob(path.join(path.join(new_m_path, *(['*']*i)),
+                                       'CVS'))
+        if not cvs_dirs:
+            break
+        for cvs_dir in cvs_dirs:
+            shutil.rmtree(cvs_dir)
+
+shutil.rmtree(os.path.join(filepath, "Models_new"))
+logging.info("Copied %d v4 models." % nmodels)
 
 # 4. Create the automatic documentation in the apidoc directory
 
-status1 = subprocess.call(['epydoc', '--html', '-o', 'apidoc',
+try:
+    status1 = subprocess.call(['epydoc', '--html', '-o', 'apidoc',
                            'madgraph', 'aloha',
                            os.path.join('models', '*.py')], cwd = filepath)
+except:
+    logging.error("Call to epydoc failed. " +\
+                  "Please check that it is properly installed.")
+    exit()
 
 if status1:
-    info.warning('Non-0 exit code %d from epydoc. Please check output.' % \
+    logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
                  status)
+    exit()
 
 # 5. Remove the .bzr directory and the create_release.py file,
 #    take care of README files.
@@ -222,24 +218,68 @@ shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README')
 
 # 6. tar the MadGraph5_vVERSION directory.
 
-logging.info("Create the tar file " + filepath + ".tar.gz")
+logging.info("Create the tar file " + filename)
 
-status2 = subprocess.call(['tar', 'czf', filepath + ".tar.gz", filepath])
+status2 = subprocess.call(['tar', 'czf', filename, filepath])
 
 if status2:
-    logging.warning('Non-0 exit code %d from tar. Please check result.' % \
+    logging.error('Non-0 exit code %d from tar. Please check result.' % \
                  status)
+    exit()
 
-if not status1 and not status2:
-    # Remove the MadGraph5_vVERSION directory
-    logging.info("Removing directory " + filepath)
+logging.info("Running tests on directory %s", filepath)
+
+try:
+    logging.config.fileConfig(os.path.join(root_path,'tests','.mg5_logging.conf'))
+    logging.root.setLevel(eval('logging.CRITICAL'))
+    logging.getLogger('madgraph').setLevel(eval('logging.CRITICAL'))
+    logging.getLogger('cmdprint').setLevel(eval('logging.CRITICAL'))
+    logging.getLogger('tutorial').setLevel('CRITICAL')
+except:
+    pass
+
+sys.path.insert(0, os.path.realpath(filepath))
+import tests.test_manager as test_manager
+
+# Need a __init__ file to run tests
+if not os.path.exists(os.path.join(filepath,'__init__.py')):
+    open(os.path.join(filepath,'__init__.py'), 'w').close()
+
+# For acceptance tests, make sure to use filepath as MG4DIR
+
+import madgraph
+
+madgraph.MG4DIR = os.path.realpath(filepath)
+madgraph.MG5DIR = os.path.realpath(filepath)
+
+test_results = test_manager.run(package=os.path.join(filepath,'tests',
+                                                     'unit_tests'))
+
+a_test_results = test_manager.run(package=os.path.join(filepath,'tests',
+                                                       'acceptance_tests'),
+                                  )
+# Set logging level according to the logging level given by options
+logging.basicConfig(level=vars(logging)[options.logging],
+                    format="%(message)s")
+logging.root.setLevel(vars(logging)[options.logging])
+
+if not test_results.wasSuccessful():
+    logging.error("Failed %d unit tests, please check!" % \
+                    (len(test_results.errors) + len(test_results.failures)))
+
+if not a_test_results.wasSuccessful():
+    logging.error("Failed %d acceptance tests, please check!" % \
+                  (len(a_test_results.errors) + len(a_test_results.failures)))
+
+if a_test_results.errors or test_results.errors:
+    logging.error("Removing %s and quitting..." % filename)
+    os.remove(filename)
+    exit()
+
+if not a_test_results.failures and not test_results.failures:
+    logging.info("All good. Removing temporary %s directory." % filepath)
     shutil.rmtree(filepath)
-    
+else:
+    logging.error("Some failures - please check before using release file")
+
 logging.info("Thanks for creating a release.")
-logging.info("*Please* make sure that you used the latest version")
-logging.info("  of the MG/ME Template and models!")
-logging.info("*Please* check the output log above to make sure that")
-logging.info("  all copied directories are the ones you intended!")
-logging.info("*Please* untar the release tar.gz and run the acceptance ")
-logging.info("  tests before uploading the release to Launchpad!")
-logging.info("  Syntax: python tests/test_manager.py -p A")

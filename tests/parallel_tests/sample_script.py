@@ -57,13 +57,19 @@ if '__main__' == __name__:
     my_proc_list = me_comparator.create_proc_list(['g', 'go'], initial=2,
                                                   final=2)
 
+    my_proc_list = ['g g > h g g', 'g g > h > b b~ g', 'g g > h > a a g',
+                    'g g > h g g g']
+
+    my_proc_list += ['g g > h3 g g', 'g g > h3 > b b~ g', 'g g > h3 > a a g',
+                    'g g > h3 g g g']
+
     # Create a MERunner object for MG4
     my_mg4 = me_comparator.MG4Runner()
     my_mg4.setup(mg4_path)
 
     # Create a MERunner object for MG5
-    my_mg5 = me_comparator.MG5Runner()
-    my_mg5.setup(mg5_path, mg4_path)
+    #my_mg5 = me_comparator.MG5Runner()
+    #my_mg5.setup(mg5_path, mg4_path)
 
     # Create a MERunner object for UFO-ALOHA-MG5
     my_mg5_ufo = me_comparator.MG5_UFO_Runner()
@@ -71,20 +77,20 @@ if '__main__' == __name__:
 
     # Create and setup a comparator
     my_comp = me_comparator.MEComparator()
-    my_comp.set_me_runners(my_mg5, my_mg5_ufo, my_mg4)
+    my_comp.set_me_runners(my_mg4, my_mg5_ufo)
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                       model='mssm', orders={'QED':4, 'QCD':4}, energy=2000)
+                       model='heft', orders={'QED':4, 'QCD':4, 'HIG':1, 'HIW':1}, energy=1000)
 
     # Do some cleanup
     #my_comp.cleanup()
 
     # Print the output
-    my_comp.output_result(filename='mssm_results.log')
+    my_comp.output_result(filename='heft_results.log')
 
     
-    pydoc.pager(file('mssm_results.log','r').read())
+    pydoc.pager(file('heft_results.log','r').read())
 
     # Print a list of non zero processes
     #print my_comp.get_non_zero_processes()
