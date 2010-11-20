@@ -79,7 +79,7 @@ class DecayParticle(base_objects.Particle):
                    'texname', 'antitexname', 'line', 'propagating',
                    'is_part', 'self_antipart', 'is_stable',
                    'decay_vertexlist', 'decay_channels', 'apx_decaywidth',
-                   'decay_amplitudes'
+                   'decay_amplitudes', '2body_massdiff'
                   ]
 
 
@@ -125,6 +125,7 @@ class DecayParticle(base_objects.Particle):
         self['decay_amplitudes'] = {}
         self['apx_decaywidth'] = 0.
         self['apx_decaywidth_err'] = 0.
+        self['2body_massdiff'] = 0.
         
     def get(self, name):
         """ Evaluate some special properties first if the user request. """
@@ -368,13 +369,14 @@ class DecayParticle(base_objects.Particle):
         if name == 'max_vertexorder':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
-                    "Propery %s should be int type." % name
+                    "Property %s should be int type." % name
 
         # Check apx_decaywidth and apx_decaywidth_err
-        if name == 'apx_decaywidth' or name == 'apx_decaywidth_err':
+        if name == 'apx_decaywidth' or name == 'apx_decaywidth_err' \
+                or name == '2body_massdiff':
             if not isinstance(value, float) and not isinstance(value, int):
                 raise self.PhysicsObjectError, \
-                    "Decay width or width error %s must be float type." % str(value)
+                    "Property %s must be float type." % str(value)
 
         super(DecayParticle, self).filter(name, value)
 
@@ -658,6 +660,7 @@ class DecayParticle(base_objects.Particle):
                 "The final particle ids %s must be a list of integer." \
                 %str(final_ids)
 
+        # Sort the given id list first
         final_ids.sort()
         # Search in the amplitude list of given final particle number
         if self.get_amplitudes(len(final_ids)):
@@ -825,9 +828,10 @@ class DecayParticle(base_objects.Particle):
                 # Setup the 'has_idpart' property
                 if Channel.check_idlegs(temp_vert):
                     temp_channel['has_idpart'] = True
-                # Add width to total width if onshell
+
+                # Add width to total width if onshell and
                 if temp_channel.get_onshell(model):
-                    self['apx_decaywidth'] +=temp_channel.get_apx_decaywidth(model)
+                    self['apx_decaywidth'] +=temp_channel.get_apx_decaywidth(model)                    
                 # Calculate the order
                 temp_channel.calculate_orders(model)
                 self.get_channels(clevel, temp_channel.get_onshell(model)).\
@@ -883,6 +887,14 @@ class DecayParticle(base_objects.Particle):
         if clevel > 2:
             for channel in self.get_channels(clevel, False):
                 channel.get_apx_decaywidth_nextlevel(model)
+
+        # For two-body decay, record the maxima mass difference
+        else:
+            for channel in self.get_channels(2, True):
+                mass_diff = abs(eval(self['mass'])) - sum(channel.get('final_mass_list'))
+                if mass_diff > self['2body_massdiff']:
+                    self.set('2body_massdiff', mass_diff)
+
 
         # Sort the channels by their width
         self.get_channels(clevel, False).sort(channelcmp_width)
@@ -3081,6 +3093,7 @@ class Channel(base_objects.Diagram):
             it developes."""
 
         M = abs(eval(model.get_particle(self.get_initial_id()).get('mass')))
+        m_now = sum(self.get('final_mass_list'))
         # Ratio is the width of next-level channels over current channel.
         ratio = 1.
         for leg in self.get_final_legs():
@@ -3088,7 +3101,7 @@ class Channel(base_objects.Diagram):
             # width
             part = model.get_particle(abs(leg.get('id')))
             # For legs that are possible to decay.
-            if (not part.get('is_stable')) and part.get('apx_decaywidth'):
+            if (not part.get('is_stable')) and (M-m_now+part.get('2body_massdiff')) > 0.:
                 # Suppose the further decay is two-body.
                 # Formula: ratio = width_of_this_leg * (M/m_leg)**(-1) *
                 #                  (2 * M * 8 * pi * (c_psarea* (M/8/pi)**2)) *

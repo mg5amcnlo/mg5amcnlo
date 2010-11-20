@@ -238,6 +238,9 @@ class Test_DecayParticle(unittest.TestCase):
                        {'prop':'apx_decaywidth_err',
                         'right_list':[3., 4.5, 0.2],
                         'wrong_list':['a', [12,2], None]},
+                       {'prop':'2body_massdiff',
+                        'right_list':[3., 4.5, 0.2],
+                        'wrong_list':['a', [12,2], None]},
                        {'prop':'decay_vertexlist',
                         'right_list':[{(2, False):self.my_2bodyvertexlist,
                                        (2, True) :self.my_2bodyvertexlist,
@@ -1414,7 +1417,7 @@ class Test_Channel(unittest.TestCase):
         self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
                           higgs.find_channels,
                           non_sm, self.my_testmodel)
-
+        
         # Create two equivalent channels
         # h > z (z > ln ln~)
         vert_0 = self.h_tt_bbmmvv.get('vertices')[-1] 
@@ -1479,6 +1482,10 @@ class Test_Channel(unittest.TestCase):
         # For both has_idpart and not has_idpart channels
         self.assertEqual((result1.count(channel_b)+ result1.count(channel_a)),1)
 
+        # Test if the 2bodymassdiff calculated during
+        # find_channels_nextlevel is right.
+        self.assertAlmostEqual(higgs.get('2body_massdiff'), decay_objects.MH-2*decay_objects.MB)
+
         # Set MH < MW to get the desire channels.
         decay_objects.MH = 50
         channel_c.get_apx_decaywidth(self.my_testmodel)
@@ -1517,7 +1524,7 @@ class Test_Channel(unittest.TestCase):
 
 
         # Test of the symmetric factor
-        #print higgs.get_channels(3, True).nice_string()
+        print higgs.get_channels(3, False).nice_string()
         #print higgs.get_channels(4, True).nice_string()
         h_zz_llll_1 = higgs.get_channels(4, True)[5]
         h_zz_llll_2 = higgs.get_channels(4, True)[6]
@@ -1653,43 +1660,38 @@ class Test_Channel(unittest.TestCase):
                             tau_qdecay.get_apx_decaywidth(full_sm) < 0.0001)
 
         # Test of the estimated further decay width of off shell channel
+        # Channels impossible for next-level decay
+        self.assertEqual(h_ww_wtb.get_apx_decaywidth_nextlevel(full_sm), 0.)
+        # Channels possible for next-level decay
         full_sm.find_all_channels(3)
-        WT = full_sm.get_particle(6).get('apx_decaywidth')
+        h_zz_zbb = higgs.get_channels(3, False)[2]
+        WZ = full_sm.get_particle(23).get('apx_decaywidth')
         WW = full_sm.get_particle(24).get('apx_decaywidth')
-        ratio = (1+ WT*abs(decay_objects.MT)/MH_new*\
-                     (1/4/math.pi)*MH_new **3 *0.8/ \
-                     h_ww_wtb.get_apx_fnrule(6, decay_objects.MT,
-                                             True, full_sm)/ \
-                     h_ww_wtb.get_apx_fnrule(6, 0.5*MH_new,
-                                             True, full_sm)* \
-                     h_ww_wtb.get_apx_fnrule(6, 0.5*MH_new,
-                                             False, full_sm))
-        ratio *= (1+ WW*MW/MH_new*\
-                      (1/4/math.pi)*MH_new **3 *0.8/ \
-                      h_ww_wtb.get_apx_fnrule(24, MW,
-                                              True, full_sm)/ \
-                      h_ww_wtb.get_apx_fnrule(24, 0.5*MH_new,
-                                              True, full_sm)* \
-                      h_ww_wtb.get_apx_fnrule(24, 0.5*MH_new,
-                                              False, full_sm))
 
-        self.assertTrue((h_ww_wtb.get_apx_decaywidth_nextlevel(full_sm) - \
-                           h_ww_wtb.get_apx_decaywidth(full_sm)*(ratio-1))/ \
-                            h_ww_wtb.get_apx_decaywidth_nextlevel(full_sm)
-                        < 0.0001)
+        ratio = (1+ WZ*abs(decay_objects.MZ)/MH_new*\
+                     (1/4/math.pi)*MH_new **3 *0.8/ \
+                     h_zz_zbb.get_apx_fnrule(6, decay_objects.MZ,
+                                             True, full_sm)/ \
+                     h_zz_zbb.get_apx_fnrule(6, 0.5*MH_new,
+                                             True, full_sm)* \
+                     h_zz_zbb.get_apx_fnrule(6, 0.5*MH_new,
+                                             False, full_sm))
+
+        self.assertAlmostEqual(\
+            h_zz_zbb.get_apx_decaywidth(full_sm)*(ratio-1),
+            h_zz_zbb.get_apx_decaywidth_nextlevel(full_sm))
+
         #print channel_1.get_apx_fnrule(24, q_offshell, False, self.my_testmodel)
         #print ((1-2*((q_offshell/MW) ** 2)+(q_offshell/MW) ** 4)/ \
         #                       (((q_offshell**2-MW **2)**2+MW**2*WW**2)))
 
 
         # Test of the Brett-Wigner correction of propagator
-        self.assertTrue((channel_1.get_apx_fnrule(24, q_offshell, 
-                                                  False, self.my_testmodel)-
-                          ((1-2*((q_offshell/MW) ** 2)+(q_offshell/MW) ** 4)/ \
-                               (((q_offshell**2-MW **2)**2+MW**2*WW**2))))/ \
-                             channel_1.get_apx_fnrule(24, q_offshell, 
-                                                      False, self.my_testmodel)\
-                          < 0.001)
+        self.assertTrue(channel_1.get_apx_fnrule(24, q_offshell, 
+                                                 False, self.my_testmodel),
+                        ((1-2*((q_offshell/MW) ** 2)+(q_offshell/MW) ** 4)/ \
+                             (((q_offshell**2-MW **2)**2+MW**2*WW**2)))
+                        )
 
 
         model_base = import_ufo.import_model('mssm')
@@ -1731,7 +1733,7 @@ class Test_Channel(unittest.TestCase):
         # Read MG5 param_card
         param_path_1 = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
         param_path_2 = os.path.join(_file_path,'../input_files/param_card_mssm_test.dat')
-        model.read_param_card(param_path_2)
+        model.read_param_card(param_path_1)
         
         # Find channels before read MG4 param_card
         model.find_all_channels(3)
@@ -1740,29 +1742,46 @@ class Test_Channel(unittest.TestCase):
         MG4_param_path_1 = os.path.join(_file_path,'../input_files/param_card_0.dat')
         MG4_param_path_2 = os.path.join(_file_path,'../input_files/param_card_test.dat')
 
-        model.read_MG4_param_card_decay(MG4_param_path_2)
+        model.read_MG4_param_card_decay(MG4_param_path_1)
 
         # Write decay summary and the table
         # file name 1: default name
-        #model.write_summary_decay_table()
-        #model.write_decay_table('cmp')
+        model.write_summary_decay_table()
+        model.write_decay_table('cmp')
         # file name 2: for test mssm
-        model.write_summary_decay_table('mssm_decay_summary_test.dat')
-        model.write_decay_table('cmp', 'mssm_decaytable_test.dat')
+        #model.write_summary_decay_table('mssm_decay_summary_test.dat')
+        #model.write_decay_table('cmp', 'mssm_decaytable_test.dat')
 
         # Test if the calculated ratio is float or None
-        for part in model.get('particles'):
-            n_max = len(part['decay_amplitudes'].keys())
+        """for part in model.get('particles'):
+            print part.get_pdg_code(), part.get('2body_massdiff')
+            #n_max = len(part['decay_amplitudes'].keys())
             for n in range(2,n_max+2):
                 for amp in part.get_amplitudes(n):
                     self.assertTrue(isinstance(amp['exa_decaywidth'], bool) or \
-                                        isinstance(amp['exa_decaywidth'], float))
-
-        particle = model.get_particle(35)
+                                        isinstance(amp['exa_decaywidth'], float))"""
+        """
+        particle = model.get_particle(1000021)
+        particleb = model.get_particle(2000015)
+        print particleb.get_pdg_code()
         self.assertAlmostEqual(0.78950006*0.57480138,
-                               particle.get_amplitude([-5,5])['exa_decaywidth'])
+                               particle.get_amplitude([-5,5])['exa_decaywidth'])"""
+        """
+        #print particle.get_amplitude([-11, 2000011])['diagrams'].nice_string()
+        print model.get_interaction(371)
+        print decay_objects.GC_169, decay_objects.GC_168
+        print model.get_interaction(388)
+        print decay_objects.GC_757, decay_objects.GC_785
+        print particle.get_amplitude([2000001, -1]).decaytable_string()
+        print particle.get_amplitude([2000001, -1])['diagrams'][0].get_apx_psarea(model)
+        print particle.get_amplitude([2000001, -1])['apx_decaywidth']
+        print particle.get_amplitude([2000001, -1])['exa_decaywidth']
 
-        
+        #print particleb.get_amplitude([-1000024, 16, 22]).nice_string()
+
+        #print particle.get_amplitude([-11, 2000011])['diagrams'][0].get_apx_matrixelement_sq(model)        
+        #print particle.get_amplitude([-11, 2000011])['exa_decaywidth']
+
         #for part in model.get('particles'):
         #    print part['pdg_code'], part['decay_width']
 
@@ -1773,7 +1792,7 @@ class Test_Channel(unittest.TestCase):
         #print len(particle.get_channels(3, False))
         #print particle.get_channels(3, False)[0].nice_string(),\
         #    particle.get('apx_decaywidth')
-
+        """
 
 
 
