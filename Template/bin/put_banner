@@ -29,16 +29,10 @@ if [[ -d Events ]]; then
 # Now the version information
 # grab the info first
    mgme=`awk '/.*/{print $1}' ../MGMEVersion.txt`
-   mg=`awk '/.*/{print $1}' ../SubProcesses/MGVersion.txt`
-   template=`awk '/.*/{print $1}' ../TemplateVersion.txt`
-   helas=`awk '/.*/{print $1}' ../Source/DHELAS/HELASVersion.txt`
    model=`awk '/.*/{print $1}' ../Source/MODEL/ModelVersion.txt`
 # $B$version_info$E$  ! Tag for add info in MW_version. Don't edit this line
    echo "<MGVersion>">& version.txt
-   echo "# MG/ME version    : $mgme"    >>version.txt
-   echo "# madgraph version : $mg"      >>version.txt
-   echo "# template version : $template" >>version.txt
-   echo "# helas version    : $helas"    >>version.txt
+   echo "# MG    version    : $mgme"    >>version.txt
    echo "# model version    : $model"    >>version.txt
 # $B$ write_version $E$  ! Tag for add info in MW_version. Don't edit this line
    echo "</MGVersion>" >> version.txt 
