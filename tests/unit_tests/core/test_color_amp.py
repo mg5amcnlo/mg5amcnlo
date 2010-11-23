@@ -213,7 +213,7 @@ class ColorAmpTest(unittest.TestCase):
                                      self.mymodel)
 
         goal_dict = {(0, 0):color.ColorString([color.T(-1000, 1, 2),
-                                               color.f(3, 4, -1000)])}
+                                               color.f(-1000, 3, 4)])}
 
         self.assertEqual(col_dict, goal_dict)
 
@@ -263,7 +263,7 @@ class ColorAmpTest(unittest.TestCase):
         col_dict = my_col_basis.colorize(myamplitude['diagrams'][0],
                                      self.mymodel)
         goal_dict = {(0, 0, 0):color.ColorString([color.T(-1000, 2, 1),
-                                               color.f(3, 4, -1001),
+                                               color.f(-1001, 3, 4),
                                                color.f(-1000, -1001, 5)])}
 
         self.assertEqual(col_dict, goal_dict)
@@ -273,14 +273,14 @@ class ColorAmpTest(unittest.TestCase):
                                      self.mymodel)
 
         goal_dict = {(0, 0):color.ColorString([color.T(-1000, 2, 1),
-                                               color.f(-1001, 3, 5),
-                                               color.f(-1001, 4, -1000)]),
+                                               color.f(-1001, -1000, 4),
+                                               color.f(-1001, 3, 5)]),
                      (0, 1):color.ColorString([color.T(-1000, 2, 1),
-                                               color.f(-1002, 3, -1000),
-                                               color.f(-1002, 4, 5)]),
+                                               color.f(-1002, -1000, 5),
+                                               color.f(-1002, 3, 4)]),
                      (0, 2):color.ColorString([color.T(-1000, 2, 1),
-                                               color.f(-1003, 3, 4),
-                                               color.f(-1003, 5, -1000)])}
+                                               color.f(-1003, -1000, 3),
+                                               color.f(-1003, 4, 5)])}
 
         self.assertEqual(col_dict, goal_dict)
 
