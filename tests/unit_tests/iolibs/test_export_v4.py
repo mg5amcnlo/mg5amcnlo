@@ -936,7 +936,7 @@ C       Read in weight file
  20     LUN=NEXTUNOPEN()
         OPEN(UNIT=LUN,FILE='selproc.dat',STATUS='OLD',ERR=30)
         DO J=1,SYMCONF(0)
-          READ(LUN,*) ((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
+          READ(LUN,'(3E16.8)') ((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
         CLOSE(LUN)
         GOTO 40
@@ -963,7 +963,7 @@ C       Set SELPROC democratically
         ENDDO
  40     WRITE(*,*) 'Initial selection weights:'
         DO J=1,SYMCONF(0)
-          WRITE(*,'(100E12.4)')((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
+          WRITE(*,'(3E12.4)')((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
         RETURN
       ELSE IF(IMODE.EQ.2)THEN
@@ -994,15 +994,15 @@ C       Update SELPROC
         ENDDO
         WRITE(*,*)'Selection weights after reweight:'
         DO J=1,SYMCONF(0)
-          WRITE(*,'(100E12.4)')((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
+          WRITE(*,'(3E12.4)')((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
         WRITE(*,*)'Summed weights:'
         DO J=1,SYMCONF(0)
-          WRITE(*,'(100E12.4)')((SUMWGT(K,I,J),K=1,2),I=1,MAXSPROC)
+          WRITE(*,'(3E12.4)')((SUMWGT(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
         WRITE(*,*)'Events:'
         DO J=1,SYMCONF(0)
-          WRITE(*,'(100I12)')((NUMEVTS(K,I,J),K=1,2),I=1,MAXSPROC)
+          WRITE(*,'(3I12)')((NUMEVTS(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
 C       Reset weights and number of events if above LIMEVTS
         DO J=1,SYMCONF(0)
@@ -1021,7 +1021,7 @@ C       Write out weight file
         LUN=NEXTUNOPEN()
         OPEN(UNIT=LUN,FILE='selproc.dat',STATUS='UNKNOWN')
         DO J=1,SYMCONF(0)
-          WRITE(LUN,*) ((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
+          WRITE(LUN,'(3E16.8)') ((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
         CLOSE(LUN)
         RETURN
