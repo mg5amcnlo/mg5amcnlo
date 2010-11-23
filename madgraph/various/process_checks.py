@@ -375,6 +375,8 @@ def check_processes(processes, param_card = None, quick = []):
                                               full_model,
                                               quick)
 
+        if "used_lorentz" not in stored_quantities:
+            stored_quantities["used_lorentz"] = []
         return results, stored_quantities["used_lorentz"]
 
     elif isinstance(processes, base_objects.Process):
@@ -419,10 +421,9 @@ def check_processes(processes, param_card = None, quick = []):
         if res:
             comparison_results.append(res)
 
+    if "used_lorentz" not in stored_quantities:
+        stored_quantities["used_lorentz"] = []
     return comparison_results, stored_quantities["used_lorentz"]
-
-
-
 
 
 def check_process(process, stored_quantities, helas_writer, full_model, quick):

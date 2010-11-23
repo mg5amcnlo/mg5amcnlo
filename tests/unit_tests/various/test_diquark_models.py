@@ -40,7 +40,7 @@ class TestColorSextetModel(unittest.TestCase):
 
 
     def setUp(self):
-        self.base_model = import_ufo.import_model('sextets')
+        self.base_model = import_ufo.import_model('sextet_diquarks')
         self.full_model = model_reader.ModelReader(self.base_model)
         self.full_model.set_parameters_and_couplings()
     
@@ -197,6 +197,8 @@ class TestColorTripletModel(unittest.TestCase):
 
         stored_quantities = {}
 
+        self.assertTrue(matrix_element.get('diagrams'))
+
         mg5_me_value = process_checks.evaluate_matrix_element(matrix_element,
                                                            stored_quantities,
                                                            helas_writer,
@@ -250,15 +252,17 @@ def uu_Dg(P, color_rep, full_model):
         C_D = 10./3.
         lamb = abs(full_model.get('coupling_dict')['GC_24'])
         G = full_model.get('coupling_dict')['GC_4']
+        M_D = full_model.get('parameter_dict')['MSIX']
     else:
         N_D = 3.
         C_D = 4./3.
         lamb = abs(full_model.get('coupling_dict')['GC_12'])
         G = full_model.get('coupling_dict')['GC_4']
+        M_D = full_model.get('parameter_dict')['MSIX']
 
     # Define auxiliary quantities
     shat=dot(P[0],P[0])+dot(P[1],P[1])+2*dot(P[0],P[1])
-    tau=full_model.get('parameter_dict')['MSIX']**2/shat
+    tau=M_D**2/shat
     cos2theta=dot3(P[0],P[3])**2/(dot3(P[0],P[0])*dot3(P[3],P[3]))
 
     # Calculate matrix element
