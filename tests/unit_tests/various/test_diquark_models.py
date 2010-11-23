@@ -151,6 +151,96 @@ class TestColorSextetModel(unittest.TestCase):
 
         self.assertAlmostEqual(mg5_me_value, comparison_value, 14)
 
+
+    def test_sextet_color_flow_output(self):
+        """Test the color flow output for color sextets"""
+
+        # Test u u > six g
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False,
+                                           'number': 1}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False,
+                                           'number': 2}))
+        myleglist.append(base_objects.Leg({'id':9000006,
+                                           'state':True,
+                                           'number': 3}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True,
+                                           'number': 4}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        myamp = diagram_generation.Amplitude(myproc)
+        matrix_element = helas_objects.HelasMatrixElement(myamp)
+        
+        # First build a color representation dictionnary
+        repr_dict = {}
+        for l in myleglist:
+            repr_dict[l.get('number')] = \
+                self.base_model.get_particle(l.get('id')).get_color()
+
+        # Get the color flow decomposition
+        col_flow = \
+           matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
+                                                                      2)
+        self.assertEqual(col_flow,
+                         [{1: [501, 0], 2: [504, 0],
+                           3: [0, 503], 4: [504, 502]},
+                          {1: [501, 0], 2: [503, 0],
+                           3: [0, 504], 4: [501, 502]},
+                          {1: [501, 0], 2: [504, 0],
+                           3: [0, 503], 4: [504, 502]},
+                          {1: [504, 0], 2: [501, 0],
+                           3: [0, 503], 4: [504, 502]}])
+
+        # Test u u > six > u u g
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model,
+                                       'required_s_channels': [[9000006]]})
+
+        myamp = diagram_generation.Amplitude(myproc)
+        self.assertEqual(len(myamp.get('diagrams')), 5)
+        matrix_element = helas_objects.HelasMatrixElement(myamp)
+        
+        # First build a color representation dictionnary
+        repr_dict = {}
+        for l in myleglist:
+            repr_dict[l.get('number')] = \
+                self.base_model.get_particle(l.get('id')).get_color()
+
+        # Get the color flow decomposition
+        col_flow = \
+           matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
+                                                                      2)
+        self.assertEqual(col_flow,
+                         [{1: [501, 0], 2: [503, 0], 3: [501, 0],
+                           4: [502, 0], 5: [503, 502]},
+                          {1: [503, 0], 2: [501, 0], 3: [501, 0],
+                           4: [502, 0], 5: [503, 502]},
+                          {1: [502, 0], 2: [503, 0], 3: [501, 0],
+                           4: [502, 0], 5: [503, 501]},
+                          {1: [503, 0], 2: [502, 0], 3: [501, 0],
+                           4: [502, 0], 5: [503, 501]}])
+
 #===============================================================================
 # TestColorTripletModel
 #===============================================================================
@@ -236,7 +326,99 @@ class TestColorTripletModel(unittest.TestCase):
 
         self.assertTrue(comparison_results[0]['passed'])
 
+    def test_triplet_color_flow_output(self):
+        """Test the color flow output for color triplets"""
+
+        # Test u u > trip~ g
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False,
+                                           'number': 1}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                           'state':False,
+                                           'number': 2}))
+        myleglist.append(base_objects.Leg({'id':-9000006,
+                                           'state':True,
+                                           'number': 3}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True,
+                                           'number': 4}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        myamp = diagram_generation.Amplitude(myproc)
+        matrix_element = helas_objects.HelasMatrixElement(myamp)
+        
+        # First build a color representation dictionnary
+        repr_dict = {}
+        for l in myleglist:
+            repr_dict[l.get('number')] = \
+                self.base_model.get_particle(l.get('id')).get_color()
+
+        # Get the color flow decomposition
+        col_flow = \
+           matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
+                                                                      2)
+        self.assertEqual(col_flow,
+                         [{1: [501, 0], 2: [503, 0],
+                           3: [0, 504], 4: [501, 502]},
+                          {1: [501, 0], 2: [504, 0],
+                           3: [0, 503], 4: [504, 502]},
+                          {1: [501, 0], 2: [502, 0],
+                           3: [0, 504], 4: [504, 503]}])
+
+        # Test u u > trip~ > u u g
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model,
+                                       'required_s_channels': [[-9000006]]})
+
+        myamp = diagram_generation.Amplitude(myproc)
+        self.assertEqual(len(myamp.get('diagrams')), 5)
+        matrix_element = helas_objects.HelasMatrixElement(myamp)
+        
+        # First build a color representation dictionnary
+        repr_dict = {}
+        for l in myleglist:
+            repr_dict[l.get('number')] = \
+                self.base_model.get_particle(l.get('id')).get_color()
+
+        # Get the color flow decomposition
+        col_flow = \
+           matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
+                                                                      2)
+        self.assertEqual(col_flow,
+                         [{1: [501, 0], 2: [502, 0], 3: [504, 0],
+                           4: [505, 0], 5: [506, 503]},
+                          {1: [501, 0], 2: [503, 0], 3: [501, 0],
+                           4: [502, 0], 5: [503, 502]},
+                          {1: [503, 0], 2: [501, 0], 3: [501, 0],
+                           4: [502, 0], 5: [503, 502]},
+                          {1: [502, 0], 2: [503, 0], 3: [501, 0],
+                           4: [502, 0], 5: [503, 501]},
+                          {1: [503, 0], 2: [502, 0], 3: [501, 0],
+                           4: [502, 0], 5: [503, 501]}])
+
+
+#===============================================================================
 # Global helper functions
+#===============================================================================
 
 def uu_Dg(P, color_rep, full_model):
     """Process: u u > six g
