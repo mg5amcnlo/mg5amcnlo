@@ -20,7 +20,7 @@
       integer ito(-nexternal+3:nexternal),iseed
       integer icolalt(2,-nexternal+3:2*nexternal-3)
       double precision qicl(-nexternal+3:2*nexternal-3), factpm
-      real xtarget
+      double precision xtarget
       data iseed/0/
 
       double precision ZERO
@@ -218,8 +218,9 @@ c       Fist set "safe" color info
             icolalt(1,i) = icolalt(1,ida(1))+icolalt(1,ida(2))
             icolalt(2,i) = icolalt(2,ida(1))+icolalt(2,ida(2))
           else
-c         Erraneous color assignment for propagator
-            goto 90
+c         Erraneous color assignment for propagator - set color to 0
+            icolalt(1,i) = 0
+            icolalt(2,i) = 0
           endif
 c         Set tentative mothers
           jpart(2,i) = 1
@@ -232,27 +233,6 @@ c         Set mother info for daughters
 c       Just zero helicity info for intermediate states
           jpart(7,i) = 0
         enddo                   ! do i
-        goto 100                ! only s-channel propagators found
- 90     continue
-c     Propagator not compatible with color flow -> remove the propagator
-        print *,'ERROR: Safe color assignment wrong! This should never happen!'
-
-        if(jpart(6,i).eq.2) then
-           nres=nres-1
-           jpart(6,i)=3
-        endif
-
-c        print *,'Diagram: ',igraph,', Color flow: ',ic
-c        print *,'colors:',icolalt(1,ida(1)),icolalt(2,ida(1)),
-c     $     icolalt(1,ida(2)),icolalt(2,ida(2))
-c        write(*,'(15i5)'),(jpart(1,j),j=1,nexternal),(jpart(1,j),j=-1,i,-1)
-c        write(*,'(15i5)'),(jpart(2,j),j=1,nexternal),(jpart(2,j),j=-1,i,-1)
-c        write(*,'(15i5)'),(jpart(3,j),j=1,nexternal),(jpart(3,j),j=-1,i,-1)
-c        write(*,'(15i5)'),(icolalt(1,j),j=1,nexternal),(icolalt(1,j),j=-1,i,-1)
-c        write(*,'(15i5)'),(icolalt(2,j),j=1,nexternal),(icolalt(2,j),j=-1,i,-1)
-c        write(*,'(15i5)'),(jpart(6,j),j=1,nexternal),(jpart(6,j),j=-1,i,-1)
-c        write(*,'(15f5.0)'),(pb(4,j),j=1,nexternal),(pb(4,j),j=-1,i,-1)
-c        STOP
  100    continue
 
 c    Remove non-resonant mothers, set position of particles
