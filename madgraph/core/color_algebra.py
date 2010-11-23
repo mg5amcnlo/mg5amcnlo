@@ -320,6 +320,8 @@ class Epsilon(ColorObject):
         if len(args) != 3:
             raise ValueError, \
                 "Epsilon objects must have three indices!"
+        # Ensure that the order of indices have no impact
+        self[:] = array.array('i', sorted(self))
 
     def pair_simplify(self, col_obj):
         """Implement e_ijk ae_ilm = T(j,l)T(k,m) - T(j,m)T(k,l) and
@@ -355,6 +357,7 @@ class Epsilon(ColorObject):
             com_index = self.index(col_obj[1])
             new_self = copy.copy(self)
             new_self[com_index] = col_obj[0]
+            new_self[:] = array.array('i', sorted(new_self))
 
             return ColorFactor([ColorString([new_self])])
 
@@ -375,6 +378,8 @@ class EpsilonBar(ColorObject):
         if len(args) != 3:
             raise ValueError, \
                 "EpsilonBar objects must have three indices!"
+        # Ensure that the order of indices have no impact
+        self[:] = array.array('i', sorted(self))
 
     def pair_simplify(self, col_obj):
         """Implement ebar_ijk T(k,l) = e_ikl"""
@@ -385,6 +390,7 @@ class EpsilonBar(ColorObject):
             com_index = self.index(col_obj[0])
             new_self = copy.copy(self)
             new_self[com_index] = col_obj[1]
+            new_self[:] = array.array('i', sorted(new_self))
 
             return ColorFactor([ColorString([new_self])])
 

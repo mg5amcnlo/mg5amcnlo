@@ -366,10 +366,34 @@ class ColorBasis(dict):
 
         # Add one T per external octet
         for indices in octet_indices:
-            my_cf[0].append(color_algebra.T(indices[0],
-                                            indices[1],
-                                            indices[2]))
-
+            if indices[0] == -6:
+                # Add a K6 which contracts the antisextet index to a
+                # pair of antitriplets
+                my_cf[0].append(color_algebra.K6(indices[1],
+                                                 indices[2],
+                                                 indices[3]))
+                # ... and then contract the pair of antitriplets to a
+                # single triplet
+                my_cf[0].append(color_algebra.Epsilon(indices[2],
+                                                      indices[3],
+                                                      indices[4]))
+            if indices[0] == 6:
+                # Add a K6Bar which contracts the sextet index to a
+                # pair of triplets
+                my_cf[0].append(color_algebra.K6Bar(indices[1],
+                                                    indices[2],
+                                                    indices[3]))
+                # ... and then contract the pair of triplets to a
+                # single antitriplet
+                my_cf[0].append(color_algebra.EpsilonBar(indices[2],
+                                                         indices[3],
+                                                         indices[4]))
+            if indices[0] == 8:
+                # Add a T which contracts the octet to a
+                # triplet-antitriplet pair
+                my_cf[0].append(color_algebra.T(indices[1],
+                                                indices[2],
+                                                indices[3]))
         # Simplify the whole thing
         my_cf = my_cf.full_simplify()
 
@@ -380,19 +404,21 @@ class ColorBasis(dict):
         res_cs = [cs for cs in my_cf if cs.Nc_power == max_coeff]
 
         # If more than one string at leading N...
-        if len(res_cs) > 1:
+        if len(res_cs) > 1 and any([cs != res_cs[0] for cs in res_cs]):
             raise ColorBasis.ColorBasisError, \
              "More than one color string with leading N coeff: %s" % str(res_cs)
 
         res_cs = res_cs[0]
 
         # If the result string does not contain only T's with two indices
+        # and Epsilon/EpsilonBar objects
         for col_obj in res_cs:
-            if col_obj.__class__.__name__ != 'T':
+            if not isinstance(col_obj, color_algebra.T) and \
+                   not col_obj.__class__.__name__.startswith('Epsilon'):
                 raise ColorBasis.ColorBasisError, \
-                  "Color flow decomposition %s contains non T elements" % \
+                  "Color flow decomposition %s contains non T/Epsilon elements" % \
                                                                     str(res_cs)
-            if len(col_obj) != 2:
+            if isinstance(col_obj, color_algebra.T) and len(col_obj) != 2:
                 raise ColorBasis.ColorBasisError, \
                   "Color flow decomposition %s contains T's w/o 2 indices" % \
                                                                     str(res_cs)
@@ -411,6 +437,7 @@ class ColorBasis(dict):
         # Offsets used to introduce fake quark indices for gluons
         offset1 = 1000
         offset2 = 2000
+        offset3 = 3000
 
         res = []
 
@@ -428,31 +455,51 @@ class ColorBasis(dict):
                 res_dict[leg_num] = [0, 0]
 
                 # Raise an error if external legs contain non supported repr
-                if leg_repr not in [1, 3, -3, 8]:
+                if leg_repr not in [1, 3, -3, 6, -6, 8]:
                     raise ColorBasis.ColorBasisError, \
         "Particle ID=%i has an unsupported color representation" % leg_repr
 
                 # Build the fake indices replacements for octets
                 if leg_repr == 8:
-                    fake_repl.append((leg_num,
+                    fake_repl.append((leg_repr, leg_num,
                                       offset1 + leg_num,
                                       offset2 + leg_num))
+                # Build the fake indices for sextets
+                elif leg_repr in [-6, 6]:
+                    fake_repl.append((leg_repr, leg_num,
+                                      offset1 + leg_num,
+                                      offset2 + leg_num,
+                                      offset3 + leg_num))
 
             # Get the actual color flow
             col_str_flow = self.get_color_flow_string(col_str, fake_repl)
 
             # Offset for color flow
-            offset = 501
+            offset = 500
 
             for col_obj in col_str_flow:
+                if isinstance(col_obj, color_algebra.T):
+                    # For T, all color indices should be the same
+                    offset = offset + 1
                 for i, index in enumerate(col_obj):
+                    if isinstance(col_obj, color_algebra.Epsilon):
+                        # Epsilon contracts with antitriplets,
+                        i = 0
+                        # ...and requires all different color indices
+                        offset = offset+1
+                    elif isinstance(col_obj, color_algebra.EpsilonBar):
+                        # EpsilonBar contracts with antitriplets
+                        i = 1
+                        # ...and requires all different color indices
+                        offset = offset+1
                     if index < offset1:
                         res_dict[index][i] = offset
                     elif index > offset1 and index < offset2:
-                        res_dict[index - offset1][0] = offset
-                    elif index > offset2:
-                        res_dict[index - offset2][1] = offset
-                offset = offset + 1
+                        res_dict[index - offset1][i] = offset
+                    elif index > offset2 and index < offset3:
+                        res_dict[index - offset2][i] = offset
+                    elif index > offset3:
+                        res_dict[index - offset3][i] = offset
 
             # Reverse ordering for initial state to stick to the (weird)
             # les houches convention
