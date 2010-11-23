@@ -110,6 +110,8 @@ for i in `cat subproc.mg` ; do
     rm -f G*/ftn* >& /dev/null
     rm -f G*/selproc.dat >& /dev/null
     rm -f G*/events.lhe >& /dev/null
+    rm -f G*/results.dat >& /dev/null
+    rm -f results.dat results.html >& /dev/null
     cd ..
 done
 echo " "

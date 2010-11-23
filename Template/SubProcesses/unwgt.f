@@ -380,7 +380,7 @@ c
       integer ida(2),ito(-nexternal+3:nexternal),ns,nres,ires,icloop
       integer iseed
       double precision pboost(0:3),pb(0:4,-nexternal+3:2*nexternal-3),eta
-      double precision ptcltmp(nexternal)
+      double precision ptcltmp(nexternal), pdum(0:3)
 
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
@@ -510,6 +510,23 @@ c   Fix ordering of ptclus
       do i=1,nexternal
         ptclus(i) = ptcltmp(i)
       enddo
+
+c     Check if we have flipped particle 1 and 2, and flip back
+      if (p(3,1).lt.0) then
+         do j=0,3
+            pdum(j)=p(j,1)
+            p(j,1)=p(j,2)
+            p(j,2)=pdum(j)
+         enddo
+         do i=1,7
+            j=jpart(i,1)
+            jpart(i,1)=jpart(i,2)
+            jpart(i,2)=j
+         enddo
+         ptcltmp(1)=ptclus(1)
+         ptclus(1)=ptclus(2)
+         ptclus(2)=ptcltmp(1)
+      endif
 
 c
 c     Boost momentum to lab frame

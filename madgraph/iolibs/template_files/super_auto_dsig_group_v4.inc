@@ -39,7 +39,7 @@ C
       SAVE FIRST_TIME,NPROC,IDUM
       INTEGER SYMCONF(0:LMAXCONFIGS)
       SAVE SYMCONF
-      DOUBLE PRECISION SUMPROB,TOTWGT,R
+    DOUBLE PRECISION SUMPROB,TOTWGT,R,XDUM
       DOUBLE PRECISION P1(0:3,NEXTERNAL)
       INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
       INCLUDE 'config_subproc_map.inc'            
@@ -179,6 +179,17 @@ c     Update SELPROC
         DO J=1,SYMCONF(0)
           WRITE(*,'(100I12)')((NUMEVTS(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
+C       Reset weights and number of events if above LIMEVTS
+        DO J=1,SYMCONF(0)
+          DO I=1,MAXSPROC
+            DO K=1,2
+              IF(NUMEVTS(K,I,J).GE.LIMEVTS)THEN
+                NUMEVTS(K,I,J)=0
+                SUMWGT(K,I,J)=0d0
+              ENDIF
+            ENDDO
+          ENDDO
+        ENDDO
         RETURN
       ELSE IF(IMODE.EQ.3)THEN
 C     Write out weight file
@@ -193,53 +204,58 @@ C     Write out weight file
 
 C   IMODE.EQ.0, regular run mode
 
-      IF (PASSCUTS(PP)) THEN
-C     Select among the subprocesses based on SELPROC
-        IDUM=0
-        R=XRAN1(IDUM)
-        ICONF=0
-        IPROC=0
-        SUMPROB=0D0
-        DO J=1,SYMCONF(0)
-          DO I=1,MAXSPROC
-            DO K=1,2
-              SUMPROB=SUMPROB+SELPROC(K,I,J)
-              IF(R.LT.SUMPROB)THEN
-                IPROC=I
-                ICONF=J
-                IMIRROR=K
-                GOTO 50
-              ENDIF
-            ENDDO
-          ENDDO
-        ENDDO
- 50     CONTINUE
-
-        IF(IPROC.EQ.0) RETURN
-
-C     Set SUBDIAG and ICONFIG
-        ICONFIG=SYMCONF(ICONF)
+C   Select among the subprocesses based on SELPROC
+      IDUM=0
+      R=XRAN1(IDUM)
+      ICONF=0
+      IPROC=0
+      SUMPROB=0D0
+      DO J=1,SYMCONF(0)
         DO I=1,MAXSPROC
-          SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF))
-        ENDDO
-
-C     Set momenta according to this permutation
-        CALL SWITCHMOM(PP,P1,PERMS(1,ICONFIG),JC,NEXTERNAL)
-
-        IB(1)=1
-        IB(2)=2
-
-        IF(IMIRROR.EQ.2)THEN
-C       Flip momenta (rotate around x axis)
-          DO I=1,NEXTERNAL
-            P1(2,I)=-P1(2,I)
-            P1(3,I)=-P1(3,I)
+          DO K=1,2
+            SUMPROB=SUMPROB+SELPROC(K,I,J)
+            IF(R.LT.SUMPROB)THEN
+              IPROC=I
+              ICONF=J
+              IMIRROR=K
+              GOTO 50
+            ENDIF
           ENDDO
-C       Flip beam identity
-          IB(1)=2
-          IB(2)=1
-        ENDIF
+        ENDDO
+      ENDDO
+ 50   CONTINUE
 
+      IF(IPROC.EQ.0) RETURN
+
+C   Set SUBDIAG and ICONFIG
+      ICONFIG=SYMCONF(ICONF)
+      DO I=1,MAXSPROC
+        SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF))
+      ENDDO
+
+C   Set momenta according to this permutation
+      CALL SWITCHMOM(PP,P1,PERMS(1,ICONFIG),JC,NEXTERNAL)
+
+      IB(1)=1
+      IB(2)=2
+
+      IF(IMIRROR.EQ.2)THEN
+C     Flip momenta (rotate around x axis)
+        DO I=1,NEXTERNAL
+          P1(2,I)=-P1(2,I)
+          P1(3,I)=-P1(3,I)
+        ENDDO
+C     Flip beam identity
+        IB(1)=2
+        IB(2)=1
+C     Flip x values (to get boost right)
+        XDUM=XBK(1)
+        XBK(1)=XBK(2)
+        XBK(2)=XDUM
+      ENDIF
+
+
+      IF (PASSCUTS(P1)) THEN
 C     Update weigth w.r.t SELPROC
         WGT=WGT/SELPROC(IMIRROR,IPROC,ICONF)
 

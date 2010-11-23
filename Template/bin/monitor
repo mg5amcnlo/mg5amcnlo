@@ -35,5 +35,9 @@ while [[  $d -lt $t  ]]; do
     w=`find ./ -maxdepth 2 -name "wait.ajob*" |wc -l`
     d=`find ./ -maxdepth 2 -name "done.ajob*" |wc -l`
 done
+echo $w $r $d $t
+
+# Extra sleep to allow time to copy files over network
+sleep 10
 
 rm -f ../running_jobs
