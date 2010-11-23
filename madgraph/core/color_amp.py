@@ -404,7 +404,8 @@ class ColorBasis(dict):
         res_cs = [cs for cs in my_cf if cs.Nc_power == max_coeff]
 
         # If more than one string at leading N...
-        if len(res_cs) > 1 and any([cs != res_cs[0] for cs in res_cs]):
+        if len(res_cs) > 1 and any([not cs.near_equivalent(res_cs[0]) \
+                                    for cs in res_cs]):
             raise ColorBasis.ColorBasisError, \
              "More than one color string with leading N coeff: %s" % str(res_cs)
 

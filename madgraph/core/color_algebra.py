@@ -320,8 +320,6 @@ class Epsilon(ColorObject):
         if len(args) != 3:
             raise ValueError, \
                 "Epsilon objects must have three indices!"
-        # Ensure a unique ordering
-        self.cycle_sort()
 
     def pair_simplify(self, col_obj):
         """Implement e_ijk ae_ilm = T(j,l)T(k,m) - T(j,m)T(k,l) and
@@ -357,7 +355,6 @@ class Epsilon(ColorObject):
             com_index = self.index(col_obj[1])
             new_self = copy.copy(self)
             new_self[com_index] = col_obj[0]
-            new_self.cycle_sort()
 
             return ColorFactor([ColorString([new_self])])
 
@@ -368,13 +365,6 @@ class Epsilon(ColorObject):
 
         return EpsilonBar(*self)
 
-    def cycle_sort(self):
-        """Cyclically change order of items so the smallest comes
-        first"""
-
-        index_min = self.index(min(self))
-        self[:] = self[index_min:]+self[:index_min]
-        
 
 class EpsilonBar(ColorObject):
     """Epsilon_ijk color object for three antitriplets"""
@@ -386,8 +376,6 @@ class EpsilonBar(ColorObject):
         if len(args) != 3:
             raise ValueError, \
                 "EpsilonBar objects must have three indices!"
-        # Ensure a unique ordering
-        self.cycle_sort()
 
     def pair_simplify(self, col_obj):
         """Implement ebar_ijk T(k,l) = e_ikl"""
@@ -398,7 +386,6 @@ class EpsilonBar(ColorObject):
             com_index = self.index(col_obj[0])
             new_self = copy.copy(self)
             new_self[com_index] = col_obj[1]
-            new_self.cycle_sort()
 
             return ColorFactor([ColorString([new_self])])
 
@@ -409,13 +396,6 @@ class EpsilonBar(ColorObject):
 
         return Epsilon(*self)
 
-    def cycle_sort(self):
-        """Cyclically change order of items so the smallest comes
-        first"""
-
-        index_min = self.index(min(self))
-        self[:] = self[index_min:]+self[:index_min]
-        
 #===============================================================================
 # Color sextet objects: K6, K6Bar, T6
 #                       Note that delta3 = T, delta6 = T6, delta8 = 1/2 Tr
@@ -839,6 +819,17 @@ class ColorString(list):
         return self.Nc_power == col_str.Nc_power and \
                self.is_imaginary == col_str.is_imaginary and \
                self.to_canonical() == col_str.to_canonical()
+
+    def near_equivalent(self, col_str):
+        """Check if two color strings are equivalent looking only at
+        the color objects (used in color flow string calculation)"""
+
+        if len(self.to_canonical()) != len(col_str.to_canonical()):
+            return False
+
+        return all([co1[0] == co2[0] and sorted(co1[1]) == sorted(co2[1]) \
+                        for (co1,co2) in zip(self.to_canonical()[0],
+                                             col_str.to_canonical()[0])])
 
 #===============================================================================
 # ColorFactor
