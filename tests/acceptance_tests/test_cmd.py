@@ -157,6 +157,58 @@ class TestCmdShell2(unittest.TestCase):
                                                     'P0_epem_epem',
                                                     'matrix1.jpg')))
 
+        # Test the tar file
+        os.mkdir(os.path.join(self.out_dir, 'temp'))
+        devnull = open(os.devnull,'w')
+        subprocess.call(['tar', 'xzf', os.path.join(os.path.pardir,
+                                                    "madevent.tar.gz")],
+                        stdout=devnull, stderr=devnull, 
+                        cwd=os.path.join(self.out_dir, 'temp'))
+
+        # Check that the Source directory compiles
+        status = subprocess.call(['make'],
+                                 stdout=devnull, stderr=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'temp', 'Source'))
+        self.assertEqual(status, 0)
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir, 'temp',
+                                               'lib', 'libdhelas3.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir, 'temp',
+                                               'lib', 'libmodel.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir, 'temp',
+                                               'lib', 'libgeneric.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir, 'temp',
+                                               'lib', 'libcernlib.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir, 'temp',
+                                               'lib', 'libdsample.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir, 'temp',
+                                               'lib', 'libpdf.a')))
+        # Check that gensym compiles
+        status = subprocess.call(['make', 'gensym'],
+                                 stdout=devnull, stderr=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'temp', 'SubProcesses',
+                                                  'P0_epem_epem'))
+        self.assertEqual(status, 0)
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir, 'temp',
+                                                    'SubProcesses',
+                                                    'P0_epem_epem',
+                                                    'gensym')))
+        # Check that gensym runs
+        status = subprocess.call('./gensym', 
+                                 stdout=devnull, stderr=devnull,
+                                 cwd=os.path.join(self.out_dir, 'temp', 'SubProcesses',
+                                                  'P0_epem_epem'), shell=True)
+        self.assertEqual(status, 0)
+        # Check that madevent compiles
+        status = subprocess.call(['make', 'madevent'],
+                                 stdout=devnull, stderr=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'temp', 'SubProcesses',
+                                                  'P0_epem_epem'))
+        self.assertEqual(status, 0)
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir, 'temp',
+                                                    'SubProcesses',
+                                                    'P0_epem_epem',
+                                                    'madevent')))
+
     def test_invalid_operations_for_add(self):
         """Test that errors are raised appropriately for add"""
 

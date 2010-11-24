@@ -879,12 +879,11 @@ def export_helas(helas_path, process_path):
         filepos = os.path.join(helas_path, filename)
         if os.path.isfile(filepos):
             if filepos.endswith('Makefile.template'):
-                ln(filepos, os.path.join(process_path,'Source','DHELAS'),
-                   'Makefile')
+                cp(filepos, process_path + '/Source/DHELAS/Makefile')
             elif filepos.endswith('Makefile'):
                 pass
             else:
-                ln(filepos, process_path+'/Source/DHELAS')
+                cp(filepos, process_path + '/Source/DHELAS')
 # following lines do the same but whithout symbolic link
 # 
 #def export_helas(mgme_dir, dir_path):
