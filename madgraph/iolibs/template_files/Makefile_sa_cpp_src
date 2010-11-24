@@ -1,0 +1,18 @@
+LIBDIR=../lib
+CXXFLAGS= -O -I.
+
+target=$(LIBDIR)/libmodel_%(model)s.a
+
+all: $(target)
+
+objects=hel_amps_%(model)s.o Parameters_%(model)s.o rambo.o read_slha.o
+
+$(target): $(objects)
+	$(AR) cru $@ $(objects)
+
+.PHONY: clean
+
+clean:
+	rm -f $(target)
+	rm -f $(objects)
+

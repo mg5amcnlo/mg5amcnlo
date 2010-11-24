@@ -3,16 +3,16 @@
 %(info_lines)s
 //==========================================================================
 
-#ifndef Pythia8_hel_amps_%(model_name)s_H
-#define Pythia8_hel_amps_%(model_name)s_H
+#ifndef MG5_%(process_file_name)s_H
+#define MG5_%(process_file_name)s_H
 
-#include <cmath> 
 #include <complex>
+#include <vector>
+
+#include "Parameters_%(model_name)s.h"
 
 using namespace std;
 
-namespace Pythia8_%(model_name)s {
-%(function_declarations)s
-} // end namespace Pythia8_%(model_name)s
+%(process_class_definitions)s
 
-#endif // Pythia8_hel_amps_%(model_name)s_H
+#endif // MG5_%(process_file_name)s_H

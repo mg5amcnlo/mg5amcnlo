@@ -1408,13 +1408,14 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
 # Routines to output UFO models in MG4 format
 #===============================================================================
 
-def convert_model_to_mg4(model, output_dir, wanted_lorentz = []):
+def convert_model_to_mg4(model, output_dir, wanted_lorentz = [],
+                         wanted_couplings = []):
     """ Create a full valid MG4 model from a MG5 model (coming from UFO)"""
     
     # create the MODEL
     write_dir=os.path.join(output_dir, 'Source', 'MODEL')
     model_builder = UFO_model_to_mg4(model, write_dir)
-    model_builder.build()
+    model_builder.build(wanted_couplings)
     
     # Create and write ALOHA Routine
     aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
@@ -1461,7 +1462,7 @@ class UFO_model_to_mg4(object):
         self.params_ext = []   # external parameter
         self.p_to_f = parsers.UFOExpressionParserFortran()
         
-    def build(self):
+    def build(self, wanted_couplings = []):
         """modify the couplings to fit with MG4 convention and creates all the 
         different files"""
 
@@ -1480,9 +1481,13 @@ class UFO_model_to_mg4(object):
         keys.sort(key=len)
         for key, coup_list in self.model['couplings'].items():
             if 'aS' in key:
-                self.coups_dep += coup_list
+                self.coups_dep += [c for c in coup_list if
+                                   (not wanted_couplings or c.name in \
+                                    wanted_couplings)]
             else:
-                self.coups_indep += coup_list
+                self.coups_indep += [c for c in coup_list if
+                                     (not wanted_couplings or c.name in \
+                                      wanted_couplings)]
                 
         # MG4 use G and not aS as it basic object for alphas related computation
         #Pass G in the  independant list

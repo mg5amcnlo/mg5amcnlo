@@ -1,19 +1,15 @@
 //==========================================================================
-// This file has been automatically generated for Pythia 8
+// This file has been automatically generated for C++
 %(info_lines)s
 //==========================================================================
 
-#ifndef Pythia8_parameters_%(model_name)s_H
-#define Pythia8_parameters_%(model_name)s_H
+#ifndef Parameters_%(model_name)s_H
+#define Parameters_%(model_name)s_H
 
 #include <complex>
 
-#include "ParticleData.h"
-#include "StandardModel.h"
-
+#include "read_slha.h"
 using namespace std;
-
-namespace Pythia8 {
 
 class Parameters_%(model_name)s
 {
@@ -29,13 +25,13 @@ double zero, ZERO;
 %(dependent_couplings)s
 
 // Set parameters that are unchanged during the run
-void setIndependentParameters(ParticleData*& pd, CoupSM*& csm);
+void setIndependentParameters(SLHAReader& slha);
 // Set couplings that are unchanged during the run
-void setIndependentCouplings(ParticleData*& pd, CoupSM*& csm);
+void setIndependentCouplings();
 // Set parameters that are changed event by event
-void setDependentParameters(ParticleData*& pd, CoupSM*& csm, double alpS);
+void setDependentParameters();
 // Set couplings that are changed event by event
-void setDependentCouplings(ParticleData*& pd, CoupSM*& csm);
+void setDependentCouplings();
 
 // Print parameters that are unchanged during the run
 void printIndependentParameters();
@@ -48,8 +44,7 @@ void printDependentCouplings();
 
 
   private:
-static Parameters_%(model_name)s* instance;
+    static Parameters_%(model_name)s* instance;
 };
 
-} // end namespace Pythia8
-#endif // Pythia8_parameters_%(model_name)s_H
+#endif // Parameters_%(model_name)s_H

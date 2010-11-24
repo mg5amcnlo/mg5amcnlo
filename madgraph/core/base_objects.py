@@ -859,6 +859,43 @@ class Model(PhysicsObject):
                     if antipart:
                         antipart.set('antiname', default[pdg])
                 
+    def write_param_card(self):
+        """Write out the param_card, and return as string."""
+
+        def write_param(param, lhablock):
+
+            lhacode=' '.join(['%3s' % key for key in param.lhacode])
+            if lhablock == 'DECAY':
+                return 'DECAY %s %e # %s' % (lhacode, param.value, param.name)
+            else:
+                return "  %s %e # %s" % (lhacode, param.value, param.name ) 
+
+        if not self.get('parameters'):
+            raise self.PhysicsObjectError,\
+                  "Attempt to write param_card from non-UFO model"
+
+        external_params = self.get('parameters')[('external',)]
+
+        # list all lhablock
+        all_lhablock = set([param.lhablock for param in external_params])
+        
+        # sort lhablock alphabeticaly
+        all_lhablock = sorted(list(all_lhablock))
+        # place DECAY blocks last
+        all_lhablock.remove('DECAY')
+        all_lhablock.append('DECAY')
+
+        ret_list = ["# SLHA param_card for %s written by MadGraph 5" % \
+                    self.get('name')]
+        
+        for lhablock in all_lhablock:
+            if lhablock != 'DECAY':
+                ret_list.append("BLOCK %s" % lhablock)
+            ret_list.extend(sorted([write_param(param, lhablock) \
+                                    for param in external_params if \
+                                    param.lhablock == lhablock]))
+        return "\n".join(ret_list) + "\n"
+        
     @ staticmethod
     def load_default_name():
         """ load the default for name convention """

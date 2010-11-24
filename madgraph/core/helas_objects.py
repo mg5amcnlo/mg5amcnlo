@@ -1066,37 +1066,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return sorted([mother['number'] for mother in self['mothers']]) == \
                sorted([mother['number'] for mother in other['mothers']])
 
-    # Overloaded operators
-
-    def almost_equal(self, other):
-        """Just like the equality operator above, except mass is not
-        taken into account for external wavefunctions.
-        """
-
-        if not isinstance(other, HelasWavefunction):
-            return False
-
-        # Check relevant directly defined properties
-        if self['number_external'] != other['number_external'] or \
-           self['fermionflow'] != other['fermionflow'] or \
-           self['coupl_key'] != other['coupl_key'] or \
-           self['lorentz'] != other['lorentz'] or \
-           self['coupling'] != other['coupling'] or \
-           self['state'] != other['state'] or \
-           self['onshell'] != other['onshell'] or \
-           self.get('spin') != other.get('spin') or \
-           self.get('self_antipart') != other.get('self_antipart') or \
-           (self.get('mothers') and self.get('mass') != other.get('mass')) or \
-           self.get('width') != other.get('width') or \
-           self.get('color') != other.get('color') or \
-           self['decay'] != other['decay'] or \
-           self['decay'] and self['particle'] != other['particle']:
-            return False
-
-        # Check that mothers have the same numbers (only relevant info)
-        return sorted([mother['number'] for mother in self['mothers']]) == \
-               sorted([mother['number'] for mother in other['mothers']])
-
     def __ne__(self, other):
         """Overloading the nonequality operator, to make comparison easy"""
         return not self.__eq__(other)
@@ -3204,6 +3173,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 self.get_all_wavefunctions() + self.get_all_amplitudes() \
                 if wa.get('interaction_id') != 0]
         
+    def get_used_couplings(self):
+        """Return a list with all couplings used by this
+        HelasMatrixElement."""
+
+        return [wa.get('coupling') for wa in \
+                self.get_all_wavefunctions() + self.get_all_amplitudes() \
+                if wa.get('interaction_id') != 0]
 
     @staticmethod
     def check_equal_decay_processes(decay1, decay2):
@@ -3860,3 +3836,15 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             helas_list.extend(me.get_used_lorentz())
 
         return list(set(helas_list))
+
+    def get_used_couplings(self):
+        """Return a list with all couplings used by this
+        HelasMatrixElement."""
+
+        coupling_list = []
+
+        for me in self.get('matrix_elements'):
+            coupling_list.extend(me.get_used_couplings())
+
+        return list(set(coupling_list))
+    
