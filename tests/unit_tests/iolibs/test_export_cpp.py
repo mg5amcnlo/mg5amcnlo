@@ -700,7 +700,7 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
         goal_string = \
 """//==========================================================================
 // This file has been automatically generated for Pythia 8 by
-// by MadGraph 5 v. 0.5.0, 2010-09-23
+// by MadGraph 5 v. %(version)s, %(date)s
 // By the MadGraph Development Team
 // Please visit us at https://launchpad.net/madgraph5
 //==========================================================================
