@@ -1066,37 +1066,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return sorted([mother['number'] for mother in self['mothers']]) == \
                sorted([mother['number'] for mother in other['mothers']])
 
-    # Overloaded operators
-
-    def almost_equal(self, other):
-        """Just like the equality operator above, except mass is not
-        taken into account for external wavefunctions.
-        """
-
-        if not isinstance(other, HelasWavefunction):
-            return False
-
-        # Check relevant directly defined properties
-        if self['number_external'] != other['number_external'] or \
-           self['fermionflow'] != other['fermionflow'] or \
-           self['coupl_key'] != other['coupl_key'] or \
-           self['lorentz'] != other['lorentz'] or \
-           self['coupling'] != other['coupling'] or \
-           self['state'] != other['state'] or \
-           self['onshell'] != other['onshell'] or \
-           self.get('spin') != other.get('spin') or \
-           self.get('self_antipart') != other.get('self_antipart') or \
-           (self.get('mothers') and self.get('mass') != other.get('mass')) or \
-           self.get('width') != other.get('width') or \
-           self.get('color') != other.get('color') or \
-           self['decay'] != other['decay'] or \
-           self['decay'] and self['particle'] != other['particle']:
-            return False
-
-        # Check that mothers have the same numbers (only relevant info)
-        return sorted([mother['number'] for mother in self['mothers']]) == \
-               sorted([mother['number'] for mother in other['mothers']])
-
     def __ne__(self, other):
         """Overloading the nonequality operator, to make comparison easy"""
         return not self.__eq__(other)

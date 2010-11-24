@@ -256,13 +256,6 @@ class ProcessExporterCPP(object):
             self.wavefunctions = []
             wf_number = 0
 
-            # Redefine equality so that mass differences for external
-            # particles don't matter (since Pythia gives the mass
-            # explicitly anyway)
-            wf_equal = helas_objects.HelasWavefunction.__eq__
-            helas_objects.HelasWavefunction.__eq__ = \
-                              helas_objects.HelasWavefunction.almost_equal
-
             for me in self.matrix_elements:
                 for iwf, wf in enumerate(me.get_all_wavefunctions()):
                     try:
@@ -273,9 +266,6 @@ class ProcessExporterCPP(object):
                         wf_number += 1
                         wf.set('number', wf_number)
                         self.wavefunctions.append(wf)
-
-            # Redefined the equality back to the original
-            helas_objects.HelasWavefunction.__eq__ = wf_equal
 
     # Methods for generation of process files for C++
 
