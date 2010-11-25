@@ -17,7 +17,7 @@ c      parameter (ng = 43, maxdim = 25, maxinvar= 57 , maxconfigs=20)
       parameter        (xgmin=-1d0, xgmax=1d0)
 
       integer    maxevents         !Requires about 1K/event
-      parameter (maxevents=100000)  !Maximum # events to write to disk
+      parameter (maxevents=1000000)  !Maximum # events to write to disk
 
 c*************************************************************************
 c	Parameters used for parrallel running

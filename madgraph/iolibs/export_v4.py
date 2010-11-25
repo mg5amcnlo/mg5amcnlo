@@ -46,7 +46,8 @@ logger = logging.getLogger('madgraph.export_v4')
 #===============================================================================
 # copy the Template in a new directory.
 #===============================================================================
-def copy_v4template(mgme_dir, dir_path, clean, v4_model = False):
+def copy_v4template(mgme_dir, dir_path, clean, v4_model = False,
+                    subproc_group = False):
     """create the directory run_name as a copy of the MadEvent
     Template, and clean the directory
     """
@@ -93,6 +94,32 @@ def copy_v4template(mgme_dir, dir_path, clean, v4_model = False):
        os.path.isfile(os.path.join(dir_path, 'SubProcesses', 'symmetry_v4.f')):
         shutil.move(os.path.join(dir_path, 'SubProcesses', 'symmetry_v4.f'),
                     os.path.join(dir_path, 'SubProcesses', 'symmetry.f'))
+
+    # If we are using subproc_group, change run_config.inc parameters
+    # and refine multiplicity
+    if subproc_group:
+        # Update values in run_config.inc
+        run_config = \
+                open(os.path.join(dir_path, 'Source', 'run_config.inc')).read()
+        run_config = run_config.replace("min_events_channel = 1000",
+                                        "min_events_channel = 4000")
+        run_config = run_config.replace("min_events = 2000",
+                                        "min_events = 4000")
+        run_config = run_config.replace("max_events = 2000",
+                                        "max_events = 8000")
+        run_config = run_config.replace("ChanPerJob=5",
+                                        "ChanPerJob=2")
+        open(os.path.join(dir_path, 'Source', 'run_config.inc'), 'w').\
+                                    write(run_config)
+        # Update values in generate_events
+        generate_events = \
+                open(os.path.join(dir_path, 'bin', 'generate_events')).read()
+        generate_events = generate_events.replace(\
+                                        "$dirbin/refine $a $mode $n 5 $t",
+                                        "$dirbin/refine $a $mode $n 1 $t")
+        open(os.path.join(dir_path, 'bin', 'generate_events'), 'w').\
+                                    write(generate_events)
+
         
 #===============================================================================
 # copy the Template in a new directory and set up Standalone MG

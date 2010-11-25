@@ -78,7 +78,12 @@ $(LIBDIR)libmodel.a: MODEL
 # $B$ add_compile $E$ !this is a tag for add library in MadWeight compilation
 
 dsample.o: dsample.f genps.inc
-setrun.o: setrun.f nexternal.inc leshouche.inc
+invarients.o: invarients.f genps.inc
+setrun.o: setrun.f nexternal.inc leshouche.inc genps.inc
+sum_html.o: sum_html.f genps.inc
+gen_ximprove.o: gen_ximprove.f run_config.inc
+combine_events.o: combine_events.f run_config.inc
+select_events.o: select_events.f run_config.inc
 
 $(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o
 	$(g77) $(FFLAGS) -o gen_ximprove gen_ximprove.o ranmar.o rw_routines.o open_file.o

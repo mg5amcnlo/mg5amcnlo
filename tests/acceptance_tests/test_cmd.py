@@ -358,12 +358,30 @@ class TestCmdShell2(unittest.TestCase):
             shutil.rmdir(self.out_dir)
 
         self.do('import model sm')
-        self.do('define p = g u u~ d d~')
-        self.do('generate g g > p p @2')
+        self.do('define p = g u d u~ d~')
         self.do('set group_subprocesses_output True')
+        self.do('generate g g > p p @2')
         self.do('output madevent %s ' % self.out_dir)
         self.do('set group_subprocesses_output False')
         devnull = open(os.devnull,'w')
+        # Check that all subprocess directories have been created
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P2_gg_gg')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P2_gg_qq')))
+        # Check that the run_config.inc file has been modified correctly
+        run_config = open(os.path.join(self.out_dir, 'Source',
+                                       'run_config.inc')).read()
+        self.assertTrue(run_config.find("min_events_channel = 4000"))
+        self.assertTrue(run_config.find("min_events = 4000"))
+        self.assertTrue(run_config.find("max_events = 8000"))
+        self.assertTrue(run_config.find("ChanPerJob=2"))
+        generate_events = open(os.path.join(self.out_dir, 'bin',
+                                       'generate_events')).read()
+        self.assertTrue(generate_events.find(\
+                                            "$dirbin/refine $a $mode $n 1 $t"))
         # Check that the Source directory compiles
         status = subprocess.call(['make'],
                                  stdout=devnull, 
@@ -385,27 +403,27 @@ class TestCmdShell2(unittest.TestCase):
         status = subprocess.call(['make', 'gensym'],
                                  stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                                  'P2_gg_jj'))
+                                                  'P2_gg_qq'))
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P2_gg_jj',
+                                                    'P2_gg_qq',
                                                     'gensym')))
         # Check that gensym runs
         status = subprocess.call('./gensym', 
                                  stdout=devnull,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                                  'P2_gg_jj'), shell=True)
+                                                  'P2_gg_qq'), shell=True)
         self.assertEqual(status, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
                                  stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                                  'P2_gg_jj'))
+                                                  'P2_gg_qq'))
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P2_gg_jj',
+                                                    'P2_gg_qq',
                                                     'madevent')))
         
     def test_ufo_standard_sm(self):

@@ -2522,10 +2522,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if answer != 'y':
                 raise MadGraph5Error('Stopped by user request')
 
+        subproc_group_opt = 'group_subprocesses_output' in self._options and \
+                                self._options['group_subprocesses_output']
+
         # Make a Template Copy
         if self._export_format.startswith('madevent'):
             export_v4.copy_v4template(self._mgme_dir, self._export_dir,
-                                      not noclean, self._model_v4_path)
+                                      not noclean, self._model_v4_path,
+                                      subproc_group_opt)
         elif self._export_format == 'standalone':
             export_v4.copy_v4standalone(self._mgme_dir, self._export_dir,
                                         not noclean)
