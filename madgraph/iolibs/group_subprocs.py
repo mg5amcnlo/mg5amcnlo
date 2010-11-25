@@ -153,16 +153,17 @@ class SubProcessGroup(base_objects.PhysicsObject):
             if part.get('mass').lower() == 'zero' and part.is_fermion() and \
                    part.get('color') != 1:
                 name += "q"
-                if not part.get('is_part'):
-                    name +="bar"
+                #if not part.get('is_part'):
+                #    name +="bar"
             else:
                 name += part.get_name().replace('~', 'bar').\
                             replace('+', 'p').replace('-', 'm')
         name += "_"
         for fs_part in fs:
             part = process.get('model').get_particle(fs_part)
-            if part.get('mass').lower() == 'zero' and part.get('color') != 1:
-                name += "j"
+            if part.get('mass').lower() == 'zero' and part.get('color') != 1 \
+                   and part.get('spin') == 2:
+                name += "q" # "j"
             else:
                 name += part.get_name().replace('~', 'bar').\
                             replace('+', 'p').replace('-', 'm')
@@ -321,13 +322,16 @@ class SubProcessGroup(base_objects.PhysicsObject):
             fs_parts = [model.get_particle(l.get('id')) for l in \
                         amplitude.get('process').get('legs') if l.get('state')]
             diagrams = amplitude.get('diagrams')
-            #couplings = set(sum([d.get('orders').keys() for d in diagrams], []))
-            #actual_orders = dict([(key, max([d.get('orders')[key] for d in \
-            #                            diagrams if key in d.get('orders')])) \
-            #                       for key in couplings])
-            proc_class = [ [(p.is_fermion(), p.get('is_part')) \
-                            for p in is_parts],
-                           [(p.get('mass'), p.get('color') != 1) for p in \
+
+            # This is where the requirements for which particles to
+            # combine are defined. Include p.get('is_part') in
+            # is_parts selection to distinguish between q and qbar,
+            # remove p.get('spin') from fs_parts selection to combine
+            # q and g into "j"
+            proc_class = [ [(p.is_fermion(), ) \
+                            for p in is_parts], # p.get('is_part')
+                           [(p.get('mass'), p.get('spin'),
+                             p.get('color') != 1) for p in \
                             is_parts + fs_parts],
                            amplitude.get('process').get('id')]
             try:

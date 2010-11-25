@@ -1862,6 +1862,9 @@ c                  write(26,*) grid(2,i,j),j,i
 c               enddo
 c            enddo
 c            close(26)
+
+c     Update weights in dsig (needed for subprocess group mode)
+            xdum=dsig(0,0,2)
 c
 c     Add test to see if we have achieved desired accuracy
 c
@@ -1973,8 +1976,6 @@ c
 c                  nun = n_unwgted()
 c                  write(*,*) 'Estimated unweighted events ', nun
               call clear_Events
-c           Update weights in dsig (needed for subprocess group mode)
-              xdum=dsig(0,0,2)
             endif
          endif
       else

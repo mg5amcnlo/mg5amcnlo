@@ -2605,18 +2605,24 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 nojpeg = True
                 ndiags = 0
                 cpu_time1 = time.time()
-                for me_group in group_subprocs.SubProcessGroup.group_amplitudes(\
-                                      self._curr_amps):
+                subproc_groups = \
+                               group_subprocs.SubProcessGroup.group_amplitudes(\
+                                      self._curr_amps)
+                cpu_time1 = time.time()
+                for sp_group in subproc_groups:
+                    ndiags = ndiags + sum([len(m.get('diagrams')) for m in \
+                          sp_group.get('multi_matrix').get('matrix_elements')])
+                cpu_time = time.time() - cpu_time1
+                cpu_time1 = time.time()
+                for me_group in subproc_groups:
                     calls = calls + \
                          export_v4.generate_subprocess_group_directory_v4_madevent(\
                                 me_group, self._curr_fortran_model, path)
                     matrix_elements = \
                                  me_group.get('multi_matrix').get('matrix_elements')
-                    ndiags += sum([len(me.get('diagrams')) for me in \
-                               matrix_elements])
                     self._curr_matrix_elements.get('matrix_elements').\
                                                              extend(matrix_elements)
-                cpu_time = time.time() - cpu_time1
+                cpu_time2 = time.time() - cpu_time1
             else:
                 cpu_time1 = time.time()
                 for me in self._curr_matrix_elements.get('matrix_elements'):
@@ -2671,11 +2677,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                ndiags, cpu_time))
 
         if calls:
-            if "cpu_time2" in locals():
                 logger.info("Wrote files for %d helas calls in %0.3f s" % \
                             (calls, cpu_time2))
-            else:
-                logger.info("Wrote %d helas calls" % calls)
         # Replace the amplitudes with the actual amplitudes from the
         # matrix elements, which allows proper diagram drawing also of
         # decay chain processes

@@ -167,6 +167,17 @@ c     Update SELPROC
             ENDDO
           ENDDO
         ENDDO
+C     Average selection for mirror processes if identical beams
+        IF(EBEAM(1).EQ.EBEAM(2) .AND. LPP(1).EQ.LPP(2))THEN
+           DO J=1,SYMCONF(0)
+              DO I=1,MAXSPROC
+                 IF(SELPROC(2,I,J).GT.0d0)THEN
+                    SELPROC(1,I,J)=0.5d0*(SELPROC(1,I,J)+SELPROC(2,I,J))
+                    SELPROC(2,I,J)=SELPROC(1,I,J)
+                 ENDIF
+              ENDDO
+           ENDDO
+        ENDIF
         WRITE(*,*)'Selection weights after reweight:'
         DO J=1,SYMCONF(0)
           WRITE(*,'(%(maxsprocs)dE12.4)')((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
