@@ -558,10 +558,14 @@ C     Amplitude(s) for diagram number 6
 
         # Calculate diagrams for all processes
 
-        amplitudes[0].set('has_mirror_process', True)
-        subprocess_group = group_subprocs.SubProcessGroup.\
-                           group_amplitudes(amplitudes)[0]
+        amplitudes[1].set('has_mirror_process', True)
+        subprocess_groups = group_subprocs.SubProcessGroup.\
+                           group_amplitudes(amplitudes)
+        self.assertEqual(len(subprocess_groups), 2)
+        self.assertEqual(subprocess_groups[0].get('name'), 'qq_gg')
+        self.assertEqual(subprocess_groups[1].get('name'), 'qq_qq')
 
+        subprocess_group = subprocess_groups[1]
         matrix_elements = subprocess_group.get('multi_matrix').\
                                         get('matrix_elements')
 
@@ -575,8 +579,8 @@ C     Amplitude(s) for diagram number 6
         # Test amp2 lines
         
         amp2_lines = \
-                 export_v4.get_amp2_lines(matrix_elements[1],
-                                        subprocess_group.get('diagram_maps')[1])
+                 export_v4.get_amp2_lines(matrix_elements[0],
+                                          subprocess_group.get('diagram_maps')[0])
         self.assertEqual(amp2_lines,
                          ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))+AMP(2)*dconjg(AMP(2))',
                           'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))+AMP(4)*dconjg(AMP(4))+AMP(5)*dconjg(AMP(5))+AMP(6)*dconjg(AMP(6))',
@@ -596,26 +600,23 @@ C     Amplitude(s) for diagram number 6
       DATA SPROP(-1,1)/21/
 C     Diagram 2
       DATA MAPCONFIG(2)/2/
-      DATA (IFOREST(I,-1,2),I=1,2)/1,3/
-      DATA TPRID(-1,2)/-2/
-      DATA (IFOREST(I,-2,2),I=1,2)/-1,4/
+      DATA (IFOREST(I,-1,2),I=1,2)/4,3/
+      DATA SPROP(-1,2)/23/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
-      DATA (IFOREST(I,-1,3),I=1,2)/1,4/
-      DATA TPRID(-1,3)/-2/
-      DATA (IFOREST(I,-2,3),I=1,2)/-1,3/
+      DATA (IFOREST(I,-1,3),I=1,2)/1,3/
+      DATA TPRID(-1,3)/21/
+      DATA (IFOREST(I,-2,3),I=1,2)/-1,4/
 C     Diagram 4
       DATA MAPCONFIG(4)/4/
-      DATA (IFOREST(I,-1,4),I=1,2)/4,3/
-      DATA SPROP(-1,4)/23/
-C     Diagram 5
-      DATA MAPCONFIG(5)/5/
-      DATA (IFOREST(I,-1,5),I=1,2)/1,3/
-      DATA TPRID(-1,5)/23/
-      DATA (IFOREST(I,-2,5),I=1,2)/-1,4/
+      DATA (IFOREST(I,-1,4),I=1,2)/1,3/
+      DATA TPRID(-1,4)/23/
+      DATA (IFOREST(I,-2,4),I=1,2)/-1,4/
 C     Number of configs
-      DATA MAPCONFIG(0)/5/
+      DATA MAPCONFIG(0)/4/
 """
+        #print open(self.give_pos('test')).read()
+
         self.assertFileContains('test', goal_configs)
 
         # Test config_subproc_map.inc
@@ -624,11 +625,10 @@ C     Number of configs
             writers.FortranWriter(self.give_pos('test')),
             subprocess_group.get('diagrams_for_configs'))
 
-        goal_confsub = """      DATA (CONFSUB(I,1),I=1,3)/1,1,1/
-      DATA (CONFSUB(I,2),I=1,3)/2,4,0/
-      DATA (CONFSUB(I,3),I=1,3)/3,0,0/
-      DATA (CONFSUB(I,4),I=1,3)/0,3,3/
-      DATA (CONFSUB(I,5),I=1,3)/0,6,0/
+        goal_confsub = """      DATA (CONFSUB(I,1),I=1,2)/1,1/
+      DATA (CONFSUB(I,2),I=1,2)/3,3/
+      DATA (CONFSUB(I,3),I=1,2)/4,0/
+      DATA (CONFSUB(I,4),I=1,2)/6,0/
 """
         
         #print open(self.give_pos('test')).read()
@@ -644,30 +644,27 @@ C     Number of configs
 
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test',
-"""      LOGICAL ICOLAMP(2,5,3)
+"""      LOGICAL ICOLAMP(2,4,2)
       DATA(ICOLAMP(I,1,1),I=1,2)/.TRUE.,.TRUE./
-      DATA(ICOLAMP(I,2,1),I=1,2)/.FALSE.,.TRUE./
-      DATA(ICOLAMP(I,3,1),I=1,2)/.TRUE.,.FALSE./
+      DATA(ICOLAMP(I,2,1),I=1,2)/.TRUE.,.FALSE./
+      DATA(ICOLAMP(I,3,1),I=1,2)/.TRUE.,.TRUE./
+      DATA(ICOLAMP(I,4,1),I=1,2)/.FALSE.,.TRUE./
       DATA(ICOLAMP(I,1,2),I=1,2)/.TRUE.,.TRUE./
-      DATA(ICOLAMP(I,2,2),I=1,2)/.TRUE.,.TRUE./
-      DATA(ICOLAMP(I,4,2),I=1,2)/.TRUE.,.FALSE./
-      DATA(ICOLAMP(I,5,2),I=1,2)/.FALSE.,.TRUE./
-      DATA(ICOLAMP(I,1,3),I=1,2)/.TRUE.,.TRUE./
-      DATA(ICOLAMP(I,4,3),I=1,2)/.TRUE.,.FALSE./
+      DATA(ICOLAMP(I,2,2),I=1,2)/.TRUE.,.FALSE./
 """)
 
         # Test find_matrix_elements_for_configs
 
         self.assertEqual(\
             diagram_symmetry.find_matrix_elements_for_configs(subprocess_group),
-            ([0], {0:[1,2,3]}))
+            ([], {}))
 
         symmetry, perms, ident_perms = \
                   diagram_symmetry.find_symmetry(subprocess_group)
 
-        self.assertEqual(symmetry, [1,1,-2,1,1])
+        self.assertEqual(symmetry, [1,1,1,1])
         self.assertEqual(perms,
-                         [[0,1,2,3],[0,1,2,3],[0,1,3,2],[0,1,2,3],[0,1,2,3]])
+                         [[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3]])
         self.assertEqual(ident_perms,
                          [[0,1,2,3]])
 
@@ -677,13 +674,13 @@ C     Number of configs
                             export_v4.write_processes_file,
                             subprocess_group)
 
-        goal_processes = """1       u u~ > g g
-mirror  u~ u > g g
-2       u u~ > u u~
-mirror  none
-3       u u~ > d d~
+        goal_processes = """1       u u~ > u u~
+mirror  u~ u > u u~
+2       u u~ > d d~
 mirror  none"""
         
+        self.assertFileContains('test', goal_processes)
+
         # Test mirrorprocs.inc
 
         export_v4.write_mirrorprocs(\
@@ -691,7 +688,7 @@ mirror  none"""
             subprocess_group)
 
         goal_mirror_inc = \
-                 "      DATA (MIRRORPROCS(I),I=1,3)/.TRUE.,.FALSE.,.FALSE./\n"
+                 "      DATA (MIRRORPROCS(I),I=1,2)/.TRUE.,.FALSE./\n"
         
         self.assertFileContains('test', goal_mirror_inc)
 
@@ -705,11 +702,11 @@ mirror  none"""
 """      DOUBLE PRECISION FUNCTION DSIG1(PP,WGT,IMODE)
 C     ****************************************************
 C     
-C     Generated by MadGraph 5 v. %(version)s, %(date)s
+C     Generated by MadGraph 5 v. 1.0.b1, 2010-11-12
 C     By the MadGraph Development Team
 C     Please visit us at https://launchpad.net/madgraph5
 C     
-C     Process: u u~ > g g
+C     Process: u u~ > u u~
 C     
 C     RETURNS DIFFERENTIAL CROSS SECTION
 C     Input:
@@ -789,7 +786,7 @@ C     Only run if IMODE is 0
       ENDIF
       PD(0) = 0D0
       IPROC = 0
-      IPROC=IPROC+1  ! u u~ > g g
+      IPROC=IPROC+1  ! u u~ > u u~
       PD(IPROC)=PD(IPROC-1) + U1*UB2
       CALL SMATRIX1(PP,DSIGUU)
       DSIGUU=DSIGUU*REWGT(PP)
@@ -819,11 +816,10 @@ C     Only run if IMODE is 0
 """      DOUBLE PRECISION FUNCTION DSIG(PP,WGT,IMODE)
 C     ****************************************************
 C     
-C     Generated by MadGraph 5 v. %(version)s, %(date)s
+C     Generated by MadGraph 5 v. 1.0.b1, 2010-11-12
 C     By the MadGraph Development Team
 C     Please visit us at https://launchpad.net/madgraph5
 C     
-C     Process: u u~ > g g
 C     Process: u u~ > u u~
 C     Process: u u~ > d d~
 C     
@@ -888,7 +884,7 @@ C
       INTEGER NEXTUNOPEN
       REAL XRAN1
       EXTERNAL PASSCUTS,NEXTUNOPEN,XRAN1
-      DOUBLE PRECISION DSIG1,DSIG2,DSIG3
+      DOUBLE PRECISION DSIG1,DSIG2
 C     
 C     GLOBAL VARIABLES
 C     
@@ -936,12 +932,11 @@ C       Read in weight file
  20     LUN=NEXTUNOPEN()
         OPEN(UNIT=LUN,FILE='selproc.dat',STATUS='OLD',ERR=30)
         DO J=1,SYMCONF(0)
-          READ(LUN,'(3E16.8)') ((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
+          READ(LUN,'(4E16.8)') ((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
         CLOSE(LUN)
         GOTO 40
- 30     WRITE(*,*)'Error opening file selproc.dat. Set all weights
-     $    equal.'
+ 30     WRITE(*,*)'Error opening selproc.dat. Set all weights equal.'
 C       Find number of contributing diagrams
         NPROC=0
         DO J=1,SYMCONF(0)
@@ -963,7 +958,7 @@ C       Set SELPROC democratically
         ENDDO
  40     WRITE(*,*) 'Initial selection weights:'
         DO J=1,SYMCONF(0)
-          WRITE(*,'(3E12.4)')((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
+          WRITE(*,'(4E12.4)')((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
         RETURN
       ELSE IF(IMODE.EQ.2)THEN
@@ -992,17 +987,28 @@ C       Update SELPROC
             ENDDO
           ENDDO
         ENDDO
+C       Average selection for mirror processes if identical beams
+        IF(EBEAM(1).EQ.EBEAM(2) .AND. LPP(1).EQ.LPP(2))THEN
+          DO J=1,SYMCONF(0)
+            DO I=1,MAXSPROC
+              IF(SELPROC(2,I,J).GT.0D0)THEN
+                SELPROC(1,I,J)=0.5D0*(SELPROC(1,I,J)+SELPROC(2,I,J))
+                SELPROC(2,I,J)=SELPROC(1,I,J)
+              ENDIF
+            ENDDO
+          ENDDO
+        ENDIF
         WRITE(*,*)'Selection weights after reweight:'
         DO J=1,SYMCONF(0)
-          WRITE(*,'(3E12.4)')((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
+          WRITE(*,'(4E12.4)')((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
         WRITE(*,*)'Summed weights:'
         DO J=1,SYMCONF(0)
-          WRITE(*,'(3E12.4)')((SUMWGT(K,I,J),K=1,2),I=1,MAXSPROC)
+          WRITE(*,'(4E12.4)')((SUMWGT(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
         WRITE(*,*)'Events:'
         DO J=1,SYMCONF(0)
-          WRITE(*,'(3I12)')((NUMEVTS(K,I,J),K=1,2),I=1,MAXSPROC)
+          WRITE(*,'(4I12)')((NUMEVTS(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
 C       Reset weights and number of events if above LIMEVTS
         DO J=1,SYMCONF(0)
@@ -1021,7 +1027,7 @@ C       Write out weight file
         LUN=NEXTUNOPEN()
         OPEN(UNIT=LUN,FILE='selproc.dat',STATUS='UNKNOWN')
         DO J=1,SYMCONF(0)
-          WRITE(LUN,'(3E16.8)') ((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
+          WRITE(LUN,'(4E16.8)') ((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
         CLOSE(LUN)
         RETURN
@@ -1084,9 +1090,8 @@ C       Flip x values (to get boost right)
 C       Update weigth w.r.t SELPROC
         WGT=WGT/SELPROC(IMIRROR,IPROC,ICONF)
 
-        IF(IPROC.EQ.1) DSIG=DSIG1(P1,WGT,0)  ! u u~ > g g
-        IF(IPROC.EQ.2) DSIG=DSIG2(P1,WGT,0)  ! u u~ > u u~
-        IF(IPROC.EQ.3) DSIG=DSIG3(P1,WGT,0)  ! u u~ > d d~
+        IF(IPROC.EQ.1) DSIG=DSIG1(P1,WGT,0)  ! u u~ > u u~
+        IF(IPROC.EQ.2) DSIG=DSIG2(P1,WGT,0)  ! u u~ > d d~
 
 C       Update summed weight and number of events
         SUMWGT(IMIRROR,IPROC,ICONF)=SUMWGT(IMIRROR,IPROC,ICONF)

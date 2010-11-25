@@ -660,11 +660,8 @@ class IOExportPythonTest(unittest.TestCase):
 
         amp2_lines = \
                  python_exporter.get_amp2_lines(subprocess_group.get('multi_matrix').\
-                                        get('matrix_elements')[1],
-                                        subprocess_group.get('diagram_maps')[1])
+                                        get('matrix_elements')[0],
+                                        subprocess_group.get('diagram_maps')[0])
         self.assertEqual(amp2_lines,
-                         ['self.amp2[0]+=abs(amp[0]*amp[0].conjugate())+abs(amp[1]*amp[1].conjugate())',
-                          'self.amp2[2]+=abs(amp[2]*amp[2].conjugate())+abs(amp[3]*amp[3].conjugate())+abs(amp[4]*amp[4].conjugate())+abs(amp[5]*amp[5].conjugate())',
-                          'self.amp2[3]+=abs(amp[6]*amp[6].conjugate())+abs(amp[7]*amp[7].conjugate())',
-                          'self.amp2[5]+=abs(amp[8]*amp[8].conjugate())+abs(amp[9]*amp[9].conjugate())+abs(amp[10]*amp[10].conjugate())+abs(amp[11]*amp[11].conjugate())'])
+                         ['self.amp2[0]+=abs(amp[0]*amp[0].conjugate())', 'self.amp2[1]+=abs(amp[1]*amp[1].conjugate())', 'self.amp2[2]+=abs(amp[2]*amp[2].conjugate())'])
 

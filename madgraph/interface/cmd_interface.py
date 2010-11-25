@@ -2681,8 +2681,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                ndiags, cpu_time))
 
         if calls:
+            if "cpu_time2" in locals():
                 logger.info("Wrote files for %d helas calls in %0.3f s" % \
                             (calls, cpu_time2))
+            else:
+                logger.info("Wrote files for %d helas calls" % \
+                            (calls))
         # Replace the amplitudes with the actual amplitudes from the
         # matrix elements, which allows proper diagram drawing also of
         # decay chain processes

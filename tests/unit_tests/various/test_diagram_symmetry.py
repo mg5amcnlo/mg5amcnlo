@@ -98,10 +98,10 @@ class TestDiagramSymmetry(unittest.TestCase):
             self.assertAlmostEqual(amp2[isym], amp2_org[-sym-1])
         
 
-    def test_find_symmetry_udbar_ggg_with_subprocess_group(self):
+    def test_find_symmetry_qq_qqg_with_subprocess_group(self):
         """Test the find_symmetry function for subprocess groups"""
 
-        procs = [[2,-2,2,-2,21], [2,-2,21,21,21]]
+        procs = [[2,-2,2,-2,21], [2,2,2,2,21]]
         amplitudes = diagram_generation.AmplitudeList()
 
         for proc in procs:
@@ -122,10 +122,10 @@ class TestDiagramSymmetry(unittest.TestCase):
 
         symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(subproc_group)
 
-        self.assertEqual(len([s for s in symmetry if s > 0]), 12)
+        self.assertEqual(len([s for s in symmetry if s > 0]), 18)
 
         self.assertEqual(symmetry,
-                         [1, -1, 1, -1, 1, 1, -6, 1, 1, 1, -6, 1, -9, 1, -23, 1, -23, 1, -6, -6, -9, -6, 1])
+                         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -24, -25, 1, 1, -26, -27, 1, 1, -6, -7, -8, -9, -10, 1, 1, 1, 1])
 
         # Check that the momentum assignments work
         matrix_element = \

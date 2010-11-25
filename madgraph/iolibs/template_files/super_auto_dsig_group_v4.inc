@@ -112,11 +112,11 @@ C     Read in weight file
  20     LUN=NEXTUNOPEN()
         OPEN(UNIT=LUN,FILE='selproc.dat',STATUS='OLD',ERR=30)
         DO J=1,SYMCONF(0)
-          READ(LUN,'(%(maxsprocs)dE16.8)') ((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
+          READ(LUN,'(%(nsprocs)dE16.8)') ((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
         CLOSE(LUN)
         GOTO 40
- 30     WRITE(*,*)'Error opening file selproc.dat. Set all weights equal.'
+ 30     WRITE(*,*)'Error opening selproc.dat. Set all weights equal.'
 C     Find number of contributing diagrams
         NPROC=0
         DO J=1,SYMCONF(0)
@@ -138,7 +138,7 @@ C     Set SELPROC democratically
         ENDDO
  40     WRITE(*,*) 'Initial selection weights:'
         DO J=1,SYMCONF(0)
-          WRITE(*,'(%(maxsprocs)dE12.4)')((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
+          WRITE(*,'(%(nsprocs)dE12.4)')((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
         RETURN
       ELSE IF(IMODE.EQ.2)THEN
@@ -180,15 +180,15 @@ C     Average selection for mirror processes if identical beams
         ENDIF
         WRITE(*,*)'Selection weights after reweight:'
         DO J=1,SYMCONF(0)
-          WRITE(*,'(%(maxsprocs)dE12.4)')((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
+          WRITE(*,'(%(nsprocs)dE12.4)')((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
         WRITE(*,*)'Summed weights:'
         DO J=1,SYMCONF(0)
-          WRITE(*,'(%(maxsprocs)dE12.4)')((SUMWGT(K,I,J),K=1,2),I=1,MAXSPROC)
+          WRITE(*,'(%(nsprocs)dE12.4)')((SUMWGT(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
         WRITE(*,*)'Events:'
         DO J=1,SYMCONF(0)
-          WRITE(*,'(%(maxsprocs)dI12)')((NUMEVTS(K,I,J),K=1,2),I=1,MAXSPROC)
+          WRITE(*,'(%(nsprocs)dI12)')((NUMEVTS(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
 C       Reset weights and number of events if above LIMEVTS
         DO J=1,SYMCONF(0)
@@ -207,7 +207,7 @@ C     Write out weight file
         LUN=NEXTUNOPEN()
         OPEN(UNIT=LUN,FILE='selproc.dat',STATUS='UNKNOWN')
         DO J=1,SYMCONF(0)
-          WRITE(LUN,'(%(maxsprocs)dE16.8)') ((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
+          WRITE(LUN,'(%(nsprocs)dE16.8)') ((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
         CLOSE(LUN)
         RETURN
