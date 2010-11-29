@@ -1579,17 +1579,17 @@ class UFO_model_to_mg4(object):
         fsock.writelines(header)
         
         # Write the Mass definition/ common block
-        masses = []
-        widths = []
+        masses = set()
+        widths = set()
         for particle in self.model.get('particles'):
             #find masses
             one_mass = particle.get('mass')
             if one_mass.lower() != 'zero':
-                masses.append(one_mass)
+                masses.add(one_mass)
             # find width
             one_width = particle.get('width')
             if one_width.lower() != 'zero':
-                widths.append(one_width)
+                widths.add(one_width)
             
         
         fsock.writelines('double precision '+','.join(masses)+'\n')
