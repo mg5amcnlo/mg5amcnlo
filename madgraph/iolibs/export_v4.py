@@ -1579,20 +1579,21 @@ class UFO_model_to_mg4(object):
         fsock.writelines(header)
         
         # Write the Mass definition/ common block
-        masses = [param.name for param in self.params_ext \
-                                                    if param.lhablock == 'MASS']
-        
-        is_mass = lambda name: name[0].lower() == 'm' and len(name)<4
-        masses += [param.name for param in self.params_dep + 
-                            self.params_indep if param.type == 'real'
-                            and is_mass(param.name)]      
+        masses = []
+        widths = []
+        for particle in self.model.get('particles'):
+            #find masses
+            one_mass = particle.get('mass')
+            if one_mass.lower() != 'zero':
+                masses.append(one_mass)
+            # find width
+            one_width = particle.get('width')
+            if one_width.lower() != 'zero':
+                widths.append(one_width)
+            
         
         fsock.writelines('double precision '+','.join(masses)+'\n')
         fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
-        
-        # Write the Width definition/ common block
-        widths = [param.name for param in self.params_ext \
-                                                   if param.lhablock == 'DECAY']
         fsock.writelines('double precision '+','.join(widths)+'\n')
         fsock.writelines('common/widths/ '+','.join(widths)+'\n\n')
         
@@ -1621,8 +1622,14 @@ class UFO_model_to_mg4(object):
         """create input.inc containing the definition of the parameters"""
         
         fsock = self.open('input.inc', format='fortran')
+
+        #find mass/ width since they are already define
+        already_def = set()
+        for particle in self.model.get('particles'):
+            already_def.add(particle.get('mass').lower())
+            already_def.add(particle.get('width').lower())
         
-        is_valid = lambda name: name!='G' and not (name[0].lower() == 'm' and len(name)<4)
+        is_valid = lambda name: name!='G' and name.lower() not in already_def
         
         real_parameters = [param.name for param in self.params_dep + 
                             self.params_indep if param.type == 'real'
