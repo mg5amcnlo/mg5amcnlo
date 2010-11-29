@@ -54,7 +54,7 @@ GC_11 = Coupling(name = 'GC_11',
                  order = {'QED':2})
 
 GC_12 = Coupling(name = 'GC_12',
-                 value = 'complex(0,1)*qqtrip',
+                 value = 'complex(0,1)*1/cmath.sqrt(2)*qqtrip',
                  order = {'QED':1})
 
 GC_13 = Coupling(name = 'GC_13',

@@ -308,7 +308,8 @@ class d(f):
         return ColorFactor([col_str1, col_str2])
 
 #===============================================================================
-# epsilon
+# Epsilon and EpsilonBar, the totally antisymmetric tensors of three triplet
+# (antitriplet) indices
 #===============================================================================
 class Epsilon(ColorObject):
     """Epsilon_ijk color object for three triplets"""
@@ -380,7 +381,7 @@ class EpsilonBar(ColorObject):
     def pair_simplify(self, col_obj):
         """Implement ebar_ijk T(k,l) = e_ikl"""
 
-        # ebar_ijk T(k,l) = e_ijl
+        # ebar_ijk T(k,l) = ebar_ijl
         if isinstance(col_obj, T) and len(col_obj) == 2 and col_obj[0] in self:
 
             com_index = self.index(col_obj[0])
@@ -395,6 +396,7 @@ class EpsilonBar(ColorObject):
         interchange triplets and antitriplets."""
 
         return Epsilon(*self)
+
 
 #===============================================================================
 # Color sextet objects: K6, K6Bar, T6
@@ -513,7 +515,7 @@ class T6(ColorObject):
                 "T6 objects must have two or three indices!"
 
     def simplify(self):
-        """Implement delta6(i,i) = Nc,
+        """Implement delta6(i,i) = 1/2 Nc(Nc+1),
         T6(a,i,j) = 2(K6(i,ii,jj)T(a,jj,kk)K6Bar(j,kk,ii))"""
 
         # delta6(i,i) = Nc
