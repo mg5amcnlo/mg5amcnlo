@@ -566,8 +566,7 @@ C     Amplitude(s) for diagram number 6
         self.assertEqual(subprocess_groups[1].get('name'), 'qq_qq')
 
         subprocess_group = subprocess_groups[1]
-        matrix_elements = subprocess_group.get('multi_matrix').\
-                                        get('matrix_elements')
+        matrix_elements = subprocess_group.get('matrix_elements')
 
         maxflows = 0
         for me in matrix_elements:

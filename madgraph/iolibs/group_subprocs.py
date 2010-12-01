@@ -55,10 +55,11 @@ class SubProcessGroup(base_objects.PhysicsObject):
         self['number'] = 0
         self['name'] = ""
         self['amplitudes'] = diagram_generation.AmplitudeList()
-        self['multi_matrix'] = helas_objects.HelasMultiProcess()
+        self['matrix_elements'] = helas_objects.HelasMatrixElementList()
         self['mapping_diagrams'] = []
         self['diagram_maps'] = {}
         self['diagrams_for_configs'] = []
+        self['amplitude_map'] = {}
 
     def filter(self, name, value):
         """Filter for valid property values."""
@@ -83,24 +84,30 @@ class SubProcessGroup(base_objects.PhysicsObject):
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid dict" % str(value)
-        if name == 'multi_matrix':
-            if not isinstance(value, helas_objects.HelasMultiProcess):
+        if name == 'matrix_elements':
+            if not isinstance(value, helas_objects.HelasMatrixElementList):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid HelasMultiProcess" % str(value)
+                        "%s is not a valid HelasMatrixElementList" % str(value)
+
+        if name == 'amplitude_map':
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid dict object" % str(value)
+
         return True
 
     def get_sorted_keys(self):
         """Return diagram property names as a nicely sorted list."""
 
         return ['number', 'name', 'amplitudes', 'mapping_diagrams',
-                'diagram_maps', 'multi_matrix']
+                'diagram_maps', 'matrix_elements', 'amplitude_map']
 
     # Enhanced get function
     def get(self, name):
         """Get the value of the property name."""
 
-        if name == 'multi_matrix' and not self[name].get('matrix_elements'):
-            self.generate_multi_matrix()
+        if name == 'matrix_elements' and not self[name]:
+            self.generate_matrix_elements()
         
         if name in ['mapping_diagrams', 'diagram_maps'] and not self[name]:
             self.set_mapping_diagrams()
@@ -125,7 +132,10 @@ class SubProcessGroup(base_objects.PhysicsObject):
         self.set('mapping_diagrams', mapping_diagrams)
         self.set('diagram_maps', diagram_maps)
 
-    def generate_multi_matrix(self):
+    #===========================================================================
+    # generate_matrix_elements
+    #===========================================================================
+    def generate_matrix_elements(self):
         """Create a HelasMultiProcess corresponding to the amplitudes
         in self"""
 
@@ -135,9 +145,10 @@ class SubProcessGroup(base_objects.PhysicsObject):
 
         self.set_mapping_diagrams()
 
-        self['multi_matrix'] = helas_objects.HelasMultiProcess(\
-            self.get('amplitudes'))
-
+        self['matrix_elements'], self['amplitude_map'] = \
+                       helas_objects.HelasMatrixElementList.\
+                               generate_matrix_elements(self.get('amplitudes'))
+        
         self.rearrange_diagram_maps()
 
     def generate_name(self):
@@ -174,7 +185,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
         """Rearrange the diagram_maps according to the matrix elements in
         the HelasMultiProcess"""
 
-        amplitude_map = self.get('multi_matrix').get('amplitude_map')
+        amplitude_map = self.get('amplitude_map')
         new_diagram_maps = {}
         for key in amplitude_map:
             new_diagram_maps[amplitude_map[key]] = self.get('diagram_maps')[key]
@@ -184,10 +195,10 @@ class SubProcessGroup(base_objects.PhysicsObject):
     def get_nexternal_ninitial(self):
         """Get number of external and initial particles for this group"""
 
-        assert self.get('multi_matrix').get('matrix_elements'), \
+        assert self.get('matrix_elements'), \
                "Need matrix element to call get_nexternal_ninitial"
 
-        return self.get('multi_matrix').get('matrix_elements')[0].\
+        return self.get('matrix_elements')[0].\
                get_nexternal_ninitial()
 
     def find_mapping_diagrams(self):
@@ -256,7 +267,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
 
         subproc_diagrams = []
         for iproc in \
-                range(len(self.get('multi_matrix').get('matrix_elements'))):
+                range(len(self.get('matrix_elements'))):
             try:
                 subproc_diagrams.append(self.get('diagram_maps')[iproc].\
                                         index(iconfig + 1) + 1)
@@ -275,7 +286,9 @@ class SubProcessGroup(base_objects.PhysicsObject):
 
         self['diagrams_for_configs'] = subproc_diagrams_for_config
     
-
+    #===========================================================================
+    # group_amplitudes
+    #===========================================================================
     @staticmethod
     def group_amplitudes(amplitudes):
         """Return a SubProcessGroupList with the amplitudes divided
@@ -352,4 +365,145 @@ class SubProcessGroupList(base_objects.PhysicsObjectList):
         """Test if object obj is a valid element."""
 
         return isinstance(obj, SubProcessGroup)
+    
+#===============================================================================
+# DecayChainSubProcessGroup
+#===============================================================================
+
+class DecayChainSubProcessGroup(SubProcessGroup):
+    """Class to keep track of subprocess groups from a decay chain"""
+
+    def default_setup(self):
+        """Define object and give default values"""
+
+        self['core_groups'] = SubProcessGroupList()
+        self['decay_groups'] = DecayChainSubProcessGroupList()
+        # decay_ids is a list of PDG codes for all decaying particles
+        self['decay_ids'] = []
+        # helas_decay_chains is a list of HelasDecayChainProcessLists,
+        # corresponding to the core groups combined with decays
+        self['helas_decay_chains'] = []
+        
+    def filter(self, name, value):
+        """Filter for valid property values."""
+
+        if name == 'core_groups':
+            if not isinstance(value, SubProcessGroupList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid core_groups" % str(value)
+        if name == 'decay_groups':
+            if not isinstance(value, DecayChainSubProcessGroupList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid decay_groups" % str(value)
+        if name == 'decay_ids':
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list" % str(value)
+        if name == 'helas_decay_chains':
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list" % str(value)
+        return True
+
+    def get_sorted_keys(self):
+        """Return diagram property names as a nicely sorted list."""
+
+        return ['core_groups', 'decay_groups', 'decay_ids',
+                'helas_decay_chains']
+
+    def nice_string(self, indent = 0):
+        """Returns a nicely formatted string of the content."""
+
+        mystr = ""
+        for igroup, group in enumerate(self.get('core_groups')):
+            mystr += " " * indent + "Group %d:\n" % (igroup + 1)
+            for amplitude in group.get('amplitudes'):
+                mystr = mystr + amplitude.nice_string(indent + 2) + "\n"
+
+        if self.get('decay_groups'):
+            mystr += " " * indent + "Decay groups:\n"
+            for dec in self.get('decay_groups'):
+                mystr = mystr + dec.nice_string(indent + 2) + "\n"
+
+        return  mystr[:-1]
+
+    #===========================================================================
+    # generate_helas_decay_chain_processes
+    #===========================================================================
+    def generate_helas_decay_chain_processes(self):
+        """Create a HelasDecayChainProcess corresponding to each core_group"""
+
+        # Start with calling generate_helas_decay_chain_process for
+        # all decay chain groups
+        for decay_group in self.get('decay_groups'):
+            decay_group.generate_helas_decay_chain_processes()
+
+        # Now start working on the core groups
+
+        for core_group in self.get('core_groups'):
+            if not core_group.get('amplitudes'):
+                raise self.PhysicsObjectError, \
+                      "Need amplitudes to generate matrix_elements"
+
+            # Determine mapping diagrams for this group
+            core_group.set_mapping_diagrams()
+            print "Before:"
+            print core_group.get('mapping_diagrams')
+            print core_group.get('diagram_maps')
+
+            matrix_elements, amplitude_map = \
+                      helas_objects.HelasMatrixElementList.\
+                         generate_matrix_elements(core_group.get('amplitudes'),
+                                                  False,
+                                                  self.get('decay_ids'))
+            core_group.set('matrix_elements', matrix_elements)
+            core_group.set('amplitude_map', amplitude_map)
+
+            core_group.rearrange_diagram_maps()
+
+            print "After:"
+            print core_group.get('mapping_diagrams')
+            print core_group.get('diagram_maps')
+
+    #===========================================================================
+    # group_amplitudes
+    #===========================================================================
+    @staticmethod
+    def group_amplitudes(decay_chain_amp):
+        """Recursive function. Starting from a DecayChainAmplitude,
+        return a DecayChainSubProcessGroup with the core amplitudes
+        and decay chains divided into subprocess groups"""
+
+        assert isinstance(decay_chain_amp, diagram_generation.DecayChainAmplitude), \
+                  "Argument to group_amplitudes must be DecayChainAmplitude"
+
+
+        # Determine core process groups
+        core_groups = SubProcessGroup.group_amplitudes(\
+            decay_chain_amp.get('amplitudes'))
+
+        dc_subproc_group = DecayChainSubProcessGroup(\
+            {'core_groups': core_groups,
+             'decay_ids': decay_chain_amp.get_decay_ids()})
+        
+        # Recursively determine decay chain groups
+        for decay_chain in decay_chain_amp.get('decay_chains'):
+            dc_subproc_group.get('decay_groups').append(\
+                DecayChainSubProcessGroup.group_amplitudes(decay_chain))
+
+        return dc_subproc_group
+
+
+
+
+#===============================================================================
+# DecayChainSubProcessGroupList
+#===============================================================================
+class DecayChainSubProcessGroupList(base_objects.PhysicsObjectList):
+    """List of DecayChainSubProcessGroup objects"""
+
+    def is_valid_element(self, obj):
+        """Test if object obj is a valid element."""
+
+        return isinstance(obj, DecayChainSubProcessGroup)
     

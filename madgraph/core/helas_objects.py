@@ -3479,6 +3479,116 @@ class HelasMatrixElementList(base_objects.PhysicsObjectList):
 
         return isinstance(obj, HelasMatrixElement)
 
+    #===========================================================================
+    # generate_matrix_elements
+    #===========================================================================
+    @staticmethod
+    def generate_matrix_elements(amplitudes, gen_color = True,
+                                 decay_ids = []):
+        """Generate the HelasMatrixElements for the amplitudes,
+        identifying processes with identical matrix elements, as
+        defined by HelasMatrixElement.__eq__. Returns a
+        HelasMatrixElementList and an amplitude map (used by the
+        SubprocessGroup functionality). decay_ids is a list of decayed
+        particle ids, since those should not be combined even if
+        matrix element is identical."""
+
+        assert isinstance(amplitudes, diagram_generation.AmplitudeList), \
+                  "%s is not valid AmplitudeList" % repr(amplitudes)
+
+        # Keep track of already generated color objects, to reuse as
+        # much as possible
+        list_colorize = []
+        list_color_basis = []
+        list_color_matrices = []
+
+        matrix_elements = HelasMatrixElementList()
+
+        # Keep track of how the amplitudes map into matrix elements
+        amplitude_map = dict([(i,-1) for i in range(len(amplitudes))])
+        iamp = -1
+        
+        while amplitudes:
+            iamp += 1
+            # Pop the amplitude to save memory space
+            amplitude = amplitudes.pop(0)
+            if isinstance(amplitude, diagram_generation.DecayChainAmplitude):
+                matrix_element_list = HelasDecayChainProcess(amplitude).\
+                                      combine_decay_chain_processes()
+            else:
+                logger.info("Generating Helas calls for %s" % \
+                         amplitude.get('process').nice_string().\
+                                           replace('Process', 'process'))
+                matrix_element_list = [HelasMatrixElement(amplitude,
+                                                          decay_ids=decay_ids,
+                                                          gen_color=False)]
+            for matrix_element in matrix_element_list:
+                assert isinstance(matrix_element, HelasMatrixElement), \
+                          "Not a HelasMatrixElement: %s" % matrix_element
+
+                try:
+                    # If an identical matrix element is already in the list,
+                    # then simply add this process to the list of
+                    # processes for that matrix element
+                    me_index = matrix_elements.index(matrix_element)
+                    other_processes = matrix_elements[me_index].get('processes')
+                    # Keep track of the mapping
+                    amplitude_map[iamp] = me_index
+                    logger.info("Combining process with %s" % \
+                      other_processes[0].nice_string().replace('Process: ', ''))
+                    other_processes.extend(matrix_element.get('processes'))
+                except ValueError:
+                    # Otherwise, if the matrix element has any diagrams,
+                    # add this matrix element.
+                    if matrix_element.get('processes') and \
+                           matrix_element.get('diagrams'):
+                        matrix_elements.append(matrix_element)
+
+                        if not gen_color:
+                            continue
+
+                        # Keep track of the mapping
+                        amplitude_map[iamp] = len(matrix_elements) - 1
+
+                        # Always create an empty color basis, and the
+                        # list of raw colorize objects (before
+                        # simplification) associated with amplitude
+                        col_basis = color_amp.ColorBasis()
+                        new_amp = matrix_element.get_base_amplitude()
+                        matrix_element.set('base_amplitude', new_amp)
+                        colorize_obj = col_basis.create_color_dict_list(new_amp)
+
+                        try:
+                            # If the color configuration of the ME has
+                            # already been considered before, recycle
+                            # the information
+                            col_index = list_colorize.index(colorize_obj)
+                            logger.info(\
+                              "Reusing existing color information for %s" % \
+                              matrix_element.get('processes')[0].nice_string().\
+                                                 replace('Process', 'process'))
+                        except ValueError:
+                            # If not, create color basis and color
+                            # matrix accordingly
+                            list_colorize.append(colorize_obj)
+                            col_basis.build()
+                            list_color_basis.append(col_basis)
+                            col_matrix = color_amp.ColorMatrix(col_basis)
+                            list_color_matrices.append(col_matrix)
+                            col_index = -1
+                            logger.info(\
+                              "Processing color information for %s" % \
+                              matrix_element.get('processes')[0].nice_string().\
+                                             replace('Process', 'process'))
+
+                if gen_color:
+                    matrix_element.set('color_basis',
+                                       list_color_basis[col_index])
+                    matrix_element.set('color_matrix',
+                                       list_color_matrices[col_index])
+            
+        return matrix_elements, amplitude_map
+
 #===============================================================================
 # HelasDecayChainProcess
 #===============================================================================
@@ -3537,38 +3647,17 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                         "%s is not a valid DecayChainAmplitude" % dc_amplitude
 
 
-        matrix_elements = self['core_processes']
-
         # Extract the pdg codes of all particles decayed by decay chains
         # since these should not be combined in a MultiProcess
         decay_ids = dc_amplitude.get_decay_ids()
 
-        while dc_amplitude.get('amplitudes'):
-            # Pop the amplitude to save memory space
-            amplitude = dc_amplitude.get('amplitudes').pop(0)
+        matrix_elements, amp_map = \
+                         HelasMatrixElementList.generate_matrix_elements(\
+                               dc_amplitude.get('amplitudes'),
+                               False,
+                               decay_ids)
 
-            logger.info("Generating Helas calls for %s" % \
-                        amplitude.get('process').nice_string().\
-                                            replace('Process', 'process'))
-            matrix_element = HelasMatrixElement(amplitude,
-                                                decay_ids=decay_ids,
-                                                gen_color=False)
-
-            try:
-                # If an identical matrix element is already in the list,
-                # then simply add this process to the list of
-                # processes for that matrix element
-                other_processes = matrix_elements[\
-                    matrix_elements.index(matrix_element)].get('processes')
-                logger.info("Combining process with %s" % \
-                      other_processes[0].nice_string().replace('Process: ', ''))
-                other_processes.append(amplitude.get('process'))
-            except ValueError:
-                # Otherwise, if the matrix element has any diagrams,
-                # add this matrix element.
-                if matrix_element.get('processes') and \
-                       matrix_element.get('diagrams'):
-                    matrix_elements.append(matrix_element)
+        self.set('core_processes', matrix_elements)
 
         while dc_amplitude.get('decay_chains'):
             # Pop the amplitude to save memory space
@@ -3764,7 +3853,6 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         """Default values for all properties"""
 
         self['matrix_elements'] = HelasMatrixElementList()
-        self['amplitude_map'] = {}
         
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -3773,17 +3861,12 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             if not isinstance(value, HelasMatrixElementList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid HelasMatrixElementList object" % str(value)
-        if name == 'amplitude_map':
-            if not isinstance(value, dict):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid dict object" % str(value)
-
         return True
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return ['matrix_elements', 'amplitude_map']
+        return ['matrix_elements']
 
     def __init__(self, argument=None):
         """Allow initialization with AmplitudeList"""
@@ -3813,92 +3896,10 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         assert isinstance(amplitudes, diagram_generation.AmplitudeList), \
                   "%s is not valid AmplitudeList" % repr(amplitudes)
 
-        # Keep track of already generated color objects, to reuse as
-        # much as possible
-        list_colorize = []
-        list_color_basis = []
-        list_color_matrices = []
+        matrix_elements, amplitude_map = \
+                     HelasMatrixElementList.generate_matrix_elements(amplitudes)
 
-        matrix_elements = self.get('matrix_elements')
-
-        # Keep track of how the amplitudes map into matrix elements
-        amplitude_map = dict([(i,-1) for i in range(len(amplitudes))])
-        iamp = -1
-        
-        while amplitudes:
-            iamp += 1
-            # Pop the amplitude to save memory space
-            amplitude = amplitudes.pop(0)
-            if isinstance(amplitude, diagram_generation.DecayChainAmplitude):
-                matrix_element_list = HelasDecayChainProcess(amplitude).\
-                                      combine_decay_chain_processes()
-            else:
-                logger.info("Generating Helas calls for %s" % \
-                         amplitude.get('process').nice_string().\
-                                           replace('Process', 'process'))
-                matrix_element_list = [HelasMatrixElement(amplitude,
-                                                          gen_color=False)]
-            for matrix_element in matrix_element_list:
-                assert isinstance(matrix_element, HelasMatrixElement), \
-                          "Not a HelasMatrixElement: %s" % matrix_element
-
-                try:
-                    # If an identical matrix element is already in the list,
-                    # then simply add this process to the list of
-                    # processes for that matrix element
-                    me_index = matrix_elements.index(matrix_element)
-                    other_processes = matrix_elements[me_index].get('processes')
-                    # Keep track of the mapping
-                    amplitude_map[iamp] = me_index
-                    logger.info("Combining process with %s" % \
-                      other_processes[0].nice_string().replace('Process: ', ''))
-                    other_processes.extend(matrix_element.get('processes'))
-                except ValueError:
-                    # Otherwise, if the matrix element has any diagrams,
-                    # add this matrix element.
-                    if matrix_element.get('processes') and \
-                           matrix_element.get('diagrams'):
-                        matrix_elements.append(matrix_element)
-
-                        # Keep track of the mapping
-                        amplitude_map[iamp] = len(matrix_elements) - 1
-
-                        # Always create an empty color basis, and the
-                        # list of raw colorize objects (before
-                        # simplification) associated with amplitude
-                        col_basis = color_amp.ColorBasis()
-                        new_amp = matrix_element.get_base_amplitude()
-                        matrix_element.set('base_amplitude', new_amp)
-                        colorize_obj = col_basis.create_color_dict_list(new_amp)
-
-                        try:
-                            # If the color configuration of the ME has
-                            # already been considered before, recycle
-                            # the information
-                            col_index = list_colorize.index(colorize_obj)
-                            logger.info(\
-                              "Reusing existing color information for %s" % \
-                              matrix_element.get('processes')[0].nice_string().\
-                                                 replace('Process', 'process'))
-                        except ValueError:
-                            # If not, create color basis and color
-                            # matrix accordingly
-                            list_colorize.append(colorize_obj)
-                            col_basis.build()
-                            list_color_basis.append(col_basis)
-                            col_matrix = color_amp.ColorMatrix(col_basis)
-                            list_color_matrices.append(col_matrix)
-                            col_index = -1
-                            logger.info(\
-                              "Processing color information for %s" % \
-                              matrix_element.get('processes')[0].nice_string().\
-                                             replace('Process', 'process'))
-
-                matrix_element.set('color_basis', list_color_basis[col_index])
-                matrix_element.set('color_matrix',
-                                   list_color_matrices[col_index])
-            
-        self.set('amplitude_map', amplitude_map)
+        self.set('matrix_elements', matrix_elements)
 
     def get_used_lorentz(self):
         """Return a list of (lorentz_name, conjugate, outgoing) with

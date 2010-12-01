@@ -179,7 +179,7 @@ def find_symmetry_subproc_group(subproc_group):
     assert isinstance(subproc_group, group_subprocs.SubProcessGroup),\
            "Argument to find_symmetry_subproc_group has to be SubProcessGroup"
 
-    matrix_elements = subproc_group.get('multi_matrix').get('matrix_elements')
+    matrix_elements = subproc_group.get('matrix_elements')
 
     contributing_mes, me_config_dict = \
                       find_matrix_elements_for_configs(subproc_group)
@@ -241,7 +241,7 @@ def find_matrix_elements_for_configs(subproc_group):
     """For each config, find all matrix elements with maximum identical
     particle factor. Then take minimal set of these matrix elements."""
 
-    matrix_elements = subproc_group.get('multi_matrix').get('matrix_elements')
+    matrix_elements = subproc_group.get('matrix_elements')
 
     n_mes = len(matrix_elements)
 

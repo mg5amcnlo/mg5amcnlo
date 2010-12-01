@@ -571,7 +571,7 @@ def write_super_auto_dsig_file(writer, subproc_group):
     info_lines = get_mg5_info_lines()
     replace_dict['info_lines'] = info_lines
 
-    matrix_elements = subproc_group.get('multi_matrix').get('matrix_elements')
+    matrix_elements = subproc_group.get('matrix_elements')
 
     # Extract process info lines
     process_lines = '\n'.join([get_process_info_lines(me) for me in \
@@ -614,7 +614,7 @@ def write_mirrorprocs(writer, subproc_group):
 
     lines = []
     bool_dict = {True: '.true.', False: '.false.'}
-    matrix_elements = subproc_group.get('multi_matrix').get('matrix_elements')
+    matrix_elements = subproc_group.get('matrix_elements')
     lines.append("DATA (MIRRORPROCS(I),I=1,%d)/%s/" % \
                  (len(matrix_elements),
                   ",".join([bool_dict[me.get('has_mirror_process')] for \
@@ -714,7 +714,7 @@ def write_group_configs_file(writer, subproc_group, diagrams_for_config):
     subprocess group. Use the first subprocess with a diagram for each
     configuration."""
 
-    matrix_elements = subproc_group.get('multi_matrix').get('matrix_elements')
+    matrix_elements = subproc_group.get('matrix_elements')
 
     diagrams = []
     for config in diagrams_for_config:
@@ -861,7 +861,7 @@ def write_leshouche_group_file(writer, subproc_group):
     all_lines = []
 
     for iproc, matrix_element in \
-        enumerate(subproc_group.get('multi_matrix').get('matrix_elements')):
+        enumerate(subproc_group.get('matrix_elements')):
         all_lines.extend(get_leshouche_lines(matrix_element,
                                              iproc))
 
@@ -1120,7 +1120,7 @@ def write_processes_file(writer, subproc_group):
     lines = []
 
     for ime, me in \
-        enumerate(subproc_group.get('multi_matrix').get('matrix_elements')):
+        enumerate(subproc_group.get('matrix_elements')):
         lines.append("%s %s" % (str(ime+1) + " " * (7-len(str(ime+1))),
                                 me.get('processes')[0].base_string()))
         if me.get('has_mirror_process'):
@@ -1541,7 +1541,7 @@ def generate_subprocess_group_directory_v4_madevent(subproc_group,
     maxflows = 0
     tot_calls = 0
 
-    matrix_elements = subproc_group.get('multi_matrix').get('matrix_elements')
+    matrix_elements = subproc_group.get('matrix_elements')
 
     for ime, matrix_element in \
             enumerate(matrix_elements):

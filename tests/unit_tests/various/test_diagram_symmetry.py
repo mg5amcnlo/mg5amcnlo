@@ -129,7 +129,7 @@ class TestDiagramSymmetry(unittest.TestCase):
 
         # Check that the momentum assignments work
         matrix_element = \
-                     subproc_group.get('multi_matrix').get('matrix_elements')[1]
+                     subproc_group.get('matrix_elements')[1]
         process = matrix_element.get('processes')[0]
         full_model = model_reader.ModelReader(self.base_model)
         full_model.set_parameters_and_couplings()

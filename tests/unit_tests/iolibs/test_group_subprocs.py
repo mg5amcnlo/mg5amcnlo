@@ -61,6 +61,7 @@ class SubProcessGroupTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
+        g = mypartlist[-1]
 
         # A quark U and its antiparticle
         mypartlist.append(base_objects.Particle({'name':'u',
@@ -77,7 +78,8 @@ class SubProcessGroupTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        antiu = copy.copy(mypartlist[1])
+        u = mypartlist[-1]
+        antiu = copy.copy(u)
         antiu.set('is_part', False)
 
         # A quark D and its antiparticle
@@ -95,7 +97,8 @@ class SubProcessGroupTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        antid = copy.copy(mypartlist[2])
+        d = mypartlist[-1]
+        antid = copy.copy(d)
         antid.set('is_part', False)
 
         # A photon
@@ -113,6 +116,7 @@ class SubProcessGroupTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
+        a = mypartlist[-1]
 
         # A electron and positron
         mypartlist.append(base_objects.Particle({'name':'e-',
@@ -129,8 +133,9 @@ class SubProcessGroupTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        antie = copy.copy(mypartlist[4])
-        antie.set('is_part', False)
+        eminus = mypartlist[-1]
+        eplus = copy.copy(eminus)
+        eplus.set('is_part', False)
 
         # A Z
         mypartlist.append(base_objects.Particle({'name':'z',
@@ -153,7 +158,7 @@ class SubProcessGroupTest(unittest.TestCase):
         myinterlist.append(base_objects.Interaction({
                       'id': 1,
                       'particles': base_objects.ParticleList(\
-                                            [mypartlist[0]] * 3),
+                                            [g] * 3),
                       'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'G'},
@@ -163,7 +168,7 @@ class SubProcessGroupTest(unittest.TestCase):
         myinterlist.append(base_objects.Interaction({
                       'id': 2,
                       'particles': base_objects.ParticleList(\
-                                            [mypartlist[0]] * 4),
+                                            [g] * 4),
                       'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'G^2'},
@@ -173,9 +178,9 @@ class SubProcessGroupTest(unittest.TestCase):
         myinterlist.append(base_objects.Interaction({
                       'id': 3,
                       'particles': base_objects.ParticleList(\
-                                            [mypartlist[1], \
+                                            [u, \
                                              antiu, \
-                                             mypartlist[0]]),
+                                             g]),
                       'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQQ'},
@@ -184,9 +189,9 @@ class SubProcessGroupTest(unittest.TestCase):
         myinterlist.append(base_objects.Interaction({
                       'id': 4,
                       'particles': base_objects.ParticleList(\
-                                            [mypartlist[1], \
+                                            [u, \
                                              antiu, \
-                                             mypartlist[3]]),
+                                             a]),
                       'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
@@ -195,9 +200,9 @@ class SubProcessGroupTest(unittest.TestCase):
         myinterlist.append(base_objects.Interaction({
                       'id': 5,
                       'particles': base_objects.ParticleList(\
-                                            [mypartlist[2], \
+                                            [d, \
                                              antid, \
-                                             mypartlist[0]]),
+                                             g]),
                       'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQQ'},
@@ -206,9 +211,9 @@ class SubProcessGroupTest(unittest.TestCase):
         myinterlist.append(base_objects.Interaction({
                       'id': 6,
                       'particles': base_objects.ParticleList(\
-                                            [mypartlist[2], \
+                                            [d, \
                                              antid, \
-                                             mypartlist[3]]),
+                                             a]),
                       'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
@@ -219,20 +224,20 @@ class SubProcessGroupTest(unittest.TestCase):
         myinterlist.append(base_objects.Interaction({
                       'id': 7,
                       'particles': base_objects.ParticleList(\
-                                            [mypartlist[4], \
-                                             antie, \
-                                             mypartlist[3]]),
+                                            [eminus, \
+                                             eplus, \
+                                             a]),
                       'color': [],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
 
-        # Coupling of Z to quarks
+        # Coupling of Z to quarks and electrons
         
         myinterlist.append(base_objects.Interaction({
                       'id': 8,
                       'particles': base_objects.ParticleList(\
-                                            [mypartlist[1], \
+                                            [u, \
                                              antiu, \
                                              z]),
                       'color': [],
@@ -243,8 +248,19 @@ class SubProcessGroupTest(unittest.TestCase):
         myinterlist.append(base_objects.Interaction({
                       'id': 9,
                       'particles': base_objects.ParticleList(\
-                                            [mypartlist[2], \
+                                            [d, \
                                              antid, \
+                                             z]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 10,
+                      'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             eminus, \
                                              z]),
                       'color': [],
                       'lorentz':['L1'],
@@ -307,7 +323,7 @@ class SubProcessGroupTest(unittest.TestCase):
 
 
             for igroup, group in enumerate(subprocess_groups):
-                group.get('multi_matrix')
+                group.get('matrix_elements')
                 self.assertEqual(group.get('diagram_maps'),
                                  diagram_maps[nfs-2][igroup])
                 for iconfig, config in enumerate(group.get('mapping_diagrams')):
@@ -318,7 +334,7 @@ class SubProcessGroupTest(unittest.TestCase):
     def test_find_process_classes_and_mapping_diagrams(self):
         """Test the find_process_classes and find_mapping_diagrams function."""
 
-        max_fs = 3 # 3
+        max_fs = 2 # 3
 
         p = [21, 1, -1, 2, -2]
 
@@ -382,3 +398,103 @@ class SubProcessGroupTest(unittest.TestCase):
                     #print amplitude.nice_string()
                     self.assertEqual(diagram_maps[iamp],
                                      all_diagram_maps[nfs-2][inum][iamp])
+
+    def test_group_decay_chains(self):
+        """Test group_amplitudes for decay chains."""
+
+        max_fs = 2 # 3
+
+        procs = [[1,-1,2,-2,23], [2,2,2,2,23], [2,-2,21,21,23], [1,-1,21,21,23]]
+        decays = [[23,1,-1], [23,11,-11]]
+        coreamplitudes = diagram_generation.AmplitudeList()
+        decayamplitudes = diagram_generation.AmplitudeList()
+
+        for proc in procs:
+            # Define the multiprocess
+            my_leglist = base_objects.LegList([\
+                base_objects.Leg({'id': id, 'state': True}) for id in proc])
+
+            my_leglist[0].set('state', False)
+            my_leglist[1].set('state', False)
+
+            my_process = base_objects.Process({'legs':my_leglist,
+                                               'model':self.mymodel,
+                                               'orders':{'QED':1}})
+            my_amplitude = diagram_generation.Amplitude(my_process)
+            coreamplitudes.append(my_amplitude)
+
+        for proc in decays:
+            # Define the multiprocess
+            my_leglist = base_objects.LegList([\
+                base_objects.Leg({'id': id, 'state': True}) for id in proc])
+
+            my_leglist[0].set('state', False)
+
+            my_process = base_objects.Process({'legs':my_leglist,
+                                               'model':self.mymodel})
+            my_amplitude = diagram_generation.Amplitude(my_process)
+            decayamplitudes.append(my_amplitude)
+
+        decays = diagram_generation.DecayChainAmplitudeList([\
+                         diagram_generation.DecayChainAmplitude({\
+                                            'amplitudes': decayamplitudes})])
+
+        decay_chains = diagram_generation.DecayChainAmplitude({\
+            'amplitudes': coreamplitudes,
+            'decay_chains': decays})
+
+        dc_subproc_group = group_subprocs.DecayChainSubProcessGroup.\
+                          group_amplitudes(decay_chains)
+
+        print dc_subproc_group.nice_string()
+
+        self.assertEqual(dc_subproc_group.nice_string(),
+"""Group 1:
+  Process: d d~ > u u~ z QED=1
+  4 diagrams:
+  1  ((1(-1),2(1)>1(21),id:5),(3(2),5(23)>3(2),id:8),(1(21),3(2),4(-2),id:3)) (QED=1,QCD=2)
+  2  ((1(-1),2(1)>1(21),id:5),(4(-2),5(23)>4(-2),id:8),(1(21),3(2),4(-2),id:3)) (QED=1,QCD=2)
+  3  ((1(-1),5(23)>1(-1),id:9),(3(2),4(-2)>3(21),id:3),(1(-1),2(1),3(21),id:5)) (QED=1,QCD=2)
+  4  ((2(1),5(23)>2(1),id:9),(3(2),4(-2)>3(21),id:3),(1(-1),2(1),3(21),id:5)) (QED=1,QCD=2)
+  Process: u u > u u z QED=1
+  8 diagrams:
+  1  ((1(-2),3(2)>1(21),id:3),(2(-2),5(23)>2(-2),id:8),(1(21),2(-2),4(2),id:3)) (QED=1,QCD=2)
+  2  ((1(-2),3(2)>1(21),id:3),(4(2),5(23)>4(2),id:8),(1(21),2(-2),4(2),id:3)) (QED=1,QCD=2)
+  3  ((1(-2),4(2)>1(21),id:3),(2(-2),5(23)>2(-2),id:8),(1(21),2(-2),3(2),id:3)) (QED=1,QCD=2)
+  4  ((1(-2),4(2)>1(21),id:3),(3(2),5(23)>3(2),id:8),(1(21),2(-2),3(2),id:3)) (QED=1,QCD=2)
+  5  ((1(-2),5(23)>1(-2),id:8),(2(-2),3(2)>2(21),id:3),(1(-2),2(21),4(2),id:3)) (QED=1,QCD=2)
+  6  ((1(-2),5(23)>1(-2),id:8),(2(-2),4(2)>2(21),id:3),(1(-2),2(21),3(2),id:3)) (QED=1,QCD=2)
+  7  ((2(-2),3(2)>2(21),id:3),(4(2),5(23)>4(2),id:8),(1(-2),2(21),4(2),id:3)) (QED=1,QCD=2)
+  8  ((2(-2),4(2)>2(21),id:3),(3(2),5(23)>3(2),id:8),(1(-2),2(21),3(2),id:3)) (QED=1,QCD=2)
+Group 2:
+  Process: u u~ > g g z QED=1
+  8 diagrams:
+  1  ((1(-2),3(21)>1(-2),id:3),(2(2),4(21)>2(2),id:3),(1(-2),2(2),5(23),id:8)) (QED=1,QCD=2)
+  2  ((1(-2),3(21)>1(-2),id:3),(2(2),5(23)>2(2),id:8),(1(-2),2(2),4(21),id:3)) (QED=1,QCD=2)
+  3  ((1(-2),4(21)>1(-2),id:3),(2(2),3(21)>2(2),id:3),(1(-2),2(2),5(23),id:8)) (QED=1,QCD=2)
+  4  ((1(-2),4(21)>1(-2),id:3),(2(2),5(23)>2(2),id:8),(1(-2),2(2),3(21),id:3)) (QED=1,QCD=2)
+  5  ((1(-2),5(23)>1(-2),id:8),(2(2),3(21)>2(2),id:3),(1(-2),2(2),4(21),id:3)) (QED=1,QCD=2)
+  6  ((1(-2),5(23)>1(-2),id:8),(2(2),4(21)>2(2),id:3),(1(-2),2(2),3(21),id:3)) (QED=1,QCD=2)
+  7  ((1(-2),5(23)>1(-2),id:8),(3(21),4(21)>3(21),id:1),(1(-2),2(2),3(21),id:3)) (QED=1,QCD=2)
+  8  ((2(2),5(23)>2(2),id:8),(3(21),4(21)>3(21),id:1),(1(-2),2(2),3(21),id:3)) (QED=1,QCD=2)
+  Process: d d~ > g g z QED=1
+  8 diagrams:
+  1  ((1(-1),3(21)>1(-1),id:5),(2(1),4(21)>2(1),id:5),(1(-1),2(1),5(23),id:9)) (QED=1,QCD=2)
+  2  ((1(-1),3(21)>1(-1),id:5),(2(1),5(23)>2(1),id:9),(1(-1),2(1),4(21),id:5)) (QED=1,QCD=2)
+  3  ((1(-1),4(21)>1(-1),id:5),(2(1),3(21)>2(1),id:5),(1(-1),2(1),5(23),id:9)) (QED=1,QCD=2)
+  4  ((1(-1),4(21)>1(-1),id:5),(2(1),5(23)>2(1),id:9),(1(-1),2(1),3(21),id:5)) (QED=1,QCD=2)
+  5  ((1(-1),5(23)>1(-1),id:9),(2(1),3(21)>2(1),id:5),(1(-1),2(1),4(21),id:5)) (QED=1,QCD=2)
+  6  ((1(-1),5(23)>1(-1),id:9),(2(1),4(21)>2(1),id:5),(1(-1),2(1),3(21),id:5)) (QED=1,QCD=2)
+  7  ((1(-1),5(23)>1(-1),id:9),(3(21),4(21)>3(21),id:1),(1(-1),2(1),3(21),id:5)) (QED=1,QCD=2)
+  8  ((2(1),5(23)>2(1),id:9),(3(21),4(21)>3(21),id:1),(1(-1),2(1),3(21),id:5)) (QED=1,QCD=2)
+Decay groups:
+  Group 1:
+    Process: z > d d~
+    1 diagrams:
+    1  ((2(1),3(-1)>2(23),id:9),(1(23),2(23),id:0)) (QED=1)
+  Group 2:
+    Process: z > e- e+
+    1 diagrams:
+    1  ((2(11),3(-11)>2(23),id:10),(1(23),2(23),id:0)) (QED=1)""")
+
+        dc_subproc_group.generate_helas_decay_chain_processes()
