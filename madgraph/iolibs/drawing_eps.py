@@ -71,6 +71,8 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
     y_min = 450
     x_max = 450
     y_max = 750
+    
+    blob_size = 1.5
 
     def initialize(self):
         """Operation done before starting to create diagram specific EPS content
@@ -132,6 +134,20 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
 
         #return the line in correct format
         return " %s %s %s %s %s \n" % (x1, y1, x2, y2, name)
+
+    def draw_vertex(self, vertex):
+        """Add blob in case on non QED-QCD information"""
+        
+        interaction = self.model.get_interaction(vertex.id)
+        if interaction:
+            order = interaction.get('orders')
+            order = [key for key in order.keys() if order[key] and \
+                                                     key not in ['QED','QCD']]
+            if order:
+                x1, y1 = self.rescale(vertex.pos_x, vertex.pos_y)
+                self.text += " %s %s %s 1.0 Fblob \n" % (x1, y1, self.blob_size)
+
+
 
     def draw_straight(self, line):
         """ADD the EPS code for this fermion line."""
@@ -289,10 +305,12 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
     nb_line = 3
     nb_col = 2
     
+    blob_size = 1.5
     
     lower_scale = 5
     second_scale ={'x_min': 40, 'x_size':150,'y_min':620,'y_size':100,
-                   'x_gap':42,'y_gap':30,'font':6,'nb_line':5,'nb_col':3}
+                   'x_gap':42,'y_gap':30,'font':6,'nb_line':5,'nb_col':3,
+                   'blob_size':0.9}
     
     def __init__(self, diagramlist=None, filename='diagram.eps', \
                   model=None, amplitude=None, legend=''):
