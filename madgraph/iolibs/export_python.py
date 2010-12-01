@@ -63,8 +63,7 @@ class ProcessExporterPython(object):
         elif isinstance(matrix_elements,
                         group_subprocs.SubProcessGroup):
             self.config_maps = matrix_elements.get('diagram_maps')
-            self.matrix_elements = matrix_elements.get('multi_matrix').\
-                                   get('matrix_elements')
+            self.matrix_elements = matrix_elements.get('matrix_elements')
         elif isinstance(matrix_elements,
                         helas_objects.HelasMatrixElementList):
             self.matrix_elements = matrix_elements

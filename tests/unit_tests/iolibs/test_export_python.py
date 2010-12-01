@@ -659,7 +659,7 @@ class IOExportPythonTest(unittest.TestCase):
                                                               helas_writer)
 
         amp2_lines = \
-                 python_exporter.get_amp2_lines(subprocess_group.get('multi_matrix').\
+                 python_exporter.get_amp2_lines(subprocess_group.\
                                         get('matrix_elements')[0],
                                         subprocess_group.get('diagram_maps')[0])
         self.assertEqual(amp2_lines,
