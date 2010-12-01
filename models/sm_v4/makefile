@@ -6,13 +6,13 @@
 # ----------------------------------------------------------------------------
 
 
-F77           = f77
+G77           = g77
 FFLAGS        = -O -ffixed-line-length-132
 LIBRARY	      = ../libmodel.a
 LIBDIR        = ../../lib/
 MODEL         = printout.o couplings.o
 
-.f.o: ; $(F77) $(FFLAGS) -c $*.f
+.f.o: ; $(G77) $(FFLAGS) -c $*.f
 
 all: $(LIBDIR)libmodel.a
 
@@ -22,4 +22,4 @@ $(LIBDIR)libmodel.a: $(MODEL)
 	mv libmodel.a  $(LIBDIR)
 
 smcalc: 
-	$(F77) $(FFLAGS) SMCalc.f -o smcalc 
+	$(G77) $(FFLAGS) SMCalc.f -o smcalc 

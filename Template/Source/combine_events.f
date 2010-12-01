@@ -17,10 +17,20 @@ c
       parameter (maxexternal=17)
       integer maxpara
       parameter (maxpara=1000)
+c
+c     Les Houches init block (for the <init> info)
+c
+      integer maxpup
+      parameter(maxpup=100)
+      integer idbmup,pdfgup,pdfsup,idwtup,nprup,lprup
+      double precision ebmup,xsecup,xerrup,xmaxup
+      common /heprup/ idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
+     &     idwtup,nprup,xsecup(maxpup),xerrup(maxpup),
+     &     xmaxup(maxpup),lprup(maxpup)
 c     
 c     Local
 c
-      character*30 subname(maxsubprocesses)
+      character*100 subname(maxsubprocesses)
       character*110 pathsubname(maxsubprocesses)         !needed for MadWeight
       character*80 down_path                           !needed for MadWeight
       character*40 filename                         !needed for MadWeight
@@ -116,7 +126,7 @@ c $E$ down_path $E$ !this is tag for automatic modification by MW
       do i=1,ns
 c         write(*,*) 'Subprocess: ',subname(ns)
          pos3=index(subname(i),' ')
-         pathsubname(i)=subname(i)(1:pos3-1)//'/'//down_path
+         pathsubname(i)=subname(i)(1:pos3-1)//down_path
          call read_channels(pathsubname(i),sum,kevent,revent,goal_wgt,maxwgt)
       enddo 
 c
@@ -654,7 +664,7 @@ c
 c
 c     Arguments
 c
-      character*30 subname(maxsubprocesses)
+      character*100 subname(maxsubprocesses)
       integer ns
 c-----
 c  Begin Code

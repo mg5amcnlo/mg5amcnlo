@@ -2615,7 +2615,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 cpu_time1 = time.time()
                 for sp_group in subproc_groups:
                     ndiags = ndiags + sum([len(m.get('diagrams')) for m in \
-                          sp_group.get('multi_matrix').get('matrix_elements')])
+                          sp_group.get('matrix_elements')])
                 cpu_time = time.time() - cpu_time1
                 cpu_time1 = time.time()
                 for me_group in subproc_groups:
@@ -2623,7 +2623,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                          export_v4.generate_subprocess_group_directory_v4_madevent(\
                                 me_group, self._curr_fortran_model, path)
                     matrix_elements = \
-                                 me_group.get('multi_matrix').get('matrix_elements')
+                                 me_group.get('matrix_elements')
                     self._curr_matrix_elements.get('matrix_elements').\
                                                              extend(matrix_elements)
                 cpu_time2 = time.time() - cpu_time1
