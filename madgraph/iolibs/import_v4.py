@@ -407,17 +407,9 @@ class ProcCardv4Reader(object):
     for mg5"""
     
     #tag in the proc_card.dat which split the proc_card content
-    begin_process = "# Begin PROCESS # This is TAG. Do not modify this line\n"
-    end_process = "# End PROCESS  # This is TAG. Do not modify this line\n"
-    begin_model = "# Begin MODEL  # This is TAG. Do not modify this line\n"
-    end_model = "# End   MODEL  # This is TAG. Do not modify this line\n"
-    begin_multipart = \
-               "# Begin MULTIPARTICLES # This is TAG. Do not modify this line\n"
-    end_multipart = \
-                "# End  MULTIPARTICLES # This is TAG. Do not modify this line\n"
         
     # line pattern (remove comment at the end of the line)
-    pat_line = re.compile(r"""^\s*(?P<info>[^\#]*[^\s\#])\s*(\#|$)""", re.DOTALL)
+    pat_line = re.compile(r"""^\s*(?P<info>[^\#]*?)\s*(\#|$)""", re.DOTALL)
     
     def __init__(self, fsock):
         """init the variable"""
@@ -437,22 +429,42 @@ class ProcCardv4Reader(object):
     def analyze_v4_proc_card(self, fsock):
         """read the file and fullfill the variable with mg4 line"""
         
-        # skip the introduction of the file
-        for line in iter(fsock.readline, self.begin_process):
-            if line == '':
-                raise MadGraph5Error('wrong proc_card.dat format')
-            pass
+        proc_card = fsock.read()
 
         # store process information
         process_open = False
-        # an 'end_coup' stop the current process, 
-        #    'done' finish the list of process
-        for line in iter(fsock.readline, self.end_process):
-            if line == '':
-                raise MadGraph5Error('wrong proc_card.dat format')
+        
+        process_re = re.search(\
+            r"^# Begin\s+PROCESS.*?^(?P<process>.*)^# End\s+PROCESS",
+            proc_card, re.MULTILINE|re.DOTALL)
+
+        if not process_re:
+            raise MadGraph5Error('No valid Begin...End PROCESS tags')
+
+        model_re = re.search(\
+            r"^# Begin\s+MODEL.*?^(?P<model>.+?)(\s+|$)^# End\s+MODEL",
+            proc_card, re.MULTILINE|re.DOTALL)
+
+        if not model_re:
+            raise MadGraph5Error('No valid Begin...End MODEL tags')
+
+        multiparticles_re = re.search(\
+            r"^# Begin\s+MULTIPARTICLES.*?^(?P<multiparticles>.*)^# End\s+MULTIPARTICLES",
+            proc_card, re.MULTILINE|re.DOTALL)
+
+        if not multiparticles_re:
+            raise MadGraph5Error('No valid Begin...End MULTIPARTICLES tags')
+
+        process_lines = process_re.group('process').split('\n')
+
+        for line in process_lines:
+            # an 'end_coup' stop the current process, 
+            #    'done' finish the list of process
             analyze_line = self.pat_line.search(line)
             if analyze_line:
                 data = analyze_line.group('info') #skip the comment
+                if not data:
+                    continue
                 if not process_open and 'done' not in data:
                     process_open = True
                     self.process.append(ProcessInfo(data))
@@ -461,35 +473,19 @@ class ProcCardv4Reader(object):
                 elif 'done' not in data:
                     self.process[-1].add_coupling(data)
          
-        #skip comment
-        for line in iter(fsock.readline, self.begin_model):
-            if line == '':
-                raise MadGraph5Error('wrong proc_card.dat format')
-            pass        
-        
-        #load the model name
-        for line in iter(fsock.readline, self.end_model):
-            if line == '':
-                raise MadGraph5Error('wrong proc_card.dat format')
+        self.model = model_re.group('model')
+                
+        multiparticles_lines = multiparticles_re.group('multiparticles').split('\n')
+
+        for line in multiparticles_lines:
             analyze_line = self.pat_line.search(line)
             if analyze_line:
-                model = analyze_line.group('info')
-                self.model = model
-                
-        #skip comment
-        for line in iter(fsock.readline, self.begin_multipart):
-            if line == '':
-                raise MadGraph5Error('wrong proc_card.dat format')            
-            pass
-        
-        #store multipart information
-        for line in iter(fsock.readline, self.end_multipart):
-            if line == '':
-                raise MadGraph5Error('wrong proc_card.dat format')            
-            data = line.split()
-            if data:
+                line = analyze_line.group('info') #skip the comment
+                if not line:
+                    continue
+                data = line.split()
                 self.particles_name.add(data[0].lower())
-                self.multipart.append(line)   
+                self.multipart.append(line)
         
     
     def extract_command_lines(self, model):
