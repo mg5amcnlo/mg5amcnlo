@@ -3504,12 +3504,7 @@ class HelasMatrixElementList(base_objects.PhysicsObjectList):
 
         matrix_elements = HelasMatrixElementList()
 
-        # Keep track of how the amplitudes map into matrix elements
-        amplitude_map = dict([(i,-1) for i in range(len(amplitudes))])
-        iamp = -1
-        
         while amplitudes:
-            iamp += 1
             # Pop the amplitude to save memory space
             amplitude = amplitudes.pop(0)
             if isinstance(amplitude, diagram_generation.DecayChainAmplitude):
@@ -3532,8 +3527,6 @@ class HelasMatrixElementList(base_objects.PhysicsObjectList):
                     # processes for that matrix element
                     me_index = matrix_elements.index(matrix_element)
                     other_processes = matrix_elements[me_index].get('processes')
-                    # Keep track of the mapping
-                    amplitude_map[iamp] = me_index
                     logger.info("Combining process with %s" % \
                       other_processes[0].nice_string().replace('Process: ', ''))
                     other_processes.extend(matrix_element.get('processes'))
@@ -3546,9 +3539,6 @@ class HelasMatrixElementList(base_objects.PhysicsObjectList):
 
                         if not gen_color:
                             continue
-
-                        # Keep track of the mapping
-                        amplitude_map[iamp] = len(matrix_elements) - 1
 
                         # Always create an empty color basis, and the
                         # list of raw colorize objects (before
@@ -3587,7 +3577,7 @@ class HelasMatrixElementList(base_objects.PhysicsObjectList):
                     matrix_element.set('color_matrix',
                                        list_color_matrices[col_index])
             
-        return matrix_elements, amplitude_map
+        return matrix_elements
 
 #===============================================================================
 # HelasDecayChainProcess
@@ -3651,8 +3641,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
         # since these should not be combined in a MultiProcess
         decay_ids = dc_amplitude.get_decay_ids()
 
-        matrix_elements, amp_map = \
-                         HelasMatrixElementList.generate_matrix_elements(\
+        matrix_elements = HelasMatrixElementList.generate_matrix_elements(\
                                dc_amplitude.get('amplitudes'),
                                False,
                                decay_ids)
@@ -3734,7 +3723,9 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                 # of decay elements is different: Then use any decay
                 # chain which defines the decay for this particle.
 
-                if len(fs_legs) == len(decay_elements):
+                if len(fs_legs) == len(decay_elements) and \
+                       all([fs in ids for (fs, ids) in \
+                             zip(fs_ids, decay_is_ids)]):
                     # The decay of the different fs parts is given
                     # by the different decay chains, respectively.
                     # Chains is a list of matrix element lists
@@ -3896,8 +3887,8 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         assert isinstance(amplitudes, diagram_generation.AmplitudeList), \
                   "%s is not valid AmplitudeList" % repr(amplitudes)
 
-        matrix_elements, amplitude_map = \
-                     HelasMatrixElementList.generate_matrix_elements(amplitudes)
+        matrix_elements = HelasMatrixElementList.generate_matrix_elements(\
+                                                                    amplitudes)
 
         self.set('matrix_elements', matrix_elements)
 
