@@ -194,8 +194,8 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
     def put_diagram_number(self, number=0):
         """ADD the comment 'diagram [number]' just below the diagram."""
 
-        # Postion of the text in [0,1] square
-        x = 0.33
+        # Position of the text in [0,1] square
+        x = 0.2
         y = -0.17
         # Compute the EPS coordinate
         x, y = self.rescale(x, y)
@@ -204,7 +204,15 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         self.text += '( diagram %s )   show\n' % (number + 1) # +1 python
                                                             #starts to count at
                                                             #zero.
-
+        mystr = " (%s)" % ", ".join(["%s=%d" % (key, self.diagram.diagram['orders'][key]) \
+                                        for key in self.diagram.diagram['orders'].keys()])
+        x = 0.6
+        y = -0.17
+        x, y = self.rescale(x, y)
+        #write the text
+        self.text += ' %s  %s moveto \n' % (x, y)
+        self.text += '%s   show\n' % (mystr)                                                             #zero.
+        
 
     def associate_number(self, line, number):
         """Write in the EPS figure the MadGraph number associate to the line.
