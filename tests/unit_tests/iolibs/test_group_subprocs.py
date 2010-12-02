@@ -446,7 +446,7 @@ class SubProcessGroupTest(unittest.TestCase):
         dc_subproc_group = group_subprocs.DecayChainSubProcessGroup.\
                           group_amplitudes(decay_chains)
 
-        print dc_subproc_group.nice_string()
+        #print dc_subproc_group.nice_string()
 
         self.assertEqual(dc_subproc_group.nice_string(),
 """Group 1:
