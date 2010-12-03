@@ -707,8 +707,7 @@ class CheckValidForCmd(object):
         """check the validity of args"""
         
         if  not self._curr_model:
-            logger.info('No model currently active. Try with the Standard Model')
-            self.do_import('model sm')
+            raise self.InvalidCmd("No model currently active, please import a model!")
 
         if self._model_v4_path:
             raise self.InvalidCmd(\
@@ -737,8 +736,7 @@ class CheckValidForCmd(object):
         """check the validity of args"""
         
         if  not self._curr_model:
-            logger.info('No model currently active. Try with the Standard Model')
-            self.do_import('model sm')
+            raise self.InvalidCmd("No model currently active, please import a model!")
 
         if len(args) < 1:
             self.help_generate()
@@ -867,6 +865,10 @@ class CheckValidForCmd(object):
     def check_output(self, args):
         """ check the validity of the line"""
         
+        if not self._curr_amps and self._export_format != "pythia8_model":
+            text = 'No processes generated. Please generate a process first.'
+            raise self.InvalidCmd(text)
+
         if not self._curr_model:
             text = 'No model found. Please import a model first and then retry.'
             raise self.InvalidCmd(text)
@@ -906,10 +908,6 @@ class CheckValidForCmd(object):
                   "To generate a new MG4 directory, you need a valid MG_ME path"
 
         self._export_dir = os.path.realpath(self._export_dir)
-
-        if not self._curr_amps and self._export_format != "pythia8_model":
-            text = 'No processes generated. Please generate a process first.'
-            raise self.InvalidCmd(text)
 
     def get_default_path(self):
         """Set self._export_dir to the default (\'auto\') path"""
@@ -1207,7 +1205,7 @@ class CompleteForCmd(CheckValidForCmd):
             return self.model_completion(text, line[begidx:])
 
     def complete_draw(self, text, line, begidx, endidx):
-        "Complete the import command"
+        "Complete the draw command"
 
         args = split_arg(line[0:begidx])
 
@@ -2823,6 +2821,7 @@ class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
         # By default, load the UFO Standard Model
         logger.info("Loading default model: sm")
         self.do_import('model sm')
+        self.history.append('import model sm')
 
 
     # Access to shell
