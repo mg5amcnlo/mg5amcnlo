@@ -270,6 +270,7 @@ c     First scale all of the events to the total cross section
 c
       if (nw .le. 0) return
       call sample_result(xsec,xerr)
+      if (xsec .le. 0) return   !Fix by TS 12/3/2010
       xtot=0
       call dsort(nw, swgt)
       do i=1,nw
