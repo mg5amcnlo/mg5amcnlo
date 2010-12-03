@@ -643,14 +643,17 @@ class DecayChainAmplitude(Amplitude):
         self['amplitudes'] = AmplitudeList()
         self['decay_chains'] = DecayChainAmplitudeList()
 
-    def __init__(self, argument=None):
+    def __init__(self, argument = None, collect_mirror_procs = False,
+                 ignore_six_quark_processes = False):
         """Allow initialization with Process and with ProcessDefinition"""
 
         if isinstance(argument, base_objects.Process):
             super(DecayChainAmplitude, self).__init__()
             if isinstance(argument, base_objects.ProcessDefinition):
                 self['amplitudes'].extend(\
-                MultiProcess.generate_multi_amplitudes(argument))
+                MultiProcess.generate_multi_amplitudes(argument,
+                                                       collect_mirror_procs,
+                                                       ignore_six_quark_processes))
             else:
                 self['amplitudes'].append(Amplitude(argument))
                 # Clean decay chains from process, since we haven't
@@ -667,7 +670,8 @@ class DecayChainAmplitude(Amplitude):
                           "Decay chain process must have exactly one" + \
                           " incoming particle"
                 self['decay_chains'].append(\
-                    DecayChainAmplitude(process))
+                    DecayChainAmplitude(process, collect_mirror_procs,
+                                        ignore_six_quark_processes))
         elif argument != None:
             # call the mother routine
             super(DecayChainAmplitude, self).__init__(argument)
@@ -851,7 +855,9 @@ class MultiProcess(base_objects.PhysicsObject):
                     # This is a decay chain process
                     # Store amplitude(s) as DecayChainAmplitude
                     self['amplitudes'].append(\
-                        DecayChainAmplitude(process_def))
+                        DecayChainAmplitude(process_def,
+                                       self.get('collect_mirror_procs'),
+                                       self.get('ignore_six_quark_processes')))
                 else:
                     self['amplitudes'].extend(\
                        MultiProcess.generate_multi_amplitudes(process_def,

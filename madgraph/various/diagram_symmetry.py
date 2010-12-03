@@ -103,8 +103,15 @@ def find_symmetry(matrix_element):
     base_model = process.get('model')
     full_model = model_reader.ModelReader(base_model)
     full_model.set_parameters_and_couplings()
+    equivalent_process = base_objects.Process({\
+                     'legs': base_objects.LegList([base_objects.Leg({
+                               'id': wf.get('pdg_code'),
+                               'state': wf.get('leg_state')}) \
+                       for wf in matrix_element.get_external_wavefunctions()]),
+                     'model': base_model})
+    print equivalent_process.nice_string()
     # Get phase space point
-    p, w_rambo = process_checks.get_momenta(process, full_model)
+    p, w_rambo = process_checks.get_momenta(equivalent_process, full_model)
     
     # Writer for the Python matrix elements
     helas_writer = helas_call_writer.PythonUFOHelasCallWriter(base_model)
@@ -113,12 +120,14 @@ def find_symmetry(matrix_element):
     if not "stored_quantities" in globals():
         globals()["stored_quantities"] = {}
     amp2start = []
-    final_states = [l.get('id') for l in process.get('legs')[ninitial:]]
+    final_states = [l.get('id') for l in \
+                    equivalent_process.get('legs')[ninitial:]]
     nperm = 0
     perms = []
     ident_perms = []
     for perm in itertools.permutations(range(ninitial, nexternal)):
-        if [process.get('legs')[i].get('id') for i in perm] != final_states:
+        if [equivalent_process.get('legs')[i].get('id') for i in perm] != \
+           final_states:
             # Non-identical particles permutated
             continue
         ident_perms.append([0,1]+list(perm))

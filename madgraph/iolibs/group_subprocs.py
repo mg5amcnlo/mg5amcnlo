@@ -157,11 +157,10 @@ class SubProcessGroup(base_objects.PhysicsObject):
         self.rearrange_diagram_maps()
         self.set('amplitudes', diagram_generation.AmplitudeList())
 
-    def generate_name(self):
-        """Generate a convenient name for the group, based on IS and
+    def generate_name(self, process):
+        """Generate a convenient name for the group, based on  and
         masses"""
 
-        process = self.get('amplitudes')[0].get('process')
         beam = [l.get('id') for l in process.get('legs') if not l.get('state')]
         fs = [l.get('id') for l in process.get('legs') if l.get('state')]
         name = ""
@@ -185,6 +184,9 @@ class SubProcessGroup(base_objects.PhysicsObject):
                 name += part.get_name().replace('~', 'bar').\
                             replace('+', 'p').replace('-', 'm')
         
+        for dc in process.get('decay_chains'):
+            name += "_" + self.generate_name(dc)
+
         return name
 
     def rearrange_diagram_maps(self):
@@ -322,7 +324,8 @@ class SubProcessGroup(base_objects.PhysicsObject):
                                                         amp_nums]))
             group.set('number', group.get('amplitudes')[0].get('process').\
                                                                      get('id'))
-            group.set('name', group.generate_name())
+            group.set('name', group.generate_name(\
+                                    group.get('amplitudes')[0].get('process')))
             ret_list.append(group)
 
         return ret_list
@@ -336,6 +339,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
 
         assert isinstance(amplitudes, diagram_generation.AmplitudeList), \
                   "Argument to find_process_classes must be AmplitudeList"
+        assert amplitudes
 
         model = amplitudes[0].get('process').get('model')
         proc_classes = []
@@ -391,14 +395,10 @@ class DecayChainSubProcessGroup(SubProcessGroup):
 
         self['core_groups'] = SubProcessGroupList()
         self['decay_groups'] = DecayChainSubProcessGroupList()
-        # decay_ids is a list of PDG codes for all decaying particles
-        self['decay_ids'] = []
-        # helas_decay_chains is a list of HelasDecayChainProcessLists,
-        # corresponding to the core groups combined with decays
-        self['helas_decay_chains'] = helas_objects.HelasDecayChainProcessList()
-        # decay_diagram_maps is the combined diagram_maps,
-        # corresponding to the helas_decay_chains
-        self['decay_diagram_maps'] = []
+        # decay_chain_amplitude is the original DecayChainAmplitude
+        self['decay_chain_amplitude'] = diagram_generation.DecayChainAmplitude()
+        # helas_decay_chain is the resulting HelasDecayChainProcess
+        self['helas_decay_chain'] = helas_objects.HelasDecayChainProcess()
         
     def filter(self, name, value):
         """Filter for valid property values."""
@@ -411,25 +411,21 @@ class DecayChainSubProcessGroup(SubProcessGroup):
             if not isinstance(value, DecayChainSubProcessGroupList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid decay_groups" % str(value)
-        if name == 'decay_ids':
-            if not isinstance(value, list):
+        if name == 'decay_chain_amplitude':
+            if not isinstance(value, diagram_generation.DecayChainAmplitude):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid list" % str(value)
-        if name == 'helas_decay_chains':
-            if not isinstance(value, helas_objects.HelasDecayChainProcessList):
+                        "%s is not a valid DecayChainAmplitude" % str(value)
+        if name == 'helas_decay_chain':
+            if not isinstance(value, helas_objects.HelasDecayChainProcess):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid list" % str(value)
-        if name == 'decay_diagram_maps':
-            if not isinstance(value, list):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid list" % str(value)
+                        "%s is not a valid DecayChainAmplitude" % str(value)
         return True
 
     def get_sorted_keys(self):
         """Return diagram property names as a nicely sorted list."""
 
-        return ['core_groups', 'decay_groups', 'decay_ids',
-                'helas_decay_chains']
+        return ['core_groups', 'decay_groups', 'decay_chain_amplitude',
+                'helas_decay_chain']
 
     def nice_string(self, indent = 0):
         """Returns a nicely formatted string of the content."""
@@ -448,91 +444,135 @@ class DecayChainSubProcessGroup(SubProcessGroup):
         return  mystr[:-1]
 
     #===========================================================================
-    # generate_helas_decay_chain_processes
+    # generate_helas_decay_chain_subproc_groups
     #===========================================================================
-    def generate_helas_decay_chain_processes(self):
+    def generate_helas_decay_chain_subproc_groups(self):
         """Combine core_groups and decay_groups to give
         HelasDecayChainProcesses and new diagram_maps.
         """
 
-        # Start with calling generate_helas_decay_chain_process for
-        # all decay chain groups
-        for decay_group in self.get('decay_groups'):
-            decay_group.generate_helas_decay_chain_processes()
+        # Generate helas diagrams for the decay chain processes
+        self.set('helas_decay_chain', helas_objects.HelasDecayChainProcess(\
+            self.get('decay_chain_amplitude')))
 
-        # Now start working on the core groups
+        # Combine decays
+        matrix_elements = \
+                  self.get('helas_decay_chain').combine_decay_chain_processes()
 
-        # Generate matrix elements for all core groups and make sure
-        # diagram mapping is correct
-        for core_group in self.get('core_groups'):
-            if not core_group.get('amplitudes'):
-                raise self.PhysicsObjectError, \
-                      "Need amplitudes to generate matrix_elements"
+        # For each matrix element, check which group it should go into and
+        # calculate diagram_maps
+        me_assignments = {}
+        for me in matrix_elements:
+            group_assignment, diagram_map, mapping_diagrams = \
+                              self.assign_group_to_decay_process(\
+                                     me.get('processes')[0])
+            try:
+                me_assignments[group_assignment].append((me, diagram_map,
+                                                         mapping_diagrams))
+            except KeyError:
+                me_assignments[group_assignment] = [(me, diagram_map,
+                                                     mapping_diagrams)]
 
-            # Determine mapping diagrams for this group
-            core_group.set_mapping_diagrams()
+        # Create subprocess groups corresponding to the different
+        # group_assignments
 
-            amplitudes = copy.copy(core_group.get('amplitudes'))
-            core_group.set('matrix_elements',
-                           helas_objects.HelasMatrixElementList.\
-                                generate_matrix_elements(amplitudes,
-                                                         False,
-                                                         self.get('decay_ids')))
-            core_group.rearrange_diagram_maps()
-            core_group.set('amplitudes', diagram_generation.AmplitudeList())
+        subproc_groups = SubProcessGroupList()
+        for key in sorted(me_assignments.keys()):
+            group = SubProcessGroup()
+            group.set('matrix_elements', helas_objects.HelasMatrixElementList(\
+                [me[0] for me in me_assignments[key]]))
+            group.set('diagram_maps', dict((imap, map[1]) for (imap, map) in \
+                                           enumerate(me_assignments[key])))
+            group.set('mapping_diagrams', range(me_assignments[key][0][2]))
+            group.set('number', group.get('matrix_elements')[0].\
+                                      get('processes')[0].get('id'))
+            group.set('name', group.generate_name(\
+                              group.get('matrix_elements')[0].\
+                                    get('processes')[0]))
+            subproc_groups.append(group)
 
-        # Create a HelasDecayChainProcess for each core group and set
-        # of decay groups
-        decay_chains = helas_objects.HelasDecayChainProcessList()
-        diagram_maps = []
-        print "core_groups: ", len(self.get('core_groups'))
-        for core_group in self.get('core_groups'):
-            print "decay_groups: ",len(self.get('decay_groups'))
-            print [range(len(g.get('helas_decay_chains'))) for g in \
-                     self.get('decay_groups')]
-            # Get all combinations of decay chains in the groups
-            for prod in itertools.product(\
-                *[range(len(g.get('helas_decay_chains'))) for g in \
-                     self.get('decay_groups')]):
-                print 'prod: ',prod
-                # Combine the decay chains
-                d_chains = helas_objects.HelasDecayChainProcessList(\
-                    [self.get('decay_groups')[i].get('helas_decay_chains')[j] \
-                      for i, j in enumerate(prod)])
-                # Pick out decay chains which actually correspond to
-                # final state particles in this core group
-                
-                decay_chains.append(helas_objects.HelasDecayChainProcess({\
-                    'core_processes': core_group.get('matrix_elements'),
-                    'decay_chains': helas_objects.HelasDecayChainProcessList(\
-                        d_chains)}))
-                d_maps = [self.get('decay_groups')[i].\
-                          get('decay_diagram_maps')[j] \
-                          for i, j in enumerate(prod)]
-                diagram_maps.append(DecayChainSubProcessGroup.combine_maps(\
-                                    core_group.get('diagram_maps'),
-                                    d_maps))
+        return subproc_groups
 
-        self.set('helas_decay_chains', decay_chains)
-        self.set('decay_diagram_maps', diagram_maps)
-        print len(decay_chains), len(diagram_maps)
-        print "diagram_maps: ",diagram_maps
+    def assign_group_to_decay_process(self, process):
+        """Recursively identify which group process belongs to,
+        and determine the mapping_diagrams for the process."""
 
-    @staticmethod
-    def combine_maps(core_maps, decay_maps):
-        """Combine the diagram_maps for the core and decay process
-        group to common diagram_maps"""
+        # Determine properties for the decay chains
+        # The entries of group_assignments are:
+        # [(decay_index, (decay_group_index, ...)),
+        #  diagram_map (updated), len(mapping_diagrams)]
 
-        result_maps = []
+        group_assignments = []
+        
+        for decay in process.get('decay_chains'):
+            # Find decay group that has this decay in it
+            ids = [l.get('id') for l in decay.get('legs')]
+            decay_group = [(i, group) for (i, group) in \
+                           enumerate(self.get('decay_groups')) \
+                           if any([ids in [[l.get('id') for l in \
+                                            a.get('process').get('legs')] \
+                                           for a in g.get('amplitudes')] \
+                                   for g in group.get('core_groups')])]
 
-        #for maps in decay_maps:
-            
+            assert decay_group
+            decay_group = decay_group[0]
 
-        print 'core_maps: ', core_maps
-        print 'decay_maps:', decay_maps
+            group_assignment, diagram_map, mapping_diagrams = \
+                              decay_group[1].assign_group_to_decay_process(\
+                                                                         decay)
 
-        return core_maps
+            group_assignments.append(((decay_group[0], group_assignment),
+                                      diagram_map,
+                                      mapping_diagrams))
 
+        # Now calculate the corresponding properties for process
+
+        # First determine group id
+        ids = [l.get('id') for l in process.get('legs')]
+        core_group = [(i, group) for (i, group) in \
+                      enumerate(self.get('core_groups')) \
+                      if ids in [[l.get('id') for l in \
+                                  a.get('process').get('legs')] \
+                                 for a in group.get('amplitudes')]]
+        assert core_group
+        
+        core_group = core_group[0]
+        # This is the first return argument - the chain of group indices
+        group_assignment = (core_group[0],
+                            tuple([g[0] for g in group_assignments]))
+
+        # Now get length of mapping diagrams
+        org_mapping_diagrams = len(core_group[1].get('mapping_diagrams'))
+
+        # Now calculate the diagram map for this process
+        proc_index = [[l.get('id') for l in a.get('process').get('legs')] \
+                      for a in core_group[1].get('amplitudes')].index(ids)
+        org_diagram_map = core_group[1].get('diagram_maps')[proc_index]
+
+        if not group_assignments:
+            # No decays - return the values for this process
+            return group_assignment, org_diagram_map, org_mapping_diagrams
+
+        # mapping_diagrams is simply the product of org_mapping_diagrams
+        # with all decay mapping_diagrams
+        decay_mapping_diagrams = reduce(lambda x, y: x * y,
+                                        [g[2] for g in group_assignments])
+        mapping_diagrams = org_mapping_diagrams * decay_mapping_diagrams
+
+        # Now construct the diagram_map from the diagram maps of the
+        # decays and org_diagram_map
+        diagram_map = []
+        for diag_prod in itertools.product(org_diagram_map,
+                                         *[ga[1] for ga in group_assignments]):
+            diag_num = 1+(diag_prod[0]-1)*decay_mapping_diagrams
+            for idm, dm in enumerate(diag_prod[1:]):
+                diag_num += (dm-1)*reduce(lambda x, y: x * y,
+                                          [g[2] for g in \
+                                           group_assignments[idm+1:]], 1)
+            diagram_map.append(diag_num)
+
+        return group_assignment, diagram_map, mapping_diagrams
+    
     #===========================================================================
     # group_amplitudes
     #===========================================================================
@@ -550,9 +590,12 @@ class DecayChainSubProcessGroup(SubProcessGroup):
         core_groups = SubProcessGroup.group_amplitudes(\
             decay_chain_amp.get('amplitudes'))
 
+        for group in core_groups:
+            group.set_mapping_diagrams()
+
         dc_subproc_group = DecayChainSubProcessGroup(\
             {'core_groups': core_groups,
-             'decay_ids': decay_chain_amp.get_decay_ids()})
+             'decay_chain_amplitude': decay_chain_amp})
 
         # Recursively determine decay chain groups
         for decay_chain in decay_chain_amp.get('decay_chains'):

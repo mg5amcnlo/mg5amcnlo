@@ -35,13 +35,13 @@ c
 c
 c     Local for generating amps
 c
-      double precision p(0:3,99), wgt, x(99), fx
+      double precision p(0:3,99), wgt, x(99), fx, xdum
       double precision p1(0:3,99)
       integer ninvar, ndim, iconfig, minconfig, maxconfig
       integer ncall,itmax,nconfigs,ntry, ngraphs
       integer ic(nexternal,maxswitch), jc(12),nswitch
       double precision saveamp(maxamps)
-      integer nmatch, ibase, idum
+      integer nmatch, ibase
       logical mtc, even
 
 c
@@ -98,7 +98,7 @@ c     Start reading use_config from symfact.dat written by MG5
 c
       open(unit=25, file='symfact.dat', status='old')
       do j=1,mapconfig(0)
-         read(25,*) idum, use_config(j)
+         read(25,*) xdum, use_config(j)
       enddo
       close(25)
 

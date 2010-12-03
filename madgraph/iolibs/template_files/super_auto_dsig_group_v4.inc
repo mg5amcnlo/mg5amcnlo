@@ -94,7 +94,7 @@ C     Read in symfact file and store used permutations in SYMCONF
         IPROC=1
         SYMCONF(IPROC)=ICONFIG
         DO I=1,MAPCONFIG(0)
-          READ(LUN,*) IDUM, ICONF
+          READ(LUN,*) XDUM, ICONF
           IF(ICONF.EQ.-ICONFIG)THEN
             IPROC=IPROC+1
             SYMCONF(IPROC)=I

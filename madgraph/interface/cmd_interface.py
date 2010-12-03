@@ -911,17 +911,6 @@ class CheckValidForCmd(object):
             text = 'No processes generated. Please generate a process first.'
             raise self.InvalidCmd(text)
 
-        # Decay chain processes not yet implemented for subprocess
-        # group output
-        if self._export_format == 'madevent' and \
-           'group_subprocesses_output' in self._options and \
-           self._options['group_subprocesses_output'] and \
-           any([isinstance(a, diagram_generation.DecayChainAmplitude) for \
-               a in self._curr_amps]):
-            text = 'Sorry, subprocess group output can not handle decay chains.'
-            text += ' Please set group_subprocesses_output to False.'
-            raise self.InvalidCmd(text)
-
     def get_default_path(self):
         """Set self._export_dir to the default (\'auto\') path"""
         
@@ -2609,9 +2598,24 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 nojpeg = True
                 ndiags = 0
                 cpu_time1 = time.time()
-                subproc_groups = \
+                dc_amps = [amp for amp in self._curr_amps if isinstance(amp, \
+                                    diagram_generation.DecayChainAmplitude)]
+                non_dc_amps = [amp for amp in self._curr_amps if not \
+                               isinstance(amp, \
+                                    diagram_generation.DecayChainAmplitude)]
+                subproc_groups = group_subprocs.SubProcessGroupList()
+                if non_dc_amps:
+                    subproc_groups.extend(\
                                group_subprocs.SubProcessGroup.group_amplitudes(\
-                                      self._curr_amps)
+                                                                   non_dc_amps))
+                for dc_amp in dc_amps:
+                    dc_subproc_group = \
+                             group_subprocs.DecayChainSubProcessGroup.\
+                                                       group_amplitudes(dc_amp)
+                    subproc_groups.extend(\
+                              dc_subproc_group.\
+                                    generate_helas_decay_chain_subproc_groups())
+
                 cpu_time1 = time.time()
                 for sp_group in subproc_groups:
                     ndiags = ndiags + sum([len(m.get('diagrams')) for m in \

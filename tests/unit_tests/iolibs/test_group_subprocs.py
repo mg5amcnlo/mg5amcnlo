@@ -405,9 +405,10 @@ class SubProcessGroupTest(unittest.TestCase):
         max_fs = 2 # 3
 
         procs = [[1,-1,2,-2,23], [2,2,2,2,23], [2,-2,21,21,23], [1,-1,21,21,23]]
-        decays = [[23,1,-1], [23,11,-11]]
+        decays = [[23,1,-1,21], [23,11,-11]]
         coreamplitudes = diagram_generation.AmplitudeList()
         decayamplitudes = diagram_generation.AmplitudeList()
+        decayprocs = base_objects.ProcessList()
 
         for proc in procs:
             # Define the multiprocess
@@ -431,9 +432,11 @@ class SubProcessGroupTest(unittest.TestCase):
             my_leglist[0].set('state', False)
 
             my_process = base_objects.Process({'legs':my_leglist,
-                                               'model':self.mymodel})
+                                               'model':self.mymodel,
+                                               'is_decay_chain': True})
             my_amplitude = diagram_generation.Amplitude(my_process)
             decayamplitudes.append(my_amplitude)
+            decayprocs.append(my_process)
 
         decays = diagram_generation.DecayChainAmplitudeList([\
                          diagram_generation.DecayChainAmplitude({\
@@ -447,7 +450,7 @@ class SubProcessGroupTest(unittest.TestCase):
                           group_amplitudes(decay_chains)
 
         #print dc_subproc_group.nice_string()
-
+        
         self.assertEqual(dc_subproc_group.nice_string(),
 """Group 1:
   Process: d d~ > u u~ z QED=1
@@ -489,12 +492,19 @@ Group 2:
   8  ((2(1),5(23)>2(1),id:9),(3(21),4(21)>3(21),id:1),(1(-1),2(1),3(21),id:5)) (QED=1,QCD=2)
 Decay groups:
   Group 1:
-    Process: z > d d~
-    1 diagrams:
-    1  ((2(1),3(-1)>2(23),id:9),(1(23),2(23),id:0)) (QED=1)
+    Process: z > d d~ g
+    2 diagrams:
+    1  ((2(1),4(21)>2(1),id:5),(2(1),3(-1)>2(23),id:9),(1(23),2(23),id:0)) (QED=1,QCD=1)
+    2  ((3(-1),4(21)>3(-1),id:5),(2(1),3(-1)>2(23),id:9),(1(23),2(23),id:0)) (QED=1,QCD=1)
   Group 2:
     Process: z > e- e+
     1 diagrams:
     1  ((2(11),3(-11)>2(23),id:10),(1(23),2(23),id:0)) (QED=1)""")
 
-        dc_subproc_group.generate_helas_decay_chain_processes()
+        subproc_groups = \
+                       dc_subproc_group.generate_helas_decay_chain_subproc_groups()
+
+        print len(subproc_groups)
+
+        for group in subproc_groups:
+            print group.get('name')

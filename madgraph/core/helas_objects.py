@@ -687,6 +687,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                               'outgoing', self.get('mothers'))
         in_fermions = filter(lambda wf: wf.get_with_flow('state') == \
                              'incoming', self.get('mothers'))
+
         # Pick out bosons
         bosons = filter(lambda wf: wf.is_boson(), self.get('mothers'))
 
@@ -3628,6 +3629,21 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
         else:
             # call the mother routine
             super(HelasDecayChainProcess, self).__init__()
+
+    def nice_string(self, indent = 0):
+        """Returns a nicely formatted string of the matrix element processes."""
+
+        mystr = ""
+
+        for process in self.get('core_processes'):
+            mystr += process.get('processes')[0].nice_string(indent) + "\n"
+
+        if self.get('decay_chains'):
+            mystr += " " * indent + "Decays:\n"
+        for dec in self.get('decay_chains'):
+            mystr += dec.nice_string(indent + 2) + "\n"
+
+        return  mystr[:-1]
 
     def generate_matrix_elements(self, dc_amplitude):
         """Generate the HelasMatrixElements for the core processes and
