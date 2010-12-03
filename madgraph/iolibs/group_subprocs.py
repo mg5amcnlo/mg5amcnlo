@@ -209,7 +209,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
             new_diagram_maps[ime] = \
                        self.get('diagram_maps')[amp_procs.index(me_proc)]
 
-        self.set("diagram_maps", new_diagram_maps)
+        self.set('diagram_maps', new_diagram_maps)
 
     def get_nexternal_ninitial(self):
         """Get number of external and initial particles for this group"""
@@ -563,6 +563,9 @@ class DecayChainSubProcessGroup(SubProcessGroup):
         diagram_map = []
         for diag_prod in itertools.product(org_diagram_map,
                                          *[ga[1] for ga in group_assignments]):
+            if diag_prod[0] == 0:
+                diagram_map.append(0)
+                continue
             diag_num = 1+(diag_prod[0]-1)*decay_mapping_diagrams
             for idm, dm in enumerate(diag_prod[1:]):
                 diag_num += (dm-1)*reduce(lambda x, y: x * y,

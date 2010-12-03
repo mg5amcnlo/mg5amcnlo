@@ -1891,10 +1891,7 @@ def get_amp2_lines(matrix_element, config_map = []):
         # AMP2 number corresponding to the first diagram number used
         # for that AMP2.
         for config in sorted(config_to_diag_dict.keys()):
-            # Ignore any diagrams with 4-particle vertices.
-            if max(diag.get_vertex_leg_numbers()) > 3:
-                continue
-            
+
             line = "AMP2(%(num)d)=AMP2(%(num)d)+" % \
                    {"num": (config_to_diag_dict[config][0] + 1)}
             
