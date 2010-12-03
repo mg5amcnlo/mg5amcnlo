@@ -1890,8 +1890,11 @@ def get_amp2_lines(matrix_element, config_map = []):
         # identical propagator properties.  Note that we need to use
         # AMP2 number corresponding to the first diagram number used
         # for that AMP2.
-        for config in config_to_diag_dict.keys():
-
+        for config in sorted(config_to_diag_dict.keys()):
+            # Ignore any diagrams with 4-particle vertices.
+            if max(diag.get_vertex_leg_numbers()) > 3:
+                continue
+            
             line = "AMP2(%(num)d)=AMP2(%(num)d)+" % \
                    {"num": (config_to_diag_dict[config][0] + 1)}
             
@@ -1900,7 +1903,6 @@ def get_amp2_lines(matrix_element, config_map = []):
                               sum([diagrams[idiag].get('amplitudes') for \
                                    idiag in config_to_diag_dict[config]], [])])
             ret_lines.append(line)
-        ret_lines.sort()
     else:
         for idiag, diag in enumerate(matrix_element.get('diagrams')):
             # Ignore any diagrams with 4-particle vertices.

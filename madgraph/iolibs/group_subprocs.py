@@ -169,10 +169,14 @@ class SubProcessGroup(base_objects.PhysicsObject):
             if part.get('mass').lower() == 'zero' and part.is_fermion() and \
                    part.get('color') != 1:
                 name += "q"
-                #if not part.get('is_part'):
-                #    name +="bar"
+            elif part.get('mass').lower() == 'zero' and part.is_fermion() and \
+                   part.get('color') == 1 and part.get('pdg_code') % 2 == 1:
+                name += "l"
+            elif part.get('mass').lower() == 'zero' and part.is_fermion() and \
+                   part.get('color') == 1 and part.get('pdg_code') % 2 == 0:
+                name += "vl"
             else:
-                name += part.get_name().replace('~', 'bar').\
+                name += part.get_name().replace('~', 'x').\
                             replace('+', 'p').replace('-', 'm')
         name += "_"
         for fs_part in fs:
