@@ -78,21 +78,28 @@ def import_model(model_path, mgme_dir = MG4DIR):
 def find_model_path(model_path, mgme_dir):
     """Find the path to the model, starting with path model_path."""
 
+    # treat simple case (model_path is a valid path/ mgme_dir doesn't exist)
     if os.path.isdir(model_path):
-        pass
-    elif mgme_dir and os.path.isdir(os.path.join(mgme_dir, 'models',
-                                                 model_path + "_v4")):
-        model_path = os.path.join(mgme_dir, 'models', model_path + "_v4")
-    elif mgme_dir and os.path.isdir(os.path.join(mgme_dir, 'Models', model_path)):
-        model_path = os.path.join(mgme_dir, 'Models', model_path)
+        return model_path
     elif not mgme_dir:
         error_text = "Path %s is not a valid pathname\n" % model_path
         error_text += "and no MG_ME installation detected in order to search in Models"
         raise MadGraph5Error(error_text)
-    else:
-        raise MadGraph5Error("Path %s is not a valid pathname" % model_path)
 
-    return model_path
+    # Try to build the valid path
+    path_possibilities = [os.path.join(mgme_dir, 'Models', model_path),
+                         os.path.join(mgme_dir, 'models', model_path + "_v4"),    
+                         os.path.join(mgme_dir, 'models', model_path)            
+                         ]
+
+    for path in path_possibilities:
+        print path
+        if os.path.exists(path) and \
+                        not os.path.exists(os.path.join(path, 'particles.py')):
+            return path
+    
+    # No valid path found
+    raise MadGraph5Error("Path %s is not a valid pathname" % model_path)
 
 #===============================================================================
 # read_particles_v4

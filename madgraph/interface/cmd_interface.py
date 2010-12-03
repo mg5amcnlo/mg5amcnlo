@@ -1322,35 +1322,21 @@ class CompleteForCmd(CheckValidForCmd):
         # Filename if directory is not given
         if len(split_arg(line[0:begidx])) == 2:
             if args[1] == 'model':
-                out = [name for name in \
-                       self.path_completion(text,
+                file_cond = lambda p : os.path.exists(os.path.join(MG5DIR,'models',p,'particles.py'))
+                mod_name = lambda name: name
+            elif args[1] == 'model_v4':
+                file_cond = lambda p :  (os.path.exists(os.path.join(MG5DIR,'models',p,'particles.dat')) 
+                                      or os.path.exists(os.path.join(self._mgme_dir,'Models',p,'particles.dat')))
+                mod_name = lambda name :(name[-3:] != '_v4' and name or name[:-3]) 
+            else:
+                return []
+                
+            return [mod_name(name) for name in \
+                    self.path_completion(text,
                                             os.path.join(MG5DIR,'models'),
                                             only_dirs = True) \
-                       if not name.endswith('_v4') and \
-                       name != 'template_files']
-            elif args[1] == 'model_v4' and self._mgme_dir:
-                if os.path.isdir(os.path.join(self._mgme_dir, 'Models')):
-                    # self._mgme_dir is an MG_ME v4 directory
-                    out = [name for name in \
-                            self.path_completion(text,
-                                                 os.path.join(self._mgme_dir,
-                                                              'Models'),
-                                                 only_dirs = True) \
-                            if name not in ['CVS']]
-                elif os.path.isdir(os.path.join(self._mgme_dir, 'models')):
-                    # self._mgme_dir is the MG5DIR
-                    out = [name[:-3] for name in \
-                            self.path_completion(text,
-                                                 os.path.join(self._mgme_dir,
-                                                              
-                                                              'models'),
-                                                 only_dirs = True) \
-                            if name.endswith('_v4')]
-                else:
-                    out = self.path_completion(text)
-            else:
-                out = self.path_completion(text)
-            return out
+                       if file_cond(name)]
+                                
 
         # Options
         if len(args) > 2 and args[1].startswith('model') and args[-1][0] != '-':
