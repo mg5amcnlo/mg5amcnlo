@@ -397,8 +397,6 @@ class DecayChainSubProcessGroup(SubProcessGroup):
         self['decay_groups'] = DecayChainSubProcessGroupList()
         # decay_chain_amplitude is the original DecayChainAmplitude
         self['decay_chain_amplitude'] = diagram_generation.DecayChainAmplitude()
-        # helas_decay_chain is the resulting HelasDecayChainProcess
-        self['helas_decay_chain'] = helas_objects.HelasDecayChainProcess()
         
     def filter(self, name, value):
         """Filter for valid property values."""
@@ -415,17 +413,12 @@ class DecayChainSubProcessGroup(SubProcessGroup):
             if not isinstance(value, diagram_generation.DecayChainAmplitude):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid DecayChainAmplitude" % str(value)
-        if name == 'helas_decay_chain':
-            if not isinstance(value, helas_objects.HelasDecayChainProcess):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid DecayChainAmplitude" % str(value)
         return True
 
     def get_sorted_keys(self):
         """Return diagram property names as a nicely sorted list."""
 
-        return ['core_groups', 'decay_groups', 'decay_chain_amplitude',
-                'helas_decay_chain']
+        return ['core_groups', 'decay_groups', 'decay_chain_amplitude']
 
     def nice_string(self, indent = 0):
         """Returns a nicely formatted string of the content."""
@@ -453,11 +446,13 @@ class DecayChainSubProcessGroup(SubProcessGroup):
 
         # Generate helas diagrams for the decay chain processes
         self.set('helas_decay_chain', helas_objects.HelasDecayChainProcess(\
-            self.get('decay_chain_amplitude')))
+            ))
 
         # Combine decays
         matrix_elements = \
-                  self.get('helas_decay_chain').combine_decay_chain_processes()
+                helas_objects.HelasMatrixElementList.generate_matrix_elements(\
+                                   diagram_generation.AmplitudeList(\
+                                          [self.get('decay_chain_amplitude')]))
 
         # For each matrix element, check which group it should go into and
         # calculate diagram_maps
