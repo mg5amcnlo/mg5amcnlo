@@ -185,7 +185,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
                    and part.get('spin') == 2:
                 name += "q" # "j"
             else:
-                name += part.get_name().replace('~', 'bar').\
+                name += part.get_name().replace('~', 'x').\
                             replace('+', 'p').replace('-', 'm')
         
         for dc in process.get('decay_chains'):
