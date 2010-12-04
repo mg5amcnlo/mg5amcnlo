@@ -589,9 +589,19 @@ class HelpToCmd(object):
         _draw_parser.print_help()
 
     def help_set(self):
-        logger.info("syntax: set %s arguments" % "|".join(self._set_options))
-        logger.info("-- set some options for generation or output")
-
+        logger.info("syntax: set %s argument" % "|".join(self._set_options))
+        logger.info("-- set options for generation or output")
+        logger.info("   group_subprocesses_output True/False: ")
+        logger.info("     Smart grouping of subprocesses into directories,")
+        logger.info("     mirroring of initial states, and combination of")
+        logger.info("     integration channels.")
+        logger.info("     Example: p p > j j j w+ gives 5 directories and 184 channels")
+        logger.info("     (cf. 65 directories and 1048 channels for regular output)")
+        logger.info("   ignore_six_quark_processes multi_part_label")
+        logger.info("     (default none) ignore processes with at least 6 of any")
+        logger.info("     of the quarks given in multi_part_label.")
+        logger.info("     These processes give negligible contribution to the")
+        logger.info("     cross section but have subprocesses/channels.")
     def help_shell(self):
         logger.info("syntax: shell CMD (or ! CMD)")
         logger.info("-- run the shell command CMD and catch output")
@@ -2203,17 +2213,26 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         if args[0].startswith('model'):
             self._model_v4_path = None
+            # Clear history, amplitudes and matrix elements when a model is imported
+            self.history = self.history[-1:]
+            self._curr_amps = diagram_generation.AmplitudeList()
+            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+            # Import model
             if args[0].endswith('_v4'):
                 self._curr_model, self._model_v4_path = \
                                  import_v4.import_model(args[1], self._mgme_dir)
                 self._curr_fortran_model = \
                       helas_call_writers.FortranHelasCallWriter(\
                                                              self._curr_model)
+                # Automatically turn off subprocess grouping
+                self.do_set('group_subprocesses_output False')
             else:
                 self._curr_model = import_ufo.import_model(args[1])
                 self._curr_fortran_model = \
                       helas_call_writers.FortranUFOHelasCallWriter(\
                                                              self._curr_model)
+                # Automatically turn on subprocess grouping
+                self.do_set('group_subprocesses_output True')
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
 
@@ -2252,7 +2271,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                      
     def process_model(self):
         """Set variables _particle_names and _couplings for tab
-        completion, defined multiparticles"""
+        completion, define multiparticles"""
 
          # Set variables for autocomplete
         self._particle_names = [p.get('name') for p in self._curr_model.get('particles')] + \
