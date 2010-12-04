@@ -2601,7 +2601,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Determine if we want to group subprocesses
         group_subprocesses = self._export_format == 'madevent' and \
                          self._options['group_subprocesses_output'] and \
-                         len(self._curr_amps) > 1
+                         (len(self._curr_amps) > 1 or \
+                          isinstance(self._curr_amps[0],
+                                     diagram_generation.DecayChainAmplitude))
 
         if not group_subprocesses:
             # Do not generate matrix elements, since this is done by the
