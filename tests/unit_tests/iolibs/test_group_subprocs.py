@@ -504,7 +504,13 @@ Decay groups:
         subproc_groups = \
                        dc_subproc_group.generate_helas_decay_chain_subproc_groups()
 
-        print len(subproc_groups)
+        self.assertEqual(len(subproc_groups), 4)
 
-        for group in subproc_groups:
-            print group.get('name')
+        group_names = ['qq_qqz_z_qqg',
+                       'qq_qqz_z_emep',
+                       'qq_ggz_z_qqg',
+                       'qq_ggz_z_emep']
+
+        for igroup, group in enumerate(subproc_groups):
+            self.assertEqual(group.get('name'),
+                             group_names[igroup])

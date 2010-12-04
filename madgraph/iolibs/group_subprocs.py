@@ -448,10 +448,6 @@ class DecayChainSubProcessGroup(SubProcessGroup):
         HelasDecayChainProcesses and new diagram_maps.
         """
 
-        # Generate helas diagrams for the decay chain processes
-        self.set('helas_decay_chain', helas_objects.HelasDecayChainProcess(\
-            ))
-
         # Combine decays
         matrix_elements = \
                 helas_objects.HelasMatrixElementList.generate_matrix_elements(\
@@ -563,7 +559,7 @@ class DecayChainSubProcessGroup(SubProcessGroup):
         diagram_map = []
         for diag_prod in itertools.product(org_diagram_map,
                                          *[ga[1] for ga in group_assignments]):
-            if diag_prod[0] == 0:
+            if any([d == 0 for d in diag_prod]):
                 diagram_map.append(0)
                 continue
             diag_num = 1+(diag_prod[0]-1)*decay_mapping_diagrams
