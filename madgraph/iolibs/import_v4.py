@@ -93,7 +93,6 @@ def find_model_path(model_path, mgme_dir):
                          ]
 
     for path in path_possibilities:
-        print path
         if os.path.exists(path) and \
                         not os.path.exists(os.path.join(path, 'particles.py')):
             return path

@@ -555,31 +555,6 @@ class HelpToCmd(object):
         logger.info("-- define a multiparticle")
         logger.info("   Example: define p = g u u~ c c~ d d~ s s~ b b~")
 
-    def help_export(self):
-        logger.info("syntax: export [" + "|".join(self._export_formats) + \
-              " FILEPATH] [options]")
-        logger.info("""-- export matrix elements.
-        *Note* that if you have run the 'output', export format and FILEPATH
-        are optional.
-        - For madevent, the path needs to be to a MadEvent SubProcesses
-          directory, and the result is the Pxxx directories (including the
-          diagram .ps and .jpg files) for the subprocesses as well as a
-          correctly generated subproc.mg file.
-        - For standalone, the result is a set of complete MG4 Standalone
-          process directories.
-        - For matrix, the resulting files will be
-          FILEPATH/matrix_\"process_string\".f
-        - For pythia8, the resulting files will be
-          FILEPATH/Sigma_\"process_string\".h and
-          FILEPATH/Sigma_\"process_string\".cc.
-        - For pythia8_model, the resulting files will be
-          FILEPATH/Parameters_\"process_string\".h,
-          FILEPATH/Parameters_\"process_string\".cc,
-          FILEPATH/hel_amps_\"process_string\".h and
-          FILEPATH/hel_amps_\"process_string\".cc.
-        - available options are \"-nojpeg\", to suppress generation of
-          jpeg diagrams in MadEvent 4 subprocess directories.""")
-
     def help_history(self):
         logger.info("syntax: history [FILEPATH|clean|.] ")
         logger.info("   If FILEPATH is \'.\' and \'output\' is done,")
@@ -694,13 +669,6 @@ class CheckValidForCmd(object):
         if not os.path.isdir(args[0]):
             raise self.InvalidCmd( "%s is not a valid directory for export file" % args[0])
             
-    def check_export(self, args):
-        """check the validity of line
-        syntax: export MODE FILEPATH
-        """  
-        
-        self.check_output(args)
-    
     def check_check(self, args):
         """check the validity of args"""
         
@@ -934,20 +902,6 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         """
         raise self.WebRestriction('direct call to draw is forbidden on the web')
       
-    def check_export(self, args):
-        """check the validity of line
-        syntax: export MODE FILEPATH
-        No FilePath authorized on the web
-        """  
-
-
-        if len(args) > 0:
-            raise self.WebRestriction('Path can\'t be specified on the web.' \
-                                      + 'use the output command to avoid the '\
-                                      + 'need to specify a path')
-  
-        return CheckValidForCmd.check_export(self, args)
-    
     def check_history(self, args):
         """check the validity of line
         No Path authorize for the Web"""
@@ -1073,11 +1027,6 @@ class CompleteForCmd(CheckValidForCmd):
                                     self._multiparticles.keys() + couplings)
         
             
-    def complete_export(self, text, line, begidx, endidx):
-        "Complete the export command"
-
-        return self.complete_output(text, line, begidx, endidx, ['nojpeg'], ['-nojpeg'])
-
     def complete_history(self, text, line, begidx, endidx):
         "Complete the add command"
 
@@ -1319,7 +1268,7 @@ class CompleteForCmd(CheckValidForCmd):
                 return self.path_completion(text,
                                     os.path.join('.',*[a for a in args if \
                                                       a.endswith(os.path.sep)]))
-        # Filename if directory is not given
+        # Model directory name if directory is not given
         if len(split_arg(line[0:begidx])) == 2:
             if args[1] == 'model':
                 file_cond = lambda p : os.path.exists(os.path.join(MG5DIR,'models',p,'particles.py'))
@@ -2305,7 +2254,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self._export_dir = os.path.sep.join(path_split[:-2])
                 
     
-
     def do_load(self, line):
         """Load information from file"""
 
@@ -2438,10 +2386,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if nojpeg:
             options = '-nojpeg'
 
-        self.do_export(options)
+        self.export(options)
 
     # Export a matrix element
-    def do_export(self, line):
+    def export(self, line):
         """Export a generated amplitude to file"""
 
         def generate_matrix_elements(self):
