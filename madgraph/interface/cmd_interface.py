@@ -875,6 +875,9 @@ class CheckValidForCmd(object):
     def check_output(self, args):
         """ check the validity of the line"""
         
+        if args and args[0] in self._export_formats:
+            self._export_format = args.pop(0)
+
         if not self._curr_amps and self._export_format != "pythia8_model":
             text = 'No processes generated. Please generate a process first.'
             raise self.InvalidCmd(text)
@@ -883,12 +886,8 @@ class CheckValidForCmd(object):
             text = 'No model found. Please import a model first and then retry.'
             raise self.InvalidCmd(text)
 
-        if args and args[0] in self._export_formats:
-            self._export_format = args.pop(0)
-
         if self._model_v4_path and \
                (self._export_format not in self._v4_export_formats or \
-                'group_subprocesses_output' in self._options and \
                 self._options['group_subprocesses_output']):
             text = " The Model imported (MG4 format) does not contain enough\n "
             text += " information for this type of output. In order to create\n"
@@ -1514,8 +1513,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 
                 # Generate processes
                 collect_mirror_procs = \
-                                 "group_subprocesses_output" in self._options \
-                                 and self._options['group_subprocesses_output']
+                                     self._options['group_subprocesses_output']
                 ignore_six_quark_processes = \
                                self._options['ignore_six_quark_processes'] if \
                                "ignore_six_quark_processes" in self._options \
@@ -1876,8 +1874,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         cpu_time1 = time.time()
         # Generate processes
-        collect_mirror_procs = "group_subprocesses_output" in self._options \
-                               and self._options['group_subprocesses_output']
+        collect_mirror_procs = self._options['group_subprocesses_output']
         ignore_six_quark_processes = \
                             self._options['ignore_six_quark_processes'] if \
                             "ignore_six_quark_processes" in self._options \
@@ -2455,6 +2452,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self._done_export = None
             else:
                 raise self.RWError('Could not load processes from file %s' % args[1])
+        if self._model_v4_path:
+            # Automatically turn off subprocess grouping
+            self.do_set('group_subprocesses_output False')
+        else:
+            # Automatically turn on subprocess grouping
+            self.do_set('group_subprocesses_output True')
+        
     
     def do_save(self, line):
         """Save information to file"""
@@ -2528,8 +2532,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if answer != 'y':
                 raise MadGraph5Error('Stopped by user request')
 
-        subproc_group_opt = 'group_subprocesses_output' in self._options and \
-                                self._options['group_subprocesses_output']
+        subproc_group_opt = self._options['group_subprocesses_output']
 
         # Make a Template Copy
         if self._export_format.startswith('madevent'):
@@ -2595,8 +2598,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                     self._export_dir)
             return        
 
-        if 'group_subprocesses_output' not in self._options or \
-               not self._options['group_subprocesses_output']:
+        # Determine if we want to group subprocesses
+        group_subprocesses = self._export_format == 'madevent' and \
+                         self._options['group_subprocesses_output'] and \
+                         len(self._curr_amps) > 1
+
+        if not group_subprocesses:
             # Do not generate matrix elements, since this is done by the
             # SubProcessGroup objects
             ndiags, cpu_time = generate_matrix_elements(self)
@@ -2610,16 +2617,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             path = os.path.join(path, 'SubProcesses')
 
         if self._export_format == 'madevent':
-            if 'group_subprocesses_output' in self._options and \
-                   self._options['group_subprocesses_output']:
+            if group_subprocesses:
                 nojpeg = True
                 ndiags = 0
                 cpu_time1 = time.time()
                 dc_amps = [amp for amp in self._curr_amps if isinstance(amp, \
                                     diagram_generation.DecayChainAmplitude)]
-                non_dc_amps = [amp for amp in self._curr_amps if not \
-                               isinstance(amp, \
-                                    diagram_generation.DecayChainAmplitude)]
+                non_dc_amps = diagram_generation.AmplitudeList(\
+                         [amp for amp in self._curr_amps if not \
+                          isinstance(amp, \
+                                     diagram_generation.DecayChainAmplitude)])
                 subproc_groups = group_subprocs.SubProcessGroupList()
                 if non_dc_amps:
                     subproc_groups.extend(\

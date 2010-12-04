@@ -109,7 +109,6 @@ def find_symmetry(matrix_element):
                                'state': wf.get('leg_state')}) \
                        for wf in matrix_element.get_external_wavefunctions()]),
                      'model': base_model})
-    print equivalent_process.nice_string()
     # Get phase space point
     p, w_rambo = process_checks.get_momenta(equivalent_process, full_model)
     

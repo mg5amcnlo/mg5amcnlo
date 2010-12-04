@@ -184,7 +184,6 @@ class TestCmdShell2(unittest.TestCase):
 
         self.assertRaises(Cmd.CheckValidForCmd.InvalidCmd,
                           self.do, 'output')
-        self.do("generate e+ e- > e+ e- / h")
 
     def test_read_madgraph4_proc_card(self):
         """Test reading a madgraph4 proc_card.dat"""
