@@ -831,7 +831,7 @@ class DecayParticle(base_objects.Particle):
 
                 # Add width to total width if onshell and
                 if temp_channel.get_onshell(model):
-                    self['apx_decaywidth'] +=temp_channel.get_apx_decaywidth(model)                    
+                    self['apx_decaywidth'] += temp_channel.get_apx_decaywidth(model)                    
                 # Calculate the order
                 temp_channel.calculate_orders(model)
                 self.get_channels(clevel, temp_channel.get_onshell(model)).\
@@ -1369,7 +1369,52 @@ class DecayModel(base_objects.Model):
         #fdata.write(str(vertexlist_dict))
         #fdata.close()
 
+    def color_multiplicity_def(self, colorlist):
+        """ Defines the two-body color multiplicity. It is applied in the 
+            get_color_multiplicity in channel object.
+            colorlist is the a list of two color indices.
+            This function will return a list of all possible
+            color index of the "mother" particle and the corresponding
+            color multiplicities. """
+        
+        # Raise error if the colorlist is not the right format.
+        if not isinstance(colorlist, list):
+            raise self.PhysicsObjectError,\
+                "The argument must be a list."
 
+        if any([not isinstance(i, int) for i in colorlist]):
+            raise self.PhysicsObjectError,\
+                "The argument must be a list of integer elements."
+
+        # Sort the colorlist and 
+        colorlist.sort()
+        color_tuple = tuple(colorlist)
+        # The dictionary of color multiplicity
+        # The key is the final_color structure and the value is
+        # [(ini_color_1, multiplicity_1), (ini_color_2, multiplicity_2), ...]
+        color_dict = { \
+            # The trivial key and value
+            # These define the convention we used.
+            (1, 1): [(1, 1)],
+            (1, 3): [(3, 1)],
+            (1, 8): [(8, 1)],
+            (1, 6): [(6, 1)],
+            (3, 3): [(1, 3), (8, 1), (3, 1), (6, 1)],
+            # (3, 6) ->  (3, 2 rather than 3), 
+            (3, 6): [(3, 2), (8, 3./4)],
+            (3, 8): [(3, (3-1./3)), (6, 1)],
+            (6, 6): [(1, 6), (8, 4./3)],
+            (6, 8): [(3, 2), (6, 2-1./3)],
+            (8, 8): [(1, 8)],
+            # 3-body decay color structure
+            # Quick reference
+            (3, 3, 8): [(1, 8), (8, 3-1./3)],
+            (1, 3, 8): [(3, 3)],
+            (1, 3, 3): [(8, 1)],
+            (3, 8, 8): [(3, 64./9)]
+            }
+
+        return color_dict[color_tuple]
 
     def read_param_card(self, param_card):
         """Read a param_card and set all parameters and couplings as
@@ -2837,9 +2882,12 @@ class Channel(base_objects.Diagram):
 
     def get_apx_matrixelement_sq(self, model):
         """ Calculate the apx_matrixelement_sq, the estimation for each leg
-           is in get_apx_fnrule.
-           For off shell decay, this function will estimate the value
-           as if it is on shell."""
+            is in get_apx_fnrule.
+            The color_multiplicity is first searching in the 
+            color_multiplicity_def in model object. If no available result,
+            use the get_color_multiplicity function.
+            For off shell decay, this function will estimate the value
+            as if it is on shell."""
 
         # To ensure the final_mass_list is setup, run get_onshell first
         self.get_onshell(model)
@@ -2859,7 +2907,8 @@ class Channel(base_objects.Diagram):
                 # Total energy of this vertex
                 q_total = 0
                 # Color multiplcity
-                color_list = []
+                final_color = []
+
                 # Assign value to apx_m except the mother leg (last leg)
                 for leg in vert['legs'][:-1]:
                     # Case for final legs
@@ -2870,13 +2919,15 @@ class Channel(base_objects.Diagram):
                         apx_m *= self.get_apx_fnrule(leg.get('id'),
                                                      avg_q+mass, True, model)
                     # If this is only internal leg, calculate the energy
-                    # it accumulate. (The value of this leg is assigned before.)
+                    # it accumulated. 
+                    # (The value of this leg is assigned before.)
                     else:
                         q_total += q_dict[(leg.get('id'), leg.get('number'))]
 
                     # Record the color content
-                    color_list.append(model.get_particle(leg.get('id')).\
+                    final_color.append(model.get_particle(leg.get('id')).\
                                            get('color'))
+
                 # The energy for mother leg is sum of the energy of its product.
                 # Set the q_dict
                 q_dict[(vert.get('legs')[-1].get('id'), 
@@ -2896,33 +2947,33 @@ class Channel(base_objects.Diagram):
                                   model.get('interaction_dict')[\
                             abs(vert.get('id'))]['couplings'].items()])
 
-                # Find the correct color factor
-                if any([i != 1 for i in color_list]):
-                    # Color multiplicity
-                    # the final number is the color of initial particle of
-                    # the vertex.
-                    color_multi = {(3,3,1):3,
-                                   (1,3,3):1,
-                                   (3,3,8):1,
-                                   (3,8,3):3,
-                                   (1,1,3,3):1,
-                                   (1,3,3,1):3,
-                                   # TBC
-                                   (3,3,8,1):3,
-                                   (1,3,8,3):3,
-                                   (1,3,3,8):1,
-                                   (3,3,8,3):3,
-                                   (3,3,3,8):3,
-                                   (3,3,8,8):3,
-                                   (3,8,8,3):3,
-                                   }
-                    color_list.sort()
-                    color_list.append(model.get_particle(vert.get('legs')[-1].get('id')).get('color'))
-                    color_tuple = tuple(color_list)
+                # If final_color contain non-singlet,
+                # get the color multiplicity.
+                if any([i != 1 for i in final_color]):
+                    ini_color = model.get_particle(vert.get('legs')[-1].get('id')).get('color')
+                    # Try to find multiplicity directly from model
+                    found = False
                     try:
-                        apx_m *= color_multi[color_tuple]
+                        color_configs = model.color_multiplicity_def(final_color)
+                        for config in color_configs:
+                            if config[0] == ini_color:
+                                apx_m *= config[1]
+                                found = True
+                                break
+                        # Call the get_color_multiplicity if no suitable
+                        # configs in the color_dict.
+                        if not found:
+                            apx_m *= self.get_color_multiplicity(ini_color,
+                                                                 final_color, 
+                                                                 model, True)
+                    # Call the get_color_multiplicity if the final_color
+                    # cannot be found directly in the color_dict.
                     except KeyError:
-                        logger.warning("Color structure %s in interaction %d is not included!" %(color_tuple, vert.get('id')))
+                        apx_m *= self.get_color_multiplicity(ini_color,
+                                                             final_color, 
+                                                             model, True)
+
+                        
         # A quick estimate of the next-level decay of a off-shell decay
         # Consider all legs are onshell.
         else:
@@ -2999,8 +3050,56 @@ class Channel(base_objects.Diagram):
         # Do nothing for scalar
 
         return value
+
+    def get_color_multiplicity(self, ini_color, final_color, model, base=False):
+        """ Get the color multiplicity recursively of the given final_color.
+            The multiplicity is obtained based on the color_multiplicity_def
+            funtion in the model.
+            If the color structure of final_color matches the 
+            color_multiplicity_def, return the multiplicity.
+            Otherwise, return 1 for the get_color_multiplicity with base = True
+            or return 0 for the get_color_multiplicity with base = False."""
             
+        # Combine the last two color factor to get the possible configs.
+        color_configs = model.color_multiplicity_def([final_color.pop(),
+                                                      final_color.pop()])
+        c_factor = 1.
+        # Try each config
+        for config in color_configs:
+            # The recursion ends when the length of the final_color now is 0.
+            # (i.e. length = 2 before pop)
+            if len(final_color) == 0:
+                # If the final_color is consistent to ini_color, return the
+                # nonzero multiplicity
+                if config[0] == ini_color:
+                    return config[1]
+
+            else:
+                # If next_final_color has more than one element,            
+                # creaat a new final_color for recursion.
+                next_final_color = copy.copy(final_color)
+                next_final_color.append(config[0])
+
+                # Call get_color_multiplicity with next_final_color as argument.
+                c_factor = config[1]* self.get_color_multiplicity(ini_color,
+                                                                  next_final_color,
+                                                                  model)
+
+                # If the c_factor is not zero, the color configs match successfully.
+                # Return the c_factor.
+                if c_factor != 0:
+                    return c_factor
+
+        # If no configs are satisfied...
+        # Raise the warning message and return 1 for base get_color_multiplicity
+        if base:
+            logger.warning("Color structure %s in interaction is not included!" %str(final_color))
+            return 1
+        # return 0 for intermediate get_color_multiplicity.
+        else:
+            return 0
         
+
     def get_apx_psarea(self, model):
         """ Calculate the approximate phase space area. For off-shell case,
             it only approximate it as if it is on-shell.

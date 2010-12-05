@@ -1722,6 +1722,42 @@ class Test_Channel(unittest.TestCase):
         #print channel_2.get_apx_decaywidth_nextlevel(model)
         #print channel_2.nice_string()
 
+    def test_colormultiplicity(self):
+        """ Test the color_multiplicity_def of the DecayModel object and
+            the get_color_multiplicity function of Channel object. """
+
+        # Test for exception 
+        self.assertRaises(decay_objects.DecayModel.PhysicsObjectError,
+                          self.my_testmodel.color_multiplicity_def,
+                          'a')
+
+        self.assertRaises(decay_objects.DecayModel.PhysicsObjectError,
+                          self.my_testmodel.color_multiplicity_def,
+                          [1, 'a'])
+        # Test the color_multiplicity_def
+        self.assertEqual(self.my_testmodel.color_multiplicity_def([6,3]),
+                         [(3, 2), (8, 3./4)])
+        
+        # Test the get_color_multiplicity
+        # Two-body decay
+        self.assertEqual(self.h_tt_bbmmvv.get_color_multiplicity(\
+                8, [3,3], self.my_testmodel, True),
+                         1)
+        # Three-body decay
+        self.assertEqual(self.h_tt_bbmmvv.get_color_multiplicity(\
+                1, [3,8,3], self.my_testmodel, True),
+                         8)
+        self.assertEqual(self.h_tt_bbmmvv.get_color_multiplicity(\
+                3, [8,8,3], self.my_testmodel, True),
+                         64./9)
+        self.assertEqual(self.h_tt_bbmmvv.get_color_multiplicity(\
+                8, [3,8,3], self.my_testmodel, True),
+                         8./3)
+        # Ambiguity!
+        self.assertEqual(self.h_tt_bbmmvv.get_color_multiplicity(\
+                8, [8,3,3], self.my_testmodel, True),
+                         3)
+
     def test_apx_decaywidth_full_read_MG4_paramcard(self):
         """ The test to show the estimation of decay width.
             and also read the param_card of MG4. """
@@ -1736,11 +1772,11 @@ class Test_Channel(unittest.TestCase):
         model.read_param_card(param_path_1)
         
         # Find channels before read MG4 param_card
-        model.find_all_channels(3)
+        model.find_all_channels(2)
        
         # Read MG4 param_card
         MG4_param_path_1 = os.path.join(_file_path,'../input_files/param_card_0.dat')
-        MG4_param_path_2 = os.path.join(_file_path,'../input_files/param_card_test.dat')
+        MG4_param_path_2 = os.path.join(_file_path,'../input_files/param_card_test2.dat')
 
         model.read_MG4_param_card_decay(MG4_param_path_1)
 
@@ -1749,13 +1785,13 @@ class Test_Channel(unittest.TestCase):
         model.write_summary_decay_table()
         model.write_decay_table('cmp')
         # file name 2: for test mssm
-        #model.write_summary_decay_table('mssm_decay_summary_test.dat')
-        #model.write_decay_table('cmp', 'mssm_decaytable_test.dat')
+        #model.write_summary_decay_table('mssm_decay_summary_test2.dat')
+        #model.write_decay_table('cmp', 'mssm_decaytable_test2.dat')
 
         # Test if the calculated ratio is float or None
-        """for part in model.get('particles'):
+        for part in model.get('particles'):
             print part.get_pdg_code(), part.get('2body_massdiff')
-            #n_max = len(part['decay_amplitudes'].keys())
+            """#n_max = len(part['decay_amplitudes'].keys())
             for n in range(2,n_max+2):
                 for amp in part.get_amplitudes(n):
                     self.assertTrue(isinstance(amp['exa_decaywidth'], bool) or \
@@ -1768,10 +1804,11 @@ class Test_Channel(unittest.TestCase):
                                particle.get_amplitude([-5,5])['exa_decaywidth'])"""
         """
         #print particle.get_amplitude([-11, 2000011])['diagrams'].nice_string()
-        print model.get_interaction(371)
-        print decay_objects.GC_169, decay_objects.GC_168
+        print model.get_interaction(390)
+        print decay_objects.GC_780, decay_objects.GC_752
         print model.get_interaction(388)
         print decay_objects.GC_757, decay_objects.GC_785
+        
         print particle.get_amplitude([2000001, -1]).decaytable_string()
         print particle.get_amplitude([2000001, -1])['diagrams'][0].get_apx_psarea(model)
         print particle.get_amplitude([2000001, -1])['apx_decaywidth']
