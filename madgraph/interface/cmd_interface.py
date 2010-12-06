@@ -2486,10 +2486,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             path = os.path.join(path, 'SubProcesses')
 
         if self._export_format == 'madevent':
-            for me in self._curr_matrix_elements.get('matrix_elements'):
+            for ime, me in \
+                enumerate(self._curr_matrix_elements.get('matrix_elements')):
                 calls = calls + \
                         export_v4.generate_subprocess_directory_v4_madevent(\
-                            me, self._curr_fortran_model, path)
+                            me, self._curr_fortran_model, ime, path)
             
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
                                      'procdef_mg5.dat')

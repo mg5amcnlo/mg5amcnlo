@@ -3705,9 +3705,9 @@ C     Number of configs
         self.assertFileContains('test', "DIRNAME=P0_emep_n1n1_n1_emsl2pa_n1_emsl2pa\n")
         # Test iproc.inc
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_iproc_file(writer, me, fortran_model)
+        export_v4.write_iproc_file(writer, 0)
         writer.close()
-        self.assertFileContains('test', "      0\n")
+        self.assertFileContains('test', "      1\n")
         # Test maxamps.inc
         writer = writers.FortranWriter(self.give_pos('test'))
         # Extract ncolor
