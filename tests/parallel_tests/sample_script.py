@@ -57,6 +57,11 @@ if '__main__' == __name__:
     my_proc_list = me_comparator.create_proc_list(['g', 'go'], initial=2,
                                                   final=2)
 
+    my_proc_list = me_comparator.create_proc_list(['g', 'h'], initial=2,
+                                                  final=3)
+    my_proc_list = me_comparator.create_proc_list(['g', 'h3'], initial=2,
+                                                  final=3)
+
     # Create a MERunner object for MG4
     my_mg4 = me_comparator.MG4Runner()
     my_mg4.setup(mg4_path)
@@ -75,7 +80,7 @@ if '__main__' == __name__:
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                       model='mssm', orders={'QED':4, 'QCD':4}, energy=2000)
+                       model='heft', orders={'QED':4, 'QCD':4, 'HIG':1, 'HIW':1}, energy=1000)
 
     # Do some cleanup
     #my_comp.cleanup()
