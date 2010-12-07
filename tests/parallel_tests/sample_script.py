@@ -53,12 +53,17 @@ if '__main__' == __name__:
                     'e+ x1+ > e+ h1 x1+','e+ x1+ > e+ h2 x1+','e+ x1+ > e+ h3 x1+']
     my_proc_list += ['el+ h2 > el+ w+ w-']
                    
-    my_proc_list += me_comparator.create_proc_list(['g', 'go'], initial=2,
-                                                  final=2)
+    #my_proc_list += me_comparator.create_proc_list(['g', 'go'], initial=2,
+    #                                              final=2)
+    my_proc_list = me_comparator.create_proc_list(['g', 'h', 'h3'], initial=2,
+                                                   final=4)
+    # Create a MERunner object for MG4
+    my_mg4 = me_comparator.MG4Runner()
+    my_mg4.setup(mg4_path)
 
     # Create a MERunner object for MG4
-    #my_mg4 = me_comparator.MG4Runner()
-    #my_mg4.setup(mg4_path)
+    my_mg4_2 = me_comparator.MG4Runner()
+    my_mg4_2.setup(mg4_path)
 
     # Create a MERunner object for MG5
     my_mg5 = me_comparator.MG5Runner()
@@ -69,21 +74,21 @@ if '__main__' == __name__:
     my_mg5_ufo.setup(mg5_path, mg4_path)
 
     # Create a MERunner object for C++
-    my_mg5_cpp = me_comparator.MG5_CPP_Runner()
-    my_mg5_cpp.setup(mg5_path, mg4_path)
+    #my_mg5_cpp = me_comparator.MG5_CPP_Runner()
+    #my_mg5_cpp.setup(mg5_path, mg4_path)
 
     # Create and setup a comparator
     my_comp = me_comparator.MEComparator()
-    my_comp.set_me_runners(my_mg5_cpp, my_mg5_ufo, my_mg5)
+    my_comp.set_me_runners(my_mg5, my_mg5_ufo, my_mg4, my_mg4_2)
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                       model='mssm', orders={'QED':4, 'QCD':4, 'HIG':1, 'HIW':1}, energy=2000)
+                       model=['heft_fix', 'heft', 'heft', 'heft_fix'], orders={'QED':0, 'QCD':3, 'HIG':1, 'HIW':1}, energy=2000)
 
     # Do some cleanup
     #my_comp.cleanup()
 
-    filename = "mssm_results.log"
+    filename = "heft_results.log"
 
     # Print the output
     my_comp.output_result(filename=filename)
