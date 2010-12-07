@@ -589,11 +589,10 @@ def write_dname_file(writer, matrix_element, fortran_model):
 #===============================================================================
 # write_iproc_file
 #===============================================================================
-def write_iproc_file(writer, matrix_element, fortran_model):
-    """Write the iproc.inc file for MG4"""
+def write_iproc_file(writer, me_number):
+    """Write the iproc.dat file for MG4"""
 
-    line = "%d" % \
-           matrix_element.get('processes')[0].get('id')
+    line = "%d" % (me_number + 1)
 
     # Write the file
     for line_to_write in writer.write_line(line):
@@ -968,6 +967,7 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
 #===============================================================================
 def generate_subprocess_directory_v4_madevent(matrix_element,
                                               fortran_model,
+                                              me_number,
                                               path=os.getcwd()):
     """Generate the Pxxxxx directory for a subprocess in MG4 madevent,
     including the necessary matrix.f and various helper files"""
@@ -1036,8 +1036,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 
     filename = 'iproc.dat'
     write_iproc_file(writers.FortranWriter(filename),
-                     matrix_element,
-                     fortran_model)
+                     me_number)
 
     filename = 'leshouche.inc'
     write_leshouche_file(writers.FortranWriter(filename),
