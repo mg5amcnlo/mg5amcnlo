@@ -30,6 +30,8 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_algebra as color
+import madgraph.core.color_amp as color_amp
+import tests.unit_tests.core.test_helas_objects as test_helas_objects
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 import tests.unit_tests.iolibs.test_helas_call_writers as \
                                             test_helas_call_writers
@@ -1883,22 +1885,22 @@ CALL VVVXXX(W(1,1),W(1,7),W(1,15),MGVX5,AMP(19))
 CALL VVVXXX(W(1,11),W(1,1),W(1,16),MGVX3,AMP(20))
 # Amplitude(s) for diagram number 21
 CALL VVVXXX(W(1,1),W(1,11),W(1,17),MGVX5,AMP(21))
-CALL JW3WNX(W(1,2),W(1,1),W(1,3),MGVX6,DUM0,MW,WW,W(1,18))
+CALL JW3WNX(W(1,3),W(1,1),W(1,2),MGVX6,DUM0,MW,WW,W(1,18))
 # Amplitude(s) for diagram number 22
 CALL VVVXXX(W(1,18),W(1,4),W(1,5),MGVX3,AMP(22))
-CALL JW3WNX(W(1,4),W(1,2),W(1,1),MGVX6,DUM0,MW,WW,W(1,19))
+CALL JW3WNX(W(1,1),W(1,2),W(1,4),MGVX6,DUM0,MW,WW,W(1,19))
 # Amplitude(s) for diagram number 23
 CALL VVVXXX(W(1,3),W(1,19),W(1,5),MGVX3,AMP(23))
-CALL JW3WNX(W(1,2),W(1,5),W(1,1),MGVX4,DUM0,zero,zero,W(1,20))
+CALL JW3WNX(W(1,1),W(1,5),W(1,2),MGVX4,DUM0,zero,zero,W(1,20))
 # Amplitude(s) for diagram number 24
 CALL VVVXXX(W(1,3),W(1,4),W(1,20),MGVX3,AMP(24))
 CALL JW3WNX(W(1,2),W(1,5),W(1,1),MGVX7,DUM0,MZ,WZ,W(1,21))
 # Amplitude(s) for diagram number 25
 CALL VVVXXX(W(1,4),W(1,3),W(1,21),MGVX5,AMP(25))
-CALL JW3WNX(W(1,4),W(1,3),W(1,1),MGVX6,DUM0,MW,WW,W(1,22))
+CALL JW3WNX(W(1,1),W(1,3),W(1,4),MGVX6,DUM0,MW,WW,W(1,22))
 # Amplitude(s) for diagram number 26
 CALL VVVXXX(W(1,2),W(1,22),W(1,5),MGVX3,AMP(26))
-CALL JW3WNX(W(1,3),W(1,5),W(1,1),MGVX4,DUM0,zero,zero,W(1,23))
+CALL JW3WNX(W(1,1),W(1,5),W(1,3),MGVX4,DUM0,zero,zero,W(1,23))
 # Amplitude(s) for diagram number 27
 CALL VVVXXX(W(1,2),W(1,4),W(1,23),MGVX3,AMP(27))
 CALL JW3WNX(W(1,3),W(1,5),W(1,1),MGVX7,DUM0,MZ,WZ,W(1,24))
@@ -2257,7 +2259,7 @@ CALL FFV5_0(W(1,8),W(1,15),W(1,3),GC_418,AMP(24))""".split('\n')
                                              u, \
                                              g]),
                       'color': [color.ColorString([color.T(2, 1, 0)])],
-                      'lorentz':[''],
+                      'lorentz':['FFV1'],
                       'couplings':{(0, 0):'GG'},
                       'orders':{'QCD':1}}))
 
@@ -2268,7 +2270,7 @@ CALL FFV5_0(W(1,8),W(1,15),W(1,3),GC_418,AMP(24))""".split('\n')
                                              t, \
                                              g]),
                       'color': [color.ColorString([color.T(2, 1, 0)])],
-                      'lorentz':[''],
+                      'lorentz':['FFV1'],
                       'couplings':{(0, 0):'GG'},
                       'orders':{'QCD':1}}))
 
@@ -2916,9 +2918,9 @@ CALL JVVXXX(W(1,8),W(1,15),GG,zero,zero,W(1,16))
 CALL GGGGXX(W(1,1),W(1,2),W(1,7),W(1,16),GG,AMP(7))
 CALL GGGGXX(W(1,7),W(1,1),W(1,2),W(1,16),GG,AMP(8))
 CALL GGGGXX(W(1,2),W(1,7),W(1,1),W(1,16),GG,AMP(9))
-CALL JGGGXX(W(1,8),W(1,9),W(1,10),GG,W(1,17))
-CALL JGGGXX(W(1,10),W(1,8),W(1,9),GG,W(1,18))
-CALL JGGGXX(W(1,9),W(1,10),W(1,8),GG,W(1,19))
+CALL JGGGXX(W(1,10),W(1,9),W(1,8),GG,W(1,17))
+CALL JGGGXX(W(1,8),W(1,10),W(1,9),GG,W(1,18))
+CALL JGGGXX(W(1,9),W(1,8),W(1,10),GG,W(1,19))
 # Amplitude(s) for diagram number 4
 CALL GGGGXX(W(1,1),W(1,2),W(1,7),W(1,17),GG,AMP(10))
 CALL GGGGXX(W(1,1),W(1,2),W(1,7),W(1,18),GG,AMP(11))
@@ -2977,9 +2979,9 @@ CALL GGGGXX(W(1,23),W(1,1),W(1,2),W(1,19),GG,AMP(51))
 CALL GGGGXX(W(1,2),W(1,23),W(1,1),W(1,17),GG,AMP(52))
 CALL GGGGXX(W(1,2),W(1,23),W(1,1),W(1,18),GG,AMP(53))
 CALL GGGGXX(W(1,2),W(1,23),W(1,1),W(1,19),GG,AMP(54))
-CALL JGGGXX(W(1,3),W(1,4),W(1,5),GG,W(1,24))
-CALL JGGGXX(W(1,5),W(1,3),W(1,4),GG,W(1,25))
-CALL JGGGXX(W(1,4),W(1,5),W(1,3),GG,W(1,26))
+CALL JGGGXX(W(1,5),W(1,4),W(1,3),GG,W(1,24))
+CALL JGGGXX(W(1,3),W(1,5),W(1,4),GG,W(1,25))
+CALL JGGGXX(W(1,4),W(1,3),W(1,5),GG,W(1,26))
 # Amplitude(s) for diagram number 13
 CALL GGGGXX(W(1,1),W(1,2),W(1,24),W(1,12),GG,AMP(55))
 CALL GGGGXX(W(1,1),W(1,2),W(1,25),W(1,12),GG,AMP(56))
@@ -4393,8 +4395,8 @@ CALL IOSXXX(W(1,15),W(1,2),W(1,19),GELN2P,AMP(9))""".split('\n')
                          "JAMP(2)=+AMP(5)+AMP(6)+AMP(7)+AMP(8)"])
 
     def test_generate_helas_diagrams_gg_gogo(self):
-        """Testing the helas diagram generation g g > go go,
-        where there should be an extra minus sign on the coupling.
+        """Testing the v4 helas diagram generation g g > go go,
+        where there is no extra sign.
         """
 
         # Set up model
@@ -4497,6 +4499,110 @@ CALL IOVXXX(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
         for i in range(max(len(goal_string),len(result))):
             self.assertEqual(result[i], goal_string[i])
 
+    def test_generate_ufo_helas_diagrams_gg_gogo(self):
+        """Testing minus sign on the FFV_1 UFO helas go-go-g coupling.
+        """
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name': 'g',
+                                                 'antiname': 'g',
+                                                 'spin': 3,
+                                                 'color': 8,
+                                                 'charge': 0.00,
+                                                 'mass': 'ZERO',
+                                                 'width': 'ZERO',
+                                                 'pdg_code': 21,
+                                                 'texname': '_',
+                                                 'antitexname': '_',
+                                                 'line': 'curly',
+                                                 'propagating': True,
+                                                 'is_part': True,
+                                                 'self_antipart': True}))
+
+        g = mypartlist[len(mypartlist) - 1]
+
+        # A gluino
+        mypartlist.append(base_objects.Particle({'name': 'go',
+                                                 'antiname': 'go',
+                                                 'spin': 2,
+                                                 'color': 8,
+                                                 'charge': 0.00,
+                                                 'mass': 'MGO',
+                                                 'width': 'WGO',
+                                                 'pdg_code': 1000021,
+                                                 'texname': 'go',
+                                                 'antitexname': 'go',
+                                                 'line': 'straight',
+                                                 'propagating': True,
+                                                 'is_part': True,
+                                                 'self_antipart': True}))
+        go = mypartlist[len(mypartlist) - 1]
+
+        # Triple glue coupling
+        myinterlist.append(base_objects.Interaction({
+            'id': 1,
+            'particles': base_objects.ParticleList([g, g, g]),
+            'lorentz': ['VVV1'],
+            'couplings': {(0, 0): 'G'},
+            'orders': {'QCD': 1}
+            }))
+
+        # go-go-g coupling
+        myinterlist.append(base_objects.Interaction({
+            'id': 2,
+            'particles': base_objects.ParticleList([go, go, g]),
+            'lorentz': ['FFV1'],
+            'couplings': {(0, 0): 'GGI'},
+            'orders': {'QCD': 1}
+            }))
+
+        mybasemodel = base_objects.Model()
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1000021,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':1000021,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mybasemodel})
+
+        myamplitude = diagram_generation.Amplitude(myproc)
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude,
+                                                          gen_color=False)
+
+        goal_string = """CALL VXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
+CALL VXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
+CALL IXXXXX(P(0,3),MGO,NHEL(3),-1*IC(3),W(1,3))
+CALL OXXXXX(P(0,4),MGO,NHEL(4),+1*IC(4),W(1,4))
+CALL VVV1_1(W(1,1),W(1,2),G,ZERO, ZERO, W(1,5))
+# Amplitude(s) for diagram number 1
+CALL FFV1_0(W(1,3),W(1,4),W(1,5),GGI,AMP(1))
+CALL FFV1_2(W(1,3),W(1,1),-GGI,MGO, WGO, W(1,6))
+# Amplitude(s) for diagram number 2
+CALL FFV1_0(W(1,6),W(1,4),W(1,2),GGI,AMP(2))
+CALL FFV1_1(W(1,4),W(1,1),GGI,MGO, WGO, W(1,7))
+# Amplitude(s) for diagram number 3
+CALL FFV1_0(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
+
+        result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
+                 get_matrix_element_calls(matrix_element)
+        for i in range(max(len(goal_string),len(result))):
+            self.assertEqual(result[i], goal_string[i])
+
 
 class AlohaFortranWriterTest(unittest.TestCase):
     """ A basic test to see if the Aloha Fortran Writter is working """
@@ -4548,3 +4654,4 @@ C
         split_sol = solution.split('\n')
         for i in range(len(split_sol)):
             self.assertEqual(split_sol[i]+'\n', textfile.readline())
+

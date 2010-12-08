@@ -60,6 +60,7 @@ class ColorObject(array.array):
         reversed. Can be overwritten for specific color objects like T,..."""
 
         self.reverse()
+        return self
 
     def replace_indices(self, repl_dict):
         """Replace current indices following the rules listed in the replacement
@@ -216,6 +217,7 @@ class T(ColorObject):
                                                    col_obj[:-2] + \
                                                    array.array('i', [ij1[0],
                                                                ij2[1]])))])])
+
             # T(a,x,b,i,j)T(c,x,d,k,l) = 1/2(T(a,d,i,l)T(c,b,k,j)    
             #                          -1/Nc T(a,b,i,j)T(c,d,k,l))
             for i1, index1 in enumerate(self[:-2]):
@@ -252,6 +254,7 @@ class T(ColorObject):
         l2 = self[-2:]
         l2.reverse()
         self[:] = l1 + l2
+        return self
 
 #===============================================================================
 # f
@@ -303,6 +306,272 @@ class d(f):
         col_str2.coeff = fractions.Fraction(2, 1)
 
         return ColorFactor([col_str1, col_str2])
+
+#===============================================================================
+# Epsilon and EpsilonBar, the totally antisymmetric tensors of three triplet
+# (antitriplet) indices
+#===============================================================================
+class Epsilon(ColorObject):
+    """Epsilon_ijk color object for three triplets"""
+
+    def __init__(self, *args):
+        """Ensure e_ijk objects have strictly 3 indices"""
+
+        super(Epsilon, self).__init__()
+        if len(args) != 3:
+            raise ValueError, \
+                "Epsilon objects must have three indices!"
+
+    def pair_simplify(self, col_obj):
+        """Implement e_ijk ae_ilm = T(j,l)T(k,m) - T(j,m)T(k,l) and
+        e_ijk T(l,k) = e_ikl"""
+
+        # e_ijk ae_ilm = T(j,l)T(k,m) - T(j,m)T(k,l)
+        if isinstance(col_obj, EpsilonBar):
+
+            incommon = False
+            eps_indices = self[:]
+            aeps_indices = col_obj[:]
+            for i in self:
+                if i in col_obj:
+                    incommon = True
+                    com_index_eps = self.index(i)
+                    com_index_aeps = col_obj.index(i)
+
+            if incommon:
+                eps_indices = self[com_index_eps:] + self[:com_index_eps]
+                aeps_indices = col_obj[com_index_aeps:] + col_obj[:com_index_aeps]
+                col_str1 = ColorString([T(eps_indices[1], aeps_indices[1]),
+                                       T(eps_indices[2], aeps_indices[2])])
+                col_str2 = ColorString([T(eps_indices[1], aeps_indices[2]),
+                                       T(eps_indices[2], aeps_indices[1])])
+
+                col_str2.coeff = fractions.Fraction(-1, 1)
+
+                return ColorFactor([col_str1, col_str2])
+
+        # e_ijk T(l,k) = e_ikl
+        if isinstance(col_obj, T) and len(col_obj) == 2 and col_obj[1] in self:
+
+            com_index = self.index(col_obj[1])
+            new_self = copy.copy(self)
+            new_self[com_index] = col_obj[0]
+
+            return ColorFactor([ColorString([new_self])])
+
+
+    def complex_conjugate(self):
+        """Complex conjugation. Overwritten here because complex conjugation
+        interchange triplets and antitriplets."""
+
+        return EpsilonBar(*self)
+
+
+class EpsilonBar(ColorObject):
+    """Epsilon_ijk color object for three antitriplets"""
+
+    def __init__(self, *args):
+        """Ensure e_ijk objects have strictly 3 indices"""
+
+        super(EpsilonBar, self).__init__()
+        if len(args) != 3:
+            raise ValueError, \
+                "EpsilonBar objects must have three indices!"
+
+    def pair_simplify(self, col_obj):
+        """Implement ebar_ijk T(k,l) = e_ikl"""
+
+        # ebar_ijk T(k,l) = ebar_ijl
+        if isinstance(col_obj, T) and len(col_obj) == 2 and col_obj[0] in self:
+
+            com_index = self.index(col_obj[0])
+            new_self = copy.copy(self)
+            new_self[com_index] = col_obj[1]
+
+            return ColorFactor([ColorString([new_self])])
+
+
+    def complex_conjugate(self):
+        """Complex conjugation. Overwritten here because complex conjugation
+        interchange triplets and antitriplets."""
+
+        return Epsilon(*self)
+
+
+#===============================================================================
+# Color sextet objects: K6, K6Bar, T6
+#                       Note that delta3 = T, delta6 = T6, delta8 = 1/2 Tr
+#===============================================================================
+
+class K6(ColorObject):
+    """K6, the symmetry clebsch coefficient, mapping into the symmetric
+    tensor."""
+
+    def __init__(self, *args):
+        """Ensure sextet color objects have strictly 3 indices"""
+
+        super(K6, self).__init__()
+        if len(args) != 3:
+            raise ValueError, \
+                "sextet color objects must have three indices!"
+
+    def pair_simplify(self, col_obj):
+        """Implement the replacement rules
+        K6(m,i,j)K6Bar(m,k,l) = 1/2(delta3(l,i)delta3(k,j)
+                                  + delta3(k,i)delta3(l,j))
+                            = 1/2(T(l,i)T(k,j) + T(k,i)T(l,j))
+        K6(m,i,j)K6Bar(n,j,i) = delta6(m,n)
+        K6(m,i,j)K6Bar(n,i,j) = delta6(m,n)
+        delta3(i,j)K6(m,i,k) = K6(m,j,k)
+        delta3(i,k)K6(m,j,i) = K6(m,j,k)."""
+
+        if isinstance(col_obj, K6Bar):
+
+            m = self[0]
+            n = col_obj[0]
+
+            ij1 = self[-2:]
+            ij2 = col_obj[-2:]
+
+            # K6(m,i,j)K6Bar(m,k,l) = 1/2(T(l,i)T(k,j)
+            #                           + T(k,i)T(l,j)
+            if m == n:
+                col_str1 = ColorString([T(ij2[1], ij1[0]),
+                                        T(ij2[0], ij1[1])])
+                col_str2 = ColorString([T(ij2[0], ij1[0]),
+                                        T(ij2[1], ij1[1])])
+                col_str1.coeff = fractions.Fraction(1, 2)
+                col_str2.coeff = fractions.Fraction(1, 2)
+
+                return ColorFactor([col_str1, col_str2])
+
+            # K6(m,i,j)K6Bar(n,j,i) = delta6(m,n)
+            if ij1[1] == ij2[0] and ij1[0] == ij2[1]:
+                return ColorFactor([ColorString([T6(m, n)])])
+
+            # K6(m,i,j)K6Bar(n,i,j) = delta6(m,n)
+            if ij1[0] == ij2[0] and ij1[1] == ij2[1]:
+                return ColorFactor([ColorString([T6(m, n)])])
+
+        if isinstance(col_obj, T) and len(col_obj) == 2:
+            # delta3(i,j)K6(m,i,k) = K6(m,j,k)
+            # delta3(i,k)K6(m,j,i) = K6(m,j,k)
+            if col_obj[0] in self[-2:]:
+                index1 = self[-2:].index(col_obj[0])
+                return ColorFactor([ColorString([K6(self[0],
+                                                    self[2-index1],
+                                                    col_obj[1])])])
+
+    def complex_conjugate(self):
+        """Complex conjugation. By default, the ordering of color index is
+        reversed. Can be overwritten for specific color objects like T,..."""
+
+        return K6Bar(*self)
+
+
+class K6Bar(ColorObject):
+    """K6Bar, the barred symmetry clebsch coefficient, mapping into the symmetric
+    tensor."""
+
+    def __init__(self, *args):
+        """Ensure sextet color objects have strictly 3 indices"""
+
+        super(K6Bar, self).__init__()
+        if len(args) != 3:
+            raise ValueError, \
+                "sextet color objects must have three indices!"
+
+    def pair_simplify(self, col_obj):
+        """Implement the replacement rules
+        delta3(i,j)K6Bar(m,j,k) = K6Bar(m,i,k)
+        delta3(k,j)K6Bar(m,i,j) = K6Bar(m,i,k)."""
+        
+        if isinstance(col_obj, T) and len(col_obj) == 2:
+            # delta3(i,j)K6Bar(m,j,k) = K6Bar(m,i,k)
+            # delta3(k,j)K6Bar(m,i,j) = K6Bar(m,i,k)
+            if col_obj[1] in self[-2:]:
+                index1 = self[-2:].index(col_obj[1])
+                return ColorFactor([ColorString([K6Bar(self[0],
+                                                    self[2-index1],
+                                                    col_obj[0])])])
+
+    def complex_conjugate(self):
+        """Complex conjugation. By default, the ordering of color index is
+        reversed. Can be overwritten for specific color objects like T,..."""
+
+        return K6(*self)
+
+class T6(ColorObject):
+    """The T6 sextet trace color object."""
+
+    new_index = 10000
+
+    def __init__(self, *args):
+        """Check for exactly three indices"""
+
+        super(T6, self).__init__()
+        if len(args) < 2 or len(args) > 3:
+            raise ValueError, \
+                "T6 objects must have two or three indices!"
+
+    def simplify(self):
+        """Implement delta6(i,i) = 1/2 Nc(Nc+1),
+        T6(a,i,j) = 2(K6(i,ii,jj)T(a,jj,kk)K6Bar(j,kk,ii))"""
+
+        # delta6(i,i) = Nc
+        if len(self) == 2 and self[0] == self[1]:
+            col_str1 = ColorString()
+            col_str1.Nc_power = 2
+            col_str1.coeff = fractions.Fraction(1, 2)
+            col_str2 = ColorString()
+            col_str2.Nc_power = 1
+            col_str2.coeff = fractions.Fraction(1, 2)
+            return ColorFactor([col_str1, col_str2])
+
+        if len(self) == 2:
+            return
+
+        # Set new indices according to the Mathematica template
+        ii = T6.new_index
+        jj = ii + 1
+        kk = jj + 1
+        T6.new_index += 3
+        # Create the resulting color objects
+        col_string = ColorString([K6(self[1], ii, jj),
+                                  T(self[0], jj, kk),
+                                  K6Bar(self[2], kk, ii)])
+        col_string.coeff = fractions.Fraction(2, 1)
+        return ColorFactor([col_string])
+
+    def pair_simplify(self, col_obj):
+        """Implement the replacement rules
+        delta6(i,j)delta6(j,k) = delta6(i,k)
+        delta6(m,n)K6(n,i,j) = K6(m,i,j)
+        delta6(m,n)K6Bar(m,i,j) = K6Bar(n,i,j)."""
+
+        if len(self) == 3:
+            return
+
+        if isinstance(col_obj, T6) and len(col_obj) == 2:
+            #delta6(i,j)delta6(j,k) = delta6(i,k)
+            if col_obj[0] == self[1]:
+                return ColorFactor([ColorString([T6(self[0],
+                                                        col_obj[1])])])
+
+        if isinstance(col_obj, K6):
+            # delta6(m,n)K6(n,i,j) = K6(m,i,j)
+            if col_obj[0] == self[1]:
+                return ColorFactor([ColorString([K6(self[0],
+                                                    col_obj[1],
+                                                    col_obj[2])])])
+                
+
+        if isinstance(col_obj, K6Bar):        
+            # delta6(m,n)K6Bar(m,i,j) = K6Bar(n,i,j)."""
+            if col_obj[0] == self[0]:
+                return ColorFactor([ColorString([K6Bar(self[1],
+                                                    col_obj[1],
+                                                    col_obj[2])])])
 
 #===============================================================================
 # ColorString
@@ -371,7 +640,7 @@ class ColorString(list):
         """Simplify the current ColorString by applying simplify rules on
         each element and building a new ColorFactor to return if necessary"""
 
-        # First, try sto simplify element by element
+        # First, try to simplify element by element
         for i1, col_obj1 in enumerate(self):
             res = col_obj1.simplify()
             # If a simplification possibility is found...
@@ -388,6 +657,7 @@ class ColorString(list):
                     # remains the same for comparison
                     first_col_str.sort()
                     res_col_factor.append(first_col_str)
+
                 return res_col_factor
 
         # Second, try to simplify pairs
@@ -419,9 +689,10 @@ class ColorString(list):
     def complex_conjugate(self):
         """Returns the complex conjugate of the current color string"""
 
-        compl_conj_str = copy.copy(self)
-        for col_obj in compl_conj_str:
-            col_obj.complex_conjugate()
+        compl_conj_str = ColorString([], self.coeff, self.is_imaginary,
+                                     self.Nc_power)
+        for col_obj in self:
+            compl_conj_str.append(col_obj.complex_conjugate())
         if compl_conj_str.is_imaginary:
             compl_conj_str.coeff = -compl_conj_str.coeff
 
@@ -550,6 +821,17 @@ class ColorString(list):
         return self.Nc_power == col_str.Nc_power and \
                self.is_imaginary == col_str.is_imaginary and \
                self.to_canonical() == col_str.to_canonical()
+
+    def near_equivalent(self, col_str):
+        """Check if two color strings are equivalent looking only at
+        the color objects (used in color flow string calculation)"""
+
+        if len(self.to_canonical()) != len(col_str.to_canonical()):
+            return False
+
+        return all([co1[0] == co2[0] and sorted(co1[1]) == sorted(co2[1]) \
+                        for (co1,co2) in zip(self.to_canonical()[0],
+                                             col_str.to_canonical()[0])])
 
 #===============================================================================
 # ColorFactor

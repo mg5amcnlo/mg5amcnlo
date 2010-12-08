@@ -338,6 +338,7 @@ class Amplitude(base_objects.PhysicsObject):
         # If all legs can be combined in one single vertex, add this
         # vertex to res and continue.
         # Special treatment for decay chain legs
+
         if curr_leglist.can_combine_to_0(ref_dict_to0, is_decay_proc):
             # Extract the interaction id associated to the vertex 
             vertex_ids = ref_dict_to0[tuple(sorted([leg.get('id') for \

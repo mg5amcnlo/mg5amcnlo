@@ -221,6 +221,9 @@ def check_already_checked(is_ids, fs_ids, sorted_ids, process, model,
     # Add this process to tested_processes
     sorted_ids.append(ids)
 
+    # Skip adding antiprocess below, since might be relevant too
+    return False
+
     # Add also antiprocess, since these are identical
     if id_anti_id_dict:
         anti_ids = sorted([id_anti_id_dict[id] \
@@ -372,6 +375,8 @@ def check_processes(processes, param_card = None, quick = []):
                                               full_model,
                                               quick)
 
+        if "used_lorentz" not in stored_quantities:
+            stored_quantities["used_lorentz"] = []
         return results, stored_quantities["used_lorentz"]
 
     elif isinstance(processes, base_objects.Process):
@@ -416,10 +421,9 @@ def check_processes(processes, param_card = None, quick = []):
         if res:
             comparison_results.append(res)
 
+    if "used_lorentz" not in stored_quantities:
+        stored_quantities["used_lorentz"] = []
     return comparison_results, stored_quantities["used_lorentz"]
-
-
-
 
 
 def check_process(process, stored_quantities, helas_writer, full_model, quick):
