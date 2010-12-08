@@ -676,49 +676,40 @@ class HelasWavefunction(base_objects.PhysicsObject):
             else:
                 return []
 
-        # Pick out fermion mothers
-        out_fermions = filter(lambda wf: wf.get_with_flow('state') == \
-                              'outgoing', self.get('mothers'))
-        in_fermions = filter(lambda wf: wf.get_with_flow('state') == \
-                             'incoming', self.get('mothers'))
+        # Pick out fermion mother
+        fermion_mother = None
+        if self.is_fermion():
+            fermion_mother = self.find_mother_fermion()
+
+        other_fermions = [wf for wf in self.get('mothers') if \
+                          wf.is_fermion() and wf != fermion_mother]
+
         # Pick out bosons
         bosons = filter(lambda wf: wf.is_boson(), self.get('mothers'))
 
-        if self.is_boson() and len(in_fermions) + len(out_fermions) > 2\
-               or self.is_fermion() and \
-               len(in_fermions) + len(out_fermions) > 1:
-            raise self.PhysicsObjectError, \
-                  "Multifermion vertices not implemented"
-
         fermion_number_list = []
+
+        if self.is_fermion():
+            # Fermions return the result N from their mother
+            # and the list from bosons, so [N,[n1,n2,...]]
+            mother_list = fermion_mother.get_fermion_order()
+            fermion_number_list.extend(mother_list[1])
+
+        # If there are fermion line pairs, append them as
+        # [NI,NO,n1,n2,...]
+        fermion_numbers = [f.get_fermion_order() for f in other_fermions]
+        for iferm in range(0, len(fermion_numbers), 2):
+            fermion_number_list.append(fermion_numbers[iferm][0])
+            fermion_number_list.append(fermion_numbers[iferm+1][0])
+            fermion_number_list.extend(fermion_numbers[iferm][1])
+            fermion_number_list.extend(fermion_numbers[iferm+1][1])
 
         for boson in bosons:
             # Bosons return a list [n1,n2,...]
             fermion_number_list.extend(boson.get_fermion_order())
 
         if self.is_fermion():
-            # Fermions return the result N from their mother
-            # and the list from bosons, so [N,[n1,n2,...]]
-            fermion_mother = filter(lambda wf: wf.is_fermion(),
-                                    self.get('mothers'))[0]
-            mother_list = fermion_mother.get_fermion_order()
-            fermion_number_list.extend(mother_list[1])
             return [mother_list[0], fermion_number_list]
-        elif in_fermions and out_fermions:
-            # Combine the incoming and outgoing fermion numbers
-            # and add the bosonic numbers: [NI,NO,n1,n2,...]
-            in_list = in_fermions[0].get_fermion_order()
-            out_list = out_fermions[0].get_fermion_order()
-            # Combine to get [N1,N2,n1,n2,...]
-            fermion_number_list.append(in_list[0])
-            fermion_number_list.append(out_list[0])
-            fermion_number_list.extend(in_list[1])
-            fermion_number_list.extend(out_list[1])
-        elif len(in_fermions) != len(out_fermions):
-            raise self.PhysicsObjectError, \
-                  "Error: %d incoming fermions != %d outgoing fermions" % \
-                  (len(in_fermions), len(out_fermions))
-
 
         return fermion_number_list
 
@@ -1480,37 +1471,25 @@ class HelasAmplitude(base_objects.PhysicsObject):
         to this amplitude"""
 
         # Pick out fermion mothers
-        out_fermions = filter(lambda wf: wf.get_with_flow('state') == \
-                              'outgoing', self.get('mothers'))
-        in_fermions = filter(lambda wf: wf.get_with_flow('state') == \
-                             'incoming', self.get('mothers'))
+        fermions = [wf for wf in self.get('mothers') if wf.is_fermion()]
+
         # Pick out bosons
         bosons = filter(lambda wf: wf.is_boson(), self.get('mothers'))
 
-        if len(in_fermions) + len(out_fermions) > 2:
-            raise self.PhysicsObjectError, \
-                  "Multifermion vertices not implemented"
-
         fermion_number_list = []
+
+        # If there are fermion line pairs, append them as
+        # [NI,NO,n1,n2,...]
+        fermion_numbers = [f.get_fermion_order() for f in fermions]
+        for iferm in range(0, len(fermion_numbers), 2):
+            fermion_number_list.append(fermion_numbers[iferm][0])
+            fermion_number_list.append(fermion_numbers[iferm+1][0])
+            fermion_number_list.extend(fermion_numbers[iferm][1])
+            fermion_number_list.extend(fermion_numbers[iferm+1][1])
 
         for boson in bosons:
             # Bosons return a list [n1,n2,...]
             fermion_number_list.extend(boson.get_fermion_order())
-
-        if in_fermions and out_fermions:
-            # Fermions return the result N from their mother
-            # and the list from bosons, so [N,[n1,n2,...]]
-            in_list = in_fermions[0].get_fermion_order()
-            out_list = out_fermions[0].get_fermion_order()
-            # Combine to get [N1,N2,n1,n2,...]
-            fermion_number_list.append(in_list[0])
-            fermion_number_list.append(out_list[0])
-            fermion_number_list.extend(in_list[1])
-            fermion_number_list.extend(out_list[1])
-        elif len(in_fermions) != len(out_fermions):
-            raise self.PhysicsObjectError, \
-                  "Error: %d incoming fermions != %d outgoing fermions" % \
-                  (len(in_fermions), len(out_fermions))
 
         self['fermionfactor'] = self.sign_flips_to_order(fermion_number_list)
 
