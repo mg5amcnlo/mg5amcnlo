@@ -471,7 +471,7 @@ class FortranHelasCallWriter(HelasCallWriter):
             if argument.needs_hermitian_conjugate():
                 call = call + 'C'
 
-            assert len(call) < 11, "Call to Helas routine %s should be maximum 6 chars" \
+            assert len(call) < 12, "Call to Helas routine %s should be maximum 6 chars" \
                       % call[5:]
 
             # Fill out with X up to 6 positions
@@ -723,7 +723,8 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             # Check if we need to append a charge conjugation flag
             c_flag = '' 
             if argument.needs_hermitian_conjugate():
-                c_flag = 'C1' # MG5 not configure for 4F vertex
+                c_flag = "".join(['C%d' % i for i in \
+                                  argument.get_conjugate_index()])
 
             call = 'CALL %s%s_%s' % (argument.get('lorentz'), c_flag, outgoing) 
 
