@@ -442,16 +442,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
             # For boson, set state to intermediate
             self.set('state', 'intermediate')
         else:
-            # For fermion, set state to same as other fermion (in the right way)
-            mother_fermions = filter(lambda wf: wf.is_fermion(),
-                                     self.get('mothers'))
-            if len(mother_fermions) != 1:
-                raise self.PhysicsObjectError, \
-                      """Multifermion vertices not implemented.
-                      Please decompose your vertex into 2-fermion
-                      vertices to get fermion flow correct."""
+            # For fermion, set state to same as other fermion (in the
+            # right way)
+            mother = self.find_mother_fermion()
 
-            mother = mother_fermions[0]
             if self.get('self_antipart'):
                 self.set('state', mother.get_with_flow('state'))
                 self.set('is_part', mother.get_with_flow('is_part'))
@@ -761,6 +755,18 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return self.get('fermionflow') * \
                state_number[self.get('state')] * \
                self.get('spin')
+
+    def find_mother_fermion(self):
+        """Return the fermion mother which is fermion flow connected to
+        this fermion"""
+
+        if not self.is_fermion():
+            return None
+
+        part_number = self.find_outgoing_number()
+        mother_number = (part_number-1)//2*2
+
+        return HelasMatrixElement.sorted_mothers(self)[mother_number]
 
     def find_outgoing_number(self):
         "Return the position of the resulting particles in the interactions"

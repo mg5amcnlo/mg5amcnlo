@@ -2184,6 +2184,144 @@ CALL FFV5_0(W(1,8),W(1,15),W(1,3),GC_418,AMP(24))""".split('\n')
         for i in range(len(goal)):
             self.assertEqual(result[i], goal[i])
 
+    def test_four_fermion_vertex(self):
+        """Testing process u u > t t g with fermion flow (u~t)(u~t)
+        """
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A u quark and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[len(mypartlist) - 1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        # A t quark and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'t',
+                      'antiname':'t~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'MT',
+                      'width':'WT',
+                      'texname':'t',
+                      'antitexname':'\bar t',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':6,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        t = mypartlist[len(mypartlist) - 1]
+        antit = copy.copy(t)
+        antit.set('is_part', False)
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        g = mypartlist[len(mypartlist) - 1]
+
+        # Gluon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2, 1, 0)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [antit, \
+                                             t, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2, 1, 0)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        # Four fermion vertex
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu,
+                                             t,
+                                             antiu,
+                                             t]),
+                      'color': [color.ColorString([color.T(1, 0),
+                                                   color.T(3, 2)])],
+                      'lorentz':['FFFF1'],
+                      'couplings':{(0, 0):'GEFF'},
+                      'orders':{'NP':2}}))
+
+        mybasemodel = base_objects.Model()
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mybasemodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        print myamplitude.nice_string()
+
+        self.assertEqual(len(myamplitude.get('diagrams')), 4)
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude)
+
+        result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
+                                   get_matrix_element_calls(matrix_element)
+
+        print "\n".join(result)
+        goal = []
+        for i in range(len(goal)):
+            self.assertEqual(result[i], goal[i])
+
     def test_export_matrix_element_v4_standalone(self):
         """Test the result of exporting a matrix element to file"""
 
