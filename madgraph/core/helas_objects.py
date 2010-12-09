@@ -1687,6 +1687,43 @@ class HelasAmplitude(base_objects.PhysicsObject):
             schannels.extend(mother_s)
             tchannels.extend(mother_t)
 
+        # Split up multiparticle vertices using fake s-channel propagators
+        multischannels = [(i, v) for (i, v) in enumerate(schannels) \
+                          if len(v.get('legs')) > 3]
+        multitchannels = [(i, v) for (i, v) in enumerate(tchannels) \
+                          if len(v.get('legs')) > 3]
+
+        for channel in multischannels + multitchannels:
+            newschannels = []
+            vertex = channel[1]
+            while len(vertex.get('legs')) > 3:
+                # Pop the first two legs (for s-channels) or the
+                # second two (for t-channels) and create a new
+                # s-channel from them
+                ipop = 0
+                if channel in multitchannels:
+                    ipop=1
+                popped_legs = \
+                           base_objects.LegList([vertex.get('legs').pop(ipop) \
+                                                    for i in [0,1]])
+                popped_legs.append(base_objects.Leg({'id': -22,
+                    'number': min([l.get('number') for l in popped_legs]),
+                    'state': True,
+                    'from_group': False}))
+
+                new_vertex = base_objects.Vertex({
+                    'id': vertex.get('id'),
+                    'legs': popped_legs})
+
+                # Insert the new s-channel before this vertex
+                if channel in multischannels:
+                    schannels.insert(channel[0], new_vertex)
+                else:
+                    schannels.append(new_vertex)
+                # Insert the new s-channel into vertex
+                vertex.get('legs').insert(0, popped_legs[-1])
+
+
         # Finally go through all vertices, sort the legs and replace
         # leg number with propagator number -1, -2, ...
         number_dict = {}

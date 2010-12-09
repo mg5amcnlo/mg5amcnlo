@@ -495,9 +495,13 @@ def write_configs_file(writer, matrix_element, fortran_model):
 
     s_and_t_channels = []
 
-    for idiag, diag in enumerate(matrix_element.get('base_amplitude').\
-                                                get('diagrams')):
-        if any([len(vert.get('legs')) > 3 for vert in diag.get('vertices')]):
+    base_diagrams = matrix_element.get('base_amplitude').get('diagrams')
+    minvert = min([max([len(vert.get('legs')) for vert in \
+                        diag.get('vertices')]) for diag in base_diagrams])
+
+    for idiag, diag in enumerate(base_diagrams):
+        if any([len(vert.get('legs')) > minvert for vert in
+                diag.get('vertices')]):
             # Only 3-vertices allowed in configs.inc
             continue
         iconfig = iconfig + 1
@@ -505,6 +509,7 @@ def write_configs_file(writer, matrix_element, fortran_model):
         amp_number = helas_diag.get('amplitudes')[0].get('number')
         lines.append("# Diagram %d, Amplitude %d" % \
                      (helas_diag.get('number'), amp_number))
+
         # Correspondance between the config and the amplitudes
         lines.append("data mapconfig(%d)/%d/" % (iconfig, amp_number))
 
@@ -805,19 +810,25 @@ def write_props_file(writer, matrix_element, fortran_model, s_and_t_channels):
     for iconf, configs in enumerate(s_and_t_channels):
         for vertex in configs[0] + configs[1][:-1]:
             leg = vertex.get('legs')[-1]
-            particle = particle_dict[leg.get('id')]
-            # Get mass
-            if particle.get('mass').lower() == 'zero':
-                mass = particle.get('mass')
+            if leg.get('id') == -22:
+                # Fake propagator used in multiparticle vertices
+                mass = 'zero'
+                width = 'zero'
+                pow_part = 0
             else:
-                mass = "abs(%s)" % particle.get('mass')
-            # Get width
-            if particle.get('width') == 'zero':
-                width = particle.get('width')
-            else:
-                width = "abs(%s)" % particle.get('width')
+                particle = particle_dict[leg.get('id')]
+                # Get mass
+                if particle.get('mass').lower() == 'zero':
+                    mass = particle.get('mass')
+                else:
+                    mass = "abs(%s)" % particle.get('mass')
+                # Get width
+                if particle.get('width') == 'zero':
+                    width = particle.get('width')
+                else:
+                    width = "abs(%s)" % particle.get('width')
 
-            pow_part = 1 + int(particle.is_boson())
+                pow_part = 1 + int(particle.is_boson())
 
             lines.append("pmass(%d,%d)  = %s" % \
                          (leg.get('number'), iconf + 1, mass))
