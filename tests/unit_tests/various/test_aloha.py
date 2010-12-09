@@ -2357,8 +2357,36 @@ class test_aloha_creation(unittest.TestCase):
                
         self.assertEqual(complex(0,-1)*ufo_value, v4_value)
         
+    def test_aloha_expr_FFFF(self):
+        """Test analytical expression for fermion clash routine"""
         
+        from models.mssm.object_library import Lorentz
+        FFFF = Lorentz(name = 'FFFF1',
+                spins = [ 2, 2, 2, 2 ],
+                structure = 'Identity(1,2)*Identity(4,3)')
         
+        builder = create_aloha.AbstractRoutineBuilder(FFFF)
+        conjg_builder= builder.define_conjugate_builder()
+        conjg_builder= conjg_builder.define_conjugate_builder(pairs=2)
+        amp = conjg_builder.compute_routine(0)
+
+        self.assertEqual(builder.conjg,[])
+
+        self.assertEqual(amp.expr.nb_spin, 0)
+        self.assertEqual(amp.expr.nb_lor, 0)
+
+        conjg_builder= builder.define_conjugate_builder(pairs=1)
+        amp = conjg_builder.compute_routine(0)
+
+        print amp.expr.spin_ind
+        self.assertEqual(amp.expr.nb_spin, 0)
+        self.assertEqual(amp.expr.nb_lor, 0)   
+        
+        conjg_builder= builder.define_conjugate_builder(pairs=2)
+        amp = conjg_builder.compute_routine(0)
+
+        self.assertEqual(amp.expr.nb_spin, 0)
+        self.assertEqual(amp.expr.nb_lor, 0)        
         
 
 class UFOLorentz(object):
