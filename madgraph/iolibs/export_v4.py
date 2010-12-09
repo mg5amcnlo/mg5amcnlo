@@ -810,7 +810,7 @@ def write_props_file(writer, matrix_element, fortran_model, s_and_t_channels):
     for iconf, configs in enumerate(s_and_t_channels):
         for vertex in configs[0] + configs[1][:-1]:
             leg = vertex.get('legs')[-1]
-            if leg.get('id') == -22:
+            if leg.get('id') == 21 and 21 not in particle_dict:
                 # Fake propagator used in multiparticle vertices
                 mass = 'zero'
                 width = 'zero'
@@ -823,7 +823,7 @@ def write_props_file(writer, matrix_element, fortran_model, s_and_t_channels):
                 else:
                     mass = "abs(%s)" % particle.get('mass')
                 # Get width
-                if particle.get('width') == 'zero':
+                if particle.get('width').lower() == 'zero':
                     width = particle.get('width')
                 else:
                     width = "abs(%s)" % particle.get('width')

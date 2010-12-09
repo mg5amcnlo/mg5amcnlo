@@ -1706,7 +1706,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 popped_legs = \
                            base_objects.LegList([vertex.get('legs').pop(ipop) \
                                                     for i in [0,1]])
-                popped_legs.append(base_objects.Leg({'id': -22,
+                popped_legs.append(base_objects.Leg({'id': 21,
                     'number': min([l.get('number') for l in popped_legs]),
                     'state': True,
                     'from_group': False}))

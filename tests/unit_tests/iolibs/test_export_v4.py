@@ -2357,7 +2357,7 @@ CALL FFV1_0(W(1,2),W(1,9),W(1,5),GG,AMP(4))""".split('\n')
 """C     Diagram 1, Amplitude 1
       DATA MAPCONFIG(1)/1/
       DATA (IFOREST(I,-1,1),I=1,2)/4,3/
-      DATA SPROP(-1,1)/-22/
+      DATA SPROP(-1,1)/21/
       DATA (IFOREST(I,-2,1),I=1,2)/1,5/
       DATA TPRID(-2,1)/-2/
       DATA (IFOREST(I,-3,1),I=1,2)/-1,-2/
@@ -2366,17 +2366,17 @@ C     Diagram 2, Amplitude 2
       DATA (IFOREST(I,-1,2),I=1,2)/5,4/
       DATA SPROP(-1,2)/6/
       DATA (IFOREST(I,-2,2),I=1,2)/-1,1/
-      DATA SPROP(-2,2)/-22/
+      DATA SPROP(-2,2)/21/
 C     Diagram 3, Amplitude 3
       DATA MAPCONFIG(3)/3/
       DATA (IFOREST(I,-1,3),I=1,2)/5,3/
       DATA SPROP(-1,3)/6/
       DATA (IFOREST(I,-2,3),I=1,2)/-1,1/
-      DATA SPROP(-2,3)/-22/
+      DATA SPROP(-2,3)/21/
 C     Diagram 4, Amplitude 4
       DATA MAPCONFIG(4)/4/
       DATA (IFOREST(I,-1,4),I=1,2)/4,3/
-      DATA SPROP(-1,4)/-22/
+      DATA SPROP(-1,4)/21/
       DATA (IFOREST(I,-2,4),I=1,2)/-1,1/
       DATA TPRID(-2,4)/2/
       DATA (IFOREST(I,-3,4),I=1,2)/-2,5/
@@ -2392,7 +2392,7 @@ C     Number of configs
         self.assertFileContains('test',
 """      PMASS(-1,1)  = ZERO
       PWIDTH(-1,1) = ZERO
-      POW(-1,1) = 0
+      POW(-1,1) = 2
       PMASS(-2,1)  = ZERO
       PWIDTH(-2,1) = ZERO
       POW(-2,1) = 1
@@ -2401,16 +2401,16 @@ C     Number of configs
       POW(-1,2) = 1
       PMASS(-2,2)  = ZERO
       PWIDTH(-2,2) = ZERO
-      POW(-2,2) = 0
+      POW(-2,2) = 2
       PMASS(-1,3)  = ABS(MT)
       PWIDTH(-1,3) = ABS(WT)
       POW(-1,3) = 1
       PMASS(-2,3)  = ZERO
       PWIDTH(-2,3) = ZERO
-      POW(-2,3) = 0
+      POW(-2,3) = 2
       PMASS(-1,4)  = ZERO
       PWIDTH(-1,4) = ZERO
-      POW(-1,4) = 0
+      POW(-1,4) = 2
       PMASS(-2,4)  = ZERO
       PWIDTH(-2,4) = ZERO
       POW(-2,4) = 1
