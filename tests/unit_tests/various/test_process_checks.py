@@ -115,10 +115,29 @@ class TestMatrixElementChecker(unittest.TestCase):
         self.assertTrue(comparison['passed'])
 
         comparison = process_checks.check_gauge(myproc)
+        
+        #check number of helicities/jamp
+        nb_hel = []
+        nb_jamp = [] 
+        for one_comp in comparison:
+            nb_hel.append(len(one_comp['value']['jamp']))
+            nb_jamp.append(len(one_comp['value']['jamp'][0]))
+        self.assertEqual(nb_hel, [24])
+        self.assertEqual(nb_jamp, [1])
+        
         nb_fail = process_checks.output_gauge(comparison, output='fail')
         self.assertEqual(nb_fail, 0)
         
         comparison = process_checks.check_lorentz(myproc)
+        #check number of helicities/jamp
+        nb_hel = []
+        nb_jamp = [] 
+        for one_comp in comparison:
+            nb_hel.append(len(one_comp['results'][0]['jamp']))
+            nb_jamp.append(len(one_comp['results'][0]['jamp'][0]))
+        self.assertEqual(nb_hel, [24])
+        self.assertEqual(nb_jamp, [1])
+        
         nb_fail = process_checks.output_lorentz_inv(comparison, output='fail')
         self.assertEqual(0, nb_fail)        
         
@@ -141,20 +160,32 @@ class TestMatrixElementChecker(unittest.TestCase):
                                                  'orders':{'QED':0}})
 
         comparisons, used_aloha = process_checks.check_processes(myproc)
-
+        
         goal_value_len = [8, 2]
 
         for i, comparison in enumerate(comparisons):
             self.assertEqual(len(comparison['values']), goal_value_len[i])
             self.assertTrue(comparison['passed'])
-            
+        
+        
         comparisons = process_checks.check_lorentz(myproc)
         nb_fail = process_checks.output_lorentz_inv(comparisons, 
                                                             output='fail')
         self.assertEqual(0, nb_fail)
+        
+        #check number of helicities/jamp
+        nb_hel = []
+        nb_jamp = [] 
+        for one_comp in comparisons:
+            if one_comp['results'] != 'pass':
+                nb_hel.append(len(one_comp['results'][0]['jamp']))
+                nb_jamp.append(len(one_comp['results'][0]['jamp'][0]))
+        self.assertEqual(nb_hel, [16, 16])
+        self.assertEqual(nb_jamp, [2, 2])
+        
         for i, comparison in enumerate(comparisons):
             if i == 2:
-                self.assertEqual(comparison[1],'pass')
+                self.assertEqual(comparison['results'],'pass')
                 continue
             else:
                 nb_fail = process_checks.output_lorentz_inv([comparison], 

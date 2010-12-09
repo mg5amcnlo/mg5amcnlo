@@ -53,6 +53,8 @@ from aloha.template_files.wavefunctions import \
 #===============================================================================
 
 logger = logging.getLogger('madgraph.various.process_checks')
+store_aloha = []
+
 
 #===============================================================================
 # Global helper function get_momenta
@@ -302,8 +304,8 @@ def evaluate_matrix_element(matrix_element, stored_quantities, helas_writer,
 
     me_used_lorentz = set(matrix_element.get_used_lorentz())
     me_used_lorentz = [lorentz for lorentz in me_used_lorentz \
-                           if lorentz not in stored_quantities['used_lorentz']]
-
+                           if lorentz not in store_aloha]
+    
     aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
     aloha_model.compute_subset(me_used_lorentz)
 
@@ -323,7 +325,7 @@ def evaluate_matrix_element(matrix_element, stored_quantities, helas_writer,
         exec(routine, globals())
 
     # Add the defined Aloha routines to used_lorentz
-    stored_quantities['used_lorentz'].extend(me_used_lorentz)
+    store_aloha.extend(me_used_lorentz)
 
     # Export the matrix element to Python calls
     exporter = export_python.ProcessExporterPython(matrix_element,
@@ -348,7 +350,7 @@ def evaluate_matrix_element(matrix_element, stored_quantities, helas_writer,
         return data.smatrix(p, full_model)
     else:
         m2 = data.smatrix(p, full_model)
-        return m2, getattr(data, output)
+        return {'m2': m2, output:getattr(data, output)}
     
 #===============================================================================
 # check_processes
@@ -546,7 +548,7 @@ def output_comparisons(comparison_results):
     """Present the results of a comparison in a nice list format
        mode short: return the number of fail process
     """
-
+    
     proc_col_size = 17
 
     for proc in comparison_results:
@@ -736,15 +738,18 @@ def check_gauge_process(process, stored_quantities, helas_writer, full_model):
                                   helas_writer, full_model, gauge_check = False,
                                   output='jamp')
     
-    if mvalue and mvalue[0]:
-        return (process.base_string(), mvalue, brsvalue)
+    if mvalue and mvalue['m2']:
+        return {'process':process.base_string(),'value':mvalue,'brs':brsvalue}
     
 
 def output_gauge(comparison_results, output='text'):
     """Present the results of a comparison in a nice list format"""
 
     proc_col_size = 17
-    for proc, mvalue, brsvalue in comparison_results:
+    for one_comp in comparison_results:
+        proc = one_comp['process']
+        mvalue = one_comp['value']
+        brsvalue = one_comp['brs']
         if len(proc) + 1 > proc_col_size:
             proc_col_size = len(proc) + 1
 
@@ -762,31 +767,36 @@ def output_gauge(comparison_results, output='text'):
               fixed_string_length("ratio", col_size) + \
               "Result"
 
-    for proc, mvalue, brsvalue in comparison_results:
-        ratio = (brsvalue[0]/mvalue[0])
+    for  one_comp in comparison_results:
+        proc = one_comp['process']
+        mvalue = one_comp['value']
+        brsvalue = one_comp['brs']
+        ratio = (brsvalue['m2']/mvalue['m2'])
         res_str += '\n' + fixed_string_length(proc, proc_col_size) + \
-                    fixed_string_length("%1.10e" % mvalue[0], col_size)+ \
-                    fixed_string_length("%1.10e" % brsvalue[0], col_size)+ \
+                    fixed_string_length("%1.10e" % mvalue['m2'], col_size)+ \
+                    fixed_string_length("%1.10e" % brsvalue['m2'], col_size)+ \
                     fixed_string_length("%1.10e" % ratio, col_size)
          
         if ratio > 1e-12:
             fail_proc += 1
+            proc_succeed = False
             failed_proc_list.append(proc)
             res_str += "Failed"
         else:
             pass_proc += 1
+            proc_succeed = True
             res_str += "Passed"
 
         #check all the JAMP
         # loop over jamp
-        for k in range(len(mvalue[1][0])):
+        for k in range(len(mvalue['jamp'][0])):
             m_sum = 0
             brs_sum = 0
             # loop over helicity
-            for j in range(len(mvalue[1])):
+            for j in range(len(mvalue['jamp'])):
                 #values for the different lorentz boost
-                m_sum += abs(mvalue[1][j][k])**2
-                brs_sum += abs(brsvalue[1][j][k])**2                                            
+                m_sum += abs(mvalue['jamp'][j][k])**2
+                brs_sum += abs(brsvalue['jamp'][j][k])**2                                            
                     
             # Compare the different helicity  
             if not m_sum:
@@ -804,7 +814,7 @@ def output_gauge(comparison_results, output='text'):
                     pass_proc -= 1
                     failed_proc_list.append(proc)
                 res_str += tmp_str + "Failed"
-            else:
+            elif not proc_succeed:
                  res_str += tmp_str + "Passed"
 
 
@@ -899,7 +909,7 @@ def check_lorentz_process(process, stored_quantities, helas_writer, full_model):
     for i, leg in enumerate(process.get('legs')):
         leg.set('number', i+1)
 
-    logger.info("Checking gauge %s" % \
+    logger.info("Checking lorentz %s" % \
                 process.nice_string().replace('Process', 'process'))
 
     legs = process.get('legs')
@@ -922,11 +932,10 @@ def check_lorentz_process(process, stored_quantities, helas_writer, full_model):
     data = evaluate_matrix_element(matrix_element, stored_quantities,
                                   helas_writer, full_model, p=p, output='jamp')
 
-    if data and data[0]:
+    if data and data['m2']:
         results = [data]
-        
     else:
-        return  (process.base_string(), 'pass')
+        return  {'process':process.base_string(), 'results':'pass'}
     
     for boost in range(1,4):
         boost_p = boost_momenta(p, boost)
@@ -936,8 +945,7 @@ def check_lorentz_process(process, stored_quantities, helas_writer, full_model):
                                   auth_skipping=False, output='jamp'))
         
         
-    return (process.base_string(), results)
-
+    return {'process': process.base_string(), 'results': results}
 
 
 def boost_momenta(p, boost_direction=1, beta=0.5):
@@ -996,14 +1004,16 @@ def output_lorentz_inv(comparison_results, output='text'):
               fixed_string_length("Relative diff.", col_size) + \
               "Result"
 
-    for proc, data in comparison_results:
+    for one_comp in comparison_results:
+        proc = one_comp['process']
+        data = one_comp['results']
         
         if data == 'pass':
             no_check_proc += 1
             no_check_proc_list.append(proc)
             continue
         
-        values = [data[i][0] for i in range(len(data))]
+        values = [data[i]['m2'] for i in range(len(data))]
         
         min_val = min(values)
         max_val = max(values)
@@ -1016,20 +1026,22 @@ def output_lorentz_inv(comparison_results, output='text'):
                    
         if diff < 1e-8:
             pass_proc += 1
+            proc_succeed = True
             res_str += "Passed"
         else:
             fail_proc += 1
+            proc_succeed = False
             failed_proc_list.append(proc)
             res_str += "Failed"
 
         #check all the JAMP
         # loop over jamp
-        for k in range(len(data[0][1][0])):
+        for k in range(len(data[0]['jamp'][0])):
             sum = [0] * len(data)
             # loop over helicity
-            for j in range(len(data[0][1])):
+            for j in range(len(data[0]['jamp'])):
                 #values for the different lorentz boost
-                values = [abs(data[i][1][j][k])**2 for i in range(len(data))]
+                values = [abs(data[i]['jamp'][j][k])**2 for i in range(len(data))]
                 sum = [sum[i] + values[i] for i in range(len(values))]
 
             # Compare the different lorentz boost  
@@ -1050,7 +1062,7 @@ def output_lorentz_inv(comparison_results, output='text'):
                     pass_proc -= 1
                     failed_proc_list.append(proc)
                 res_str += tmp_str + "Failed"
-            else:
+            elif not proc_succeed:
                  res_str += tmp_str + "Passed" 
             
             
