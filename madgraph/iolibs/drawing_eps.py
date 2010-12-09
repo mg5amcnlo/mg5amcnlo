@@ -135,14 +135,15 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         #return the line in correct format
         return " %s %s %s %s %s \n" % (x1, y1, x2, y2, name)
 
-    def draw_vertex(self, vertex):
+    def draw_vertex(self, vertex, bypass = ['QED','QCD']  ):
         """Add blob in case on non QED-QCD information"""
         
         interaction = self.model.get_interaction(vertex.id)
         if interaction:
             order = interaction.get('orders')
             order = [key for key in order.keys() if order[key] and \
-                                                     key not in ['QED','QCD']]
+                                                     key not in bypass]
+
             if order:
                 x1, y1 = self.rescale(vertex.pos_x, vertex.pos_y)
                 self.text += " %s %s %s 1.0 Fblob \n" % (x1, y1, self.blob_size)
