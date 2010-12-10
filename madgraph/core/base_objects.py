@@ -701,7 +701,7 @@ class Model(PhysicsObject):
                                                         type(value)
 
         if name == 'got_majoranas':
-            if not isinstance(value, bool) or value == None:
+            if not (isinstance(value, bool) or value == None):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a boolean" % \
                                                         type(value)

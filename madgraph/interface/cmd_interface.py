@@ -2165,10 +2165,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # Do post-processing of model
             self.process_model()
 
-            # Reset amplitudes and matrix elements
+            # Reset amplitudes and matrix elements and global checks
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-
+            process_checks.store_aloha = []
+            
         elif args[0] == 'command':
             if not os.path.isfile(args[1]):
                 raise MadGraph5Error("Path %s is not a valid pathname" % args[1])
