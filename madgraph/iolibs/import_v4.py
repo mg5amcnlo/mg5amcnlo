@@ -334,6 +334,10 @@ def read_interactions_v4(fsock, ref_part_list):
                         # Should only use one Helas amplitude for electroweak
                         # 4-vector vertices with FR. I choose W3W3NX.
                         myinter.set('lorentz', ['WWVVN'])
+                elif values[len(part_list)] in ['DUM', 'DUM0', 'DUM1']:
+                    # We can just use the second coupling, since the first
+                    # is a dummy
+                    myinter.set('couplings', {(0, 0):values[len(part_list)+1]})
                 elif pdg_codes == [21, 21, 21, 21]:
                     # gggg
                     myinter.set('couplings', {(0, 0):values[len(part_list)],
