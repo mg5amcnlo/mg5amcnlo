@@ -858,7 +858,8 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
             # Check if we need to append a charge conjugation flag
             c_flag = '' 
             if argument.needs_hermitian_conjugate():
-                c_flag = 'C1' # MG5 not configure for 4F vertex
+                c_flag = "".join(['C%d' % i for i in \
+                                  argument.get_conjugate_index()])
 
             call = '%s%s_%s' % (argument.get('lorentz'), c_flag, outgoing)
 
@@ -1025,7 +1026,8 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
             # Check if we need to append a charge conjugation flag
             c_flag = '' 
             if argument.needs_hermitian_conjugate():
-                c_flag = 'C1' # MG5 not configure for 4F vertex
+                c_flag = "".join(['C%d' % i for i in \
+                                  argument.get_conjugate_index()])
 
             if isinstance(argument, helas_objects.HelasWavefunction):
                 call = 'w[%d] = '

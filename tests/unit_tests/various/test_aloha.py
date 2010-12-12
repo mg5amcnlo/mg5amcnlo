@@ -2378,7 +2378,6 @@ class test_aloha_creation(unittest.TestCase):
         conjg_builder= builder.define_conjugate_builder(pairs=1)
         amp = conjg_builder.compute_routine(0)
 
-        print amp.expr.spin_ind
         self.assertEqual(amp.expr.nb_spin, 0)
         self.assertEqual(amp.expr.nb_lor, 0)   
         
