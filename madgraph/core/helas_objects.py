@@ -770,9 +770,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
             return 0
         
         wf_indices = self.get('pdg_codes')
-        # take the last index in case of identical particles
+        # Take the first index in case of identical particles
         wf_index = wf_indices.index(self.get_anti_pdg_code())
-        #wf_index = self.get('pdg_codes').index(self.get_anti_pdg_code())
         # If fermion, then we need to correct for I/O status
         spin_state = self.get_spin_state_number()
         if spin_state % 2 == 0:
@@ -811,10 +810,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         vertices = base_objects.VertexList()
 
-        if not self.get('mothers'):
-            return vertices
-
         mothers = self.get('mothers')
+
+        if not mothers:
+            return vertices
 
         # Add vertices for all mothers
         for mother in mothers:
@@ -1252,9 +1251,10 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
 
         return res
 
-    def sort_by_pdg_codes(self, pdg_codes, my_pdg_code):
+    def sort_by_pdg_codes(self, pdg_codes, my_pdg_code = 0):
         """Sort this HelasWavefunctionList according to the cyclic
-        order of the pdg codes given"""
+        order of the pdg codes given. my_pdg_code is the pdg code of
+        the daughter wavefunction (or 0 if daughter is amplitude)."""
 
         pdg_codes = copy.copy(pdg_codes)
 
@@ -1812,8 +1812,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                mothers[imo].get('spin') == mothers[imo+1].get('spin') and \
                mothers[imo].get('pdg_code') != mothers[imo+1].get('pdg_code'):
                 mothers, my_index = \
-                         mothers.sort_by_pdg_codes(self.get('pdg_codes'),
-                                                   0)
+                         mothers.sort_by_pdg_codes(self.get('pdg_codes'))
                 break
 
         if mothers != self.get('mothers'):

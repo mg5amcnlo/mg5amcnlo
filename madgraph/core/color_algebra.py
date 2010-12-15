@@ -318,9 +318,7 @@ class Epsilon(ColorObject):
         """Ensure e_ijk objects have strictly 3 indices"""
 
         super(Epsilon, self).__init__()
-        if len(args) != 3:
-            raise ValueError, \
-                "Epsilon objects must have three indices!"
+        assert len(args) == 3, "Epsilon objects must have three indices!"
 
     def pair_simplify(self, col_obj):
         """Implement e_ijk ae_ilm = T(j,l)T(k,m) - T(j,m)T(k,l) and
@@ -374,9 +372,7 @@ class EpsilonBar(ColorObject):
         """Ensure e_ijk objects have strictly 3 indices"""
 
         super(EpsilonBar, self).__init__()
-        if len(args) != 3:
-            raise ValueError, \
-                "EpsilonBar objects must have three indices!"
+        assert len(args) == 3, "EpsilonBar objects must have three indices!"
 
     def pair_simplify(self, col_obj):
         """Implement ebar_ijk T(k,l) = e_ikl"""
@@ -411,9 +407,7 @@ class K6(ColorObject):
         """Ensure sextet color objects have strictly 3 indices"""
 
         super(K6, self).__init__()
-        if len(args) != 3:
-            raise ValueError, \
-                "sextet color objects must have three indices!"
+        assert len(args) == 3, "sextet color objects must have three indices!"
 
     def pair_simplify(self, col_obj):
         """Implement the replacement rules
@@ -477,9 +471,7 @@ class K6Bar(ColorObject):
         """Ensure sextet color objects have strictly 3 indices"""
 
         super(K6Bar, self).__init__()
-        if len(args) != 3:
-            raise ValueError, \
-                "sextet color objects must have three indices!"
+        assert len(args) == 3, "sextet color objects must have three indices!"
 
     def pair_simplify(self, col_obj):
         """Implement the replacement rules
@@ -510,9 +502,8 @@ class T6(ColorObject):
         """Check for exactly three indices"""
 
         super(T6, self).__init__()
-        if len(args) < 2 or len(args) > 3:
-            raise ValueError, \
-                "T6 objects must have two or three indices!"
+        assert len(args) >= 2 and len(args) <= 3, \
+               "T6 objects must have two or three indices!"
 
     def simplify(self):
         """Implement delta6(i,i) = 1/2 Nc(Nc+1),

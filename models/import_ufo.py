@@ -257,15 +257,6 @@ class UFOMG5Converter(object):
         p = re.compile(r'''\'\w(?P<number>\d+)\'''')
         data_string = p.sub('-\g<number>', data_string)
          
-        # Compute how change indices to match MG5 convention
-        #info = [(i+1,part.color) for i,part in enumerate(interaction_info.particles) 
-        #         if part.color!=1]
-        #order = sorted(info, lambda p1, p2:p1[1] - p2[1])
-
-        #new_indices={}
-        #for i,(j, pcolor) in enumerate(order):
-        #    new_indices[j]=i
-
         # Shift indices by -1
         new_indices = {}
         new_indices = dict([(j,i) for (i,j) in \

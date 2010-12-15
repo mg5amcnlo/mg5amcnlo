@@ -184,7 +184,7 @@ class ColorObjectTest(unittest.TestCase):
         """Test the epsilon object"""
 
         # Espilon should have exactly 3 indices!
-        self.assertRaises(ValueError,
+        self.assertRaises(AssertionError,
                          color.Epsilon,
                          1, 2)
 
