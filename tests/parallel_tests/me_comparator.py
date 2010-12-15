@@ -41,6 +41,8 @@ import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.cmd_interface as cmd_interface
 
+from madgraph import MadGraph5Error
+
 class MERunner(object):
     """Base class to containing default function to setup, run and access results
     produced with a specific ME generator. 
@@ -107,6 +109,8 @@ class MG4Runner(MERunner):
 
         self.setup_flag = False
 
+        self.check_path(mg4_path)
+
         # Create a copy of Template
         if not os.path.isdir(os.path.join(mg4_path, "Template")) or \
                not os.path.isdir(os.path.join(mg4_path, "HELAS")):
@@ -141,6 +145,13 @@ class MG4Runner(MERunner):
         # print some info
         logging.info("Temporary standalone directory %s successfully created" % \
                      temp_dir)
+
+    def check_path(self, mg4_path):
+        """Check the path for necessary directories"""
+
+        if not os.path.isdir(os.path.join(mg4_path, "Template")) or \
+               not os.path.isdir(os.path.join(mg4_path, "HELAS")):
+            raise IOError, "Path %s is not a valid MG4 path" % str(mg4_path)
 
     def cleanup(self):
         """Clean up temporary directories"""
@@ -319,6 +330,13 @@ class MG5Runner(MG4Runner):
 
         self.mg5_path = os.path.abspath(mg5_path)
 
+    def check_path(self, mg4_path):
+        """Check the path for necessary directories"""
+
+        if not os.path.isdir(os.path.join(mg4_path, "Template")) or \
+               not os.path.isdir(os.path.join(mg4_path, "HELAS")):
+            raise IOError, "Path %s is not a valid MG4 path" % str(mg4_path)
+
     def run(self, proc_list, model, orders={}, energy=1000):
         """Execute MG5 on the list of processes mentioned in proc_list, using
         the specified model, the specified maximal coupling orders and a certain
@@ -350,7 +368,7 @@ class MG5Runner(MG4Runner):
             try:
                 cmd.run_cmd(line)
             except MadGraph5Error:
-                pass
+                raise Exception
         # Get the ME value
         for i, proc in enumerate(proc_list):
             self.res_list.append(self.get_me_value(proc, i))
@@ -377,6 +395,12 @@ class MG5_UFO_Runner(MG5Runner):
     name = 'UFO-ALOHA-MG5'
     type = 'ufo'
     
+    def check_path(self, mg4_path):
+        """Check the path for necessary directories"""
+
+        if not os.path.isdir(os.path.join(mg4_path, "Template")):
+            raise IOError, "Path %s is not a valid MG4 path" % str(mg4_path)
+
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 

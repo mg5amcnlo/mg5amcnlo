@@ -254,11 +254,11 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         # SM gluon 4-vertex components
 
-        key = ((3, 3, 3, 3, 4), 'gggg1')
+        key = ((3, 3, 3, 3, 1), 'gggg3')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
-               (wf.get('mothers')[0].get('number'),
-                wf.get('mothers')[1].get('number'),
+               (wf.get('mothers')[1].get('number'),
+                wf.get('mothers')[0].get('number'),
                 wf.get('mothers')[2].get('number'),
                 wf.get('coupling'),
                 wf.get('number'))
@@ -273,11 +273,11 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('coupling'),
                 amp.get('number'))
         self.add_amplitude(key, call)
-        key = ((3, 3, 3, 3, 4), 'gggg2')
+        key = ((3, 3, 3, 3, 1), 'gggg2')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
-               (wf.get('mothers')[2].get('number'),
-                wf.get('mothers')[0].get('number'),
+               (wf.get('mothers')[0].get('number'),
+                wf.get('mothers')[2].get('number'),
                 wf.get('mothers')[1].get('number'),
                 wf.get('coupling'),
                 wf.get('number'))
@@ -292,11 +292,11 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('coupling'),
                 amp.get('number'))
         self.add_amplitude(key, call)
-        key = ((3, 3, 3, 3, 4), 'gggg3')
+        key = ((3, 3, 3, 3, 1), 'gggg1')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
-               (wf.get('mothers')[1].get('number'),
-                wf.get('mothers')[2].get('number'),
+               (wf.get('mothers')[2].get('number'),
+                wf.get('mothers')[1].get('number'),
                 wf.get('mothers')[0].get('number'),
                 wf.get('coupling'),
                 wf.get('number'))
@@ -314,7 +314,7 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         # HEFT VVVS calls
 
-        key = ((1, 3, 3, 3, 3), '')
+        key = ((1, 3, 3, 3, 1), '')
         call = lambda wf: \
                "CALL JVVSXX(W(1,%d),W(1,%d),W(1,%d),DUM1,%s,%s,%s,W(1,%d))" % \
                (wf.get('mothers')[0].get('number'),

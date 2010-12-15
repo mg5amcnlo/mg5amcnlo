@@ -223,18 +223,7 @@ def check_already_checked(is_ids, fs_ids, sorted_ids, process, model,
     # Add this process to tested_processes
     sorted_ids.append(ids)
 
-    # Add also antiprocess, since these are identical
-    if id_anti_id_dict:
-        anti_ids = sorted([id_anti_id_dict[id] \
-                           for id in ids[:-1]]) + [process.get('id')]
-    else:
-        anti_ids = sorted([model.get_particle(id).get_anti_pdg_code() \
-                           for id in ids[:-1]]) + [process.get('id')]
-    anti_ids = array.array('i', anti_ids)
-
-    if anti_ids != ids:
-        sorted_ids.append(anti_ids)
-
+    # Skip adding antiprocess below, since might be relevant too
     return False
 
 #===============================================================================
@@ -382,6 +371,8 @@ def check_processes(processes, param_card = None, quick = []):
                                               full_model,
                                               quick)
 
+        if "used_lorentz" not in stored_quantities:
+            stored_quantities["used_lorentz"] = []
         return results, stored_quantities["used_lorentz"]
 
     elif isinstance(processes, base_objects.Process):
@@ -426,10 +417,9 @@ def check_processes(processes, param_card = None, quick = []):
         if res:
             comparison_results.append(res)
 
+    if "used_lorentz" not in stored_quantities:
+        stored_quantities["used_lorentz"] = []
     return comparison_results, stored_quantities["used_lorentz"]
-
-
-
 
 
 def check_process(process, stored_quantities, helas_writer, full_model, quick):
@@ -1080,3 +1070,4 @@ def output_lorentz_inv(comparison_results, output='text'):
         return res_str        
     else: 
         return fail_proc
+    return res_str        

@@ -240,6 +240,10 @@ class UFOMG5Converter(object):
                     output.append(self._pat_id.sub('color.T(\g<second>,\g<first>)', term))
                 elif particle.color == 3:
                     output.append(self._pat_id.sub('color.T(\g<first>,\g<second>)', term))
+                elif particle.color == -6 :
+                    output.append(self._pat_id.sub('color.T6(\g<second>,\g<first>)', term))
+                elif particle.color == 6:
+                    output.append(self._pat_id.sub('color.T6(\g<first>,\g<second>)', term))
                 elif particle.color == 8:
                     output.append(self._pat_id.sub('color.Tr(\g<first>,\g<second>)', term))
                     factor *= 2
@@ -255,25 +259,20 @@ class UFOMG5Converter(object):
         p = re.compile(r'''\'\w(?P<number>\d+)\'''')
         data_string = p.sub('-\g<number>', data_string)
          
-        # Compute how change indices to match MG5 convention
-        info = [(i+1,part.color) for i,part in enumerate(interaction_info.particles) 
-                 if part.color!=1]
-        order = sorted(info, lambda p1, p2:p1[1] - p2[1])
-        new_indices={}
-        for i,(j, pcolor) in enumerate(order):
-            new_indices[j]=i
-                        
-#            p = re.compile(r'''(?P<prefix>[^-@])(?P<nb>%s)(?P<postfix>\D)''' % j)
-#            data_string = p.sub('\g<prefix>@%s\g<postfix>' % i, data_string)
-#        data_string = data_string.replace('@','')                    
+        # Shift indices by -1
+        new_indices = {}
+        new_indices = dict([(j,i) for (i,j) in \
+                           enumerate(range(1,
+                                    len(interaction_info.particles)+1))])
 
+                        
         output = data_string.split('*')
         output = color.ColorString([eval(data) \
-                                              for data in output if data !='1'])
+                                    for data in output if data !='1'])
         output.coeff = fractions.Fraction(factor)
         for col_obj in output:
             col_obj.replace_indices(new_indices)
-        
+
         return output
       
 class OrganizeModelExpression:
