@@ -535,7 +535,7 @@ def write_configs_file(writer, matrix_element, fortran_model):
             elif vert in tchannels[:-1]:
                 lines.append("data tprid(%d,%d)/%d/" % \
                              (last_leg.get('number'), iconfig,
-                              last_leg.get('id')))
+                              abs(last_leg.get('id'))))
 
     # Write out number of configs
     lines.append("# Number of configs")
@@ -811,7 +811,7 @@ def write_props_file(writer, matrix_element, fortran_model, s_and_t_channels):
             else:
                 mass = "abs(%s)" % particle.get('mass')
             # Get width
-            if particle.get('width') == 'zero':
+            if particle.get('width').lower() == 'zero':
                 width = particle.get('width')
             else:
                 width = "abs(%s)" % particle.get('width')
