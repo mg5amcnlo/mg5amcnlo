@@ -547,22 +547,14 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 flip_sign = found_majorana
         else:
             # Follow fermion flow up through tree
-            fermion_mother = filter(lambda wf: wf.is_fermion() and
-                                     wf.get_with_flow('state') == \
-                                     self.get_with_flow('state'),
-                                     mothers)
+            fermion_mother = self.find_mother_fermion()
 
-            if len(fermion_mother) > 1:
-                raise self.PhysicsObjectError, \
-                      "6-fermion vertices not yet implemented"
-            if len(fermion_mother) == 0:
-                # Fermion flow already resolved for mothers
-                fermion_mother = filter(lambda wf: wf.is_fermion(),
-                                    mothers)
-                new_mother = fermion_mother[0]
+            if fermion_mother.get_with_flow('state') != \
+                                           self.get_with_flow('state'):
+                new_mother = fermion_mother
             else:
                 # Perform recursion by calling on mother
-                new_mother, wf_number = fermion_mother[0].\
+                new_mother, wf_number = fermion_mother.\
                                         check_majorana_and_flip_flow(\
                                            found_majorana,
                                            wavefunctions,
@@ -583,7 +575,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         not self.get('self_antipart')
 
             # Replace old mother with new mother
-            mothers[mothers.index(fermion_mother[0])] = new_mother
+            mothers[mothers.index(fermion_mother)] = new_mother
 
         # Flip sign if needed
         if flip_flow or flip_sign:
@@ -3405,7 +3397,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     def sorted_mothers(arg):
         """Gives a list of mother wavefunctions sorted according to
         1. The order of the particles in the interaction
-        2. Cyclic reordering of particles in same spin group (if boson)
+        2. Cyclic reordering of particles in same spin group
         3. Fermions ordered IOIOIO... according to the pairs in
            the interaction."""
 
@@ -3423,31 +3415,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         sorted_mothers, my_index = arg.get('mothers').sort_by_pdg_codes(\
             arg.get('pdg_codes'), my_pdg_code)
 
-        same_spin_mothers = []
-        if isinstance(arg, HelasWavefunction) and my_spin % 2 == 1:
-            # For bosons with same spin as this wf, need special treatment
-            same_spin_index = -1
-            i=0
-            while i < len(sorted_mothers):
-                if sorted_mothers[i].get_spin_state_number() == my_spin:
-                    if same_spin_index < 0:
-                        # Remember starting index for same spin states
-                        same_spin_index = i
-                    same_spin_mothers.append(sorted_mothers.pop(i))
-                else:
-                    i += 1
-
-        # Make cyclic reordering of mothers with same spin as this wf
-        if same_spin_mothers:
-            same_spin_mothers = same_spin_mothers[my_index - same_spin_index:] \
-                                + same_spin_mothers[:my_index - same_spin_index]
-
-            # Insert same_spin_mothers in sorted_mothers
-            sorted_mothers = sorted_mothers[:same_spin_index] + \
-                              same_spin_mothers + sorted_mothers[same_spin_index:]
         # If fermion, partner is the corresponding fermion flow partner
         partner = None
-        if isinstance(arg, HelasWavefunction) and my_spin % 2 == 0:
+        if isinstance(arg, HelasWavefunction) and arg.is_fermion():
             # Fermion case, just pick out the fermion flow partner
             if my_index % 2 == 0:
                 # partner is after arg
@@ -3456,6 +3426,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 # partner is before arg
                 partner_index = my_index - 1
             partner = sorted_mothers.pop(partner_index)
+            # If partner is incoming, move to before arg
+            if partner.get_spin_state_number() > 0:
+                my_index = partner_index
+            else:
+                my_index = partner_index + 1
 
         # Reorder fermions pairwise according to incoming/outgoing
         for i in range(0, len(sorted_mothers), 2):
@@ -3478,6 +3453,30 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # Put back partner into sorted_mothers
         if partner:
             sorted_mothers.insert(partner_index, partner)
+
+        same_spin_mothers = []
+        if isinstance(arg, HelasWavefunction):
+            # Pick out mothers with same spin, for cyclic reordering
+            same_spin_index = -1
+            i=0
+            while i < len(sorted_mothers):
+                if abs(sorted_mothers[i].get_spin_state_number()) == \
+                       abs(my_spin):
+                    if same_spin_index < 0:
+                        # Remember starting index for same spin states
+                        same_spin_index = i
+                    same_spin_mothers.append(sorted_mothers.pop(i))
+                else:
+                    i += 1
+
+        # Make cyclic reordering of mothers with same spin as this wf
+        if same_spin_mothers:
+            same_spin_mothers = same_spin_mothers[my_index - same_spin_index:] \
+                                + same_spin_mothers[:my_index - same_spin_index]
+
+            # Insert same_spin_mothers in sorted_mothers
+            sorted_mothers = sorted_mothers[:same_spin_index] + \
+                              same_spin_mothers + sorted_mothers[same_spin_index:]
 
         # Next sort according to spin_state_number
         return HelasWavefunctionList(sorted_mothers)
