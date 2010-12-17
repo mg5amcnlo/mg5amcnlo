@@ -3454,30 +3454,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         if partner:
             sorted_mothers.insert(partner_index, partner)
 
-        same_spin_mothers = []
-        if isinstance(arg, HelasWavefunction):
-            # Pick out mothers with same spin, for cyclic reordering
-            same_spin_index = -1
-            i=0
-            while i < len(sorted_mothers):
-                if abs(sorted_mothers[i].get_spin_state_number()) == \
-                       abs(my_spin):
-                    if same_spin_index < 0:
-                        # Remember starting index for same spin states
-                        same_spin_index = i
-                    same_spin_mothers.append(sorted_mothers.pop(i))
-                else:
-                    i += 1
-
-        # Make cyclic reordering of mothers with same spin as this wf
-        if same_spin_mothers:
-            same_spin_mothers = same_spin_mothers[my_index - same_spin_index:] \
-                                + same_spin_mothers[:my_index - same_spin_index]
-
-            # Insert same_spin_mothers in sorted_mothers
-            sorted_mothers = sorted_mothers[:same_spin_index] + \
-                              same_spin_mothers + sorted_mothers[same_spin_index:]
-
         # Next sort according to spin_state_number
         return HelasWavefunctionList(sorted_mothers)
 

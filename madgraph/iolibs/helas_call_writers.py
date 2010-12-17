@@ -227,8 +227,8 @@ class FortranHelasCallWriter(HelasCallWriter):
         key = ((3, 3, 5, 3), 'A')
         call = lambda wf: \
                "CALL UVVAXX(W(1,%d),W(1,%d),%s,zero,zero,zero,W(1,%d))" % \
-               (wf.get('mothers')[0].get('number'),
-                wf.get('mothers')[1].get('number'),
+               (FortranHelasCallWriter.sorted_mothers(wf)[0].get('number'),
+                FortranHelasCallWriter.sorted_mothers(wf)[1].get('number'),
                 wf.get('coupling'),
                 wf.get('number'))
         self.add_wavefunction(key, call)
@@ -236,8 +236,8 @@ class FortranHelasCallWriter(HelasCallWriter):
         key = ((3, 5, 3, 1), 'A')
         call = lambda wf: \
                "CALL JVTAXX(W(1,%d),W(1,%d),%s,zero,zero,W(1,%d))" % \
-               (wf.get('mothers')[0].get('number'),
-                wf.get('mothers')[1].get('number'),
+               (FortranHelasCallWriter.sorted_mothers(wf)[0].get('number'),
+                FortranHelasCallWriter.sorted_mothers(wf)[1].get('number'),
                 wf.get('coupling'),
                 wf.get('number'))
         self.add_wavefunction(key, call)
@@ -245,9 +245,9 @@ class FortranHelasCallWriter(HelasCallWriter):
         key = ((3, 3, 5), 'A')
         call = lambda amp: \
                "CALL VVTAXX(W(1,%d),W(1,%d),W(1,%d),%s,zero,AMP(%d))" % \
-               (amp.get('mothers')[0].get('number'),
-                amp.get('mothers')[1].get('number'),
-                amp.get('mothers')[2].get('number'),
+               (FortranHelasCallWriter.sorted_mothers(amp)[0].get('number'),
+                FortranHelasCallWriter.sorted_mothers(amp)[1].get('number'),
+                FortranHelasCallWriter.sorted_mothers(amp)[2].get('number'),
                 amp.get('coupling'),
                 amp.get('number'))
         self.add_amplitude(key, call)
@@ -257,57 +257,57 @@ class FortranHelasCallWriter(HelasCallWriter):
         key = ((3, 3, 3, 3, 1), 'gggg3')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
-               (wf.get('mothers')[1].get('number'),
-                wf.get('mothers')[0].get('number'),
-                wf.get('mothers')[2].get('number'),
+               (FortranHelasCallWriter.sorted_mothers(wf)[1].get('number'),
+                FortranHelasCallWriter.sorted_mothers(wf)[0].get('number'),
+                FortranHelasCallWriter.sorted_mothers(wf)[2].get('number'),
                 wf.get('coupling'),
                 wf.get('number'))
         self.add_wavefunction(key, call)
         key = ((3, 3, 3, 3), 'gggg1')
         call = lambda amp: \
                "CALL GGGGXX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,AMP(%d))" % \
-               (amp.get('mothers')[0].get('number'),
-                amp.get('mothers')[1].get('number'),
-                amp.get('mothers')[2].get('number'),
-                amp.get('mothers')[3].get('number'),
+               (FortranHelasCallWriter.sorted_mothers(amp)[0].get('number'),
+                FortranHelasCallWriter.sorted_mothers(amp)[1].get('number'),
+                FortranHelasCallWriter.sorted_mothers(amp)[2].get('number'),
+                FortranHelasCallWriter.sorted_mothers(amp)[3].get('number'),
                 amp.get('coupling'),
                 amp.get('number'))
         self.add_amplitude(key, call)
         key = ((3, 3, 3, 3, 1), 'gggg2')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
-               (wf.get('mothers')[0].get('number'),
-                wf.get('mothers')[2].get('number'),
-                wf.get('mothers')[1].get('number'),
+               (FortranHelasCallWriter.sorted_mothers(wf)[0].get('number'),
+                FortranHelasCallWriter.sorted_mothers(wf)[2].get('number'),
+                FortranHelasCallWriter.sorted_mothers(wf)[1].get('number'),
                 wf.get('coupling'),
                 wf.get('number'))
         self.add_wavefunction(key, call)
         key = ((3, 3, 3, 3), 'gggg2')
         call = lambda amp: \
                "CALL GGGGXX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,AMP(%d))" % \
-               (amp.get('mothers')[2].get('number'),
-                amp.get('mothers')[0].get('number'),
-                amp.get('mothers')[1].get('number'),
-                amp.get('mothers')[3].get('number'),
+               (FortranHelasCallWriter.sorted_mothers(amp)[2].get('number'),
+                FortranHelasCallWriter.sorted_mothers(amp)[0].get('number'),
+                FortranHelasCallWriter.sorted_mothers(amp)[1].get('number'),
+                FortranHelasCallWriter.sorted_mothers(amp)[3].get('number'),
                 amp.get('coupling'),
                 amp.get('number'))
         self.add_amplitude(key, call)
         key = ((3, 3, 3, 3, 1), 'gggg1')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
-               (wf.get('mothers')[2].get('number'),
-                wf.get('mothers')[1].get('number'),
-                wf.get('mothers')[0].get('number'),
+               (FortranHelasCallWriter.sorted_mothers(wf)[2].get('number'),
+                FortranHelasCallWriter.sorted_mothers(wf)[1].get('number'),
+                FortranHelasCallWriter.sorted_mothers(wf)[0].get('number'),
                 wf.get('coupling'),
                 wf.get('number'))
         self.add_wavefunction(key, call)
         key = ((3, 3, 3, 3), 'gggg3')
         call = lambda amp: \
                "CALL GGGGXX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,AMP(%d))" % \
-               (amp.get('mothers')[1].get('number'),
-                amp.get('mothers')[2].get('number'),
-                amp.get('mothers')[0].get('number'),
-                amp.get('mothers')[3].get('number'),
+               (FortranHelasCallWriter.sorted_mothers(amp)[1].get('number'),
+                FortranHelasCallWriter.sorted_mothers(amp)[2].get('number'),
+                FortranHelasCallWriter.sorted_mothers(amp)[0].get('number'),
+                FortranHelasCallWriter.sorted_mothers(amp)[3].get('number'),
                 amp.get('coupling'),
                 amp.get('number'))
         self.add_amplitude(key, call)
@@ -552,9 +552,9 @@ class FortranHelasCallWriter(HelasCallWriter):
                 # Create call for wavefunction
                 if len(argument.get('mothers')) == 2:
                     call_function = lambda wf: call % \
-                                    (wf.get('mothers')[0].\
+                                    (FortranHelasCallWriter.sorted_mothers(wf)[0].\
                                      get('number'),
-                                     wf.get('mothers')[1].\
+                                     FortranHelasCallWriter.sorted_mothers(wf)[1].\
                                      get('number'),
                                      wf.get_with_flow('coupling'),
                                      wf.get('mass'),
@@ -562,11 +562,11 @@ class FortranHelasCallWriter(HelasCallWriter):
                                      wf.get('number'))
                 else:
                     call_function = lambda wf: call % \
-                                    (wf.get('mothers')[0].\
+                                    (FortranHelasCallWriter.sorted_mothers(wf)[0].\
                                      get('number'),
-                                     wf.get('mothers')[1].\
+                                     FortranHelasCallWriter.sorted_mothers(wf)[1].\
                                      get('number'),
-                                     wf.get('mothers')[2].\
+                                     FortranHelasCallWriter.sorted_mothers(wf)[2].\
                                      get('number'),
                                      wf.get_with_flow('coupling'),
                                      wf.get('mass'),
@@ -576,24 +576,24 @@ class FortranHelasCallWriter(HelasCallWriter):
                 # Create call for amplitude
                 if len(argument.get('mothers')) == 3:
                     call_function = lambda amp: call % \
-                                    (amp.get('mothers')[0].\
+                                    (FortranHelasCallWriter.sorted_mothers(amp)[0].\
                                      get('number'),
-                                     amp.get('mothers')[1].\
+                                     FortranHelasCallWriter.sorted_mothers(amp)[1].\
                                      get('number'),
-                                     amp.get('mothers')[2].\
+                                     FortranHelasCallWriter.sorted_mothers(amp)[2].\
                                      get('number'),
 
                                      amp.get('coupling'),
                                      amp.get('number'))
                 else:
                     call_function = lambda amp: call % \
-                                    (amp.get('mothers')[0].\
+                                    (FortranHelasCallWriter.sorted_mothers(amp)[0].\
                                      get('number'),
-                                     amp.get('mothers')[1].\
+                                     FortranHelasCallWriter.sorted_mothers(amp)[1].\
                                      get('number'),
-                                     amp.get('mothers')[2].\
+                                     FortranHelasCallWriter.sorted_mothers(amp)[2].\
                                      get('number'),
-                                     amp.get('mothers')[3].\
+                                     FortranHelasCallWriter.sorted_mothers(amp)[3].\
                                      get('number'),
                                      amp.get('coupling'),
                                      amp.get('number'))
@@ -624,6 +624,95 @@ class FortranHelasCallWriter(HelasCallWriter):
                           lambda l1, l2: \
                           FortranHelasCallWriter.sort_amp[l2] - \
                           FortranHelasCallWriter.sort_amp[l1]))
+
+    @staticmethod
+    def sorted_mothers(arg):
+        """Gives a list of mother wavefunctions sorted according to
+        1. The order of the particles in the interaction
+        2. Cyclic reordering of particles in same spin group
+        3. Fermions ordered IOIOIO... according to the pairs in
+           the interaction."""
+
+        assert isinstance(arg, (helas_objects.HelasWavefunction, helas_objects.HelasAmplitude)), \
+            "%s is not a valid HelasWavefunction or HelasAmplitude" % repr(arg)
+
+        if not arg.get('interaction_id'):
+            return arg.get('mothers')
+        my_pdg_code = 0
+        my_spin = 0
+        if isinstance(arg, helas_objects.HelasWavefunction):
+            my_pdg_code = arg.get_anti_pdg_code()
+            my_spin = arg.get_spin_state_number()
+
+        sorted_mothers, my_index = arg.get('mothers').sort_by_pdg_codes(\
+            arg.get('pdg_codes'), my_pdg_code)
+
+        # If fermion, partner is the corresponding fermion flow partner
+        partner = None
+        if isinstance(arg, helas_objects.HelasWavefunction) and arg.is_fermion():
+            # Fermion case, just pick out the fermion flow partner
+            if my_index % 2 == 0:
+                # partner is after arg
+                partner_index = my_index
+            else:
+                # partner is before arg
+                partner_index = my_index - 1
+            partner = sorted_mothers.pop(partner_index)
+            # If partner is incoming, move to before arg
+            if partner.get_spin_state_number() > 0:
+                my_index = partner_index
+            else:
+                my_index = partner_index + 1
+
+        # Reorder fermions pairwise according to incoming/outgoing
+        for i in range(0, len(sorted_mothers), 2):
+            if sorted_mothers[i].is_fermion():
+                # This is a fermion, order between this fermion and its brother
+                if sorted_mothers[i].get_spin_state_number() > 0 and \
+                   sorted_mothers[i + 1].get_spin_state_number() < 0:
+                    # Switch places between outgoing and incoming
+                    sorted_mothers = sorted_mothers[:i] + \
+                                      [sorted_mothers[i+1], sorted_mothers[i]] + \
+                                      sorted_mothers[i+2:]
+                elif sorted_mothers[i].get_spin_state_number() < 0 and \
+                   sorted_mothers[i + 1].get_spin_state_number() > 0:
+                    # This is the right order
+                    pass
+            else:
+                # No more fermions in sorted_mothers
+                break
+            
+        # Put back partner into sorted_mothers
+        if partner:
+            sorted_mothers.insert(partner_index, partner)
+
+        same_spin_mothers = []
+        if isinstance(arg, helas_objects.HelasWavefunction):
+            # Pick out mothers with same spin, for cyclic reordering
+            same_spin_index = -1
+            i=0
+            while i < len(sorted_mothers):
+                if abs(sorted_mothers[i].get_spin_state_number()) == \
+                       abs(my_spin):
+                    if same_spin_index < 0:
+                        # Remember starting index for same spin states
+                        same_spin_index = i
+                    same_spin_mothers.append(sorted_mothers.pop(i))
+                else:
+                    i += 1
+
+        # Make cyclic reordering of mothers with same spin as this wf
+        if same_spin_mothers:
+            same_spin_mothers = same_spin_mothers[my_index - same_spin_index:] \
+                                + same_spin_mothers[:my_index - same_spin_index]
+
+            # Insert same_spin_mothers in sorted_mothers
+            sorted_mothers = sorted_mothers[:same_spin_index] + \
+                              same_spin_mothers + sorted_mothers[same_spin_index:]
+
+        # Next sort according to spin_state_number
+        return helas_objects.HelasWavefunctionList(sorted_mothers)
+
 
 #===============================================================================
 # UFOHelasCallWriter
