@@ -346,7 +346,7 @@ V_56 = Vertex(name = 'V_56',
               lorentz = [ L.FFFF1, L.FFFF2 ],
               couplings = {(0,0):C.GC_27, (1,1):C.GC_28})
 
-V_56 = Vertex(name = 'V_56',
+V_57 = Vertex(name = 'V_57',
               particles = [ P.t__tilde__, P.u, P.t__tilde__, P.u ],
               color = [ 'Identity(1,2)*Identity(3,4)',
                         'Identity(1,4)*Identity(3,2)'],

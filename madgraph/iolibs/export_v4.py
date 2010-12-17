@@ -962,6 +962,18 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
                        fortran_model,
                         len(matrix_element.get_all_amplitudes()))
 
+    # Generate diagrams
+    filename = "matrix.ps"
+    plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+                                         get('diagrams'),
+                                      filename,
+                                      model=matrix_element.get('processes')[0].\
+                                         get('model'),
+                                      amplitude='')
+    logger.info("Generating Feynman diagrams for " + \
+                 matrix_element.get('processes')[0].nice_string())
+    plot.draw()
+
     linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
 
     
