@@ -4800,7 +4800,6 @@ C     Number of configs
       POW(-3,10) = 1
 """)
         
-        
 class AlohaFortranWriterTest(unittest.TestCase):
     """ A basic test to see if the Aloha Fortran Writter is working """
     
