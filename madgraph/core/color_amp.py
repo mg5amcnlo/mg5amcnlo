@@ -397,6 +397,10 @@ class ColorBasis(dict):
         # Simplify the whole thing
         my_cf = my_cf.full_simplify()
 
+        # If the result is empty, just return
+        if not my_cf:
+            return my_cf
+
         # Return the string with the highest N coefficient 
         # (leading N decomposition), and the value of this coeff
         max_coeff = max([cs.Nc_power for cs in my_cf])
