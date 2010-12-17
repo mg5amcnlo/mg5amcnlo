@@ -3555,7 +3555,7 @@ CALL IOSXXX(W(1,28),W(1,2),W(1,27),MGVX350,AMP(8))""")
       DATA (IFOREST(I,-4,1),I=1,2)/4,-3/
       DATA SPROP(-4,1)/1000022/
       DATA (IFOREST(I,-5,1),I=1,2)/1,-4/
-      DATA TPRID(-5,1)/-1000011/
+      DATA TPRID(-5,1)/1000011/
       DATA (IFOREST(I,-6,1),I=1,2)/-5,-2/
 C     Diagram 2, Amplitude 2
       DATA MAPCONFIG(2)/2/
@@ -3568,7 +3568,7 @@ C     Diagram 2, Amplitude 2
       DATA (IFOREST(I,-4,2),I=1,2)/4,-3/
       DATA SPROP(-4,2)/1000022/
       DATA (IFOREST(I,-5,2),I=1,2)/1,-4/
-      DATA TPRID(-5,2)/-1000011/
+      DATA TPRID(-5,2)/1000011/
       DATA (IFOREST(I,-6,2),I=1,2)/-5,-2/
 C     Diagram 3, Amplitude 3
       DATA MAPCONFIG(3)/3/
@@ -3581,7 +3581,7 @@ C     Diagram 3, Amplitude 3
       DATA (IFOREST(I,-4,3),I=1,2)/-3,3/
       DATA SPROP(-4,3)/1000022/
       DATA (IFOREST(I,-5,3),I=1,2)/1,-4/
-      DATA TPRID(-5,3)/-1000011/
+      DATA TPRID(-5,3)/1000011/
       DATA (IFOREST(I,-6,3),I=1,2)/-5,-2/
 C     Diagram 4, Amplitude 4
       DATA MAPCONFIG(4)/4/
@@ -3594,7 +3594,7 @@ C     Diagram 4, Amplitude 4
       DATA (IFOREST(I,-4,4),I=1,2)/-3,3/
       DATA SPROP(-4,4)/1000022/
       DATA (IFOREST(I,-5,4),I=1,2)/1,-4/
-      DATA TPRID(-5,4)/-1000011/
+      DATA TPRID(-5,4)/1000011/
       DATA (IFOREST(I,-6,4),I=1,2)/-5,-2/
 C     Diagram 5, Amplitude 5
       DATA MAPCONFIG(5)/5/
@@ -3607,7 +3607,7 @@ C     Diagram 5, Amplitude 5
       DATA (IFOREST(I,-4,5),I=1,2)/7,-3/
       DATA SPROP(-4,5)/1000022/
       DATA (IFOREST(I,-5,5),I=1,2)/1,-4/
-      DATA TPRID(-5,5)/-1000011/
+      DATA TPRID(-5,5)/1000011/
       DATA (IFOREST(I,-6,5),I=1,2)/-5,-2/
 C     Diagram 6, Amplitude 6
       DATA MAPCONFIG(6)/6/
@@ -3620,7 +3620,7 @@ C     Diagram 6, Amplitude 6
       DATA (IFOREST(I,-4,6),I=1,2)/-3,6/
       DATA SPROP(-4,6)/1000022/
       DATA (IFOREST(I,-5,6),I=1,2)/1,-4/
-      DATA TPRID(-5,6)/-1000011/
+      DATA TPRID(-5,6)/1000011/
       DATA (IFOREST(I,-6,6),I=1,2)/-5,-2/
 C     Diagram 7, Amplitude 7
       DATA MAPCONFIG(7)/7/
@@ -3633,7 +3633,7 @@ C     Diagram 7, Amplitude 7
       DATA (IFOREST(I,-4,7),I=1,2)/7,-3/
       DATA SPROP(-4,7)/1000022/
       DATA (IFOREST(I,-5,7),I=1,2)/1,-4/
-      DATA TPRID(-5,7)/-1000011/
+      DATA TPRID(-5,7)/1000011/
       DATA (IFOREST(I,-6,7),I=1,2)/-5,-2/
 C     Diagram 8, Amplitude 8
       DATA MAPCONFIG(8)/8/
@@ -3646,7 +3646,7 @@ C     Diagram 8, Amplitude 8
       DATA (IFOREST(I,-4,8),I=1,2)/-3,6/
       DATA SPROP(-4,8)/1000022/
       DATA (IFOREST(I,-5,8),I=1,2)/1,-4/
-      DATA TPRID(-5,8)/-1000011/
+      DATA TPRID(-5,8)/1000011/
       DATA (IFOREST(I,-6,8),I=1,2)/-5,-2/
 C     Number of configs
       DATA MAPCONFIG(0)/8/
@@ -4360,6 +4360,341 @@ CALL IOVXXX(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
             self.assertEqual(result[i], goal_string[i])
 
 
+    def test_configs_ug_ttxz(self):
+        """Test config.inc which previously failed.
+        """
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # u and t quarks
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[len(mypartlist) - 1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        mypartlist.append(base_objects.Particle({'name':'t',
+                      'antiname':'t~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'MT',
+                      'width':'WT',
+                      'texname':'y',
+                      'antitexname':'\bar t',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':6,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        t = mypartlist[len(mypartlist) - 1]
+        antit = copy.copy(t)
+        antit.set('is_part', False)
+
+        # A z
+        mypartlist.append(base_objects.Particle({'name':'z',
+                      'antiname':'z',
+                      'spin':3,
+                      'mass':'zmass',
+                      'width':'zwidth',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':23,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        z = mypartlist[len(mypartlist) - 1]
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name': 'g',
+                                                 'antiname': 'g',
+                                                 'spin': 3,
+                                                 'color': 8,
+                                                 'charge': 0.00,
+                                                 'mass': 'ZERO',
+                                                 'width': 'ZERO',
+                                                 'pdg_code': 21,
+                                                 'texname': '_',
+                                                 'antitexname': '_',
+                                                 'line': 'curly',
+                                                 'propagating': True,
+                                                 'is_part': True,
+                                                 'self_antipart': True}))
+
+        g = mypartlist[len(mypartlist) - 1]
+
+        # t tbar z couplings
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [t, \
+                                             antit, \
+                                             z]),
+                      'color': [color.ColorString([color.T(0, 1)])],
+                      'lorentz':['L1'],
+                      'couplings':{(0,0):'GC_23'},
+                      'orders':{'QED':1}}))
+
+        # Gluon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2, 1, 0)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [antit, \
+                                             t, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2, 1, 0)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':6}))
+        myleglist.append(base_objects.Leg({'id':-6}))
+        myleglist.append(base_objects.Leg({'id':23}))
+        myleglist.append(base_objects.Leg({'id':2}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                           'model':mymodel})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        me = helas_objects.HelasMatrixElement(myamplitude,
+                                              gen_color=False)
+
+        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mymodel)
+        writer = writers.FortranWriter(self.give_pos('test'))
+
+        # Test configs file
+        nconfig, s_and_t_channels = export_v4.write_configs_file(writer,
+                                     me,
+                                     myfortranmodel)
+        writer.close()
+
+        # 2 21 < 6 -6 23  2
+        # 1  2   3  4  5  6
+        self.assertFileContains('test',
+"""C     Diagram 1, Amplitude 1
+      DATA MAPCONFIG(1)/1/
+      DATA (IFOREST(I,-1,1),I=1,2)/5,3/
+      DATA SPROP(-1,1)/6/
+      DATA (IFOREST(I,-2,1),I=1,2)/4,-1/
+      DATA SPROP(-2,1)/21/
+      DATA (IFOREST(I,-3,1),I=1,2)/6,-2/
+      DATA SPROP(-3,1)/2/
+C     Diagram 2, Amplitude 2
+      DATA MAPCONFIG(2)/2/
+      DATA (IFOREST(I,-1,2),I=1,2)/5,4/
+      DATA SPROP(-1,2)/-6/
+      DATA (IFOREST(I,-2,2),I=1,2)/-1,3/
+      DATA SPROP(-2,2)/21/
+      DATA (IFOREST(I,-3,2),I=1,2)/6,-2/
+      DATA SPROP(-3,2)/2/
+C     Diagram 3, Amplitude 3
+      DATA MAPCONFIG(3)/3/
+      DATA (IFOREST(I,-1,3),I=1,2)/1,6/
+      DATA TPRID(-1,3)/21/
+      DATA (IFOREST(I,-2,3),I=1,2)/-1,4/
+      DATA TPRID(-2,3)/6/
+      DATA (IFOREST(I,-3,3),I=1,2)/-2,5/
+      DATA TPRID(-3,3)/6/
+      DATA (IFOREST(I,-4,3),I=1,2)/-3,3/
+C     Diagram 4, Amplitude 4
+      DATA MAPCONFIG(4)/4/
+      DATA (IFOREST(I,-1,4),I=1,2)/5,4/
+      DATA SPROP(-1,4)/-6/
+      DATA (IFOREST(I,-2,4),I=1,2)/1,6/
+      DATA TPRID(-2,4)/21/
+      DATA (IFOREST(I,-3,4),I=1,2)/-2,-1/
+      DATA TPRID(-3,4)/6/
+      DATA (IFOREST(I,-4,4),I=1,2)/-3,3/
+C     Diagram 5, Amplitude 5
+      DATA MAPCONFIG(5)/5/
+      DATA (IFOREST(I,-1,5),I=1,2)/1,6/
+      DATA TPRID(-1,5)/21/
+      DATA (IFOREST(I,-2,5),I=1,2)/-1,3/
+      DATA TPRID(-2,5)/6/
+      DATA (IFOREST(I,-3,5),I=1,2)/-2,5/
+      DATA TPRID(-3,5)/6/
+      DATA (IFOREST(I,-4,5),I=1,2)/-3,4/
+C     Diagram 6, Amplitude 6
+      DATA MAPCONFIG(6)/6/
+      DATA (IFOREST(I,-1,6),I=1,2)/5,3/
+      DATA SPROP(-1,6)/6/
+      DATA (IFOREST(I,-2,6),I=1,2)/1,6/
+      DATA TPRID(-2,6)/21/
+      DATA (IFOREST(I,-3,6),I=1,2)/-2,-1/
+      DATA TPRID(-3,6)/6/
+      DATA (IFOREST(I,-4,6),I=1,2)/-3,4/
+C     Diagram 7, Amplitude 7
+      DATA MAPCONFIG(7)/7/
+      DATA (IFOREST(I,-1,7),I=1,2)/5,3/
+      DATA SPROP(-1,7)/6/
+      DATA (IFOREST(I,-2,7),I=1,2)/1,6/
+      DATA TPRID(-2,7)/21/
+      DATA (IFOREST(I,-3,7),I=1,2)/-2,4/
+      DATA TPRID(-3,7)/6/
+      DATA (IFOREST(I,-4,7),I=1,2)/-3,-1/
+C     Diagram 8, Amplitude 8
+      DATA MAPCONFIG(8)/8/
+      DATA (IFOREST(I,-1,8),I=1,2)/5,4/
+      DATA SPROP(-1,8)/-6/
+      DATA (IFOREST(I,-2,8),I=1,2)/1,6/
+      DATA TPRID(-2,8)/21/
+      DATA (IFOREST(I,-3,8),I=1,2)/-2,3/
+      DATA TPRID(-3,8)/6/
+      DATA (IFOREST(I,-4,8),I=1,2)/-3,-1/
+C     Diagram 9, Amplitude 9
+      DATA MAPCONFIG(9)/9/
+      DATA (IFOREST(I,-1,9),I=1,2)/5,3/
+      DATA SPROP(-1,9)/6/
+      DATA (IFOREST(I,-2,9),I=1,2)/4,-1/
+      DATA SPROP(-2,9)/21/
+      DATA (IFOREST(I,-3,9),I=1,2)/1,-2/
+      DATA TPRID(-3,9)/2/
+      DATA (IFOREST(I,-4,9),I=1,2)/-3,6/
+C     Diagram 10, Amplitude 10
+      DATA MAPCONFIG(10)/10/
+      DATA (IFOREST(I,-1,10),I=1,2)/5,4/
+      DATA SPROP(-1,10)/-6/
+      DATA (IFOREST(I,-2,10),I=1,2)/-1,3/
+      DATA SPROP(-2,10)/21/
+      DATA (IFOREST(I,-3,10),I=1,2)/1,-2/
+      DATA TPRID(-3,10)/2/
+      DATA (IFOREST(I,-4,10),I=1,2)/-3,6/
+C     Number of configs
+      DATA MAPCONFIG(0)/10/
+""")
+        # Test props.inc
+        writer = writers.FortranWriter(self.give_pos('test'))
+        export_v4.write_props_file(writer, me, myfortranmodel, s_and_t_channels)
+        writer.close()
+        self.assertFileContains('test',
+"""      PMASS(-1,1)  = ABS(MT)
+      PWIDTH(-1,1) = ABS(WT)
+      POW(-1,1) = 1
+      PMASS(-2,1)  = ZERO
+      PWIDTH(-2,1) = ZERO
+      POW(-2,1) = 2
+      PMASS(-3,1)  = ZERO
+      PWIDTH(-3,1) = ZERO
+      POW(-3,1) = 1
+      PMASS(-1,2)  = ABS(MT)
+      PWIDTH(-1,2) = ABS(WT)
+      POW(-1,2) = 1
+      PMASS(-2,2)  = ZERO
+      PWIDTH(-2,2) = ZERO
+      POW(-2,2) = 2
+      PMASS(-3,2)  = ZERO
+      PWIDTH(-3,2) = ZERO
+      POW(-3,2) = 1
+      PMASS(-1,3)  = ZERO
+      PWIDTH(-1,3) = ZERO
+      POW(-1,3) = 2
+      PMASS(-2,3)  = ABS(MT)
+      PWIDTH(-2,3) = ABS(WT)
+      POW(-2,3) = 1
+      PMASS(-3,3)  = ABS(MT)
+      PWIDTH(-3,3) = ABS(WT)
+      POW(-3,3) = 1
+      PMASS(-1,4)  = ABS(MT)
+      PWIDTH(-1,4) = ABS(WT)
+      POW(-1,4) = 1
+      PMASS(-2,4)  = ZERO
+      PWIDTH(-2,4) = ZERO
+      POW(-2,4) = 2
+      PMASS(-3,4)  = ABS(MT)
+      PWIDTH(-3,4) = ABS(WT)
+      POW(-3,4) = 1
+      PMASS(-1,5)  = ZERO
+      PWIDTH(-1,5) = ZERO
+      POW(-1,5) = 2
+      PMASS(-2,5)  = ABS(MT)
+      PWIDTH(-2,5) = ABS(WT)
+      POW(-2,5) = 1
+      PMASS(-3,5)  = ABS(MT)
+      PWIDTH(-3,5) = ABS(WT)
+      POW(-3,5) = 1
+      PMASS(-1,6)  = ABS(MT)
+      PWIDTH(-1,6) = ABS(WT)
+      POW(-1,6) = 1
+      PMASS(-2,6)  = ZERO
+      PWIDTH(-2,6) = ZERO
+      POW(-2,6) = 2
+      PMASS(-3,6)  = ABS(MT)
+      PWIDTH(-3,6) = ABS(WT)
+      POW(-3,6) = 1
+      PMASS(-1,7)  = ABS(MT)
+      PWIDTH(-1,7) = ABS(WT)
+      POW(-1,7) = 1
+      PMASS(-2,7)  = ZERO
+      PWIDTH(-2,7) = ZERO
+      POW(-2,7) = 2
+      PMASS(-3,7)  = ABS(MT)
+      PWIDTH(-3,7) = ABS(WT)
+      POW(-3,7) = 1
+      PMASS(-1,8)  = ABS(MT)
+      PWIDTH(-1,8) = ABS(WT)
+      POW(-1,8) = 1
+      PMASS(-2,8)  = ZERO
+      PWIDTH(-2,8) = ZERO
+      POW(-2,8) = 2
+      PMASS(-3,8)  = ABS(MT)
+      PWIDTH(-3,8) = ABS(WT)
+      POW(-3,8) = 1
+      PMASS(-1,9)  = ABS(MT)
+      PWIDTH(-1,9) = ABS(WT)
+      POW(-1,9) = 1
+      PMASS(-2,9)  = ZERO
+      PWIDTH(-2,9) = ZERO
+      POW(-2,9) = 2
+      PMASS(-3,9)  = ZERO
+      PWIDTH(-3,9) = ZERO
+      POW(-3,9) = 1
+      PMASS(-1,10)  = ABS(MT)
+      PWIDTH(-1,10) = ABS(WT)
+      POW(-1,10) = 1
+      PMASS(-2,10)  = ZERO
+      PWIDTH(-2,10) = ZERO
+      POW(-2,10) = 2
+      PMASS(-3,10)  = ZERO
+      PWIDTH(-3,10) = ZERO
+      POW(-3,10) = 1
+""")
+        
 class AlohaFortranWriterTest(unittest.TestCase):
     """ A basic test to see if the Aloha Fortran Writter is working """
     
