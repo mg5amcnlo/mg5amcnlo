@@ -338,6 +338,47 @@ class TestCmdShell2(unittest.TestCase):
         self.assertTrue(me_groups)
         self.assertAlmostEqual(float(me_groups.group('value')), 1.953735e-2)
         
+    def test_v4_heft(self):
+        """Test the import of models and the export of Helas Routine """
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmdir(self.out_dir)
+
+        self.do('import model_v4 heft')
+        self.do('generate g g > h g g')
+        self.do('output standalone %s ' % self.out_dir)
+
+        devnull = open(os.devnull,'w')
+        # Check that the Model and Aloha output compile
+        subprocess.call(['make'],
+                        stdout=devnull, stderr=devnull, 
+                        cwd=os.path.join(self.out_dir, 'Source'))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libdhelas3.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libmodel.a')))
+        # Check that check_sa.f compiles
+        subprocess.call(['make', 'check'],
+                        stdout=devnull, stderr=devnull, 
+                        cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                         'P0_gg_hgg'))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses', 'P0_gg_hgg',
+                                                    'check')))
+        # Check that the output of check is correct 
+        logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_gg_hgg',
+                               'check.log')
+        subprocess.call('./check', 
+                        stdout=open(logfile, 'w'), stderr=devnull,
+                        cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                         'P0_gg_hgg'), shell=True)
+        log_output = open(logfile, 'r').read()
+        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+                           re.IGNORECASE)
+        me_groups = me_re.search(log_output)
+        self.assertTrue(me_groups)
+        self.assertAlmostEqual(float(me_groups.group('value')), 1.10908942e-06)
+        
     def test_madevent_ufo_aloha(self):
         """Test MadEvent output with UFO/ALOHA"""
 

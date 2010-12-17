@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 302 $
-# Mathematica version: 7.0 for Linux x86 (64-bit) (February 18, 2009)
-# Date: Tue 7 Sep 2010 17:45:02
+# This file was automatically created by FeynRules $Revision: 364 $
+# Mathematica version: 7.0 for Linux x86 (32-bit) (February 18, 2009)
+# Date: Sat 4 Dec 2010 12:26:05
 
 
 
@@ -801,14 +801,6 @@ ME = Parameter(name = 'ME',
                lhablock = 'MASS',
                lhacode = [ 11 ])
 
-MM = Parameter(name = 'MM',
-               nature = 'external',
-               type = 'real',
-               value = 0.,
-               texname = '\\text{MM}',
-               lhablock = 'MASS',
-               lhacode = [ 13 ])
-
 MTA = Parameter(name = 'MTA',
                 nature = 'external',
                 type = 'real',
@@ -817,22 +809,6 @@ MTA = Parameter(name = 'MTA',
                 lhablock = 'MASS',
                 lhacode = [ 15 ])
 
-MU = Parameter(name = 'MU',
-               nature = 'external',
-               type = 'real',
-               value = 0.,
-               texname = 'M',
-               lhablock = 'MASS',
-               lhacode = [ 2 ])
-
-MC = Parameter(name = 'MC',
-               nature = 'external',
-               type = 'real',
-               value = 0.,
-               texname = '\\text{MC}',
-               lhablock = 'MASS',
-               lhacode = [ 4 ])
-
 MT = Parameter(name = 'MT',
                nature = 'external',
                type = 'real',
@@ -840,22 +816,6 @@ MT = Parameter(name = 'MT',
                texname = '\\text{MT}',
                lhablock = 'MASS',
                lhacode = [ 6 ])
-
-MD = Parameter(name = 'MD',
-               nature = 'external',
-               type = 'real',
-               value = 0.,
-               texname = '\\text{MD}',
-               lhablock = 'MASS',
-               lhacode = [ 1 ])
-
-MS = Parameter(name = 'MS',
-               nature = 'external',
-               type = 'real',
-               value = 0.,
-               texname = '\\text{MS}',
-               lhablock = 'MASS',
-               lhacode = [ 3 ])
 
 MB = Parameter(name = 'MB',
                nature = 'external',
@@ -948,50 +908,50 @@ Msn3 = Parameter(name = 'Msn3',
 Msl1 = Parameter(name = 'Msl1',
                  nature = 'external',
                  type = 'real',
-                 value = 202.91569,
+                 value = 1,
                  texname = '\\text{Msl1}',
                  lhablock = 'MASS',
-                 lhacode = [ 1000011 ])
+                 lhacode = [ -1000011 ])
 
 Msl2 = Parameter(name = 'Msl2',
                  nature = 'external',
                  type = 'real',
-                 value = 202.91569,
+                 value = 1,
                  texname = '\\text{Msl2}',
                  lhablock = 'MASS',
-                 lhacode = [ 1000013 ])
+                 lhacode = [ -1000013 ])
 
 Msl3 = Parameter(name = 'Msl3',
                  nature = 'external',
                  type = 'real',
-                 value = 134.490864,
+                 value = 1,
                  texname = '\\text{Msl3}',
                  lhablock = 'MASS',
-                 lhacode = [ 1000015 ])
+                 lhacode = [ -1000015 ])
 
 Msl4 = Parameter(name = 'Msl4',
                  nature = 'external',
                  type = 'real',
-                 value = 144.102799,
+                 value = 1,
                  texname = '\\text{Msl4}',
                  lhablock = 'MASS',
-                 lhacode = [ 2000011 ])
+                 lhacode = [ -2000011 ])
 
 Msl5 = Parameter(name = 'Msl5',
                  nature = 'external',
                  type = 'real',
-                 value = 144.102799,
+                 value = 1,
                  texname = '\\text{Msl5}',
                  lhablock = 'MASS',
-                 lhacode = [ 2000013 ])
+                 lhacode = [ -2000013 ])
 
 Msl6 = Parameter(name = 'Msl6',
                  nature = 'external',
                  type = 'real',
-                 value = 206.867805,
+                 value = 1,
                  texname = '\\text{Msl6}',
                  lhablock = 'MASS',
-                 lhacode = [ 2000015 ])
+                 lhacode = [ -2000015 ])
 
 Musq1 = Parameter(name = 'Musq1',
                   nature = 'external',
@@ -1212,50 +1172,50 @@ Wsn3 = Parameter(name = 'Wsn3',
 Wsl1 = Parameter(name = 'Wsl1',
                  nature = 'external',
                  type = 'real',
-                 value = 0.213682161,
+                 value = 1,
                  texname = '\\text{Wsl1}',
                  lhablock = 'DECAY',
-                 lhacode = [ 1000011 ])
+                 lhacode = [ -1000011 ])
 
 Wsl2 = Parameter(name = 'Wsl2',
                  nature = 'external',
                  type = 'real',
-                 value = 0.213682161,
+                 value = 1,
                  texname = '\\text{Wsl2}',
                  lhablock = 'DECAY',
-                 lhacode = [ 1000013 ])
+                 lhacode = [ -1000013 ])
 
 Wsl3 = Parameter(name = 'Wsl3',
                  nature = 'external',
                  type = 'real',
-                 value = 0.148327268,
+                 value = 1,
                  texname = '\\text{Wsl3}',
                  lhablock = 'DECAY',
-                 lhacode = [ 1000015 ])
+                 lhacode = [ -1000015 ])
 
 Wsl4 = Parameter(name = 'Wsl4',
                  nature = 'external',
                  type = 'real',
-                 value = 0.216121626,
+                 value = 1,
                  texname = '\\text{Wsl4}',
                  lhablock = 'DECAY',
-                 lhacode = [ 2000011 ])
+                 lhacode = [ -2000011 ])
 
 Wsl5 = Parameter(name = 'Wsl5',
                  nature = 'external',
                  type = 'real',
-                 value = 0.216121626,
+                 value = 1,
                  texname = '\\text{Wsl5}',
                  lhablock = 'DECAY',
-                 lhacode = [ 2000013 ])
+                 lhacode = [ -2000013 ])
 
 Wsl6 = Parameter(name = 'Wsl6',
                  nature = 'external',
                  type = 'real',
-                 value = 0.269906096,
+                 value = 1,
                  texname = '\\text{Wsl6}',
                  lhablock = 'DECAY',
-                 lhacode = [ 2000015 ])
+                 lhacode = [ -2000015 ])
 
 Wusq1 = Parameter(name = 'Wusq1',
                   nature = 'external',

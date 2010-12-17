@@ -48,6 +48,7 @@ if '__main__' == __name__:
     logging.basicConfig(level=logging.INFO)
     #my_proc_list = me_comparator.create_proc_list(['u', 'u~'], initial=2,
     #                                              final=2)
+
     #my_proc_list = me_comparator.create_proc_list_enhanced(
     #    ['u', 'u~', 'd', 'd~', 'g'],['six', 'six~'],['g'],
     #    initial=2, final_1=1, final_2 = 1)
@@ -57,6 +58,7 @@ if '__main__' == __name__:
                     'g g > go go',
                     'z z > n1 n1',
                     'w+ w- > n2 n2']
+
 
     # Create a MERunner object for MG4
     my_mg4 = me_comparator.MG4Runner()

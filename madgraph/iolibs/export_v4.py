@@ -594,11 +594,10 @@ def write_dname_file(writer, matrix_element, fortran_model):
 #===============================================================================
 # write_iproc_file
 #===============================================================================
-def write_iproc_file(writer, matrix_element, fortran_model):
-    """Write the iproc.inc file for MG4"""
+def write_iproc_file(writer, me_number):
+    """Write the iproc.dat file for MG4"""
 
-    line = "%d" % \
-           matrix_element.get('processes')[0].get('id')
+    line = "%d" % (me_number + 1)
 
     # Write the file
     for line_to_write in writer.write_line(line):
@@ -991,6 +990,7 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
 #===============================================================================
 def generate_subprocess_directory_v4_madevent(matrix_element,
                                               fortran_model,
+                                              me_number,
                                               path=os.getcwd()):
     """Generate the Pxxxxx directory for a subprocess in MG4 madevent,
     including the necessary matrix.f and various helper files"""
@@ -1059,8 +1059,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 
     filename = 'iproc.dat'
     write_iproc_file(writers.FortranWriter(filename),
-                     matrix_element,
-                     fortran_model)
+                     me_number)
 
     filename = 'leshouche.inc'
     write_leshouche_file(writers.FortranWriter(filename),
@@ -1602,20 +1601,21 @@ class UFO_model_to_mg4(object):
         fsock.writelines(header)
         
         # Write the Mass definition/ common block
-        masses = [param.name for param in self.params_ext \
-                                                    if param.lhablock == 'MASS']
-        
-        is_mass = lambda name: name[0].lower() == 'm' and len(name)<4
-        masses += [param.name for param in self.params_dep + 
-                            self.params_indep if param.type == 'real'
-                            and is_mass(param.name)]      
+        masses = set()
+        widths = set()
+        for particle in self.model.get('particles'):
+            #find masses
+            one_mass = particle.get('mass')
+            if one_mass.lower() != 'zero':
+                masses.add(one_mass)
+            # find width
+            one_width = particle.get('width')
+            if one_width.lower() != 'zero':
+                widths.add(one_width)
+            
         
         fsock.writelines('double precision '+','.join(masses)+'\n')
         fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
-        
-        # Write the Width definition/ common block
-        widths = [param.name for param in self.params_ext \
-                                                   if param.lhablock == 'DECAY']
         fsock.writelines('double precision '+','.join(widths)+'\n')
         fsock.writelines('common/widths/ '+','.join(widths)+'\n\n')
         
@@ -1644,8 +1644,14 @@ class UFO_model_to_mg4(object):
         """create input.inc containing the definition of the parameters"""
         
         fsock = self.open('input.inc', format='fortran')
+
+        #find mass/ width since they are already define
+        already_def = set()
+        for particle in self.model.get('particles'):
+            already_def.add(particle.get('mass').lower())
+            already_def.add(particle.get('width').lower())
         
-        is_valid = lambda name: name!='G' and not (name[0].lower() == 'm' and len(name)<4)
+        is_valid = lambda name: name!='G' and name.lower() not in already_def
         
         real_parameters = [param.name for param in self.params_dep + 
                             self.params_indep if param.type == 'real'

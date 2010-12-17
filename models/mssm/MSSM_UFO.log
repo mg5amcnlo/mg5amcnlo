@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 302 $
-# Mathematica version: 7.0 for Linux x86 (64-bit) (February 18, 2009)
-# Date: Tue 7 Sep 2010 17:33:09
+# This file was automatically created by FeynRules $Revision: 364 $
+# Mathematica version: 7.0 for Linux x86 (32-bit) (February 18, 2009)
+# Date: Sat 4 Dec 2010 11:43:16
 
 
 # 
@@ -42,6 +42,8 @@
    * Number of flavored vertices: 931
    * Saved vertices in InterfaceRun[ 1 ].
    * Checked QNumber conservation.
+      - Quantum number GhostNumber conserved in all vertices.
+      - Quantum number Q conserved in all vertices.
    * particles.py written.
    * parameters.py written.
 #
