@@ -593,7 +593,7 @@ class RestrictModel(model_reader.ModelReader):
         for param in used:
             data = self['parameters'][zero_param_info[param]['dep']]
             tag = zero_param_info[param]['tag']
-            data[tag] = base_objects.ModelVariable(param, 'ZERO', 'real')
+            data[tag] = base_objects.ModelVariable(param, '0.0', 'real')
         
         # remove completely useless parameters
         for param in zero_parameters:

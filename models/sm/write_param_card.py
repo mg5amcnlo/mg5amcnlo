@@ -1,5 +1,5 @@
 
-__date__ = "3 june 2010"
+__date__ = "19 December 2010"
 __author__ = 'olivier.mattelaer@uclouvain.be'
 
 class ParamCardWriter(object):
@@ -53,9 +53,9 @@ class ParamCardWriter(object):
         
         lhacode=' '.join(['%3s' % key for key in param.lhacode])
         if lhablock != 'DECAY':
-            text = """  %s %e # %s \n""" % (lhacode, param.value, param.name ) 
+            text = """  %s %e # %s \n""" % (lhacode, param.value.real, param.name ) 
         else:
-            text = '''DECAY %s %e \n''' % (lhacode, param.value)
+            text = '''DECAY %s %e \n''' % (lhacode, param.value.real)
         self.fsock.write(text) 
             
             
