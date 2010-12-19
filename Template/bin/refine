@@ -96,6 +96,7 @@ if [[ -d Source ]]; then
     cd Source
     make ../bin/sum_html >& /dev/null
     make ../bin/gen_ximprove >&/dev/null
+    make ../bin/combine_runs >&/dev/null
     make all >& /dev/null
     cd ..
 else
@@ -155,6 +156,7 @@ if [[ $mode -ge 1 ]]; then
 fi
     cd ../SubProcesses
     echo "Combining runs" >& ../status
+    ../bin/combine_runs
     ../bin/sumall
 cd ..
 $dirbin/gen_crossxhtml-pl $5

@@ -27,6 +27,8 @@ c
       parameter (max_iter = 9)              !during refinement
       integer    nhel_refine                !Number of helicities to sum for each
       parameter (nhel_refine=1)             !phase space point. (0 = sum_all)
+      integer    MaxEventsPerJob            !Maximum number of events requested from a single job
+      parameter (MaxEventsPerJob=1000)	
 c
 c     The following are used for parallel running
 c

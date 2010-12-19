@@ -29,7 +29,7 @@ GENSUDGRID = gensudgrid.o is-sud.o setrun_gen.o rw_routines.o open_file.o
 
 # $B$ mod_all $B$ !this is a tag for modify main compilation in MadWeight compilation. Don't edit this line
 all: $(LIBDIR)libdhelas3.a $(LIBDIR)libdsample.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a  $(LIBDIR)libmodel.a $(LIBDIR)libcernlib.a
-#    $E$ mod_all $E$ !this is a tag for modify main compilation in MadWeight compilation. Don't edit this line
+# $E$ mod_all $E$ !this is a tag for modify main compilation in MadWeight compilation. Don't edit this line
 
 scaled.dat:
 	combine_events
@@ -84,6 +84,7 @@ sum_html.o: sum_html.f genps.inc
 gen_ximprove.o: gen_ximprove.f run_config.inc
 combine_events.o: combine_events.f run_config.inc
 select_events.o: select_events.f run_config.inc
+setrun.o: setrun.f nexternal.inc leshouche.inc
 
 $(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o
 	$(g77) $(FFLAGS) -o gen_ximprove gen_ximprove.o ranmar.o rw_routines.o open_file.o
@@ -96,4 +97,8 @@ $(BINDIR)combine_events: $(COMBINE)
 $(BINDIR)gensudgrid: $(GENSUDGRID) $(LIBDIR)libpdf.a $(LIBDIR)libcernlib.a
 	$(g77) $(FFLAGS) -o gensudgrid $^
 	mv gensudgrid $(BINDIR)
+
+$(BINDIR)combine_runs: combine_runs.o rw_events.o
+	$(g77) $(FFLAGS) -o combine_runs combine_runs.o rw_events.o
+	mv combine_runs $(BINDIR)
 

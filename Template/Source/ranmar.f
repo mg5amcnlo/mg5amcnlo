@@ -12,7 +12,7 @@ c
 c
 c     Local
 c
-      integer init, ioffset
+      integer init, ioffset, joffset
       integer     ij, kl, iseed1,iseed2
 
 c
@@ -35,11 +35,19 @@ c-----
 c
 c     TJS 3/13/2008
 c     Modified to allow for more sequences 
-c     iseed can be between 0 and 31328*30081
+c     iseed can be between 0 and 31328*30081/31300
 c     before pattern repeats
 c
+c
+c     TJS 12/3/2010
+c     multipied iseed to give larger values more likely to make change
+c     get offset for multiple runs of single process
+c
+         call get_moffset(joffset)
+         joffset = joffset * 3157
+         iseed = iseed * 31300       
          ij=1802+jconfig + mod(iseed,30081)
-         kl=9373+(iseed/31328)+ioffset 
+         kl=9373+(iseed/31328)+ioffset + joffset
          write(*,'(a,i6,a3,i6)') 'Using random seed offsets',jconfig," : ",ioffset
          write(*,*) ' with seed', iseed
          do while (ij .gt. 31328)
@@ -137,6 +145,36 @@ c-----
          close(lun)
          return
  24   close(lun)
+ 25   iseed = 0
+      end
+
+      subroutine get_moffset(iseed)
+c-------------------------------------------------------
+c     Looks for file moffset.dat to offset random number gen
+c------------------------------------------------------
+      implicit none
+c
+c     Constants
+c
+      integer    lun
+      parameter (lun=22)
+c
+c     Arguments
+c
+      integer iseed
+c
+c     Local
+c
+c-----
+c  Begin Code
+c-----
+
+      open(unit=lun,file='./moffset.dat',status='old',err=25)
+         read(lun,*,err=14) iseed
+         write(*,*) "Got moffset",iseed
+         close(lun)
+         return
+ 14   close(lun)
  25   iseed = 0
       end
 

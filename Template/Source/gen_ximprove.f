@@ -336,6 +336,7 @@ c
          write(26,20) 'fi'
          write(26,20) 'cd $j'
          write(26,20) 'rm -f $k'
+c         write(26,20) 'rm -f moffset.dat'
 
          write(26,'(5x,a,2i8,a)') 'echo "',npoints,max_iter,
      $        '" >& input_sg.txt' 
@@ -510,6 +511,11 @@ c
       double precision xt(max_amps),elimit
       double precision yerr,ysec,rerr
       logical fopened
+      character*26 cjobs
+      integer mjobs,ijob,jc
+      character*150 fname
+
+      data cjobs/"abcdefghijklmnopqrstuvwxyz"/
 c-----
 c  Begin Code
 c-----
@@ -536,7 +542,7 @@ c
          k=k+1
       enddo
       k=k-1
-c      write(*,*) 'Number of diagrams to fix',k
+      write(*,*) 'Number of diagrams to fix',k
 c
 c     Now readjust because most don't contribute
 c
@@ -561,10 +567,36 @@ c
          npoints = max(npoints,min_events)
          npoints = min(npoints,max_events)
 
-c         np = np + 5*npoints
          npfile=npfile+1
-         np = nfiles*npfile+1-ifile
-         if (np .gt. k .or. ifile.eq.0) then
+c         np = nfiles*npfile+1-ifile   !Fancy order for combining channels removed 12/6/2010 by tjs
+         np = i
+c
+c     tjs 12/5/2010
+c     Add loop to allow for multiple jobs on a single channel
+c
+         mjobs = (goal_lum*xsec(io(np))*1000 / MaxEventsPerJob + 0.9)
+         write(*,*) "Workcing on Channel ",i,io(np),xt(np), goal_lum*xsec(io(np))*1000 /maxeventsperjob
+         if (mjobs .gt. 26)  then
+            write(*,*) 'Error in gen_ximprove.f, too many events requested ',mjobs*maxeventsperjob
+            mjobs=26
+         endif
+         if (mjobs .lt. 1)  mjobs=1
+         if (mjobs .gt. 1) then
+c
+c           write multijob.dat file for combine_runs.f 
+c
+            jc = index(gn(io(np)),"/")
+            fname = gn(io(np))(1:jc)// "multijob.dat"
+c            write(*,*) "Writing file ", fname
+            open(unit=15,file=fname,status="unknown",err=11)
+            write(15,*) mjobs
+ 11         close(15)
+         endif
+         do ijob = 1, mjobs
+c---
+c tjs
+c---
+         if (npfile .gt. max_np .or. ifile.eq.0 .or. mjobs .gt. 1) then
             if (fopened) then
                write(26,15) 'rm -f run.$script >& /dev/null'
                write(26,15) 'touch done.$script >& /dev/null'
@@ -572,17 +604,20 @@ c         np = np + 5*npoints
             endif
             fopened=.true.
             call open_bash_file(26)
-c            np = 5*npoints
             ifile=ifile+1
             npfile=1
-            np = ifile
+c            if (ijob .eq. 1)  np = ifile !Only increment once / source channel
          endif
          ip = index(gn(io(np)),'/')
          write(*,*) 'Channel ',gn(io(np))(2:ip-1),
      $        yerr, jpoints(io(np)),npoints
 
          ip = index(gn(io(np)),'/')
-         write(26,'(2a)') 'j=',gn(io(np))(1:ip-1)
+         if (mjobs .gt. 1) then
+            write(26,'(3a)') 'j=',gn(io(np))(1:ip-1),cjobs(ijob:ijob)
+         else
+            write(26,'(3a)') 'j=',gn(io(np))(1:ip-1)
+         endif
 c
 c     Now write the commands
 c      
@@ -592,6 +627,12 @@ c
          write(26,20) 'fi'
          write(26,20) 'cd $j'
          write(26,20) 'rm -f $k'
+         write(26,20) 'rm -f moffset.dat'
+         write(26,*) 'echo ',ijob, ' > moffset.dat'
+
+c
+c     
+c
 c
 c     Now I'll add a check to make sure the grid has been
 c     adjusted  (ftn99 or ftn25 exist)
@@ -609,7 +650,7 @@ c
 c     tjs 8/7/2007  Allow stop when have enough events
 c
          write(*,*) "Cross section",i,io(np),xsec(io(np)),mfact(io(np))
-         write(26,'(9x,a,f11.3,a)') 'echo "',-goal_lum*xsec(io(np))*1000,
+         write(26,'(9x,a,f11.3,a)') 'echo "',-goal_lum*xsec(io(np))*1000/mjobs,
      $        '" >> input_sg.txt'                       !Accuracy
          write(26,'(9x,a)') 'echo "2" >> input_sg.txt'  !Grid Adjustment
          write(26,'(9x,a)') 'echo "1" >> input_sg.txt'  !Suppression
@@ -631,7 +672,7 @@ c
 c
 c tjs 8/7/2007    Change to request events not accuracy
 c
-         write(26,'(9x,a,f11.3,a)') 'echo "',-goal_lum*xsec(io(np))*1000,
+         write(26,'(9x,a,f11.3,a)') 'echo "',-goal_lum*xsec(io(np))*1000/mjobs,
      $        '" >> input_sg.txt'                       !Accuracy
 c         write(26,'(9x,a,e12.3,a)') 'echo "',-goal_lum*mfact(io(np)),
 c     $        '" >> input_sg.txt'
@@ -658,7 +699,12 @@ c         write(26,20) 'qsub -N $1$j public_sg.sh >> ../../running_jobs'
          write(26,25) 'cat $k >> log.txt'
          write(26,20) 'fi'
          write(26,20) 'cd ../'
-      enddo
+c------
+c  tjs  end loop over split process   
+c------
+      enddo  !(ijob, split channel)         
+
+      enddo !(k  each channel)
       if (fopened) then
         write(26,15) 'rm -f run.$script'
         write(26,15) 'touch done.$script'
