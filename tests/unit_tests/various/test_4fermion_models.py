@@ -127,10 +127,10 @@ class TestTchannelModels(Models4FermionTest):
         self.full_model_4ferm.set_parameters_and_couplings()
     
     def test_uu_to_tt_tch(self):
-        """Test the process u u > t t between s-channel and 4fermion vertex"""
+        """Test the process u u > t t between t-channel and 4fermion vertex"""
         self.uu_to_ttng_test(0)
 
     def test_uu_to_ttg_tch(self):
-        """Test the process u u > t t g between s-channel and 4fermion vertex"""
+        """Test the process u u > t t g between t-channel and 4fermion vertex"""
         self.uu_to_ttng_test(1)
         
