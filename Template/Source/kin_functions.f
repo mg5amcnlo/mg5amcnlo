@@ -73,6 +73,25 @@ c-----
       RETURN
       END
 
+      DOUBLE PRECISION FUNCTION PtDot(P1,P2)
+c************************************************************************
+c     Pt of 2 particles
+c************************************************************************
+      IMPLICIT NONE
+c
+c     Arguments
+c
+      double precision p1(0:3),p2(0:3),dsign
+
+c      write (*,*)'Px of particle 1: ',P1(1)
+c      write (*,*)'Px of particle 2: ',P2(1)
+c      write (*,*)'Py of particle 1: ',P1(2)
+c      write (*,*)'Py of particle 2: ',P2(2)
+c
+      PtDot = (P1(1)+P2(1))**2+(P1(2)+P2(2))**2
+      RETURN
+      END
+
       DOUBLE PRECISION  FUNCTION rap(p)
 c************************************************************************
 c     Returns rapidity of particle in the lab frame

@@ -232,6 +232,13 @@ c*********************************************************************
  	call get_real   (npara,param,value,"ptheavy",ptheavy,0d0)
 
 c*********************************************************************
+c	Pt of pairs of leptons (charged and neutrals)                *
+c*********************************************************************
+
+      call get_real   (npara,param,value," ptllmin ",ptllmin,0d0)
+      call get_real   (npara,param,value," ptllmax ",ptllmax,1d5)
+
+c*********************************************************************
 c Check   the pt's of the jets sorted by pt                          *
 c*********************************************************************
 

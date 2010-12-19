@@ -62,9 +62,9 @@ C
 C
 C     EXTERNAL
 C
-      REAL*8 R2,DOT,ET,RAP,DJ,SumDot,pt,ALPHAS
+      REAL*8 R2,DOT,ET,RAP,DJ,SumDot,pt,ALPHAS,PtDot
       logical cut_bw,setclscales
-      external R2,DOT,ET,RAP,DJ,SumDot,pt,ALPHAS,cut_bw,setclscales
+      external R2,DOT,ET,RAP,DJ,SumDot,pt,ALPHAS,cut_bw,setclscales,PtDot
 C
 C     GLOBAL
 C
@@ -82,8 +82,9 @@ C
       double precision emax(nincoming+1:nexternal)
       double precision r2max(nincoming+1:nexternal,nincoming+1:nexternal)
       double precision s_max(nexternal,nexternal)
+      double precision ptll_min(nexternal,nexternal),ptll_max(nexternal,nexternal)
       common/to_cuts/  etmin, emin, etamax, r2min, s_min,
-     $     etmax, emax, etamin, r2max, s_max
+     $     etmax, emax, etamin, r2max, s_max,ptll_min,ptll_max
 
       double precision ptjmin4(4),ptjmax4(4),htjmin4(2:4),htjmax4(2:4)
       logical jetor
@@ -349,6 +350,29 @@ c
             endif
          enddo
       enddo
+
+
+c     s-channel min & max pt of sum of 4-momenta
+c     
+      do i=nincoming+1,nexternal-1
+         do j=i+1,nexternal
+            if(debug)write (*,*) 'ptll(',i,',',j,')=',dsqrt(PtDot(p(0,i),p(0,j)))
+            if(debug)write (*,*) dsqrt(ptll_min(j,i)),dsqrt(ptll_max(j,i))
+            if(ptll_min(j,i).gt.0.or.ptll_max(j,i).lt.1d5) then
+               tmp=PtDot(p(0,i),p(0,j))
+               notgood=(tmp .lt. ptll_min(j,i).or.tmp.gt.ptll_max(j,i))
+               if (notgood) then
+                  if(debug) write (*,*) i,j,' -> fails'
+                  passcuts=.false.
+                  return
+               endif
+            endif
+         enddo
+      enddo
+
+
+
+
 c     
 c     s-channel min & max invariant mass cuts
 c     

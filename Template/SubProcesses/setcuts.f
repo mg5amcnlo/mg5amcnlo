@@ -49,8 +49,9 @@ c--cuts
       double precision emax(nincoming+1:nexternal)
       double precision r2max(nincoming+1:nexternal,nincoming+1:nexternal)
       double precision s_max(nexternal,nexternal)
+      double precision ptll_min(nexternal,nexternal),ptll_max(nexternal,nexternal)
       common/to_cuts/  etmin, emin, etamax, r2min, s_min,
-     $     etmax, emax, etamin, r2max, s_max
+     $     etmax, emax, etamin, r2max, s_max, ptll_min, ptll_max
 
       double precision ptjmin4(4),ptjmax4(4),htjmin4(2:4),htjmax4(2:4)
       logical jetor
@@ -320,10 +321,29 @@ c
      &            (abs(idup(i,1,1)).eq.abs(idup(j,1,1))).and.
      &            (idup(i,1,1)*idup(j,1,1).lt.0)) 
      &            s_max(j,i)=mmllmax*dabs(mmllmax)  !only on l+l- pairs (same flavour)
-
             endif
          enddo
       enddo      
+
+c     
+c     ptll cut (min and max)
+c
+
+      do i=nincoming+1,nexternal-1
+         do j=i+1,nexternal
+            ptll_min(j,i)=0.0d0**2
+            ptll_max(j,i)=1d5**2
+            if(((is_a_l(i).and.is_a_l(j)).and.
+     &      (abs(idup(i,1,1)).eq.abs(idup(j,1,1))).and.
+     &      (idup(i,1,1)*idup(j,1,1).lt.0))! Leptons from same flavor but different charge
+     &       .or.(is_a_nu(i).and.is_a_l(j))
+     &       .or.(is_a_l(i).and.is_a_nu(j))   !a lepton and a neutrino
+     &       .or.(is_a_nu(i).and.is_a_nu(j))) then ! two neutrinos 
+               ptll_min(j,i)=ptllmin*dabs(ptllmin)
+               ptll_max(j,i)=ptllmax*dabs(ptllmax)
+           endif
+         enddo
+      enddo
 
 c
 c   EXTRA JET CUTS
