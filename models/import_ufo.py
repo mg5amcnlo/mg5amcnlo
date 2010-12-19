@@ -34,6 +34,7 @@ import aloha.create_aloha as create_aloha
 import models as ufomodels
 import models.model_reader as model_reader
 logger = logging.getLogger('models.import_ufo')
+logger_mod = logging.getLogger('madgraph.model')
 
 
 
@@ -535,12 +536,23 @@ class RestrictModel(model_reader.ModelReader):
         
         # clean the interactions
         for interaction in self['interactions'][:]:
+            modified = False
             for key, coupling in interaction['couplings'].items()[:]:
                 if coupling in zero_couplings:
+                    modified = True
                     del interaction['couplings'][key]
+                    
+            if modified: 
+                part_name = [part['name'] for part in interaction['particles']]
+                orders = ['%s=%s' % (order,value) 
+                               for order,value in interaction['orders'].items()]                    
             if not interaction['couplings']:
+                logger_mod.info('remove interactions: %s at order: %s' % \
+                                (' '.join(part_name),', '.join(orders)))
                 self['interactions'].remove(interaction)
-        
+            elif modified:
+                logger_mod.info('modify interactions: %s at order: %s' % \
+                                (' '.join(part_name),', '.join(orders)))                
         #clean the coupling list:
         for name, data in self['couplings'].items():
             for coupling in data[:]:
@@ -599,7 +611,9 @@ class RestrictModel(model_reader.ModelReader):
         for param in zero_parameters:
             #by pass parameter still in use
             if param in used:
+                logger_mod.info('put parameter to zero: %s' % param)
                 continue 
+            logger_mod.info('remove parameters: %s' % param)
             data = self['parameters'][zero_param_info[param]['dep']]
             data.remove(zero_param_info[param]['obj'])
             

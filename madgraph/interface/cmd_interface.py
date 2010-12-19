@@ -29,8 +29,6 @@ import sys
 import traceback
 import time
 
-import sys
-sys.path.append('../../')
 
 # Optional Library (not present on all platform)
 try:
@@ -876,6 +874,11 @@ class CheckValidForCmd(object):
                 raise self.InvalidCmd, 'Wrong restrict format'
             else:
                 del args[0]
+                
+        if self._restrict_file:
+            raise MadGraph5Error, 'This model is already restricted to the ' + \
+                        'card %s. In order to always keep track ' % self._restrict_file + \
+                        'of model modifications. We forbids multiple restrictions files.'
 
         if not os.path.isfile(args[0]):
             raise self.InvalidCmd, 'path \"%s\" is not a file' % args[0]
@@ -1391,6 +1394,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _export_format = 'madevent'
     _mgme_dir = MG4DIR
     _comparisons = None
+    _restrict_file = None
     
     def __init__(self, mgme_dir = '', *completekey, **stdin):
         """ add a tracker of the history """
@@ -1545,8 +1549,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         elif args[0] == 'interactions' and len(args) == 1:
             text = "Current model contains %i interactions\n" % \
                     len(self._curr_model['interactions'])
-            for inter in self._curr_model['interactions']:
-                text += str(inter['id']) + ':'
+            for i, inter in enumerate(self._curr_model['interactions']):
+                text += str(i+1) + ':'
                 for part in inter['particles']:
                     if part['is_part']:
                         text += part['name']
@@ -2142,6 +2146,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         if args[0].startswith('model'):
             self._model_v4_path = None
+            self._restrict_file = None
             if args[0].endswith('_v4'):
                 self._curr_model, self._model_v4_path = \
                                  import_v4.import_model(args[1], self._mgme_dir)
@@ -2433,9 +2438,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if self._export_format == 'madevent':
             export_v4.copy_v4template(self._mgme_dir, self._export_dir,
                                       not noclean)
+            export_v4.cp_model_restriction(self._restrict_file, self._export_dir)
         elif self._export_format == 'standalone':
             export_v4.copy_v4standalone(self._mgme_dir, self._export_dir,
                                         not noclean)
+            export_v4.cp_model_restriction(self._restrict_file, self._export_dir)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
         elif not os.path.isdir(self._export_dir):
@@ -2646,8 +2653,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Check args validity
         self.check_restrict(args)
         
+        
         self._curr_model = import_ufo.RestrictModel(self._curr_model)
         self._curr_model.restrict_model(args[0])
+        self._restrict_file = args[0]
+        
 
     def do_help(self, line):
         """ propose some usefull possible action """
