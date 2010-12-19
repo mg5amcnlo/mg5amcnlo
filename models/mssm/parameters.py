@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 302 $
-# Mathematica version: 7.0 for Linux x86 (64-bit) (February 18, 2009)
-# Date: Tue 7 Sep 2010 17:45:02
+# This file was automatically created by FeynRules $Revision: 364 $
+# Mathematica version: 7.0 for Linux x86 (32-bit) (February 18, 2009)
+# Date: Sat 4 Dec 2010 12:26:05
 
 
 
@@ -801,14 +801,6 @@ ME = Parameter(name = 'ME',
                lhablock = 'MASS',
                lhacode = [ 11 ])
 
-MM = Parameter(name = 'MM',
-               nature = 'external',
-               type = 'real',
-               value = 0.,
-               texname = '\\text{MM}',
-               lhablock = 'MASS',
-               lhacode = [ 13 ])
-
 MTA = Parameter(name = 'MTA',
                 nature = 'external',
                 type = 'real',
@@ -817,22 +809,6 @@ MTA = Parameter(name = 'MTA',
                 lhablock = 'MASS',
                 lhacode = [ 15 ])
 
-MU = Parameter(name = 'MU',
-               nature = 'external',
-               type = 'real',
-               value = 0.,
-               texname = 'M',
-               lhablock = 'MASS',
-               lhacode = [ 2 ])
-
-MC = Parameter(name = 'MC',
-               nature = 'external',
-               type = 'real',
-               value = 0.,
-               texname = '\\text{MC}',
-               lhablock = 'MASS',
-               lhacode = [ 4 ])
-
 MT = Parameter(name = 'MT',
                nature = 'external',
                type = 'real',
@@ -840,22 +816,6 @@ MT = Parameter(name = 'MT',
                texname = '\\text{MT}',
                lhablock = 'MASS',
                lhacode = [ 6 ])
-
-MD = Parameter(name = 'MD',
-               nature = 'external',
-               type = 'real',
-               value = 0.,
-               texname = '\\text{MD}',
-               lhablock = 'MASS',
-               lhacode = [ 1 ])
-
-MS = Parameter(name = 'MS',
-               nature = 'external',
-               type = 'real',
-               value = 0.,
-               texname = '\\text{MS}',
-               lhablock = 'MASS',
-               lhacode = [ 3 ])
 
 MB = Parameter(name = 'MB',
                nature = 'external',

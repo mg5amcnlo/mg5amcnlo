@@ -141,7 +141,9 @@ def copy_v4standalone(mgme_dir, dir_path, clean):
 
     try:
         subprocess.call([os.path.join('bin', 'standalone')],
-                        stdout = os.open(os.devnull, os.O_RDWR), cwd=dir_path)
+                        stdout = os.open(os.devnull, os.O_RDWR),
+                        stderr = os.open(os.devnull, os.O_RDWR),
+                        cwd=dir_path)
     except OSError:
         # Probably standalone already called
         pass
@@ -779,7 +781,7 @@ def write_configs_file_from_diagrams(writer, configs, mapconfigs,
             elif vert in tchannels[:-1]:
                 lines.append("data tprid(%d,%d)/%d/" % \
                              (last_leg.get('number'), iconfig + 1,
-                              last_leg.get('id')))
+                              abs(last_leg.get('id'))))
 
     # Write out number of configs
     lines.append("# Number of configs")
@@ -831,10 +833,9 @@ def write_dname_file(writer, dir_name):
 #===============================================================================
 # write_iproc_file
 #===============================================================================
-def write_iproc_file(writer, process_id):
-    """Write the iproc.inc file for MG4"""
-
-    line = "%d" % process_id
+def write_iproc_file(writer, me_number):
+    """Write the iproc.dat file for MG4"""
+    line = "%d" % (me_number + 1)
 
     # Write the file
     for line_to_write in writer.write_line(line):
@@ -1091,7 +1092,7 @@ def write_props_file(writer, matrix_element, s_and_t_channels):
             else:
                 mass = "abs(%s)" % particle.get('mass')
             # Get width
-            if particle.get('width') == 'zero':
+            if particle.get('width').lower() == 'zero':
                 width = particle.get('width')
             else:
                 width = "abs(%s)" % particle.get('width')
@@ -1239,12 +1240,11 @@ def export_helas(helas_path, process_path):
         filepos = os.path.join(helas_path, filename)
         if os.path.isfile(filepos):
             if filepos.endswith('Makefile.template'):
-                ln(filepos, os.path.join(process_path,'Source','DHELAS'),
-                   'Makefile')
+                cp(filepos, process_path + '/Source/DHELAS/Makefile')
             elif filepos.endswith('Makefile'):
                 pass
             else:
-                ln(filepos, process_path+'/Source/DHELAS')
+                cp(filepos, process_path + '/Source/DHELAS')
 # following lines do the same but whithout symbolic link
 # 
 #def export_helas(mgme_dir, dir_path):
@@ -1327,14 +1327,22 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
 #===============================================================================
 def generate_subprocess_directory_v4_madevent(matrix_element,
                                               fortran_model,
+                                              me_number,
                                               path=os.getcwd()):
     """Generate the Pxxxxx directory for a subprocess in MG4 madevent,
     including the necessary matrix.f and various helper files"""
 
     cwd = os.getcwd()
-
-    os.chdir(path)
-
+    try:
+        os.chdir(path)
+    except OSError, error:
+        error_msg = "The directory %s should exist in order to be able " % path + \
+                    "to \"export\" in it. If you see this error message by " + \
+                    "typing the command \"export\" please consider to use " + \
+                    "instead the command \"output\". "
+        raise MadGraph5Error, error_msg 
+        
+         
     pathdir = os.getcwd()
 
     # Create the directory PN_xx_xxxxx in the specified path
@@ -1386,7 +1394,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 
     filename = 'iproc.dat'
     write_iproc_file(writers.FortranWriter(filename),
-                     matrix_element.get('processes')[0].get('id'))
+                     me_number)
 
     filename = 'leshouche.inc'
     write_leshouche_file(writers.FortranWriter(filename),
@@ -1503,6 +1511,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 #===============================================================================
 def generate_subprocess_group_directory_v4_madevent(subproc_group,
                                                     fortran_model,
+                                                    group_number,
                                                     path=os.getcwd()):
     """Generate the Pn directory for a subprocess group in MadEvent,
     including the necessary matrix_N.f files, configs.inc and various
@@ -1616,7 +1625,7 @@ def generate_subprocess_group_directory_v4_madevent(subproc_group,
 
     filename = 'iproc.dat'
     write_iproc_file(writers.FortranWriter(filename),
-                     subproc_group.get('number'))
+                     group_number)
 
     filename = 'leshouche.inc'
     write_leshouche_group_file(writers.FortranWriter(filename),
@@ -2072,13 +2081,14 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
 # Routines to output UFO models in MG4 format
 #===============================================================================
 
-def convert_model_to_mg4(model, output_dir, wanted_lorentz = []):
+def convert_model_to_mg4(model, output_dir, wanted_lorentz = [],
+                         wanted_couplings = []):
     """ Create a full valid MG4 model from a MG5 model (coming from UFO)"""
     
     # create the MODEL
     write_dir=os.path.join(output_dir, 'Source', 'MODEL')
     model_builder = UFO_model_to_mg4(model, write_dir)
-    model_builder.build()
+    model_builder.build(wanted_couplings)
     
     # Create and write ALOHA Routine
     aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
@@ -2125,7 +2135,7 @@ class UFO_model_to_mg4(object):
         self.params_ext = []   # external parameter
         self.p_to_f = parsers.UFOExpressionParserFortran()
         
-    def build(self):
+    def build(self, wanted_couplings = []):
         """modify the couplings to fit with MG4 convention and creates all the 
         different files"""
 
@@ -2144,9 +2154,13 @@ class UFO_model_to_mg4(object):
         keys.sort(key=len)
         for key, coup_list in self.model['couplings'].items():
             if 'aS' in key:
-                self.coups_dep += coup_list
+                self.coups_dep += [c for c in coup_list if
+                                   (not wanted_couplings or c.name in \
+                                    wanted_couplings)]
             else:
-                self.coups_indep += coup_list
+                self.coups_indep += [c for c in coup_list if
+                                     (not wanted_couplings or c.name in \
+                                      wanted_couplings)]
                 
         # MG4 use G and not aS as it basic object for alphas related computation
         #Pass G in the  independant list
@@ -2238,20 +2252,21 @@ class UFO_model_to_mg4(object):
         fsock.writelines(header)
         
         # Write the Mass definition/ common block
-        masses = [param.name for param in self.params_ext \
-                                                    if param.lhablock == 'MASS']
-        
-        is_mass = lambda name: name[0].lower() == 'm' and len(name)<4
-        masses += [param.name for param in self.params_dep + 
-                            self.params_indep if param.type == 'real'
-                            and is_mass(param.name)]      
+        masses = set()
+        widths = set()
+        for particle in self.model.get('particles'):
+            #find masses
+            one_mass = particle.get('mass')
+            if one_mass.lower() != 'zero':
+                masses.add(one_mass)
+            # find width
+            one_width = particle.get('width')
+            if one_width.lower() != 'zero':
+                widths.add(one_width)
+            
         
         fsock.writelines('double precision '+','.join(masses)+'\n')
         fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
-        
-        # Write the Width definition/ common block
-        widths = [param.name for param in self.params_ext \
-                                                   if param.lhablock == 'DECAY']
         fsock.writelines('double precision '+','.join(widths)+'\n')
         fsock.writelines('common/widths/ '+','.join(widths)+'\n\n')
         
@@ -2280,8 +2295,14 @@ class UFO_model_to_mg4(object):
         """create input.inc containing the definition of the parameters"""
         
         fsock = self.open('input.inc', format='fortran')
+
+        #find mass/ width since they are already define
+        already_def = set()
+        for particle in self.model.get('particles'):
+            already_def.add(particle.get('mass').lower())
+            already_def.add(particle.get('width').lower())
         
-        is_valid = lambda name: name!='G' and not (name[0].lower() == 'm' and len(name)<4)
+        is_valid = lambda name: name!='G' and name.lower() not in already_def
         
         real_parameters = [param.name for param in self.params_dep + 
                             self.params_indep if param.type == 'real'

@@ -1520,6 +1520,156 @@ class DiagramGenerationTest(unittest.TestCase):
         self.assertEqual(len(myamplitude2.get('diagrams')), 3)
 
 
+    def test_diagram_generation_identical_interactions(self):
+        """Test generation with multiple interactions for same particles
+        """
+
+        mypartlist = base_objects.ParticleList();
+        myinterlist = base_objects.InteractionList();
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        g = mypartlist[-1]
+
+        # A quark U and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[-1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        # A quark D and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'d',
+                      'antiname':'d~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'d',
+                      'antitexname':'\bar d',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':1,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        d = mypartlist[-1]
+        antid = copy.copy(d)
+        antid.set('is_part', False)
+
+        # Gluon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GUU'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [antid, \
+                                             d, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GDD'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [antid, \
+                                             d, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GNP'},
+                      'orders':{'NP':1}}))
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mymodel})
+
+        myamplitude = diagram_generation.Amplitude(myproc)
+
+        myamplitude.generate_diagrams()
+        diagrams = myamplitude.get('diagrams')
+        self.assertEqual(len(diagrams), 2)
+        self.assertEqual(diagrams[0].get('orders'),{'QCD':2})
+        self.assertEqual(diagrams[1].get('orders'),{'QCD':1, 'NP':1})
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mymodel})
+
+        myamplitude = diagram_generation.Amplitude(myproc)
+
+        myamplitude.generate_diagrams()
+        diagrams = myamplitude.get('diagrams')
+        self.assertEqual(len(diagrams), 12)
+        orders = [{'QCD':3},
+                  {'QCD':2, 'NP':1},
+                  {'QCD':2, 'NP':1},
+                  {'QCD':1, 'NP':2},
+                  {'QCD':3},
+                  {'QCD':2, 'NP':1},
+                  {'QCD':2, 'NP':1},
+                  {'QCD':1, 'NP':2},
+                  {'QCD':3},
+                  {'QCD':2, 'NP':1},
+                  {'QCD':3},
+                  {'QCD':2, 'NP':1}]
+        for diagram, order in zip(diagrams, orders):
+            self.assertEqual(diagram.get('orders'),order)
+
+
 #===============================================================================
 # Muliparticle test
 #===============================================================================

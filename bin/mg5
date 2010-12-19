@@ -72,9 +72,11 @@ if len(args) == 0:
 
 # Check if optimize mode is (and should be) activated
 if __debug__ and not options.debug:
-    subprocess.call([sys.executable] + ['-O'] + sys.argv)
-    sys.exit()
-
+    if not os.path.exists(os.path.join(root_path, 'bin','create_release.py')):
+        subprocess.call([sys.executable] + ['-O'] + sys.argv)
+        sys.exit()
+    else:
+        print 'Running MG5 in debug mode'
 
 # Set logging level according to the logging level given by options
 #logging.basicConfig(level=vars(logging)[options.logging])

@@ -66,11 +66,12 @@ if len(args) == 0:
 # Set logging level according to the logging level given by options
 logging.basicConfig(level=vars(logging)[options.logging],
                     format="%(message)s")
-    
+
 # 1. bzr branch the present directory to a new directory
 #    MadGraph5_vVERSION
 
-filepath = "MadGraph5_v" + misc.get_pkg_info()['version']
+filepath = "MadGraph5_v" + misc.get_pkg_info()['version'].replace(".", "_")
+filename = "MadGraph5_v" + misc.get_pkg_info()['version'] + ".tar.gz"
 if path.exists(filepath):
     logging.info("Removing existing directory " + filepath)
     shutil.rmtree(filepath)
@@ -78,7 +79,7 @@ if path.exists(filepath):
 logging.info("Branching " + MG5DIR + " to directory " + filepath)
 status = subprocess.call(['bzr', 'branch', MG5DIR, filepath])
 if status:
-    logging.error("Script stopped")
+    logging.error("bzr branch failed. Script stopped")
     exit()
 
 # 2. Create the automatic documentation in the apidoc directory
@@ -93,8 +94,9 @@ except:
     sys.exit()
 
 if status1:
-    info.warning('Non-0 exit code %d from epydoc. Please check output.' % \
+    logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
                  status)
+    exit()
 
 # 3. Remove the .bzr directory and the create_release.py file,
 #    take care of README files.
@@ -106,24 +108,68 @@ shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README')
 
 # 6. tar the MadGraph5_vVERSION directory.
 
-logging.info("Create the tar file " + filepath + ".tar.gz")
+logging.info("Create the tar file " + filename)
 
-status2 = subprocess.call(['tar', 'czf', filepath + ".tar.gz", filepath])
+status2 = subprocess.call(['tar', 'czf', filename, filepath])
 
 if status2:
-    logging.warning('Non-0 exit code %d from tar. Please check result.' % \
+    logging.error('Non-0 exit code %d from tar. Please check result.' % \
                  status)
+    exit()
 
-if not status1 and not status2:
-    # Remove the MadGraph5_vVERSION directory
-    logging.info("Removing directory " + filepath)
+logging.info("Running tests on directory %s", filepath)
+
+try:
+    logging.config.fileConfig(os.path.join(root_path,'tests','.mg5_logging.conf'))
+    logging.root.setLevel(eval('logging.CRITICAL'))
+    logging.getLogger('madgraph').setLevel(eval('logging.CRITICAL'))
+    logging.getLogger('cmdprint').setLevel(eval('logging.CRITICAL'))
+    logging.getLogger('tutorial').setLevel('CRITICAL')
+except:
+    pass
+
+sys.path.insert(0, os.path.realpath(filepath))
+import tests.test_manager as test_manager
+
+# Need a __init__ file to run tests
+if not os.path.exists(os.path.join(filepath,'__init__.py')):
+    open(os.path.join(filepath,'__init__.py'), 'w').close()
+
+# For acceptance tests, make sure to use filepath as MG4DIR
+
+import madgraph
+
+madgraph.MG4DIR = os.path.realpath(filepath)
+madgraph.MG5DIR = os.path.realpath(filepath)
+
+test_results = test_manager.run(package=os.path.join(filepath,'tests',
+                                                     'unit_tests'))
+
+a_test_results = test_manager.run(package=os.path.join(filepath,'tests',
+                                                       'acceptance_tests'),
+                                  )
+# Set logging level according to the logging level given by options
+logging.basicConfig(level=vars(logging)[options.logging],
+                    format="%(message)s")
+logging.root.setLevel(vars(logging)[options.logging])
+
+if not test_results.wasSuccessful():
+    logging.error("Failed %d unit tests, please check!" % \
+                    (len(test_results.errors) + len(test_results.failures)))
+
+if not a_test_results.wasSuccessful():
+    logging.error("Failed %d acceptance tests, please check!" % \
+                  (len(a_test_results.errors) + len(a_test_results.failures)))
+
+if a_test_results.errors or test_results.errors:
+    logging.error("Removing %s and quitting..." % filename)
+    os.remove(filename)
+    exit()
+
+if not a_test_results.failures and not test_results.failures:
+    logging.info("All good. Removing temporary %s directory." % filepath)
     shutil.rmtree(filepath)
-    
+else:
+    logging.error("Some failures - please check before using release file")
+
 logging.info("Thanks for creating a release.")
-logging.info("*Please* make sure that you used the latest version")
-logging.info("  of the MG/ME Template and models!")
-logging.info("*Please* check the output log above to make sure that")
-logging.info("  all copied directories are the ones you intended!")
-logging.info("*Please* untar the release tar.gz and run the acceptance ")
-logging.info("  tests before uploading the release to Launchpad!")
-logging.info("  Syntax: python tests/test_manager.py -p A")

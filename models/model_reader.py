@@ -15,6 +15,8 @@
 """Module to allow reading a param_card and setting all parameters and
 couplings for a model"""
 
+from __future__ import division
+
 import array
 import cmath
 import copy

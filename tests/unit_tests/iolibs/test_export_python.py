@@ -221,6 +221,13 @@ class IOExportPythonTest(unittest.TestCase):
         goal_method = (\
 """class Matrix_0_uux_uux(object):
 
+    def __init__(self):
+        \"\"\"define the object\"\"\"
+        self.clean()
+        
+    def clean(self):
+        self.jamp = []
+        
     def smatrix(self,p, model):
         #  
         #  MadGraph 5 v. %(version)s, %(date)s
@@ -236,6 +243,9 @@ class IOExportPythonTest(unittest.TestCase):
         # Process: u u~ > u u~
         # Process: c c~ > c c~
         #  
+        # Clean additional output
+        #
+        self.clean()
         #  
         # CONSTANTS
         #  
@@ -282,7 +292,7 @@ class IOExportPythonTest(unittest.TestCase):
         #
         # Returns amplitude squared summed/avg over colors
         # for the point with external lines W(0:6,NEXTERNAL)
-        #  
+        #
         # Process: u u~ > u u~
         # Process: c c~ > c c~
         #  
@@ -353,7 +363,7 @@ class IOExportPythonTest(unittest.TestCase):
             for j in range(ncolor):
                 ztemp = ztemp + cf[i][j]*jamp[j]
             matrix = matrix + ztemp * jamp[i].conjugate()/denom[i]   
-
+        self.jamp.append(jamp)
         return matrix
 """ % misc.get_pkg_info()).split('\n')
 

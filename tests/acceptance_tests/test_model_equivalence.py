@@ -80,12 +80,13 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         
         # import MG4 model
         model = base_objects.Model()
-        v4_path = os.path.join(MG4DIR, 'Models', 'sm')
+        v4_path = os.path.join(MG4DIR, 'models', 'sm_v4')
         if not os.path.isdir(v4_path):
-            v4_path = os.path.join(MG4DIR, 'models', 'sm_v4')
+            v4_path = os.path.join(MG4DIR, 'Models', 'sm')
             if not os.path.isdir(v4_path):
                 raise MadGraph5Error, \
                       "Please provide a valid MG/ME path with -d"
+
         model.set('particles', files.read_from_file(
                os.path.join(v4_path,'particles.dat'),
                import_v4.read_particles_v4))
@@ -126,7 +127,6 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         """Test the UFO and MG4 MSSM model correspond to the same model """
         
         # import UFO model
-        import models.mssm as model
         ufo_model = import_ufo.import_model('mssm')
         #converter = import_ufo.UFOMG5Converter(model)
         #ufo_model = converter.load_model()
@@ -136,9 +136,9 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         model = base_objects.Model()
         if not MG4DIR:
             raise MadGraph5Error, "Please provide a valid MG/ME path with -d"
-        v4_path = os.path.join(MG4DIR, 'Models', 'mssm')
+        v4_path = os.path.join(MG4DIR, 'models', 'mssm_v4')
         if not os.path.isdir(v4_path):
-            v4_path = os.path.join(MG4DIR, 'models', 'mssm_v4')
+            v4_path = os.path.join(MG4DIR, 'Models', 'mssm')
             if not os.path.isdir(v4_path):
                 raise MadGraph5Error, \
                       "Please provide a valid MG/ME path with -d"
@@ -318,7 +318,9 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
             nb_value +=1
             for i, singlevalue in enumerate(value):
                 #try:
-                    self.assertAlmostEqual(singlevalue, solutions[variable][i], 7, msg = ('fail to be equal for param %s : %s != %s' % (variable, singlevalue, solutions[variable][i])))
+                    self.assertAlmostEqual(singlevalue, solutions[variable][i], \
+                        msg='fail to be equal for param %s : %s != %s' % \
+                            (variable, singlevalue, solutions[variable][i]))
                 #except:
                 #    print i, singlevalue, [variable]
                 #    if i == 0:

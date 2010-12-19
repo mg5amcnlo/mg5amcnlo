@@ -170,7 +170,7 @@ public:
   // Info on the subprocess.
   virtual string name(  )   const {
       return "q g -> q gamma(udscb) test test test test test asasd as asd a dada djkl;sdf lkja sdfjkla;sdf l;kja+sdfkldf";}
-  virtual int    code()   const {return 201;}
+  virtual int    code()   const {return 201e-3+2.E3+.01e+2+1E+3;}
   virtual string inFlux() const {return "qg";}
 
 private:
@@ -196,6 +196,8 @@ void Sigma2ff2fftgmZ::setIdColAcol() {
 
   if ( (abs(id1)!=9&&id1<0)||(abs(id1 )==10 &&    id2 < 0) ) 
     swapColAcol( ) ;
+
+  template< double > > hej;
 
 }    """.split("\n")
 
@@ -236,7 +238,7 @@ class Sigma2qg2qgamma : public Sigma2Process
     {
       return "q g -> q gamma(udscb) test test test test test asasd as asd a dada djkl;sdf lkja sdfjkla;sdf l;kja+sdfkldf"; 
     }
-    virtual int code() const {return 201;}
+    virtual int code() const {return 201e-3 + 2.e3 + .01e+2 + 1e+3;}
     virtual string inFlux() const {return "qg";}
 
   private:
@@ -264,6 +266,8 @@ void Sigma2ff2fftgmZ::setIdColAcol()
 
   if ((abs(id1) != 9 && id1 < 0) || (abs(id1) == 10 && id2 < 0))
     swapColAcol(); 
+
+  template<double> > hej; 
 
 }
 """

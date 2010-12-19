@@ -1550,9 +1550,12 @@ class HelasMatrixElementTest(unittest.TestCase):
         wavefunction = helas_objects.HelasWavefunction(myleglist[2],
                                                        4, mybasemodel)
         wavefunction.set('mothers', mymothers)
-        self.assertEqual(helas_objects.HelasMatrixElement.\
-                         sorted_mothers(wavefunction),
-                         [mymothers[1], mymothers[0], mymothers[2]])
+        self.assertEqual([m.get('pdg_code') for m in \
+                          helas_objects.HelasMatrixElement.\
+                          sorted_mothers(wavefunction)],
+                         [mymothers[1].get('pdg_code'),
+                          mymothers[0].get('pdg_code'),
+                          mymothers[2].get('pdg_code')])
 
     def test_complicated_majorana_process(self):
         """Test majorana process z e- > n2 n2 e-

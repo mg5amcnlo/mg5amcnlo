@@ -43,7 +43,7 @@ import madgraph.core.drawing as draw_lib
 import madgraph.core.helas_objects as helas_objects
 
 import madgraph.iolibs.drawing_eps as draw
-import madgraph.iolibs.export_pythia8 as export_pythia8
+import madgraph.iolibs.export_cpp as export_cpp
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
@@ -477,15 +477,18 @@ class HelpToCmd(object):
         logger.info("-- Output any generated process(es) to file.")
         logger.info("   mode: Default mode is madevent. Default path is \'.\'.")
         logger.info("   If mode is madevent or standalone, create a copy of")
-        logger.info("   the V4 Template in the MG_ME directory, with the model and")
-        logger.info("   Helas set up appropriately.")
+        logger.info("     the V4 Template in the MG_ME directory, with the model and")
+        logger.info("     Helas set up appropriately.")
         logger.info("   - If mode is standalone, the directory will be in")
         logger.info("     Standalone format, otherwise in MadEvent format.")
         logger.info("   - If mode is matrix, output the matrix.f files for all")
         logger.info("     generated processes in directory \"name\".")
-        logger.info("   - If mode is pythia8, output the .h and .cc files for the")
-        logger.info("     processes in Pythia 8 format in directory \"name\".")
-        logger.info("   - If mode is pythia8_model, output the .h and .cc files for")
+        logger.info("   If mode is standalone_cpp, output the .h and .cc files")
+        logger.info("     for the processes and model files in standalone C++")
+        logger.info("     format in directory \"name\".")
+        logger.info("   If mode is pythia8, output the .h and .cc files for")
+        logger.info("     the processes in Pythia 8 format in directory \"name\".")
+        logger.info("   If mode is pythia8_model, output the .h and .cc files for")
         logger.info("     for the model parameters and Aloha functions for the model.")
         logger.info("   name: The name of the copy of Template.")
         logger.info("   If you put '.' instead of a name, your pwd will be used.")
@@ -502,16 +505,15 @@ class HelpToCmd(object):
 
         logger.info("syntax: check " + "|".join(self._check_opts) + " [param_card] process_definition")
         logger.info("-- check a process or set of processes. Options:")
-        logger.info("full: Checks that the model and MG5 are working properly")
-        logger.info("   by generating the all permutations of the process and")
-        logger.info("   checking that the result of calculating the resulting")
-        logger.info("   matrix elements give the same result. For processes with")
-        logger.info("   gauge bosons, check gauge invariance.")
-        logger.info("quick: A faster version of the above checks.")
-        logger.info("   Only checks a subset of permutations.")
-        logger.info("gauge: Only check that processes with massless gauge bosons")
+        logger.info("full: Perform all three checks described below:")
+        logger.info("   permutation, gauge and lorentz_invariance.")
+        logger.info("permutation: Check that the model and MG5 are working")
+        logger.info("   properly by generating permutations of the process and")
+        logger.info("   checking that the resulting matrix elements give the")
+        logger.info("   same value.")
+        logger.info("gauge: Check that processes with massless gauge bosons")
         logger.info("   are gauge invariant")
-        logger.info("lorentz_invariance: Only check that the amplitude is lorentz")
+        logger.info("lorentz_invariance: Check that the amplitude is lorentz")
         logger.info("   invariant by comparing the amplitiude in different frames")        
         logger.info("If param_card is given, that param_card is used instead")
         logger.info("   of the default values for the model.")
@@ -552,31 +554,6 @@ class HelpToCmd(object):
         logger.info("syntax: define multipart_name [=] part_name_list")
         logger.info("-- define a multiparticle")
         logger.info("   Example: define p = g u u~ c c~ d d~ s s~ b b~")
-
-    def help_export(self):
-        logger.info("syntax: export [" + "|".join(self._export_formats) + \
-              " FILEPATH] [options]")
-        logger.info("""-- export matrix elements.
-        *Note* that if you have run the 'output', export format and FILEPATH
-        are optional.
-        - For madevent, the path needs to be to a MadEvent SubProcesses
-          directory, and the result is the Pxxx directories (including the
-          diagram .ps and .jpg files) for the subprocesses as well as a
-          correctly generated subproc.mg file.
-        - For standalone, the result is a set of complete MG4 Standalone
-          process directories.
-        - For matrix, the resulting files will be
-          FILEPATH/matrix_\"process_string\".f
-        - For pythia8, the resulting files will be
-          FILEPATH/Sigma_\"process_string\".h and
-          FILEPATH/Sigma_\"process_string\".cc.
-        - For pythia8_model, the resulting files will be
-          FILEPATH/Parameters_\"process_string\".h,
-          FILEPATH/Parameters_\"process_string\".cc,
-          FILEPATH/hel_amps_\"process_string\".h and
-          FILEPATH/hel_amps_\"process_string\".cc.
-        - available options are \"-nojpeg\", to suppress generation of
-          jpeg diagrams in MadEvent 4 subprocess directories.""")
 
     def help_history(self):
         logger.info("syntax: history [FILEPATH|clean|.] ")
@@ -706,13 +683,6 @@ class CheckValidForCmd(object):
         if not os.path.isdir(args[0]):
             raise self.InvalidCmd( "%s is not a valid directory for export file" % args[0])
             
-    def check_export(self, args):
-        """check the validity of line
-        syntax: export MODE FILEPATH
-        """  
-        
-        self.check_output(args)
-    
     def check_check(self, args):
         """check the validity of args"""
         
@@ -901,7 +871,7 @@ class CheckValidForCmd(object):
             path = args.pop(0)
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
-                     ['madevent', 'standalone']:
+                     ['madevent', 'standalone', 'standalone_cpp']:
                 self.get_default_path()
             else:
                 self._export_dir = path
@@ -928,6 +898,11 @@ class CheckValidForCmd(object):
                                                name_dir(i))
         elif self._export_format == 'standalone':
             name_dir = lambda i: 'PROC_SA_%s_%s' % \
+                                    (self._curr_model['name'], i)
+            auto_path = lambda i: os.path.join(self.writing_dir,
+                                               name_dir(i))                
+        elif self._export_format == 'standalone_cpp':
+            name_dir = lambda i: 'PROC_SA_CPP_%s_%s' % \
                                     (self._curr_model['name'], i)
             auto_path = lambda i: os.path.join(self.writing_dir,
                                                name_dir(i))                
@@ -961,20 +936,6 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         """
         raise self.WebRestriction('direct call to draw is forbidden on the web')
       
-    def check_export(self, args):
-        """check the validity of line
-        syntax: export MODE FILEPATH
-        No FilePath authorized on the web
-        """  
-
-
-        if len(args) > 0:
-            raise self.WebRestriction('Path can\'t be specified on the web.' \
-                                      + 'use the output command to avoid the '\
-                                      + 'need to specify a path')
-  
-        return CheckValidForCmd.check_export(self, args)
-    
     def check_history(self, args):
         """check the validity of line
         No Path authorize for the Web"""
@@ -1100,11 +1061,6 @@ class CompleteForCmd(CheckValidForCmd):
                                     self._multiparticles.keys() + couplings)
         
             
-    def complete_export(self, text, line, begidx, endidx):
-        "Complete the export command"
-
-        return self.complete_output(text, line, begidx, endidx, ['nojpeg'], ['-nojpeg'])
-
     def complete_history(self, text, line, begidx, endidx):
         "Complete the add command"
 
@@ -1362,38 +1318,24 @@ class CompleteForCmd(CheckValidForCmd):
                 return self.path_completion(text,
                                     os.path.join('.',*[a for a in args if \
                                                       a.endswith(os.path.sep)]))
-        # Filename if directory is not given
+        # Model directory name if directory is not given
         if len(split_arg(line[0:begidx])) == 2:
             if args[1] == 'model':
-                out = [name for name in \
-                       self.path_completion(text,
+                file_cond = lambda p : os.path.exists(os.path.join(MG5DIR,'models',p,'particles.py'))
+                mod_name = lambda name: name
+            elif args[1] == 'model_v4':
+                file_cond = lambda p :  (os.path.exists(os.path.join(MG5DIR,'models',p,'particles.dat')) 
+                                      or os.path.exists(os.path.join(self._mgme_dir,'Models',p,'particles.dat')))
+                mod_name = lambda name :(name[-3:] != '_v4' and name or name[:-3]) 
+            else:
+                return []
+                
+            return [mod_name(name) for name in \
+                    self.path_completion(text,
                                             os.path.join(MG5DIR,'models'),
                                             only_dirs = True) \
-                       if not name.endswith('_v4') and \
-                       name != 'template_files']
-            elif args[1] == 'model_v4' and self._mgme_dir:
-                if os.path.isdir(os.path.join(self._mgme_dir, 'Models')):
-                    # self._mgme_dir is an MG_ME v4 directory
-                    out = [name for name in \
-                            self.path_completion(text,
-                                                 os.path.join(self._mgme_dir,
-                                                              'Models'),
-                                                 only_dirs = True) \
-                            if name not in ['CVS']]
-                elif os.path.isdir(os.path.join(self._mgme_dir, 'models')):
-                    # self._mgme_dir is the MG5DIR
-                    out = [name[:-3] for name in \
-                            self.path_completion(text,
-                                                 os.path.join(self._mgme_dir,
-                                                              
-                                                              'models'),
-                                                 only_dirs = True) \
-                            if name.endswith('_v4')]
-                else:
-                    out = self.path_completion(text)
-            else:
-                out = self.path_completion(text)
-            return out
+                       if file_cond(name)]
+                                
 
         # Options
         if len(args) > 2 and args[1].startswith('model') and args[-1][0] != '-':
@@ -1417,14 +1359,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _tutorial_opts = ['start', 'stop']
-    _check_opts = ['full', 'quick', 'gauge', 'lorentz_invariance']
+    _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
-    _export_formats = _v4_export_formats + ['pythia8',
-                       'pythia8_model']
+    _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8',
+                                            'pythia8_model']
     _set_options = ['group_subprocesses_output',
                     'ignore_six_quark_processes']
-                    
     # Variables to store object information
     _curr_model = None  #base_objects.Model()
     _curr_amps = diagram_generation.AmplitudeList()
@@ -1432,6 +1373,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _curr_fortran_model = None
     _curr_cpp_model = None
     _done_export = False
+
+    # Variables to store state information
     _multiparticles = {}
     _options = {}
     _generate_info = "" # store the first generated process
@@ -1808,7 +1751,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         lorentz_result =[]
         nb_processes = 0
         
-        if args[0] in  ['quick', 'full']:
+        if args[0] in  ['permutation', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
                                                         param_card = param_card,
                                                         quick = True)
@@ -1830,18 +1773,23 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     % (nb_processes,
                       (cpu_time2 - cpu_time1)))
 
+        text = ""
+
         if gauge_result:
-            logger.info('gauge results:')
-            logger.info(process_checks.output_gauge(gauge_result))
+            text += 'Gauge results:\n'
+            text += process_checks.output_gauge(gauge_result) + '\n'
 
         if lorentz_result:
-            logger.info('lorentz invariance results:')
-            logger.info(process_checks.output_lorentz_inv(lorentz_result))
+            text += 'Lorentz invariance results:\n'
+            text += process_checks.output_lorentz_inv(lorentz_result) + '\n'
 
         if comparisons:
-            logger.info(process_checks.output_comparisons(comparisons[0]))
+            text += 'Process permutation results:\n'
+            text += process_checks.output_comparisons(comparisons[0]) + '\n'
             self._comparisons = comparisons
 
+        logger.info(text)
+        pydoc.pager(text)
         # Restore diagram logger
         diag_logger.setLevel(old_level)
 
@@ -2230,12 +2178,20 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                              self._curr_model)
                 # Automatically turn on subprocess grouping
                 self.do_set('group_subprocesses_output True')
+                self._curr_cpp_model = \
+                      helas_call_writers.CPPUFOHelasCallWriter(\
+                                                             self._curr_model)
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
 
             # Do post-processing of model
             self.process_model()
 
+            # Reset amplitudes and matrix elements and global checks
+            self._curr_amps = diagram_generation.AmplitudeList()
+            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+            process_checks.store_aloha = []
+            
         elif args[0] == 'command':
             if not os.path.isfile(args[1]):
                 raise MadGraph5Error("Path %s is not a valid pathname" % args[1])
@@ -2386,7 +2342,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self._export_dir = os.path.sep.join(path_split[:-2])
                 
     
-
     def do_load(self, line):
         """Load information from file"""
 
@@ -2432,8 +2387,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     if not model.get('parameters'):
                         # This is a v4 model.  Look for path.
                         self._model_v4_path = import_v4.find_model_path(\
-                               model.get('name').replace("_v4", ""),
-                               self._mgme_dir)
+                                   model.get('name').replace("_v4", ""),
+                                   self._mgme_dir)
                         self._curr_fortran_model = \
                                 helas_call_writers.FortranHelasCallWriter(\
                                                               model)
@@ -2542,6 +2497,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         elif self._export_format == 'standalone':
             export_v4.copy_v4standalone(self._mgme_dir, self._export_dir,
                                         not noclean)
+        elif self._export_format == 'standalone_cpp':
+            export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
         elif not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
 
@@ -2553,10 +2510,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if nojpeg:
             options = '-nojpeg'
 
-        self.do_export(options)
+        self.export(options)
 
     # Export a matrix element
-    def do_export(self, line):
+    def export(self, line):
         """Export a generated amplitude to file"""
 
         def generate_matrix_elements(self):
@@ -2580,11 +2537,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         args = split_arg(line)
         # Check the validity of the arguments and return the output path
-        self.check_export(args)
+        if __debug__:
+            self.check_output(args)
 
         if self._export_format == 'pythia8_model':
             cpu_time1 = time.time()
-            export_pythia8.convert_model_to_pythia8(\
+            export_cpp.convert_model_to_pythia8(\
                             self._curr_model, self._export_dir)
             cpu_time2 = time.time()
             logger.info(("Exported UFO model to Pythia 8 format in %0.3f s") \
@@ -2615,10 +2573,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         nojpeg = '-nojpeg' in args
 
         path = self._export_dir
-        if self._export_format in ['madevent', 'standalone']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
             path = os.path.join(path, 'SubProcesses')
-
+            
         if self._export_format == 'madevent':
+
             if group_subprocesses:
                 nojpeg = True
                 ndiags = 0
@@ -2648,10 +2607,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                           sp_group.get('matrix_elements')])
                 cpu_time = time.time() - cpu_time1
                 cpu_time1 = time.time()
-                for me_group in subproc_groups:
+                for (group_number, me_group) in enumerate(subproc_groups):
                     calls = calls + \
                          export_v4.generate_subprocess_group_directory_v4_madevent(\
-                                me_group, self._curr_fortran_model, path)
+                                me_group, self._curr_fortran_model,
+                                group_number, path)
                     matrix_elements = \
                                  me_group.get('matrix_elements')
                     self._curr_matrix_elements.get('matrix_elements').\
@@ -2659,10 +2619,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 cpu_time2 = time.time() - cpu_time1
             else:
                 cpu_time1 = time.time()
-                for me in self._curr_matrix_elements.get('matrix_elements'):
+                for me_number, me in \
+                   enumerate(self._curr_matrix_elements.get('matrix_elements')):
                     calls = calls + \
                             export_v4.generate_subprocess_directory_v4_madevent(\
-                                me, self._curr_fortran_model, path)
+                                me, self._curr_fortran_model, me_number, path)
 
                 cpu_time2 = time.time() - cpu_time1
 
@@ -2699,11 +2660,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             cpu_time2 = time.time() - cpu_time1
 
         if self._export_format == 'pythia8':
-            self._curr_cpp_model = \
-                  helas_call_writers.Pythia8UFOHelasCallWriter(self._curr_model)
-            export_pythia8.generate_process_files_pythia8(\
+            export_cpp.generate_process_files_pythia8(\
                             self._curr_matrix_elements, self._curr_cpp_model,
                             process_string = self._generate_info, path = path)
+                
+        if self._export_format == 'standalone_cpp':
+            for me in self._curr_matrix_elements.get('matrix_elements'):
+                export_cpp.generate_subprocess_directory_standalone_cpp(\
+                              me, self._curr_cpp_model,
+                              path = path)
                 
         logger.info(("Generated helas calls for %d subprocesses " + \
               "(%d diagrams) in %0.3f s") % \
@@ -2727,7 +2692,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Remember that we have done export
         self._done_export = (self._export_dir, self._export_format)
 
-        if self._export_format in ['madevent', 'standalone']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
             # Automatically run finalize
             options = []
             if nojpeg:
@@ -2761,9 +2726,23 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # actually used in the wavefunctions and amplitudes in
             # these processes
             wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
+            wanted_couplings = self._curr_matrix_elements.get_used_couplings()
             export_v4.convert_model_to_mg4(self._curr_model,
                                            os.path.join(self._export_dir),
-                                           wanted_lorentz)
+                                           wanted_lorentz,
+                                           wanted_couplings)
+        if self._export_format == 'standalone_cpp':
+            logger.info('Export UFO model to C++ format')
+            # wanted_lorentz are the lorentz structures which are
+            # actually used in the wavefunctions and amplitudes in
+            # these processes
+            wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
+            wanted_couplings = self._curr_matrix_elements.get_used_couplings()
+            export_cpp.convert_model_to_cpp(self._curr_model,
+                                            os.path.join(self._export_dir),
+                                            wanted_lorentz,
+                                            wanted_couplings)
+            export_cpp.make_model_cpp(self._export_dir)
 
         if self._export_format.startswith('madevent'):
             os.system('touch %s/done' % os.path.join(self._export_dir,

@@ -70,7 +70,8 @@ def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1):
                                    re_opt=re_opt):
         data = collect.loadTestsFromName(test_fct)
         testsuite.addTest(data)
-    unittest.TextTestRunner(verbosity=verbosity).run(testsuite)
+        
+    return unittest.TextTestRunner(verbosity=verbosity).run(testsuite)
 
 #===============================================================================
 # TestFinder
