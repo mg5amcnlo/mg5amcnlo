@@ -380,12 +380,12 @@ class ColorAmpTest(unittest.TestCase):
         # g q > six q~
         my_cs = color.ColorString([color.K6(3,-1000,4),
                                    color.T(1,-1000,2)])
-        goal_cs = color.ColorString([color.EpsilonBar(4,2001,3003),
-                                     color.T(1001,2)])
+        goal_cs = color.ColorString([color.T(1001,2), color.T(1003,4),
+                                     color.T(3003,2001)])
         goal_cs.coeff = fractions.Fraction(1, 4)
         self.assertEqual(color_amp.ColorBasis.get_color_flow_string(my_cs,
                                                     [(8, 1, 1001, 2001),
-                                                     (6, 3, 1003, 2003, 3003)]),
+                                                     (6, 3, 1003, 3003)]),
                          goal_cs)
 
         # g q~ > trip > q~ q q~
