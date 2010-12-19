@@ -162,9 +162,12 @@ c-----
          nbw = 0
          tsgn = 1d0
          do i=-1,-(nexternal-3),-1
-            if (iforest(1,i,iconfig) .eq. 1) tsgn=-1d0
-            if (pwidth(i,iconfig) .gt. 0 .and. tsgn .eq. 1d0) then
-               nbw=nbw+1
+            if (iforest(1,i,iconfig) .eq. 1) then
+              tsgn=-1d0
+              cycle
+            endif
+            nbw=nbw+1
+            if (pwidth(i,iconfig) .gt. 0d0) then
                if (lbw(nbw) .eq. 1) then
                   write(*,*) 'Requiring BW ',i,nbw
                elseif(lbw(nbw) .eq. 2) then
@@ -192,8 +195,9 @@ c-----
             xp(j,i) = xp(j,iforest(1,i,iconfig))
      $           +tsgn*xp(j,iforest(2,i,iconfig))
          enddo
-         if (tsgn .gt. 0d0 .and. pwidth(i,iconfig) .gt. 0d0 ) then !This is B.W.
-            nbw = nbw+1
+         if (tsgn .lt. 0d0) cycle
+         nbw=nbw+1
+         if (pwidth(i,iconfig) .gt. 0d0 ) then !This is B.W.
 c            write(*,*) 'Checking BW',nbw
             xmass = sqrt(dot(xp(0,i),xp(0,i)))
 c            write(*,*) 'xmass',xmass,pmass(i,iconfig)

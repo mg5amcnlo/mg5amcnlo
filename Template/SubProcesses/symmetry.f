@@ -260,8 +260,8 @@ c-----
                enddo
                do j=1,nexternal-3
 c                  write(*,*) 'Width',pwidth(-j,i),j,i
+                  nbw=nbw+1
                   if (pwidth(-j,i) .gt. 1d-20) then
-                     nbw=nbw+1
                      write(*,*) 'Got bw',-nbw,j
                      if(lconflict(-j).or.gForceBW(-j,i)) then
                         if(lconflict(-j)) write(*,*) 'Got conflict ',-nbw,j
@@ -332,8 +332,8 @@ c
                   iarray(j)=0   !Assume no cuts on BW
                enddo
                do j=1,nexternal-3
+                  nbw=nbw+1
                   if (pwidth(-j,i) .gt. 1d-20) then
-                     nbw=nbw+1
                      write(*,*) 'Got bw',nbw,j
                      if(lconflict(-j).or.gForceBW(-j,i)) then
                         iarray(nbw)=1 !Cuts on BW
