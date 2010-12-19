@@ -29,6 +29,9 @@ import sys
 import traceback
 import time
 
+import sys
+sys.path.append('../../')
+
 # Optional Library (not present on all platform)
 try:
     import readline
@@ -554,6 +557,13 @@ class HelpToCmd(object):
         logger.info("-- define a multiparticle")
         logger.info("   Example: define p = g u u~ c c~ d d~ s s~ b b~")
 
+    def help_restrict(self):
+        logger.info("syntax: restrict [model] param_card")
+        logger.info('   Suppress in the model all the interactions with zero')
+        logger.info('   couplings according to the param_card given in parameter.')
+        logger.info('   All zero parameter of the param_card are also suppress of')
+        logger.info('   the model.')
+        
     def help_history(self):
         logger.info("syntax: history [FILEPATH|clean|.] ")
         logger.info("   If FILEPATH is \'.\' and \'output\' is done,")
@@ -853,6 +863,23 @@ class CheckValidForCmd(object):
             text = 'No processes generated. Please generate a process first.'
             raise self.InvalidCmd(text)
 
+    def check_restrict(self,args):
+        """ check the format: restrict [model] param_card.dat"""
+        
+        if len(args) > 2:
+            self.help_restrict()
+            raise self.InvalidCmd, 'Wrong restrict format'
+        
+        if len(args) == 2:
+            if  args[0] != "model":
+                self.help_restrict()
+                raise self.InvalidCmd, 'Wrong restrict format'
+            else:
+                del args[0]
+
+        if not os.path.isfile(args[0]):
+            raise self.InvalidCmd, 'path \"%s\" is not a file' % args[0]
+            
     def get_default_path(self):
         """Set self._export_dir to the default (\'auto\') path"""
         
@@ -900,7 +927,12 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         syntax: draw FILEPATH [option=value]
         """
         raise self.WebRestriction('direct call to draw is forbidden on the web')
-      
+    
+    def check_check(self, args):
+        """ Not authorize for the Web"""
+        
+        raise self.WebRestriction('Check call is forbidden on the web')
+    
     def check_history(self, args):
         """check the validity of line
         No Path authorize for the Web"""
@@ -974,35 +1006,47 @@ class CompleteForCmd(CheckValidForCmd):
     def path_completion(self, text, base_dir = None, only_dirs = False):
         """Propose completions of text to compose a valid path"""
 
+        prefix = ''
+                
         if base_dir is None:
             base_dir = os.getcwd()
-
+            
+        if os.path.sep in text:    
+            if text.startswith('.'):
+                cur_path = text
+            else:
+                cur_path = os.path.join(base_dir, text) 
+                        
+            base_dir = os.path.normcase(os.path.dirname(cur_path))
+            text = os.path.basename(cur_path)
+            prefix = base_dir + os.path.sep
+            
+            
         if only_dirs:
-            completion = [f
+            completion = [prefix + f
                           for f in os.listdir(base_dir)
                           if f.startswith(text) and \
                           os.path.isdir(os.path.join(base_dir, f)) and \
                           (not f.startswith('.') or text.startswith('.'))
                           ]
         else:
-            completion = [f
+            completion = [prefix + f
                           for f in os.listdir(base_dir)
                           if f.startswith(text) and \
                           os.path.isfile(os.path.join(base_dir, f)) and \
                           (not f.startswith('.') or text.startswith('.'))
                           ]
 
-            completion = completion + \
-                         [f + os.path.sep
+            completion += [prefix + f + os.path.sep
                           for f in os.listdir(base_dir)
                           if f.startswith(text) and \
                           os.path.isdir(os.path.join(base_dir, f)) and \
                           (not f.startswith('.') or text.startswith('.'))
                           ]
 
-        completion += [f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
-                       f.startswith(text)]
-
+        completion += [prefix + f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
+                       f.startswith(text) if prefix[0] != '.']
+        
         return completion
 
     def model_completion(self, text, process):
@@ -1081,7 +1125,21 @@ class CompleteForCmd(CheckValidForCmd):
             couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
         return self.list_completion(text, self._particle_names + \
                                     self._multiparticles.keys() + couplings)
+    
+    def complete_restrict(self, text, line, begidx, endidx):
+        "Complete the restrict command"
+    
+        args = split_arg(line[0:begidx])
         
+        if len(args) == 1 and text == 'model'[:len(text)]:
+            return ['model']
+        
+        # Directory continuation
+        return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
+                                        only_dirs = False)
+            
+          
     def complete_check(self, text, line, begidx, endidx):
         "Complete the add command"
 
@@ -2580,6 +2638,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             logger.info('Please see ' + self._export_dir + '/README')
             logger.info('for information about how to generate events from this process.')
 
+    def do_restrict(self, line):
+        """ from a param_card.dat remove all zero interactions 
+            and all zero external parameter."""
+        
+        args = split_arg(line)
+        # Check args validity
+        self.check_restrict(args)
+        
+        self._curr_model = import_ufo.RestrictModel(self._curr_model)
+        self._curr_model.restrict_model(args[0])
+
     def do_help(self, line):
         """ propose some usefull possible action """
         
@@ -2724,6 +2793,7 @@ _draw_parser.add_option("", "--add_gap", default=0, type='float', \
 
 if __name__ == '__main__':
     
+    print 'pass here'
     run_option = sys.argv
     if len(run_option) > 1:
         # The first argument of sys.argv is the name of the program

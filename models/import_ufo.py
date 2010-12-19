@@ -28,10 +28,11 @@ import madgraph.iolibs.files as files
 import madgraph.iolibs.save_load_object as save_load_object
 from madgraph.core.color_algebra import *
 
+
 import aloha.create_aloha as create_aloha
 
 import models as ufomodels
-
+import models.model_reader as model_reader
 logger = logging.getLogger('models.import_ufo')
 
 
@@ -489,7 +490,129 @@ class OrganizeModelExpression:
         except:
             return 'complex'
             
+class RestrictModel(model_reader.ModelReader):
+    """ A class for restricting a model for a given param_card.
+    Two rules apply:
+     - Vertex with zero couplings are throw away
+     - external parameter with zero input are changed into internal parameter."""
+     
+    def restrict_model(self, param_card):
+        """apply the model restriction following param_card"""
+        
+        # compute the value of all parameters
+        self.set_parameters_and_couplings(param_card)
+        
+        # deal with couplings
+        zero_couplings = self.detect_zero_couplings()
+        self.remove_couplings(zero_couplings)
+        
+        # deal with parameters
+        zero_parameters = self.detect_zero_parameters()
+        self.put_parameters_to_zero(zero_parameters)
+
+    def detect_zero_couplings(self):
+        """return a list with the name of all vanishing couplings"""
+        
+        zero_coupling = []
+        
+        for name, value in self['coupling_dict'].items():
+            if value == 0:
+                zero_coupling.append(name)
+        return zero_coupling
+    
+    
+    def detect_zero_parameters(self):
+        """ return the list of (name of) parameter which are zero """
+        
+        null_parameters = []
+        for name, value in self['parameter_dict'].items():
+            if value == 0 and name != 'ZERO':
+                null_parameters.append(name)
+        return null_parameters
+    
+    def remove_couplings(self, zero_couplings):
+        """ remove the interactions associated to couplings"""
+        
+        # clean the interactions
+        for interaction in self['interactions'][:]:
+            for key, coupling in interaction['couplings'].items()[:]:
+                if coupling in zero_couplings:
+                    del interaction['couplings'][key]
+            if not interaction['couplings']:
+                self['interactions'].remove(interaction)
+        
+        #clean the coupling list:
+        for name, data in self['couplings'].items():
+            for coupling in data[:]:
+                if coupling.name in zero_couplings:
+                    data.remove(coupling)
+        
+    def put_parameters_to_zero(self, zero_parameters):
+        """ Remove all instance of the parameters in the model and replace it by 
+        zero when needed."""
+        
+        # treat specific cases for masses and width
+        for particle in self['particles']:
+            if particle['mass'] in zero_parameters:
+                particle['mass'] = 'ZERO'
+            if particle['width'] in zero_parameters:
+                particle['width'] = 'ZERO'
+        for pdg, particle in self['particle_dict'].items():
+            if particle['mass'] in zero_parameters:
+                particle['mass'] = 'ZERO'
+            if particle['width'] in zero_parameters:
+                particle['width'] = 'ZERO'            
+        
+        # check if the parameters is still usefull:
+        used = set()
+        # check in coupling
+        for name, coupling_list in self['couplings'].items():
+            for coupling in coupling_list:
+                for param in zero_parameters:
+                    if param in coupling.expr:
+                        used.add(param)
+                        
+        zero_param_info = {}
+        # check in parameters
+        for dep, param_list in self['parameters'].items():
+            for tag, parameter in enumerate(param_list):
+                # update information concerning zero_parameters
+                if parameter.name in zero_parameters:
+                    zero_param_info[parameter.name]= {'dep': dep, 'tag': tag, 
+                                                               'obj': parameter}
+                    continue
+                # Bypass all external parameter
+                if isinstance(parameter, base_objects.ParamCardVariable):
+                    continue
+                # check the presence of zero parameter
+                for zero_param in zero_parameters:
+                    if zero_param in parameter.expr:
+                        used.add(param)
+
+        # modify the object for those which are still used
+        for param in used:
+            data = self['parameters'][zero_param_info[param]['dep']]
+            tag = zero_param_info[param]['tag']
+            data[tag] = base_objects.ModelVariable(param, 'ZERO', 'real')
+        
+        # remove completely useless parameters
+        for param in zero_parameters:
+            #by pass parameter still in use
+            if param in used:
+                continue 
+            data = self['parameters'][zero_param_info[param]['dep']]
+            data.remove(zero_param_info[param]['obj'])
             
+        
+                
+                
+        
+        
+        
+         
+      
+    
+      
         
         
     
