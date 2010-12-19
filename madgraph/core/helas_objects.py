@@ -762,9 +762,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
             return 0
         
         wf_indices = self.get('pdg_codes')
-        # take the last index in case of identical particles
+        # Take the first index in case of identical particles
         wf_index = wf_indices.index(self.get_anti_pdg_code())
-        #wf_index = self.get('pdg_codes').index(self.get_anti_pdg_code())
         # If fermion, then we need to correct for I/O status
         spin_state = self.get_spin_state_number()
         if spin_state % 2 == 0:
@@ -803,7 +802,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         vertices = base_objects.VertexList()
 
-        if not self.get('mothers'):
+        mothers = self.get('mothers')
+
+        if not mothers:
             return vertices
 
         mothers = self.get('mothers')
@@ -948,9 +949,15 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 'legs': legs})
 
             # Add s- and t-channels from further down
-            mother_s, tchannels = \
-                      init_mothers[0].get_s_and_t_channels(ninitial, legs[-1])
+            new_mother_leg = legs[-1]
+            if init_mothers[0].get('number_external') == 1:
+                # If we are going towards external leg 1, mother of
+                # next vertex is legs[0]
+                new_mother_leg = legs[0]
 
+            mother_s, tchannels = \
+                      init_mothers[0].get_s_and_t_channels(ninitial,
+                                                           new_mother_leg)
             schannels.extend(mother_s)
 
             if ninitial == 1 or init_mothers[0].get('leg_state') == True:
@@ -1208,9 +1215,10 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
 
         return res
 
-    def sort_by_pdg_codes(self, pdg_codes, my_pdg_code):
+    def sort_by_pdg_codes(self, pdg_codes, my_pdg_code = 0):
         """Sort this HelasWavefunctionList according to the cyclic
-        order of the pdg codes given"""
+        order of the pdg codes given. my_pdg_code is the pdg code of
+        the daughter wavefunction (or 0 if daughter is amplitude)."""
 
         if not pdg_codes:
             return self, 0
@@ -1799,8 +1807,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                mothers[imo].get('spin') == mothers[imo+1].get('spin') and \
                mothers[imo].get('pdg_code') != mothers[imo+1].get('pdg_code'):
                 mothers, my_index = \
-                         mothers.sort_by_pdg_codes(self.get('pdg_codes'),
-                                                   0)
+                         mothers.sort_by_pdg_codes(self.get('pdg_codes'))
                 break
 
         if mothers != self.get('mothers'):
@@ -3406,6 +3413,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         if not arg.get('interaction_id'):
             return arg.get('mothers')
+
         my_pdg_code = 0
         my_spin = 0
         if isinstance(arg, HelasWavefunction):

@@ -50,7 +50,6 @@ if '__main__' == __name__:
     my_proc_list = []
     #my_proc_list = me_comparator.create_proc_list(['u', 'u~'], initial=2,
     #                                              final=2)
-
     #my_proc_list = me_comparator.create_proc_list_enhanced(
     #    ['u', 'u~', 'd', 'd~', 'g'],['six', 'six~'],['g'],
     #    initial=2, final_1=1, final_2 = 1)
@@ -88,6 +87,7 @@ if '__main__' == __name__:
 
     # Do some cleanup
     #my_comp.cleanup()
+    filename='mssm_results.log'
 
     filename='mssm_results.log'
 

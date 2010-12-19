@@ -202,8 +202,8 @@ class TestParallelMG4MG5_UFO(TestParallelMG4MG5):
     suffix_name = 'ufo_'
     
     
-    def test_ufo(self):
-        self.test_mg4_mg5_minitest()
+    #def test_ufo(self):
+    #    self.test_mg4_mg5_minitest()
         
-    def test_ufo_sm(self):
-        self.test_mg4_mg5_sm_22()
+    #def test_ufo_sm(self):
+    #    self.test_mg4_mg5_sm_22()

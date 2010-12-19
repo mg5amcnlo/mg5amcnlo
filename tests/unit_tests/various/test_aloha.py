@@ -1989,7 +1989,22 @@ class TestSomeObjectProperty(unittest.TestCase):
         for ind in product.listindices():
             self.assertEqual(product.get_rep(ind), 0, 'not zero %s for %s' 
                              % (product.get_rep(ind),ind ))
-            
+          
+        # Epsilon_{mu nu rho alpha} * Epsilon^{mu nu rho beta} = -6 * Metric(alpha,beta)
+        fact1 = aloha_obj.Epsilon('a', 'b', 'c', 'd')
+        fact2 = aloha_obj.Epsilon('a', 'b', 'c', 'e')
+        fact1 = fact1
+        fact2 = fact2
+         
+        result = -6 * aloha_obj.Metric('d','e')
+        result = result.expand().simplify()
+        prod = fact1 * fact2
+        prod = prod.expand().simplify()
+
+        self.assertEqual(prod, result)
+
+
+  
     def testCAlgebraDefinition(self):
         Gamma = aloha_obj.Gamma
         Gamma5 = aloha_obj.Gamma5

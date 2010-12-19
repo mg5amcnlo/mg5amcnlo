@@ -112,6 +112,10 @@ class MG4Runner(MERunner):
         self.check_path(mg4_path)
 
         # Create a copy of Template
+        if not os.path.isdir(os.path.join(mg4_path, "Template")) or \
+               not os.path.isdir(os.path.join(mg4_path, "HELAS")):
+            raise IOError, "Path %s is not a valid MG4 path" % str(mg4_path)
+
         self.mg4_path = os.path.abspath(mg4_path)
 
         if not temp_dir:

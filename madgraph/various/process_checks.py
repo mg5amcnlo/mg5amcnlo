@@ -226,20 +226,6 @@ def check_already_checked(is_ids, fs_ids, sorted_ids, process, model,
     # Skip adding antiprocess below, since might be relevant too
     return False
 
-    # Add also antiprocess, since these are identical
-    if id_anti_id_dict:
-        anti_ids = sorted([id_anti_id_dict[id] \
-                           for id in ids[:-1]]) + [process.get('id')]
-    else:
-        anti_ids = sorted([model.get_particle(id).get_anti_pdg_code() \
-                           for id in ids[:-1]]) + [process.get('id')]
-    anti_ids = array.array('i', anti_ids)
-
-    if anti_ids != ids:
-        sorted_ids.append(anti_ids)
-
-    return False
-
 #===============================================================================
 # Helper function evaluate_matrix_element
 #===============================================================================

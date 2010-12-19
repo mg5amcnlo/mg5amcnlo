@@ -349,6 +349,43 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('number'))
         self.add_amplitude(key, call)
 
+        # HEFT VVVS calls
+
+        key = ((1, 3, 3, 3, 1), '')
+        call = lambda wf: \
+               "CALL JVVSXX(W(1,%d),W(1,%d),W(1,%d),DUM1,%s,%s,%s,W(1,%d))" % \
+               (wf.get('mothers')[0].get('number'),
+                wf.get('mothers')[1].get('number'),
+                wf.get('mothers')[2].get('number'),
+                wf.get('coupling'),
+                wf.get('mass'),
+                wf.get('width'),
+                wf.get('number'))
+        self.add_wavefunction(key, call)
+
+        key = ((3, 3, 3, 1, 4), '')
+        call = lambda wf: \
+               "CALL HVVVXX(W(1,%d),W(1,%d),W(1,%d),DUM1,%s,%s,%s,W(1,%d))" % \
+               (wf.get('mothers')[0].get('number'),
+                wf.get('mothers')[1].get('number'),
+                wf.get('mothers')[2].get('number'),
+                wf.get('coupling'),
+                wf.get('mass'),
+                wf.get('width'),
+                wf.get('number'))
+        self.add_wavefunction(key, call)
+
+        key = ((1, 3, 3, 3), '')
+        call = lambda amp: \
+               "CALL VVVSXX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),DUM1,%s,AMP(%d))" % \
+               (amp.get('mothers')[0].get('number'),
+                amp.get('mothers')[1].get('number'),
+                amp.get('mothers')[2].get('number'),
+                amp.get('mothers')[3].get('number'),
+                amp.get('coupling'),
+                amp.get('number'))
+        self.add_amplitude(key, call)
+
     def get_wavefunction_call(self, wavefunction):
         """Return the function for writing the wavefunction
         corresponding to the key. If the function doesn't exist,

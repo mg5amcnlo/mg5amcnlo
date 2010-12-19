@@ -540,7 +540,7 @@ def write_configs_file(writer, matrix_element, fortran_model):
             elif vert in tchannels[:-1]:
                 lines.append("data tprid(%d,%d)/%d/" % \
                              (last_leg.get('number'), iconfig,
-                              last_leg.get('id')))
+                              abs(last_leg.get('id'))))
 
     # Write out number of configs
     lines.append("# Number of configs")
