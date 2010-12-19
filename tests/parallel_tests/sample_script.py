@@ -49,14 +49,15 @@ if '__main__' == __name__:
 #    my_proc_list = me_comparator.create_proc_list_enhanced(
 ##        ['w+', 'w-', 'z'],
 ##        initial=2, final_1=2)
-    #my_proc_list = ['e- x1+ > e- h1 x1+','e- x1+ > e- h2 x1+','e- x1+ > e- h3 x1+',
-    #                'e+ x1+ > e+ h1 x1+','e+ x1+ > e+ h2 x1+','e+ x1+ > e+ h3 x1+']
-    #my_proc_list += ['el+ h2 > el+ w+ w-']
+    my_proc_list = ['e- x1+ > e- h1 x1+','e- x1+ > e- h2 x1+','e- x1+ > e- h3 x1+',
+                    'e+ x1+ > e+ h1 x1+','e+ x1+ > e+ h2 x1+','e+ x1+ > e+ h3 x1+']
+    my_proc_list += ['el+ h2 > el+ w+ w-', 'w+ w- > ta1+ ta1-']
                    
     #my_proc_list += me_comparator.create_proc_list(['g', 'go'], initial=2,
     #                                              final=2)
-    my_proc_list = me_comparator.create_proc_list(['g', 'h', 'h3'], initial=2,
-                                                   final=4)
+    #my_proc_list = me_comparator.create_proc_list(['g', 'h', 'h3'], initial=2,
+    #                                               final=4)
+    
 
     # Create a MERunner object for MG4
     my_mg4 = me_comparator.MG4Runner()
@@ -80,12 +81,12 @@ if '__main__' == __name__:
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                           model='heft',
-                           orders={'QED':0, 'QCD':4, 'HIG':1}, energy=2000)
+                           model='mssm',
+                           orders={'QED':4, 'QCD':4}, energy=2000)
 
     # Do some cleanup
     #my_comp.cleanup()
-    filename='heft_results.log'
+    filename='mssm_results.log'
 
     # Print the output
     my_comp.output_result(filename=filename)
