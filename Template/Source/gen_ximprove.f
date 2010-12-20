@@ -530,6 +530,16 @@ c-----
          write(*,*) j,xlum(j),xt(j)
       enddo
 c      write(*,*) 'Number of channels',ng,k
+
+c    Reset multijob.dat for all channels
+      do j=1,ng
+        jc = index(gn(j),"/")
+        fname = gn(j)(1:jc)// "multijob.dat"
+        write(*,*) 'Resetting ' // fname
+        open(unit=15,file=fname,status="unknown",err=10)
+        write(15,*) 0
+ 10     close(15)
+      enddo
 c
 c     Let's redetermine err_goal based on luminosity
 c
@@ -581,17 +591,19 @@ c
             mjobs=26
          endif
          if (mjobs .lt. 1)  mjobs=1
-         if (mjobs .gt. 1) then
 c
-c           write multijob.dat file for combine_runs.f 
+c        write multijob.dat file for combine_runs.f 
 c
-            jc = index(gn(io(np)),"/")
-            fname = gn(io(np))(1:jc)// "multijob.dat"
+         jc = index(gn(io(np)),"/")
+         fname = gn(io(np))(1:jc)// "multijob.dat"
 c            write(*,*) "Writing file ", fname
-            open(unit=15,file=fname,status="unknown",err=11)
-            write(15,*) mjobs
- 11         close(15)
+         open(unit=15,file=fname,status="unknown",err=11)
+         if (mjobs .gt. 1) then
+           write(15,*) mjobs
+         else
+           write(15,*) 0
          endif
+ 11      close(15)
          do ijob = 1, mjobs
 c---
 c tjs
@@ -628,7 +640,6 @@ c
          write(26,20) 'cd $j'
          write(26,20) 'rm -f $k'
          write(26,20) 'rm -f moffset.dat >& /dev/null'
-         write(26,20) 'rm -f multijob.dat >& /dev/null' 
          write(26,*) '     echo ',ijob, ' > moffset.dat'
 
 c
