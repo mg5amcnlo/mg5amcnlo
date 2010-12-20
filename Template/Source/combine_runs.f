@@ -337,9 +337,9 @@ c-----
       jc = index(pathname," ")
       fname = pathname(1:jc-1) // "/" // resultfname
       nevents = 0
+      i=1
       open(unit=35, file=fname,status='old',err=99)
       read(35,*,err=99,end=99) xsec,xerr, x1, ntry,x3,x4,nevents
-      i=1
       do while (.true.)
          read(35,*,end=99,err=99) x1,xsec_it(i),xerr_it(i),
      $        eff(i),wmax(i)

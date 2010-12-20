@@ -156,7 +156,9 @@ if [[ $mode -ge 1 ]]; then
 fi
     cd ../SubProcesses
     echo "Combining runs" >& ../status
-    ../bin/combine_runs
+    $dirbin/gen_crossxhtml-pl $5
+    rm -f combine_runs.log
+    ../bin/combine_runs > combine_runs.log
     ../bin/sumall
 cd ..
 $dirbin/gen_crossxhtml-pl $5

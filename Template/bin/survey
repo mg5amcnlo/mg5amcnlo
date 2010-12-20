@@ -143,8 +143,8 @@ if [[ -d SubProcesses ]]; then
 	../bin/sumall
     fi
     cd ../
+    $dirbin/gen_crossxhtml-pl $3
 else
     echo "Error could not find SubProcesses"
     exit
 fi
-$dirbin/gen_crossxhtml-pl $3

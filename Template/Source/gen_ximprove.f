@@ -627,8 +627,9 @@ c
          write(26,20) 'fi'
          write(26,20) 'cd $j'
          write(26,20) 'rm -f $k'
-         write(26,20) 'rm -f moffset.dat'
-         write(26,*) 'echo ',ijob, ' > moffset.dat'
+         write(26,20) 'rm -f moffset.dat >& /dev/null'
+         write(26,20) 'rm -f multijob.dat >& /dev/null' 
+         write(26,*) '     echo ',ijob, ' > moffset.dat'
 
 c
 c     
