@@ -589,6 +589,7 @@ class RestrictModel(model_reader.ModelReader):
         for dep, param_list in self['parameters'].items():
             for tag, parameter in enumerate(param_list):
                 # update information concerning zero_parameters
+
                 if parameter.name in zero_parameters:
                     zero_param_info[parameter.name]= {'dep': dep, 'tag': tag, 
                                                                'obj': parameter}
@@ -596,10 +597,11 @@ class RestrictModel(model_reader.ModelReader):
                 # Bypass all external parameter
                 if isinstance(parameter, base_objects.ParamCardVariable):
                     continue
+
                 # check the presence of zero parameter
                 for zero_param in zero_parameters:
                     if zero_param in parameter.expr:
-                        used.add(param)
+                        used.add(zero_param)
 
         # modify the object for those which are still used
         for param in used:
