@@ -606,8 +606,10 @@ class RestrictModel(model_reader.ModelReader):
         # modify the object for those which are still used
         for param in used:
             data = self['parameters'][zero_param_info[param]['dep']]
+            data.remove(zero_param_info[param]['obj'])
             tag = zero_param_info[param]['tag']
-            data[tag] = base_objects.ModelVariable(param, '0.0', 'real')
+            data = self['parameters'][()]
+            data.insert(0, base_objects.ModelVariable(param, '0.0', 'real'))
         
         # remove completely useless parameters
         for param in zero_parameters:
