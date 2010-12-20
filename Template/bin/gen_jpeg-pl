@@ -8,7 +8,9 @@ system("/bin/bash -c \"rm -f matrix*.jpg\" ");
 $imatrix = "";
 if (! -e "matrix.ps") {$imatrix = 1;}
 $max_jpg = 2;
-if ($imatrix eq "") {$max_jpg = 6;}
+if ($imatrix eq "") {$max_jpg = 5;}
+# add 1 to max_jpg, to get max_jpg pages
+$max_jpg += 1;
 open(PAGE,"> diagrams.html") || die "Error creating diagrams.html";
 print PAGE "\<HTML\> \n";
 print PAGE "\<HEAD\> \n";
@@ -28,20 +30,21 @@ while ( -e "matrix$imatrix.ps"){
   system "rm -f matrix-1.ps";
 
 # Determine how many jpg files we have
-  $i=1;
+  $pages=1;
 
-  while(-e "matrix$imatrix$i.jpg"){
-    $i++;
+  while(-e "matrix$imatrix$pages.jpg"){
+    $pages++;
   }#end of while
   #reduce it by one
-  $pages=$i-1;
-
+  if ($pages > $max_jpg){
+    $pages -= 1;
+  }
 # Find name of process
   open PROCESS, "grep Process auto_dsig$imatrix.f |" or print "Error: can't do grep\n";
   $proc = <PROCESS>;
   if ($proc =~ /Process: (.+?)(\s\w+=\d+)*$/) { $proc = $1; }
   print PAGE "<P>\<A HREF\=\"matrix$imatrix.ps\"\> Postscript Diagrams for $proc\<\/A\> \<BR\> \n";
-  for($j=1;$j<$pages+1;$j++){
+  for($j=1;$j<$pages;$j++){
     print PAGE "\<IMG SRC=\"matrix$imatrix$j.jpg\" ALT=\"Page $j of $pages \" \> \<BR\> \n";
   }#end of for
 #

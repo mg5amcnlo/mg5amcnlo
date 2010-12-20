@@ -42,7 +42,7 @@ sub writeHtmlProcessPage {
     print PAGE "<TABLE BORDER=2 ALIGN=CENTER> \n";	
     print PAGE "<TR>";	
     print PAGE "<TH>Directory</TH> <TH NOWRAP># Diagrams </TH><TH NOWRAP># Subprocesses </TH> \n";
-    print PAGE "<TH COLSPAN=2>FEYNMAN DIAGRAMS</TH> <TH COLSPAN=4> SUBPROCESS </TH></TR> \n";
+    print PAGE "<TH>FEYNMAN DIAGRAMS</TH> <TH> SUBPROCESS </TH></TR> \n";
     print PAGE "</TR>";	
     my($line);
     my($proc);
@@ -53,44 +53,50 @@ sub writeHtmlProcessPage {
       while ($line = <FILE>) {
 	chomp $line;
 	print PAGE "<TR> <TD> $line </TD> \n";
-	if (open FILE2, "$line/matrix.f") {
-	  @lines = <FILE2>;
-	  @tlines = grep /NGRAPHS=/, @lines;
-	  foreach $one (@tlines) {
-	    ($before,$after) = split /=/,$one;
-	    ($before,$one) = split /\)/,$after;
-	    print PAGE "<TD> $before </TD> \n";
-	    $totdiag+=$before;
+	my $diagrams = 0;
+	my @processes;
+	$imatrix = "";
+	if (! -e "$line/matrix.f") {$imatrix = 1;}
+	while ( -e "$line/matrix$imatrix.f"){
+	  if (open FILE2, "$line/matrix$imatrix.f") {
+	    @lines = <FILE2>;
+	    @tlines = grep /diagram number/, @lines;
+	    $diagrams += $#tlines + 1;
 	    close(FILE2);
 	  }
-		      
-	  if (open FILE2, "$line/auto_dsig.f") {
-	    @lines = <FILE2>;
-	    $nlines = grep /IPROC=IPROC/, @lines;
-	    print PAGE "<TD> $nlines </TD> \n";
-	  }
-		      
-		      
-	  print PAGE "<TD> \<A HREF=\"../SubProcesses/$line/diagrams.html\" \> html \<\/A\> </TD> \n";
-	  print PAGE "<TD> \<A HREF=\"../SubProcesses/$line/matrix.ps\" \> postscript \<\/A\> </TD> \n";
-		      
-	  if (open FILE2, "$line/auto_dsig.f") {
+	  if (open FILE2, "$line/auto_dsig$imatrix.f") {
 	    @lines = <FILE2>;
 	    @tlines = grep /IPROC=IPROC/, @lines; 	       
 	    foreach $one (@tlines) {
 	      ($before,$after) = split /!/,$one;
 	      #		   print "$after \n ";
-	      print PAGE "<TD NOWRAP> $after </TD> \n ";
+	      push (@processes, $after);
 	    }
-	    print PAGE "</TR>";
 	    close(FILE2);
 	  }
+	  if ($imatrix eq "") {$imatrix = 0;}
+	  $imatrix += 1;
+	} # end while
+	$totdiag += $diagrams;
+	$numprocs = $#processes + 1;
+	print PAGE "<TD> $diagrams </TD> \n";
+	print PAGE "<TD> $numprocs </TD> \n";
+	print PAGE "<TD> \<A HREF=\"../SubProcesses/$line/diagrams.html\" \>html\<\/A\>";
+	if ( -e "$line/matrix.ps") {
+	  print PAGE " / \<A HREF=\"../SubProcesses/$line/matrix.ps\" \>postscript \<\/A\>";}
+	print PAGE "\n</TD><TD>\n";
+	
+	foreach my $proc (0..$#processes){
+	  print PAGE "<SPAN style=\"white-space: nowrap;\">$processes[$proc]";
+	  if ($proc < $#processes) {print PAGE ",</SPAN>\n";}
 	}
+	print PAGE "</SPAN></TD> \n ";
+	print PAGE "</TR>";
       }
       print PAGE "</TABLE>";
       close FILE;
       #       close(IDENT);	 
-    }
+  }
     print PAGE "\<BR\> \n";
     chdir("../"); 
   } else {

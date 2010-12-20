@@ -89,12 +89,6 @@ def copy_v4template(mgme_dir, dir_path, clean, v4_model = False,
         MG_version = misc.get_pkg_info()
         open(os.path.join(dir_path, 'SubProcesses', 'MGVersion.txt'), 'w').write(
                                                           MG_version['version'])
-    # If the model is v4 model, use old symmetry.f
-    if v4_model and \
-       os.path.isfile(os.path.join(dir_path, 'SubProcesses', 'symmetry_v4.f')):
-        shutil.move(os.path.join(dir_path, 'SubProcesses', 'symmetry_v4.f'),
-                    os.path.join(dir_path, 'SubProcesses', 'symmetry.f'))
-
     # If we are using subproc_group, change run_config.inc parameters
     # and refine multiplicity
     if subproc_group:
@@ -119,6 +113,12 @@ def copy_v4template(mgme_dir, dir_path, clean, v4_model = False,
                                         "$dirbin/refine $a $mode $n 1 $t")
         open(os.path.join(dir_path, 'bin', 'generate_events'), 'w').\
                                     write(generate_events)
+    elif os.path.isfile(os.path.join(dir_path, 'SubProcesses',
+                                     'symmetry_v4.f')):
+        # If we are not using subproc_group, use old symmetry.f
+        shutil.move(os.path.join(dir_path, 'SubProcesses', 'symmetry_v4.f'),
+                    os.path.join(dir_path, 'SubProcesses', 'symmetry.f'))
+
 
         
 #===============================================================================
@@ -1432,19 +1432,6 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
                      matrix_element,
                      s_and_t_channels)
 
-    if matrix_element.get('processes')[0].get('model').get('parameters'):
-        # Write symswap.inc and mg.sym files
-        
-        symmetry, perms, ident_perms = \
-                  diagram_symmetry.find_symmetry(matrix_element)
-
-        filename = 'symswap.inc'
-        write_symswap_file(writers.FortranWriter(filename),
-                           ident_perms)
-        filename = 'symfact.dat'
-        write_symfact_file(writers.FortranWriter(filename),
-                           symmetry)
-    
     # Generate diagrams
     filename = "matrix.ps"
     plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
