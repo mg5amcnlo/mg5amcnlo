@@ -860,7 +860,8 @@ def export_model_files(model_path, process_path):
 def make_model_symbolic_link(process_path):
     #make the copy/symbolic link
     model_path = process_path + '/Source/MODEL/'
-    ln(model_path + '/ident_card.dat', process_path + '/Cards', log=False)
+    if os.path.exists(os.path.join(model_path, 'ident_card.dat')):
+        ln(model_path + '/ident_card.dat', process_path + '/Cards', log=False)
     cp(model_path + '/param_card.dat', process_path + '/Cards')
     mv(model_path + '/param_card.dat', process_path + '/Cards/param_card_default.dat')
     ln(model_path + '/particles.dat', process_path + '/SubProcesses')

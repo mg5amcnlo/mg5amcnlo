@@ -138,6 +138,9 @@ class TestCmdShell2(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                  'Cards', 'proc_card_mg5.dat')))
         self.assertFalse(os.path.exists(os.path.join(self.out_dir,
+                                                    'Cards',
+                                                    'ident_card.dat')))
+        self.assertFalse(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_epem_epem',
                                                     'matrix1.jpg')))
@@ -401,7 +404,9 @@ class TestCmdShell2(unittest.TestCase):
                                                         'Source', 'DHELAS',
                                                         f)), 
                             '%s file is not in aloha directory' % f)
-
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'Cards',
+                                                    'ident_card.dat')))
         devnull = open(os.devnull,'w')
         # Check that the Source directory compiles
         status = subprocess.call(['make'],
