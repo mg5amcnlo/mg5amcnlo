@@ -2579,7 +2579,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if self._export_format == 'madevent':
 
             if group_subprocesses:
-                nojpeg = True
                 ndiags = 0
                 cpu_time1 = time.time()
                 dc_amps = [amp for amp in self._curr_amps if isinstance(amp, \

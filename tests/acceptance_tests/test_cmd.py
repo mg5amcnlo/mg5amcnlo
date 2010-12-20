@@ -466,6 +466,13 @@ class TestCmdShell2(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P2_gg_qq')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P2_gg_qq',
+                                                    'matrix11.jpg')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'HTML',
+                                                    'card.jpg')))
         # Check that the run_config.inc file has been modified correctly
         run_config = open(os.path.join(self.out_dir, 'Source',
                                        'run_config.inc')).read()

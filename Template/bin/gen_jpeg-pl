@@ -1,74 +1,81 @@
 #!/usr/bin/perl -w
 
-
 #---------------------------------------------------------------------
 # Run GS to create jpeg files defined as $gs
 #---------------------------------------------------------------------
-  system("/bin/bash -c \"rm -f matrix*.jpg\" ");
-  system "/bin/bash -c \"nice gs  \-sDEVICE\=jpeg \-sOutputFile\=matrix\%00d.jpg \-q \-dNOPAUSE \-dBATCH matrix.ps\" ";
+system("/bin/bash -c \"rm -f matrix*.jpg\" ");
 
-#--------------------------------------------------------------------------------
-# not sure how many jpegs produced so we need to loop
-# file still in cgi directory at this point
-#--------------------------------------------------------------------------------
-      $max_jpg = 13;
-      $i=1;      
-      while(-e "matrix$i.jpg" && $i < $max_jpg){
-           $i++;
-      }#end of while
-      
-      #reduce it by one  
-      $pages=$i-1;
+$imatrix = "";
+if (! -e "matrix.ps") {$imatrix = 1;}
+$max_jpg = 2;
+if ($imatrix eq "") {$max_jpg = 6;}
+open(PAGE,"> diagrams.html") || die "Error creating diagrams.html";
+print PAGE "\<HTML\> \n";
+print PAGE "\<HEAD\> \n";
+print PAGE "\<TITLE\>Feynman Diagrams \<\/TITLE\> \n";
+print PAGE "\<\/HEAD\> \n";
+print PAGE "\<BODY\> \n";
+while ( -e "matrix$imatrix.ps"){
+  open(IN, "< matrix$imatrix.ps") || die "No file matrix$imatrix.ps";
+  open(OUT, "> matrix-1.ps") || die "Could not open file matrix-1.ps";
+  while (<IN>) {
+    if ($_ =~ m/^%%Page: $max_jpg $max_jpg/) {last;}
+    else {print OUT $_, "\n";}
+  }
+  close(OUT);
+  close(IN);
+  system "/bin/bash -c \"nice gs  \-sDEVICE\=jpeg \-sOutputFile\=matrix$imatrix\%00d.jpg \-q \-dNOPAUSE \-dBATCH matrix-1.ps\"";
+  system "rm -f matrix-1.ps";
 
-   open(PAGE,"> diagrams.html") || die "Error creating diagrams.html";
-   print PAGE "\<HTML\> \n";
-   print PAGE "\<HEAD\> \n";
-   print PAGE "\<TITLE\>Feynman Diagrams \<\/TITLE\> \n";
-   print PAGE "\<\/HEAD\> \n";
-   print PAGE "\<BODY\> \n";
-#   print PAGE "\<H1 id=\"TOP\" \>MadGraph ll\<\/H1\> \n";
+# Determine how many jpg files we have
+  $i=1;
 
-#   print PAGE "<P>\<A HREF\=\"results.html\"\> Results \<\/A\> \<BR\> \n";
-   print PAGE "<P>\<A HREF\=\"matrix.ps\"\> Postscript Diagrams \<\/A\> \<BR\> \n";
-#   print PAGE "\<H2\>Diagrams: \<\/H2/> \n";
-   for($j=1;$j<$pages+1;$j++){
-#       print PAGE "\<P>\<A NAME=\"matrix$j\" \> \<B\>Page $j of $pages \<\/B\> \<BR\> \n";
-#       print PAGE "\<A HREF=\"\#TOP\" onMouseOver=\"window\.status=\'Back to top of page\'\; return true\" onMouseOut=\"window.status=\'  \'\; return true\"  \>back to top of page<\/A\> \<BR\> \n";
-       print PAGE "\<IMG SRC=\"matrix$j.jpg\" ALT=\"Page $j of $pages \" \> \<BR\> \n";
-   }#end of for
+  while(-e "matrix$imatrix$i.jpg"){
+    $i++;
+  }#end of while
+  #reduce it by one
+  $pages=$i-1;
+
+# Find name of process
+  open PROCESS, "grep Process auto_dsig$imatrix.f |" or print "Error: can't do grep\n";
+  $proc = <PROCESS>;
+  if ($proc =~ /Process: (.+?)(\s\w+=\d+)*$/) { $proc = $1; }
+  print PAGE "<P>\<A HREF\=\"matrix$imatrix.ps\"\> Postscript Diagrams for $proc\<\/A\> \<BR\> \n";
+  for($j=1;$j<$pages+1;$j++){
+    print PAGE "\<IMG SRC=\"matrix$imatrix$j.jpg\" ALT=\"Page $j of $pages \" \> \<BR\> \n";
+  }#end of for
 #
 #   In case I didn't include all of the diagrams as jpeg, warn user
 #
-   if (-e "matrix$max_jpg.jpg" ) {
-       print PAGE "<P> <H3> To save bandwidth not all diagrams were converted to jpeg.";
-       print PAGE "<P> To view all diagrams click on ";
-       print PAGE "\<A HREF\=\"matrix.ps\"\> postscript. \<\/A\> \<BR\> \n";
-       print PAGE "\<\/H3\> \n";
+  if (-e "matrix$imatrix$max_jpg.jpg" ) {
+    print PAGE "<P>To save bandwidth not all diagrams were converted to jpeg.";
+    print PAGE "<P> To view all diagrams click on ";
+    print PAGE "\<A HREF\=\"matrix$imatrix.ps\"\> postscript. \<\/A\> \<BR\> \n";
 #
 #    Delete files which aren't included in diagrams.html
 #
-      $i = $max_jpg;	   
-      while(-e "matrix$i.jpg"){
-#	  print "Deleting matrix$i.jpg";
-	  system ("/bin/bash -c \"rm -f matrix$i.jpg\" ");
-           $i++;
-      }#end of while
-
-    }
-   print PAGE
-   print PAGE "\<\/BODY\> \n";
-   print PAGE "\<\/HTML\> \n";
-   close(PAGE);
+    system ("/bin/bash -c \"rm -f matrix$max_jpg.jpg\" ");
+  }
 #
 #  Now create jpeg file for card
 #
-    system ("/bin/bash -c \"head -339 matrix.ps >& junk.ps\" ");
-    open(PAGE,">> junk.ps") || die "Error opening junk.ps";  
-  
-    print PAGE "-20 -390 translate \n";
-    print PAGE "0.7 0.7 scale \n";
-    close(PAGE);
+  if (! -e "../../card.jpg") {
+    system ("/bin/bash -c \"head -339 matrix$imatrix.ps >& junk.ps\" ");
+    open(JUNK,">> junk.ps") || die "Error opening junk.ps";  
 
-    system ("/bin/bash -c \"cat matrix.ps | sed 1,339d >> junk.ps\" ");
+    print JUNK "-20 -390 translate \n";
+    print JUNK "0.7 0.7 scale \n";
+    close(JUNK);
+
+    system ("/bin/bash -c \"cat matrix$imatrix.ps | sed 1,339d >> junk.ps\" ");
 
     system "/bin/bash -c \"nice gs  \-sDEVICE\=jpeg \-sOutputFile\=card.jpg \-q \-dNOPAUSE \-dBATCH \-g180x150 junk.ps; rm -f junk.ps; cp -p card.jpg ../../card.jpg\" ";
+  }
+  if ($imatrix eq "") {$imatrix = 0;}
+  $imatrix = $imatrix + 1;
+}
+
+print PAGE "\n";
+print PAGE "\<\/BODY\> \n";
+print PAGE "\<\/HTML\> \n";
+close(PAGE);
