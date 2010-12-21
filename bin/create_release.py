@@ -79,6 +79,16 @@ if len(args) == 0:
 logging.basicConfig(level=vars(logging)[options.logging],
                     format="%(message)s")
 
+# 0. check that all modification are commited in this directory
+#
+diff_result = subprocess.Popen(["bzr", "diff"], stdout=subprocess.PIPE).communicate()[0] 
+
+if diff_result:
+    logging.error("Directory is not up-to-date. The release follow the last commited version.")
+    answer = raw_input('Do you want to continue anyway? (y/n)')
+    if answer != 'y':
+        exit()
+
 # 1. bzr branch the present directory to a new directory
 #    MadGraph5_vVERSION
 
@@ -229,33 +239,38 @@ if status2:
 
 logging.info("Running tests on directory %s", filepath)
 
-try:
-    logging.config.fileConfig(os.path.join(root_path,'tests','.mg5_logging.conf'))
-    logging.root.setLevel(eval('logging.CRITICAL'))
-    logging.getLogger('madgraph').setLevel(eval('logging.CRITICAL'))
-    logging.getLogger('cmdprint').setLevel(eval('logging.CRITICAL'))
-    logging.getLogger('tutorial').setLevel('CRITICAL')
-except:
-    pass
 
+logging.config.fileConfig(os.path.join(root_path,'tests','.mg5_logging.conf'))
+logging.root.setLevel(eval('logging.CRITICAL'))
+logging.getLogger('madgraph').setLevel(eval('logging.CRITICAL'))
+logging.getLogger('cmdprint').setLevel(eval('logging.CRITICAL'))
+logging.getLogger('tutorial').setLevel(eval('logging.CRITICAL'))
+
+# Change path to use now only the directory comming from bzr
 sys.path.insert(0, os.path.realpath(filepath))
 import tests.test_manager as test_manager
 
-# Need a __init__ file to run tests
-if not os.path.exists(os.path.join(filepath,'__init__.py')):
-    open(os.path.join(filepath,'__init__.py'), 'w').close()
-
-# For acceptance tests, make sure to use filepath as MG4DIR
-
+# reload from the bzr directory the element loaded here (otherwise it's 
+#mixes the path for the tests
 import madgraph
+reload(madgraph)
+import madgraph.iolibs
+reload(madgraph.iolibs)
+import madgraph.iolibs.misc
+reload(madgraph.iolibs.misc)
 
-madgraph.MG4DIR = os.path.realpath(filepath)
-madgraph.MG5DIR = os.path.realpath(filepath)
+## Need a __init__ file to run tests
+##if not os.path.exists(os.path.join(filepath,'__init__.py')):
+##    open(os.path.join(filepath,'__init__.py'), 'w').close()
 
-test_results = test_manager.run(package=os.path.join(filepath,'tests',
+## For acceptance tests, make sure to use filepath as MG4DIR
+##madgraph.MG4DIR = os.path.realpath(filepath)
+#madgraph.MG5DIR = os.path.realpath(filepath)
+
+test_results = test_manager.run(package=os.path.join('tests',
                                                      'unit_tests'))
 
-a_test_results = test_manager.run(package=os.path.join(filepath,'tests',
+a_test_results = test_manager.run(package=os.path.join('tests',
                                                        'acceptance_tests'),
                                   )
 # Set logging level according to the logging level given by options
