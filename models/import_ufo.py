@@ -510,6 +510,12 @@ class RestrictModel(model_reader.ModelReader):
         # deal with parameters
         zero_parameters = self.detect_zero_parameters()
         self.put_parameters_to_zero(zero_parameters)
+        
+        # deal with identical parameters
+        iden_parameters = self.detect_identical_parameters()
+        for iden_param in iden_parameters:
+            self.merge_identical_parameters(iden_param)
+        
 
     def detect_zero_couplings(self):
         """return a list with the name of all vanishing couplings"""
@@ -530,6 +536,62 @@ class RestrictModel(model_reader.ModelReader):
             if value == 0 and name != 'ZERO':
                 null_parameters.append(name)
         return null_parameters
+    
+    def detect_identical_parameters(self):
+        """ return the list of tuple of name of parameter with the same 
+        input value """
+
+        # Extract external parameters
+        external_parameters = self['parameters'][('external',)]
+        
+        # define usefull variable to detect identical input
+        block_value_to_var={} #(lhablok, value): list_of_var
+        mult_param = []       # key of the previous dict with more than one
+                              #parameter.
+                              
+        #detect identical parameter and remove the duplicate parameter
+        for param in external_parameters[:]:
+            value = self['parameter_dict'][param.name]
+            if value == 0:
+                continue
+            key = (param.lhablock, value) 
+            if key in block_value_to_var:
+                block_value_to_var[key].append(param)
+                mult_param.append(key)
+                #remove the duplicate parameter
+                #external_parameters.remove(param)
+            else: 
+                block_value_to_var[key] = [param]        
+        
+        output=[]  
+        for key in mult_param:
+            output.append(block_value_to_var[key])
+            
+        return output
+            
+    def merge_identical_parameters(self, parameters):
+        """ merge the identical parameters given in argument """
+            
+        logger_mod.info('Parameters set to identical values: %s '% \
+                        ', '.join([obj.name for obj in parameters]))
+        
+        # Extract external parameters
+        external_parameters = self['parameters'][('external',)]
+        
+        for i, obj in enumerate(parameters):
+            # Keeped intact the first one and store information
+            if i == 0:
+                obj.info = 'set of param :' + \
+                                     ', '.join([param.name for param in parameters])
+                expr = obj.name
+                print obj, obj.name, obj.info
+                continue
+            # delete the old parameters
+            external_parameters.remove(obj)
+            # replace by the new one pointing of the first obj of the class
+            new_param = base_objects.ModelVariable(obj.name, expr, 'real')
+            self['parameters'][()].insert(0, new_param)
+        
     
     def remove_couplings(self, zero_couplings):
         """ remove the interactions associated to couplings"""

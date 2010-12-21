@@ -50,12 +50,17 @@ class ParamCardWriter(object):
             self.fsock.write("""Block %s \n""" % name)
 
     def write_param(self, param, lhablock):
-        
+        print param, param.name, hasattr(param, 'info'), hasattr(param, 'name')
+        if hasattr(param, 'info'):
+            info = param.info
+        else:
+            info = param.name
+            
         lhacode=' '.join(['%3s' % key for key in param.lhacode])
         if lhablock != 'DECAY':
-            text = """  %s %e # %s \n""" % (lhacode, param.value.real, param.name ) 
+            text = """  %s %e # %s \n""" % (lhacode, param.value.real, info) 
         else:
-            text = '''DECAY %s %e \n''' % (lhacode, param.value.real)
+            text = '''DECAY %s %e # %s \n''' % (lhacode, param.value.real, info)
         self.fsock.write(text) 
             
             

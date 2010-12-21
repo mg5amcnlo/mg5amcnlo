@@ -54,6 +54,37 @@ class TestRestrictModel(unittest.TestCase):
         
         self.assertEqual(expected, result)
         
+    def test_detect_identical_parameters(self):
+        """ check that we detect correctly identical parameter """
+        
+        expected=set([('MZ','MH')])
+        result = self.model.detect_identical_parameters()
+        result = [tuple([obj.name for obj in obj_list]) for obj_list in result]
+        
+        self.assertEqual(expected, set(result))
+        
+    def test_merge_identical_parameters(self):
+        """check that we treat correctly the identical parameters"""
+        
+        parameters = self.model.detect_identical_parameters()
+        self.model.merge_identical_parameters(parameters[0])
+        
+        
+        #check that both MZ and MH are not anymore in the external_parameter
+        keeped = parameters[0][0].name
+        removed = parameters[0][1].name
+        for dep,data in self.model['parameters'].items():
+            if dep == ('external'):
+                for param in data:
+                    self.assertNotEqual(param.name, removed)
+            elif dep == ():
+                found=0      
+                for param in data:
+                    if removed == param.name:
+                        found += 1
+                        self.assertEqual(param.expr, keeped)
+                self.assertEqual(found, 1)
+
         
     def test_detect_zero_couplings(self):
         """ check that detect zero couplings works"""
@@ -167,8 +198,23 @@ class TestRestrictModel(unittest.TestCase):
         self.assertEqual(part_b['mass'], 'ZERO')
         self.assertEqual(part_t['width'], 'ZERO')
                 
+        # check identical masses
+        keeped, rejected = None, None 
+        for param in self.model['parameters'][('external',)]:
+            if param.name == 'MH':
+                self.assertEqual(keeped, None)
+                keeped, rejected = 'MH','MZ'
+            elif param.name == 'MZ':
+                self.assertEqual(keeped, None)
+                keeped, rejected = 'MZ','MH'
+                
+        self.assertNotEqual(keeped, None)
         
-        
-        
-        
+        found = 0
+        for param in self.model['parameters'][()]:
+            self.assertNotEqual(param.name, keeped)
+            if param.name == rejected:
+                found +=1
+        self.assertEqual(found, 1)
+                
         
