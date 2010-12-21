@@ -501,6 +501,25 @@ class TestCmdShell2(unittest.TestCase):
                                                'lib', 'libdsample.a')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'lib', 'libpdf.a')))
+        # Check that combine_events, gen_ximprove, and combine_runs compile
+        status = subprocess.call(['make', '../bin/combine_events'],
+                                 stdout=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'Source'))
+        self.assertEqual(status, 0)
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'bin', 'combine_events')))
+        status = subprocess.call(['make', '../bin/gen_ximprove'],
+                                 stdout=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'Source'))
+        self.assertEqual(status, 0)
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'bin', 'gen_ximprove')))
+        status = subprocess.call(['make', '../bin/combine_runs'],
+                                 stdout=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'Source'))
+        self.assertEqual(status, 0)
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'bin', 'combine_runs')))
         # Check that gensym compiles
         status = subprocess.call(['make', 'gensym'],
                                  stdout=devnull, 

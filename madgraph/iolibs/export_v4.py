@@ -1474,6 +1474,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     #import nexternal/leshouch in Source
     ln('nexternal.inc', '../../Source', log=False)
     ln('leshouche.inc', '../../Source', log=False)
+    ln('maxamps.inc', '../../Source', log=False)
 
     # Return to SubProcesses dir
     os.chdir(pathdir)
@@ -1706,6 +1707,7 @@ def generate_subprocess_group_directory_v4_madevent(subproc_group,
     #import nexternal/leshouch in Source
     ln('nexternal.inc', '../../Source', log=False)
     ln('leshouche.inc', '../../Source', log=False)
+    ln('maxamps.inc', '../../Source', log=False)
 
     # Return to SubProcesses dir
     os.chdir(pathdir)

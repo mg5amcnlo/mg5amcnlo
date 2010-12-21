@@ -60,11 +60,10 @@ c
      &     xmaxup(maxpup),lprup(maxpup)
 c
       include 'nexternal.inc'
-      integer    maxflow,maxproc
-      parameter (maxflow=999,maxproc=500)
-      integer idup(nexternal,maxproc,maxproc)
+      include 'maxamps.inc'
+      integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
-      integer icolup(2,nexternal,maxflow,maxproc)
+      integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
 c
 c
