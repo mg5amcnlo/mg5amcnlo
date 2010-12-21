@@ -4,7 +4,7 @@ static bool goodhel[ncomb] = {ncomb * false};
 static int ntry = 0, sum_hel = 0, ngood = 0;
 static int igood[ncomb];
 static int jhel;
-complex **wfs;
+std::complex<double> **wfs;
 double t[nprocesses];
 // Helicities for the process
 %(helicity_matrix)s

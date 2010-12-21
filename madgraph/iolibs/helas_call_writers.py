@@ -211,7 +211,7 @@ class FortranHelasCallWriter(HelasCallWriter):
     self_dict = {1: 'H', 2: 'F', -2: 'F', 3: 'J', 5: 'U'}
     # Dictionaries used for sorting the letters in the Helas call
     sort_wf = {'O': 0, 'I': 1, 'S': 2, 'T': 3, 'V': 4}
-    sort_amp = {'S': 1, 'V': 2, 'T': 0, 'O': 3, 'I': 4}
+    sort_amp = {'S': 0, 'V': 2, 'T': 1, 'O': 3, 'I': 4}
 
     def default_setup(self):
         """Set up special Helas calls (wavefunctions and amplitudes)
@@ -225,46 +225,40 @@ class FortranHelasCallWriter(HelasCallWriter):
         # Gluon 4-vertex division tensor calls ggT for the FR sm and mssm
 
         key = ((3, 3, 5, 3), 'A')
-
         call = lambda wf: \
                "CALL UVVAXX(W(1,%d),W(1,%d),%s,zero,zero,zero,W(1,%d))" % \
                (wf.get('mothers')[0].get('number'),
                 wf.get('mothers')[1].get('number'),
-
                 wf.get('coupling'),
                 wf.get('number'))
         self.add_wavefunction(key, call)
 
         key = ((3, 5, 3, 1), 'A')
-
         call = lambda wf: \
                "CALL JVTAXX(W(1,%d),W(1,%d),%s,zero,zero,W(1,%d))" % \
                (wf.get('mothers')[0].get('number'),
                 wf.get('mothers')[1].get('number'),
-
                 wf.get('coupling'),
                 wf.get('number'))
         self.add_wavefunction(key, call)
 
         key = ((3, 3, 5), 'A')
-
         call = lambda amp: \
                "CALL VVTAXX(W(1,%d),W(1,%d),W(1,%d),%s,zero,AMP(%d))" % \
                (amp.get('mothers')[0].get('number'),
                 amp.get('mothers')[1].get('number'),
                 amp.get('mothers')[2].get('number'),
-
                 amp.get('coupling'),
                 amp.get('number'))
         self.add_amplitude(key, call)
 
         # SM gluon 4-vertex components
 
-        key = ((3, 3, 3, 3, 4), 'gggg1')
+        key = ((3, 3, 3, 3, 1), 'gggg3')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
-               (wf.get('mothers')[0].get('number'),
-                wf.get('mothers')[1].get('number'),
+               (wf.get('mothers')[1].get('number'),
+                wf.get('mothers')[0].get('number'),
                 wf.get('mothers')[2].get('number'),
                 wf.get('coupling'),
                 wf.get('number'))
@@ -279,11 +273,11 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('coupling'),
                 amp.get('number'))
         self.add_amplitude(key, call)
-        key = ((3, 3, 3, 3, 4), 'gggg2')
+        key = ((3, 3, 3, 3, 1), 'gggg2')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
-               (wf.get('mothers')[2].get('number'),
-                wf.get('mothers')[0].get('number'),
+               (wf.get('mothers')[0].get('number'),
+                wf.get('mothers')[2].get('number'),
                 wf.get('mothers')[1].get('number'),
                 wf.get('coupling'),
                 wf.get('number'))
@@ -298,11 +292,11 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('coupling'),
                 amp.get('number'))
         self.add_amplitude(key, call)
-        key = ((3, 3, 3, 3, 4), 'gggg3')
+        key = ((3, 3, 3, 3, 1), 'gggg1')
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
-               (wf.get('mothers')[1].get('number'),
-                wf.get('mothers')[2].get('number'),
+               (wf.get('mothers')[2].get('number'),
+                wf.get('mothers')[1].get('number'),
                 wf.get('mothers')[0].get('number'),
                 wf.get('coupling'),
                 wf.get('number'))
@@ -313,6 +307,43 @@ class FortranHelasCallWriter(HelasCallWriter):
                (amp.get('mothers')[1].get('number'),
                 amp.get('mothers')[2].get('number'),
                 amp.get('mothers')[0].get('number'),
+                amp.get('mothers')[3].get('number'),
+                amp.get('coupling'),
+                amp.get('number'))
+        self.add_amplitude(key, call)
+
+        # HEFT VVVS calls
+
+        key = ((1, 3, 3, 3, 1), '')
+        call = lambda wf: \
+               "CALL JVVSXX(W(1,%d),W(1,%d),W(1,%d),DUM1,%s,%s,%s,W(1,%d))" % \
+               (wf.get('mothers')[0].get('number'),
+                wf.get('mothers')[1].get('number'),
+                wf.get('mothers')[2].get('number'),
+                wf.get('coupling'),
+                wf.get('mass'),
+                wf.get('width'),
+                wf.get('number'))
+        self.add_wavefunction(key, call)
+
+        key = ((3, 3, 3, 1, 4), '')
+        call = lambda wf: \
+               "CALL HVVVXX(W(1,%d),W(1,%d),W(1,%d),DUM1,%s,%s,%s,W(1,%d))" % \
+               (wf.get('mothers')[0].get('number'),
+                wf.get('mothers')[1].get('number'),
+                wf.get('mothers')[2].get('number'),
+                wf.get('coupling'),
+                wf.get('mass'),
+                wf.get('width'),
+                wf.get('number'))
+        self.add_wavefunction(key, call)
+
+        key = ((1, 3, 3, 3), '')
+        call = lambda amp: \
+               "CALL VVVSXX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),DUM1,%s,AMP(%d))" % \
+               (amp.get('mothers')[0].get('number'),
+                amp.get('mothers')[1].get('number'),
+                amp.get('mothers')[2].get('number'),
                 amp.get('mothers')[3].get('number'),
                 amp.get('coupling'),
                 amp.get('number'))
@@ -763,9 +794,9 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
 
 
 #===============================================================================
-# Pythia8UFOHelasCallWriter
+# CPPUFOHelasCallWriter
 #===============================================================================
-class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
+class CPPUFOHelasCallWriter(UFOHelasCallWriter):
     """The class for writing Helas calls in C++, starting from
     HelasWavefunctions and HelasAmplitudes.
 
@@ -819,7 +850,6 @@ class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
             # Fill out with X up to 6 positions
             call = call + 'x' * (6 - len(call))
             # Specify namespace for Helas calls
-            call = "Pythia8_%s::" % self.get_model_name() + call
             call = call + "(p[%d],"
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity
@@ -858,7 +888,7 @@ class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
             # Check if we need to append a charge conjugation flag
             c_flag = '' 
             if argument.needs_hermitian_conjugate():
-                c_flag = 'c1' # MG5 not configure for 4F vertex
+                c_flag = 'C1' # MG5 not configure for 4F vertex
 
             call = '%s%s_%s' % (argument.get('lorentz'), c_flag, outgoing)
 
@@ -867,7 +897,7 @@ class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
             # Wavefunctions
             call = call + "w[%d]," * len(argument.get('mothers'))
             # Couplings
-            call = call + "pars->%s,"
+            call = call + "%s,"
 
             if isinstance(argument, helas_objects.HelasWavefunction):
                 # Create call for wavefunction
@@ -875,7 +905,8 @@ class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
                 #CALL L_4_011(W(1,%d),W(1,%d),%s,%s, %s, W(1,%d))
                 call_function = lambda wf: call % \
                     (tuple([mother.get('number')-1 for mother in wf.get('mothers')]) + \
-                    (wf.get_with_flow('coupling'),
+                    (CPPUFOHelasCallWriter.format_coupling(\
+                                     wf.get_with_flow('coupling')),
                                      wf.get('mass'),
                                      wf.get('width'),
                                      wf.get('number')-1))
@@ -885,14 +916,24 @@ class Pythia8UFOHelasCallWriter(UFOHelasCallWriter):
                 call_function = lambda amp: call % \
                                 (tuple([mother.get('number')-1
                                           for mother in amp.get('mothers')]) + \
-                                (amp.get('coupling'),
-                                amp.get('number')-1))
+                                (CPPUFOHelasCallWriter.format_coupling(\
+                                 amp.get('coupling')),
+                                 amp.get('number')-1))
                 
         # Add the constructed function to wavefunction or amplitude dictionary
         if isinstance(argument, helas_objects.HelasWavefunction):
             self.add_wavefunction(argument.get_call_key(), call_function)
         else:
             self.add_amplitude(argument.get_call_key(), call_function)
+
+    @staticmethod
+    def format_coupling(coupling):
+        """Format the coupling so any minus signs are put in front"""
+
+        if coupling.startswith('-'):
+            return "-pars->" + coupling[1:]
+        else:
+            return "pars->" + coupling
 
 #===============================================================================
 # PythonUFOHelasCallWriter

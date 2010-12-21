@@ -1,5 +1,12 @@
 class Matrix(object):
 
+    def __init__(self):
+        """define the object"""
+        self.clean()
+        
+    def clean(self):
+        self.jamp = []
+        
     def smatrix(self,p, model):
         #  
         %(info_lines)s
@@ -12,6 +19,9 @@ class Matrix(object):
         #  
         %(process_lines)s
         #  
+        # Clean additional output
+        #
+        self.clean()
         #  
         # CONSTANTS
         #  
@@ -38,7 +48,7 @@ class Matrix(object):
         #
         # Returns amplitude squared summed/avg over colors
         # for the point with external lines W(0:6,NEXTERNAL)
-        #  
+        #
         %(process_lines)s
         #  
         #  
@@ -73,5 +83,5 @@ class Matrix(object):
             for j in range(ncolor):
                 ztemp = ztemp + cf[i][j]*jamp[j]
             matrix = matrix + ztemp * jamp[i].conjugate()/denom[i]   
-
+        self.jamp.append(jamp)
         return matrix

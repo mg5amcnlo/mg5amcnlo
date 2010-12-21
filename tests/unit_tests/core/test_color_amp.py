@@ -212,8 +212,8 @@ class ColorAmpTest(unittest.TestCase):
         col_dict = my_col_basis.colorize(myamplitude['diagrams'][0],
                                      self.mymodel)
 
-        goal_dict = {(0, 0):color.ColorString([color.T(-1000, 2, 1),
-                                               color.f(3, 4, -1000)])}
+        goal_dict = {(0, 0):color.ColorString([color.T(-1000, 1, 2),
+                                               color.f(-1000, 3, 4)])}
 
         self.assertEqual(col_dict, goal_dict)
 
@@ -221,8 +221,8 @@ class ColorAmpTest(unittest.TestCase):
         col_dict = my_col_basis.colorize(myamplitude['diagrams'][1],
                                      self.mymodel)
 
-        goal_dict = {(0, 0):color.ColorString([color.T(3, -1000, 1),
-                                               color.T(4, 2, -1000)])}
+        goal_dict = {(0, 0):color.ColorString([color.T(3, 1, -1000),
+                                               color.T(4, -1000, 2)])}
 
         self.assertEqual(col_dict, goal_dict)
 
@@ -230,8 +230,8 @@ class ColorAmpTest(unittest.TestCase):
         col_dict = my_col_basis.colorize(myamplitude['diagrams'][2],
                                      self.mymodel)
 
-        goal_dict = {(0, 0):color.ColorString([color.T(4, -1000, 1),
-                                               color.T(3, 2, -1000)])}
+        goal_dict = {(0, 0):color.ColorString([color.T(4, 1, -1000),
+                                               color.T(3,-1000, 2)])}
 
         self.assertEqual(col_dict, goal_dict)
 
@@ -262,9 +262,8 @@ class ColorAmpTest(unittest.TestCase):
         # First diagram with two 3-gluon vertices
         col_dict = my_col_basis.colorize(myamplitude['diagrams'][0],
                                      self.mymodel)
-
-        goal_dict = {(0, 0, 0):color.ColorString([color.T(-1000, 1, 2),
-                                               color.f(3, 4, -1001),
+        goal_dict = {(0, 0, 0):color.ColorString([color.T(-1000, 2, 1),
+                                               color.f(-1001, 3, 4),
                                                color.f(-1000, -1001, 5)])}
 
         self.assertEqual(col_dict, goal_dict)
@@ -273,15 +272,15 @@ class ColorAmpTest(unittest.TestCase):
         col_dict = my_col_basis.colorize(myamplitude['diagrams'][3],
                                      self.mymodel)
 
-        goal_dict = {(0, 0):color.ColorString([color.T(-1000, 1, 2),
-                                               color.f(-1001, 3, 5),
-                                               color.f(-1001, 4, -1000)]),
-                     (0, 1):color.ColorString([color.T(-1000, 1, 2),
-                                               color.f(-1002, 3, -1000),
-                                               color.f(-1002, 4, 5)]),
-                     (0, 2):color.ColorString([color.T(-1000, 1, 2),
-                                               color.f(-1003, 3, 4),
-                                               color.f(-1003, 5, -1000)])}
+        goal_dict = {(0, 0):color.ColorString([color.T(-1000, 2, 1),
+                                               color.f(-1001, -1000, 4),
+                                               color.f(-1001, 3, 5)]),
+                     (0, 1):color.ColorString([color.T(-1000, 2, 1),
+                                               color.f(-1002, -1000, 5),
+                                               color.f(-1002, 3, 4)]),
+                     (0, 2):color.ColorString([color.T(-1000, 2, 1),
+                                               color.f(-1003, -1000, 3),
+                                               color.f(-1003, 4, 5)])}
 
         self.assertEqual(col_dict, goal_dict)
 
@@ -316,12 +315,12 @@ class ColorAmpTest(unittest.TestCase):
         # Test the color flow decomposition
         self.assertEqual(new_col_basis.color_flow_decomposition(
                                         {1:3, 2:-3, 3:1, 4:8, 5:8, 6:8}, 2),
-        [{1: [504, 0], 2: [0, 501], 3: [0, 0], 4: [502, 501], 5: [503, 502], 6: [504, 503]},
-         {1: [503, 0], 2: [0, 501], 3: [0, 0], 4: [502, 501], 5: [503, 504], 6: [504, 502]},
-         {1: [504, 0], 2: [0, 501], 3: [0, 0], 4: [502, 503], 5: [503, 501], 6: [504, 502]},
-         {1: [502, 0], 2: [0, 501], 3: [0, 0], 4: [502, 504], 5: [503, 501], 6: [504, 503]},
-         {1: [503, 0], 2: [0, 501], 3: [0, 0], 4: [502, 504], 5: [503, 502], 6: [504, 501]},
-         {1: [502, 0], 2: [0, 501], 3: [0, 0], 4: [502, 503], 5: [503, 504], 6: [504, 501]}])
+        [{1: [0, 501], 2: [504, 0], 3: [0, 0], 4: [502, 501], 5: [503, 502], 6: [504, 503]},
+         {1: [0, 501], 2: [503, 0], 3: [0, 0], 4: [502, 501], 5: [503, 504], 6: [504, 502]},
+         {1: [0, 501], 2: [504, 0], 3: [0, 0], 4: [502, 503], 5: [503, 501], 6: [504, 502]},
+         {1: [0, 501], 2: [502, 0], 3: [0, 0], 4: [502, 504], 5: [503, 501], 6: [504, 503]},
+         {1: [0, 501], 2: [503, 0], 3: [0, 0], 4: [502, 504], 5: [503, 502], 6: [504, 501]},
+         {1: [0, 501], 2: [502, 0], 3: [0, 0], 4: [502, 503], 5: [503, 504], 6: [504, 501]}])
 
     def test_color_flow_string(self):
         """Test the color flow decomposition of various color strings"""
@@ -344,7 +343,7 @@ class ColorAmpTest(unittest.TestCase):
                                      color.T(1005, 6)])
         goal_cs.coeff = fractions.Fraction(1, 4)
         self.assertEqual(color_amp.ColorBasis.get_color_flow_string(my_cs,
-                                                         [(5, 1005, 2005)]),
+                                                         [(8, 5, 1005, 2005)]),
                          goal_cs)
 
         # gg>gg
@@ -358,10 +357,49 @@ class ColorAmpTest(unittest.TestCase):
         goal_cs.coeff = fractions.Fraction(1, 32)
 
         self.assertEqual(color_amp.ColorBasis.get_color_flow_string(my_cs,
-                                                         [(1, 1001, 2001),
-                                                          (2, 1002, 2002),
-                                                          (3, 1003, 2003),
-                                                          (4, 1004, 2004)]),
+                                                         [(8, 1, 1001, 2001),
+                                                          (8, 2, 1002, 2002),
+                                                          (8, 3, 1003, 2003),
+                                                          (8, 4, 1004, 2004)]),
+                         goal_cs)
+
+    def test_color_flow_string_epsilon(self):
+        """Test the color flow decomposition of strings including Epsilon
+        and color sextets"""
+
+        # g q > trip q
+        my_cs = color.ColorString([color.Epsilon(-1000,2,3), color.T(1,4,-1000)])
+
+        goal_cs = color.ColorString([color.T(4,2001), color.Epsilon(1001,2,3)])
+        goal_cs.coeff = fractions.Fraction(1, 2)
+
+        self.assertEqual(color_amp.ColorBasis.get_color_flow_string(my_cs,
+                                                    [(8, 1, 1001, 2001)]),
+                         goal_cs)
+
+        # g q > six q~
+        my_cs = color.ColorString([color.K6(3,-1000,4),
+                                   color.T(1,-1000,2)])
+        goal_cs = color.ColorString([color.T(1001,2), color.T(1003,4),
+                                     color.T(3003,2001)])
+        goal_cs.coeff = fractions.Fraction(1, 4)
+        self.assertEqual(color_amp.ColorBasis.get_color_flow_string(my_cs,
+                                                    [(8, 1, 1001, 2001),
+                                                     (6, 3, 1003, 3003)]),
+                         goal_cs)
+
+        # g q~ > trip > q~ q q~
+
+        my_cs = color.ColorString([color.Epsilon(-1000,2,4),
+                                   color.EpsilonBar(-1001,3,5),
+                                   color.T(1,-1001,-1000)])
+
+        goal_cs = color.ColorString([color.Epsilon(1001,2,4),
+                                     color.EpsilonBar(2001,3,5)])
+        goal_cs.coeff = fractions.Fraction(1, 2)
+
+        self.assertEqual(color_amp.ColorBasis.get_color_flow_string(my_cs,
+                                                          [(8, 1, 1001, 2001)]),
                          goal_cs)
 
 

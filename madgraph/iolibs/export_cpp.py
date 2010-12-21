@@ -13,8 +13,8 @@
 #
 ################################################################################
 
-"""Methods and classes to export models and matrix elements to Pythia8
-format."""
+"""Methods and classes to export models and matrix elements to Pythia 8
+and C++ Standalone format."""
 
 import fractions
 import glob
@@ -36,6 +36,7 @@ import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
 from madgraph import MadGraph5Error, MG5DIR
+from madgraph.iolibs.files import cp, ln, mv
 
 import aloha.create_aloha as create_aloha
 import aloha.aloha_writers as aloha_writers
@@ -44,39 +45,169 @@ _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_pythia8')
 
 
-#===============================================================================
-# generate_process_files_pythia8
-#===============================================================================
-def generate_process_files_pythia8(multi_matrix_element, cpp_helas_call_writer,
-                                   process_string = "", path = os.getcwd()):
-
-    """Generate the .h and .cc files needed for Pythia 8, for the
-    processes described by multi_matrix_element"""
-
-    process_exporter_pythia8 = ProcessExporterPythia8(multi_matrix_element,
-                                                      cpp_helas_call_writer,
-                                                      process_string,
-                                                      path)
-
-    process_exporter_pythia8.generate_process_files_pythia8()
 
 
 #===============================================================================
-# ProcessExporterPythia8
+# setup_cpp_standalone_dir
 #===============================================================================
-class ProcessExporterPythia8(object):
+def setup_cpp_standalone_dir(dirpath, model):
+    """Prepare export_dir as standalone_cpp directory, including:
+    src (for RAMBO, model and ALOHA files + makefile)
+    lib (with compiled libraries from src)
+    SubProcesses (with check_sa.cpp + makefile and Pxxxxx directories)
+    """
+
+    cwd = os.getcwd()
+
+    try:
+        os.mkdir(dirpath)
+    except os.error as error:
+        logger.warning(error.strerror + " " + dirpath)
+    
+    try:
+        os.chdir(dirpath)
+    except os.error:
+        logger.error('Could not cd to directory %s' % dirpath)
+        return 0
+
+    logger.info('Creating subdirectories in directory %s' % dirpath)
+
+    try:
+        os.mkdir('src')
+    except os.error as error:
+        logger.warning(error.strerror + " " + dirpath)
+    
+    try:
+        os.mkdir('lib')
+    except os.error as error:
+        logger.warning(error.strerror + " " + dirpath)
+    
+    try:
+        os.mkdir('Cards')
+    except os.error as error:
+        logger.warning(error.strerror + " " + dirpath)
+    
+    try:
+        os.mkdir('SubProcesses')
+    except os.error as error:
+        logger.warning(error.strerror + " " + dirpath)
+
+    # Write param_card
+    open(os.path.join("Cards","param_card.dat"), 'w').write(\
+        model.write_param_card())
+
+    src_files = ['rambo.h', 'rambo.cc', 'read_slha.h', 'read_slha.cc']
+    
+    # Copy the needed src files
+    for f in src_files:
+        cp(_file_path + 'iolibs/template_files/' + f, 'src')
+
+    # Copy src Makefile
+    makefile = read_template_file('Makefile_sa_cpp_src') % \
+                                           {'model': model.get('name')}
+    open(os.path.join('src', 'Makefile'), 'w').write(makefile)
+
+    # Copy SubProcesses files
+    cp(_file_path + 'iolibs/template_files/check_sa.cpp', 'SubProcesses')
+
+    # Copy SubProcesses Makefile
+    makefile = read_template_file('Makefile_sa_cpp_sp') % \
+                                           {'model': model.get('name')}
+    open(os.path.join('SubProcesses', 'Makefile'), 'w').write(makefile)
+
+    # Return to original PWD
+    os.chdir(cwd)
+
+#===============================================================================
+# generate_subprocess_directory_standalone_cpp
+#===============================================================================
+def generate_subprocess_directory_standalone_cpp(matrix_element,
+                                                 cpp_helas_call_writer,
+                                                 path = os.getcwd()):
+
+    """Generate the Pxxxxx directory for a subprocess in C++ standalone,
+    including the necessary .h and .cc files"""
+
+    cwd = os.getcwd()
+
+    # Create the process_exporter
+    process_exporter_cpp = ProcessExporterCPP(matrix_element,
+                                              cpp_helas_call_writer)
+
+    # Create the directory PN_xx_xxxxx in the specified path
+    dirpath = os.path.join(path, \
+                   "P%d_%s" % (process_exporter_cpp.process_number,
+                               process_exporter_cpp.process_name))
+    try:
+        os.mkdir(dirpath)
+    except os.error as error:
+        logger.warning(error.strerror + " " + dirpath)
+
+    try:
+        os.chdir(dirpath)
+    except os.error:
+        logger.error('Could not cd to directory %s' % dirpath)
+        return 0
+
+    logger.info('Creating files in directory %s' % dirpath)
+
+    process_exporter_cpp.path = dirpath
+    # Create the process .h and .cc files
+    process_exporter_cpp.generate_process_files()
+
+    linkfiles = ['check_sa.cpp', 'Makefile']
+
+    
+    for file in linkfiles:
+        ln('../%s' % file)
+
+    # Return to original PWD
+    os.chdir(cwd)
+
+    return
+
+def make_model_cpp(dir_path):
+    """Make the model library in a C++ standalone directory"""
+
+    source_dir = os.path.join(dir_path, "src")
+    # Run standalone
+    logger.info("Running make for src")
+    subprocess.call(['make'],
+                    stdout = open(os.devnull, 'w'), cwd=source_dir)
+
+#===============================================================================
+# ProcessExporterCPP
+#===============================================================================
+class ProcessExporterCPP(object):
     """Class to take care of exporting a set of matrix elements to
-    Pythia 8 format."""
+    C++ format."""
 
-    class ProcessExporterPythia8Error(Exception):
+    # Static variables (for inheritance)
+    process_template_h = 'cpp_process_h.inc'
+    process_template_cc = 'cpp_process_cc.inc'
+    process_class_template = 'cpp_process_class.inc'
+    process_definition_template = 'cpp_process_function_definitions.inc'
+    process_wavefunction_template = 'cpp_process_wavefunctions.inc'
+    process_sigmaKin_function_template = 'cpp_process_sigmaKin_function.inc'
+
+    class ProcessExporterCPPError(Exception):
         pass
     
-    def __init__(self, multi_matrix_element, cpp_helas_call_writer, process_string = "",
+    def __init__(self, matrix_elements, cpp_helas_call_writer, process_string = "",
                  path = os.getcwd()):
         """Initiate with matrix elements, helas call writer, process
         string, path. Generate the process .h and .cc files."""
 
-        self.matrix_elements = multi_matrix_element.get('matrix_elements')
+        if isinstance(matrix_elements, helas_objects.HelasMultiProcess):
+            self.matrix_elements = matrix_elements.get('matrix_elements')
+        elif isinstance(matrix_elements, helas_objects.HelasMatrixElement):
+            self.matrix_elements = \
+                         helas_objects.HelasMatrixElementList([matrix_elements])
+        elif isinstance(matrix_elements, helas_objects.HelasMatrixElementList):
+            self.matrix_elements = matrix_elements
+        else:
+            raise base_objects.PhysicsObject.PhysicsObjectError,\
+                  "Wrong object type for matrix_elements"
 
         if not self.matrix_elements:
             raise MadGraph5Error("No matrix elements to export")
@@ -89,16 +220,18 @@ class ProcessExporterPythia8(object):
         if process_string:
             self.process_string = process_string
         else:
-            self.process_string = self.processes.base_string()
+            self.process_string = self.processes[0].base_string()
 
         self.process_name = self.get_process_name()
+        self.process_class = "CPPProcess"
 
         self.path = path
+        self.process_number = self.processes[0].get('id')
         self.helas_call_writer = cpp_helas_call_writer
 
-        if not isinstance(self.helas_call_writer, helas_call_writers.Pythia8UFOHelasCallWriter):
-            raise ProcessExporterPythia8Error, \
-                "helas_call_writer not Pythia8UFOHelasCallWriter"
+        if not isinstance(self.helas_call_writer, helas_call_writers.CPPUFOHelasCallWriter):
+            raise ProcessExporterCPPError, \
+                "helas_call_writer not CPPUFOHelasCallWriter"
 
         self.nexternal, self.ninitial = \
                         self.matrix_elements[0].get_nexternal_ninitial()
@@ -123,13 +256,6 @@ class ProcessExporterPythia8(object):
             self.wavefunctions = []
             wf_number = 0
 
-            # Redefine equality so that mass differences for external
-            # particles don't matter (since Pythia gives the mass
-            # explicitly anyway)
-            wf_equal = helas_objects.HelasWavefunction.__eq__
-            helas_objects.HelasWavefunction.__eq__ = \
-                              helas_objects.HelasWavefunction.almost_equal
-
             for me in self.matrix_elements:
                 for iwf, wf in enumerate(me.get_all_wavefunctions()):
                     try:
@@ -141,12 +267,19 @@ class ProcessExporterPythia8(object):
                         wf.set('number', wf_number)
                         self.wavefunctions.append(wf)
 
-            # Redefined the equality back to the original
-            helas_objects.HelasWavefunction.__eq__ = wf_equal
+    # Methods for generation of process files for C++
 
-    # Methods for generation of process files for Pythia 8
+    def generate_process_files(self):
+        """Generate the .h and .cc files needed for C++, for the
+        processes described by multi_matrix_element"""
 
-    def generate_process_files_pythia8(self):
+        cwd = os.getcwd()
+
+        os.chdir(self.path)
+
+        pathdir = os.getcwd()
+
+    def generate_process_files(self):
 
         """Generate the .h and .cc files needed for Pythia 8, for the
         processes described by multi_matrix_element"""
@@ -157,22 +290,23 @@ class ProcessExporterPythia8(object):
 
         pathdir = os.getcwd()
 
-        logger.info('Creating files %s.h and %s.cc in directory %s' % \
-                    (self.process_name, self.process_name, self.path))
+        logger.info('Creating files %(process)s.h and %(process)s.cc in' % \
+                    {'process': self.process_class} +\
+                    ' directory %(dir)s' % {'dir': self.path})
 
         # Create the files
-        filename = '%s.h' % self.process_name
-        self.write_pythia8_process_h_file(writers.CPPWriter(filename))
+        filename = '%s.h' % self.process_class
+        self.write_process_h_file(writers.CPPWriter(filename))
 
-        filename = '%s.cc' % self.process_name
-        self.write_pythia8_process_cc_file(writers.CPPWriter(filename))
+        filename = '%s.cc' % self.process_class
+        self.write_process_cc_file(writers.CPPWriter(filename))
 
         os.chdir(cwd)
 
     #===========================================================================
-    # write_pythia8_process_h_file
+    # write_process_h_file
     #===========================================================================
-    def write_pythia8_process_h_file(self, writer):
+    def write_process_h_file(self, writer):
         """Write the class definition (.h) file for the process"""
 
         if not isinstance(writer, writers.CPPWriter):
@@ -196,15 +330,15 @@ class ProcessExporterPythia8(object):
         process_class_definitions = self.get_process_class_definitions()
         replace_dict['process_class_definitions'] = process_class_definitions
 
-        file = read_template_file('pythia8_process_h.inc') % replace_dict
+        file = read_template_file(self.process_template_h) % replace_dict
 
         # Write the file
         writer.writelines(file)
 
     #===========================================================================
-    # write_pythia8_process_cc_file
+    # write_process_cc_file
     #===========================================================================
-    def write_pythia8_process_cc_file(self, writer):
+    def write_process_cc_file(self, writer):
         """Write the class member definition (.cc) file for the process
         described by matrix_element"""
 
@@ -231,10 +365,528 @@ class ProcessExporterPythia8(object):
         replace_dict['process_function_definitions'] = \
                                                    process_function_definitions
 
-        file = read_template_file('pythia8_process_cc.inc') % replace_dict
+        file = read_template_file(self.process_template_cc) % replace_dict
 
         # Write the file
         writer.writelines(file)
+
+    #===========================================================================
+    # Process export helper functions
+    #===========================================================================
+    def get_process_class_definitions(self):
+        """The complete class definition for the process"""
+
+        replace_dict = {}
+
+        # Extract model name
+        replace_dict['model_name'] = self.model.get('name')
+
+        # Extract process info lines for all processes
+        process_lines = "\n".join([self.get_process_info_lines(me) for me in \
+                                   self.matrix_elements])
+        
+        replace_dict['process_lines'] = process_lines
+
+        # Extract number of external particles
+        replace_dict['nfinal'] = self.nfinal
+
+        # Extract number of external particles
+        replace_dict['ninitial'] = self.ninitial
+
+        # Extract process class name (for the moment same as file name)
+        replace_dict['process_class_name'] = self.process_name
+
+        # Extract process definition
+        process_definition = "%s (%s)" % (self.process_string,
+                                          self.model.get('name'))
+        replace_dict['process_definition'] = process_definition
+
+        process = self.processes[0]
+
+        replace_dict['process_code'] = self.process_number
+        replace_dict['nexternal'] = self.nexternal
+        replace_dict['nprocesses'] = len(self.matrix_elements)
+
+        if self.single_helicities:
+            replace_dict['all_sigma_kin_definitions'] = \
+                          """// Calculate wavefunctions
+                          void calculate_wavefunctions(const int hel[]);
+                          static const int nwavefuncs = %d;
+                          std::complex<double> w[nwavefuncs][18];""" % \
+                                                    len(self.wavefunctions)
+            replace_dict['all_matrix_definitions'] = \
+                           "\n".join(["double matrix_%s();" % \
+                                      me.get('processes')[0].shell_string().\
+                                      replace("0_", "") \
+                                      for me in self.matrix_elements])
+
+        else:
+            replace_dict['all_sigma_kin_definitions'] = \
+                          "\n".join(["void sigmaKin_%s();" % \
+                                     me.get('processes')[0].shell_string().\
+                                     replace("0_", "") \
+                                     for me in self.matrix_elements])
+            replace_dict['all_matrix_definitions'] = \
+                           "\n".join(["double matrix_%s(const int hel[]);" % \
+                                      me.get('processes')[0].shell_string().\
+                                      replace("0_", "") \
+                                      for me in self.matrix_elements])
+
+
+        file = read_template_file(self.process_class_template) % replace_dict
+
+        return file
+
+    def get_process_function_definitions(self):
+        """The complete Pythia 8 class definition for the process"""
+
+        replace_dict = {}
+
+        # Extract model name
+        replace_dict['model_name'] = self.model.get('name')
+
+        # Extract process info lines
+        replace_dict['process_lines'] = \
+                             "\n".join([self.get_process_info_lines(me) for \
+                                        me in self.matrix_elements])
+
+        # Extract process class name (for the moment same as file name)
+        replace_dict['process_class_name'] = self.process_name
+
+        color_amplitudes = [me.get_color_amplitudes() for me in \
+                            self.matrix_elements]
+
+        replace_dict['initProc_lines'] = \
+                                self.get_initProc_lines(self.matrix_elements[0],
+                                                        color_amplitudes)
+        replace_dict['reset_jamp_lines'] = \
+                                     self.get_reset_jamp_lines(color_amplitudes)
+        replace_dict['sigmaKin_lines'] = \
+                                     self.get_sigmaKin_lines(color_amplitudes)
+        replace_dict['sigmaHat_lines'] = \
+                                     self.get_sigmaHat_lines()
+
+        replace_dict['all_sigmaKin'] = \
+                                  self.get_all_sigmaKin_lines(color_amplitudes,
+                                                              'CPPProcess')
+
+        file = read_template_file(self.process_definition_template) %\
+               replace_dict
+
+        return file
+
+    def get_process_name(self):
+        """Return process file name for the process in matrix_element"""
+
+        process_string = self.process_string
+
+        # Extract process number
+        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*(.*)$")
+        proc_number_re = proc_number_pattern.match(process_string)
+        proc_number = 0
+        if proc_number_re:
+            proc_number = int(proc_number_re.group(2))
+            process_string = proc_number_re.group(1) + \
+                             proc_number_re.group(3)
+
+        # Remove order information
+        order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
+        order_re = order_pattern.match(process_string)
+        while order_re:
+            process_string = order_re.group(1)
+            order_re = order_pattern.match(process_string)
+        
+        process_string = process_string.replace(' ', '')
+        process_string = process_string.replace('>', '_')
+        process_string = process_string.replace('+', 'p')
+        process_string = process_string.replace('-', 'm')
+        process_string = process_string.replace('~', 'x')
+        process_string = process_string.replace('/', '_no_')
+        process_string = process_string.replace('$', '_nos_')
+        process_string = process_string.replace('|', '_or_')
+        if proc_number != 0:
+            process_string = "%d_%s" % (proc_number, process_string)
+
+        process_string = "Sigma_%s_%s" % (self.model.get('name'),
+                                          process_string)
+        return process_string
+
+    def get_process_info_lines(self, matrix_element):
+        """Return info lines describing the processes for this matrix element"""
+
+        return"\n".join([ "# " + process.nice_string().replace('\n', '\n# * ') \
+                         for process in matrix_element.get('processes')])
+
+
+    def get_initProc_lines(self, matrix_element, color_amplitudes):
+        """Get initProc_lines for function definition for Pythia 8 .cc file"""
+
+        initProc_lines = []
+
+        initProc_lines.append("// Set external particle masses for this matrix element")
+
+        for part in matrix_element.get_external_wavefunctions():
+            initProc_lines.append("mME.push_back(pars->%s);" % part.get('mass'))
+        for i, colamp in enumerate(color_amplitudes):
+            initProc_lines.append("jamp2[%d] = new double[%d];" % \
+                                  (i, len(colamp)))
+
+        return "\n".join(initProc_lines)
+
+    def get_reset_jamp_lines(self, color_amplitudes):
+        """Get lines to reset jamps"""
+
+        ret_lines = ""
+        for icol, col_amp in enumerate(color_amplitudes):
+            ret_lines+= """for(int i=0;i < %(ncolor)d; i++)
+            jamp2[%(proc_number)d][i]=0.;\n""" % \
+            {"ncolor": len(col_amp), "proc_number": icol}
+        return ret_lines
+        
+
+    def get_calculate_wavefunctions(self, wavefunctions):
+        """Return the lines for optimized calculation of the
+        wavefunctions for all subprocesses"""
+
+        replace_dict = {}
+
+        replace_dict['nwavefuncs'] = len(wavefunctions)
+
+        replace_dict['wavefunction_calls'] = "\n".join(\
+            self.helas_call_writer.get_wavefunction_calls(\
+            helas_objects.HelasWavefunctionList(wavefunctions)))
+
+        file = read_template_file(self.process_wavefunction_template) % \
+                replace_dict
+
+        return file
+       
+
+    def get_sigmaKin_lines(self, color_amplitudes):
+        """Get sigmaKin_lines for function definition for Pythia 8 .cc file"""
+
+        
+        if self.single_helicities:
+            replace_dict = {}
+
+            # Number of helicity combinations
+            replace_dict['ncomb'] = \
+                            self.matrix_elements[0].get_helicity_combinations()
+
+            # Process name
+            replace_dict['process_class_name'] = self.process_name
+        
+            # Particle ids for the call to setupForME
+            replace_dict['id1'] = self.processes[0].get('legs')[0].get('id')
+            replace_dict['id2'] = self.processes[0].get('legs')[1].get('id')
+
+            # Extract helicity matrix
+            replace_dict['helicity_matrix'] = \
+                            self.get_helicity_matrix(self.matrix_elements[0])
+
+            # Extract denominator
+            replace_dict['den_factors'] = \
+                     ",".join([str(me.get_denominator_factor()) for me in \
+                               self.matrix_elements])
+
+            replace_dict['get_matrix_t_lines'] = "\n".join(
+                    ["t[%(iproc)d]=matrix_%(proc_name)s();" % \
+                     {"iproc": i, "proc_name": \
+                      me.get('processes')[0].shell_string().replace("0_", "")} \
+                     for i, me in enumerate(self.matrix_elements)])
+
+            file = \
+                 read_template_file(\
+                            self.process_sigmaKin_function_template) %\
+                            replace_dict
+
+            return file
+
+        else:
+            ret_lines = "// Call the individual sigmaKin for each process\n"
+            return ret_lines + \
+                   "\n".join(["sigmaKin_%s();" % \
+                              me.get('processes')[0].shell_string().\
+                              replace("0_", "") for \
+                              me in self.matrix_elements])
+
+    def get_all_sigmaKin_lines(self, color_amplitudes, class_name):
+        """Get sigmaKin_process for all subprocesses for Pythia 8 .cc file"""
+
+        ret_lines = []
+        if self.single_helicities:
+            ret_lines.append(\
+                "void %s::calculate_wavefunctions(const int hel[]){" % \
+                class_name)
+            ret_lines.append("// Calculate wavefunctions for all processes")
+            ret_lines.append(self.get_calculate_wavefunctions(\
+                self.wavefunctions))
+            ret_lines.append("}")
+        else:
+            ret_lines.extend([self.get_sigmaKin_single_process(i, me) \
+                                  for i, me in enumerate(self.matrix_elements)])
+        ret_lines.extend([self.get_matrix_single_process(i, me,
+                                                         color_amplitudes[i],
+                                                         class_name) \
+                                for i, me in enumerate(self.matrix_elements)])
+        return "\n".join(ret_lines)
+
+
+    def get_sigmaKin_single_process(self, i, matrix_element):
+        """Write sigmaKin for each process"""
+
+        # Write sigmaKin for the process
+
+        replace_dict = {}
+
+        # Process name
+        replace_dict['proc_name'] = \
+          matrix_element.get('processes')[0].shell_string().replace("0_", "")
+        
+        # Process name
+        replace_dict['process_class_name'] = self.process_name
+        
+        # Process number
+        replace_dict['proc_number'] = i
+
+        # Number of helicity combinations
+        replace_dict['ncomb'] = matrix_element.get_helicity_combinations()
+
+        # Extract helicity matrix
+        replace_dict['helicity_matrix'] = \
+                                      self.get_helicity_matrix(matrix_element)
+        # Extract denominator
+        replace_dict['den_factor'] = matrix_element.get_denominator_factor()
+
+        file = \
+         read_template_file('cpp_process_sigmaKin_subproc_function.inc') %\
+         replace_dict
+
+        return file
+
+    def get_matrix_single_process(self, i, matrix_element, color_amplitudes,
+                                  class_name):
+        """Write matrix() for each process"""
+
+        # Write matrix() for the process
+
+        replace_dict = {}
+
+        # Process name
+        replace_dict['proc_name'] = \
+          matrix_element.get('processes')[0].shell_string().replace("0_", "")
+        
+
+        if self.single_helicities:
+            replace_dict['matrix_args'] = ""
+            replace_dict['all_wavefunction_calls'] = "int i, j;"
+        else:
+            replace_dict['matrix_args'] = "const int hel[]"
+            wavefunctions = matrix_element.get_all_wavefunctions()
+            replace_dict['all_wavefunction_calls'] = \
+                         """const int nwavefuncs = %d;
+                         std::complex<double> w[nwavefuncs][18];\n""" % len(wavefunctions)+ \
+                         self.get_calculate_wavefunctions(wavefunctions)
+
+        # Process name
+        replace_dict['process_class_name'] = class_name
+        
+        # Process number
+        replace_dict['proc_number'] = i
+
+        # Number of color flows
+        replace_dict['ncolor'] = len(color_amplitudes)
+
+        replace_dict['ngraphs'] = matrix_element.get_number_of_amplitudes()
+
+        # Extract color matrix
+        replace_dict['color_matrix_lines'] = \
+                                     self.get_color_matrix_lines(matrix_element)
+
+        # The Helicity amplitude calls
+        replace_dict['amplitude_calls'] = "\n".join(\
+            self.helas_call_writer.get_amplitude_calls(matrix_element))
+        replace_dict['jamp_lines'] = self.get_jamp_lines(color_amplitudes)
+
+        file = read_template_file('cpp_process_matrix.inc') % \
+                replace_dict
+
+        return file
+
+
+    def get_sigmaHat_lines(self):
+        """Get sigmaHat_lines for function definition for Pythia 8 .cc file"""
+
+        # Create a set with the pairs of incoming partons
+        beams = set([(process.get('legs')[0].get('id'),
+                      process.get('legs')[1].get('id')) \
+                     for process in self.processes])
+
+        res_lines = []
+
+        # Write a selection routine for the different processes with
+        # the same beam particles
+        res_lines.append("// Select between the different processes")
+        for ibeam, beam_parts in enumerate(beams):
+            
+            if ibeam == 0:
+                res_lines.append("if(id1 == %d && id2 == %d){" % beam_parts)
+            else:
+                res_lines.append("else if(id1 == %d && id2 == %d){" % beam_parts)            
+            
+            # Pick out all processes with this beam pair
+            beam_processes = [(i, me) for (i, me) in \
+                              enumerate(self.matrix_elements) if beam_parts in \
+                              [(process.get('legs')[0].get('id'),
+                                process.get('legs')[1].get('id')) \
+                               for process in me.get('processes')]]
+
+            # Now add matrix elements for the processes with the right factors
+            res_lines.append("// Add matrix elements for processes with beams %s" % \
+                             repr(beam_parts))
+            res_lines.append("return %s;" % \
+                             ("+".join(["matrix_element[%i]*%i" % \
+                                        (i, len([proc for proc in \
+                                         me.get('processes') if beam_parts == \
+                                         (proc.get('legs')[0].get('id'),
+                                          proc.get('legs')[1].get('id'))])) \
+                                        for (i, me) in beam_processes]).\
+                              replace('*1', '')))
+            res_lines.append("}")
+            
+
+        res_lines.append("else {")
+        res_lines.append("// Return 0 if not correct initial state assignment")
+        res_lines.append(" return 0.;}")
+
+        return "\n".join(res_lines)
+
+
+    def get_helicity_matrix(self, matrix_element):
+        """Return the Helicity matrix definition lines for this matrix element"""
+
+        helicity_line = "static const int helicities[ncomb][nexternal] = {";
+        helicity_line_list = []
+
+        for helicities in matrix_element.get_helicity_matrix():
+            helicity_line_list.append(",".join(['%d'] * len(helicities)) % \
+                                      tuple(helicities))
+
+        return helicity_line + ",".join(helicity_line_list) + "};"
+
+    def get_den_factor_line(self, matrix_element):
+        """Return the denominator factor line for this matrix element"""
+
+        return "const int denominator = %d;" % \
+               matrix_element.get_denominator_factor()
+
+    def get_color_matrix_lines(self, matrix_element):
+        """Return the color matrix definition lines for this matrix element. Split
+        rows in chunks of size n."""
+
+        if not matrix_element.get('color_matrix'):
+            return "\n".join(["static const double denom[1] = {1.};",
+                              "static const double cf[1][1] = {1.};"])
+        else:
+            color_denominators = matrix_element.get('color_matrix').\
+                                                 get_line_denominators()
+            denom_string = "static const double denom[ncolor] = {%s};" % \
+                           ",".join(["%i" % denom for denom in color_denominators])
+
+            matrix_strings = []
+            my_cs = color.ColorString()
+            for index, denominator in enumerate(color_denominators):
+                # Then write the numerators for the matrix elements
+                num_list = matrix_element.get('color_matrix').\
+                                            get_line_numerators(index, denominator)
+
+                matrix_strings.append("%s" % \
+                                     ",".join(["%d" % i for i in num_list]))
+            matrix_string = "static const double cf[ncolor][ncolor] = {" + \
+                            ",".join(matrix_strings) + "};"
+            return "\n".join([denom_string, matrix_string])
+
+    def get_jamp_lines(self, color_amplitudes):
+        """Return the jamp = sum(fermionfactor * amp[i]) lines"""
+
+        res_list = []
+
+        for i, coeff_list in enumerate(color_amplitudes):
+
+            res = "jamp[%i]=" % i
+
+            # Optimization: if all contributions to that color basis element have
+            # the same coefficient (up to a sign), put it in front
+            list_fracs = [abs(coefficient[0][1]) for coefficient in coeff_list]
+            common_factor = False
+            diff_fracs = list(set(list_fracs))
+            if len(diff_fracs) == 1 and abs(diff_fracs[0]) != 1:
+                common_factor = True
+                global_factor = diff_fracs[0]
+                res = res + '%s(' % coeff(1, global_factor, False, 0)
+
+            for (coefficient, amp_number) in coeff_list:
+                if common_factor:
+                    res = res + "%samp[%d]" % (coeff(coefficient[0],
+                                               coefficient[1] / abs(coefficient[1]),
+                                               coefficient[2],
+                                               coefficient[3]),
+                                               amp_number - 1)
+                else:
+                    res = res + "%samp[%d]" % (coeff(coefficient[0],
+                                               coefficient[1],
+                                               coefficient[2],
+                                               coefficient[3]),
+                                               amp_number - 1)
+
+            if common_factor:
+                res = res + ')'
+
+            res += ';'
+
+            res_list.append(res)
+
+        return "\n".join(res_list)
+
+#===============================================================================
+# generate_process_files_pythia8
+#===============================================================================
+def generate_process_files_pythia8(multi_matrix_element, cpp_helas_call_writer,
+                                   process_string = "", path = os.getcwd()):
+
+    """Generate the .h and .cc files needed for Pythia 8, for the
+    processes described by multi_matrix_element"""
+
+    process_exporter_pythia8 = ProcessExporterPythia8(multi_matrix_element,
+                                                      cpp_helas_call_writer,
+                                                      process_string,
+                                                      path)
+
+    process_exporter_pythia8.generate_process_files()
+
+
+#===============================================================================
+# ProcessExporterPythia8
+#===============================================================================
+class ProcessExporterPythia8(ProcessExporterCPP):
+    """Class to take care of exporting a set of matrix elements to
+    Pythia 8 format."""
+
+    # Static variables (for inheritance)
+    process_template_h = 'pythia8_process_h.inc'
+    process_template_cc = 'pythia8_process_cc.inc'
+    process_class_template = 'pythia8_process_class.inc'
+    process_definition_template = 'pythia8_process_function_definitions.inc'
+    process_wavefunction_template = 'pythia8_process_wavefunctions.inc'
+    process_sigmaKin_function_template = 'pythia8_process_sigmaKin_function.inc'
+    def __init__(self, *args, **opts):
+        """Set process class name"""
+
+        super(ProcessExporterPythia8, self).__init__(*args, **opts)
+
+        self.process_class = self.process_name
+        
+    # Methods for generation of process files for Pythia 8
 
     #===========================================================================
     # Process export helper functions
@@ -275,13 +927,13 @@ class ProcessExporterPythia8(object):
 
         replace_dict['nexternal'] = self.nexternal
         replace_dict['nprocesses'] = len(self.matrix_elements)
-
+        
         if self.single_helicities:
             replace_dict['all_sigma_kin_definitions'] = \
                           """// Calculate wavefunctions
                           void calculate_wavefunctions(const int hel[]);
                           static const int nwavefuncs = %d;
-                          complex w[nwavefuncs][18];""" % \
+                          std::complex<double> w[nwavefuncs][18];""" % \
                                                     len(self.wavefunctions)
             replace_dict['all_matrix_definitions'] = \
                            "\n".join(["double matrix_%s();" % \
@@ -341,55 +993,13 @@ class ProcessExporterPythia8(object):
                                        self.get_weightDecay_lines()    
 
         replace_dict['all_sigmaKin'] = \
-                                  self.get_all_sigmaKin_lines(color_amplitudes)
+                                  self.get_all_sigmaKin_lines(color_amplitudes,
+                                                              self.process_name)
 
         file = read_template_file('pythia8_process_function_definitions.inc') %\
                replace_dict
 
         return file
-
-    def get_process_name(self):
-        """Return process file name for the process in matrix_element"""
-
-        process_string = self.process_string
-
-        # Extract process number
-        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*(.*)$")
-        proc_number_re = proc_number_pattern.match(process_string)
-        proc_number = 0
-        if proc_number_re:
-            proc_number = int(proc_number_re.group(2))
-            process_string = proc_number_re.group(1) + \
-                             proc_number_re.group(3)
-
-        # Remove order information
-        order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
-        order_re = order_pattern.match(process_string)
-        while order_re:
-            process_string = order_re.group(1)
-            order_re = order_pattern.match(process_string)
-        
-        process_string = process_string.replace(' ', '')
-        process_string = process_string.replace('>', '_')
-        process_string = process_string.replace('+', 'p')
-        process_string = process_string.replace('-', 'm')
-        process_string = process_string.replace('~', 'x')
-        process_string = process_string.replace('/', '_no_')
-        process_string = process_string.replace('$', '_nos_')
-        process_string = process_string.replace('|', '_or_')
-        if proc_number != 0:
-            process_string = "%d_%s" % (proc_number, process_string)
-
-        process_string = "Sigma_%s_%s" % (self.model.get('name'),
-                                          process_string)
-        return process_string
-
-    def get_process_info_lines(self, matrix_element):
-        """Return info lines describing the processes for this matrix element"""
-
-        return"\n".join([ "# " + process.nice_string().replace('\n', '\n# * ') \
-                         for process in matrix_element.get('processes')])
-
 
     def get_process_influx(self):
         """Return process file name for the process in matrix_element"""
@@ -553,233 +1163,6 @@ class ProcessExporterPythia8(object):
 
         return "\n".join(initProc_lines)
 
-    def get_reset_jamp_lines(self, color_amplitudes):
-        """Get lines to reset jamps"""
-
-        ret_lines = ""
-        for icol, col_amp in enumerate(color_amplitudes):
-            ret_lines+= """for(int i=0;i < %(ncolor)d; i++)
-            jamp2[%(proc_number)d][i]=0.;\n""" % \
-            {"ncolor": len(col_amp), "proc_number": icol}
-        return ret_lines
-        
-
-    def get_calculate_wavefunctions(self, wavefunctions):
-        """Return the lines for optimized calculation of the
-        wavefunctions for all subprocesses"""
-
-        replace_dict = {}
-
-        replace_dict['nwavefuncs'] = len(wavefunctions)
-
-        replace_dict['wavefunction_calls'] = "\n".join(\
-            self.helas_call_writer.get_wavefunction_calls(\
-            helas_objects.HelasWavefunctionList(wavefunctions)))
-
-        file = read_template_file('pythia8_process_wavefunctions.inc') % \
-                replace_dict
-
-        return file
-       
-
-    def get_sigmaKin_lines(self, color_amplitudes):
-        """Get sigmaKin_lines for function definition for Pythia 8 .cc file"""
-
-        
-        if self.single_helicities:
-            replace_dict = {}
-
-            # Number of helicity combinations
-            replace_dict['ncomb'] = \
-                            self.matrix_elements[0].get_helicity_combinations()
-
-            # Process name
-            replace_dict['process_class_name'] = self.process_name
-        
-            # Particle ids for the call to setupForME
-            replace_dict['id1'] = self.processes[0].get('legs')[0].get('id')
-            replace_dict['id2'] = self.processes[0].get('legs')[1].get('id')
-
-            # Extract helicity matrix
-            replace_dict['helicity_matrix'] = \
-                            self.get_helicity_matrix(self.matrix_elements[0])
-
-            # Extract denominator
-            replace_dict['den_factors'] = \
-                     ",".join([str(me.get_denominator_factor()) for me in \
-                               self.matrix_elements])
-
-            replace_dict['get_matrix_t_lines'] = "\n".join(
-                    ["t[%(iproc)d]=matrix_%(proc_name)s();" % \
-                     {"iproc": i, "proc_name": \
-                      me.get('processes')[0].shell_string().replace("0_", "")} \
-                     for i, me in enumerate(self.matrix_elements)])
-
-            file = \
-                 read_template_file(\
-                            'pythia8_process_sigmaKin_function.inc') %\
-                            replace_dict
-
-            return file
-
-        else:
-            ret_lines = "// Call the individual sigmaKin for each process\n"
-            return ret_lines + \
-                   "\n".join(["sigmaKin_%s();" % \
-                              me.get('processes')[0].shell_string().\
-                              replace("0_", "") for \
-                              me in self.matrix_elements])
-
-    def get_all_sigmaKin_lines(self, color_amplitudes):
-        """Get sigmaKin_process for all subprocesses for Pythia 8 .cc file"""
-
-        ret_lines = []
-        if self.single_helicities:
-            ret_lines.append(\
-                "void %s::calculate_wavefunctions(const int hel[]){" % \
-                self.process_name)
-            ret_lines.append("// Calculate wavefunctions for all processes")
-            ret_lines.append(self.get_calculate_wavefunctions(\
-                self.wavefunctions))
-            ret_lines.append("}")
-        else:
-            ret_lines.extend([self.get_sigmaKin_single_process(i, me) \
-                                  for i, me in enumerate(self.matrix_elements)])
-        ret_lines.extend([self.get_matrix_single_process(i, me,
-                                                      color_amplitudes[i]) \
-                                for i, me in enumerate(self.matrix_elements)])
-        return "\n".join(ret_lines)
-
-
-    def get_sigmaKin_single_process(self, i, matrix_element):
-        """Write sigmaKin for each process"""
-
-        # Write sigmaKin for the process
-
-        replace_dict = {}
-
-        # Process name
-        replace_dict['proc_name'] = \
-          matrix_element.get('processes')[0].shell_string().replace("0_", "")
-        
-        # Process name
-        replace_dict['process_class_name'] = self.process_name
-        
-        # Process number
-        replace_dict['proc_number'] = i
-
-        # Number of helicity combinations
-        replace_dict['ncomb'] = matrix_element.get_helicity_combinations()
-
-        # Extract helicity matrix
-        replace_dict['helicity_matrix'] = \
-                                      self.get_helicity_matrix(matrix_element)
-        # Extract denominator
-        replace_dict['den_factor'] = matrix_element.get_denominator_factor()
-
-        file = \
-         read_template_file('pythia8_process_sigmaKin_subproc_function.inc') %\
-         replace_dict
-
-        return file
-
-    def get_matrix_single_process(self, i, matrix_element, color_amplitudes):
-        """Write sigmaKin for each process"""
-
-        # Write matrix() for the process
-
-        replace_dict = {}
-
-        # Process name
-        replace_dict['proc_name'] = \
-          matrix_element.get('processes')[0].shell_string().replace("0_", "")
-        
-
-        if self.single_helicities:
-            replace_dict['matrix_args'] = ""
-            replace_dict['all_wavefunction_calls'] = "int i, j;"
-        else:
-            replace_dict['matrix_args'] = "const int hel[]"
-            wavefunctions = matrix_element.get_all_wavefunctions()
-            replace_dict['all_wavefunction_calls'] = \
-                         """const int nwavefuncs = %d;
-                         complex w[nwavefuncs][18];\n""" % len(wavefunctions)+ \
-                         self.get_calculate_wavefunctions(wavefunctions)
-
-        # Process name
-        replace_dict['process_class_name'] = self.process_name
-        
-        # Process number
-        replace_dict['proc_number'] = i
-
-        # Number of color flows
-        replace_dict['ncolor'] = len(color_amplitudes)
-
-        replace_dict['ngraphs'] = matrix_element.get_number_of_amplitudes()
-
-        # Extract color matrix
-        replace_dict['color_matrix_lines'] = \
-                                     self.get_color_matrix_lines(matrix_element)
-
-        # The Helicity amplitude calls
-        replace_dict['amplitude_calls'] = "\n".join(\
-            self.helas_call_writer.get_amplitude_calls(matrix_element))
-        replace_dict['jamp_lines'] = self.get_jamp_lines(color_amplitudes)
-
-        file = read_template_file('pythia8_process_matrix.inc') % \
-                replace_dict
-
-        return file
-
-
-    def get_sigmaHat_lines(self):
-        """Get sigmaHat_lines for function definition for Pythia 8 .cc file"""
-
-        # Create a set with the pairs of incoming partons
-        beams = set([(process.get('legs')[0].get('id'),
-                      process.get('legs')[1].get('id')) \
-                     for process in self.processes])
-
-        res_lines = []
-
-        # Write a selection routine for the different processes with
-        # the same beam particles
-        res_lines.append("// Select between the different processes")
-        for ibeam, beam_parts in enumerate(beams):
-            
-            if ibeam == 0:
-                res_lines.append("if(id1 == %d && id2 == %d){" % beam_parts)
-            else:
-                res_lines.append("else if(id1 == %d && id2 == %d){" % beam_parts)            
-            
-            # Pick out all processes with this beam pair
-            beam_processes = [(i, me) for (i, me) in \
-                              enumerate(self.matrix_elements) if beam_parts in \
-                              [(process.get('legs')[0].get('id'),
-                                process.get('legs')[1].get('id')) \
-                               for process in me.get('processes')]]
-
-            # Now add matrix elements for the processes with the right factors
-            res_lines.append("// Add matrix elements for processes with beams %s" % \
-                             repr(beam_parts))
-            res_lines.append("return %s;" % \
-                             ("+".join(["matrix_element[%i]*%i" % \
-                                        (i, len([proc for proc in \
-                                         me.get('processes') if beam_parts == \
-                                         (proc.get('legs')[0].get('id'),
-                                          proc.get('legs')[1].get('id'))])) \
-                                        for (i, me) in beam_processes]).\
-                              replace('*1', '')))
-            res_lines.append("}")
-            
-
-        res_lines.append("else {")
-        res_lines.append("// Return 0 if not correct initial state assignment")
-        res_lines.append(" return 0.;}")
-
-        return "\n".join(res_lines)
-
-
     def get_setIdColAcol_lines(self, color_amplitudes):
         """Generate lines to set final-state id and color info for process"""
 
@@ -829,7 +1212,7 @@ class ProcessExporterPythia8(object):
                                            (i, l) in items if l > 0]).\
                                  replace('*1', ''))
                 if any([l>1 for (i, l) in items]):
-                    raise ProcessExporterPythia8Error,\
+                    raise ProcessExporterCPPError,\
                           "More than one process with identical " + \
                           "external particles is not supported"
 
@@ -929,91 +1312,6 @@ class ProcessExporterPythia8(object):
 
         return weightDecay_lines
 
-    def get_helicity_matrix(self, matrix_element):
-        """Return the Helicity matrix definition lines for this matrix element"""
-
-        helicity_line = "static const int helicities[ncomb][nexternal] = {";
-        helicity_line_list = []
-
-        for helicities in matrix_element.get_helicity_matrix():
-            helicity_line_list.append(",".join(['%d'] * len(helicities)) % \
-                                      tuple(helicities))
-
-        return helicity_line + ",".join(helicity_line_list) + "};"
-
-    def get_den_factor_line(self, matrix_element):
-        """Return the denominator factor line for this matrix element"""
-
-        return "const int denominator = %d;" % \
-               matrix_element.get_denominator_factor()
-
-    def get_color_matrix_lines(self, matrix_element):
-        """Return the color matrix definition lines for this matrix element. Split
-        rows in chunks of size n."""
-
-        if not matrix_element.get('color_matrix'):
-            return ["static const double denom[1] = {1.};", "static const double cf[1][1] = {1.};"]
-        else:
-            color_denominators = matrix_element.get('color_matrix').\
-                                                 get_line_denominators()
-            denom_string = "static const double denom[ncolor] = {%s};" % \
-                           ",".join(["%i" % denom for denom in color_denominators])
-
-            matrix_strings = []
-            my_cs = color.ColorString()
-            for index, denominator in enumerate(color_denominators):
-                # Then write the numerators for the matrix elements
-                num_list = matrix_element.get('color_matrix').\
-                                            get_line_numerators(index, denominator)
-
-                matrix_strings.append("%s" % \
-                                     ",".join(["%d" % i for i in num_list]))
-            matrix_string = "static const double cf[ncolor][ncolor] = {" + \
-                            ",".join(matrix_strings) + "};"
-            return "\n".join([denom_string, matrix_string])
-
-    def get_jamp_lines(self, color_amplitudes):
-        """Return the jamp = sum(fermionfactor * amp[i]) lines"""
-
-        res_list = []
-
-        for i, coeff_list in enumerate(color_amplitudes):
-
-            res = "jamp[%i]=" % i
-
-            # Optimization: if all contributions to that color basis element have
-            # the same coefficient (up to a sign), put it in front
-            list_fracs = [abs(coefficient[0][1]) for coefficient in coeff_list]
-            common_factor = False
-            diff_fracs = list(set(list_fracs))
-            if len(diff_fracs) == 1 and abs(diff_fracs[0]) != 1:
-                common_factor = True
-                global_factor = diff_fracs[0]
-                res = res + '%s(' % coeff(1, global_factor, False, 0)
-
-            for (coefficient, amp_number) in coeff_list:
-                if common_factor:
-                    res = res + "%samp[%d]" % (coeff(coefficient[0],
-                                               coefficient[1] / abs(coefficient[1]),
-                                               coefficient[2],
-                                               coefficient[3]),
-                                               amp_number - 1)
-                else:
-                    res = res + "%samp[%d]" % (coeff(coefficient[0],
-                                               coefficient[1],
-                                               coefficient[2],
-                                               coefficient[3]),
-                                               amp_number - 1)
-
-            if common_factor:
-                res = res + ')'
-
-            res += ';'
-
-            res_list.append(res)
-
-        return "\n".join(res_list)
-
 #===============================================================================
 # Global helper methods
 #===============================================================================
@@ -1051,12 +1349,12 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
 
     if total_coeff == 1:
         if is_imaginary:
-            return '+complex(0,1)*'
+            return '+std::complex<double>(0,1)*'
         else:
             return '+'
     elif total_coeff == -1:
         if is_imaginary:
-            return '-complex(0,1)*'
+            return '-std::complex<double>(0,1)*'
         else:
             return '-'
 
@@ -1067,9 +1365,388 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
         res_str = res_str + '/%i.' % total_coeff.denominator
 
     if is_imaginary:
-        res_str = res_str + '*complex(0,1)'
+        res_str = res_str + '*std::complex<double>(0,1)'
 
     return res_str + '*'
+
+#===============================================================================
+# Routines to output UFO models in C++ format
+#===============================================================================
+
+def convert_model_to_cpp(model, output_dir, wanted_lorentz = [],
+                         wanted_couplings = []):
+    """Create a full valid Pythia 8 model from an MG5 model (coming from UFO)"""
+
+    # create the model parameter files
+    model_builder = UFOModelConverterCPP(model,
+                                         os.path.join(output_dir, 'src'),
+                                         wanted_lorentz,
+                                         wanted_couplings)
+    model_builder.write_files()
+
+#===============================================================================
+# UFOModelConverterCPP
+#===============================================================================
+
+class UFOModelConverterCPP(object):
+    """ A converter of the UFO-MG5 Model to the C++ format """
+
+    # Static variables (for inheritance)
+    output_name = 'C++ Standalone'
+    namespace = 'MG5'
+
+    # Dictionary from Python type to C++ type
+    type_dict = {"real": "double",
+                 "complex": "std::complex<double>"}
+
+    # Regular expressions for cleaning of lines from Aloha files
+    compiler_option_re = re.compile('^#\w')
+    namespace_re = re.compile('^using namespace')
+
+    slha_to_depend = {('SMINPUTS', (3,)): ('aS',),
+                      ('SMINPUTS', (1,)): ('aEM',)}
+
+    # Template files to use
+    param_template_h = 'cpp_model_parameters_h.inc'
+    param_template_cc = 'cpp_model_parameters_cc.inc'
+    aloha_template_h = 'cpp_hel_amps_h.inc'
+    aloha_template_cc = 'cpp_hel_amps_cc.inc'
+
+    copy_files = ["read_slha.h", "read_slha.cc"]
+
+    def __init__(self, model, output_path, wanted_lorentz = [],
+                 wanted_couplings = []):
+        """ initialization of the objects """
+
+        self.model = model
+        self.model_name = model['name']
+
+        self.dir_path = output_path
+
+        # List of needed ALOHA routines
+        self.wanted_lorentz = wanted_lorentz
+
+        # For dependent couplings, only want to update the ones
+        # actually used in each process. For other couplings and
+        # parameters, just need a list of all.
+        self.coups_dep = {}    # name -> base_objects.ModelVariable
+        self.coups_indep = []  # base_objects.ModelVariable
+        self.params_dep = []   # base_objects.ModelVariable
+        self.params_indep = [] # base_objects.ModelVariable
+        self.p_to_cpp = parsers.UFOExpressionParserCPP()
+
+        # Prepare parameters and couplings for writeout in C++
+        self.prepare_parameters()
+        self.prepare_couplings(wanted_couplings)
+
+    def write_files(self):
+        """Create all necessary files"""
+
+        # Write Helas Routines
+        self.write_aloha_routines()
+
+        # Write parameter (and coupling) class files
+        self.write_parameter_class_files()
+
+    # Routines for preparing parameters and couplings from the model
+
+    def prepare_parameters(self):
+        """Extract the parameters from the model, and store them in
+        the two lists params_indep and params_dep"""
+
+        # Keep only dependences on alphaS, to save time in execution
+        keys = self.model['parameters'].keys()
+        keys.sort(key=len)
+        params_ext = []
+        for key in keys:
+            if key == ('external',):
+                params_ext += self.model['parameters'][key]
+            elif 'aS' in key:
+                for p in self.model['parameters'][key]:
+                    self.params_dep.append(base_objects.ModelVariable(p.name,
+                                                 self.p_to_cpp.parse(p.expr),
+                                                 p.type,
+                                                 p.depend))
+            else:
+                for p in self.model['parameters'][key]:
+                    self.params_indep.append(base_objects.ModelVariable(p.name,
+                                                 self.p_to_cpp.parse(p.expr),
+                                                 p.type,
+                                                 p.depend))
+
+        # For external parameters, want to read off the SLHA block code
+        while params_ext:
+            param = params_ext.pop(0)
+            # Read value from the slha variable
+            expression = ""
+            if len(param.lhacode) == 1:
+                expression = "slha.get_block_entry(\"%s\", %d, %e);" % \
+                             (param.lhablock.lower(), param.lhacode[0],
+                              param.value)
+            elif len(param.lhacode) == 2:
+                expression = "indices[0] = %d;\nindices[1] = %d;\n" % \
+                             (param.lhacode[0], param.lhacode[1])
+                expression += "%s=slha.get_block_entry(\"%s\", indices, %e);" \
+                              % (param.name, param.lhablock.lower(), param.value)
+            else:
+                raise MadGraph5Error("Only support for SLHA blocks with 1 or 2 indices")
+            self.params_indep.insert(0,
+                                   base_objects.ModelVariable(param.name,
+                                                              expression,
+                                                              'real'))
+            
+    def prepare_couplings(self, wanted_couplings = []):
+        """Extract the couplings from the model, and store them in
+        the two lists coups_indep and coups_dep"""
+
+        # Keep only dependences on alphaS, to save time in execution
+        keys = self.model['couplings'].keys()
+        keys.sort(key=len)
+        for key, coup_list in self.model['couplings'].items():
+            if "aS" in key:
+                for c in coup_list:
+                    if not wanted_couplings or c.name in wanted_couplings:
+                        self.coups_dep[c.name] = base_objects.ModelVariable(\
+                                                                   c.name,
+                                                                   c.expr,
+                                                                   c.type,
+                                                                   c.depend)
+            else:
+                for c in coup_list:
+                    if not wanted_couplings or c.name in wanted_couplings:
+                        self.coups_indep.append(base_objects.ModelVariable(\
+                                                                   c.name,
+                                                                   c.expr,
+                                                                   c.type,
+                                                                   c.depend))
+
+        # Convert coupling expressions from Python to C++
+        for coup in self.coups_dep.values() + self.coups_indep:
+            coup.expr = self.p_to_cpp.parse(coup.expr)
+
+    # Routines for writing the parameter files
+
+    def write_parameter_class_files(self):
+        """Generate the parameters_model.h and parameters_model.cc
+        files, which have the parameters and couplings for the model."""
+
+        parameter_h_file = os.path.join(self.dir_path,
+                                    'Parameters_%s.h' % self.model.get('name'))
+        parameter_cc_file = os.path.join(self.dir_path,
+                                     'Parameters_%s.cc' % self.model.get('name'))
+
+        replace_dict = {}
+
+        replace_dict['info_lines'] = get_mg5_info_lines()
+        replace_dict['model_name'] = self.model.get('name')
+
+        replace_dict['independent_parameters'] = \
+                                   "// Model parameters independent of aS\n" + \
+                                   self.write_parameters(self.params_indep)
+        replace_dict['independent_couplings'] = \
+                                   "// Model parameters dependent on aS\n" + \
+                                   self.write_parameters(self.params_dep)
+        replace_dict['dependent_parameters'] = \
+                                   "// Model couplings independent of aS\n" + \
+                                   self.write_parameters(self.coups_indep)
+        replace_dict['dependent_couplings'] = \
+                                   "// Model couplings dependent on aS\n" + \
+                                   self.write_parameters(self.coups_dep.values())
+
+        replace_dict['set_independent_parameters'] = \
+                               self.write_set_parameters(self.params_indep)
+        replace_dict['set_independent_couplings'] = \
+                               self.write_set_parameters(self.coups_indep)
+        replace_dict['set_dependent_parameters'] = \
+                               self.write_set_parameters(self.params_dep)
+        replace_dict['set_dependent_couplings'] = \
+                               self.write_set_parameters(self.coups_dep.values())
+
+        replace_dict['print_independent_parameters'] = \
+                               self.write_print_parameters(self.params_indep)
+        replace_dict['print_independent_couplings'] = \
+                               self.write_print_parameters(self.coups_indep)
+        replace_dict['print_dependent_parameters'] = \
+                               self.write_print_parameters(self.params_dep)
+        replace_dict['print_dependent_couplings'] = \
+                               self.write_print_parameters(self.coups_dep.values())
+
+        file_h = read_template_file(self.param_template_h) % \
+                 replace_dict
+        file_cc = read_template_file(self.param_template_cc) % \
+                  replace_dict
+
+        # Write the files
+        writers.CPPWriter(parameter_h_file).writelines(file_h)
+        writers.CPPWriter(parameter_cc_file).writelines(file_cc)
+
+        # Copy additional needed files
+        for copy_file in self.copy_files:
+            shutil.copy(os.path.join(_file_path, 'iolibs',
+                                         'template_files',copy_file),
+                            self.dir_path)
+
+        logger.info("Created files %s and %s in directory %s" \
+                    % (os.path.split(parameter_h_file)[-1],
+                       os.path.split(parameter_cc_file)[-1],
+                       os.path.split(parameter_h_file)[0]))
+
+    def write_parameters(self, params):
+        """Write out the definitions of parameters"""
+
+        # Create a dictionary from parameter type to list of parameter names
+        type_param_dict = {}
+
+        for param in params:
+            type_param_dict[param.type] = \
+                  type_param_dict.setdefault(param.type, []) + [param.name]
+
+        # For each parameter type, write out the definition string
+        # type parameters;
+        res_strings = []
+        for key in type_param_dict:
+            res_strings.append("%s %s;" % (self.type_dict[key],
+                                          ",".join(type_param_dict[key])))
+
+        return "\n".join(res_strings)
+
+    def write_set_parameters(self, params):
+        """Write out the lines of independent parameters"""
+
+        # For each parameter, write name = expr;
+
+        res_strings = []
+        for param in params:
+            if param.expr.find('\n') >= 0:
+                res_strings.append("%s;" % param.expr)
+            else:
+                res_strings.append("%s=%s;" % (param.name, param.expr))
+
+        # Correct width sign for Majorana particles (where the width
+        # and mass need to have the same sign)        
+        for particle in self.model.get('particles'):
+            if particle.is_fermion() and particle.get('self_antipart') and \
+                   particle.get('width').lower() != 'zero':
+                res_strings.append("if (%s < 0)" % particle.get('mass'))
+                res_strings.append("%(width)s = -abs(%(width)s);" % \
+                                   {"width": particle.get('width')})
+
+        return "\n".join(res_strings)
+
+    def write_print_parameters(self, params):
+        """Write out the lines of independent parameters"""
+
+        # For each parameter, write name = expr;
+
+        res_strings = []
+        for param in params:
+            res_strings.append("cout << setw(20) << \"%s \" << \"= \" << setiosflags(ios::scientific) << setw(10) << %s << endl;" % (param.name, param.name))
+
+        return "\n".join(res_strings)
+
+    # Routines for writing the ALOHA files
+
+    def write_aloha_routines(self):
+        """Generate the hel_amps_model.h and hel_amps_model.cc files, which
+        have the complete set of generalized Helas routines for the model"""
+
+        model_h_file = os.path.join(self.dir_path,
+                                    'hel_amps_%s.h' % self.model.get('name'))
+        model_cc_file = os.path.join(self.dir_path,
+                                     'hel_amps_%s.cc' % self.model.get('name'))
+
+        replace_dict = {}
+
+        replace_dict['output_name'] = self.output_name
+        replace_dict['info_lines'] = get_mg5_info_lines()
+        replace_dict['namespace'] = self.namespace
+        replace_dict['model_name'] = self.model.get('name')
+
+        # Read in the template .h and .cc files, stripped of compiler
+        # commands and namespaces
+        template_h_files = self.read_aloha_template_files(ext = 'h')
+        template_cc_files = self.read_aloha_template_files(ext = 'cc')
+
+        aloha_model = create_aloha.AbstractALOHAModel(\
+                                         self.model.get('name'))
+        if self.wanted_lorentz:
+            aloha_model.compute_subset(self.wanted_lorentz)
+        else:
+            aloha_model.compute_all(save=False)
+        for abstracthelas in dict(aloha_model).values():
+            aloha_writer = aloha_writers.ALOHAWriterForCPP(abstracthelas,
+                                                        self.dir_path)
+            header = aloha_writer.define_header()
+            template_h_files.append(self.write_function_declaration(\
+                                         aloha_writer, header))
+            template_cc_files.append(self.write_function_definition(\
+                                          aloha_writer, header))
+
+        replace_dict['function_declarations'] = '\n'.join(template_h_files)
+        replace_dict['function_definitions'] = '\n'.join(template_cc_files)
+
+        file_h = read_template_file(self.aloha_template_h) % replace_dict
+        file_cc = read_template_file(self.aloha_template_cc) % replace_dict
+
+        # Write the files
+        writers.CPPWriter(model_h_file).writelines(file_h)
+        writers.CPPWriter(model_cc_file).writelines(file_cc)
+
+        logger.info("Created files %s and %s in directory %s" \
+                    % (os.path.split(model_h_file)[-1],
+                       os.path.split(model_cc_file)[-1],
+                       os.path.split(model_h_file)[0]))
+
+
+    def read_aloha_template_files(self, ext):
+        """Read all ALOHA template files with extension ext, strip them of
+        compiler options and namespace options, and return in a list"""
+
+        template_files = []
+        for filename in glob.glob(os.path.join(MG5DIR, 'aloha',
+                                               'template_files', '*.%s' % ext)):
+            file = open(filename, 'r')
+            template_file_string = ""
+            while file:
+                line = file.readline()
+                if len(line) == 0: break
+                line = self.clean_line(line)
+                if not line:
+                    continue
+                template_file_string += line.strip() + '\n'
+            template_files.append(template_file_string)
+
+        return template_files
+
+    def write_function_declaration(self, aloha_writer, header):
+        """Write the function declaration for the ALOHA routine"""
+
+        ret_lines = []
+        for line in aloha_writer.write_h(header).split('\n'):
+            if self.compiler_option_re.match(line) or self.namespace_re.match(line):
+                # Strip out compiler flags and namespaces
+                continue
+            ret_lines.append(line)
+        return "\n".join(ret_lines)
+
+    def write_function_definition(self, aloha_writer, header):
+        """Write the function definition for the ALOHA routine"""
+
+        ret_lines = []
+        for line in aloha_writer.write_cc(header).split('\n'):
+            if self.compiler_option_re.match(line) or self.namespace_re.match(line):
+                # Strip out compiler flags and namespaces
+                continue
+            ret_lines.append(line)
+        return "\n".join(ret_lines)
+
+    def clean_line(self, line):
+        """Strip a line of compiler options and namespace options."""
+
+        if self.compiler_option_re.match(line) or self.namespace_re.match(line):
+            return ""
+
+        return line
 
 #===============================================================================
 # Routines to output UFO models in Pythia8 format
@@ -1086,16 +1763,12 @@ def convert_model_to_pythia8(model, output_dir):
 # UFOModelConverterPythia8
 #===============================================================================
 
-class UFOModelConverterPythia8(object):
+class UFOModelConverterPythia8(UFOModelConverterCPP):
     """ A converter of the UFO-MG5 Model to the Pythia 8 format """
 
-    # Dictionary from Python type to C++ type
-    type_dict = {"real": "double",
-                 "complex": "complex"}
-
-    # Regular expressions for cleaning of lines from Aloha files
-    compiler_option_re = re.compile('^#\w')
-    namespace_re = re.compile('^using namespace')
+    # Static variables (for inheritance)
+    output_name = 'Pythia 8'
+    namespace = 'Pythia8'
 
     # Dictionaries for expression of MG5 SM parameters into Pythia 8
     slha_to_expr = {('SMINPUTS', (1,)): '1./csm->alphaEM(pow(pd->m0(23),2))',
@@ -1104,44 +1777,12 @@ class UFOModelConverterPythia8(object):
                     ('CKMBLOCK', (1,)): 'csm->VCKMgen(1,2)',
                     }
 
-    slha_to_depend = {('SMINPUTS', (3,)): ('aS',),
-                      ('SMINPUTS', (1,)): ('aEM',)}
-
-    def __init__(self, model, output_path):
-        """ initialization of the objects """
-
-        self.model = model
-        self.model_name = model['name']
-
-        self.dir_path = output_path
-
-        # For dependent couplings, only want to update the ones
-        # actually used in each process. For other couplings and
-        # parameters, just need a list of all.
-        self.coups_dep = {}    # name -> base_objects.ModelVariable
-        self.coups_indep = []  # base_objects.ModelVariable
-        self.params_dep = []   # base_objects.ModelVariable
-        self.params_indep = [] # base_objects.ModelVariable
-        self.p_to_cpp = parsers.UFOExpressionParserPythia8()
-
-        # Prepare parameters and couplings for writeout in C++
-        self.prepare_parameters()
-        self.prepare_couplings()
-
-    def write_files(self):
-        """Modify the parameters to fit with Pythia8 conventions and
-        creates all necessary files"""
-
-        # Write Helas Routines
-        self.write_aloha_routines()
-
-        # Write parameter (and coupling) class files
-        self.write_parameter_class_files()
-
-    # Routines for preparing parameters and couplings from the model
+    # Template files to use
+    param_template_h = 'pythia8_model_parameters_h.inc'
+    param_template_cc = 'pythia8_model_parameters_cc.inc'
 
     def prepare_parameters(self):
-        """Extract the parameters from the model, and store them in
+        """Extract the model parameters from Pythia 8, and store them in
         the two lists params_indep and params_dep"""
 
         # Keep only dependences on alphaS, to save time in execution
@@ -1207,239 +1848,3 @@ class UFOModelConverterPythia8(object):
                               "Parameter with key " + repr(key) + \
                               " unknown in model export to Pythia 8"
 
-    def prepare_couplings(self):
-        """Extract the couplings from the model, and store them in
-        the two lists coups_indep and coups_dep"""
-
-
-        # Keep only dependences on alphaS, to save time in execution
-        keys = self.model['couplings'].keys()
-        keys.sort(key=len)
-        for key, coup_list in self.model['couplings'].items():
-            if 'aS' in key:
-                for c in coup_list:
-                    self.coups_dep[c.name] = base_objects.ModelVariable(c.name,
-                                                 self.p_to_cpp.parse(c.expr),
-                                                 c.type,
-                                                 c.depend)
-            else:
-                for c in coup_list:
-                    self.coups_indep.append(base_objects.ModelVariable(c.name,
-                                                 self.p_to_cpp.parse(c.expr),
-                                                 c.type,
-                                                 c.depend))
-
-        # Convert coupling expressions from Python to C++
-        for coup in self.coups_dep.values() + self.coups_indep:
-            coup.expr = self.p_to_cpp.parse(coup.expr)
-
-    # Routines for writing the parameter files
-
-    def write_parameter_class_files(self):
-        """Generate the parameters_model.h and parameters_model.cc
-        files, which have the parameters and couplings for the model."""
-
-        parameter_h_file = os.path.join(self.dir_path,
-                                    'Parameters_%s.h' % self.model.get('name'))
-        parameter_cc_file = os.path.join(self.dir_path,
-                                     'Parameters_%s.cc' % self.model.get('name'))
-
-        replace_dict = {}
-
-        replace_dict['info_lines'] = get_mg5_info_lines()
-        replace_dict['model_name'] = self.model.get('name')
-
-        replace_dict['independent_parameters'] = \
-                                   "// Model parameters independent of aS\n" + \
-                                   self.write_parameters(self.params_indep)
-        replace_dict['independent_couplings'] = \
-                                   "// Model parameters dependent on aS\n" + \
-                                   self.write_parameters(self.params_dep)
-        replace_dict['dependent_parameters'] = \
-                                   "// Model couplings independent of aS\n" + \
-                                   self.write_parameters(self.coups_indep)
-        replace_dict['dependent_couplings'] = \
-                                   "// Model couplings dependent on aS\n" + \
-                                   self.write_parameters(self.coups_dep.values())
-
-        replace_dict['set_independent_parameters'] = \
-                               self.write_set_parameters(self.params_indep)
-        replace_dict['set_independent_couplings'] = \
-                               self.write_set_parameters(self.coups_indep)
-        replace_dict['set_dependent_parameters'] = \
-                               self.write_set_parameters(self.params_dep)
-        replace_dict['set_dependent_couplings'] = \
-                               self.write_set_parameters(self.coups_dep.values())
-
-        replace_dict['print_independent_parameters'] = \
-                               self.write_print_parameters(self.params_indep)
-        replace_dict['print_independent_couplings'] = \
-                               self.write_print_parameters(self.coups_indep)
-        replace_dict['print_dependent_parameters'] = \
-                               self.write_print_parameters(self.params_dep)
-        replace_dict['print_dependent_couplings'] = \
-                               self.write_print_parameters(self.coups_dep.values())
-
-        file_h = read_template_file('pythia8_model_parameters_h.inc') % \
-                 replace_dict
-        file_cc = read_template_file('pythia8_model_parameters_cc.inc') % \
-                  replace_dict
-
-        # Write the files
-        writers.CPPWriter(parameter_h_file).writelines(file_h)
-        writers.CPPWriter(parameter_cc_file).writelines(file_cc)
-
-        logger.info("Created files %s and %s in directory %s" \
-                    % (os.path.split(parameter_h_file)[-1],
-                       os.path.split(parameter_cc_file)[-1],
-                       os.path.split(parameter_h_file)[0]))
-
-    def write_parameters(self, params):
-        """Write out the definitions of parameters"""
-
-        # Create a dictionary from parameter type to list of parameter names
-        type_param_dict = {}
-
-        for param in params:
-            type_param_dict[param.type] = \
-                  type_param_dict.setdefault(param.type, []) + [param.name]
-
-        # For each parameter type, write out the definition string
-        # type parameters;
-        res_strings = []
-        for key in type_param_dict:
-            res_strings.append("%s %s;" % (self.type_dict[key],
-                                          ",".join(type_param_dict[key])))
-
-        return "\n".join(res_strings)
-
-    def write_set_parameters(self, params):
-        """Write out the lines of independent parameters"""
-
-        # For each parameter, write name = expr;
-
-        res_strings = []
-        for param in params:
-            res_strings.append("%s=%s;" % (param.name, param.expr))
-
-        # Correct width sign for Majorana particles (where the width
-        # and mass need to have the same sign)        
-        for particle in self.model.get('particles'):
-            if particle.is_fermion() and particle.get('self_antipart') and \
-                   particle.get('width').lower() != 'zero':
-                res_strings.append("if (%s < 0)" % particle.get('mass'))
-                res_strings.append("%(width)s = -abs(%(width)s);" % \
-                                   {"width": particle.get('width')})
-
-        return "\n".join(res_strings)
-
-    def write_print_parameters(self, params):
-        """Write out the lines of independent parameters"""
-
-        # For each parameter, write name = expr;
-
-        res_strings = []
-        for param in params:
-            res_strings.append("cout << setw(20) << \"%s \" << \"= \" << setiosflags(ios::scientific) << setw(10) << %s << endl;" % (param.name, param.name))
-
-        return "\n".join(res_strings)
-
-    # Routines for writing the ALOHA files
-
-    def write_aloha_routines(self):
-        """Generate the hel_amps_model.h and hel_amps_model.cc files, which
-        have the complete set of generalized Helas routines for the model"""
-
-        model_h_file = os.path.join(self.dir_path,
-                                    'hel_amps_%s.h' % self.model.get('name'))
-        model_cc_file = os.path.join(self.dir_path,
-                                     'hel_amps_%s.cc' % self.model.get('name'))
-
-        replace_dict = {}
-
-        replace_dict['info_lines'] = get_mg5_info_lines()
-        replace_dict['model_name'] = self.model.get('name')
-
-        # Read in the template .h and .cc files, stripped of compiler
-        # commands and namespaces
-        template_h_files = self.read_aloha_template_files(ext = 'h')
-        template_cc_files = self.read_aloha_template_files(ext = 'cc')
-
-        aloha_model = create_aloha.AbstractALOHAModel(\
-                                         self.model.get('name'))
-        aloha_model.compute_all(save=False)
-        for abstracthelas in dict(aloha_model).values():
-            aloha_writer = aloha_writers.ALOHAWriterForCPP(abstracthelas,
-                                                        self.dir_path)
-            header = aloha_writer.define_header()
-            template_h_files.append(self.write_function_declaration(\
-                                         aloha_writer, header))
-            template_cc_files.append(self.write_function_definition(\
-                                          aloha_writer, header))
-
-        replace_dict['function_declarations'] = '\n'.join(template_h_files)
-        replace_dict['function_definitions'] = '\n'.join(template_cc_files)
-
-        file_h = read_template_file('pythia8_hel_amps_h.inc') % replace_dict
-        file_cc = read_template_file('pythia8_hel_amps_cc.inc') % replace_dict
-
-        # Write the files
-        writers.CPPWriter(model_h_file).writelines(file_h)
-        writers.CPPWriter(model_cc_file).writelines(file_cc)
-
-        logger.info("Created files %s and %s in directory %s" \
-                    % (os.path.split(model_h_file)[-1],
-                       os.path.split(model_cc_file)[-1],
-                       os.path.split(model_h_file)[0]))
-
-
-    def read_aloha_template_files(self, ext):
-        """Read all ALOHA template files with extension ext, strip them of
-        compiler options and namespace options, and return in a list"""
-
-        template_files = []
-        for filename in glob.glob(os.path.join(MG5DIR, 'aloha',
-                                               'template_files', '*.%s' % ext)):
-            file = open(filename, 'r')
-            template_file_string = ""
-            while file:
-                line = file.readline()
-                if len(line) == 0: break
-                line = self.clean_line(line)
-                if not line:
-                    continue
-                template_file_string += line.strip() + '\n'
-            template_files.append(template_file_string)
-
-        return template_files
-
-    def write_function_declaration(self, aloha_writer, header):
-        """Write the function declaration for the ALOHA routine"""
-
-        ret_lines = []
-        for line in aloha_writer.write_h(header).split('\n'):
-            if self.compiler_option_re.match(line) or self.namespace_re.match(line):
-                # Strip out compiler flags and namespaces
-                continue
-            ret_lines.append(line)
-        return "\n".join(ret_lines)
-
-    def write_function_definition(self, aloha_writer, header):
-        """Write the function definition for the ALOHA routine"""
-
-        ret_lines = []
-        for line in aloha_writer.write_cc(header).split('\n'):
-            if self.compiler_option_re.match(line) or self.namespace_re.match(line):
-                # Strip out compiler flags and namespaces
-                continue
-            ret_lines.append(line)
-        return "\n".join(ret_lines)
-
-    def clean_line(self, line):
-        """Strip a line of compiler options and namespace options, and
-        replace complex<double> by complex."""
-
-        if self.compiler_option_re.match(line) or self.namespace_re.match(line):
-            return ""
-
-        return line

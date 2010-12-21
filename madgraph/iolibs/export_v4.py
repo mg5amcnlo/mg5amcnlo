@@ -105,7 +105,9 @@ def copy_v4standalone(mgme_dir, dir_path, clean):
 
     try:
         subprocess.call([os.path.join('bin', 'standalone')],
-                        stdout = os.open(os.devnull, os.O_RDWR), cwd=dir_path)
+                        stdout = os.open(os.devnull, os.O_RDWR),
+                        stderr = os.open(os.devnull, os.O_RDWR),
+                        cwd=dir_path)
     except OSError:
         # Probably standalone already called
         pass
@@ -858,7 +860,8 @@ def export_model_files(model_path, process_path):
 def make_model_symbolic_link(process_path):
     #make the copy/symbolic link
     model_path = process_path + '/Source/MODEL/'
-    ln(model_path + '/ident_card.dat', process_path + '/Cards', log=False)
+    if os.path.exists(os.path.join(model_path, 'ident_card.dat')):
+        ln(model_path + '/ident_card.dat', process_path + '/Cards', log=False)
     cp(model_path + '/param_card.dat', process_path + '/Cards')
     mv(model_path + '/param_card.dat', process_path + '/Cards/param_card_default.dat')
     ln(model_path + '/particles.dat', process_path + '/SubProcesses')
@@ -971,9 +974,16 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     including the necessary matrix.f and various helper files"""
 
     cwd = os.getcwd()
-
-    os.chdir(path)
-
+    try:
+        os.chdir(path)
+    except OSError, error:
+        error_msg = "The directory %s should exist in order to be able " % path + \
+                    "to \"export\" in it. If you see this error message by " + \
+                    "typing the command \"export\" please consider to use " + \
+                    "instead the command \"output\". "
+        raise MadGraph5Error, error_msg 
+        
+         
     pathdir = os.getcwd()
 
     # Create the directory PN_xx_xxxxx in the specified path
@@ -1398,13 +1408,14 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
 # Routines to output UFO models in MG4 format
 #===============================================================================
 
-def convert_model_to_mg4(model, output_dir, wanted_lorentz = []):
+def convert_model_to_mg4(model, output_dir, wanted_lorentz = [],
+                         wanted_couplings = []):
     """ Create a full valid MG4 model from a MG5 model (coming from UFO)"""
     
     # create the MODEL
     write_dir=os.path.join(output_dir, 'Source', 'MODEL')
     model_builder = UFO_model_to_mg4(model, write_dir)
-    model_builder.build()
+    model_builder.build(wanted_couplings)
     
     # Create and write ALOHA Routine
     aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
@@ -1451,7 +1462,7 @@ class UFO_model_to_mg4(object):
         self.params_ext = []   # external parameter
         self.p_to_f = parsers.UFOExpressionParserFortran()
         
-    def build(self):
+    def build(self, wanted_couplings = []):
         """modify the couplings to fit with MG4 convention and creates all the 
         different files"""
 
@@ -1470,9 +1481,13 @@ class UFO_model_to_mg4(object):
         keys.sort(key=len)
         for key, coup_list in self.model['couplings'].items():
             if 'aS' in key:
-                self.coups_dep += coup_list
+                self.coups_dep += [c for c in coup_list if
+                                   (not wanted_couplings or c.name in \
+                                    wanted_couplings)]
             else:
-                self.coups_indep += coup_list
+                self.coups_indep += [c for c in coup_list if
+                                     (not wanted_couplings or c.name in \
+                                      wanted_couplings)]
                 
         # MG4 use G and not aS as it basic object for alphas related computation
         #Pass G in the  independant list
@@ -1564,20 +1579,21 @@ class UFO_model_to_mg4(object):
         fsock.writelines(header)
         
         # Write the Mass definition/ common block
-        masses = [param.name for param in self.params_ext \
-                                                    if param.lhablock == 'MASS']
-        
-        is_mass = lambda name: name[0].lower() == 'm' and len(name)<4
-        masses += [param.name for param in self.params_dep + 
-                            self.params_indep if param.type == 'real'
-                            and is_mass(param.name)]      
+        masses = set()
+        widths = set()
+        for particle in self.model.get('particles'):
+            #find masses
+            one_mass = particle.get('mass')
+            if one_mass.lower() != 'zero':
+                masses.add(one_mass)
+            # find width
+            one_width = particle.get('width')
+            if one_width.lower() != 'zero':
+                widths.add(one_width)
+            
         
         fsock.writelines('double precision '+','.join(masses)+'\n')
         fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
-        
-        # Write the Width definition/ common block
-        widths = [param.name for param in self.params_ext \
-                                                   if param.lhablock == 'DECAY']
         fsock.writelines('double precision '+','.join(widths)+'\n')
         fsock.writelines('common/widths/ '+','.join(widths)+'\n\n')
         
@@ -1606,8 +1622,14 @@ class UFO_model_to_mg4(object):
         """create input.inc containing the definition of the parameters"""
         
         fsock = self.open('input.inc', format='fortran')
+
+        #find mass/ width since they are already define
+        already_def = set()
+        for particle in self.model.get('particles'):
+            already_def.add(particle.get('mass').lower())
+            already_def.add(particle.get('width').lower())
         
-        is_valid = lambda name: name!='G' and not (name[0].lower() == 'm' and len(name)<4)
+        is_valid = lambda name: name!='G' and name.lower() not in already_def
         
         real_parameters = [param.name for param in self.params_dep + 
                             self.params_indep if param.type == 'real'

@@ -41,6 +41,8 @@ import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.cmd_interface as cmd_interface
 
+from madgraph import MadGraph5Error
+
 class MERunner(object):
     """Base class to containing default function to setup, run and access results
     produced with a specific ME generator. 
@@ -107,15 +109,12 @@ class MG4Runner(MERunner):
 
         self.setup_flag = False
 
+        self.check_path(mg4_path)
+
         # Create a copy of Template
-        if not os.path.isdir(os.path.join(mg4_path, "MadGraphII")) or \
-               not os.path.isdir(os.path.join(mg4_path, "Template")) or \
+        if not os.path.isdir(os.path.join(mg4_path, "Template")) or \
                not os.path.isdir(os.path.join(mg4_path, "HELAS")):
             raise IOError, "Path %s is not a valid MG4 path" % str(mg4_path)
-
-        if not os.path.isdir(os.path.join(mg4_path, "Models", self.model)):
-            raise IOError, "No such model directory %s" % \
-                  os.path.join(mg4_path, "Models", self.model)
 
         self.mg4_path = os.path.abspath(mg4_path)
 
@@ -146,6 +145,13 @@ class MG4Runner(MERunner):
         # print some info
         logging.info("Temporary standalone directory %s successfully created" % \
                      temp_dir)
+
+    def check_path(self, mg4_path):
+        """Check the path for necessary directories"""
+
+        if not os.path.isdir(os.path.join(mg4_path, "Template")) or \
+               not os.path.isdir(os.path.join(mg4_path, "HELAS")):
+            raise IOError, "Path %s is not a valid MG4 path" % str(mg4_path)
 
     def cleanup(self):
         """Clean up temporary directories"""
@@ -324,6 +330,13 @@ class MG5Runner(MG4Runner):
 
         self.mg5_path = os.path.abspath(mg5_path)
 
+    def check_path(self, mg4_path):
+        """Check the path for necessary directories"""
+
+        if not os.path.isdir(os.path.join(mg4_path, "Template")) or \
+               not os.path.isdir(os.path.join(mg4_path, "HELAS")):
+            raise IOError, "Path %s is not a valid MG4 path" % str(mg4_path)
+
     def run(self, proc_list, model, orders={}, energy=1000):
         """Execute MG5 on the list of processes mentioned in proc_list, using
         the specified model, the specified maximal coupling orders and a certain
@@ -355,7 +368,7 @@ class MG5Runner(MG4Runner):
             try:
                 cmd.run_cmd(line)
             except MadGraph5Error:
-                pass
+                raise Exception
         # Get the ME value
         for i, proc in enumerate(proc_list):
             self.res_list.append(self.get_me_value(proc, i))
@@ -382,6 +395,12 @@ class MG5_UFO_Runner(MG5Runner):
     name = 'UFO-ALOHA-MG5'
     type = 'ufo'
     
+    def check_path(self, mg4_path):
+        """Check the path for necessary directories"""
+
+        if not os.path.isdir(os.path.join(mg4_path, "Template")):
+            raise IOError, "Path %s is not a valid MG4 path" % str(mg4_path)
+
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
@@ -396,6 +415,133 @@ class MG5_UFO_Runner(MG5Runner):
                      os.path.join(self.mg4_path, self.temp_dir_name)
 
         return v5_string
+
+class MG5_CPP_Runner(MG4Runner):
+    """Runner object for the MG5 C++ Standalone output."""
+
+    mg5_path = ""
+    
+    type='cpp'
+    name = 'MG5-C++'
+    compilator ='g++'
+
+    def setup(self, mg5_path, mg4_path, temp_dir=None):
+        """Setup routine: create a temporary C++ Standalone
+        directory. the temp_dir variable can be given to specify the
+        name of the process directory, otherwise a temporary one is
+        created."""
+
+        self.proc_list = []
+        self.res_list = []
+
+        self.setup_flag = False
+
+        if not os.path.isdir(mg4_path):
+            raise IOError, "Path %s is not valid" % str(mg4_path)
+
+        self.mg4_path = os.path.abspath(mg4_path)
+
+        if not os.path.isdir(mg5_path):
+            raise IOError, "Path %s is not valid" % str(mg5_path)
+
+        self.mg5_path = os.path.abspath(mg5_path)
+
+        if not temp_dir:
+            i=0
+            while os.path.exists(os.path.join(mg4_path, 
+                                              "test_%s_%s" % (self.type, i))):
+                i += 1
+            temp_dir = "test_%s_%s" % (self.type, i)         
+
+        if os.path.exists(os.path.join(mg4_path, temp_dir)):
+            raise IOError, "Path %s for test already exist" % \
+                                    str(os.path.join(mg4_path, temp_dir))
+
+        try:
+            os.mkdir(os.path.join(mg4_path, temp_dir))
+        except os.error as error:
+            raise IOError, error.strerror + " " + temp_dir
+
+        try:
+            os.mkdir(os.path.join(mg4_path, temp_dir, 'Cards'))
+        except os.error as error:
+            raise IOError, error.strerror + " " + temp_dir + '/Cards'
+
+        self.temp_dir_name = temp_dir
+
+        # Set the setup flag to true to tell other routines everything is OK
+        self.setup_flag = True
+
+        # print some info
+        logging.info("Temporary standalone C++ directory %s successfully created" % \
+                     temp_dir)
+
+    def run(self, proc_list, model, orders={}, energy=1000):
+        """Execute MG5 on the list of processes mentioned in proc_list, using
+        the specified model, the specified maximal coupling orders and a certain
+        energy for incoming particles (for decay, incoming particle is at rest).
+        """
+
+        self.proc_list = proc_list
+        self.model = model
+        self.orders = orders
+        self.energy = energy
+
+        dir_name = os.path.join(self.mg4_path, self.temp_dir_name)
+
+        # Create a proc_card.dat in the v5 format
+        proc_card_file = open(os.path.join(dir_name, 'Cards', 'proc_card_v5.dat'), 'w')
+        proc_card_file.write(self.format_mg5_proc_card(proc_list, model, orders))
+        proc_card_file.close()
+
+        logging.info("proc_card.dat file for %i processes successfully created in %s" % \
+                     (len(proc_list), os.path.join(dir_name, 'Cards')))
+
+        # Run mg5
+        logging.info("Running MG5 Standalone C++ output")
+        proc_card = open(os.path.join(dir_name, 'Cards', 'proc_card_v5.dat'), 'r').read()
+        cmd = cmd_interface.MadGraphCmdShell()
+        for line in proc_card.split('\n'):
+            try:
+                cmd.run_cmd(line)
+            except MadGraph5Error:
+                pass
+
+        self.fix_energy_in_check(dir_name, energy)
+
+        # Get the ME value
+        for i, proc in enumerate(proc_list):
+            self.res_list.append(self.get_me_value(proc, i))
+
+        return self.res_list
+
+    def format_mg5_proc_card(self, proc_list, model, orders):
+        """Create a proc_card.dat string following v5 conventions."""
+
+        v5_string = "import model %s \n" % model
+
+        couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
+
+        for i, proc in enumerate(proc_list):
+            v5_string += 'add process ' + proc + ' ' + couplings + \
+                         '@%i' % i + '\n'
+        v5_string += "output standalone_cpp %s -f\n" % \
+                     os.path.join(self.mg4_path, self.temp_dir_name)
+
+        return v5_string
+
+    def fix_energy_in_check(self, dir_name, energy):
+        """Replace the hard coded collision energy in check_sa.f by the given
+        energy, assuming a working dir dir_name"""
+
+        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.cpp'), 'r')
+        check_sa = file.read()
+        file.close()
+
+        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.cpp'), 'w')
+        file.write(re.sub("energy = 1000", "energy = %i" % int(energy),
+                          check_sa))
+        file.close()
 
 class PickleRunner(MERunner):
     """Runner object for the stored comparison results."""

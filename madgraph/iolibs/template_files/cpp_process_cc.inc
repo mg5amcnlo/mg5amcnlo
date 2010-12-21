@@ -3,9 +3,9 @@
 %(info_lines)s
 //==========================================================================
 
+#include "CPPProcess.h"
 #include "hel_amps_%(model_name)s.h"
 
-namespace Pythia8_%(model_name)s {
+using namespace MG5_%(model_name)s;
 
-%(function_definitions)s
-} // end namespace Pythia8_%(model_name)s
+%(process_function_definitions)s

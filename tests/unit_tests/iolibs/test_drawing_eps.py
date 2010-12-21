@@ -20,7 +20,7 @@ from __future__ import division
 # The following two lines (suitably modified) are needed to run the
 # diagram generation using __main__
 #import sys
-#sys.path.append('/home/alwall/MadEvent/MG5/madevent_output')
+#sys.path.append('/Users/omatt/fynu/MADGRAPH/MG_ME/mg5_drawer')
 
 import os
 import pickle
@@ -98,7 +98,7 @@ class TestDrawingOption(unittest.TestCase):
         
     def test_option_multi_type(self):
         """Test that t h > t g W+ W-  is fine with all options"""
-        diagram = self.store_diagram['t h > t g W+ W-'][0] 
+        diagram = self.store_diagram['t h > t g w+ w-'][0] 
         self.schedular(diagram)        
           
 #===============================================================================
@@ -122,12 +122,31 @@ class TestDrawingS_EPS(unittest.TestCase):
 
         self.diagram = base_objects.DiagramList()
         for i in range(7):
-            self.diagram.append(self.store_diagram['t h > t g W+ W-'][i])
+            self.diagram.append(self.store_diagram['t h > t g w+ w-'][i])
 
         self.plot = draw_eps.MultiEpsDiagramDrawer(self.diagram, '__testdiag__.eps', \
                                           model=_model, amplitude='')
         
+    def test_blob(self):
+        """ test if the blob are written correctly """
+        #prepare everything
+        diagram = self.store_diagram['u~ u~ > e+ e- u~ u~ g'][1]
+        plot = draw_eps.EpsDiagramDrawer(diagram, \
+                                        '__testdiag__.eps', model=_model, \
+                                         amplitude='')
         
+        plot.convert_diagram()
+        plot.initialize()
+        
+        nb_blob =0
+        for i, vertex in enumerate(plot.diagram.vertexList): 
+            plot.text = ''
+            plot.draw_vertex(vertex, bypass= ['QCD'])
+            if '1.0 Fblob' in plot.text:
+                nb_blob += 1
+        self.assertEqual(nb_blob, 4)
+            
+    
     def output_is_valid(self, position, pdf_check=True):
         """Test if the output files exist. 
         Additionally if pdf_check is on True
@@ -175,34 +194,38 @@ if __name__ == '__main__':
     process_diag['g g > g g g g'] = [0, 26, 92, 93, 192]
     process_diag['g g > g g g g g g'] = [73, 2556]
     process_diag['mu+ mu- > w+ w- a'] = [6, 7]
-    process_diag['t h > t g W+ W-'] = [0, 1, 2, 3, 4, 5, 6, 7]
-    process_diag['u u > Z u u g'] = [26]
-    process_diag['u~ u~ > Z u~ u~ g'] = [26]
+    process_diag['t h > t g w+ w-'] = [0, 1, 2, 3, 4, 5, 6, 7]
+    process_diag['u u > z u u g'] = [26]
+    process_diag['u~ u~ > z u~ u~ g'] = [26]
     process_diag['u~ u~ > e+ e- u~ u~ g'] = [1, 8]
     process_diag['e- e+ > t t~, t > w+ b'] = [0]
 
-    from madgraph.interface.cmd_interface import MadGraphCmd
-    cmd = MadGraphCmd()
-    cmd.do_import('model_v4 ' + os.path.join(_file_path, \
-                                        '../input_files/v4_sm_particles.dat'))
-    cmd.do_import('model_v4 ' + os.path.join(_file_path, \
-                                    '../input_files/v4_sm_interactions.dat'))
-
+    from madgraph.interface.cmd_interface import MadGraphCmdShell
+    cmd = MadGraphCmdShell()
+    #cmd.do_import('model /Users/omatt/fynu/MADGRAPH/MG_ME/mg5_drawer/models/sm')
+    #cmd.do_import('model_v4 ' + os.path.join(_file_path, \
+    #                                    '../input_files/v4_sm_particles.dat'))
+    #cmd.do_import('model_v4 ' + os.path.join(_file_path, \
+    #                                '../input_files/v4_sm_interactions.dat'))
+    cmd._curr_model = _model 
+    
     # Create the diagrams
     diag_content = {}
     for gen_line, pos_list in process_diag.items():
         print gen_line, ':',
-        cmd.do_generate(gen_line)
+        gen_line_with_order = gen_line + ' QCD=99'
+        cmd.do_generate(gen_line_with_order)
         #Look for decay chains
         if ',' in gen_line:
-            amp = cmd._MadGraphCmd__curr_amps[0]
+            amp = cmd._curr_amps[0]
             import madgraph.core.helas_objects as helas_objects
             matrix_elements = \
             helas_objects.HelasDecayChainProcess(amp).combine_decay_chain_processes()
             if matrix_elements:
                 amplitude = matrix_elements[0].get('base_amplitude')     
         else:
-            amplitude = cmd._MadGraphCmd__curr_amps[0]
+            amplitude = cmd._curr_amps[0]
+        print len(amplitude['diagrams'])
             
                                                     
         diag_content[gen_line] = {}

@@ -78,21 +78,27 @@ def import_model(model_path, mgme_dir = MG4DIR):
 def find_model_path(model_path, mgme_dir):
     """Find the path to the model, starting with path model_path."""
 
+    # treat simple case (model_path is a valid path/ mgme_dir doesn't exist)
     if os.path.isdir(model_path):
-        pass
-    elif mgme_dir and os.path.isdir(os.path.join(mgme_dir, 'Models', model_path)):
-        model_path = os.path.join(mgme_dir, 'Models', model_path)
-    elif mgme_dir and os.path.isdir(os.path.join(mgme_dir, 'models',
-                                                 model_path + "_v4")):
-        model_path = os.path.join(mgme_dir, 'models', model_path + "_v4")
+        return model_path
     elif not mgme_dir:
         error_text = "Path %s is not a valid pathname\n" % model_path
         error_text += "and no MG_ME installation detected in order to search in Models"
         raise MadGraph5Error(error_text)
-    else:
-        raise MadGraph5Error("Path %s is not a valid pathname" % model_path)
 
-    return model_path
+    # Try to build the valid path
+    path_possibilities = [os.path.join(mgme_dir, 'Models', model_path),
+                         os.path.join(mgme_dir, 'models', model_path + "_v4"),    
+                         os.path.join(mgme_dir, 'models', model_path)            
+                         ]
+
+    for path in path_possibilities:
+        if os.path.exists(path) and \
+                        not os.path.exists(os.path.join(path, 'particles.py')):
+            return path
+    
+    # No valid path found
+    raise MadGraph5Error("Path %s is not a valid pathname" % model_path)
 
 #===============================================================================
 # read_particles_v4
@@ -107,6 +113,7 @@ def read_particles_v4(fsock):
 
     color_equiv = {'s': 1,
                    't': 3,
+                   '6': 6,
                    'o': 8}
 
     line_equiv = {'d': 'dashed',
@@ -233,10 +240,12 @@ def read_interactions_v4(fsock, ref_part_list):
                 # Give color structure
                 # Order particles according to color
                 # Don't consider singlets
-                color_parts = sorted(part_list, lambda p1, p2:\
-                                            p1.get_color() - p2.get_color())
-                colors = [part.get_color() for part in color_parts \
-                                                        if part.get_color() !=1]
+                color_parts = sorted(enumerate(part_list), lambda p1, p2:\
+                                     p1[1].get_color() - p2[1].get_color())
+                color_ind = [(i, part.get_color()) for i, part in \
+                             color_parts if part.get_color() !=1]
+                colors = [c for i,c in color_ind]
+                ind = [i for i,c in color_ind]
 
                 # Set color empty by default
                 myinter.set('color', [])
@@ -246,32 +255,31 @@ def read_interactions_v4(fsock, ref_part_list):
                 elif colors == [-3, 3]:
                     # triplet-triplet-singlet coupling
                     myinter.set('color', [color.ColorString(\
-                        [color.T(1, 0)])])
+                        [color.T(ind[1], ind[0])])])
                 elif colors == [8, 8]:
                     # octet-octet-singlet coupling
                     my_cs = color.ColorString(\
-                        [color.Tr(0, 1)])
+                        [color.Tr(ind[0], ind[1])])
                     my_cs.coeff = fractions.Fraction(2)
                     myinter.set('color', [my_cs])
                 elif colors == [-3, 3, 8]:
                     # triplet-triplet-octet coupling
                     myinter.set('color', [color.ColorString(\
-                        [color.T(2, 1, 0)])])
+                        [color.T(ind[2], ind[1], ind[0])])])
                 elif colors == [8, 8, 8]:
                     # Triple glue coupling
                     my_color_string = color.ColorString(\
-                        [color.f(0, 1, 2)])
+                        [color.f(ind[0], ind[1], ind[2])])
                     my_color_string.is_imaginary = True
                     myinter.set('color', [my_color_string])
                 elif colors == [-3, 3, 8, 8]:
                     my_cs1 = color.ColorString(\
-                        [color.T(2, 3, 1, 0)])
+                        [color.T(ind[2], ind[3], ind[1], ind[0])])
                     my_cs2 = color.ColorString(\
-                        [color.T(3, 2, 1, 0)])
+                        [color.T(ind[3], ind[2], ind[1], ind[0])])
                     myinter.set('color', [my_cs1, my_cs2])
-
                 elif colors == [8, 8, 8, 8]:
-                    # 4-glue / glue-glue-gluino-gluino coupling
+                    # 4-glue coupling
                     cs1 = color.ColorString([color.f(0, 1, -1),
                                                    color.f(2, 3, -1)])
                     #cs1.coeff = fractions.Fraction(-1)
@@ -334,6 +342,10 @@ def read_interactions_v4(fsock, ref_part_list):
                         # Should only use one Helas amplitude for electroweak
                         # 4-vector vertices with FR. I choose W3W3NX.
                         myinter.set('lorentz', ['WWVVN'])
+                elif values[len(part_list)] in ['DUM', 'DUM0', 'DUM1']:
+                    # We can just use the second coupling, since the first
+                    # is a dummy
+                    myinter.set('couplings', {(0, 0):values[len(part_list)+1]})
                 elif pdg_codes == [21, 21, 21, 21]:
                     # gggg
                     myinter.set('couplings', {(0, 0):values[len(part_list)],

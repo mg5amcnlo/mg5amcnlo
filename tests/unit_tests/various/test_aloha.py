@@ -1906,7 +1906,105 @@ class TestSomeObjectProperty(unittest.TestCase):
             self.assertEqual(diff1.get_rep(ind), 0, 'not zero %s for %s' 
                              % (diff1.get_rep(ind),ind ))       
 
+    def test_parity_for_epsilon(self):
+
+        # usefull shortcut
+        Epsilon = aloha_obj.Epsilon
+        # test some value
+        eps = Epsilon(1,2,3,4)
         
+        indices = ((l1, l2, l3, 6 - l1- l2 -l3)
+                                 for l1 in range(4) \
+                                 for l2 in range(4) if l2 != l1\
+                                 for l3 in range(4) if l3 not in [l1,l2])
+        for index in indices:
+            val1 = eps.give_parity(index)
+            val2 = aloha_obj.give_sign_perm([0,1,2,3], index)
+        
+            self.assertEqual(val1, val2, 'not same parity for perm %s' % (index,))
+
+    def testEpsilonProperty(self):
+        """Test the property of the epsilon object"""
+        
+        # usefull shortcut
+        Epsilon = aloha_obj.Epsilon
+
+        # test some value
+        eps = Epsilon(1,2,3,4)
+        eps = eps.expand().simplify()
+        self.assertEqual(eps.get_rep([0,1,2,3]), 1)
+        self.assertEqual(eps.get_rep([0,1,2,2]), 0) 
+        self.assertEqual(eps.get_rep([0,1,3,2]), -1) 
+        self.assertEqual(eps.get_rep([0,1,1,2]), 0) 
+        self.assertEqual(eps.get_rep([0,0,2,2]), 0) 
+        self.assertEqual(eps.get_rep([1,2,3,0]), -1) 
+        self.assertEqual(eps.get_rep([1,2,0,3]), 1) 
+        self.assertEqual(eps.get_rep([1,0,2,3]), -1) 
+
+        # Test the full contraction of two Epsilon
+        contraction = Epsilon(1,2,3,4) * Epsilon(1,2,3,4)
+        
+        contraction = contraction.simplify().expand().simplify()
+        self.assertEqual(contraction, -24)
+        
+        # Test the anti-symmetry of the Epsilon
+        momentum1 = aloha_obj.P(1,1) #first index lorentz, second part number
+        momentum2 = aloha_obj.P(2,1)
+        momentum3 = aloha_obj.P(3,1)
+        momentum4 = aloha_obj.P(4,1)
+        eps = Epsilon(1,2,3,4)
+        
+        product = eps * momentum1 * momentum2
+        product = product.simplify().expand().simplify()
+        for ind in product.listindices():
+            self.assertEqual(product.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (product.get_rep(ind),ind ))
+        
+        product = eps * momentum1 * momentum3
+        product = product.simplify().expand().simplify()
+        for ind in product.listindices():
+            self.assertEqual(product.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (product.get_rep(ind),ind ))        
+               
+        product = eps * momentum1 * momentum4
+        product = product.simplify().expand().simplify()
+        for ind in product.listindices():
+            self.assertEqual(product.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (product.get_rep(ind),ind ))
+                    
+        product = eps * momentum2 * momentum3
+        product = product.simplify().expand().simplify()
+        for ind in product.listindices():
+            self.assertEqual(product.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (product.get_rep(ind),ind ))
+                    
+        product = eps * momentum2 * momentum4
+        product = product.simplify().expand().simplify()
+        for ind in product.listindices():
+            self.assertEqual(product.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (product.get_rep(ind),ind ))
+                    
+        product = eps * momentum3 * momentum4
+        product = product.simplify().expand().simplify()
+        for ind in product.listindices():
+            self.assertEqual(product.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (product.get_rep(ind),ind ))
+          
+        # Epsilon_{mu nu rho alpha} * Epsilon^{mu nu rho beta} = -6 * Metric(alpha,beta)
+        fact1 = aloha_obj.Epsilon('a', 'b', 'c', 'd')
+        fact2 = aloha_obj.Epsilon('a', 'b', 'c', 'e')
+        fact1 = fact1
+        fact2 = fact2
+         
+        result = -6 * aloha_obj.Metric('d','e')
+        result = result.expand().simplify()
+        prod = fact1 * fact2
+        prod = prod.expand().simplify()
+
+        self.assertEqual(prod, result)
+
+
+  
     def testCAlgebraDefinition(self):
         Gamma = aloha_obj.Gamma
         Gamma5 = aloha_obj.Gamma5

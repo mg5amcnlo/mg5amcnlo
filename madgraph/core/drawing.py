@@ -1772,6 +1772,9 @@ class DiagramDrawer(object):
         """Building the diagram Line after Line. 
         This is the key routine of 'draw'."""
 
+        for vertex in self.diagram.vertexList:
+            self.draw_vertex(vertex)
+
         for line in self.diagram.lineList:
             self.draw_line(line)
 
@@ -1815,6 +1818,11 @@ class DiagramDrawer(object):
         if line.is_external():
             number = line.number
             self.associate_number(line, number)
+
+    def draw_vertex(self, vertex):
+        """default vertex style"""
+        pass
+
 
     def draw_straight(self, line):
         """Example of routine for drawing the line 'line' in a specific format.

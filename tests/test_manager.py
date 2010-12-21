@@ -46,8 +46,8 @@ import unittest
 root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 sys.path.append(root_path)
 # Only for profiling with -m cProfile!
-root_path = os.path.split(os.path.dirname(os.path.realpath(sys.argv[0])))[0]
-sys.path.append(root_path)
+#root_path = os.path.split(os.path.dirname(os.path.realpath(sys.argv[0])))[0]
+#sys.path.append(root_path)
 
 from madgraph import MG4DIR
 
@@ -70,7 +70,8 @@ def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1):
                                    re_opt=re_opt):
         data = collect.loadTestsFromName(test_fct)
         testsuite.addTest(data)
-    unittest.TextTestRunner(verbosity=verbosity).run(testsuite)
+        
+    return unittest.TextTestRunner(verbosity=verbosity).run(testsuite)
 
 #===============================================================================
 # TestFinder

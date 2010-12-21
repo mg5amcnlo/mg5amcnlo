@@ -1504,7 +1504,11 @@ class LorentzObjectRepresentation(dict):
         """Check that two representation are identical"""
         
         if self.__class__ != obj.__class__:
-            return False
+            if self.nb_spin == 0 == self.nb_lor and \
+                isinstance(obj, Number): 
+                return self.get_rep([0]) == obj
+            else:
+                return False
         if len(self.lorentz_ind) != len(obj.lorentz_ind):
             return False
         if len(self.spin_ind) != len(obj.spin_ind):

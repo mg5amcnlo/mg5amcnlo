@@ -312,7 +312,7 @@ class Particle(PhysicsObject):
     def get_color(self):
         """Return the color code with a correct minus sign"""
 
-        if not self['is_part'] and self['color'] in [3, 6]:
+        if not self['is_part'] and abs(self['color']) in [3, 6]:
             return - self['color']
         else:
             return self['color']
@@ -321,7 +321,7 @@ class Particle(PhysicsObject):
         """Return the color code of the antiparticle with a correct minus sign
         """
 
-        if self['is_part'] and self['color'] in [3, 6]:
+        if self['is_part'] and self['color'] not in [1, 8]:
             return - self['color']
         else:
             return self['color']
@@ -401,8 +401,8 @@ class ParticleList(PhysicsObjectList):
         ref_dict_to0 = {}
 
         for part in self:
-            ref_dict_to0[(part.get_pdg_code(), part.get_anti_pdg_code())] = 0
-            ref_dict_to0[(part.get_anti_pdg_code(), part.get_pdg_code())] = 0
+            ref_dict_to0[(part.get_pdg_code(), part.get_anti_pdg_code())] = [0]
+            ref_dict_to0[(part.get_anti_pdg_code(), part.get_pdg_code())] = [0]
 
         return ref_dict_to0
 
@@ -538,7 +538,9 @@ class Interaction(PhysicsObject):
 
         pdg_tuple = tuple(sorted([p.get_pdg_code() for p in self['particles']]))
         if pdg_tuple not in ref_dict_to0.keys():
-            ref_dict_to0[pdg_tuple] = self['id']
+            ref_dict_to0[pdg_tuple] = [self['id']]
+        else:
+            ref_dict_to0[pdg_tuple].append(self['id'])
 
         # Create n-1>1 entries. Note that, in the n-1 > 1 dictionary,
         # the n-1 entries should have opposite sign as compared to
@@ -699,7 +701,7 @@ class Model(PhysicsObject):
                                                         type(value)
 
         if name == 'got_majoranas':
-            if not isinstance(value, bool) or value == None:
+            if not (isinstance(value, bool) or value == None):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a boolean" % \
                                                         type(value)
@@ -740,12 +742,16 @@ class Model(PhysicsObject):
         regenerate dictionaries."""
 
         if name == 'particles':
+            # Ensure no doublets in particle list
+            make_unique(value)
             # Reset dictionaries
             self['particle_dict'] = {}
             self['ref_dict_to0'] = {}
             self['got_majoranas'] = None
 
         if name == 'interactions':
+            # Ensure no doublets in interaction list
+            make_unique(value)
             # Reset dictionaries
             self['interaction_dict'] = {}
             self['ref_dict_to1'] = {}
@@ -853,6 +859,43 @@ class Model(PhysicsObject):
                     if antipart:
                         antipart.set('antiname', default[pdg])
                 
+    def write_param_card(self):
+        """Write out the param_card, and return as string."""
+
+        def write_param(param, lhablock):
+
+            lhacode=' '.join(['%3s' % key for key in param.lhacode])
+            if lhablock == 'DECAY':
+                return 'DECAY %s %e # %s' % (lhacode, param.value, param.name)
+            else:
+                return "  %s %e # %s" % (lhacode, param.value, param.name ) 
+
+        if not self.get('parameters'):
+            raise self.PhysicsObjectError,\
+                  "Attempt to write param_card from non-UFO model"
+
+        external_params = self.get('parameters')[('external',)]
+
+        # list all lhablock
+        all_lhablock = set([param.lhablock for param in external_params])
+        
+        # sort lhablock alphabeticaly
+        all_lhablock = sorted(list(all_lhablock))
+        # place DECAY blocks last
+        all_lhablock.remove('DECAY')
+        all_lhablock.append('DECAY')
+
+        ret_list = ["# SLHA param_card for %s written by MadGraph 5" % \
+                    self.get('name')]
+        
+        for lhablock in all_lhablock:
+            if lhablock != 'DECAY':
+                ret_list.append("BLOCK %s" % lhablock)
+            ret_list.extend(sorted([write_param(param, lhablock) \
+                                    for param in external_params if \
+                                    param.lhablock == lhablock]))
+        return "\n".join(ret_list) + "\n"
+        
     @ staticmethod
     def load_default_name():
         """ load the default for name convention """
@@ -1894,3 +1937,23 @@ class ProcessDefinitionList(PhysicsObjectList):
         """Test if object obj is a valid ProcessDefinition for the list."""
 
         return isinstance(obj, ProcessDefinition)
+
+#===============================================================================
+# Global helper functions
+#===============================================================================
+
+def make_unique(doubletlist):
+    """Make sure there are no doublets in the list doubletlist.
+    Note that this is a slow implementation, so don't use if speed 
+    is needed"""
+
+    assert isinstance(doubletlist, list), \
+           "Argument to make_unique must be list"
+    
+
+    uniquelist = []
+    for elem in doubletlist:
+        if elem not in uniquelist:
+            uniquelist.append(elem)
+
+    doubletlist[:] = uniquelist[:]

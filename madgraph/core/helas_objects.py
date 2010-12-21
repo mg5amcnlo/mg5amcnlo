@@ -12,7 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-from madgraph.core import base_objects
+
 """Definitions of objects used to generate language-independent Helas
 calls: HelasWavefunction, HelasAmplitude, HelasDiagram for the
 generation of wavefunctions and amplitudes, HelasMatrixElement and
@@ -412,13 +412,14 @@ class HelasWavefunction(base_objects.PhysicsObject):
         """For octet Majorana fermions, need an extra minus sign in
         the FVI (and FSI?) wavefunction in UFO models."""
 
+        # Add minus sign to coupling of color octet Majorana
+        # particles to g for FVI vertex
         if self.get('color') == 8 and \
                self.get_spin_state_number() == -2 and \
                self.get('self_antipart') and \
                [m.get('color') for m in self.get('mothers')] == [8, 8]:
             self.set('coupling', '-' + self.get('coupling'))
         
-
     def set_state_and_particle(self, model):
         """Set incoming/outgoing state according to mother states and
         Lorentz structure of the interaction, and set PDG code
@@ -769,11 +770,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
             return 0
         
         wf_indices = self.get('pdg_codes')
-        # take the last index in case of identical particles
-        wf_indices.reverse() 
-        wf_index = len(wf_indices) - wf_indices.index(self.get_anti_pdg_code()) - 1
-        wf_indices.reverse() # restore the ordering
-        #wf_index = self.get('pdg_codes').index(self.get_anti_pdg_code())
+        # Take the first index in case of identical particles
+        wf_index = wf_indices.index(self.get_anti_pdg_code())
         # If fermion, then we need to correct for I/O status
         spin_state = self.get_spin_state_number()
         if spin_state % 2 == 0:
@@ -812,14 +810,17 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         vertices = base_objects.VertexList()
 
-        if not self.get('mothers'):
+        mothers = self.get('mothers')
+
+        if not mothers:
             return vertices
 
         # Add vertices for all mothers
-        for mother in self.get('mothers'):
+        for mother in mothers:
             # This is where recursion happens
-            vertices.extend(mother.get_base_vertices(wf_dict, vx_list,
-                                                     optimization))
+            vertices.extend(mother.get_base_vertices(\
+                                                wf_dict, vx_list,optimization))
+
         # Generate last vertex
         legs = base_objects.LegList()
 
@@ -837,7 +838,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             if optimization != 0:
                 wf_dict[self.get('number')] = lastleg
 
-        for mother in self.get('mothers'):
+        for mother in mothers:
             try:
                 leg = wf_dict[mother.get('number')]
             except KeyError:
@@ -1072,37 +1073,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return sorted([mother['number'] for mother in self['mothers']]) == \
                sorted([mother['number'] for mother in other['mothers']])
 
-    # Overloaded operators
-
-    def almost_equal(self, other):
-        """Just like the equality operator above, except mass is not
-        taken into account for external wavefunctions.
-        """
-
-        if not isinstance(other, HelasWavefunction):
-            return False
-
-        # Check relevant directly defined properties
-        if self['number_external'] != other['number_external'] or \
-           self['fermionflow'] != other['fermionflow'] or \
-           self['coupl_key'] != other['coupl_key'] or \
-           self['lorentz'] != other['lorentz'] or \
-           self['coupling'] != other['coupling'] or \
-           self['state'] != other['state'] or \
-           self['onshell'] != other['onshell'] or \
-           self.get('spin') != other.get('spin') or \
-           self.get('self_antipart') != other.get('self_antipart') or \
-           (self.get('mothers') and self.get('mass') != other.get('mass')) or \
-           self.get('width') != other.get('width') or \
-           self.get('color') != other.get('color') or \
-           self['decay'] != other['decay'] or \
-           self['decay'] and self['particle'] != other['particle']:
-            return False
-
-        # Check that mothers have the same numbers (only relevant info)
-        return sorted([mother['number'] for mother in self['mothers']]) == \
-               sorted([mother['number'] for mother in other['mothers']])
-
     def __ne__(self, other):
         """Overloading the nonequality operator, to make comparison easy"""
         return not self.__eq__(other)
@@ -1255,6 +1225,44 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
             i = i - 1
 
         return res
+
+    def sort_by_pdg_codes(self, pdg_codes, my_pdg_code = 0):
+        """Sort this HelasWavefunctionList according to the cyclic
+        order of the pdg codes given. my_pdg_code is the pdg code of
+        the daughter wavefunction (or 0 if daughter is amplitude)."""
+
+        pdg_codes = copy.copy(pdg_codes)
+
+        # Remove the argument wavefunction code from pdg_codes
+
+        my_index = -1
+        if my_pdg_code:
+            # Find the last index instead of the first, to work with UFO models
+            my_index = pdg_codes.index(my_pdg_code)
+            pdg_codes.pop(my_index)
+        
+        mothers = copy.copy(self)
+
+        # Sort according to interaction pdg codes
+
+        mother_codes = [ wf.get_pdg_code() for wf \
+                         in mothers ]
+
+        if pdg_codes == mother_codes:
+            # Already sorted - skip sort below
+            return mothers, my_index
+
+        sorted_mothers = []
+        for i, code in enumerate(pdg_codes):
+            index = mother_codes.index(code)
+            mother_codes.pop(index)
+            mother = mothers.pop(index)
+            sorted_mothers.append(mother)
+
+        if mothers:
+            raise base_objects.PhysicsObject.PhysicsObjectError
+
+        return sorted_mothers, my_index
 
     @staticmethod
     def extract_wavefunctions(mothers):
@@ -1574,9 +1582,11 @@ class HelasAmplitude(base_objects.PhysicsObject):
         for mother in self.get('mothers'):
             vertices.extend(mother.get_base_vertices(wf_dict, vx_list,
                                                      optimization))
+        mothers = self.get('mothers')
+
         # Generate last vertex
         legs = base_objects.LegList()
-        for mother in self.get('mothers'):
+        for mother in mothers:
             try:
                 leg = wf_dict[mother.get('number')]
             except KeyError:
@@ -1762,9 +1772,32 @@ class HelasAmplitude(base_objects.PhysicsObject):
         else:
             return ()
 
+    def set_coupling_color_factor(self):
+        """Check if there is a mismatch between order of fermions
+        w.r.t. color"""
+        mothers = self.get('mothers')
+
+        # Sort mothers according to pdg codes if fermions with indentical
+        # color but not identical pdg code. Needed for antisymmetric
+        # color eps^{ijk}.
+        for imo in range(len(mothers)-1):
+            if mothers[imo].get('color') != 1 and \
+               mothers[imo].is_fermion() and \
+               mothers[imo].get('color') == mothers[imo+1].get('color') and \
+               mothers[imo].get('spin') == mothers[imo+1].get('spin') and \
+               mothers[imo].get('pdg_code') != mothers[imo+1].get('pdg_code'):
+                mothers, my_index = \
+                         mothers.sort_by_pdg_codes(self.get('pdg_codes'))
+                break
+
+        if mothers != self.get('mothers'):
+            # We have mismatch between fermion order for color and lorentz
+            self.set('coupling', '-'+self.get('coupling'))
+
     # Comparison between different amplitudes, to allow check for
     # identical processes. Note that we are then not interested in
     # interaction id, but in all other properties.
+
     def __eq__(self, other):
         """Comparison between different amplitudes, to allow check for
         identical processes.
@@ -2274,6 +2307,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # Sort all mothers according to the order wanted in Helas calls
         for wf in self.get_all_wavefunctions():
             wf.set('mothers', HelasMatrixElement.sorted_mothers(wf))
+
         for amp in self.get_all_amplitudes():
             amp.set('mothers', HelasMatrixElement.sorted_mothers(amp))
             amp.set('color_indices', amp.get_color_indices())
@@ -3210,6 +3244,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 self.get_all_wavefunctions() + self.get_all_amplitudes() \
                 if wa.get('interaction_id') != 0]
         
+    def get_used_couplings(self):
+        """Return a list with all couplings used by this
+        HelasMatrixElement."""
+
+        return [wa.get('coupling') for wa in \
+                self.get_all_wavefunctions() + self.get_all_amplitudes() \
+                if wa.get('interaction_id') != 0]
 
     @staticmethod
     def check_equal_decay_processes(decay1, decay2):
@@ -3347,45 +3388,30 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         if not arg.get('interaction_id'):
             return arg.get('mothers')
 
-        pdg_codes = copy.copy(arg.get('pdg_codes'))
-
-        # Remove the argument wavefunction code from pdg_codes
-
+        sorted_mothers = copy.copy(arg.get('mothers'))
+        my_pdg_code = 0
+        my_spin = 0
         if isinstance(arg, HelasWavefunction):
+            my_pdg_code = arg.get_anti_pdg_code()
             my_spin = arg.get_spin_state_number()
-            # Find the last index instead of the first, to work with UFO models
-            pdg_codes.reverse()
-            my_index = len(pdg_codes) - pdg_codes.index(arg.get_anti_pdg_code()) - 1
-            pdg_codes.reverse()
-            pdg_codes.pop(my_index)
-        
-        mothers = copy.copy(arg.get('mothers'))
 
-        # First sort according to interaction pdg codes
+        sorted_mothers, my_index = arg.get('mothers').sort_by_pdg_codes(\
+            arg.get('pdg_codes'), my_pdg_code)
 
-        mother_codes = [ wf.get_pdg_code() for wf \
-                         in mothers ]
-
-        sorted_mothers = []
         same_spin_mothers = []
-        same_spin_index = -1
-        for i, code in enumerate(pdg_codes):
-            index = mother_codes.index(code)
-            mother_codes.pop(index)
-            mother = mothers.pop(index)
-            if isinstance(arg, HelasWavefunction) and \
-               my_spin % 2 == 1 and \
-               mother.get_spin_state_number() == my_spin:
-                # For bosons with same spin as this wf, need special treatment
-                if same_spin_index < 0:
-                    # Remember starting index for same spin states
-                    same_spin_index = i
-                same_spin_mothers.append(mother)
-            else:
-                sorted_mothers.append(mother)
-
-        if mothers:
-            raise base_objects.PhysicsObject.PhysicsObjectError
+        if isinstance(arg, HelasWavefunction) and \
+               my_spin % 2 == 1:
+            # For bosons with same spin as this wf, need special treatment
+            same_spin_index = -1
+            i=0
+            while i < len(sorted_mothers):
+                if sorted_mothers[i].get_spin_state_number() == my_spin:
+                    if same_spin_index < 0:
+                        # Remember starting index for same spin states
+                        same_spin_index = i
+                    same_spin_mothers.append(sorted_mothers.pop(i))
+                else:
+                    i += 1
 
         # Make cyclic reordering of mothers with same spin as this wf
         if same_spin_mothers:
@@ -3434,7 +3460,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # Put back partner into sorted_mothers
         if partner:
             sorted_mothers.insert(partner_index, partner)
-        
+
         # Next sort according to spin_state_number
         return HelasWavefunctionList(sorted_mothers)
 
@@ -3826,7 +3852,6 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                         new_amp = matrix_element.get_base_amplitude()
                         matrix_element.set('base_amplitude', new_amp)
                         colorize_obj = col_basis.create_color_dict_list(new_amp)
-
                         try:
                             # If the color configuration of the ME has
                             # already been considered before, recycle
@@ -3866,3 +3891,15 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             helas_list.extend(me.get_used_lorentz())
 
         return list(set(helas_list))
+
+    def get_used_couplings(self):
+        """Return a list with all couplings used by this
+        HelasMatrixElement."""
+
+        coupling_list = []
+
+        for me in self.get('matrix_elements'):
+            coupling_list.extend(me.get_used_couplings())
+
+        return list(set(coupling_list))
+    
