@@ -770,6 +770,10 @@ class DecayParticle(base_objects.Particle):
                             "No channel search will not proceed." )
             return
 
+        # Running the coupling constants
+        model.running_externals(abs(eval(self.get('mass'))))
+        model.running_internals(abs(eval(self.get('mass'))))
+
         self['apx_decaywidth'] = 0.
         # Find channels from 2-body decay to partnum-body decay channels.
         for clevel in range(2, partnum+1):
@@ -1397,12 +1401,12 @@ class DecayModel(base_objects.Model):
             # These define the convention we used.
             (1, 1): [(1, 1)],
             (1, 3): [(3, 1)],
-            (1, 8): [(8, 1)],
+            (1, 8): [(8, 1./2)],
             (1, 6): [(6, 1)],
-            (3, 3): [(1, 3), (8, 1), (3, 1), (6, 1)],
+            (3, 3): [(1, 3), (8, 0.5), (3, 1), (6, 1)],
             # (3, 6) ->  (3, 2 rather than 3), 
             (3, 6): [(3, 2), (8, 3./4)],
-            (3, 8): [(3, (3-1./3)), (6, 1)],
+            (3, 8): [(3, 0.5*(3-1./3)), (6, 1)],
             (6, 6): [(1, 6), (8, 4./3)],
             (6, 8): [(3, 2), (6, 2-1./3)],
             (8, 8): [(1, 8)],
@@ -1589,11 +1593,191 @@ class DecayModel(base_objects.Model):
             logger.info("Calculated coupling %s = (%f, %f)" % \
                         (coup.name,\
                          eval(coup.name).real, eval(coup.name).imag))
-                
+
+        # Set alpha_s original value
+        global amZ0, aS
+        amZ0 = aS
+
+
+    def running_externals(self, q):
+        """ Recalculate external parameters at the given scale. """
+
+        # Raise error for wrong type of q
+        if not isinstance(q, int) and not isinstance(q, long) and \
+                not isinstance(q, float):
+            raise self.PhysicsObjectError, \
+                "The argument %s should be numerical type." %str(q)
+
+        # Declare global value. amZ0 is the alpha_s at Z pole
+        global aS, MB, MZ, amZ0
+
+        # Setup the alpha_s at different scale
+        amb = 0.
+        amc = 0.
+        a_out = 0.
+
+        # Setup parameters
+        # MZ, MB are already read in from param_card
+        loopnum = 3
+        MZ_ref = MZ
+        if MB == 0:
+            MB_ref = 4.7
+        else:
+            MB_ref = MB
+        MC_ref = 1.42
+
+        # Calculate alpha_s at the scale q
+        if q < MB_ref:
+            # Running the alpha_s from MZ_ref to MB_ref (fermion_num = 5)
+            t = 2 * math.log(MB_ref/MZ_ref)
+            amb = self.newton1(t, amZ0, loopnum, 5.)
+            if q< MC_ref:
+                # Running the alpha_s from MB_ref to MC_ref (fermion_num = 4)
+                t = 2.*math.log(MC_ref/MB_ref)
+                amc = self.newton1(t, amb, loopnum, 4.)
+                # Running the alpha_s from MC_ref to q
+                t = 2.*math.log(q/MC_ref)
+                a_out = self.newton1(t, amc, loopnum, 3.)
+            else:
+                # Running the alpha_s from MB_ref to q (fermion_num = 4)
+                t = 2.*math.log(q/MB_ref)
+                a_out = self.newton1(t, amb, loopnum, 4.)
+        else:
+            # Running the alpha_s from MZ_ref to MB_ref (fermion_num = 5)
+            t = 2 * math.log(q/MZ_ref)
+            a_out = self.newton1(t, amZ0, loopnum, 5.)
+
+        # Save the result alpha_s
+        aS = a_out
+            
+
+    def newton1(self, t, a_in, loopnum, nf):
+        """ Calculate the running strong coupling constant from a_in
+            using the t as the energy running factor, 
+            loop number given by loopnum, number of fermions by nf."""
+
+        # Setup the accuracy.
+        tol = 5e-4
+
+        # Functions used in the beta function
+        b0 = {}
+        c1 = {}
+        c2 = {}
+        delc = {}
+        for i in range(3,6):
+            b0[i] = (11. - 2.*i/3.)/4./math.pi
+            c1[i] = (102. - 38./3.*i)/4./math.pi/(11. - 2.*i/3.)
+            c2[i] = (2857./2. - 5033.*i/18. + 325* i**2 /54.)\
+                /16./math.pi**2/(11. - 2.*i/3.)
+            delc[i] = math.sqrt(4*c2[i] - c1[i]**2)
+
+        f2 = lambda x: (1./x + c1[nf] * math.log((c1[nf]*x)/(1. + c1[nf]*x)))
+        f3 = lambda x: (1./x + 0.5*c1[nf] * \
+                         math.log((c2[nf]* x**2)\
+                                      /(1. +c1[nf]*x +c2[nf]* x**2))\
+                            -(c1[nf]**2 - 2.*c2[nf])/delc[nf]* \
+                            math.atan((2.*c2[nf]*x + c1[nf])/delc[nf]))
+
+        # Return the 1-loop alpha_s
+        if loopnum == 1:
+            return a_in/(1. + a_in * b0[nf] * t)
+        # For higher order correction, setup the initial value of a_out
+        else:
+            a_out = a_in/(1. + a_in * b0[nf] * t + \
+                              c1[nf] * a_in * math.log(1. + a_in * b0[nf] * t))
+            if a_out <= 0.:
+                a_out = 0.3
+            
+        # Start the iteration            
+        delta = tol +1
+        while delta > tol:
+            if loopnum == 2:
+                f = b0[nf]*t + f2(a_in) - f2(a_out)
+                fp = 1./(a_out**2 * (1. + c1[nf]*a_out))
+            if loopnum == 3:
+                f = b0[nf]*t + f3(a_in) - f3(a_out)
+                fp = 1./(a_out**2 * (1. + c1[nf]*a_out + c2[nf]* a_out**2))
+
+            a_out = a_out - f/fp
+            delta = abs(f/fp/a_out)
+
+        return a_out
+
+    def running_internals(self, q):
+        """ Recalculate parameters and couplings which depend on
+            running external parameters to the given energy scale.
+            RUN running_externals before run this function."""
+
+        # Raise error for wrong type of q
+        if not isinstance(q, int) and not isinstance(q, long) and \
+                not isinstance(q, float):
+            raise self.PhysicsObjectError, \
+                "The argument %s should be numerical type." %str(q)
+
+        # External parameters that must be recalculate for different energy
+        # scale.
+        run_ext_params = ['aS']
+
+        # Extract derived parameters
+        # TO BE IMPLEMENTED allow running alpha_s coupling
+        derived_parameters = []
+        try:
+            derived_parameters += self['parameters'][('aS',)]
+        except KeyError:
+            pass
+        try:
+            derived_parameters += self['parameters'][('aS', 'aEWM1')]
+        except KeyError:
+            pass
+        try:
+            derived_parameters += self['parameters'][('aEWM1', 'aS')]
+        except KeyError:
+            pass
+
+        # Now calculate derived parameters
+        # TO BE IMPLEMENTED use running alpha_s for aS-dependent params
+        for param in derived_parameters:
+            exec("globals()[\'%s\'] = %s" % (param.name, param.expr))
+            if not eval(param.name) and eval(param.name) != 0:
+                logger.warning("%s has no expression: %s" % (param.name,
+                                                             param.expr))
+            try:
+                logger.info("Recalculated parameter %s = %f" % \
+                            (param.name, eval(param.name)))
+            except TypeError:
+                logger.info("Recalculated parameter %s = (%f, %f)" % \
+                            (param.name,\
+                             eval(param.name).real, eval(param.name).imag))
+        
+        # Extract couplings
+        couplings = []
+        try:
+            couplings += self['couplings'][('aS',)]
+        except KeyError:
+            pass
+        try:
+            couplings += self['couplings'][('aS', 'aEWM1')]
+        except KeyError:
+            pass
+        try:
+            couplings += self['couplings'][('aEWM1', 'aS')]
+        except KeyError:
+            pass
+
+        # Now calculate all couplings
+        # TO BE IMPLEMENTED use running alpha_s for aS-dependent couplings
+        for coup in couplings:
+            exec("globals()[\'%s\'] = %s" % (coup.name, coup.expr))
+            if not eval(coup.name) and eval(coup.name) != 0:
+                logger.warning("%s has no expression: %s" % (coup.name,
+                                                             coup.expr))
+            logger.info("Recalculated coupling %s = (%f, %f)" % \
+                        (coup.name,\
+                         eval(coup.name).real, eval(coup.name).imag))
 
 
     def find_decay_groups(self):
-        """Find groups of particles which can decay into each other,
+        """ Find groups of particles which can decay into each other,
         keeping Standard Model particles outside for now. This allows
         to find particles which are absolutely stable based on their
         interactions.
@@ -2227,9 +2411,35 @@ class DecayModel(base_objects.Model):
 
         # Run the width of all particles from 2-body decay so that the 3-body
         # decay could use the width from 2-body decay.
-        for clevel in range(2, max_partnum+1):
+        for part in self.get('particles'):
+            # Skip search if this particle is stable
+            if part.get('is_stable'):
+                logger.info("Particle %s is stable." %part['name'] +\
+                                "No channel search will not proceed.")
+                continue
+
+            # Recalculating parameters and coupling constants 
+            print abs(eval(part.get('mass')))
+
+            self.running_externals(abs(eval(part.get('mass'))))
+            self.running_internals(abs(eval(part.get('mass'))))
+            part.find_channels_nextlevel(self)
+
+        if max_partnum > 2:
             for part in self.get('particles'):
-                part.find_channels_nextlevel(self)
+                # Skip search if this particle is stable
+                if part.get('is_stable'):
+                    logger.info("Particle %s is stable." %part['name'] +\
+                                    "No channel search will not proceed.")
+                    continue
+                
+                # Recalculating parameters and coupling constants 
+                self.running_externals(abs(eval(part.get('mass'))))
+                self.running_internals(abs(eval(part.get('mass'))))
+                # After recalculating the parameters, find the channels to the
+                # requested level.
+                for clevel in range(3, max_partnum+1):
+                    part.find_channels_nextlevel(self)
 
 
 
@@ -3179,7 +3389,8 @@ class Channel(base_objects.Diagram):
         # Return the value now if width has been calculated.
         if self['apx_width_calculated']:
             return self['apx_decaywidth']
-        
+
+        # Calculate width
         self['apx_decaywidth'] = self.get_apx_matrixelement_sq(model) * \
             self.get_apx_psarea(model)/ \
             (2*abs(eval(model.get_particle(self.get_initial_id()).get('mass'))))

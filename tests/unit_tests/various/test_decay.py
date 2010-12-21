@@ -1049,6 +1049,38 @@ class Test_DecayModel(unittest.TestCase):
                                      if p.get('is_stable')]), goal_stable_pid_2)
             
 
+    def test_running_couplings(self):
+        """ Test the running coupling constants in DecayModel."""
+
+        # Test for exception
+        self.assertRaises(decay_objects.DecayModel.PhysicsObjectError,
+                          self.my_testmodel.running_internals, "not i")
+        self.assertRaises(decay_objects.DecayModel.PhysicsObjectError,
+                          self.my_testmodel.running_externals, "not i")
+
+        # Test for running_externals
+        print decay_objects.aS
+        self.my_testmodel.running_externals(100.)
+        print decay_objects.aS
+        self.my_testmodel.running_externals(10.)
+        print decay_objects.aS
+        self.my_testmodel.running_externals(decay_objects.MZ)
+        self.assertAlmostEqual(decay_objects.aS, decay_objects.amZ0)
+
+        # Test for running_internals
+        self.my_testmodel.running_internals(100.)
+        a_out = decay_objects.aS
+        self.assertAlmostEqual(decay_objects.GC_4, -2*math.sqrt(a_out* math.pi))
+
+        # Read mssm
+        model_base = import_ufo.import_model('mssm')
+        model = decay_objects.DecayModel(model_base)
+        param_path = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
+        model.read_param_card(param_path)
+
+        model.running_externals(400.)
+        model.running_internals(400.)
+
 #===============================================================================
 # Test_Channel
 #===============================================================================
@@ -1734,6 +1766,7 @@ class Test_Channel(unittest.TestCase):
         self.assertRaises(decay_objects.DecayModel.PhysicsObjectError,
                           self.my_testmodel.color_multiplicity_def,
                           [1, 'a'])
+
         # Test the color_multiplicity_def
         self.assertEqual(self.my_testmodel.color_multiplicity_def([6,3]),
                          [(3, 2), (8, 3./4)])
@@ -1742,21 +1775,7 @@ class Test_Channel(unittest.TestCase):
         # Two-body decay
         self.assertEqual(self.h_tt_bbmmvv.get_color_multiplicity(\
                 8, [3,3], self.my_testmodel, True),
-                         1)
-        # Three-body decay
-        self.assertEqual(self.h_tt_bbmmvv.get_color_multiplicity(\
-                1, [3,8,3], self.my_testmodel, True),
-                         8)
-        self.assertEqual(self.h_tt_bbmmvv.get_color_multiplicity(\
-                3, [8,8,3], self.my_testmodel, True),
-                         64./9)
-        self.assertEqual(self.h_tt_bbmmvv.get_color_multiplicity(\
-                8, [3,8,3], self.my_testmodel, True),
-                         8./3)
-        # Ambiguity!
-        self.assertEqual(self.h_tt_bbmmvv.get_color_multiplicity(\
-                8, [8,3,3], self.my_testmodel, True),
-                         3)
+                         0.5)
 
     def test_apx_decaywidth_full_read_MG4_paramcard(self):
         """ The test to show the estimation of decay width.
@@ -1772,7 +1791,7 @@ class Test_Channel(unittest.TestCase):
         model.read_param_card(param_path_1)
         
         # Find channels before read MG4 param_card
-        model.find_all_channels(2)
+        model.find_all_channels(3)
        
         # Read MG4 param_card
         MG4_param_path_1 = os.path.join(_file_path,'../input_files/param_card_0.dat')
@@ -1789,9 +1808,9 @@ class Test_Channel(unittest.TestCase):
         #model.write_decay_table('cmp', 'mssm_decaytable_test2.dat')
 
         # Test if the calculated ratio is float or None
-        for part in model.get('particles'):
+        """for part in model.get('particles'):
             print part.get_pdg_code(), part.get('2body_massdiff')
-            """#n_max = len(part['decay_amplitudes'].keys())
+            #n_max = len(part['decay_amplitudes'].keys())
             for n in range(2,n_max+2):
                 for amp in part.get_amplitudes(n):
                     self.assertTrue(isinstance(amp['exa_decaywidth'], bool) or \
@@ -2030,5 +2049,9 @@ class Test_DecayAmplitude(unittest.TestCase):
 
         self.my_testmodel.write_decay_table('full', 'mysmallmodel')
 
+        print self.my_testmodel['parameters'], '\n',\
+            self.my_testmodel['functions']
+
+        
 if __name__ == '__main__':
     unittest.unittest.main()
