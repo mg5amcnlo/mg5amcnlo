@@ -155,6 +155,48 @@ class TestColorSextetModel(unittest.TestCase):
     def test_sextet_color_flow_output(self):
         """Test the color flow output for color sextets"""
 
+        # Test u u~ > six six~
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False,
+                                           'number': 1}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                           'state':False,
+                                           'number': 2}))
+        myleglist.append(base_objects.Leg({'id':9000006,
+                                           'state':True,
+                                           'number': 3}))
+        myleglist.append(base_objects.Leg({'id':-9000006,
+                                           'state':True,
+                                           'number': 4}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        myamp = diagram_generation.Amplitude(myproc)
+        matrix_element = helas_objects.HelasMatrixElement(myamp)
+        
+        # First build a color representation dictionnary
+        repr_dict = {}
+        for l in myleglist:
+            repr_dict[l.get('number')] = \
+                self.base_model.get_particle(l.get('id')).get_color()
+
+        # Get the color flow decomposition
+        col_flow = \
+           matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
+                                                                      2)
+        self.assertEqual(len(col_flow), len(matrix_element.get('color_basis')))
+        self.assertEqual(col_flow,
+                         [{1: [502, 0], 2: [0, 501],
+                           3: [502, -503], 4: [-503, 501]},
+                          {1: [502, 0], 2: [0, 501],
+                           3: [502, -503], 4: [-503, 501]},
+                          {1: [501, 0], 2: [0, 501],
+                           3: [502, -503], 4: [-502, 503]}])
+
         # Test u u > six g
 
         myleglist = base_objects.LegList()
@@ -188,15 +230,16 @@ class TestColorSextetModel(unittest.TestCase):
         col_flow = \
            matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
                                                                       2)
+        self.assertEqual(len(col_flow), len(matrix_element.get('color_basis')))
         self.assertEqual(col_flow,
-                         [{1: [501, 0], 2: [504, 0],
-                           3: [0, 503], 4: [504, 502]},
-                          {1: [501, 0], 2: [503, 0],
-                           3: [0, 504], 4: [501, 502]},
-                          {1: [501, 0], 2: [504, 0],
-                           3: [0, 503], 4: [504, 502]},
-                          {1: [504, 0], 2: [501, 0],
-                           3: [0, 503], 4: [504, 502]}])
+                         [{1: [501, 0], 2: [502, 0],
+                           3: [501, -503], 4: [502, 503]},
+                          {1: [502, 0], 2: [503, 0],
+                           3: [501, -503], 4: [502, 501]},
+                          {1: [501, 0], 2: [502, 0],
+                           3: [501, -503], 4: [502, 503]},
+                          {1: [502, 0], 2: [501, 0],
+                           3: [501, -503], 4: [502, 503]}])
 
         # Test u u > six > u u g
 
@@ -231,6 +274,7 @@ class TestColorSextetModel(unittest.TestCase):
         col_flow = \
            matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
                                                                       2)
+        self.assertEqual(len(col_flow), len(matrix_element.get('color_basis')))
         self.assertEqual(col_flow,
                          [{1: [501, 0], 2: [503, 0], 3: [501, 0],
                            4: [502, 0], 5: [503, 502]},
