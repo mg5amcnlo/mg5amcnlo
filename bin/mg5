@@ -72,7 +72,7 @@ if len(args) == 0:
 
 # Check if optimize mode is (and should be) activated
 if __debug__ and not options.debug and options.web:
-    if not os.path.exists(os.path.join(root_path, 'bin','create_release.py')):
+    if not path.exists(path.join(root_path, 'bin','create_release.py')):
         subprocess.call([sys.executable] + ['-O'] + sys.argv)
         sys.exit()
     else:

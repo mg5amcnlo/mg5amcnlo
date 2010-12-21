@@ -64,7 +64,8 @@ sub writeHtmlProcessPage {
 	    $diagrams += $#tlines + 1;
 	    close(FILE2);
 	  }
-	  if (open FILE2, "$line/auto_dsig$imatrix.f") {
+	  if ((! -e "$line/processes.dat") and
+	      (open FILE2, "$line/auto_dsig$imatrix.f")) {
 	    @lines = <FILE2>;
 	    @tlines = grep /IPROC=IPROC/, @lines; 	       
 	    foreach $one (@tlines) {
@@ -78,6 +79,17 @@ sub writeHtmlProcessPage {
 	  $imatrix += 1;
 	} # end while
 	$totdiag += $diagrams;
+	if (open FILE2, "$line/processes.dat") {
+	  foreach $line (<FILE2>) {
+	    my @lineprocs = {};
+	    if ($line =~ m/\s*\d\s+(.+)$/)
+	      {@lineprocs = split(/,/, $1);}
+	    elsif ($line =~ m/\s*mirror\s+none\s*$/){next;}
+	    elsif  ($line =~ m/\s*mirror\s+(.+)\s*$/)
+	      {@lineprocs = split(/,/, $1);}
+	    @processes = (@processes, @lineprocs);
+	  }
+	}
 	$numprocs = $#processes + 1;
 	print PAGE "<TD> $diagrams </TD> \n";
 	print PAGE "<TD> $numprocs </TD> \n";

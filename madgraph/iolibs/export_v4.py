@@ -1123,13 +1123,16 @@ def write_processes_file(writer, subproc_group):
     for ime, me in \
         enumerate(subproc_group.get('matrix_elements')):
         lines.append("%s %s" % (str(ime+1) + " " * (7-len(str(ime+1))),
-                                me.get('processes')[0].base_string()))
+                                ",".join(p.base_string() for p in \
+                                         me.get('processes'))))
         if me.get('has_mirror_process'):
-            mirror_proc = copy.copy(me.get('processes')[0])
-            legs = copy.copy(mirror_proc.get('legs'))
-            legs.insert(0, legs.pop(1))
-            mirror_proc.set("legs", legs)
-            lines.append("mirror  %s" % mirror_proc.base_string())
+            mirror_procs = [copy.copy(p) for p in me.get('processes')]
+            for proc in mirror_procs:
+                legs = copy.copy(proc.get('legs'))
+                legs.insert(0, legs.pop(1))
+                proc.set("legs", legs)
+            lines.append("mirror  %s" % ",".join(p.base_string() for p in \
+                                                 mirror_procs))
         else:
             lines.append("mirror  none")
 
