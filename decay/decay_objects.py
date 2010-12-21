@@ -79,7 +79,7 @@ class DecayParticle(base_objects.Particle):
                    'texname', 'antitexname', 'line', 'propagating',
                    'is_part', 'self_antipart', 'is_stable',
                    'decay_vertexlist', 'decay_channels', 'apx_decaywidth',
-                   'decay_amplitudes', '2body_massdiff'
+                   'apx_decaywidth_err', 'decay_amplitudes', '2body_massdiff'
                   ]
 
 
@@ -2419,8 +2419,6 @@ class DecayModel(base_objects.Model):
                 continue
 
             # Recalculating parameters and coupling constants 
-            print abs(eval(part.get('mass')))
-
             self.running_externals(abs(eval(part.get('mass'))))
             self.running_internals(abs(eval(part.get('mass'))))
             part.find_channels_nextlevel(self)
@@ -2542,7 +2540,11 @@ class DecayModel(base_objects.Model):
         """ Functions that write the decay table of all the particles 
             in this model that including the channel information and 
             branch ratio (call the estimate_width_error automatically 
-            in the execution) in a file."""
+            in the execution) in a file.
+            format:
+                normal: write only amplitudes
+                cmp: add ratio of decay_width to the value in MG4 param_card
+                full: also write the channels in each amplitude."""
 
         # The list of current allowing formats
         allow_formats = ['normal','full','cmp']
@@ -2550,7 +2552,8 @@ class DecayModel(base_objects.Model):
         # Raise error if format is wrong
         if not format in allow_formats:
             raise self.PhysicsObjectError,\
-                "The format must be \'normal\' or \'full\'." % str(name)
+                "The format must be \'normal\' or \'full\' or \'cmp\'." \
+                % str(name)
 
         # Write the result to decaywidth_MODELNAME.dat in 'decay' directory
         path = os.path.join(MG5DIR, 'decay')
@@ -3199,7 +3202,7 @@ class Channel(base_objects.Diagram):
                 # q is assumed as 0.5M
                 if i != len(self.get('vertices'))-2: 
                     apx_m *= self.get_apx_fnrule(vert.get('legs')[-1].get('id'),
-                                                 1*M, False, model)
+                                                 1*M, False, model, True)
                 # Assign the value to initial particle.
                 else:
                     apx_m *= self.get_apx_fnrule(vert.get('legs')[-1].get('id'),
@@ -3221,7 +3224,7 @@ class Channel(base_objects.Diagram):
         self['apx_matrixelement_sq'] = apx_m
         return apx_m
             
-    def get_apx_fnrule(self, pid, q, onshell, model):
+    def get_apx_fnrule(self, pid, q, onshell, model, est = False):
         """ The library that provide the 'approximated Feynmann rule'
             q is the energy of the leg. The onshell label is to decide
             whether this particle is final or intermediate particle."""
@@ -3234,8 +3237,14 @@ class Channel(base_objects.Diagram):
         if onshell:
             value = 1.
         else:
-            value = 1./((q ** 2 - mass ** 2) ** 2 + \
-                            mass **2 * part.get('apx_decaywidth') **2)
+            if not est:
+                value = 1./((q ** 2 - mass ** 2) ** 2 + \
+                                mass **2 * part.get('apx_decaywidth') **2)
+            # Rough estimation on propagator. Avoid the large propagator when
+            # q is close to mass
+            else:
+                m_large = max([q, mass])
+                value = 1./(0.5* m_large**2)**2
         
         # Set the value according the particle type
         # vector boson case
@@ -3425,8 +3434,8 @@ class Channel(base_objects.Diagram):
                                    self.get_apx_fnrule(leg.get('id'), 
                                                        abs(eval(part.get('mass'))),
                                                        True, model))*\
-                              self.get_apx_fnrule(leg.get('id'), 0.5*M,
-                                                  False, model)
+                              self.get_apx_fnrule(leg.get('id'), M,
+                                                  False, model, True)
                           )
 
         # Subtract 1 to get the real ratio

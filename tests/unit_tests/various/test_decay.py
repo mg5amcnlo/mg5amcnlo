@@ -1706,8 +1706,8 @@ class Test_Channel(unittest.TestCase):
                                              True, full_sm)/ \
                      h_zz_zbb.get_apx_fnrule(6, 0.5*MH_new,
                                              True, full_sm)* \
-                     h_zz_zbb.get_apx_fnrule(6, 0.5*MH_new,
-                                             False, full_sm))
+                     h_zz_zbb.get_apx_fnrule(6, MH_new,
+                                             False, full_sm, True))
 
         self.assertAlmostEqual(\
             h_zz_zbb.get_apx_decaywidth(full_sm)*(ratio-1),
@@ -1807,6 +1807,12 @@ class Test_Channel(unittest.TestCase):
         #model.write_summary_decay_table('mssm_decay_summary_test2.dat')
         #model.write_decay_table('cmp', 'mssm_decaytable_test2.dat')
 
+        """for c in model.get_particle(1000023).get_channels(3, False)[0:100]:
+            print c.nice_string(), '\n'
+        c = model.get_particle(1000023).get_channels(3, False)[0]
+        print len(model.get_particle(1000023).get_channels(3, False))
+        print c.get_apx_decaywidth(model)
+        print c.get_apx_decaywidth_nextlevel(model)"""
         # Test if the calculated ratio is float or None
         """for part in model.get('particles'):
             print part.get_pdg_code(), part.get('2body_massdiff')
@@ -2049,8 +2055,8 @@ class Test_DecayAmplitude(unittest.TestCase):
 
         self.my_testmodel.write_decay_table('full', 'mysmallmodel')
 
-        print self.my_testmodel['parameters'], '\n',\
-            self.my_testmodel['functions']
+        #print self.my_testmodel['parameters'], '\n',\
+        #    self.my_testmodel['functions']
 
         
 if __name__ == '__main__':
