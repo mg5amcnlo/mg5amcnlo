@@ -1787,25 +1787,25 @@ class Test_Channel(unittest.TestCase):
 
         # Read MG5 param_card
         param_path_1 = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
-        param_path_2 = os.path.join(_file_path,'../input_files/param_card_mssm_test.dat')
-        model.read_param_card(param_path_1)
+        param_path_2 = os.path.join(_file_path,'../input_files/param_card_mssm_test1.dat')
+        model.read_param_card(param_path_2)
         
         # Find channels before read MG4 param_card
         model.find_all_channels(3)
        
         # Read MG4 param_card
         MG4_param_path_1 = os.path.join(_file_path,'../input_files/param_card_0.dat')
-        MG4_param_path_2 = os.path.join(_file_path,'../input_files/param_card_test2.dat')
+        MG4_param_path_2 = os.path.join(_file_path,'../input_files/param_card_test1.dat')
 
-        model.read_MG4_param_card_decay(MG4_param_path_1)
+        model.read_MG4_param_card_decay(MG4_param_path_2)
 
         # Write decay summary and the table
         # file name 1: default name
-        model.write_summary_decay_table()
-        model.write_decay_table('cmp')
+        #model.write_summary_decay_table()
+        #model.write_decay_table('cmp')
         # file name 2: for test mssm
-        #model.write_summary_decay_table('mssm_decay_summary_test2.dat')
-        #model.write_decay_table('cmp', 'mssm_decaytable_test2.dat')
+        model.write_summary_decay_table('mssm_decay_summary_test1.dat')
+        model.write_decay_table('cmp', 'mssm_decaytable_test1.dat')
 
         """for c in model.get_particle(1000023).get_channels(3, False)[0:100]:
             print c.nice_string(), '\n'
