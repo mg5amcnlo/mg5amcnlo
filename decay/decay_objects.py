@@ -133,7 +133,7 @@ class DecayParticle(base_objects.Particle):
         if name == 'apx_decaywidth' \
                 and not self[name] \
                 and not self['is_stable']:
-            self.update_decay_attributes()
+            self.update_decay_attributes(True, False, True)
             return self[name]
         elif name == 'apx_decaywidth_err' and not self[name]:
             self.estimate_width_error()
@@ -382,42 +382,54 @@ class DecayParticle(base_objects.Particle):
 
         return True
 
-    def reset_decay_attributes(self):
-        """ Reset the apx_decaywidth, apx_decaywidth_err, and
+    def reset_decay_attributes(self, reset_width, reset_err, reset_br):
+        """ Depend on the given arguments, 
+            reset the apx_decaywidth, apx_decaywidth_err, and
             branching ratio of the amplitudes in this particle.
             It is necessary when the channels are changed, 
             e.g. find next level."""
 
-        # Reset decay width and its error
-        self['apx_decaywidth'] = 0.
-        self['apx_decaywidth_err'] = 0.
+        # Reset decay width
+        if reset_width:
+            self['apx_decaywidth'] = 0.
+
+        # Reset err
+        if reset_err:
+            self['apx_decaywidth_err'] = 0.
         
         # Reset the branching ratio inside amplitudes
-        for n, amplist in self['decay_amplitudes'].items():
-            for amp in amplist:
-                amp.reset_width_br()
+        if reset_br:
+            for n, amplist in self['decay_amplitudes'].items():
+                for amp in amplist:
+                    amp.reset_width_br()
 
-    def update_decay_attributes(self):
-        """ This function will sum all the estimated width for nextlevel to
-            provide the error of current width."""
+    def update_decay_attributes(self, reset_width, reset_err, reset_br):
+        """ This function will update the attributes related to decay width,
+            including total width, branching ratios (of each amplitudes),
+            and error of width.
+            The arguments specify which attributes needs to be updated.
+            Note that the width of amplitudes will not be changed."""
         
         # Reset the related properties
-        self.reset_decay_attributes()
+        self.reset_decay_attributes(reset_width, reset_err, reset_br)
 
         # Update the total width
-        for n, amplist in self['decay_amplitudes'].items():
-            for amp in amplist:
-                # Do not calculate the br in this moment
-                amp.get('apx_decaywidth')
-                self['apx_decaywidth'] += amp.get('apx_decaywidth')
-
-        # Update the branching ratio now with the right total width
-        for n, amplist in self['decay_amplitudes'].items():
-            for amp in amplist:
-                amp.get('apx_br')
+        if reset_width:
+            for n, amplist in self['decay_amplitudes'].items():
+                for amp in amplist:
+                    # Do not calculate the br in this moment
+                    self['apx_decaywidth'] += amp.get('apx_decaywidth')
 
         # Update the apx_decaywidth_err
-        self.estimate_width_error()
+        if reset_err:
+            self.estimate_width_error()
+
+        # Update the branching ratio in the end with the updated total width
+        if reset_br:
+            for n, amplist in self['decay_amplitudes'].items():
+                for amp in amplist:
+                    amp.get('apx_br')
+
 
     def estimate_width_error(self):
         """ This function will estimate the width error from the highest order
@@ -712,6 +724,7 @@ class DecayParticle(base_objects.Particle):
     def find_channels(self, partnum, model):
         """ Function for finding decay channels up to the final particle
             number given by max_partnum.
+            The branching ratios and err are recalculated in the end.
             Algorithm:
             1. Any channel must be a. only one vertex, b. an existing channel
                plus one vertex.
@@ -778,7 +791,9 @@ class DecayParticle(base_objects.Particle):
         # Find channels from 2-body decay to partnum-body decay channels.
         for clevel in range(2, partnum+1):
             self.find_channels_nextlevel(model)
-            
+
+        # Update decay width err and branching ratios, but not the total width
+        self.update_decay_attributes(False, True, True)
 
     def find_channels_nextlevel(self, model):
         """ Find channels from all the existing lower level channels to 
@@ -786,8 +801,11 @@ class DecayParticle(base_objects.Particle):
             the channels lower than clevel are all found. The user could
             first setup channels by find_channels and then use this function
             if they want to have high level decay.
-            Note that the estimation of width for each channels is performed
-            in the search."""
+            NOTE that the width of channels are added sucessively into mother
+            particle during the search.
+            NO calculation of branching ratios and width err are performed!
+            For the search of two-body decay channels, the 2body_massdiff
+            is recorded in the end."""
 
         # Find the next channel level
         try:
@@ -881,19 +899,14 @@ class DecayParticle(base_objects.Particle):
                                                  temp_c_o, temp_c):
                             temp_c.calculate_orders(model)
                             # Calculate the width if onshell
+                            # Add to the apx_decaywidth of mother particle
                             if temp_c_o:
                                 self['apx_decaywidth'] += temp_c.\
                                     get_apx_decaywidth(model)
                             self.get_channels(clevel, temp_c_o).append(temp_c)
 
-        # After the total width is known, estimate the next level width
-        # by get_apx_decaywidth_nextlevel                                
-        if clevel > 2:
-            for channel in self.get_channels(clevel, False):
-                channel.get_apx_decaywidth_nextlevel(model)
-
         # For two-body decay, record the maxima mass difference
-        else:
+        if clevel == 2:
             for channel in self.get_channels(2, True):
                 mass_diff = abs(eval(self['mass'])) - sum(channel.get('final_mass_list'))
                 if mass_diff > self['2body_massdiff']:
@@ -977,6 +990,7 @@ class DecayParticle(base_objects.Particle):
     def group_channels_2_amplitudes(self, clevel, model):
         """ After the channels is found, combining channels with the same 
             final states into amplitudes.
+            NO CALCULATION of branching ratio at this stage!
             clevel: the number of final particles
             model: the model use in find_channels
         """
@@ -1016,10 +1030,10 @@ class DecayParticle(base_objects.Particle):
                 self.get_amplitudes(clevel).append(DecayAmplitude(channel,
                                                                   model))
 
-        # Calculate the apx_decaywidth and apx_br for every amplitude.
+        # Calculate the apx_decaywidth and for every amplitude.
+        # apr_br WILL NOT be calculated!
         for amp in self.get_amplitudes(clevel):
             amp.get('apx_decaywidth')
-            amp.get('apx_br')
         self.get_amplitudes(clevel).sort(amplitudecmp_width)
 
     # This helper function is obselete in current algorithm...
@@ -2434,11 +2448,15 @@ class DecayModel(base_objects.Model):
                 # Recalculating parameters and coupling constants 
                 self.running_externals(abs(eval(part.get('mass'))))
                 self.running_internals(abs(eval(part.get('mass'))))
+
                 # After recalculating the parameters, find the channels to the
                 # requested level.
                 for clevel in range(3, max_partnum+1):
                     part.find_channels_nextlevel(self)
 
+                # Update the decay attributes including branching ratios and
+                # apx_decaywidth_err
+                part.update_decay_attributes(False, True, True)
 
 
     def find_all_channels_smart(self, precision):
@@ -3464,7 +3482,7 @@ class ChannelList(base_objects.DiagramList):
 class DecayAmplitude(diagram_generation.Amplitude):
     """ DecayAmplitude is derived from Amplitude. It collects channels 
         with the same final states and create a Process object to describe it.
-        This could used to generate HELAS amplitude."""
+        This could be used to generate HELAS amplitude."""
 
     sorted_keys = ['process', 'diagrams', 'apx_decaywidth', 'apx_br',
                    'exa_decaywidth']
@@ -3548,7 +3566,7 @@ class DecayAmplitude(diagram_generation.Amplitude):
         # If apx_br is requested, recalculate from the apx_decaywidth if needed.
         if name == 'apx_br' and not self[name]:
             try:
-                self['apx_br'] = self['apx_decaywidth']/ \
+                self['apx_br'] = self.get('apx_decaywidth')/ \
                     self['process']['model'].\
                     get_particle(self['diagrams'][0].get_initial_id()).\
                     get('apx_decaywidth')
@@ -3627,7 +3645,15 @@ class DecayAmplitudeList(diagram_generation.AmplitudeList):
     def decaytable_string(self, format='normal'):
         """ Decaytable string for Amplitudes """
 
-        mystr = '\n'.join([a.decaytable_string(format) for a in self])
+        # Get the level (n-body) of this amplitudelist and
+        # the total width inside this DecayAmplitudeList
+        level = len(self[0].get('diagrams')[0].get_final_legs())
+        total_width = sum([amp.get('apx_decaywidth') for amp in self])
+
+        # Print the header with the total width
+        mystr = '## Contribution to total width of %d-body decay: %.5e \n' \
+            %(level, total_width)
+        mystr += '\n'.join([a.decaytable_string(format) for a in self])
 
         return mystr
 

@@ -373,8 +373,14 @@ class Test_DecayParticle(unittest.TestCase):
         # Add a new channel to tquark
         tquark.get_amplitudes(2).append(amp)
 
-        # Total width doubles. And the branching ratio should be 0.5
-        tquark.update_decay_attributes()
+        # Total width doubles. Update the width, br should remain the same.
+        amp.get('apx_br')
+        tquark.update_decay_attributes(True, True, False)
+        self.assertAlmostEqual(tquark.get('apx_decaywidth'),old_width*2)
+        self.assertAlmostEqual(amp.get('apx_br'), 1)
+
+        # Update the br now. It should be 0.5.
+        tquark.update_decay_attributes(False, True, True)
         self.assertAlmostEqual(tquark.get('apx_decaywidth'),old_width*2)
         self.assertAlmostEqual(amp.get('apx_br'), 0.5)
 
@@ -384,7 +390,8 @@ class Test_DecayParticle(unittest.TestCase):
         offshell_clist = w.get_channels(3, False)
         w.get_channels(3, False).extend(offshell_clist)
 
-        w.update_decay_attributes()
+        # Test if the width_err doubles after the update
+        w.update_decay_attributes(False, True, False)
         self.assertAlmostEqual(w.get('apx_decaywidth_err'),width_err*2)
 
     def test_find_vertexlist(self):
@@ -1538,8 +1545,19 @@ class Test_Channel(unittest.TestCase):
         susy_higgs = decay_mssm.get_particle(25)
         susy_higgs.find_channels(3, decay_mssm)
         #susy_higgs.find_channels_nextlevel(decay_mssm)
-        print len(susy_higgs.get_channels(3, False))
         #decay_mssm.find_all_channels(3)
+
+        # Test the calculation of branching ratios
+        # The total br should be unity
+        total_br = sum([amp['apx_br'] for amp in susy_higgs.get_amplitudes(2)])
+        total_br += sum([amp['apx_br'] for amp in susy_higgs.get_amplitudes(3)])
+        self.assertAlmostEqual(total_br, 1.)
+
+        # Test if the err is from the off-shell 3-body channels
+        err = sum([c['apx_decaywidth_nextlevel'] \
+                       for c in susy_higgs.get_channels(3, False)])
+        self.assertAlmostEqual(err, susy_higgs['apx_decaywidth_err'])
+
                                            
     def test_apx_decaywidth(self):
         """ Test for the approximation of decay rate"""
@@ -1777,9 +1795,13 @@ class Test_Channel(unittest.TestCase):
                 8, [3,3], self.my_testmodel, True),
                          0.5)
 
+
     def test_apx_decaywidth_full_read_MG4_paramcard(self):
         """ The test to show the estimation of decay width.
-            and also read the param_card of MG4. """
+            and also read the param_card of MG4. 
+            Also test the find_all_channels including:
+            1. unity of total branching ratio
+            2. the apx_decaywidth_nextlevel comes from the right level."""
 
         # Read mssm
         model_base = import_ufo.import_model('mssm')
@@ -1788,7 +1810,7 @@ class Test_Channel(unittest.TestCase):
         # Read MG5 param_card
         param_path_1 = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
         param_path_2 = os.path.join(_file_path,'../input_files/param_card_mssm_test1.dat')
-        model.read_param_card(param_path_2)
+        model.read_param_card(param_path_1)
         
         # Find channels before read MG4 param_card
         model.find_all_channels(3)
@@ -1797,22 +1819,27 @@ class Test_Channel(unittest.TestCase):
         MG4_param_path_1 = os.path.join(_file_path,'../input_files/param_card_0.dat')
         MG4_param_path_2 = os.path.join(_file_path,'../input_files/param_card_test1.dat')
 
-        model.read_MG4_param_card_decay(MG4_param_path_2)
+        model.read_MG4_param_card_decay(MG4_param_path_1)
 
         # Write decay summary and the table
         # file name 1: default name
-        #model.write_summary_decay_table()
-        #model.write_decay_table('cmp')
+        model.write_summary_decay_table()
+        model.write_decay_table('cmp')
         # file name 2: for test mssm
-        model.write_summary_decay_table('mssm_decay_summary_test1.dat')
-        model.write_decay_table('cmp', 'mssm_decaytable_test1.dat')
+        #model.write_summary_decay_table('mssm_decay_summary_test1.dat')
+        #model.write_decay_table('cmp', 'mssm_decaytable_test1.dat')
 
-        """for c in model.get_particle(1000023).get_channels(3, False)[0:100]:
-            print c.nice_string(), '\n'
-        c = model.get_particle(1000023).get_channels(3, False)[0]
-        print len(model.get_particle(1000023).get_channels(3, False))
-        print c.get_apx_decaywidth(model)
-        print c.get_apx_decaywidth_nextlevel(model)"""
+        # Test the sum of branching ratios is unity
+        part = model.get_particle(25)
+        total_br = sum([amp['apx_br'] for amp in part.get_amplitudes(2)])
+        total_br += sum([amp['apx_br'] for amp in part.get_amplitudes(3)])
+        self.assertAlmostEqual(total_br, 1.)
+
+        # Test if the err is from the off-shell 3-body channels
+        err = sum([c['apx_decaywidth_nextlevel'] \
+                       for c in part.get_channels(3, False)])
+        self.assertAlmostEqual(err, part['apx_decaywidth_err'])
+
         # Test if the calculated ratio is float or None
         """for part in model.get('particles'):
             print part.get_pdg_code(), part.get('2body_massdiff')
@@ -2029,9 +2056,12 @@ class Test_DecayAmplitude(unittest.TestCase):
         higgs.find_channels(4, self.my_testmodel)
         higgs.group_channels_2_amplitudes(4, self.my_testmodel)
         #print higgs.get_amplitudes(4).nice_string()
+
+        # Grouping will calculate the decaywidth but not the apx_br
         amplt_h_mmvv.get('apx_decaywidth')
-        amplt_h_mmvv.get('apx_br')
+
         self.assertTrue(amplt_h_mmvv in higgs.get_amplitudes(4))
+
 
     def test_decaytable_string(self):
         """ Test the decaytable_string """
