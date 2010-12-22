@@ -36,18 +36,25 @@ import models.model_reader as model_reader
 logger = logging.getLogger('models.import_ufo')
 logger_mod = logging.getLogger('madgraph.model')
 
+class UFOImportError(MadGraph5Error):
+    """ a error class for wrong import of UFO model""" 
 
+def find_ufo_path(model_name):
+    """ find the path to a model """
 
-def import_model(model_name):
-    """ a practical and efficient way to import one of those models """
-
-    # Check for a valid directory
     if os.path.isdir(model_name):
         model_path = model_name
     elif os.path.isdir(os.path.join(MG5DIR, 'models', model_name)):
         model_path = os.path.join(MG5DIR, 'models', model_name)
     else:
-        raise MadGraph5Error("Path %s is not a valid pathname" % model_name)
+        raise UFOImportError("Path %s is not a valid pathname" % model_name)
+
+    return model_path
+
+def import_model(model_path):
+    """ a practical and efficient way to import one of those models """
+
+    assert model_path == find_ufo_path(model_path)
             
     # Check the validity of the model
     files_list_prov = ['couplings.py','lorentz.py','parameters.py',
@@ -56,7 +63,7 @@ def import_model(model_name):
     for filename in files_list_prov:
         filepath = os.path.join(model_path, filename)
         if not os.path.isfile(filepath):
-            raise MadGraph5Error,  "%s directory is not a valid UFO model: \n %s is missing" % \
+            raise UFOImportError,  "%s directory is not a valid UFO model: \n %s is missing" % \
                                                          (model_path, filename)
         files_list.append(filepath)
         
@@ -546,7 +553,7 @@ class RestrictModel(model_reader.ModelReader):
         
         # define usefull variable to detect identical input
         block_value_to_var={} #(lhablok, value): list_of_var
-        mult_param = []       # key of the previous dict with more than one
+        mult_param = set([])       # key of the previous dict with more than one
                               #parameter.
                               
         #detect identical parameter and remove the duplicate parameter
@@ -557,7 +564,7 @@ class RestrictModel(model_reader.ModelReader):
             key = (param.lhablock, value) 
             if key in block_value_to_var:
                 block_value_to_var[key].append(param)
-                mult_param.append(key)
+                mult_param.add(key)
                 #remove the duplicate parameter
                 #external_parameters.remove(param)
             else: 
@@ -577,7 +584,6 @@ class RestrictModel(model_reader.ModelReader):
         
         # Extract external parameters
         external_parameters = self['parameters'][('external',)]
-        
         for i, obj in enumerate(parameters):
             # Keeped intact the first one and store information
             if i == 0:

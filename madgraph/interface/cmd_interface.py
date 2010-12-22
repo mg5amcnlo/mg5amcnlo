@@ -782,6 +782,11 @@ class CheckValidForCmd(object):
     
     def check_import(self, args):
         """check the validity of line"""
+ 
+        if '-modelname' in args:
+            if args[-1] != '-modelname':
+                args.remove('-modelname')
+                args.append('-modelname') 
         
         if not args or args[0] not in self._import_formats:
             self.help_import()
@@ -797,10 +802,7 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd('PATH is mandatory in the current context\n' + \
                                   'Did you forget to run the \"output\" command')
                         
-        if '-modelname' in args:
-            if args[-1] != '-modelname':
-                args.remove('-modelname')
-                args.append('-modelname')
+
         
     def check_load(self, args):
         """ check the validity of the line"""
@@ -874,7 +876,11 @@ class CheckValidForCmd(object):
                 raise self.InvalidCmd, 'Wrong restrict format'
             else:
                 del args[0]
-                
+        
+        if self._model_v4_path:
+            raise self.InvalidCmd, 'Operation not possible with v4 model. ' + \
+                            'Please use a UFO model as a starting point'
+                            
         if self._restrict_file:
             raise MadGraph5Error, 'This model is already restricted to the ' + \
                         'card %s. In order to always keep track ' % self._restrict_file + \
@@ -2152,15 +2158,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                  import_v4.import_model(args[1], self._mgme_dir)
                 self._curr_fortran_model = \
                       helas_call_writers.FortranHelasCallWriter(\
-                                                             self._curr_model)
+                                                             self._curr_model)                
             else:
-                self._curr_model = import_ufo.import_model(args[1])
-                self._curr_fortran_model = \
-                      helas_call_writers.FortranUFOHelasCallWriter(\
-                                                             self._curr_model)
-                self._curr_cpp_model = \
-                      helas_call_writers.CPPUFOHelasCallWriter(\
-                                                             self._curr_model)
+                self.import_ufo_model(args[1])
+
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
 
@@ -2176,7 +2177,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if not os.path.isfile(args[1]):
                 raise MadGraph5Error("Path %s is not a valid pathname" % args[1])
             else:
-                # Check the status of export and try to use file position is no
+                # Check the status of export and try to use file position if no
                 #self._export dir are define
                 self.check_for_export_dir(args[1])
                 # Execute the card
@@ -2201,7 +2202,43 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
  
             #convert and excecute the card
             self.import_mg4_proc_card(proc_card)
-                                     
+    
+    def import_ufo_model(self, model_name):
+        """ import the UFO name """
+        
+        def import_main_model(model_path):
+            """ import a UFO model whithout any restriction file """
+            
+            self._curr_model = import_ufo.import_model(model_path)
+            self._curr_fortran_model = \
+                helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
+            self._curr_cpp_model = \
+                helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
+        
+        try:
+            model_path = import_ufo.find_ufo_path(model_name)
+        except import_ufo.UFOImportError:
+            if '-' not in model_name:
+                raise
+            split = model_name.split('-')
+            model_name = '-'.join([text for text in split[:-1]])
+            model_path = import_ufo.find_ufo_path(model_name)
+            
+            restrict_file = os.path.join(model_path, 'restrict_%s.dat'% split[-1])
+        else:
+
+            if os.path.exists(os.path.join(model_path, 'restrict_default.dat')):
+                restrict_file = os.path.join(model_path, 'restrict_default.dat')
+            else:
+                restrict_file = None
+        #import the model
+        import_main_model(model_path)
+        #restrict it        
+        if restrict_file:
+            self.do_restrict('model %s' %restrict_file)
+        
+        
+        
     def process_model(self):
         """Set variables _particle_names and _couplings for tab
         completion, defined multiparticles"""
