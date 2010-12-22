@@ -197,6 +197,11 @@ def finalize_madevent_v4_directory(dir_path, makejpg, history):
     """Finalize ME v4 directory by creating jpeg diagrams, html
     pages,proc_card_mg5.dat and madevent.tar.gz."""
 
+    if not misc.which('f77'):
+        logger.info('Change makefiles to use gfortran')
+        subprocess.call(['python','./bin/Passto_gfortran.py'], cwd=dir_path, \
+                        stdout = open(os.devnull, 'w')) 
+    
     old_pos = os.getcwd()
     os.chdir(os.path.join(dir_path, 'SubProcesses'))
     P_dir_list = [proc for proc in os.listdir('.') if os.path.isdir(proc) and \
