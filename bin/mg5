@@ -26,12 +26,12 @@ if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
 
 # tab completion and history
 try:
+    import rlcompleter
     import readline
 except ImportError:
     print "For tab completion and history, install module readline."
 else:
-    import rlcompleter
-    readline.parse_and_bind("tab: complete")
+    readline.parse_and_bind("bind ^I rl_complete")
     try:
         import os
         history_file = os.path.join(os.environ['HOME'], '.pythonhistory')
