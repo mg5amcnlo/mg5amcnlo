@@ -19,6 +19,10 @@ import StringIO
 import copy
 import fractions
 import os 
+import sys
+
+root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
+sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
 
 import tests.unit_tests as unittest
 
@@ -26,6 +30,7 @@ import madgraph.iolibs.misc as misc
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.helas_call_writers as helas_call_writers
+import madgraph.iolibs.save_load_object as save_load_object        
 import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -36,6 +41,9 @@ import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 import tests.unit_tests.iolibs.test_helas_call_writers as \
                                             test_helas_call_writers
 
+_file_path = os.path.dirname(os.path.realpath(__file__))
+_input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
+                                'input_files')
 #===============================================================================
 # IOImportV4Test
 #===============================================================================
@@ -4466,7 +4474,7 @@ CALL FFV1_0(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
             self.assertEqual(result[i], goal_string[i])
 
     def test_configs_ug_ttxz(self):
-        """Test config.inc which previously failed.
+        """Test configs.inc which previously failed.
         """
 
         mypartlist = base_objects.ParticleList()
@@ -4800,6 +4808,24 @@ C     Number of configs
       POW(-3,10) = 1
 """)
         
+    def test_configs_8fs(self):
+        """Test configs.inc for 8fs process which previously failed.
+        """
+
+        diagram = save_load_object.load_from_file(\
+                                              os.path.join(_input_file_path,
+                                                           'test_8fs.pkl'))
+        schannels, tchannels = diagram.get('amplitudes')[0].\
+                                     get_s_and_t_channels(2)
+
+        self.assertEqual([[l.get('number') for l in v.get('legs')] for v \
+                          in schannels],
+                         [[7, 6, -1], [-1, 5, -2], [-2, 4, -3], [8, 3, -4],
+                          [-3, -4, -5]])
+        self.assertEqual([[l.get('number') for l in v.get('legs')] for v \
+                          in tchannels],
+                         [[1, -5,-6]]) 
+
 class AlohaFortranWriterTest(unittest.TestCase):
     """ A basic test to see if the Aloha Fortran Writter is working """
     
@@ -4851,3 +4877,33 @@ C
         for i in range(len(split_sol)):
             self.assertEqual(split_sol[i]+'\n', textfile.readline())
 
+if __name__ == '__main__':
+        """Write out pkl file with helas diagram for test_configs_8fs
+        """
+
+        import models.import_ufo
+        mymodel = models.import_ufo.import_model('sm')
+        
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1}))
+        myleglist.append(base_objects.Leg({'id':24}))
+        myleglist.append(base_objects.Leg({'id':5}))
+        myleglist.append(base_objects.Leg({'id':-5}))
+        myleglist.append(base_objects.Leg({'id':21}))
+        myleglist.append(base_objects.Leg({'id':21}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                           'model':mymodel})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        me = helas_objects.HelasMatrixElement(myamplitude,
+                                              gen_color=False)
+
+        me = save_load_object.save_to_file(\
+                       os.path.join(_input_file_path, 'test_8fs.pkl'),
+                       me.get('diagrams')[314])
