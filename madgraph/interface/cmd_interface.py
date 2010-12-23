@@ -2488,11 +2488,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 raise MadGraph5Error('Stopped by user request')
 
         group_subprocesses = self._export_format == 'madevent' and \
-                            self._options['group_subprocesses_output'] and \
-                            (len(self._curr_amps) > 1 or \
-                             isinstance(self._curr_amps[0],
-                                     diagram_generation.DecayChainAmplitude) \
-                             and len(self._curr_amps[0].get('amplitudes')) > 1)
+                             self._options['group_subprocesses_output']
         # Make a Template Copy
         if self._export_format.startswith('madevent'):
             export_v4.copy_v4template(self._mgme_dir, self._export_dir,
@@ -2562,12 +2558,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         # Determine if we want to group subprocesses
         group_subprocesses = self._export_format == 'madevent' and \
-                         self._options['group_subprocesses_output'] and \
-                         (len(self._curr_amps) > 1 or \
-                          isinstance(self._curr_amps[0],
-                                     diagram_generation.DecayChainAmplitude) \
-                          and len(self._curr_amps[0].get('amplitudes')) > 1)
-
+                             self._options['group_subprocesses_output']
+        
         if not group_subprocesses:
             # Do not generate matrix elements, since this is done by the
             # SubProcessGroup objects

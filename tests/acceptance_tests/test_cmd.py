@@ -389,6 +389,7 @@ class TestCmdShell2(unittest.TestCase):
             shutil.rmdir(self.out_dir)
 
         self.do('import model sm')
+        self.do('set group_subprocesses_output False')
         self.do('generate e+ e->e+ e-')
         self.do('output %s ' % self.out_dir)
         # Check that the needed ALOHA subroutines are generated
@@ -556,6 +557,7 @@ class TestCmdShell2(unittest.TestCase):
         """Test MadEvent output of triplet diquarks"""
 
         self.do('import model triplet_diquarks')
+        self.do('set group_subprocesses_output False')
         self.do('generate u t > trip~ > u t g')
         self.do('output %s ' % self.out_dir)
 
