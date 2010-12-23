@@ -590,7 +590,6 @@ class RestrictModel(model_reader.ModelReader):
                 obj.info = 'set of param :' + \
                                      ', '.join([param.name for param in parameters])
                 expr = obj.name
-                print obj, obj.name, obj.info
                 continue
             # delete the old parameters
             external_parameters.remove(obj)

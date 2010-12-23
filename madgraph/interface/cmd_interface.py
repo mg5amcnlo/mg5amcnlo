@@ -2225,8 +2225,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             model_path = import_ufo.find_ufo_path(model_name)
             
             restrict_file = os.path.join(model_path, 'restrict_%s.dat'% split[-1])
+            if split[-1] == 'full':
+                restrict_file = None
         else:
-
             if os.path.exists(os.path.join(model_path, 'restrict_default.dat')):
                 restrict_file = os.path.join(model_path, 'restrict_default.dat')
             else:
