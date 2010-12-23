@@ -39,11 +39,14 @@ import glob
 import optparse
 import logging
 import logging.config
+import time
 
 import os
 import os.path as path
 import shutil
 import subprocess
+
+from datetime import date
 
 # Get the parent directory (mg root) of the script real path (bin)
 # and add it to the current PYTHONPATH
@@ -68,14 +71,25 @@ logging.basicConfig(level=vars(logging)[options.logging],
                     format="%(message)s")
 
 # 0. check that all modification are commited in this directory
-#
+#    and that the date is up-to-date
 diff_result = subprocess.Popen(["bzr", "diff"], stdout=subprocess.PIPE).communicate()[0] 
 
 if diff_result:
-    logging.error("Directory is not up-to-date. The release follow the last commited version.")
+    logging.warning("Directory is not up-to-date. The release follow the last commited version.")
     answer = raw_input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
         exit()
+release_date = date.fromtimestamp(time.time())
+for line in file('VERSION'):
+    if 'version' in line:
+        logging.info(line)
+    if 'date' in line:
+        if not str(release_date.year) in line or not str(release_date.month) in line or \
+                                                           not str(release_date.day) in line:
+            logging.warning("WARNING: The release time information is : %s" % line)
+            answer = raw_input('Do you want to continue anyway? (y/n)')
+            if answer != 'y':
+                exit()
 
 # 1. bzr branch the present directory to a new directory
 #    MadGraph5_vVERSION

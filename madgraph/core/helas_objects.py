@@ -891,7 +891,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         """Returns two lists of vertices corresponding to the s- and
         t-channels that can be traced from this wavefunction, ordered
         from the outermost s-channel and in/down towards the highest
-        number initial state leg."""
+        number initial state leg. mother_leg corresponds to self but with
+        correct leg number = min(final state mothers)."""
 
         schannels = base_objects.VertexList()
         tchannels = base_objects.VertexList()
@@ -917,15 +918,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             # leg of a decay process. Add vertex and continue stepping
             # down towards external initial state
             legs = base_objects.LegList()
-
-            if ninitial == 1 or init_mothers[0].get('number_external') == 2 \
-                   or init_mothers[0].get('leg_state') == True:
-                # This is an s-channel or a leg on its way towards the
-                # final vertex
-                mothers = final_mothers + init_mothers
-            else:
-                # This is a t-channel leg going up towards leg number 1
-                mothers = init_mothers + final_mothers
+            mothers = final_mothers + init_mothers
 
             for mother in mothers:
                 legs.append(base_objects.Leg({
@@ -935,19 +928,20 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     'from_group': False
                     }))
 
-            if ninitial == 1 or init_mothers[0].get('number_external') == 2 \
-                   or init_mothers[0].get('leg_state') == True:
-                # For decay processes or if this is an s-channel leg
-                # or we are going towards external leg 2, mother leg
-                # is one of the mothers
-                legs.insert(-1, mother_leg)
-                # Also need to switch direction of the resulting s-channel
-                legs[-1].set('id', init_mothers[0].get_anti_pdg_code())
-            else:
-                # If the mother is going
-                # towards external leg 1, mother leg is resulting wf
+            if init_mothers[0].get('number_external') == 1 and \
+                   not init_mothers[0].get('leg_state') and \
+                   ninitial > 1:
+                # If this is t-channel going towards external leg 1,
+                # mother_leg is resulting wf
                 legs.append(mother_leg)
-
+            else:
+                # For decay processes or if init_mother is an s-channel leg
+                # or we are going towards external leg 2, mother_leg
+                # is one of the mothers (placed next-to-last)
+                legs.insert(-1, mother_leg)
+                # Need to switch direction of the resulting s-channel
+                legs[-1].set('id', init_mothers[0].get_anti_pdg_code())
+                
             # Renumber resulting leg according to minimum leg number
             legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
 
@@ -955,29 +949,31 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 'id': self.get('interaction_id'),
                 'legs': legs})
 
-            # Add s- and t-channels from further down
+            # Add s- and t-channels from init_mother
             new_mother_leg = legs[-1]
-            if init_mothers[0].get('number_external') == 1:
-                # If we are going towards external leg 1, mother of
-                # next vertex is legs[0]
-                new_mother_leg = legs[0]
+            if init_mothers[0].get('number_external') == 1 and \
+                   not init_mothers[0].get('leg_state') and \
+                   ninitial > 1:
+                # Mother of next vertex is init_mothers[0]
+                # (next-to-last in legs)
+                new_mother_leg = legs[-2]
 
             mother_s, tchannels = \
                       init_mothers[0].get_s_and_t_channels(ninitial,
                                                            new_mother_leg)
-            schannels.extend(mother_s)
-
             if ninitial == 1 or init_mothers[0].get('leg_state') == True:
-                # This leg is s-channel
+                # This vertex is s-channel
                 schannels.append(vertex)
             elif init_mothers[0].get('number_external') == 1:
-                # If we are going towards external leg 1, add to
-                # t-channels, at end
+                # If init_mothers is going towards external leg 1, add
+                # to t-channels, at end
                 tchannels.append(vertex)
             else:
-                # If we are going towards external leg 2, add to
+                # If init_mothers is going towards external leg 2, add to
                 # t-channels, at start
                 tchannels.insert(0, vertex)
+
+            schannels.extend(mother_s)
 
         elif len(init_mothers) == 2:
             # This is a t-channel junction. Start with the leg going
@@ -1019,6 +1015,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                       init_mothers2.get_s_and_t_channels(ninitial, legs[-1])
             schannels.extend(mother_s)
             tchannels.extend(mother_t)
+
 
         return schannels, tchannels
 
