@@ -78,16 +78,11 @@ def import_model(model_path):
             return model
 
     # Load basic information
-    ufo_model = ufomodels.load_model(model_name)
+    ufo_model = ufomodels.load_model(model_path)
     ufo2mg5_converter = UFOMG5Converter(ufo_model)
     model = ufo2mg5_converter.load_model()
-    model.set('name', os.path.split(model_name)[-1])
+    model.set('name', os.path.split(model_path)[-1])
  
-    # Load Abstract Helas routine from Aloha
-    #abstract_model = create_aloha.AbstractALOHAModel(model_name)
-    #abstract_model.compute_all(save=False)
-    #model.set('lorentz', abstract_model)
-    
     # Load the Parameter/Coupling in a convinient format.
     parameters, couplings = OrganizeModelExpression(ufo_model).main()
     model.set('parameters', parameters)
