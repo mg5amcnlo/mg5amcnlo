@@ -85,7 +85,7 @@ if [[ -d Events ]]; then
 #    echo $r
 #    echo '<LesHouchesEvents version="1.0">' >& banner.txt
 #    echo '<!---' >> banner.txt
-    sed -e "s/\s0.*iseed/$r = iseed/g" b.txt >& banner.txt
+    sed -e "s/[\t ]0.*iseed/ $r = iseed/g" b.txt >& banner.txt
     rm -f b.txt 
 #now copy things over 
     cat $c >> banner.txt
