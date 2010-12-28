@@ -2312,7 +2312,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         import_main_model(model_path)
         #restrict it        
         if restrict_file:
+            old_level = import_ufo.logger_mod.level
+            import_ufo.logger_mod.setLevel(eval('logging.warning'))
             self.do_restrict('model %s' %restrict_file)
+            import_ufo.logger_mod.setLevel(old_level)
         
         
         
