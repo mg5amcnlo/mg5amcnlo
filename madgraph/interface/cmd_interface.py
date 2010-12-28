@@ -1326,7 +1326,7 @@ class CompleteForCmd(CheckValidForCmd):
         "Complete the import command"
 
         args=split_arg(line[0:begidx])
-
+        
         # Format
         if len(args) == 1:
             return self.list_completion(text, self._import_formats)
@@ -1334,14 +1334,39 @@ class CompleteForCmd(CheckValidForCmd):
         # Directory continuation
         if args[-1].endswith(os.path.sep):
             if args[1].startswith('model'):
-                return self.path_completion(text,
+                model_list = self.path_completion(text,
                                     os.path.join('.',*[a for a in args if \
                                                       a.endswith(os.path.sep)]),
                                     only_dirs = True)
+                all_name = []
+                for model_name in model_list:
+                    all_name += self.find_restrict_card(model_name)
+                return all_name 
             else:
                 return self.path_completion(text,
                                     os.path.join('.',*[a for a in args if \
                                                       a.endswith(os.path.sep)]))
+
+        # restriction continuation (for UFO)
+        if args[1] == 'model' and ('-' in args[-1] or '-' in text):
+            if sys.version_info[1] == 7:
+                args.append(text)
+            all_name = []
+            path = '-'.join(args[-1].split('-')[:-1])
+            end = args[-1].split('-')[-1]
+            all_name += self.find_restrict_card(path, no_restrict=False)
+            all_name += self.find_restrict_card(path, no_restrict=False,
+                                        base_dir=os.path.join(MG5DIR,'models'))
+            # post treatment
+            if sys.version_info[1] == 6:
+                all_name = [name.split('-')[-1] for name in  all_name ]
+            all_name = [name+' ' for name in  all_name if name.startswith(end)
+                                                       and name.strip() != end]
+            if all_name:
+                return all_name                  
+
+               
+        
         # Model directory name if directory is not given
         if len(split_arg(line[0:begidx])) == 2:
             if args[1] == 'model':
@@ -1354,22 +1379,59 @@ class CompleteForCmd(CheckValidForCmd):
             else:
                 return []
                 
-            return [mod_name(name) for name in \
-                    self.path_completion(text,
+            model_list = [mod_name(name) for name in \
+                                            self.path_completion(text,
                                             os.path.join(MG5DIR,'models'),
                                             only_dirs = True) \
-                       if file_cond(name)]
-                                
+                                            if file_cond(name)]
+            if args[1] == 'model_v4':
+                return model_list
+            else:
+                # need to update the  list with the possible restriction
+                all_name = []
+                for model_name in model_list:
+                    all_name += self.find_restrict_card(model_name, 
+                                        base_dir=os.path.join(MG5DIR,'models'))
+                return all_name                
 
         # Options
         if len(args) > 2 and args[1].startswith('model') and args[-1][0] != '-':
                 return ['-modelname']
+            
         if len(args) > 3 and args[1].startswith('model') and args[-1][0] == '-':
-                return ['modelname']
+                if sys.version_info[1] == 6:
+                    return ['modelname']
+                else: 
+                    return ['-modelname']
+    
+    def find_restrict_card(self, model_name, base_dir='./', no_restrict=True):
+        """find the restriction file associate to a given model"""
 
-  
+        # check if the model_name should be keeped as a possibility
+        if no_restrict:
+            output = [model_name]
+        else:
+            output = []
+        
+        # check that the model is a valid model
+        if not os.path.exists(os.path.join(base_dir, model_name, 'couplings.py')):
+            # not valid UFO model
+            return output
+        
+        # look for _default and treat this case
+        if os.path.exists(os.path.join(base_dir, model_name, 'restrict_default.dat')):
+            output.append('%s-full' % model_name)
+        
+        # look for other restrict_file
+        for name in os.listdir(os.path.join(base_dir, model_name)):
+            if name.startswith('restrict_') and not name.endswith('default.dat'):
+                tag = name[9:-4] #remove restrict and .dat
+                while model_name.endswith(os.path.sep):
+                    model_name = model_name[:-1]
+                output.append('%s-%s' % (model_name, tag))
 
-
+        # return
+        return output
     
 #===============================================================================
 # MadGraphCmd
