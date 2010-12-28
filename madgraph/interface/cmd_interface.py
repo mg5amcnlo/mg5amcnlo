@@ -201,6 +201,11 @@ class CmdExtended(cmd.Cmd):
         # execute the line command
         return line
 
+    def completenames(self, text, *ignored):
+        dotext = 'do_'+text
+        return [ '%s ' % a[3:] for a in self.get_names() if a.startswith(dotext)]
+
+
     def nice_error_handling(self, error, line):
         """ """ 
         # Make sure that we are at the initial position
@@ -1010,7 +1015,14 @@ class CompleteForCmd(CheckValidForCmd):
                             for f in list
                             if f.startswith(text)
                             ]
-        return completions
+        
+        def put_space(name): 
+            if name.endswith(' '): 
+                return name
+            else:
+                return '%s ' % name 
+            
+        return [put_space(name) for name in completions] 
 
     def path_completion(self, text, base_dir = None, only_dirs = False):
         """Propose completions of text to compose a valid path"""
@@ -1031,30 +1043,26 @@ class CompleteForCmd(CheckValidForCmd):
             prefix = base_dir + os.path.sep
             
             
-        if only_dirs:
-            completion = [prefix + f
+        # search for directory
+        completion = [prefix + f + os.path.sep
                           for f in os.listdir(base_dir)
                           if f.startswith(text) and \
                           os.path.isdir(os.path.join(base_dir, f)) and \
                           (not f.startswith('.') or text.startswith('.'))
                           ]
-        else:
-            completion = [prefix + f
+        
+        if not only_dirs:
+            # search for files
+            completion += [prefix + f
                           for f in os.listdir(base_dir)
                           if f.startswith(text) and \
                           os.path.isfile(os.path.join(base_dir, f)) and \
                           (not f.startswith('.') or text.startswith('.'))
                           ]
 
-            completion += [prefix + f + os.path.sep
-                          for f in os.listdir(base_dir)
-                          if f.startswith(text) and \
-                          os.path.isdir(os.path.join(base_dir, f)) and \
-                          (not f.startswith('.') or text.startswith('.'))
-                          ]
-
+        # add ./ and ../
         completion += [prefix + f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
-                       f.startswith(text) if prefix[0] != '.']
+                       f.startswith(text) if not prefix.startswith('.')]
         
         return completion
 
@@ -1141,7 +1149,7 @@ class CompleteForCmd(CheckValidForCmd):
         args = split_arg(line[0:begidx])
         
         if len(args) == 1 and text == 'model'[:len(text)]:
-            return ['model']
+            return ['model ']
         
         # Directory continuation
         return self.path_completion(text,
