@@ -507,6 +507,34 @@ class TestCmdShell2(unittest.TestCase):
                                                     'P0_ut_tripx_utg',
                                                     'madevent')))
         
+    def test_leshouche_sextet_diquarks(self):
+        """Test MadEvent output of triplet diquarks"""
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmdir(self.out_dir)
+
+        # Test sextet production
+        self.do('import model sextet_diquarks')
+        self.do('generate u u > six g')
+        self.do('output %s ' % self.out_dir)
+
+        devnull = open(os.devnull,'w')
+        # Check that leshouche.inc exists
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P0_uu_sixg',
+                                                    'leshouche.inc')))        
+        # Test sextet decay
+        self.do('generate six > u u g')
+        self.do('output %s -f' % self.out_dir)
+
+        devnull = open(os.devnull,'w')
+        # Check that leshouche.inc exists
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P0_six_uug',
+                                                    'leshouche.inc')))        
+
     def test_ufo_standard_sm(self):
         """ check that we can use standard MG4 name """
         self.do('import model sm')
