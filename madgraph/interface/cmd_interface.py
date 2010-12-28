@@ -1349,22 +1349,28 @@ class CompleteForCmd(CheckValidForCmd):
 
         # restriction continuation (for UFO)
         if args[1] == 'model' and ('-' in args[-1] or '-' in text):
+            # deal with - in 2.7 as in 2.6
             if sys.version_info[1] == 7:
-                args.append(text)
-            all_name = []
-            path = '-'.join(args[-1].split('-')[:-1])
-            end = args[-1].split('-')[-1]
-            all_name += self.find_restrict_card(path, no_restrict=False)
+                prefix = '-'.join([part for part in text.split('-')[:-1]])+'-'
+                args.append(prefix)
+                text = text.split('-')[-1]
+            #model name
+            path = args[-1][:-1] # remove the final - for the model name
+            # find the different possibilities
+            all_name = self.find_restrict_card(path, no_restrict=False)
             all_name += self.find_restrict_card(path, no_restrict=False,
                                         base_dir=os.path.join(MG5DIR,'models'))
-            # post treatment
-            if sys.version_info[1] == 6:
-                all_name = [name.split('-')[-1] for name in  all_name ]
-            all_name = [name+' ' for name in  all_name if name.startswith(end)
-                                                       and name.strip() != end]
+
+            # select the possibility according to the current line            
+            all_name = [name.split('-')[-1] for name in  all_name ]
+            all_name = [name+' ' for name in  all_name if name.startswith(text)
+                                                       and name.strip() != text]
+            # adapt output for python2.7 (due to different splitting)
+            if sys.version_info[1] == 7:
+                all_name = [prefix + name for name in  all_name ]
+                
             if all_name:
                 return all_name                  
-
                
         
         # Model directory name if directory is not given
