@@ -908,7 +908,8 @@ def get_leshouche_lines(matrix_element, numproc):
                 repr_dict = {}
                 for l in legs:
                     repr_dict[l.get('number')] = \
-                        proc.get('model').get_particle(l.get('id')).get_color()
+                        proc.get('model').get_particle(l.get('id')).get_color()\
+                        * (-1)**(1+l.get('state'))
                 # Get the list of color flows
                 color_flow_list = \
                     matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
