@@ -2337,7 +2337,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         for wf in self.get_all_wavefunctions() + \
             sum([d.get_all_wavefunctions() for d in \
                  decay_dict.values()], []):
-            if wf.get('self_antipart') and wf.is_fermion():
+            if wf.get('fermionflow') < 0 or \
+                   wf.get('self_antipart') and wf.is_fermion():
                 got_majoranas = True
 
         # Now insert decays for all legs that have decays
@@ -2529,13 +2530,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 # Set unique number for new wavefunctions
                 numbers[0] = numbers[0] + 1
                 wf.set('number', numbers[0])
-
-            # External wavefunction offset for new wfs
-            incr_new = number_external - \
-                       decay_wfs[0].get('number_external')
-            for wf in decay_wfs:
-                wf.set('number_external', wf.get('number_external') + incr_new)
-
 
         # External wavefunction offset for old wfs, only the first
         # time this external wavefunction is replaced
@@ -2749,7 +2743,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     for wf in final_decay_wfs:
                         wf.set('onshell', True)
 
-                    if len_decay == 1:
+                    if len_decay == 1 and len(final_decay_wfs) == 1:
                         # Can use simplified treatment, by just modifying old_wf
                         self.replace_single_wavefunction(old_wf,
                                                          final_decay_wfs[0])
