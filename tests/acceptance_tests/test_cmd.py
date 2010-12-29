@@ -513,12 +513,13 @@ class TestCmdShell2(unittest.TestCase):
         if os.path.isdir(self.out_dir):
             shutil.rmdir(self.out_dir)
 
+        devnull = open(os.devnull,'w')
+
         # Test sextet production
         self.do('import model sextet_diquarks')
         self.do('generate u u > six g')
         self.do('output %s ' % self.out_dir)
-
-        devnull = open(os.devnull,'w')
+        
         # Check that leshouche.inc exists
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
@@ -528,11 +529,21 @@ class TestCmdShell2(unittest.TestCase):
         self.do('generate six > u u g')
         self.do('output %s -f' % self.out_dir)
 
-        devnull = open(os.devnull,'w')
         # Check that leshouche.inc exists
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_six_uug',
+                                                    'leshouche.inc')))        
+
+        # Test sextet production
+        self.do('import model sextet_diquarks')
+        self.do('generate u g > six u~')
+        self.do('output %s -f' % self.out_dir)
+        
+        # Check that leshouche.inc exists
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P0_ug_sixux',
                                                     'leshouche.inc')))        
 
     def test_ufo_standard_sm(self):
