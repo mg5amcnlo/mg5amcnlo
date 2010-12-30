@@ -769,38 +769,6 @@ Ryu33 = Parameter(name = 'Ryu33',
                   lhablock = 'YU',
                   lhacode = [ 3, 3 ])
 
-Mnue = Parameter(name = 'Mnue',
-                 nature = 'external',
-                 type = 'real',
-                 value = 0.,
-                 texname = '\\text{Mnue}',
-                 lhablock = 'MASS',
-                 lhacode = [ 12 ])
-
-Mnum = Parameter(name = 'Mnum',
-                 nature = 'external',
-                 type = 'real',
-                 value = 0.,
-                 texname = '\\text{Mnum}',
-                 lhablock = 'MASS',
-                 lhacode = [ 14 ])
-
-Mnut = Parameter(name = 'Mnut',
-                 nature = 'external',
-                 type = 'real',
-                 value = 0.,
-                 texname = '\\text{Mnut}',
-                 lhablock = 'MASS',
-                 lhacode = [ 16 ])
-
-ME = Parameter(name = 'ME',
-               nature = 'external',
-               type = 'real',
-               value = 0.,
-               texname = '\\text{ME}',
-               lhablock = 'MASS',
-               lhacode = [ 11 ])
-
 MTA = Parameter(name = 'MTA',
                 nature = 'external',
                 type = 'real',

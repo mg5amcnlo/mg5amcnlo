@@ -372,23 +372,13 @@ class ColorBasis(dict):
                 my_cf[0].append(color_algebra.K6(indices[1],
                                                  indices[2],
                                                  indices[3]))
-                # ... and then contract the pair of antitriplets to a
-                # single triplet
-                my_cf[0].append(color_algebra.Epsilon(indices[2],
-                                                      indices[3],
-                                                      indices[4]))
             if indices[0] == 6:
                 # Add a K6Bar which contracts the sextet index to a
                 # pair of triplets
                 my_cf[0].append(color_algebra.K6Bar(indices[1],
                                                     indices[2],
                                                     indices[3]))
-                # ... and then contract the pair of triplets to a
-                # single antitriplet
-                my_cf[0].append(color_algebra.EpsilonBar(indices[2],
-                                                         indices[3],
-                                                         indices[4]))
-            if indices[0] == 8:
+            if abs(indices[0]) == 8:
                 # Add a T which contracts the octet to a
                 # triplet-antitriplet pair
                 my_cf[0].append(color_algebra.T(indices[1],
@@ -460,12 +450,12 @@ class ColorBasis(dict):
                 res_dict[leg_num] = [0, 0]
 
                 # Raise an error if external legs contain non supported repr
-                if leg_repr not in [1, 3, -3, 6, -6, 8]:
+                if abs(leg_repr) not in [1, 3, 6, 8]:
                     raise ColorBasis.ColorBasisError, \
         "Particle ID=%i has an unsupported color representation" % leg_repr
 
                 # Build the fake indices replacements for octets
-                if leg_repr == 8:
+                if abs(leg_repr) == 8:
                     fake_repl.append((leg_repr, leg_num,
                                       offset1 + leg_num,
                                       offset2 + leg_num))
@@ -473,7 +463,6 @@ class ColorBasis(dict):
                 elif leg_repr in [-6, 6]:
                     fake_repl.append((leg_repr, leg_num,
                                       offset1 + leg_num,
-                                      offset2 + leg_num,
                                       offset3 + leg_num))
 
             # Get the actual color flow
@@ -504,7 +493,12 @@ class ColorBasis(dict):
                     elif index > offset2 and index < offset3:
                         res_dict[index - offset2][i] = offset
                     elif index > offset3:
-                        res_dict[index - offset3][i] = offset
+                        # For color sextets, use negative triplet
+                        # number to reperesent antitriplet and vice
+                        # versa, allowing for two triplet or two
+                        # antitriplet numbers representing the color
+                        # sextet.
+                        res_dict[index - offset3][1-i] = -offset
 
             # Reverse ordering for initial state to stick to the (weird)
             # les houches convention

@@ -19,21 +19,21 @@
 and call immediately the command line interface scripts"""
 
 import sys
-
 if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
     sys.exit('MadGraph 5 works only with python 2.6 or later (but not python 3.X).\n\
                Please upgrate your version of python.')
 
+import os
+
 # tab completion and history
 try:
+    import rlcompleter
     import readline
 except ImportError:
     print "For tab completion and history, install module readline."
 else:
-    import rlcompleter
-    readline.parse_and_bind("tab: complete")
+    readline.parse_and_bind("bind ^I rl_complete")
     try:
-        import os
         history_file = os.path.join(os.environ['HOME'], '.pythonhistory')
         readline.read_history_file(history_file)
     except:
@@ -44,12 +44,11 @@ import logging
 import logging.config
 
 import subprocess
-import os.path as path
 
 # Get the parent directory (mg root) of the script real path (bin)
 # and add it to the current PYTHONPATH
 
-root_path = path.split(path.dirname(path.realpath( __file__ )))[0]
+root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
 
 
@@ -71,7 +70,7 @@ if len(args) == 0:
     args = ''
 
 # Check if optimize mode is (and should be) activated
-if __debug__ and not options.debug:
+if __debug__ and not options.debug and options.web:
     if not os.path.exists(os.path.join(root_path, 'bin','create_release.py')):
         subprocess.call([sys.executable] + ['-O'] + sys.argv)
         sys.exit()
@@ -81,7 +80,7 @@ if __debug__ and not options.debug:
 # Set logging level according to the logging level given by options
 #logging.basicConfig(level=vars(logging)[options.logging])
 try:
-    logging.config.fileConfig(path.join(root_path, 'madgraph', 'interface', '.mg5_logging.conf'))
+    logging.config.fileConfig(os.path.join(root_path, 'madgraph', 'interface', '.mg5_logging.conf'))
     logging.root.setLevel(eval('logging.' + options.logging))
     logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
 except:
