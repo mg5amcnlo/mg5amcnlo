@@ -36,6 +36,7 @@ aloha_path = os.path.dirname(os.path.realpath(__file__))
 logger = logging.getLogger('ALOHA')
 
 _conjugate_gap = 50
+_spin2_mult = 1000
 
 class ALOHAERROR(Exception): pass
 
@@ -182,9 +183,9 @@ class AbstractRoutineBuilder(object):
                         id += _conjugate_gap
                     nb_spinor += 1
                     if nb_spinor %2:
-                        lorentz *= SpinorPropagator(id, 'I2', i + 1)
+                        lorentz *= SpinorPropagator(id, 'I2', id)
                     else:
-                        lorentz *= SpinorPropagator('I2', id, i + 1) 
+                        lorentz *= SpinorPropagator('I2', id, id) 
                 elif spin == 3 :
                     lorentz *= VectorPropagator(id, 'I2', id)
                 elif spin == 5 :
@@ -201,11 +202,11 @@ class AbstractRoutineBuilder(object):
                     if (id+1) // 2 in self.conjg:
                         id += _conjugate_gap
                     nb_spinor += 1
-                    lorentz *= Spinor(id, i + 1)
+                    lorentz *= Spinor(id, id)
                 elif spin == 3:        
                     lorentz *= Vector(id, id)
                 elif spin == 5:
-                    lorentz *= Spin2(10*id+1, 10*id+2, 'I2', 'I3', id)
+                    lorentz *= Spin2(_spin2_mult + id, 2 * _spin2_mult + id, id)
                 else:
                     raise self.AbstractALOHAError(
                                 'The spin value %s is not supported yet' % spin)                    
@@ -221,10 +222,11 @@ class AbstractRoutineBuilder(object):
           
         #lorentz = lorentz.simplify()
         lorentz = lorentz.expand()
-
-        if self.spins[self.outgoing-1] == 5:
+        if self.outgoing and self.spins[self.outgoing-1] == 5:
             if not self.aloha_lib:
                 AbstractRoutineBuilder.load_library()
+            print lorentz
+            print self.aloha_lib[('Spin2Prop', id)]
             lorentz *= self.aloha_lib[('Spin2Prop', id)]
 
         
@@ -269,8 +271,12 @@ class AbstractRoutineBuilder(object):
     @classmethod
     def load_library(cls):
     # load the library
-        fsock = open(os.path.join(aloha_path, 'ALOHALib.pkl'), 'r')
-        cls.aloha_lib = cPickle.load(fsock)
+        try:
+            fsock = open(os.path.join(aloha_path, 'ALOHALib.pkl'), 'r')
+        except IOError:
+            cls.aloha_lib = create_library()
+        else:
+            cls.aloha_lib = cPickle.load(fsock)
         
 
 class AbstractALOHAModel(dict):
@@ -638,22 +644,22 @@ def create_library():
     lib = {} # key: (name, part_nb, special) -> object
     for i in range(1, 10):
         logger.info('step %s/9' % i)
-        lib[('Scalar', i)] = create( Scalar(i) )
-        lib[('ScalarProp', i)] = complex(0,1)
-        lib[('Denom', i )] = create( DenominatorPropagator(i) )
-        lib[('Spinor', i )] = create( Spinor(i, i) )
-        lib[('SpinorProp', i, 0)] = create( SpinorPropagator(i, 'I2', i) )
-        lib[('SpinorProp', i, 1)] = create( SpinorPropagator('I2', i, i) )
-        lib[('Vector', i)] = create( Vector(i+1, i+1) )
-        lib[('VectorProp', i)] = create( VectorPropagator(i,'I2', i) )
-        lib[('Spin2', i )] = create( Spin2(10*i+1, 10*i+2, i) )
-        lib[('Spin2Prop',i)] = create( Spin2Propagator(10*i+1, \
-                                            10*i+2,'I2','I3', i) )
-    logger.info('writing')         
-    fsock = open('./ALOHALib.pkl','wb')
+        #lib[('Scalar', i)] = create( Scalar(i) )
+        #lib[('ScalarProp', i)] = complex(0,1)
+        #lib[('Denom', i )] = create( DenominatorPropagator(i) )
+        #lib[('Spinor', i )] = create( Spinor(i, i) )
+        #lib[('SpinorProp', i, 0)] = create( SpinorPropagator(i, 'I2', i) )
+        #lib[('SpinorProp', i, 1)] = create( SpinorPropagator('I2', i, i) )
+        #lib[('Vector', i)] = create( Vector(i+1, i+1) )
+        #lib[('VectorProp', i)] = create( VectorPropagator(i,'I2', i) )
+        #lib[('Spin2', i )] = create( Spin2(10*i+1, 10*i+2, i) )
+        lib[('Spin2Prop',i)] = create( Spin2Propagator(_spin2_mult + i, \
+                                            2 * _spin2_mult + i,'I2','I3', i) )
+    logger.info('writing Spin2 lib')         
+    fsock = open(os.path.join(aloha_path, 'ALOHALib.pkl'),'wb')
     cPickle.dump(lib, fsock, -1)
-    logger.info('done')
-    
+    return lib
+
 if '__main__' == __name__:       
     logging.basicConfig(level=0)
     #create_library()
