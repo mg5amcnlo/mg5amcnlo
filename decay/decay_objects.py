@@ -1733,20 +1733,16 @@ class DecayModel(base_objects.Model):
         run_ext_params = ['aS']
 
         # Extract derived parameters
-        # TO BE IMPLEMENTED allow running alpha_s coupling
         derived_parameters = []
-        try:
-            derived_parameters += self['parameters'][('aS',)]
-        except KeyError:
-            pass
-        try:
-            derived_parameters += self['parameters'][('aS', 'aEWM1')]
-        except KeyError:
-            pass
-        try:
-            derived_parameters += self['parameters'][('aEWM1', 'aS')]
-        except KeyError:
-            pass
+        # Take only keys that depend on running external parameters
+        ordered_keys = [key for key in self['parameters'].keys() if \
+                            key != ('external',) and \
+                            not any([run_ext in key for run_ext in run_ext_params])]
+        # Sort keys, keys depend on fewer number parameters should be
+        # evaluated first.
+        ordered_keys.sort(key=len)
+        for key in ordered_keys:
+            derived_parameters += self['parameters'][key]
 
         # Now calculate derived parameters
         # TO BE IMPLEMENTED use running alpha_s for aS-dependent params
@@ -1763,20 +1759,17 @@ class DecayModel(base_objects.Model):
                             (param.name,\
                              eval(param.name).real, eval(param.name).imag))
         
-        # Extract couplings
+        # Extract couplings from couplings that depend on fewer 
+        # number of external parameters.
         couplings = []
-        try:
-            couplings += self['couplings'][('aS',)]
-        except KeyError:
-            pass
-        try:
-            couplings += self['couplings'][('aS', 'aEWM1')]
-        except KeyError:
-            pass
-        try:
-            couplings += self['couplings'][('aEWM1', 'aS')]
-        except KeyError:
-            pass
+        # Only take keys that contain running external parameters.
+        ordered_keys = [key for key in self['parameters'].keys() if \
+                            key != ('external',) and \
+                            not any([run_ext in key for run_ext in run_ext_params])]
+        # Sort keys
+        ordered_keys.sort(key=len)
+        for key in ordered_keys:
+            couplings += self['couplings'][key]
 
         # Now calculate all couplings
         # TO BE IMPLEMENTED use running alpha_s for aS-dependent couplings
@@ -2464,6 +2457,12 @@ class DecayModel(base_objects.Model):
             Call the function in DecayParticle.
             Decay channels more than three final particles are searched
             when the precision is not satisfied."""
+
+        # Raise error if precision is not a float
+        if not isinstance(precision, float):
+            raise self.PhysicsObjectError, \
+                "The precision %s should be float type." % str(precision)
+
         # If vertexlist has not been found before, run model.find_vertexlist
         if not self['vertexlist_found']:
             logger.info("Vertexlist of this model has not been searched."+ \
@@ -2473,18 +2472,21 @@ class DecayModel(base_objects.Model):
         # Find stable particles of this model
         self.get('stable_particles')
 
-        # Run the width of all particles from 2 body decay.
-        for clevel in range(2, 4):
-            for part in self.get('particles'):
-                part.find_channels_nextlevel(self)
-
+        # Run the width of all particles from 2-body decay so that the 3-body
+        # decay could use the width from 2-body decay.
         for part in self.get('particles'):
-            clevel = 3
-            err = sum([c.get('apx_decaywidth_nextlevel') for c in part.get_channels(clevel, False)])
-            if err > precision:
-                pass
+            # Skip search if this particle is stable
+            if part.get('is_stable'):
+                logger.info("Particle %s is stable." %part['name'] +\
+                                "No channel search will not proceed.")
+                continue
 
+            # Recalculating parameters and coupling constants 
+            self.running_externals(abs(eval(part.get('mass'))))
+            self.running_internals(abs(eval(part.get('mass'))))
             part.find_channels_nextlevel(self)
+
+
 
     def write_summary_decay_table(self, name=''):
         """ Write a table to list the total width of all the particles
