@@ -138,8 +138,10 @@ c**************************************************
 
       isqcd=.true.
 
-      irfl=iand(abs(ipdg),63)
-      if (irfl.gt.8.and.irfl.ne.21) isqcd=.false.
+c     Assume that QCD particles have pdg codes that are (multiples of 1M) +
+c     1-10 or 21
+      irfl=mod(abs(ipdg),1000000)
+      if (irfl.ge.11.and.irfl.ne.21) isqcd=.false.
 c      write(*,*)'iqcd? pdg = ',ipdg,' -> ',irfl,' -> ',isqcd
 
       return
@@ -533,8 +535,8 @@ c     Set central scale to mT2 and multiply with scalefact
       if(jlast(2).gt.0.and.mt2ij(jlast(2)).gt.0d0)
      $     pt2ijcl(jlast(2))=mt2ij(jlast(2))
       if(qcdline(1).and.qcdline(2).and.jlast(1).ne.jlast(2)) then
-c     If not WBF or similar, set uniform scale to be geom. average
-         pt2ijcl(jlast(1))=sqrt(pt2ijcl(jlast(1))*pt2ijcl(jlast(2)))
+c     If not WBF or similar, set uniform scale to be maximum
+         pt2ijcl(jlast(1))=max(pt2ijcl(jlast(1)),pt2ijcl(jlast(2)))
          pt2ijcl(jlast(2))=pt2ijcl(jlast(1))
       endif
       if(jlast(1).gt.0) pt2ijcl(jlast(1))=scalefact**2*pt2ijcl(jlast(1))
