@@ -44,8 +44,8 @@ def ixxxxx(p,fmass,nhel,nsf):
         else:
             sf = [(1+nsf+(1-nsf)*nh)*0.5,(1+nsf-(1-nsf)*nh)*0.5]
             omega = [sqrt(p[0]+pp),fmass/(sqrt(p[0]+pp))]
-            ip = (1+nh)/2
-            im = (1-nh)/2
+            ip = (1+nh)//2
+            im = (1-nh)//2
             sfomeg = [sf[0]*omega[ip],sf[1]*omega[im]]
             pp3 = max(pp+p[3],0.)
             if (pp3 == 0.):
@@ -105,8 +105,8 @@ def oxxxxx(p,fmass,nhel,nsf):
         else:
             sf = [(1+nsf+(1-nsf)*nh)*0.5,(1+nsf-(1-nsf)*nh)*0.5]
             omega = [sqrt(p[0]+pp),fmass/(sqrt(p[0]+pp))]
-            ip = (1+nh)/2
-            im = (1-nh)/2
+            ip = (1+nh)//2
+            im = (1-nh)//2
             sfomeg = [sf[0]*omega[ip],sf[1]*omega[im]]
             pp3 = max(pp+p[3],0.)
             if (pp3 == 0.):

@@ -27,6 +27,7 @@ root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
 from aloha.aloha_object import *
 import aloha.aloha_writers as aloha_writers
+import aloha.aloha_lib as aloha_lib
 try:
     import madgraph.iolibs.files as files
 except:
@@ -206,7 +207,7 @@ class AbstractRoutineBuilder(object):
                 elif spin == 3:        
                     lorentz *= Vector(id, id)
                 elif spin == 5:
-                    lorentz *= Spin2(_spin2_mult + id, 2 * _spin2_mult + id, id)
+                    lorentz *= Spin2(1 * _spin2_mult + id, 2 * _spin2_mult + id, id)
                 else:
                     raise self.AbstractALOHAError(
                                 'The spin value %s is not supported yet' % spin)                    
@@ -225,9 +226,11 @@ class AbstractRoutineBuilder(object):
         if self.outgoing and self.spins[self.outgoing-1] == 5:
             if not self.aloha_lib:
                 AbstractRoutineBuilder.load_library()
-            print lorentz
-            print self.aloha_lib[('Spin2Prop', id)]
             lorentz *= self.aloha_lib[('Spin2Prop', id)]
+            aloha_lib.USE_TAG.add('OM%d' % id)
+            aloha_lib.USE_TAG.add('P%d' % id)
+            
+            
 
         
         lorentz = lorentz.simplify()

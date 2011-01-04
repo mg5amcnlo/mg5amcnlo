@@ -285,6 +285,36 @@ class TestColorSextetModel(unittest.TestCase):
                           {1: [503, 0], 2: [502, 0], 3: [501, 0],
                            4: [502, 0], 5: [503, 501]}])
 
+        # Test six > u u
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':9000006,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':2}))
+        myleglist.append(base_objects.Leg({'id':2}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        myamp = diagram_generation.Amplitude(myproc)
+        matrix_element = helas_objects.HelasMatrixElement(myamp)
+        
+        # First build a color representation dictionnary
+        repr_dict = {}
+        for l in myleglist:
+            repr_dict[l.get('number')] = \
+                self.base_model.get_particle(l.get('id')).get_color()\
+                * (-1)**(1+l.get('state'))
+
+        # Get the color flow decomposition
+        col_flow = \
+           matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
+                                                                      2)
+        self.assertEqual(len(col_flow), len(matrix_element.get('color_basis')))
+        self.assertEqual(col_flow,
+                         [{1: [502, -501], 2: [0, 501], 3: [502, 0]}])
+
 #===============================================================================
 # TestColorTripletModel
 #===============================================================================

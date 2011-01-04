@@ -197,6 +197,11 @@ def finalize_madevent_v4_directory(dir_path, makejpg, history):
     """Finalize ME v4 directory by creating jpeg diagrams, html
     pages,proc_card_mg5.dat and madevent.tar.gz."""
 
+    if not misc.which('f77'):
+        logger.info('Change makefiles to use gfortran')
+        subprocess.call(['python','./bin/Passto_gfortran.py'], cwd=dir_path, \
+                        stdout = open(os.devnull, 'w')) 
+    
     old_pos = os.getcwd()
     os.chdir(os.path.join(dir_path, 'SubProcesses'))
     P_dir_list = [proc for proc in os.listdir('.') if os.path.isdir(proc) and \
@@ -635,7 +640,8 @@ def write_leshouche_file(writer, matrix_element, fortran_model):
                 repr_dict = {}
                 for l in legs:
                     repr_dict[l.get('number')] = \
-                        proc.get('model').get_particle(l.get('id')).get_color()
+                        proc.get('model').get_particle(l.get('id')).get_color()\
+                        * (-1)**(1+l.get('state'))
                 # Get the list of color flows
                 color_flow_list = \
                     matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
@@ -1586,6 +1592,7 @@ class UFO_model_to_mg4(object):
             one_mass = particle.get('mass')
             if one_mass.lower() != 'zero':
                 masses.add(one_mass)
+                
             # find width
             one_width = particle.get('width')
             if one_width.lower() != 'zero':
