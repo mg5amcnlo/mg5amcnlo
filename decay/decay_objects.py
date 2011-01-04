@@ -52,7 +52,7 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color
-import madgraph.iolibs.import_ufo as import_ufo
+import models.import_ufo as import_ufo
 from madgraph import MadGraph5Error, MG5DIR
 
 ZERO = 0

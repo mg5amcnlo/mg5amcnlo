@@ -50,7 +50,7 @@ import re
 import random
 
 import madgraph.core.base_objects as base_objects
-import madgraph.iolibs.import_ufo as import_ufo
+import models.import_ufo as import_ufo
 from madgraph import MadGraph5Error, MG5DIR
 
 #===============================================================================

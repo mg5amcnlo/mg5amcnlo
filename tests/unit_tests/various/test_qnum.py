@@ -21,7 +21,7 @@ import sys
 
 import tests.unit_tests as unittest
 import madgraph.core.base_objects as base_objects
-import madgraph.iolibs.import_ufo as import_ufo
+import models.import_ufo as import_ufo
 import decay.decay_objects as decay_objects
 import tests.input_files.import_vertexlist as import_vertexlist
 import quantum_number.quantum_number as quantum_number
