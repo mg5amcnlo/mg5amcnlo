@@ -39,10 +39,12 @@ import unittest
 
 #Add the ROOT dir to the current PYTHONPATH
 root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
-sys.path.append(root_path)
+# Insert the path in the beginning to prevent the name conflict with
+# python default module
+sys.path.insert(0, root_path)
 # Only for profiling with -m cProfile!
 root_path = os.path.split(os.path.dirname(os.path.realpath(sys.argv[0])))[0]
-sys.path.append(root_path)
+sys.path.insert(0, root_path)
 
 from madgraph import MG4DIR
 
