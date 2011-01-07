@@ -230,8 +230,8 @@ def txxxxx(p, tmass, nhel, nst):
     
     tc = WaveFunction(5)
     
-    sqh = sqrt(0.3)
-    sqs = sqrt(2/3)
+    sqh = sqrt(0.5)
+    sqs = sqrt(1/6)
 
     pt2 = p[1]**2 + p[2]**2
     pp = min(p[0],sqrt(pt2+p[3]**2))
@@ -244,12 +244,13 @@ def txxxxx(p, tmass, nhel, nst):
     if ( nhel >= 0 ): 
         #construct eps+
         ep = [0] * 4
+        
         if ( pp == 0 ):
             #ep[0] = 0
             ep[1] = -sqh
             ep[2] = complex(0, nst*sqh)
             #ep[3] = 0
-        else:
+        else:            
             #ep[0] = 0
             ep[3] = pt/pp*sqh
             if (pt != 0):

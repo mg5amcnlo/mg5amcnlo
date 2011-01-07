@@ -184,9 +184,9 @@ class AbstractRoutineBuilder(object):
                         id += _conjugate_gap
                     nb_spinor += 1
                     if nb_spinor %2:
-                        lorentz *= SpinorPropagator(id, 'I2', id)
+                        lorentz *= SpinorPropagator(id, 'I2', self.outgoing)
                     else:
-                        lorentz *= SpinorPropagator('I2', id, id) 
+                        lorentz *= SpinorPropagator('I2', id, self.outgoing) 
                 elif spin == 3 :
                     lorentz *= VectorPropagator(id, 'I2', id)
                 elif spin == 5 :
@@ -201,9 +201,11 @@ class AbstractRoutineBuilder(object):
                 elif spin == 2:
                     # shift the tag if we multiply by C matrices
                     if (id+1) // 2 in self.conjg:
-                        id += _conjugate_gap
+                        spin_id = id + _conjugate_gap
+                    else:
+                        spin_id = id
                     nb_spinor += 1
-                    lorentz *= Spinor(id, id)
+                    lorentz *= Spinor(spin_id, id)
                 elif spin == 3:        
                     lorentz *= Vector(id, id)
                 elif spin == 5:

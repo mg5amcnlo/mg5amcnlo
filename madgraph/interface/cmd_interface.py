@@ -1304,7 +1304,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
     # Options and formats available
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams', 
-                     'multiparticles', 'couplings', 'lorentz', 'checks']
+                     'multiparticles', 'couplings', 'lorentz', 'checks',
+                     'parameters']
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _tutorial_opts = ['start', 'stop']
@@ -1510,7 +1511,26 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     print "Interactions %s has the following property:" % arg
                     print self._curr_model['interactions'][int(arg)-1]
 
-
+        elif args[0] == 'parameters' and len(args) == 1:
+            text = "Current model contains %i parameters\n" % \
+                    sum([len(part) for part in 
+                                       self._curr_model['parameters'].values()])
+            
+            for key, item in self._curr_model['parameters'].items():
+                text += '\nparameter type: %s\n' % str(key)
+                for value in item:
+                    if hasattr(value, 'expr'):
+                        if value.value is not None:
+                            text+= '        %s = %s = %s\n' % (value.name, value.expr ,value.value)
+                        else:
+                            text+= '        %s = %s\n' % (value.name, value.expr)
+                    else:
+                        if value.value is not None:
+                            text+= '        %s = %s\n' % (value.name, value.value)
+                        else:
+                            text+= '        %s \n' % (value.name)
+            pydoc.pager(text)
+            
         elif args[0] == 'processes':
             for amp in self._curr_amps:
                 print amp.nice_string_processes()
