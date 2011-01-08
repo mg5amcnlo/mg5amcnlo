@@ -1390,6 +1390,7 @@ class CompleteForCmd(CheckValidForCmd):
                                             os.path.join(MG5DIR,'models'),
                                             only_dirs = True) \
                                             if file_cond(name)]
+            
             if args[1] == 'model_v4':
                 return model_list
             else:
@@ -1423,6 +1424,9 @@ class CompleteForCmd(CheckValidForCmd):
         if not os.path.exists(os.path.join(base_dir, model_name, 'couplings.py')):
             # not valid UFO model
             return output
+        
+        if model_name.endswith(os.path.sep):
+            model_name = model_name[:-1]
         
         # look for _default and treat this case
         if os.path.exists(os.path.join(base_dir, model_name, 'restrict_default.dat')):
@@ -2313,7 +2317,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         #restrict it        
         if restrict_file:
             old_level = import_ufo.logger_mod.level
-            import_ufo.logger_mod.setLevel(eval('logging.warning'))
+            if old_level < 30:
+                import_ufo.logger_mod.setLevel(30) # WARNING
             self.do_restrict('model %s' %restrict_file)
             import_ufo.logger_mod.setLevel(old_level)
         

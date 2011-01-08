@@ -36,6 +36,10 @@ import models.model_reader as model_reader
 logger = logging.getLogger('models.import_ufo')
 logger_mod = logging.getLogger('madgraph.model')
 
+root_path = os.path.dirname(os.path.realpath( __file__ ))
+print root_path, __file__
+sys.path.append(root_path)
+
 class UFOImportError(MadGraph5Error):
     """ a error class for wrong import of UFO model""" 
 
@@ -72,7 +76,8 @@ def import_model(model_path):
         try:
             model = save_load_object.load_from_file( \
                                           os.path.join(model_path, 'model.pkl'))
-        except Exception:
+        except Exception, error:
+            print error
             logger.info('failed to load model from pickle file. Try importing UFO from File')
         else:
             return model
