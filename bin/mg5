@@ -65,22 +65,17 @@ parser.add_option("","--web", action="store_true", default=False, dest='web', \
                  help='force to be in secure mode')
 parser.add_option("","--debug", action="store_true", default=False, dest='debug', \
                  help='force to launch debug mode')
-parser.add_option("","--nodebug", action="store_true", default=False, dest='nodebug', \
-                 help='forbid to launch debug mode in develloper mode')
 (options, args) = parser.parse_args()
 if len(args) == 0:
     args = ''
 
-# web should always be optimise
-if options.web:
-    options.nodebug = True
-
 # Check if optimize mode is (and should be) activated
-if __debug__ and not options.debug:
-    if not os.path.exists(os.path.join(root_path, 'bin','create_release.py')) or options.nodebug:
+if __debug__ and not options.debug and \
+    (not os.path.exists(os.path.join(root_path, 'bin','create_release.py')) or options.web):
         subprocess.call([sys.executable] + ['-O'] + sys.argv)
         sys.exit()
-    else:
+
+if __debug__:
         print 'Running MG5 in debug mode'
 
 
