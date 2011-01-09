@@ -20,6 +20,7 @@ import os
 import sys
 import time
 import math
+import cmath
 
 import tests.unit_tests as unittest
 import madgraph.core.base_objects as base_objects
@@ -1059,34 +1060,75 @@ class Test_DecayModel(unittest.TestCase):
     def test_running_couplings(self):
         """ Test the running coupling constants in DecayModel."""
 
-        # Test for exception
-        self.assertRaises(decay_objects.DecayModel.PhysicsObjectError,
-                          self.my_testmodel.running_internals, "not i")
-        self.assertRaises(decay_objects.DecayModel.PhysicsObjectError,
-                          self.my_testmodel.running_externals, "not i")
-
-        # Test for running_externals
-        print decay_objects.aS
-        self.my_testmodel.running_externals(100.)
-        print decay_objects.aS
-        self.my_testmodel.running_externals(10.)
-        print decay_objects.aS
-        self.my_testmodel.running_externals(decay_objects.MZ)
-        self.assertAlmostEqual(decay_objects.aS, decay_objects.amZ0)
-
-        # Test for running_internals
-        self.my_testmodel.running_internals(100.)
-        a_out = decay_objects.aS
-        self.assertAlmostEqual(decay_objects.GC_4, -2*math.sqrt(a_out* math.pi))
-
         # Read mssm
         model_base = import_ufo.import_model('mssm')
         model = decay_objects.DecayModel(model_base)
         param_path = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
         model.read_param_card(param_path)
 
+
+        # Test for exception
+        self.assertRaises(decay_objects.DecayModel.PhysicsObjectError,
+                          self.my_testmodel.running_externals, "not i")
+
+        # Test for running_externals
+        # No reference value for q higher than top quark mass
+
+        # Set b quark mass to be consistent with SM model
+        decay_objects.MB = 4.7
+        
+        # q=400., Nf = 5 quarks
+        model.running_externals(400., 1)
+        self.assertAlmostEqual(decay_objects.aS, 0.0972887598)
         model.running_externals(400.)
-        model.running_internals(400.)
+        self.assertAlmostEqual(decay_objects.aS, 0.096563954696)
+
+        # q=170., Nf = 5 quarks
+        model.running_externals(170., 1)
+        self.assertAlmostEqual(decay_objects.aS, 0.1082883202)
+        model.running_externals(170.)
+        self.assertAlmostEqual(decay_objects.aS, 0.10788637604)
+
+        # q=10., Nf = 5 quarks
+        model.running_externals(10., 1)
+        self.assertAlmostEqual(decay_objects.aS, 0.1730836377)
+        model.running_externals(10.)
+        self.assertAlmostEqual(decay_objects.aS, 0.17787426379)
+
+        # q=4., Nf = 4 quarks
+        model.running_externals(4., 1)
+        self.assertAlmostEqual(decay_objects.aS, 0.215406025)
+        model.running_externals(4.)
+        self.assertAlmostEqual(decay_objects.aS, 0.22772914557)
+
+        # q=1., Nf = 3 quarks
+        model.running_externals(1., 1)
+        self.assertAlmostEqual(decay_objects.aS, 0.36145974008)
+        model.running_externals(1.)
+        self.assertAlmostEqual(decay_objects.aS, 0.45187971053)
+
+        # Test for running_internals
+        temp_aS = 100
+        decay_objects.aS = temp_aS
+        Ru11_old = decay_objects.Ru11
+        GC_365_old = decay_objects.GC_365
+        model.running_internals()
+
+        # Test for parameters
+        # Ru11 should not change
+        self.assertAlmostEqual(decay_objects.Ru11, Ru11_old)
+        # G should change
+        self.assertAlmostEqual(decay_objects.G, \
+                                   2*cmath.sqrt(temp_aS)*cmath.sqrt(cmath.pi))
+        # Test for couplings
+        # GC_365 should not change
+        self.assertAlmostEqual(decay_objects.GC_365, GC_365_old)
+        # Both of GC_114 ('aS',) and GC_15 ('aEWSM1', 'aS') should change
+        self.assertAlmostEqual(decay_objects.GC_114, \
+                                   -(complex(0,1)*decay_objects.G*decay_objects.I911))
+        self.assertAlmostEqual(decay_objects.GC_15, \
+                                   (-2* decay_objects.ee * complex(0,1)*decay_objects.G * decay_objects.I111)/3.)
+
 
 #===============================================================================
 # Test_Channel

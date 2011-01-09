@@ -785,7 +785,7 @@ class DecayParticle(base_objects.Particle):
 
         # Running the coupling constants
         model.running_externals(abs(eval(self.get('mass'))))
-        model.running_internals(abs(eval(self.get('mass'))))
+        model.running_internals()
 
         self['apx_decaywidth'] = 0.
         # Find channels from 2-body decay to partnum-body decay channels.
@@ -1613,7 +1613,7 @@ class DecayModel(base_objects.Model):
         amZ0 = aS
 
 
-    def running_externals(self, q):
+    def running_externals(self, q, loopnum=2):
         """ Recalculate external parameters at the given scale. """
 
         # Raise error for wrong type of q
@@ -1623,16 +1623,16 @@ class DecayModel(base_objects.Model):
                 "The argument %s should be numerical type." %str(q)
 
         # Declare global value. amZ0 is the alpha_s at Z pole
-        global aS, MB, MZ, amZ0
+        global aS, MT, MB, MZ, amZ0
 
         # Setup the alpha_s at different scale
+        amt = 0.
         amb = 0.
         amc = 0.
         a_out = 0.
 
         # Setup parameters
         # MZ, MB are already read in from param_card
-        loopnum = 3
         MZ_ref = MZ
         if MB == 0:
             MB_ref = 4.7
@@ -1663,7 +1663,7 @@ class DecayModel(base_objects.Model):
 
         # Save the result alpha_s
         aS = a_out
-            
+
 
     def newton1(self, t, a_in, loopnum, nf):
         """ Calculate the running strong coupling constant from a_in
@@ -1671,13 +1671,14 @@ class DecayModel(base_objects.Model):
             loop number given by loopnum, number of fermions by nf."""
 
         # Setup the accuracy.
-        tol = 5e-4
+        tol = 5e-5
 
         # Functions used in the beta function
         b0 = {}
         c1 = {}
         c2 = {}
         delc = {}
+
         for i in range(3,6):
             b0[i] = (11. - 2.*i/3.)/4./math.pi
             c1[i] = (102. - 38./3.*i)/4./math.pi/(11. - 2.*i/3.)
@@ -1717,16 +1718,10 @@ class DecayModel(base_objects.Model):
 
         return a_out
 
-    def running_internals(self, q):
+    def running_internals(self):
         """ Recalculate parameters and couplings which depend on
             running external parameters to the given energy scale.
             RUN running_externals before run this function."""
-
-        # Raise error for wrong type of q
-        if not isinstance(q, int) and not isinstance(q, long) and \
-                not isinstance(q, float):
-            raise self.PhysicsObjectError, \
-                "The argument %s should be numerical type." %str(q)
 
         # External parameters that must be recalculate for different energy
         # scale.
@@ -1737,7 +1732,7 @@ class DecayModel(base_objects.Model):
         # Take only keys that depend on running external parameters
         ordered_keys = [key for key in self['parameters'].keys() if \
                             key != ('external',) and \
-                            not any([run_ext in key for run_ext in run_ext_params])]
+                            any([run_ext in key for run_ext in run_ext_params])]
         # Sort keys, keys depend on fewer number parameters should be
         # evaluated first.
         ordered_keys.sort(key=len)
@@ -1763,9 +1758,9 @@ class DecayModel(base_objects.Model):
         # number of external parameters.
         couplings = []
         # Only take keys that contain running external parameters.
-        ordered_keys = [key for key in self['parameters'].keys() if \
+        ordered_keys = [key for key in self['couplings'].keys() if \
                             key != ('external',) and \
-                            not any([run_ext in key for run_ext in run_ext_params])]
+                            any([run_ext in key for run_ext in run_ext_params])]
         # Sort keys
         ordered_keys.sort(key=len)
         for key in ordered_keys:
@@ -2427,7 +2422,7 @@ class DecayModel(base_objects.Model):
 
             # Recalculating parameters and coupling constants 
             self.running_externals(abs(eval(part.get('mass'))))
-            self.running_internals(abs(eval(part.get('mass'))))
+            self.running_internals()
             part.find_channels_nextlevel(self)
 
         if max_partnum > 2:
@@ -2440,7 +2435,7 @@ class DecayModel(base_objects.Model):
                 
                 # Recalculating parameters and coupling constants 
                 self.running_externals(abs(eval(part.get('mass'))))
-                self.running_internals(abs(eval(part.get('mass'))))
+                self.running_internals()
 
                 # After recalculating the parameters, find the channels to the
                 # requested level.
@@ -2483,7 +2478,7 @@ class DecayModel(base_objects.Model):
 
             # Recalculating parameters and coupling constants 
             self.running_externals(abs(eval(part.get('mass'))))
-            self.running_internals(abs(eval(part.get('mass'))))
+            self.running_internals()
             part.find_channels_nextlevel(self)
 
 

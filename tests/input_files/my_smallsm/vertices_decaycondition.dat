@@ -17,24 +17,6 @@
     'from_group': True
 }]
 }, {
-    'id': 12,
-    'legs': [{
-    'id': 23,
-    'number': 0,
-    'state': True,
-    'from_group': True
-}, {
-    'id': 23,
-    'number': 0,
-    'state': True,
-    'from_group': True
-}, {
-    'id': 25,
-    'number': 0,
-    'state': True,
-    'from_group': True
-}]
-}, {
     'id': 40,
     'legs': [{
     'id': -6,
@@ -61,24 +43,6 @@
     'from_group': True
 }, {
     'id': 11,
-    'number': 0,
-    'state': True,
-    'from_group': True
-}, {
-    'id': -24,
-    'number': 0,
-    'state': True,
-    'from_group': True
-}]
-}, {
-    'id': 48,
-    'legs': [{
-    'id': -14,
-    'number': 0,
-    'state': True,
-    'from_group': True
-}, {
-    'id': 13,
     'number': 0,
     'state': True,
     'from_group': True
@@ -138,24 +102,6 @@
     'from_group': True
 }, {
     'id': 12,
-    'number': 0,
-    'state': True,
-    'from_group': True
-}, {
-    'id': 24,
-    'number': 0,
-    'state': True,
-    'from_group': True
-}]
-}, {
-    'id': 45,
-    'legs': [{
-    'id': -13,
-    'number': 0,
-    'state': True,
-    'from_group': True
-}, {
-    'id': 14,
     'number': 0,
     'state': True,
     'from_group': True
