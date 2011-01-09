@@ -537,6 +537,17 @@ class Test_DecayParticle(unittest.TestCase):
                           higgs.set_channels, 3, False, [h_tt_bbww],
                           self.my_testmodel)
 
+    def test_get_max_level(self):
+        """ Test the get_max_level function. """
+
+        higgs = self.my_testmodel.get_particle(25)
+        higgs.find_channels(2, self.my_testmodel)
+        self.assertEqual(higgs.get_max_level(), 2)
+        higgs.find_channels_nextlevel(self.my_testmodel)
+        self.assertEqual(higgs.get_max_level(), 3)
+        higgs.find_channels_nextlevel(self.my_testmodel)
+        higgs.set_amplitudes(4, decay_objects.DecayAmplitudeList())
+        self.assertEqual(higgs.get_max_level(), 4)
 
 #===============================================================================
 # TestDecayParticleList
@@ -1854,9 +1865,11 @@ class Test_Channel(unittest.TestCase):
         param_path_2 = os.path.join(_file_path,'../input_files/param_card_mssm_test1.dat')
         model.read_param_card(param_path_1)
         
-        # Find channels before read MG4 param_card
-        model.find_all_channels(3)
+        # Find channels before read MG4 param_card (use smart function)
+        prec = 5E-3
+        model.find_all_channels_smart(prec)
        
+
         # Read MG4 param_card
         MG4_param_path_1 = os.path.join(_file_path,'../input_files/param_card_0.dat')
         MG4_param_path_2 = os.path.join(_file_path,'../input_files/param_card_test1.dat')
@@ -1871,6 +1884,7 @@ class Test_Channel(unittest.TestCase):
         #model.write_summary_decay_table('mssm_decay_summary_test1.dat')
         #model.write_decay_table('cmp', 'mssm_decaytable_test1.dat')
 
+
         # Test the sum of branching ratios is unity
         part = model.get_particle(25)
         total_br = sum([amp['apx_br'] for amp in part.get_amplitudes(2)])
@@ -1880,7 +1894,14 @@ class Test_Channel(unittest.TestCase):
         # Test if the err is from the off-shell 3-body channels
         err = sum([c['apx_decaywidth_nextlevel'] \
                        for c in part.get_channels(3, False)])
-        self.assertAlmostEqual(err, part['apx_decaywidth_err'])
+        self.assertAlmostEqual(err/part.get('apx_decaywidth'), part['apx_decaywidth_err'])
+
+        # Test if the channels are find wisely
+        for part in model['particles']:
+            self.assertTrue(prec > part.get('apx_decaywidth_err'))
+        # Check if the max_level is expected.
+        self.assertEqual(model.get_particle(1000016).get_max_level(), 2)
+        self.assertEqual(model.get_particle(25).get_max_level(), 3)
 
         # Test if the calculated ratio is float or None
         """for part in model.get('particles'):
