@@ -986,7 +986,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     'state': mother.get('leg_state'),
                     'from_group': False
                     }))
-            legs.insert(-1, mother_leg)
+            legs.insert(0, mother_leg)
 
             # Renumber resulting leg according to minimum leg number
             legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
@@ -1651,17 +1651,13 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
             # Create vertex
             legs = base_objects.LegList()
-            for mother in [init_mothers1] + final_mothers + [init_mothers2]:
+            for mother in final_mothers + [init_mothers1] + [init_mothers2]:
                 legs.append(base_objects.Leg({
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
                     'from_group': False
                     }))
-            # Sort the legs
-            legs = base_objects.LegList(\
-                   sorted(legs[:-1], lambda l1, l2: l1.get('number') - \
-                          l2.get('number')) + legs[-1:])
             # Renumber resulting leg according to minimum leg number
             legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
 
@@ -1671,7 +1667,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
             # Add s- and t-channels going down towards leg 1
             mother_s, tchannels = \
-                      init_mothers1.get_s_and_t_channels(ninitial, legs[0])
+                      init_mothers1.get_s_and_t_channels(ninitial, legs[-2])
 
             schannels.extend(mother_s)
 
@@ -1694,14 +1690,10 @@ class HelasAmplitude(base_objects.PhysicsObject):
             newschannels = []
             vertex = channel[1]
             while len(vertex.get('legs')) > 3:
-                # Pop the first two legs (for s-channels) or the
-                # second two (for t-channels) and create a new
+                # Pop the first two legs and create a new
                 # s-channel from them
-                ipop = 0
-                if channel in multitchannels:
-                    ipop=1
                 popped_legs = \
-                           base_objects.LegList([vertex.get('legs').pop(ipop) \
+                           base_objects.LegList([vertex.get('legs').pop(0) \
                                                     for i in [0,1]])
                 popped_legs.append(base_objects.Leg({'id': 21,
                     'number': min([l.get('number') for l in popped_legs]),
@@ -1717,9 +1709,11 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     schannels.insert(channel[0], new_vertex)
                 else:
                     schannels.append(new_vertex)
+                legs = vertex.get('legs')
                 # Insert the new s-channel into vertex
-                vertex.get('legs').insert(0, popped_legs[-1])
-
+                legs.insert(0, copy.copy(popped_legs[-1]))
+                # Renumber resulting leg according to minimum leg number
+                legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
 
         # Finally go through all vertices, sort the legs and replace
         # leg number with propagator number -1, -2, ...

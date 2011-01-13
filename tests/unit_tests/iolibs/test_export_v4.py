@@ -2376,24 +2376,24 @@ CALL FFV1_0(W(1,2),W(1,9),W(1,5),GG,AMP(4))""".split('\n')
       DATA SPROP(-1,1)/21/
       DATA (IFOREST(I,-2,1),I=1,2)/1,5/
       DATA TPRID(-2,1)/2/
-      DATA (IFOREST(I,-3,1),I=1,2)/-1,-2/
+      DATA (IFOREST(I,-3,1),I=1,2)/-2,-1/
 C     Diagram 2, Amplitude 2
       DATA MAPCONFIG(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/5,4/
       DATA SPROP(-1,2)/6/
-      DATA (IFOREST(I,-2,2),I=1,2)/-1,1/
+      DATA (IFOREST(I,-2,2),I=1,2)/-1,3/
       DATA SPROP(-2,2)/21/
 C     Diagram 3, Amplitude 3
       DATA MAPCONFIG(3)/3/
       DATA (IFOREST(I,-1,3),I=1,2)/5,3/
       DATA SPROP(-1,3)/6/
-      DATA (IFOREST(I,-2,3),I=1,2)/-1,1/
+      DATA (IFOREST(I,-2,3),I=1,2)/4,-1/
       DATA SPROP(-2,3)/21/
 C     Diagram 4, Amplitude 4
       DATA MAPCONFIG(4)/4/
-      DATA (IFOREST(I,-1,4),I=1,2)/4,1/
+      DATA (IFOREST(I,-1,4),I=1,2)/4,3/
       DATA SPROP(-1,4)/21/
-      DATA (IFOREST(I,-2,4),I=1,2)/-1,3/
+      DATA (IFOREST(I,-2,4),I=1,2)/1,-1/
       DATA TPRID(-2,4)/2/
       DATA (IFOREST(I,-3,4),I=1,2)/-2,5/
 C     Number of configs
@@ -5323,7 +5323,7 @@ CALL FFV1_0(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
                                      myfortranmodel)
         writer.close()
 
-        # 2 21 < 6 -6 23  2
+        # 2 21 > 6 -6 23  2
         # 1  2   3  4  5  6
         self.assertFileContains('test',
 """C     Diagram 1, Amplitude 1
