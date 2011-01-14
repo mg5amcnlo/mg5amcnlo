@@ -413,6 +413,10 @@ def write_matrix_element_v4_madevent(writer, matrix_element, fortran_model):
                 matrix_element)
     replace_dict['helas_calls'] = "\n".join(helas_calls)
 
+    # Extract amp2 lines
+    amp2_lines = get_amp2_lines(matrix_element)
+    replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
+
     # Extract JAMP lines
     jamp_lines = get_JAMP_lines(matrix_element)
     replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
@@ -507,11 +511,11 @@ def write_configs_file(writer, matrix_element, fortran_model):
             continue
         iconfig = iconfig + 1
         helas_diag = matrix_element.get('diagrams')[idiag]
-        amp_number = helas_diag.get('amplitudes')[0].get('number')
-        lines.append("# Diagram %d, Amplitude %d" % \
-                     (helas_diag.get('number'), amp_number))
+        lines.append("# Diagram %d" % \
+                     (helas_diag.get('number')))
         # Correspondance between the config and the amplitudes
-        lines.append("data mapconfig(%d)/%d/" % (iconfig, amp_number))
+        lines.append("data mapconfig(%d)/%d/" % (iconfig,
+                                                 helas_diag.get('number')))
 
         # Need to reorganize the topology so that we start with all
         # final state external particles and work our way inwards
@@ -1268,6 +1272,26 @@ def get_icolamp_lines(matrix_element):
                                        bool_list])))
 
     return ret_list
+
+def get_amp2_lines(matrix_element):
+    """Return the amp2(i) = sum(amp for diag(i))^2 lines"""
+
+    nexternal, ninitial = matrix_element.get_nexternal_ninitial()
+
+    ret_lines = []
+    for idiag, diag in enumerate(matrix_element.get('diagrams')):
+        # Ignore any diagrams with 4-particle vertices.
+        if max(diag.get_vertex_leg_numbers()) > 3:
+            continue
+        # Now write out the expression for AMP2, meaning the sum of
+        # squared amplitudes belonging to the same diagram
+        line = "AMP2(%(num)d)=AMP2(%(num)d)+" % {"num": (idiag + 1)}
+        line += "+".join(["AMP(%(num)d)*dconjg(AMP(%(num)d))" % \
+                          {"num": a.get('number')} for a in \
+                          diag.get('amplitudes')])
+        ret_lines.append(line)
+    
+    return ret_lines
 
 def get_JAMP_lines(matrix_element):
     """Return the JAMP = sum(fermionfactor * AMP(i)) lines"""
