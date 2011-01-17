@@ -197,10 +197,10 @@ class ParticleTest(unittest.TestCase):
         test_part.set('mass', 'Zero')
         self.assertEqual(test_part.get_helicity_states(), [-1, 1])
         test_part.set('spin', 5)
-        self.assertRaises(test_part.PhysicsObjectError,
-                          test_part.get_helicity_states)
-
-
+        self.assertEqual(test_part.get_helicity_states(), [-2, -1, 1, 2])
+        test_part.set('mass', 'M')
+        self.assertEqual(test_part.get_helicity_states(), [-2, -1, 0, 1, 2])
+        
     def test_particle_list(self):
         """Test particle list initialization, search and dict generation
         functions."""
