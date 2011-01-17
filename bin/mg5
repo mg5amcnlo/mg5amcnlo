@@ -25,14 +25,27 @@ if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
 
 import os
 
-# tab completion and history
-try:
-    import rlcompleter
+# import readline
+try: 
     import readline
 except ImportError:
-    print "For tab completion and history, install module readline."
+    try:
+        import pyreadline as readline
+    except:
+        print "For tab completion and history, install module readline."
+
+# import rlcomplete and fix auto completion
+try:
+    import rlcomplete
+except:
+    pass
 else:
-    readline.parse_and_bind("bind ^I rl_complete")
+    if sys.platfrom == 'darwin':
+        readline.parse_and_bind("bind ^I rl_complete")
+    else:
+        readline.parse_and_bind("tab: complete")
+
+    # charge history file
     try:
         history_file = os.path.join(os.environ['HOME'], '.pythonhistory')
         readline.read_history_file(history_file)
