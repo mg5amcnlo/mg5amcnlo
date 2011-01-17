@@ -93,10 +93,10 @@ class AbstractRoutineBuilder(object):
         self.routine_kernel = None
         
     
-    def compute_routine(self, mode):
+    def compute_routine(self, mode, factorize=True):
         """compute the expression and return it"""
         self.outgoing = mode
-        self.expr = self.compute_aloha_high_kernel(mode)
+        self.expr = self.compute_aloha_high_kernel(mode, factorize)
         return self.define_simple_output()
     
     def define_all_conjugate_builder(self, pair_list):
@@ -150,7 +150,7 @@ class AbstractRoutineBuilder(object):
         return AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
                                                                         infostr)
         
-    def compute_aloha_high_kernel(self, mode):
+    def compute_aloha_high_kernel(self, mode, factorize=True):
         """compute the abstract routine associate to this mode """
         # reset tag for particles
         aloha_lib.USE_TAG=set()
@@ -236,7 +236,8 @@ class AbstractRoutineBuilder(object):
 
         
         lorentz = lorentz.simplify()
-        lorentz = lorentz.factorize()
+        if factorize:
+            lorentz = lorentz.factorize()
         
         lorentz.tag = set(aloha_lib.USE_TAG)
         #raise
