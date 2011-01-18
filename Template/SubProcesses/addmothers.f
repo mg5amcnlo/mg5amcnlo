@@ -17,7 +17,7 @@
 
       integer isym(nexternal,99), jsym
       integer i,j,k,ida(2),ns,nres,ires,icl,ito2,idenpart,nc,ic
-      integer ito(-nexternal+3:nexternal),iseed
+      integer ito(-nexternal+3:nexternal),iseed,maxcolor
       integer icolalt(2,-nexternal+3:2*nexternal-3)
       double precision qicl(-nexternal+3:2*nexternal-3), factpm
       double precision xtarget
@@ -93,6 +93,7 @@ c    structure of the chosen diagram and use that as an alternative
 c   
 
       nc = int(jamp2(0))
+      maxcolor=0
       if(nc.gt.0)then
       if(icolamp(1,iconfig,iproc)) then
         targetamp(1)=jamp2(1)
@@ -121,9 +122,13 @@ c      print *,'Chose color flow ',ic
          if(ic.gt.0) then
             icolalt(1,isym(i,jsym))=icolup(1,i,ic,numproc)
             icolalt(2,isym(i,jsym))=icolup(2,i,ic,numproc)
+            if (icolup(1,i,ic, numproc).gt.maxcolor) maxcolor=icolup(1,i,ic, numproc)
+            if (icolup(2,i,ic, numproc).gt.maxcolor) maxcolor=icolup(2,i,ic, numproc)
          else
             icolalt(1,i)=jpart(4,i)
             icolalt(2,i)=jpart(5,i)
+            if (jpart(4,i).gt.maxcolor) maxcolor=jpart(4,i)
+            if (jpart(5,i).gt.maxcolor) maxcolor=jpart(5,i)
          endif
       enddo
 
@@ -214,6 +219,16 @@ c       Fist set "safe" color info
           else if(icolalt(1,ida(2))-icolalt(2,ida(1)).eq.0) then
             icolalt(1,i) = icolalt(1,ida(1))
             icolalt(2,i) = icolalt(2,ida(2))
+          else if(icolalt(1,ida(2)).gt.0.and.icolalt(1,ida(1)).gt.0.and.
+     $           icolalt(2,ida(2)).le.0.and.icolalt(2,ida(1)).le.0) then         ! sextet
+            maxcolor=maxcolor+1
+            icolalt(1,i) = maxcolor
+            icolalt(2,i) = 0
+          else if(icolalt(2,ida(2)).gt.0.and.icolalt(2,ida(1)).gt.0.and.
+     $           icolalt(1,ida(2)).le.0.and.icolalt(1,ida(1)).le.0) then         ! antisextet
+            maxcolor=maxcolor+1
+            icolalt(1,i) = 0
+            icolalt(2,i) = maxcolor
           else if(jpart(6,i).ge.3) then ! Don't need to match
             icolalt(1,i) = icolalt(1,ida(1))+icolalt(1,ida(2))
             icolalt(2,i) = icolalt(2,ida(1))+icolalt(2,ida(2))
