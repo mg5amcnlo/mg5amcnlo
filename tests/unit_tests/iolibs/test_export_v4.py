@@ -3576,7 +3576,8 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, gen_color=False)
 
-        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter(mybasemodel).\
+        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mybasemodel)
+        self.assertEqual("\n".join(myfortranmodel.\
                                    get_matrix_element_calls(matrix_element)),
                          """CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
 CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
@@ -3603,6 +3604,39 @@ CALL VVVL1X(W(1,2),W(1,3),W(1,9),G1,AMP(9))
 CALL VVVL2X(W(1,2),W(1,3),W(1,9),G2,AMP(10))
 CALL VVVL1X(W(1,2),W(1,3),W(1,10),G1,AMP(11))
 CALL VVVL2X(W(1,2),W(1,3),W(1,10),G2,AMP(12))""")
+
+        # Test amp2 lines
+        amp2_lines = \
+                 export_v4.get_amp2_lines(matrix_element)
+        self.assertEqual(amp2_lines,
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))+AMP(2)*dconjg(AMP(2))+AMP(3)*dconjg(AMP(3))+AMP(4)*dconjg(AMP(4))',
+                          'AMP2(2)=AMP2(2)+AMP(5)*dconjg(AMP(5))+AMP(6)*dconjg(AMP(6))+AMP(7)*dconjg(AMP(7))+AMP(8)*dconjg(AMP(8))',
+                          'AMP2(3)=AMP2(3)+AMP(9)*dconjg(AMP(9))+AMP(10)*dconjg(AMP(10))+AMP(11)*dconjg(AMP(11))+AMP(12)*dconjg(AMP(12))'])
+
+        # Test configs file
+        writer = writers.FortranWriter(self.give_pos('test'))
+        nconfig, s_and_t_channels = export_v4.write_configs_file(writer,
+                                     matrix_element)
+        writer.close()
+
+        self.assertFileContains('test',
+"""C     Diagram 1
+      DATA MAPCONFIG(1)/1/
+      DATA (IFOREST(I,-1,1),I=1,2)/4,3/
+      DATA SPROP(-1,1)/45/
+C     Diagram 2
+      DATA MAPCONFIG(2)/2/
+      DATA (IFOREST(I,-1,2),I=1,2)/1,3/
+      DATA TPRID(-1,2)/45/
+      DATA (IFOREST(I,-2,2),I=1,2)/-1,4/
+C     Diagram 3
+      DATA MAPCONFIG(3)/3/
+      DATA (IFOREST(I,-1,3),I=1,2)/1,4/
+      DATA TPRID(-1,3)/45/
+      DATA (IFOREST(I,-2,3),I=1,2)/-1,3/
+C     Number of configs
+      DATA MAPCONFIG(0)/3/
+""")
 
     def test_multiple_lorentz_structures_with_fermion_flow_clash(self):
         """Testing process w+ w+ > z x1+ x1+.
@@ -5461,6 +5495,20 @@ CALL IOSXXX(W(1,28),W(1,2),W(1,22),MGVX350,AMP(7))
 # Amplitude(s) for diagram number 8
 CALL IOSXXX(W(1,28),W(1,2),W(1,27),MGVX350,AMP(8))""")
 
+        # Test amp2 lines        
+        amp2_lines = \
+                 export_v4.get_amp2_lines(me)
+        self.assertEqual(amp2_lines,
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))',
+                          'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
+                          'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))',
+                          'AMP2(4)=AMP2(4)+AMP(4)*dconjg(AMP(4))',
+                          'AMP2(5)=AMP2(5)+AMP(5)*dconjg(AMP(5))',
+                          'AMP2(6)=AMP2(6)+AMP(6)*dconjg(AMP(6))',
+                          'AMP2(7)=AMP2(7)+AMP(7)*dconjg(AMP(7))',
+                          'AMP2(8)=AMP2(8)+AMP(8)*dconjg(AMP(8))'])
+        
+        # Test jamp lines        
         self.assertEqual(export_v4.get_JAMP_lines(me)[0],
                          "JAMP(1)=+AMP(1)+AMP(2)+AMP(3)+AMP(4)-AMP(5)-AMP(6)-AMP(7)-AMP(8)")
 
