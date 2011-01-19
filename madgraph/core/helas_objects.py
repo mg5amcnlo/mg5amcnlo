@@ -997,7 +997,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
             # Add s- and t-channels going down towards leg 1
             mother_s, tchannels = \
-                      init_mothers1.get_s_and_t_channels(ninitial, legs[0])
+                      init_mothers1.get_s_and_t_channels(ninitial, legs[1])
             schannels.extend(mother_s)
 
             # Add vertex
