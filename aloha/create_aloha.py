@@ -115,9 +115,10 @@ class AbstractRoutineBuilder(object):
         one is conjugated"""
         
         new_builder = copy.copy(self)
+        new_builder.conjg = self.conjg[:]
         try:
             for index in pairs:
-               new_builder.apply_conjugation(index) 
+                new_builder.apply_conjugation(index) 
         except TypeError:
             new_builder.apply_conjugation(pairs) 
         return new_builder
@@ -125,7 +126,8 @@ class AbstractRoutineBuilder(object):
     def apply_conjugation(self, pair=1):
         """ apply conjugation on self object"""
         
-        old_id = pair
+        
+        old_id = 2 * pair - 1
         new_id = _conjugate_gap + old_id
         
         if self.routine_kernel is None:
@@ -138,7 +140,8 @@ class AbstractRoutineBuilder(object):
 
         if pair:
             self.name += str(pair)
-        self.conjg.append(pair) 
+        self.conjg.append(pair)
+
     
     
     def define_simple_output(self):
@@ -152,7 +155,6 @@ class AbstractRoutineBuilder(object):
         """compute the abstract routine associate to this mode """
         # reset tag for particles
         aloha_lib.USE_TAG=set()
-
         #multiply by the wave functions
         nb_spinor = 0
         if not self.routine_kernel:
@@ -171,7 +173,6 @@ class AbstractRoutineBuilder(object):
             aloha_lib.USE_TAG = set(self.kernel_tag) 
         for (i, spin ) in enumerate(self.spins):
             id = i + 1
-            
             #Check if this is the outgoing particle
             if id == self.outgoing:
                 if spin == 1: 

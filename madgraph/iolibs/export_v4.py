@@ -700,8 +700,7 @@ def write_configs_file(writer, matrix_element):
     # Extract number of external particles
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
-    configs = [(i+1, d) for i,d in enumerate(matrix_element.get('diagrams')) \
-               if max(d.get_vertex_leg_numbers()) == 3]
+    configs = [(i+1, d) for i,d in enumerate(matrix_element.get('diagrams'))]
     mapconfigs = [c[0] for c in configs]
     return mapconfigs, write_configs_file_from_diagrams(writer,
                                                         [c[1] for c in configs],
@@ -743,11 +742,16 @@ def write_configs_file_from_diagrams(writer, configs, mapconfigs,
 
     lines = []
 
-    iconfig = 0
-
     s_and_t_channels = []
 
+    minvert = min([max(diag.get_vertex_leg_numbers()) for diag in configs])
+
     for iconfig, helas_diag in enumerate(configs):
+        if any([vert > minvert for vert in
+                diag.get_vertex_leg_numbers()]):
+            # Only 3-vertices allowed in configs.inc
+            continue
+
         # Need to reorganize the topology so that we start with all
         # final state external particles and work our way inwards
 
@@ -1086,19 +1090,25 @@ def write_props_file(writer, matrix_element, s_and_t_channels):
     for iconf, configs in enumerate(s_and_t_channels):
         for vertex in configs[0] + configs[1][:-1]:
             leg = vertex.get('legs')[-1]
-            particle = particle_dict[leg.get('id')]
-            # Get mass
-            if particle.get('mass').lower() == 'zero':
-                mass = particle.get('mass')
+            if leg.get('id') == 21 and 21 not in particle_dict:
+                # Fake propagator used in multiparticle vertices
+                mass = 'zero'
+                width = 'zero'
+                pow_part = 0
             else:
-                mass = "abs(%s)" % particle.get('mass')
-            # Get width
-            if particle.get('width').lower() == 'zero':
-                width = particle.get('width')
-            else:
-                width = "abs(%s)" % particle.get('width')
+                particle = particle_dict[leg.get('id')]
+                # Get mass
+                if particle.get('mass').lower() == 'zero':
+                    mass = particle.get('mass')
+                else:
+                    mass = "abs(%s)" % particle.get('mass')
+                # Get width
+                if particle.get('width').lower() == 'zero':
+                    width = particle.get('width')
+                else:
+                    width = "abs(%s)" % particle.get('width')
 
-            pow_part = 1 + int(particle.is_boson())
+                pow_part = 1 + int(particle.is_boson())
 
             lines.append("pmass(%d,%d)  = %s" % \
                          (leg.get('number'), iconf + 1, mass))
@@ -1313,6 +1323,18 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
     filename = 'ngraphs.inc'
     write_ngraphs_file(writers.FortranWriter(filename),
                        len(matrix_element.get_all_amplitudes()))
+
+    # Generate diagrams
+    filename = "matrix.ps"
+    plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+                                         get('diagrams'),
+                                      filename,
+                                      model=matrix_element.get('processes')[0].\
+                                         get('model'),
+                                      amplitude='')
+    logger.info("Generating Feynman diagrams for " + \
+                 matrix_element.get('processes')[0].nice_string())
+    plot.draw()
 
     linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
 

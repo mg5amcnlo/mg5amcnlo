@@ -202,11 +202,11 @@ def find_symmetry_subproc_group(subproc_group):
                        enumerate(subproc_group.get('diagram_maps')[me_number]) \
                                    if n > 0])
         symmetry, perms, ident_perms = find_symmetry(matrix_elements[me_number])
-        
+
         # Go through symmetries and remove those for any diagrams
         # where this ME is not supposed to contribute
         for isym, sym_config in enumerate(symmetry):
-            if sym_config == 0:
+            if sym_config == 0 or isym not in diagram_config_map:
                 continue
             config = diagram_config_map[isym]
             if config not in me_config_dict[me_number] or \
@@ -220,7 +220,7 @@ def find_symmetry_subproc_group(subproc_group):
 
         # Now update the maps all_symmetry and all_perms
         for isym, (perm, sym_config) in enumerate(zip(perms, symmetry)):
-            if sym_config in [0,1]:
+            if sym_config in [0,1] or isym not in diagram_config_map:
                 continue
             config = diagram_config_map[isym]
 

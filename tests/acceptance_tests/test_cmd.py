@@ -114,8 +114,7 @@ class TestCmdShell2(unittest.TestCase):
         
     def tearDown(self):
         """ basic destruction after have run """
-        if os.path.exists(self.out_dir):
-            shutil.rmtree(self.out_dir)
+        pass
     
     join_path = TestCmdShell1.join_path
 

@@ -198,6 +198,13 @@ class CmdExtended(cmd.Cmd):
         if '#' in line:
             line = line.split('#')[0]
 
+        # Deal with line splitting
+        if ';' in line:
+            for subline in line.split(';'):
+                stop = self.onecmd(subline)
+                stop = self.postcmd(stop, subline)
+            return ''
+        
         # execute the line command
         return line
 

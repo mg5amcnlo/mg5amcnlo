@@ -41,7 +41,7 @@ import madgraph.core.diagram_generation as diagram_generation
 
 import madgraph.various.rambo as rambo
 
-from madgraph import MG5DIR
+from madgraph import MG5DIR, MadGraph5Error
 
 import models.model_reader as model_reader
 import aloha.template_files.wavefunctions as wavefunctions
@@ -110,7 +110,7 @@ def get_momenta(process, model, energy = 1000.):
         return p, w_rambo
 
     if nincoming != 2:
-        raise RAMBOError('Need 1 or 2 incoming particles')
+        raise rambo.RAMBOError('Need 1 or 2 incoming particles')
 
     if nfinal == 1:
         energy = masses[0]
@@ -1082,4 +1082,3 @@ def output_lorentz_inv(comparison_results, output='text'):
         return res_str        
     else: 
         return fail_proc
-    return res_str        
