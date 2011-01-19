@@ -35,10 +35,12 @@ except ImportError:
     except:
         print "For tab completion and history, install module readline."
 else:
-    if sys.platform == 'darwin':
-        import rlcompleter
+    import rlcompleter
+    if sys.platform == 'darwin':    
         readline.parse_and_bind("bind ^I rl_complete")
-
+    else:
+        readline.parse_and_bind("tab: complete")
+ 
     # charge history file
     try:
         history_file = os.path.join(os.environ['HOME'], '.pythonhistory')
