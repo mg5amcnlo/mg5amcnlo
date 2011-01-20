@@ -1030,6 +1030,18 @@ class HelasWavefunction(base_objects.PhysicsObject):
         else:
             return ()
 
+    def get_vertex_leg_numbers(self):
+        """Get a list of the number of legs in vertices in this diagram"""
+
+        if not self.get('mothers'):
+            return []
+
+        vertex_leg_numbers = [len(self.get('mothers')) + 1]
+        for mother in self.get('mothers'):
+            vertex_leg_numbers.extend(mother.get_vertex_leg_numbers())
+
+        return vertex_leg_numbers
+
     # Overloaded operators
 
     def __eq__(self, other):
@@ -1783,6 +1795,15 @@ class HelasAmplitude(base_objects.PhysicsObject):
         else:
             return ()
 
+    def get_vertex_leg_numbers(self):
+        """Get a list of the number of legs in vertices in this diagram"""
+
+        vertex_leg_numbers = [len(self.get('mothers'))]
+        for mother in self.get('mothers'):
+            vertex_leg_numbers.extend(mother.get_vertex_leg_numbers())
+
+        return vertex_leg_numbers
+
     def set_coupling_color_factor(self):
         """Check if there is a mismatch between order of fermions
         w.r.t. color"""
@@ -1899,6 +1920,11 @@ class HelasDiagram(base_objects.PhysicsObject):
                     coupling_orders[order] = wf.get('orders')[order]
 
         return coupling_orders
+
+    def get_vertex_leg_numbers(self):
+        """Get a list of the number of legs in vertices in this diagram"""
+
+        return self.get('amplitudes')[0].get_vertex_leg_numbers()
 
 
 #===============================================================================

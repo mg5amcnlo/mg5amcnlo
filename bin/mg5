@@ -49,7 +49,7 @@ import subprocess
 # and add it to the current PYTHONPATH
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
-sys.path.append(root_path)
+sys.path.insert(0, root_path)
 
 
 # Write out nice usage message if called with -h or --help
@@ -70,12 +70,14 @@ if len(args) == 0:
     args = ''
 
 # Check if optimize mode is (and should be) activated
-if __debug__ and not options.debug and options.web:
-    if not os.path.exists(os.path.join(root_path, 'bin','create_release.py')):
+if __debug__ and not options.debug and \
+    (not os.path.exists(os.path.join(root_path, 'bin','create_release.py')) or options.web):
         subprocess.call([sys.executable] + ['-O'] + sys.argv)
         sys.exit()
-    else:
+
+if __debug__:
         print 'Running MG5 in debug mode'
+
 
 # Set logging level according to the logging level given by options
 #logging.basicConfig(level=vars(logging)[options.logging])

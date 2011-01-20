@@ -198,9 +198,7 @@ C ----------
         ENDDO
         MATRIX =MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
     ENDDO
-    Do I = 1, NGRAPHS
-        amp2(i)=amp2(i)+amp(i)*dconjg(amp(i))
-    Enddo
+%(amp2_lines)s
     Do I = 1, NCOLOR
         Jamp2(i)=Jamp2(i)+Jamp(i)*dconjg(Jamp(i))
     Enddo
