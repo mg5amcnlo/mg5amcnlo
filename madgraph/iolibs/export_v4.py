@@ -1336,6 +1336,18 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
                  matrix_element.get('processes')[0].nice_string())
     plot.draw()
 
+    # Generate diagrams
+    filename = "matrix.ps"
+    plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+                                         get('diagrams'),
+                                      filename,
+                                      model=matrix_element.get('processes')[0].\
+                                         get('model'),
+                                      amplitude='')
+    logger.info("Generating Feynman diagrams for " + \
+                 matrix_element.get('processes')[0].nice_string())
+    plot.draw()
+
     linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
 
     
@@ -1894,6 +1906,9 @@ def get_amp2_lines(matrix_element, config_map = []):
     """Return the amp2(i) = sum(amp for diag(i))^2 lines"""
 
     nexternal, ninitial = matrix_element.get_nexternal_ninitial()
+    # Get minimum legs in a vertex
+    minvert = min([max(diag.get_vertex_leg_numbers()) for diag in \
+                   matrix_element.get('diagrams')])
 
     ret_lines = []
     if config_map:
@@ -1928,7 +1943,7 @@ def get_amp2_lines(matrix_element, config_map = []):
     else:
         for idiag, diag in enumerate(matrix_element.get('diagrams')):
             # Ignore any diagrams with 4-particle vertices.
-            if max(diag.get_vertex_leg_numbers()) > 3:
+            if max(diag.get_vertex_leg_numbers()) > minvert:
                 continue
             # Now write out the expression for AMP2, meaning the sum of
             # squared amplitudes belonging to the same diagram

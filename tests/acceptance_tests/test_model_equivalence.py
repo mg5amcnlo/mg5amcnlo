@@ -318,7 +318,9 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
             nb_value +=1
             for i, singlevalue in enumerate(value):
                 #try:
-                    self.assertAlmostEqual(singlevalue, solutions[variable][i], \
+                    self.assertAlmostEqual(singlevalue,
+                                           solutions[variable][i],
+                                           places=7,
                         msg='fail to be equal for param %s : %s != %s' % \
                             (variable, singlevalue, solutions[variable][i]))
                 #except:

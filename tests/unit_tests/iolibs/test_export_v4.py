@@ -1880,6 +1880,7 @@ JAMP(6)=+1./4.*(-1./3.*AMP(1)-1./3.*AMP(2)-AMP(5)-AMP(6)-AMP(8)-AMP(11)-AMP(13)-
         writer = writers.FortranWriter(self.give_pos('test'))
         mapconfigs, s_and_t_channels = export_v4.write_configs_file(writer,
                                                                  matrix_element)
+
         writer.close()
 
         self.assertFileContains('test',
@@ -2491,6 +2492,14 @@ JAMP(4)=+2*(+AMP(1)-AMP(2)-AMP(4)-AMP(5))
 JAMP(5)=+2*(-AMP(3)+AMP(2)+AMP(5)+AMP(6))
 JAMP(6)=+2*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))""")
 
+        # Test amp2 lines        
+        amp2_lines = \
+                 export_v4.get_amp2_lines(matrix_element)
+        self.assertEqual(amp2_lines,
+                         ['AMP2(2)=AMP2(2)+AMP(4)*dconjg(AMP(4))',
+                          'AMP2(3)=AMP2(3)+AMP(5)*dconjg(AMP(5))',
+                          'AMP2(4)=AMP2(4)+AMP(6)*dconjg(AMP(6))'])
+        
 
     def test_generate_helas_diagrams_uu_susu(self):
         """Testing the helas diagram generation u u > su su with t-channel n1
@@ -3836,6 +3845,17 @@ CALL FFV5_0(W(1,8),W(1,15),W(1,3),GC_418,AMP(24))""".split('\n')
         for i in range(len(goal)):
             self.assertEqual(result[i], goal[i])
 
+        # Test amp2 lines        
+        amp2_lines = \
+                 export_v4.get_amp2_lines(matrix_element)
+        self.assertEqual(amp2_lines,
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))+AMP(2)*dconjg(AMP(2))+AMP(3)*dconjg(AMP(3))+AMP(4)*dconjg(AMP(4))',
+                          'AMP2(2)=AMP2(2)+AMP(5)*dconjg(AMP(5))+AMP(6)*dconjg(AMP(6))+AMP(7)*dconjg(AMP(7))+AMP(8)*dconjg(AMP(8))',
+                          'AMP2(3)=AMP2(3)+AMP(9)*dconjg(AMP(9))+AMP(10)*dconjg(AMP(10))+AMP(11)*dconjg(AMP(11))+AMP(12)*dconjg(AMP(12))',
+                          'AMP2(4)=AMP2(4)+AMP(13)*dconjg(AMP(13))+AMP(14)*dconjg(AMP(14))+AMP(15)*dconjg(AMP(15))+AMP(16)*dconjg(AMP(16))',
+                          'AMP2(5)=AMP2(5)+AMP(17)*dconjg(AMP(17))+AMP(18)*dconjg(AMP(18))+AMP(19)*dconjg(AMP(19))+AMP(20)*dconjg(AMP(20))',
+                          'AMP2(6)=AMP2(6)+AMP(21)*dconjg(AMP(21))+AMP(22)*dconjg(AMP(22))+AMP(23)*dconjg(AMP(23))+AMP(24)*dconjg(AMP(24))'])
+
     def test_four_fermion_vertex_normal_fermion_flow(self):
         """Testing process u u > t t g with fermion flow (u~t)(u~t)
         """
@@ -3987,6 +4007,15 @@ CALL FFV1_0(W(1,2),W(1,9),W(1,5),GG,AMP(4))""".split('\n')
 
         for i in range(len(goal)):
             self.assertEqual(result[i], goal[i])
+
+        # Test amp2 lines        
+        amp2_lines = \
+                 export_v4.get_amp2_lines(matrix_element)
+        self.assertEqual(amp2_lines,
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))',
+                          'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
+                          'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))',
+                          'AMP2(4)=AMP2(4)+AMP(4)*dconjg(AMP(4))'])
 
         # Check fermion factors
         self.assertEqual([d.get('amplitudes')[0].get('fermionfactor') \
@@ -4217,6 +4246,15 @@ CALL FFV1C1_0(W(1,9),W(1,2),W(1,5),GG,AMP(4))""".split('\n')
 
         for i in range(len(goal)):
             self.assertEqual(result[i], goal[i])
+
+        # Test amp2 lines        
+        amp2_lines = \
+                 export_v4.get_amp2_lines(matrix_element)
+        self.assertEqual(amp2_lines,
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))',
+                          'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
+                          'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))',
+                          'AMP2(4)=AMP2(4)+AMP(4)*dconjg(AMP(4))'])
 
         # Check fermion factors
         self.assertEqual([d.get('amplitudes')[0].get('fermionfactor') \
