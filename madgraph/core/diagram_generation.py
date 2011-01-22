@@ -167,7 +167,7 @@ class Amplitude(base_objects.PhysicsObject):
 
         assert model.get('particles'), \
            "particles are missing in model: %s" %  model.get('particles')
-         
+
         assert model.get('interactions'), \
                "interactions are missing in model" 
                   
@@ -550,21 +550,22 @@ class Amplitude(base_objects.PhysicsObject):
                         state = True
                     # 4) from_group is True, by definition
 
-                    # Create and add the object
-                    mylegs = [base_objects.Leg(
-                                    {'id':leg_id[0],
-                                     'number':number,
-                                     'state':state,
-                                     'from_group':True}) \
-                                    for leg_id in leg_vert_ids]
-                    reduced_list.append(mylegs)
+                    # Create and add the object. This is done by a
+                    # separate routine, to allow overloading by
+                    # daughter classes
+                    new_leg_vert_ids = self.get_combined_legs(entry,
+                                                    leg_vert_ids,
+                                                    number,
+                                                    state)
+                    
+                    reduced_list.append([l[0] for l in new_leg_vert_ids])
 
 
                     # Create and add the corresponding vertex
                     # Extract vertex ids corresponding to the various legs
                     # in mylegs
                     vlist = base_objects.VertexList()
-                    for ileg, myleg in enumerate(mylegs):
+                    for (myleg, vert_id) in new_leg_vert_ids:
                         # Start with the considered combination...
                         myleglist = base_objects.LegList(list(entry))
                         # ... and complete with legs after reducing
@@ -572,7 +573,7 @@ class Amplitude(base_objects.PhysicsObject):
                         # ... and consider the correct vertex id
                         vlist.append(base_objects.Vertex(
                                          {'legs':myleglist,
-                                          'id':leg_vert_ids[ileg][1]}))
+                                          'id':vert_id}))
 
                     vertex_list.append(vlist)
 
@@ -598,6 +599,19 @@ class Amplitude(base_objects.PhysicsObject):
 
         return res
 
+    def get_combined_legs(self, entry, leg_vert_ids, number, state):
+        """Create a set of new legs from the info given. This can be
+        overloaded by daughter classes."""
+
+        mylegs = [(base_objects.Leg({'id':leg_id,
+                                    'number':number,
+                                    'state':state,
+                                    'from_group':True}),
+                   vert_id)\
+                  for leg_id, vert_id in leg_vert_ids]
+
+        return mylegs
+                          
     def trim_diagrams(self):
         """Reduce the number of legs and vertices used in memory."""
 
