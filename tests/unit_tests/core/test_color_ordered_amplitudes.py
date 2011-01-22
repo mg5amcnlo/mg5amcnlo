@@ -450,10 +450,10 @@ class ColorOrderedAmplitudeTest(unittest.TestCase):
     def test_color_ordered_uux_uuxng(self):
         """Test the number of diagram generated for uu~>uu~+ng with n up to 2
         """
-        goal_ndiags = [[1], [3, 3], [10, 10, 10]]
+        goal_ndiags = [[1], [3, 3], [10, 15, 10]]
         goal_nflows = [1, 2, 3, 0]
 
-        for ngluons in range(0, 3):
+        for ngluons in range(2, 3):
 
             myleglist = base_objects.LegList()
 

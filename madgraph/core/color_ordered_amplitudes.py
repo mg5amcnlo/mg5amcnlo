@@ -224,7 +224,8 @@ class ColorOrderedFlow(diagram_generation.Amplitude):
                 [(g, max([l.get('color_ordering')[g][0] for l \
                       in legs if g in l.get('color_ordering')]))\
                  for g in groups]))
-            
+            print "Color flow: ",[(l.get('number'),l.get('id'),l.get('color_ordering')) \
+                        for l in argument.get('legs')]
             self.generate_diagrams()
         elif argument != None:
             # call the mother routine
@@ -305,7 +306,35 @@ class ColorOrderedFlow(diagram_generation.Amplitude):
                    len(color_orderings[leg_id]) > 0 and \
                    len(color_orderings[leg_id]) <= 2)]
 
+        print 'legs: ',[(l.get('number'),l.get('id'),l.get('color_ordering')) \
+                        for l in legs]
+        print 'newlegs: ',[(l.get('number'),l.get('id'),l.get('color_ordering')) \
+                        for l,v in mylegs]
+
         return mylegs
+
+    def get_combined_vertices(self, legs, vert_ids):
+        """Allow for selection of vertex ids. This can be
+        overloaded by daughter classes."""
+
+        #return get_combined_legs(self, legs,
+        #                         [(0, v) for v in vert_ids], 0, False)
+
+        # Combine legs by color order groups
+        
+        # Find all color ordering groups
+        groups = set(sum([l.get('color_ordering').keys() for l in legs],[]))
+        # Extract legs colored under each group
+        group_legs = {}
+        for group in groups:
+            group_legs[group] = set([l.get('number') for l in legs \
+                                     if group in l.get('color_ordering')])
+        # Check that all groups are pair-wise connected by particles
+        for g1, g2 in itertools.combinations(groups, 2):
+            if not group_legs[g1].intersection(group_legs[g2]):
+                return []
+
+        return vert_ids
 
 #===============================================================================
 # AmplitudeList

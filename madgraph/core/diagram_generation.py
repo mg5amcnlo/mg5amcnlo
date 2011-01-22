@@ -349,8 +349,9 @@ class Amplitude(base_objects.PhysicsObject):
 
         if curr_leglist.can_combine_to_0(ref_dict_to0, is_decay_proc):
             # Extract the interaction id associated to the vertex 
-            vertex_ids = ref_dict_to0[tuple(sorted([leg.get('id') for \
-                                                   leg in curr_leglist]))]
+            vertex_ids = self.get_combined_vertices(curr_leglist,
+                            ref_dict_to0[tuple(sorted([leg.get('id') for \
+                                                       leg in curr_leglist]))])
 
             final_vertices = [base_objects.Vertex({'legs':curr_leglist,
                                                    'id':vertex_id}) for \
@@ -599,7 +600,7 @@ class Amplitude(base_objects.PhysicsObject):
 
         return res
 
-    def get_combined_legs(self, entry, leg_vert_ids, number, state):
+    def get_combined_legs(self, legs, leg_vert_ids, number, state):
         """Create a set of new legs from the info given. This can be
         overloaded by daughter classes."""
 
@@ -611,6 +612,12 @@ class Amplitude(base_objects.PhysicsObject):
                   for leg_id, vert_id in leg_vert_ids]
 
         return mylegs
+                          
+    def get_combined_vertices(self, legs, vert_ids):
+        """Allow for selection of vertex ids. This can be
+        overloaded by daughter classes."""
+
+        return vert_ids
                           
     def trim_diagrams(self):
         """Reduce the number of legs and vertices used in memory."""
