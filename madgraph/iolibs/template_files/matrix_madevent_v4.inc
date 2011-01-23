@@ -162,6 +162,8 @@ C
     PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
     REAL*8     ZERO
     PARAMETER (ZERO=0D0)
+    COMPLEX*16 IMAG1
+    PARAMETER (IMAG1=(0D0,1D0))
 C  
 C ARGUMENTS 
 C  
