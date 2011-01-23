@@ -2088,12 +2088,12 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
 
     if total_coeff == 1:
         if is_imaginary:
-            return '+complex(0,1)*'
+            return '+imag1*'
         else:
             return '+'
     elif total_coeff == -1:
         if is_imaginary:
-            return '-complex(0,1)*'
+            return '-imag1*'
         else:
             return '-'
 
@@ -2104,7 +2104,7 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
         res_str = res_str + './%i.' % total_coeff.denominator
 
     if is_imaginary:
-        res_str = res_str + '*complex(0,1)'
+        res_str = res_str + '*imag1'
 
     return res_str + '*'
 

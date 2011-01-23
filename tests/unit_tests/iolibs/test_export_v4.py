@@ -260,6 +260,8 @@ C
       PARAMETER (NWAVEFUNCS=11, NCOLOR=1)
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
+      COMPLEX*16 IMAG1
+      PARAMETER (IMAG1=(0D0,1D0))
 C     
 C     ARGUMENTS 
 C     
@@ -345,7 +347,7 @@ C     Amplitude(s) for diagram number 6
 
         self.assertEqual(export_v4.coeff(-1,
                                          fractions.Fraction(3, 5),
-                                         True, -2), '-1./15.*complex(0,1)*')
+                                         True, -2), '-1./15.*imag1*')
 
 
     def test_export_matrix_element_v4_madevent_group(self):
@@ -4691,6 +4693,8 @@ C
       PARAMETER (NWAVEFUNCS=11, NCOLOR=1)
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
+      COMPLEX*16 IMAG1
+      PARAMETER (IMAG1=(0D0,1D0))
 C     
 C     ARGUMENTS 
 C     
