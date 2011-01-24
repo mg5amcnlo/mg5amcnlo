@@ -261,33 +261,39 @@ class ColorOrderedFlow(diagram_generation.Amplitude):
         """Determine if the combination of legs is valid with color
         ordering. Algorithm: A combination is valid if
 
-        1) all particles with the same color ordering group are
-        adjacent in the group,
+        1) all particles with the same color ordering group have
+        adjacent color flow numbers
 
-        2) No color octet is dead-ending
+        2) No color octet is dead-ending (if there are other color groups)
+
+        3) Resulting legs have: a) no uncompleted groups (if color singlet),
+           b) exactly one uncompleted group (if color triplet),
+           c) no uncompleted group, and 1 or 2 groups (if color octet).
         """
 
         # Find all color ordering groups
         groups = set(sum([l.get('color_ordering').keys() for l in legs],[]))
         model = self.get('process').get('model')
-        leg_colors = dict([(leg_id, model.get_particle(leg_id).get('color')) \
+        new_leg_colors = dict([(leg_id,
+                                model.get_particle(leg_id).get('color')) \
                            for (leg_id, vert_id) in leg_vert_ids])
+        old_leg_colors = dict([(leg_id,
+                                model.get_particle(leg_id).get('color')) \
+                               for leg_id in set([l.get('id') for l in legs])])
         color_orderings = dict([(leg_id, {}) for (leg_id, vert_id) in \
                                 leg_vert_ids])
-        failed_legs = []
+
         for group in groups:
             # sort the legs with color ordering number
             color_legs = [(i, l.get('color_ordering')[group]) for \
                           (i, l) in enumerate(legs) \
                           if group in l.get('color_ordering')]
 
-            # If only one octet leg for a group, this means that we have a
-            # color octet line which is not completed -> discard
-            if len(color_legs) == 1 and \
-               abs(model.get_particle(legs[color_legs[0][0]].get('id')).\
-                   get_color()) == 8 and \
+            # Check for unattached color octet legs
+            if len(groups) > 1 and len(color_legs) == 1 and \
+               old_leg_colors[legs[color_legs[0][0]].get('id')] == 8 and \
                    len(legs[color_legs[0][0]].get('color_ordering')) == 1:
-                return []
+                return []            
 
             color_legs.sort(lambda l1, l2: l1[1][0] - l2[1][0])
 
@@ -303,28 +309,54 @@ class ColorOrderedFlow(diagram_generation.Amplitude):
                 color_legs[-1][1][1] < self.get('max_color_orders')[group]) and \
                 color_legs[-1][1][1] + 1 != color_legs[0][1][0]:
                 ngap = 1
+            # Check if there are gaps between other legs
             for leg in color_legs[1:]:
                 if leg[1][0] != lastmax + 1:
                     ngap += 1
                     color_ordering = (leg[1][0], lastmax)
                 if ngap == 2:
+                    # For adjacent legs, only allow one gap
                     return []
                 lastmax = leg[1][1]
-
-            # Set color ordering for legs
-            for leg_id, vert_id in leg_vert_ids:
-                # Color ordering [first, last] counts as color singlet
-                if abs(leg_colors[leg_id]) == 1 and \
-                     color_ordering != (1, self.get('max_color_orders')[group]):
-                    failed_legs.append(leg_id)                    
-                elif abs(leg_colors[leg_id]) == 8 and \
-                     color_ordering == (1, self.get('max_color_orders')[group]):
-                    # Color singlet ordering not allowed for octet
-                    failed_legs.append(leg_id)
-                elif abs(leg_colors[leg_id]) != 1 and \
-                     color_ordering != (1, self.get('max_color_orders')[group]):
-                    color_orderings[leg_id][group] = color_ordering
-
+            # Set color ordering for new legs
+            for leg_id in color_orderings.keys():
+                color_orderings[leg_id][group] = color_ordering
+                
+        # Check validity of resulting color orderings for the legs
+        ileg = 0
+        while ileg < len(leg_vert_ids):
+            leg_id, vert_id = leg_vert_ids[ileg]
+            if abs(new_leg_colors[leg_id]) == 1:
+                # Color singlets need all groups to be completed
+                if any([color_orderings[leg_id][group] != \
+                        (1, self.get('max_color_orders')[group]) \
+                        for group in groups]):
+                    leg_vert_ids.remove((leg_id, vert_id))
+                else:
+                    ileg += 1
+                color_orderings[leg_id] = {}
+            elif abs(new_leg_colors[leg_id]) == 3:
+                # Color triplets should have exactly one color ordering
+                color_orderings[leg_id] = \
+                    dict([(group, color_orderings[leg_id][group]) for \
+                          group in groups if \
+                          color_orderings[leg_id][group] != \
+                           (1, self.get('max_color_orders')[group])])
+                if len(color_orderings[leg_id].keys()) != 1:
+                    leg_vert_ids.remove((leg_id, vert_id))                    
+                else:
+                    ileg += 1
+            elif abs(new_leg_colors[leg_id]) == 8:
+                # Color octets should have no completed groups,
+                # and 1 or 2 orderings
+                if any([color_orderings[leg_id][group] == \
+                        (1, self.get('max_color_orders')[group]) \
+                        for group in groups]) or \
+                        len(color_orderings[leg_id]) < 1 or \
+                        len(color_orderings[leg_id]) > 2:
+                    leg_vert_ids.remove((leg_id, vert_id))
+                else:
+                    ileg += 1
 
         # Return all legs that have valid color_orderings
         mylegs = [(ColorOrderedLeg({'id':leg_id,
@@ -332,24 +364,14 @@ class ColorOrderedFlow(diagram_generation.Amplitude):
                                    'state':state,
                                    'from_group':True,
                                    'color_ordering': color_orderings[leg_id]}),
-                   vert_id) \
-                  for leg_id, vert_id in leg_vert_ids if \
-                  leg_id not in failed_legs and \
-                  (abs(leg_colors[leg_id]) == 1 or \
-                   abs(leg_colors[leg_id]) == 3 and \
-                   len(color_orderings[leg_id]) == 1 or \
-                   abs(leg_colors[leg_id]) == 8 and \
-                   len(color_orderings[leg_id]) > 0 and \
-                   len(color_orderings[leg_id]) <= 2)]
+                   vert_id) for (leg_id, vert_id) in leg_vert_ids]
 
         return mylegs
 
     def get_combined_vertices(self, legs, vert_ids):
-        """Allow for selection of vertex ids. This can be
-        overloaded by daughter classes."""
+        """Check that all color-ordering groups are pairwise
+        connected, i.e., we do not allow groups that are disjuct."""
 
-        # Combine legs by color order groups
-        
         # Find all color ordering groups
         groups = set(sum([l.get('color_ordering').keys() for l in legs],[]))
         # Extract legs colored under each group

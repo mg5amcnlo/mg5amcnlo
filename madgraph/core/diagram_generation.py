@@ -350,8 +350,8 @@ class Amplitude(base_objects.PhysicsObject):
         if curr_leglist.can_combine_to_0(ref_dict_to0, is_decay_proc):
             # Extract the interaction id associated to the vertex 
             vertex_ids = self.get_combined_vertices(curr_leglist,
-                            ref_dict_to0[tuple(sorted([leg.get('id') for \
-                                                       leg in curr_leglist]))])
+                       copy.copy(ref_dict_to0[tuple(sorted([leg.get('id') for \
+                                                       leg in curr_leglist]))]))
 
             final_vertices = [base_objects.Vertex({'legs':curr_leglist,
                                                    'id':vertex_id}) for \
@@ -537,8 +537,8 @@ class Amplitude(base_objects.PhysicsObject):
 
                     # Build the leg object which will replace the combination:
                     # 1) leg ids is as given in the ref_dict
-                    leg_vert_ids = ref_dict_to1[tuple(sorted([leg.get('id') \
-                                               for leg in entry]))]
+                    leg_vert_ids = copy.copy(ref_dict_to1[\
+                        tuple(sorted([leg.get('id') for leg in entry]))])
                     # 2) number is the minimum of leg numbers involved in the
                     # combination
                     number = min([leg.get('number') for leg in entry])
@@ -554,10 +554,12 @@ class Amplitude(base_objects.PhysicsObject):
                     # Create and add the object. This is done by a
                     # separate routine, to allow overloading by
                     # daughter classes
-                    new_leg_vert_ids = self.get_combined_legs(entry,
-                                                    leg_vert_ids,
-                                                    number,
-                                                    state)
+                    new_leg_vert_ids = []
+                    if leg_vert_ids:
+                        new_leg_vert_ids = self.get_combined_legs(entry,
+                                                                  leg_vert_ids,
+                                                                  number,
+                                                                  state)
                     
                     reduced_list.append([l[0] for l in new_leg_vert_ids])
 
