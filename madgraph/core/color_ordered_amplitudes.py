@@ -106,50 +106,59 @@ class ColorOrderedAmplitude(diagram_generation.Amplitude):
     def setup_process(self):
         """Add negative singlet gluon to model. Setup
         ColorOrderedFlows corresponding to all color flows of this
-        process. Each ordering of color triplets corresponds to a
-        unique color flow."""
+        process. Each ordering of unique particles with color triplets
+        pairwise combined as (3 3bar)...(3 3bar)... etc. corresponds
+        to a unique color flow."""
 
         process = self.get('process')
         model = process.get('model')
         legs = base_objects.LegList([copy.copy(l) for l in \
                                      process.get('legs')])
 
-        # Add color negative singlet gluon to model - TO BE DONE
+        # Add color negative singlets to model corresponding to all
+        # color octets, with only 3-3bar-8 interactions.
+        # Color factor: -1/6 * Id(1,2)
 
         # Set leg numbers for the process
         for i, leg in enumerate(legs):
             leg.set('number', i+1)
-            # Reverse initial state legs
+            # Reverse initial state legs to have all legs outgoing
             if not leg.get('state'):
                 leg.set('id', model.get_particle(leg.get('id')).\
                         get_anti_pdg_code())
 
-        # First set flags to get only relevant combinations
+        # Create list of leg (number, id, color) to find unique color flows
         order_legs = [(l.get('number'), l.get('id'),
                        model.get_particle(l.get('id')).get_color()) \
                       for l in legs]
 
         # Identify particle types: Color singlets (can connect
-        # anywhere), colored particles
+        # anywhere), color triplets, anti-triplets and octets
         triplet_legs = [l for l in order_legs if l[2] == 3]
         anti_triplet_legs = [l for l in order_legs if l[2] == -3]
         octet_legs = [l for l in order_legs if abs(l[2]) == 8]
         singlet_legs = [l for l in order_legs if abs(l[2]) == 1]
+
+        if len(triplet_legs) != len(anti_triplet_legs):
+            # Need triplets in pairs for valid amplitude
+            return
 
         if len(triplet_legs+anti_triplet_legs + octet_legs+singlet_legs) != \
                len(legs):
             raise MadGraph5Error, \
                   "Non-triplet/octet/singlet found in color ordered amplitude"
         
-        # Insert all orderings of triplet legs into octet legs. Each
-        # ordering corresponds to a color flow.
+        # Determine all unique permutations of particles corresponding
+        # to color flows. Valid color flows have color triplet pairs
+        # prganized as (3 3bar)...(3 3bar)...
 
-        # Extract all unique combinations of legs
+        # Extract all unique permutations of legs
         leg_perms = []
         if triplet_legs:
             first_leg = [triplet_legs.pop(0)]
         else:
             first_leg = [octet_legs.pop(0)]
+
         for perm in itertools.permutations(sorted(triplet_legs + \
                                                   anti_triplet_legs + \
                                                   octet_legs,
@@ -160,7 +169,8 @@ class ColorOrderedAmplitude(diagram_generation.Amplitude):
                 continue
 
             # Also remove permutations where a triplet and
-            # anti-triplet are not next to each other
+            # anti-triplet are not next to each other and ordered as 
+            # (3 3bar)...(3 3bar)...
             trip = [(i,p) for (i,p) in enumerate(first_leg + list(perm)) \
                     if abs(p[2])==3]
             failed = False
@@ -174,7 +184,8 @@ class ColorOrderedAmplitude(diagram_generation.Amplitude):
 
             leg_perms.append(perm)
 
-        # Create color flow amplitudes corresponding to all resulting combinations
+        # Create color flow amplitudes corresponding to all resulting
+        # permutations
         color_flows = ColorOrderedFlowList()
         colegs = base_objects.LegList([ColorOrderedLeg(l) for l in legs])
         # Restore initial state leg identities
@@ -182,21 +193,27 @@ class ColorOrderedAmplitude(diagram_generation.Amplitude):
             if not leg.get('state'):
                 leg.set('id', model.get_particle(leg.get('id')).\
                         get_anti_pdg_code())
+        # Set color flow flags (color_ordering) so that every
+        # chain (3bar 8 8 .. 8 3) has a unique color ordering
+        # group, and each entry in the chain has a unique color flow
+        # flag {chain:(n,n)}
+
         for perm in leg_perms:
             legs = base_objects.LegList([copy.copy(l) for l in colegs])
             # Keep track of number of triplets
-            num_triplets = 0
+            ichain = 0
             ileg = 0
             # Set color ordering flags for all colored legs
             for perm_leg in list(perm) + first_leg:
                 leg = legs[perm_leg[0]-1]
                 if perm_leg[2] == -3:
-                    num_triplets += 1
+                    ichain += 1
                     ileg = 0
                 ileg += 1
-                leg.set('color_ordering', {num_triplets: (ileg, ileg)})
+                leg.set('color_ordering', {ichain: (ileg, ileg)})
             coprocess = copy.copy(process)
             coprocess.set('legs', legs)
+            # Create the color ordered flow
             flow = ColorOrderedFlow(coprocess)
             if flow.get('diagrams'):
                 color_flows.append(flow)
@@ -241,7 +258,14 @@ class ColorOrderedFlow(diagram_generation.Amplitude):
         self['max_color_orders'] = {}
 
     def get_combined_legs(self, legs, leg_vert_ids, number, state):
-        """Create a set of new legs from the info given."""
+        """Determine if the combination of legs is valid with color
+        ordering. Algorithm: A combination is valid if
+
+        1) all particles with the same color ordering group are
+        adjacent in the group,
+
+        2) No color octet is dead-ending
+        """
 
         # Find all color ordering groups
         groups = set(sum([l.get('color_ordering').keys() for l in legs],[]))
@@ -289,15 +313,17 @@ class ColorOrderedFlow(diagram_generation.Amplitude):
 
             # Set color ordering for legs
             for leg_id, vert_id in leg_vert_ids:
-            # Color ordering [first, last] counts as color singlet
-                if abs(leg_colors[leg_id]) != 1:
-                    if color_ordering == \
-                           (1, self.get('max_color_orders')[group]):
-                        if abs(leg_colors[leg_id]) == 8:
-                            # Color singlet not allowed for octet
-                            failed_legs.append(leg_id)
-                    else:
-                        color_orderings[leg_id][group] = color_ordering
+                # Color ordering [first, last] counts as color singlet
+                if abs(leg_colors[leg_id]) == 1 and \
+                     color_ordering != (1, self.get('max_color_orders')[group]):
+                    failed_legs.append(leg_id)                    
+                elif abs(leg_colors[leg_id]) == 8 and \
+                     color_ordering == (1, self.get('max_color_orders')[group]):
+                    # Color singlet ordering not allowed for octet
+                    failed_legs.append(leg_id)
+                elif abs(leg_colors[leg_id]) != 1 and \
+                     color_ordering != (1, self.get('max_color_orders')[group]):
+                    color_orderings[leg_id][group] = color_ordering
 
 
         # Return all legs that have valid color_orderings

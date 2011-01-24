@@ -486,6 +486,45 @@ class ColorOrderedAmplitudeTest(unittest.TestCase):
                 self.assertEqual(len(self.myamplitude.get('color_flows')[iflow].get('diagrams')),
                              goal_ndiags[ngluons][iflow])
 
+    def test_color_ordered_uux_uuxng_singlet(self):
+        """Test the number of color flows and diagram generated for uu~>uu~+ng with n up to 3
+        """
+        goal_ndiags = [[1], [2, 2], [5, 4, 5],[16, 10, 10, 16]]
+        goal_nflows = [1, 2, 3, 4]
+
+        for ngluons in range(0, 4):
+
+            myleglist = base_objects.LegList()
+
+            myleglist.append(base_objects.Leg({'id':2,
+                                             'state':False}))
+            myleglist.append(base_objects.Leg({'id':-2,
+                                             'state':False}))
+            myleglist.append(base_objects.Leg({'id':2,
+                                             'state':True}))
+            myleglist.append(base_objects.Leg({'id':-2,
+                                             'state':True}))
+            myleglist.extend([base_objects.Leg({'id':21,
+                                                 'state':True})] * ngluons)
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'orders':{'QCD':ngluons, 'QED': 2}})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.setup_process()
+            for c in self.myamplitude.get('color_flows'):
+                print "color flow process: ",[(l.get('number'), l.get('color_ordering')) for \
+                                               l in c.get('process').get('legs')]
+                print c.nice_string()
+
+            self.assertEqual(len(self.myamplitude.get('color_flows')),
+                             goal_nflows[ngluons])
+            for iflow, flow in enumerate(self.myamplitude.get('color_flows')):
+                self.assertEqual(len(self.myamplitude.get('color_flows')[iflow].get('diagrams')),
+                             goal_ndiags[ngluons][iflow])
+
     def test_color_ordered_uux_ddxng_no_singlet(self):
         """Test the number of color flows and diagram generated for uu~>uu~+ng with n up to 3
         """
