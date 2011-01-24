@@ -77,6 +77,15 @@ Fnopoints div Frmod sin mul Fttype mul 2 div
 add add } Fstraight } def
 
 
+/Fphotonr
+{{ Fx1 Fx2 Fx1 sub Fi mul Fnopoints div Fn
+div Fxt Fi 90 mul Fnopoints div Frmod sin
+mul Fttype mul 1 div add add Fy1 Fy2 Fy1 sub
+Fi mul Fnopoints div Fn div Fyt Fi 90 mul
+Fnopoints div Frmod sin mul Fttype mul 1 div
+add add } Fstraight Fx1
+Fx2 add 2 div Fy1 Fy2 add 2 div Farrow} def
+
 /Fphotond
 {{ Fx1 Fx2 Fx1 sub Fi mul Fnopoints div Fn
 div Fxt Fi 180 mul Fnopoints div Frmod sin
@@ -107,6 +116,17 @@ Fnopoints div Fn div Fyt 1 Fi 180 mul
 Fnopoints div cos sub mul Fttype mul Fyl Fi
 180 mul Fnopoints div sin mul add add add }
 Fstraight } def
+
+/Fgluonr
+{2 sub { Fx1 Fx2 Fx1 sub Fi mul Fnopoints div
+Fn div Fxt 0 Fi 120 mul Fnopoints div cos sub
+mul Fttype mul Fxl Fi 120 mul Fnopoints div
+sin mul add add add Fy1 Fy2 Fy1 sub Fi mul
+Fnopoints div Fn div Fyt 0 Fi 120 mul
+Fnopoints div cos sub mul Fttype mul Fyl Fi
+120 mul Fnopoints div sin mul add add add }
+Fstraight } def
+
 
 /Fgluonl
 {exch 2 sub exch { Fxc Fth cos Frr mul Fxt 1

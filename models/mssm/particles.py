@@ -15,7 +15,6 @@ ve = Particle(pdg_code = 12,
               width = 'ZERO',
               texname = 've',
               antitexname = 've',
-              line = 'straight',
               charge = 0,
               GhostNumber = 0)
 
@@ -30,8 +29,7 @@ vm = Particle(pdg_code = 14,
               width = 'ZERO',
               texname = 'vm',
               antitexname = 'vm',
-              line = 'straight',
-              charge = 0,
+             charge = 0,
               GhostNumber = 0)
 
 vm__tilde__ = vm.anti()
@@ -45,8 +43,7 @@ vt = Particle(pdg_code = 16,
               width = 'ZERO',
               texname = 'vt',
               antitexname = 'vt',
-              line = 'straight',
-              charge = 0,
+             charge = 0,
               GhostNumber = 0)
 
 vt__tilde__ = vt.anti()
@@ -60,8 +57,7 @@ e__minus__ = Particle(pdg_code = 11,
                       width = 'ZERO',
                       texname = 'e-',
                       antitexname = 'e-',
-                      line = 'straight',
-                      charge = -1,
+             charge = -1,
                       GhostNumber = 0)
 
 e__plus__ = e__minus__.anti()
@@ -75,8 +71,7 @@ mu__minus__ = Particle(pdg_code = 13,
                        width = 'ZERO',
                        texname = 'mu-',
                        antitexname = 'mu-',
-                       line = 'straight',
-                       charge = -1,
+             charge = -1,
                        GhostNumber = 0)
 
 mu__plus__ = mu__minus__.anti()
@@ -90,8 +85,7 @@ tau__minus__ = Particle(pdg_code = 15,
                         width = 'ZERO',
                         texname = 'tau-',
                         antitexname = 'tau-',
-                        line = 'straight',
-                        charge = -1,
+             charge = -1,
                         GhostNumber = 0)
 
 tau__plus__ = tau__minus__.anti()
@@ -105,7 +99,6 @@ u = Particle(pdg_code = 2,
              width = 'ZERO',
              texname = 'u',
              antitexname = 'u',
-             line = 'straight',
              charge = 2/3,
              GhostNumber = 0)
 
@@ -120,7 +113,6 @@ c = Particle(pdg_code = 4,
              width = 'ZERO',
              texname = 'c',
              antitexname = 'c',
-             line = 'straight',
              charge = 2/3,
              GhostNumber = 0)
 
@@ -135,7 +127,6 @@ t = Particle(pdg_code = 6,
              width = 'WT',
              texname = 't',
              antitexname = 't',
-             line = 'straight',
              charge = 2/3,
              GhostNumber = 0)
 
@@ -150,7 +141,6 @@ d = Particle(pdg_code = 1,
              width = 'ZERO',
              texname = 'd',
              antitexname = 'd',
-             line = 'straight',
              charge = -1/3,
              GhostNumber = 0)
 
@@ -165,7 +155,6 @@ s = Particle(pdg_code = 3,
              width = 'ZERO',
              texname = 's',
              antitexname = 's',
-             line = 'straight',
              charge = -1/3,
              GhostNumber = 0)
 
@@ -180,7 +169,6 @@ b = Particle(pdg_code = 5,
              width = 'ZERO',
              texname = 'b',
              antitexname = 'b',
-             line = 'straight',
              charge = -1/3,
              GhostNumber = 0)
 
@@ -195,8 +183,7 @@ n1 = Particle(pdg_code = 1000022,
               width = 'Wneu1',
               texname = 'n1',
               antitexname = 'n1',
-              line = 'straight',
-              charge = 0,
+             charge = 0,
               GhostNumber = 0)
 
 n2 = Particle(pdg_code = 1000023,
@@ -208,8 +195,7 @@ n2 = Particle(pdg_code = 1000023,
               width = 'Wneu2',
               texname = 'n2',
               antitexname = 'n2',
-              line = 'straight',
-              charge = 0,
+             charge = 0,
               GhostNumber = 0)
 
 n3 = Particle(pdg_code = 1000025,
@@ -221,8 +207,7 @@ n3 = Particle(pdg_code = 1000025,
               width = 'Wneu3',
               texname = 'n3',
               antitexname = 'n3',
-              line = 'straight',
-              charge = 0,
+             charge = 0,
               GhostNumber = 0)
 
 n4 = Particle(pdg_code = 1000035,
@@ -234,8 +219,7 @@ n4 = Particle(pdg_code = 1000035,
               width = 'Wneu4',
               texname = 'n4',
               antitexname = 'n4',
-              line = 'straight',
-              charge = 0,
+             charge = 0,
               GhostNumber = 0)
 
 x1__plus__ = Particle(pdg_code = 1000024,
@@ -247,8 +231,7 @@ x1__plus__ = Particle(pdg_code = 1000024,
                       width = 'Wch1',
                       texname = 'x1+',
                       antitexname = 'x1+',
-                      line = 'straight',
-                      charge = 1,
+             charge = 1,
                       GhostNumber = 0)
 
 x1__minus__ = x1__plus__.anti()
@@ -262,8 +245,7 @@ x2__plus__ = Particle(pdg_code = 1000037,
                       width = 'Wch2',
                       texname = 'x2+',
                       antitexname = 'x2+',
-                      line = 'straight',
-                      charge = 1,
+             charge = 1,
                       GhostNumber = 0)
 
 x2__minus__ = x2__plus__.anti()
@@ -277,8 +259,7 @@ go = Particle(pdg_code = 1000021,
               width = 'Wglu',
               texname = 'go',
               antitexname = 'go',
-              line = 'straight',
-              charge = 0,
+             charge = 0,
               GhostNumber = 0)
 
 sv1 = Particle(pdg_code = 1000012,
@@ -290,8 +271,7 @@ sv1 = Particle(pdg_code = 1000012,
                width = 'Wsn1',
                texname = 'sv1',
                antitexname = 'sv1',
-               line = 'dashed',
-               charge = 0,
+             charge = 0,
                GhostNumber = 0)
 
 sv1__tilde__ = sv1.anti()
@@ -305,8 +285,7 @@ sv2 = Particle(pdg_code = 1000014,
                width = 'Wsn2',
                texname = 'sv2',
                antitexname = 'sv2',
-               line = 'dashed',
-               charge = 0,
+             charge = 0,
                GhostNumber = 0)
 
 sv2__tilde__ = sv2.anti()
@@ -320,8 +299,7 @@ sv3 = Particle(pdg_code = 1000016,
                width = 'Wsn3',
                texname = 'sv3',
                antitexname = 'sv3',
-               line = 'dashed',
-               charge = 0,
+             charge = 0,
                GhostNumber = 0)
 
 sv3__tilde__ = sv3.anti()
@@ -335,8 +313,7 @@ sl1__minus__ = Particle(pdg_code = 1000011,
                         width = 'Wsl1',
                         texname = 'sl1-',
                         antitexname = 'sl1-',
-                        line = 'dashed',
-                        charge = -1,
+             charge = -1,
                         GhostNumber = 0)
 
 sl1__plus__ = sl1__minus__.anti()
@@ -350,8 +327,7 @@ sl2__minus__ = Particle(pdg_code = 1000013,
                         width = 'Wsl2',
                         texname = 'sl2-',
                         antitexname = 'sl2-',
-                        line = 'dashed',
-                        charge = -1,
+             charge = -1,
                         GhostNumber = 0)
 
 sl2__plus__ = sl2__minus__.anti()
@@ -365,8 +341,7 @@ sl3__minus__ = Particle(pdg_code = 1000015,
                         width = 'Wsl3',
                         texname = 'sl3-',
                         antitexname = 'sl3-',
-                        line = 'dashed',
-                        charge = -1,
+             charge = -1,
                         GhostNumber = 0)
 
 sl3__plus__ = sl3__minus__.anti()
@@ -380,8 +355,7 @@ sl4__minus__ = Particle(pdg_code = 2000011,
                         width = 'Wsl4',
                         texname = 'sl4-',
                         antitexname = 'sl4-',
-                        line = 'dashed',
-                        charge = -1,
+             charge = -1,
                         GhostNumber = 0)
 
 sl4__plus__ = sl4__minus__.anti()
@@ -395,8 +369,7 @@ sl5__minus__ = Particle(pdg_code = 2000013,
                         width = 'Wsl5',
                         texname = 'sl5-',
                         antitexname = 'sl5-',
-                        line = 'dashed',
-                        charge = -1,
+             charge = -1,
                         GhostNumber = 0)
 
 sl5__plus__ = sl5__minus__.anti()
@@ -410,8 +383,7 @@ sl6__minus__ = Particle(pdg_code = 2000015,
                         width = 'Wsl6',
                         texname = 'sl6-',
                         antitexname = 'sl6-',
-                        line = 'dashed',
-                        charge = -1,
+             charge = -1,
                         GhostNumber = 0)
 
 sl6__plus__ = sl6__minus__.anti()
@@ -425,8 +397,7 @@ su1 = Particle(pdg_code = 1000002,
                width = 'Wusq1',
                texname = 'su1',
                antitexname = 'su1',
-               line = 'dashed',
-               charge = 2/3,
+             charge = 2/3,
                GhostNumber = 0)
 
 su1__tilde__ = su1.anti()
@@ -440,8 +411,7 @@ su2 = Particle(pdg_code = 1000004,
                width = 'Wusq2',
                texname = 'su2',
                antitexname = 'su2',
-               line = 'dashed',
-               charge = 2/3,
+             charge = 2/3,
                GhostNumber = 0)
 
 su2__tilde__ = su2.anti()
@@ -455,8 +425,7 @@ su3 = Particle(pdg_code = 1000006,
                width = 'Wusq3',
                texname = 'su3',
                antitexname = 'su3',
-               line = 'dashed',
-               charge = 2/3,
+             charge = 2/3,
                GhostNumber = 0)
 
 su3__tilde__ = su3.anti()
@@ -470,8 +439,7 @@ su4 = Particle(pdg_code = 2000002,
                width = 'Wusq4',
                texname = 'su4',
                antitexname = 'su4',
-               line = 'dashed',
-               charge = 2/3,
+             charge = 2/3,
                GhostNumber = 0)
 
 su4__tilde__ = su4.anti()
@@ -485,8 +453,7 @@ su5 = Particle(pdg_code = 2000004,
                width = 'Wusq5',
                texname = 'su5',
                antitexname = 'su5',
-               line = 'dashed',
-               charge = 2/3,
+             charge = 2/3,
                GhostNumber = 0)
 
 su5__tilde__ = su5.anti()
@@ -500,8 +467,7 @@ su6 = Particle(pdg_code = 2000006,
                width = 'Wusq6',
                texname = 'su6',
                antitexname = 'su6',
-               line = 'dashed',
-               charge = 2/3,
+             charge = 2/3,
                GhostNumber = 0)
 
 su6__tilde__ = su6.anti()
@@ -515,8 +481,7 @@ sd1 = Particle(pdg_code = 1000001,
                width = 'Wdsq1',
                texname = 'sd1',
                antitexname = 'sd1',
-               line = 'dashed',
-               charge = -1/3,
+             charge = -1/3,
                GhostNumber = 0)
 
 sd1__tilde__ = sd1.anti()
@@ -530,8 +495,7 @@ sd2 = Particle(pdg_code = 1000003,
                width = 'Wdsq2',
                texname = 'sd2',
                antitexname = 'sd2',
-               line = 'dashed',
-               charge = -1/3,
+             charge = -1/3,
                GhostNumber = 0)
 
 sd2__tilde__ = sd2.anti()
@@ -545,8 +509,7 @@ sd3 = Particle(pdg_code = 1000005,
                width = 'Wdsq3',
                texname = 'sd3',
                antitexname = 'sd3',
-               line = 'dashed',
-               charge = -1/3,
+             charge = -1/3,
                GhostNumber = 0)
 
 sd3__tilde__ = sd3.anti()
@@ -560,8 +523,7 @@ sd4 = Particle(pdg_code = 2000001,
                width = 'Wdsq4',
                texname = 'sd4',
                antitexname = 'sd4',
-               line = 'dashed',
-               charge = -1/3,
+             charge = -1/3,
                GhostNumber = 0)
 
 sd4__tilde__ = sd4.anti()
@@ -575,8 +537,7 @@ sd5 = Particle(pdg_code = 2000003,
                width = 'Wdsq5',
                texname = 'sd5',
                antitexname = 'sd5',
-               line = 'dashed',
-               charge = -1/3,
+             charge = -1/3,
                GhostNumber = 0)
 
 sd5__tilde__ = sd5.anti()
@@ -590,8 +551,7 @@ sd6 = Particle(pdg_code = 2000005,
                width = 'Wdsq6',
                texname = 'sd6',
                antitexname = 'sd6',
-               line = 'dashed',
-               charge = -1/3,
+             charge = -1/3,
                GhostNumber = 0)
 
 sd6__tilde__ = sd6.anti()
@@ -605,8 +565,7 @@ h1 = Particle(pdg_code = 25,
               width = 'Wh01',
               texname = 'h1',
               antitexname = 'h1',
-              line = 'dashed',
-              charge = 0,
+             charge = 0,
               GhostNumber = 0)
 
 h2 = Particle(pdg_code = 35,
@@ -618,8 +577,7 @@ h2 = Particle(pdg_code = 35,
               width = 'Wh02',
               texname = 'h2',
               antitexname = 'h2',
-              line = 'dashed',
-              charge = 0,
+             charge = 0,
               GhostNumber = 0)
 
 h3 = Particle(pdg_code = 36,
@@ -631,8 +589,7 @@ h3 = Particle(pdg_code = 36,
               width = 'WA0',
               texname = 'h3',
               antitexname = 'h3',
-              line = 'dashed',
-              charge = 0,
+             charge = 0,
               GhostNumber = 0)
 
 H__plus__ = Particle(pdg_code = 37,
@@ -644,8 +601,7 @@ H__plus__ = Particle(pdg_code = 37,
                      width = 'WH',
                      texname = 'H+',
                      antitexname = 'H+',
-                     line = 'dashed',
-                     charge = 1,
+             charge = 1,
                      GhostNumber = 0)
 
 H__minus__ = H__plus__.anti()
@@ -659,8 +615,7 @@ phi0 = Particle(pdg_code = 250,
                 width = 'Wphi',
                 texname = 'phi0',
                 antitexname = 'phi0',
-                line = 'dashed',
-                GoldstoneBoson = True,
+             GoldstoneBoson = True,
                 charge = 0,
                 GhostNumber = 0)
 
@@ -673,8 +628,7 @@ phi__plus__ = Particle(pdg_code = 251,
                        width = 'Wphi2',
                        texname = '\\phi^+',
                        antitexname = '\\phi^+',
-                       line = 'dashed',
-                       GoldstoneBoson = True,
+             GoldstoneBoson = True,
                        charge = 1,
                        GhostNumber = 0)
 
@@ -689,7 +643,6 @@ a = Particle(pdg_code = 22,
              width = 'ZERO',
              texname = 'a',
              antitexname = 'a',
-             line = 'wavy',
              charge = 0,
              GhostNumber = 0)
 
@@ -702,7 +655,6 @@ Z = Particle(pdg_code = 23,
              width = 'WZ',
              texname = 'Z',
              antitexname = 'Z',
-             line = 'wavy',
              charge = 0,
              GhostNumber = 0)
 
@@ -715,8 +667,7 @@ W__plus__ = Particle(pdg_code = 24,
                      width = 'WW',
                      texname = 'W+',
                      antitexname = 'W+',
-                     line = 'wavy',
-                     charge = 1,
+             charge = 1,
                      GhostNumber = 0)
 
 W__minus__ = W__plus__.anti()
@@ -730,7 +681,6 @@ g = Particle(pdg_code = 21,
              width = 'ZERO',
              texname = 'g',
              antitexname = 'g',
-             line = 'curly',
              charge = 0,
              GhostNumber = 0)
 
@@ -743,8 +693,7 @@ ghG = Particle(pdg_code = 9000001,
                width = 'ZERO',
                texname = 'ghG',
                antitexname = 'ghG',
-               line = 'dotted',
-               charge = 0,
+             charge = 0,
                GhostNumber = 1)
 
 ghG__tilde__ = ghG.anti()
@@ -758,8 +707,7 @@ ghA = Particle(pdg_code = 9000002,
                width = 'WghA',
                texname = 'ghA',
                antitexname = 'ghA',
-               line = 'dotted',
-               charge = 0,
+             charge = 0,
                GhostNumber = 1)
 
 ghA__tilde__ = ghA.anti()
@@ -773,8 +721,7 @@ ghZ = Particle(pdg_code = 9000003,
                width = 'WghZ',
                texname = 'ghZ',
                antitexname = 'ghZ',
-               line = 'dotted',
-               charge = 0,
+             charge = 0,
                GhostNumber = 1)
 
 ghZ__tilde__ = ghZ.anti()
@@ -788,8 +735,7 @@ ghWp = Particle(pdg_code = 9000004,
                 width = 'WghWp',
                 texname = 'ghWp',
                 antitexname = 'ghWp',
-                line = 'dotted',
-                charge = 1,
+             charge = 1,
                 GhostNumber = 1)
 
 ghWp__tilde__ = ghWp.anti()
@@ -803,8 +749,7 @@ ghWm = Particle(pdg_code = 9000005,
                 width = 'WghWm',
                 texname = 'ghWm',
                 antitexname = 'ghWm',
-                line = 'dotted',
-                charge = -1,
+             charge = -1,
                 GhostNumber = 1)
 
 ghWm__tilde__ = ghWm.anti()

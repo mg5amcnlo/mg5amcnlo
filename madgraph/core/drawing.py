@@ -1809,8 +1809,11 @@ class DiagramDrawer(object):
         # Find the type line of the particle [straight, wavy, ...]
         line_type = line.get_info('line')
         # Call the routine associate to this type [self.draw_straight, ...]
-        getattr(self, 'draw_' + line_type)(line)
-
+        if hasattr(self, 'draw_' + line_type):
+            getattr(self, 'draw_' + line_type)(line)
+        else:
+            self.draw_straight(line)
+            
         # Finalize the line representation with adding the name of the particle
         name = line.get_name()
         self.associate_name(line, name)

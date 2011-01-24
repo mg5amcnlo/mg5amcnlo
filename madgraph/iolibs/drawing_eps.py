@@ -166,15 +166,15 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
                          line.end.pos_x, line.end.pos_y, 'Fhiggs')
 
 
-    def draw_wavy(self, line):
+    def draw_wavy(self, line, opt=0, type='d'):
         """ADD the EPS code for this photon line."""
 
         #add the code in the correct format
         self.text += self.line_format(line.start.pos_x, line.start.pos_y,
-                         line.end.pos_x, line.end.pos_y, '0 Fphotond')
+                         line.end.pos_x, line.end.pos_y, '%d Fphoton%s' % (opt,type))
 
 
-    def draw_curly(self, line):
+    def draw_curly(self, line, type=''):
         """ADD the EPS code for this gluon line."""
 
         # Due to the asymmetry in the way to draw the gluon (everything is draw
@@ -185,13 +185,28 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
                                 line.start.pos_y > line.end.pos_y):
             self.text += self.line_format(line.start.pos_x,
                         line.start.pos_y, line.end.pos_x,
-                        line.end.pos_y, '0 Fgluon')
+                        line.end.pos_y, '0 Fgluon%s' % type)
         else:
             self.text += self.line_format(line.end.pos_x,
                         line.end.pos_y, line.start.pos_x,
-                        line.start.pos_y, '0 Fgluon')
-
-
+                        line.start.pos_y, '0 Fgluon%s' % type)
+    
+    def draw_scurly(self, line):
+        """ADD the EPS code for this gluino line."""
+        self.draw_curly(line, type='r'
+                        )
+        self.draw_straight(line)
+        
+    def draw_swavy(self, line):
+        """ADD the EPS code for this neutralino line."""
+        self.draw_wavy(line, type='r')
+        self.draw_straight(line)  
+             
+    def draw_double(self, line):
+        """ADD the EPS code for this neutralino line."""
+        self.draw_wavy(line, 0) 
+        self.draw_wavy(line, 1) 
+        
     def put_diagram_number(self, number=0):
         """ADD the comment 'diagram [number]' just below the diagram."""
 
