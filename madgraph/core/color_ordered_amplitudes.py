@@ -120,9 +120,9 @@ class ColorOrderedAmplitude(diagram_generation.Amplitude):
         for i, leg in enumerate(legs):
             leg.set('number', i+1)
             # Reverse initial state legs
-            if not leg.get('state') and \
-               not model.get_particle(leg.get('id')).get('self_antipart'):
-                leg.set('id', -leg.get('id'))
+            if not leg.get('state'):
+                leg.set('id', model.get_particle(leg.get('id')).\
+                        get_anti_pdg_code())
 
         # First set flags to get only relevant combinations
         order_legs = [(l.get('number'), l.get('id'),
@@ -174,30 +174,32 @@ class ColorOrderedAmplitude(diagram_generation.Amplitude):
 
             leg_perms.append(perm)
 
-        # Create color flow amplitudes corresponding to all unique combinations
+        # Create color flow amplitudes corresponding to all resulting combinations
         color_flows = ColorOrderedFlowList()
+        colegs = base_objects.LegList([ColorOrderedLeg(l) for l in legs])
+        # Restore initial state leg identities
+        for leg in colegs:
+            if not leg.get('state'):
+                leg.set('id', model.get_particle(leg.get('id')).\
+                        get_anti_pdg_code())
         for perm in leg_perms:
-            legs = base_objects.LegList([ColorOrderedLeg(l) for l in legs])
+            legs = base_objects.LegList([copy.copy(l) for l in colegs])
             # Keep track of number of triplets
             num_triplets = 0
-            ileg = 1
-            legs[first_leg[0][0]-1].set('color_ordering', {0:(1,1)})
+            ileg = 0
             # Set color ordering flags for all colored legs
-            for perm_leg in perm:
+            for perm_leg in list(perm) + first_leg:
                 leg = legs[perm_leg[0]-1]
-                if perm_leg[2] == 3:
+                if perm_leg[2] == -3:
                     num_triplets += 1
                     ileg = 0
                 ileg += 1
                 leg.set('color_ordering', {num_triplets: (ileg, ileg)})
-            # Restore initial state leg identities
-            for leg in legs:
-                if not leg.get('state') and \
-                   not model.get_particle(leg.get('id')).get('self_antipart'):
-                    leg.set('id', -leg.get('id'))
             coprocess = copy.copy(process)
             coprocess.set('legs', legs)
-            color_flows.append(ColorOrderedFlow(coprocess))
+            flow = ColorOrderedFlow(coprocess)
+            if flow.get('diagrams'):
+                color_flows.append(flow)
 
         self.set('color_flows', color_flows)
 
@@ -224,8 +226,6 @@ class ColorOrderedFlow(diagram_generation.Amplitude):
                 [(g, max([l.get('color_ordering')[g][0] for l \
                       in legs if g in l.get('color_ordering')]))\
                  for g in groups]))
-            print "Color flow: ",[(l.get('number'),l.get('id'),l.get('color_ordering')) \
-                        for l in argument.get('legs')]
             self.generate_diagrams()
         elif argument != None:
             # call the mother routine
@@ -253,42 +253,52 @@ class ColorOrderedFlow(diagram_generation.Amplitude):
         failed_legs = []
         for group in groups:
             # sort the legs with color ordering number
-            color_legs = [l.get('color_ordering')[group] for l in legs \
-                         if group in l.get('color_ordering')]
+            color_legs = [(i, l.get('color_ordering')[group]) for \
+                          (i, l) in enumerate(legs) \
+                          if group in l.get('color_ordering')]
 
-            color_legs.sort(lambda l1, l2: l1[0] - l2[0])
+            # If only one octet leg for a group, this means that we have a
+            # color octet line which is not completed -> discard
+            if len(color_legs) == 1 and \
+               abs(model.get_particle(legs[color_legs[0][0]].get('id')).\
+                   get_color()) == 8 and \
+                   len(legs[color_legs[0][0]].get('color_ordering')) == 1:
+                return []
 
-            color_ordering = (color_legs[0][0], color_legs[-1][1])
+            color_legs.sort(lambda l1, l2: l1[1][0] - l2[1][0])
+
+            color_ordering = (color_legs[0][1][0], color_legs[-1][1][1])
 
             # Check that we don't try to combine legs with
             # non-adjacent color ordering (allowing to wrap around
             # cyclically)
-            lastmax = color_legs[0][1]
+            lastmax = color_legs[0][1][1]
             ngap = 0
             # First check if there is a gap between last and first
-            if (color_legs[0][0] > 1 or \
-                color_legs[-1][1] < self.get('max_color_orders')[group]) and \
-                color_legs[-1][1] + 1 != color_legs[0][0]:
+            if (color_legs[0][1][0] > 1 or \
+                color_legs[-1][1][1] < self.get('max_color_orders')[group]) and \
+                color_legs[-1][1][1] + 1 != color_legs[0][1][0]:
                 ngap = 1
             for leg in color_legs[1:]:
-                if leg[0] != lastmax + 1:
+                if leg[1][0] != lastmax + 1:
                     ngap += 1
-                    color_ordering = (leg[0], lastmax)
+                    color_ordering = (leg[1][0], lastmax)
                 if ngap == 2:
                     return []
-                lastmax = leg[1]
+                lastmax = leg[1][1]
 
-            # Color ordering [first, last] counts as color singlet
             # Set color ordering for legs
             for leg_id, vert_id in leg_vert_ids:
-            # Color ordering [first, last] counts as color singlet, so
-            # is not allowed for colored propagator
+            # Color ordering [first, last] counts as color singlet
                 if abs(leg_colors[leg_id]) != 1:
                     if color_ordering == \
                            (1, self.get('max_color_orders')[group]):
-                        failed_legs.append(leg_id)
+                        if abs(leg_colors[leg_id]) == 8:
+                            # Color singlet not allowed for octet
+                            failed_legs.append(leg_id)
                     else:
                         color_orderings[leg_id][group] = color_ordering
+
 
         # Return all legs that have valid color_orderings
         mylegs = [(ColorOrderedLeg({'id':leg_id,
@@ -306,19 +316,11 @@ class ColorOrderedFlow(diagram_generation.Amplitude):
                    len(color_orderings[leg_id]) > 0 and \
                    len(color_orderings[leg_id]) <= 2)]
 
-        print 'legs: ',[(l.get('number'),l.get('id'),l.get('color_ordering')) \
-                        for l in legs]
-        print 'newlegs: ',[(l.get('number'),l.get('id'),l.get('color_ordering')) \
-                        for l,v in mylegs]
-
         return mylegs
 
     def get_combined_vertices(self, legs, vert_ids):
         """Allow for selection of vertex ids. This can be
         overloaded by daughter classes."""
-
-        #return get_combined_legs(self, legs,
-        #                         [(0, v) for v in vert_ids], 0, False)
 
         # Combine legs by color order groups
         
@@ -330,9 +332,10 @@ class ColorOrderedFlow(diagram_generation.Amplitude):
             group_legs[group] = set([l.get('number') for l in legs \
                                      if group in l.get('color_ordering')])
         # Check that all groups are pair-wise connected by particles
-        for g1, g2 in itertools.combinations(groups, 2):
-            if not group_legs[g1].intersection(group_legs[g2]):
-                return []
+        if len(groups) > 1:
+            for g1, g2 in itertools.combinations(groups, 2):
+                if not group_legs[g1].intersection(group_legs[g2]):
+                    return []
 
         return vert_ids
 
