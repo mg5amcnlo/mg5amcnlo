@@ -84,7 +84,7 @@ class Particle(FRBaseClass):
         self.goldstoneboson= goldstoneboson
 
         self.selfconjugate = (name == antiname)
-        if 1: #not line:
+        if not line:
             self.line = self.find_line_type()
         else:
             self.line = line
