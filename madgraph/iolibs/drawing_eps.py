@@ -40,7 +40,7 @@ DrawDiagramsEPS:
 from __future__ import division
 
 import os
-
+import math
 import madgraph.core.drawing as draw
 import madgraph.core.base_objects as base_objects
 
@@ -202,10 +202,27 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         self.draw_wavy(line, type='r')
         self.draw_straight(line)  
              
-    def draw_double(self, line):
+    def draw_double(self, line, type='r'):
         """ADD the EPS code for this neutralino line."""
-        self.draw_wavy(line, 0) 
-        self.draw_wavy(line, 1) 
+        
+        
+        length = math.sqrt((line.end.pos_y - line.start.pos_y)**2 + (line.end.pos_x - line.start.pos_x) **2)
+        c1 = (line.end.pos_x - line.start.pos_x)/length
+        c2 = (line.end.pos_y - line.start.pos_y)/length
+        
+        gap = 0.013
+        start2_x = line.start.pos_x + gap * c1  
+        start2_y = line.start.pos_y + gap * c2
+        stop1_x = line.end.pos_x - gap * c1
+        stop1_y = line.end.pos_y - gap * c2
+        
+        
+        self.text += self.line_format(line.start.pos_x, line.start.pos_y,
+                         stop1_x, stop1_y, '0 Fphoton%s' % (type))
+        #add the code in the correct format
+        self.text += self.line_format(start2_x, start2_y,
+                         line.end.pos_x, line.end.pos_y, '0 Fphoton%s' % (type))
+        
         
     def put_diagram_number(self, number=0):
         """ADD the comment 'diagram [number]' just below the diagram."""
