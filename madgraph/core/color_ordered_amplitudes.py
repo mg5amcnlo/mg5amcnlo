@@ -188,31 +188,55 @@ class ColorOrderedAmplitude(diagram_generation.Amplitude):
         # permutations
         color_flows = ColorOrderedFlowList()
         colegs = base_objects.LegList([ColorOrderedLeg(l) for l in legs])
-        # Restore initial state leg identities
-        for leg in colegs:
-            if not leg.get('state'):
-                leg.set('id', model.get_particle(leg.get('id')).\
-                        get_anti_pdg_code())
+
         # Set color flow flags (color_ordering) so that every
         # chain (3bar 8 8 .. 8 3) has a unique color ordering
         # group, and each entry in the chain has a unique color flow
         # flag {chain:(n,n)}
 
+        # For > 2 triplet pairs, we need to remove double counting due
+        # to different ordering of color chains. Idea: make list of
+        # [(pdg,group,color flow) for all combinations of groups
+        # except the last (which is fixed to the first triplet)
+
+        used_flows = []
+
         for perm in leg_perms:
-            legs = base_objects.LegList([copy.copy(l) for l in colegs])
+            colegs = base_objects.LegList([ColorOrderedLeg(l) for l in legs])
             # Keep track of number of triplets
             ichain = 0
             ileg = 0
             # Set color ordering flags for all colored legs
             for perm_leg in list(perm) + first_leg:
-                leg = legs[perm_leg[0]-1]
+                leg = colegs[perm_leg[0]-1]
                 if perm_leg[2] == -3:
                     ichain += 1
                     ileg = 0
                 ileg += 1
                 leg.set('color_ordering', {ichain: (ileg, ileg)})
+            if ichain > 2:
+                # Make sure we don't have double counting between
+                # different orders of chains
+                failed = False
+                for perm in itertools.permutations(range(1, ichain+1), ichain): 
+                    this_flow = sorted(sum([[(leg.get('id'), perm[i],
+                                           leg.get('color_ordering')[i]) \
+                                          for leg in colegs if i in \
+                                          leg.get('color_ordering')] for \
+                                         i in range(len(perm))], []))
+                    if this_flow in used_flows:
+                        failed = True
+                        break
+                    used_flows.append(this_flow)
+                if failed:
+                    continue
+            # Restore initial state leg identities
+            for leg in colegs:
+                if not leg.get('state'):
+                    leg.set('id', model.get_particle(leg.get('id')).\
+                            get_anti_pdg_code())
             coprocess = copy.copy(process)
-            coprocess.set('legs', legs)
+            coprocess.set('legs', colegs)
             # Create the color ordered flow
             flow = ColorOrderedFlow(coprocess)
             if flow.get('diagrams'):
