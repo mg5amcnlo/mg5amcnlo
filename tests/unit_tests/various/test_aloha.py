@@ -620,8 +620,46 @@ class TestMultVariable(unittest.TestCase):
                 else:
                     self.assertFalse(obj1 is term[1])                
         
+    def testdealingwithpower3(self):
+        """Check that the power is correctly set in a product in the full chain"""
+        
+        F1_1, F1_2, F1_3, F1_4 = 1,2,3,4
+        
+        P1_0, P1_1, P1_2, P1_3 = 12, 0, 0, 12
+        P2_0, P2_1, P2_2, P2_3 = 12, 0, 12, 0
+        P3_0, P3_1, P3_2, P3_3 = 20, 0, 12, 12
+        M1, M2, M3 = 0, 0, 100 
+        
+        F2_1, F2_2, F2_3, F2_4 = 5,5,6,7
+        T3_1, T3_2, T3_3, T3_4 = 8,9,10,11
+        T3_5, T3_6, T3_7, T3_8 = 8,9,10,11
+        T3_9, T3_10, T3_11, T3_12 = 8,9,10,11
+        T3_13, T3_14, T3_15, T3_16 = 8,9,10,11
         
         
+        
+        p1 = aloha_obj.P('mu',2)
+        gamma1 = aloha_obj.Gamma('mu','a','b')
+        metric = aloha_obj.Spin2('nu','rho',3)
+        p2 = aloha_obj.P('rho',2)
+        gamma2 = aloha_obj.Gamma('nu','b','c')
+        F1 = aloha_obj.Spinor('c',1) 
+        
+         
+        lor1 = p1 * gamma1 * gamma2 * F1
+        lor2 = metric * p2
+        lor1.simplify()
+        new_lor = lor1.expand()
+        
+        lor2.simplify()
+        new_lor2 = lor2.expand()
+        
+        expr = new_lor * new_lor2
+        
+        self.assertEqual((-864+288j), eval(str(expr.get_rep([0]))))
+        self.assertEqual((288+864j), eval(str(expr.get_rep([1]))))
+        self.assertEqual((2016+288j), eval(str(expr.get_rep([2]))))
+        self.assertEqual((-288+2016j), eval(str(expr.get_rep([3]))))
         
     
     def test_obj_are_not_modified(self):
@@ -2401,6 +2439,7 @@ class test_aloha_creation(unittest.TestCase):
 
         self.assertEqual(amp.expr.nb_spin, 0)
         self.assertEqual(amp.expr.nb_lor, 0)        
+
         
 
 class UFOLorentz(object):

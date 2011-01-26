@@ -1641,6 +1641,7 @@ class UFO_model_to_mg4(object):
             one_mass = particle.get('mass')
             if one_mass.lower() != 'zero':
                 masses.add(one_mass)
+                
             # find width
             one_width = particle.get('width')
             if one_width.lower() != 'zero':
