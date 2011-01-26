@@ -1772,6 +1772,9 @@ class UFO_model_to_mg4(object):
         fsock.writelines("""subroutine coup%s()
         
           implicit none
+          double precision PI
+          parameter  (PI=3.141592653589793d0)
+      
       
           include 'input.inc'
           include 'coupl.inc'

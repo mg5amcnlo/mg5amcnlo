@@ -950,6 +950,22 @@ class testLorentzObject(unittest.TestCase):
         self.assertEqual(new2.__class__, aloha_lib.AddVariable) 
         self.assertEqual(len(new2), 2)
         self.assertNotEqual(new, new2)
+    
+    def test_power(self):
+        """ Test that we can take a square of an object --fully auto contracted"""
+        
+        product = self.p2 * self.p2
+        power = self.p2**2
+
+        self.assertEqual(power.__class__, aloha_lib.MultLorentz)        
+        self.assertEqual(product, power)
+        power = power.expand()
+
+        keys= power.keys()
+        keys.sort()
+        self.assertEqual(keys, [(0,)])
+        solution = '( ( P3_0**2 ) + -1 * ( P3_1**2 ) + -1 * ( P3_2**2 ) + -1 * ( P3_3**2 ) )'
+        self.assertEqual(str(power[(0,)]), solution)
         
     def test_equality(self):
         """test the equality of Lorentz Object"""

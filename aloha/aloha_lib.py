@@ -711,7 +711,7 @@ class Variable(object):
         else:
             #apply obj * self
             return NotImplemented
-                
+    
 
     def __add__(self, obj):
         """ How to make an addition
@@ -1103,7 +1103,18 @@ class LorentzObject(Variable):
             
         #call the initialization of the basic class
         Variable.__init__(self, prefactor, variable)
+    
+    def __pow__(self, power):
+        """ definition of an auto-contracted object """
+
+        assert power == 2, "Lorentz object cann't have power higher than two"
         
+        new = MultLorentz()
+        new.append(self)
+        new.append(self.copy())
+        return new
+    
+    
     def copy(self):
         """return a shadow copy of the object. This is performed in calling 
         again the __init__ instance"""
@@ -1162,6 +1173,8 @@ class LorentzObject(Variable):
         for i in spin_list:
             if i in self.spin_ind:
                 return True
+
+
 
 #===============================================================================
 # IndicesIterator
