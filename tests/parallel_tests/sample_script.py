@@ -46,19 +46,18 @@ if '__main__' == __name__:
     logging.getLogger('tutorial').setLevel(logging.ERROR)
         
     logging.basicConfig(level=logging.INFO)
-#    my_proc_list = me_comparator.create_proc_list_enhanced(
-##        ['w+', 'w-', 'z'],
-##        initial=2, final_1=2)
-    my_proc_list = ['e- x1+ > e- h1 x1+','e- x1+ > e- h2 x1+','e- x1+ > e- h3 x1+',
-                    'e+ x1+ > e+ h1 x1+','e+ x1+ > e+ h2 x1+','e+ x1+ > e+ h3 x1+']
-    my_proc_list += ['el+ h2 > el+ w+ w-', 'w+ w- > ta1+ ta1-']
-    my_proc_list += ['u u~ > u u~ g']
-                   
-    my_proc_list += me_comparator.create_proc_list(['g', 'go'], initial=2,
+
+    my_proc_list = []
+    #my_proc_list = me_comparator.create_proc_list(['u', 'u~'], initial=2,
+    #                                              final=2)
+    #my_proc_list = me_comparator.create_proc_list_enhanced(
+    #    ['u', 'u~', 'd', 'd~', 'g'],['six', 'six~'],['g'],
+    #    initial=2, final_1=1, final_2 = 1)
+
+    my_proc_list += me_comparator.create_proc_list(['w+','w-','z','a','x1+','x1-','n1'], initial=2,
                                                   final=3)
-    #my_proc_list = me_comparator.create_proc_list(['g', 'h', 'h3'], initial=2,
-    #                                               final=4)
-    
+    my_proc_list += me_comparator.create_proc_list(['g','u','u~','go','ul','ul~','ur','ur~'], initial=2,
+                                                  final=3)
 
     # Create a MERunner object for MG4
     my_mg4 = me_comparator.MG4Runner()
@@ -73,12 +72,12 @@ if '__main__' == __name__:
     my_mg5_ufo.setup(mg5_path, mg4_path)
 
     # Create a MERunner object for C++
-    #my_mg5_cpp = me_comparator.MG5_CPP_Runner()
-    #my_mg5_cpp.setup(mg5_path, mg4_path)
+    my_mg5_cpp = me_comparator.MG5_CPP_Runner()
+    my_mg5_cpp.setup(mg5_path, mg4_path)
 
     # Create and setup a comparator
     my_comp = me_comparator.MEComparator()
-    my_comp.set_me_runners(my_mg4, my_mg5, my_mg5_ufo)
+    my_comp.set_me_runners(my_mg5, my_mg5_ufo, my_mg4, my_mg5_cpp)
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
@@ -89,8 +88,11 @@ if '__main__' == __name__:
     #my_comp.cleanup()
     filename='mssm_results2.log'
 
+    filename='mssm_results.log'
+
     # Print the output
     my_comp.output_result(filename=filename)
+
     pydoc.pager(file(filename,'r').read())
 
     # Print a list of non zero processes

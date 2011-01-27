@@ -341,16 +341,22 @@ class Particle(PhysicsObject):
         if spin == 1:
             # Scalar
             return [ 0 ]
-        if spin == 2:
+        elif spin == 2:
             # Spinor
             return [ -1, 1 ]
-        if spin == 3 and self.get('mass').lower() == 'zero':
+        elif spin == 3 and self.get('mass').lower() == 'zero':
             # Massless vector
             return [ -1, 1 ]
-        if spin == 3:
+        elif spin == 3:
             # Massive vector
             return [ -1, 0, 1 ]
-
+        elif spin == 5 and self.get('mass').lower() == 'zero':
+            # Massless tensor
+            return [-2, -1, 1, 2]
+        elif spin == 5:
+            # Massive tensor
+            return [-2, -1, 0, 1, 2]
+        
         raise self.PhysicsObjectError, \
               "No helicity state assignment for spin %d particles" % spin
 
