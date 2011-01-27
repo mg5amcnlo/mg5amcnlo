@@ -175,6 +175,7 @@ class CmdExtended(cmd.Cmd):
         
         if not line:
             return line
+        line = line.lstrip()
 
         # Update the history of this suite of command,
         # except for useless commands (empty history and help calls)
@@ -198,7 +199,7 @@ class CmdExtended(cmd.Cmd):
             line = line.split('#')[0]
 
         # Deal with line splitting
-        if ';' in line:
+        if ';' in line and not (line.startswith('!') or line.startswith('shell')):
             for subline in line.split(';'):
                 stop = self.onecmd(subline)
                 stop = self.postcmd(stop, subline)
@@ -268,7 +269,7 @@ class CmdExtended(cmd.Cmd):
             
     def exec_cmd(self, line):
         """for third party call, call the line with pre and postfix treatment"""
-        
+
         logger.info(line)
         line = self.precmd(line)
         stop = cmd.Cmd.onecmd(self, line)
