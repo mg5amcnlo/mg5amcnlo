@@ -3664,8 +3664,11 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                                              me.get('processes')[0].\
                                              get_initial_ids()[0] == fs_id,
                                              decay_elements[index]))
-                else:
-                    # All decays for this particle type are used
+
+                if len(fs_legs) != len(decay_elements) or not chains[0]:
+                    # In second case, or no chains are found
+                    # (e.g. because the order of decays is reversed),
+                    # all decays for this particle type are used
                     chain = sum([filter(lambda me: \
                                         me.get('processes')[0].\
                                         get_initial_ids()[0] == fs_id,
