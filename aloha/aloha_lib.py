@@ -649,12 +649,12 @@ class Variable(object):
         """class for error in Variable object"""
         pass
     
-    def __init__(self, prefactor=1, variable='x'):
+    def __init__(self, prefactor=1, variable='x', power=1):
         """ [prefactor] * Variable ** [power]"""
 
         self.prefactor = prefactor
         self.variable = variable
-        self.power = 1
+        self.power = power
 
     def copy(self):
         """provide an indenpedant copy of the object"""
