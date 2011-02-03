@@ -92,7 +92,7 @@ if diff_result:
     if answer != 'y':
         exit()
 release_date = date.fromtimestamp(time.time())
-for line in file('VERSION'):
+for line in file(os.path.join(MG5DIR,'VERSION')):
     if 'version' in line:
         logging.info(line)
     if 'date' in line:
