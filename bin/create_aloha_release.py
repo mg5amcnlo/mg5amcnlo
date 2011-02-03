@@ -128,9 +128,7 @@ os.system('mv %s/* %s' %(os.path.join(filepath,'aloha'), filepath))
 # 4. Create the automatic documentation in the apidoc directory
 
 try:
-    status1 = subprocess.call(['epydoc', '--html', '-o', 'apidoc',
-                           'madgraph', 'aloha',
-                           os.path.join('models', '*.py')], cwd = filepath)
+    status1 = subprocess.call(['epydoc', '--html', '-o', 'apidoc', './*'], cwd = filepath)
 except:
     logging.error("Call to epydoc failed. " +\
                   "Please check that it is properly installed.")
