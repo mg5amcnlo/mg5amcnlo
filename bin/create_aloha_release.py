@@ -119,7 +119,7 @@ for fname in requested_files:
     files_routines.cp(MG5DIR +'/'+ fname, filepath)
 
 for fname in os.listdir(filepath):
-    if name in requested_files or name in ['aloha']:
+    if fname in requested_files or fname in ['aloha']:
         continue
     os.system('rm -rf %s ' % os.path.join(filepath,fname))
 
