@@ -116,19 +116,18 @@ logging.info("copying files")
 requested_files=['madgraph/iolibs/files.py','madgraph/iolibs/file_writers.py']
 
 for fname in requested_files:
-    files_routines.cp(MG5DIR +'/'+ fname, filepath)
+    files_routines.cp(MG5DIR +'/'+ fname, filepath+'/aloha')
 
 for fname in os.listdir(filepath):
-    if fname in requested_files or fname in ['aloha']:
+    if fname in ['aloha','VERSION']:
         continue
     os.system('rm -rf %s ' % os.path.join(filepath,fname))
 
-os.system('mv %s/* %s' %(os.path.join(filepath,'aloha'), filepath))
 
 # 4. Create the automatic documentation in the apidoc directory
 
 try:
-    status1 = subprocess.call(['epydoc', '--html', '-o', 'apidoc', './*'], cwd = filepath)
+    status1 = subprocess.call(['epydoc', '--html', '-o', 'apidoc', 'aloha'], cwd = filepath)
 except:
     logging.error("Call to epydoc failed. " +\
                   "Please check that it is properly installed.")
@@ -142,7 +141,11 @@ if status1:
 # 5. Remove the .bzr directory and the create_release.py file,
 #    take care of README files.
 
-shutil.rmtree(path.join(filepath, '.bzr'))
+print filepath
+try:
+    shutil.rmtree(path.join(filepath, '.bzr'))
+except:
+    pass
 #os.remove(path.join(filepath, 'bin', 'create_release.py'))
 #os.remove(path.join(filepath, 'bin', 'setup_madevent_template.py'))
 #os.remove(path.join(filepath, 'README.developer'))

@@ -1,7 +1,7 @@
 try:
     import madgraph.iolibs.file_writers as writers 
 except:
-    import aloha.writer as writers
+    import aloha.file_writers as writers
     
 import os
 import re 
