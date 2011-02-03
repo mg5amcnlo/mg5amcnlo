@@ -730,7 +730,6 @@ class ALOHAWriterForPython(WriteALOHA):
             WriteALOHA.__init__(self, abstract_routine, '')
             self.out_path = None
             self.dir_out = None
-        
         self.outname = '%s%s' % (self.particles[self.offshell -1], \
                                                                self.offshell)
     

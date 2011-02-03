@@ -63,7 +63,6 @@ class AbstractRoutine(object):
         
     def write(self, output_dir, language='Fortran', mode='self'):
         """ write the content of the object """
-
         return getattr(aloha_writers, 'ALOHAWriterFor%s' % language)(self, output_dir).write(mode=mode)
 
 
@@ -289,12 +288,16 @@ class AbstractRoutineBuilder(object):
 class AbstractALOHAModel(dict):
     """ A class to build and store the full set of Abstract ALOHA Routine"""
 
-    def __init__(self, model_name, write_dir=None):
+    def __init__(self, model_name, write_dir=None, format='Fortran'):
         """ load the UFO model and init the dictionary """
         
         # load the UFO model
-        python_pos = 'models.%s' % model_name 
-        __import__(python_pos)
+        try:
+            python_pos = model_name 
+            __import__(python_pos)
+        except:
+            python_pos = 'models.%s' % model_name 
+            __import__(python_pos)
         self.model = sys.modules[python_pos]
         
         # find the position on the disk
@@ -308,13 +311,15 @@ class AbstractALOHAModel(dict):
         self.symmetries = {}
         
         if write_dir:
-            self.main(write_dir)
+            self.main(write_dir,format=format)
             
     def main(self, output_dir, format='Fortran'):
         """ Compute if not already compute. 
             Write file in models/MY_MODEL/MY_FORMAT.
             copy the file to output_dir
         """
+        ext = {'Fortran':'f','Python':'py','CPP':'h'}
+        
         
         # Check if a pickle file exists
         if not self.load():
@@ -322,26 +327,20 @@ class AbstractALOHAModel(dict):
         logger.info(' %s aloha routine' % len(self))
             
         # Check that output directory exists
-        aloha_dir = os.path.join(self.model_pos, format.lower())
-        logger.debug('aloha output dir is %s' %aloha_dir) 
-        if not os.path.exists(aloha_dir):
-            os.mkdir(aloha_dir)
+        if not output_dir:
+            output_dir = os.path.join(self.model_pos, format.lower())
+            logger.debug('aloha output dir is %s' % output_dir) 
+        if not os.path.exists(output_dir):
+            os.mkdir(output_dir)
         
         # Check that all routine are generated at default places:
         for (name, outgoing), abstract in self.items():
             routine_name = AbstractRoutineBuilder.get_routine_name(name, outgoing)
-            if not glob.glob(os.path.join(aloha_dir, routine_name) + '.*'):
-                abstract.write(output_dir, format)
-        
-        # Check that makefile and default file are up-to-date
-        self.insertTemplate(output_dir, format)
-        # Check aloha_file.inc
-        self.write_aloha_file_inc(output_dir)
-        
-        # Copy model_routine in PROC
-        
-        
-        
+            if not glob.glob(os.path.join(output_dir, routine_name) + '.' + ext[format]):
+                abstract.write(output_dir, format) 
+            else:
+                logger.info('File for %s already present, skip the writing of this file' % routine_name)
+                   
         
     def save(self, filepos=None):
         """ save the current model in a pkl file """
