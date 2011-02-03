@@ -113,7 +113,7 @@ if status:
 # 2. Copy MG5 files needed by ALOHA + remove pointless direcoty
 devnull = os.open(os.devnull, os.O_RDWR)
 logging.info("copying files")
-requested_files=['madgraph/iolibs/files','madgraph/iolibs/file_writers']
+requested_files=['madgraph/iolibs/files.py','madgraph/iolibs/file_writers.py']
 
 for fname in requested_files:
     files_routines.cp(MG5DIR +'/'+ fname, filepath)
@@ -123,7 +123,7 @@ for fname in os.listdir(filepath):
         continue
     os.system('rm -rf %s ' % os.path.join(filepath,fname))
 
-os.system('mv %s/* %s' %(os.path.join(filepath,aloha), filepath))
+os.system('mv %s/* %s' %(os.path.join(filepath,'aloha'), filepath))
 
 # 4. Create the automatic documentation in the apidoc directory
 
