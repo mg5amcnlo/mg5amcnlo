@@ -413,6 +413,10 @@ def write_matrix_element_v4_madevent(writer, matrix_element, fortran_model):
                 matrix_element)
     replace_dict['helas_calls'] = "\n".join(helas_calls)
 
+    # Extract amp2 lines
+    amp2_lines = get_amp2_lines(matrix_element)
+    replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
+
     # Extract JAMP lines
     jamp_lines = get_JAMP_lines(matrix_element)
     replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
@@ -500,18 +504,22 @@ def write_configs_file(writer, matrix_element, fortran_model):
 
     s_and_t_channels = []
 
-    for idiag, diag in enumerate(matrix_element.get('base_amplitude').\
-                                                get('diagrams')):
-        if any([len(vert.get('legs')) > 3 for vert in diag.get('vertices')]):
+    base_diagrams = matrix_element.get('base_amplitude').get('diagrams')
+    minvert = min([max([len(vert.get('legs')) for vert in \
+                        diag.get('vertices')]) for diag in base_diagrams])
+
+    for idiag, diag in enumerate(base_diagrams):
+        if any([len(vert.get('legs')) > minvert for vert in
+                diag.get('vertices')]):
             # Only 3-vertices allowed in configs.inc
             continue
         iconfig = iconfig + 1
         helas_diag = matrix_element.get('diagrams')[idiag]
-        amp_number = helas_diag.get('amplitudes')[0].get('number')
-        lines.append("# Diagram %d, Amplitude %d" % \
-                     (helas_diag.get('number'), amp_number))
+        lines.append("# Diagram %d" % \
+                     (helas_diag.get('number')))
         # Correspondance between the config and the amplitudes
-        lines.append("data mapconfig(%d)/%d/" % (iconfig, amp_number))
+        lines.append("data mapconfig(%d)/%d/" % (iconfig,
+                                                 helas_diag.get('number')))
 
         # Need to reorganize the topology so that we start with all
         # final state external particles and work our way inwards
@@ -810,19 +818,25 @@ def write_props_file(writer, matrix_element, fortran_model, s_and_t_channels):
     for iconf, configs in enumerate(s_and_t_channels):
         for vertex in configs[0] + configs[1][:-1]:
             leg = vertex.get('legs')[-1]
-            particle = particle_dict[leg.get('id')]
-            # Get mass
-            if particle.get('mass').lower() == 'zero':
-                mass = particle.get('mass')
+            if leg.get('id') == 21 and 21 not in particle_dict:
+                # Fake propagator used in multiparticle vertices
+                mass = 'zero'
+                width = 'zero'
+                pow_part = 0
             else:
-                mass = "abs(%s)" % particle.get('mass')
-            # Get width
-            if particle.get('width').lower() == 'zero':
-                width = particle.get('width')
-            else:
-                width = "abs(%s)" % particle.get('width')
+                particle = particle_dict[leg.get('id')]
+                # Get mass
+                if particle.get('mass').lower() == 'zero':
+                    mass = particle.get('mass')
+                else:
+                    mass = "abs(%s)" % particle.get('mass')
+                # Get width
+                if particle.get('width').lower() == 'zero':
+                    width = particle.get('width')
+                else:
+                    width = "abs(%s)" % particle.get('width')
 
-            pow_part = 1 + int(particle.is_boson())
+                pow_part = 1 + int(particle.is_boson())
 
             lines.append("pmass(%d,%d)  = %s" % \
                          (leg.get('number'), iconf + 1, mass))
@@ -956,6 +970,18 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
                        matrix_element,
                        fortran_model,
                         len(matrix_element.get_all_amplitudes()))
+
+    # Generate diagrams
+    filename = "matrix.ps"
+    plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+                                         get('diagrams'),
+                                      filename,
+                                      model=matrix_element.get('processes')[0].\
+                                         get('model'),
+                                      amplitude='')
+    logger.info("Generating Feynman diagrams for " + \
+                 matrix_element.get('processes')[0].nice_string())
+    plot.draw()
 
     linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
 
@@ -1269,6 +1295,29 @@ def get_icolamp_lines(matrix_element):
 
     return ret_list
 
+def get_amp2_lines(matrix_element):
+    """Return the amp2(i) = sum(amp for diag(i))^2 lines"""
+
+    nexternal, ninitial = matrix_element.get_nexternal_ninitial()
+    # Get minimum legs in a vertex
+    minvert = min([max(diag.get_vertex_leg_numbers()) for diag in \
+                   matrix_element.get('diagrams')])
+
+    ret_lines = []
+    for idiag, diag in enumerate(matrix_element.get('diagrams')):
+        # Ignore any diagrams with 4-particle vertices.
+        if max(diag.get_vertex_leg_numbers()) > minvert:
+            continue
+        # Now write out the expression for AMP2, meaning the sum of
+        # squared amplitudes belonging to the same diagram
+        line = "AMP2(%(num)d)=AMP2(%(num)d)+" % {"num": (idiag + 1)}
+        line += "+".join(["AMP(%(num)d)*dconjg(AMP(%(num)d))" % \
+                          {"num": a.get('number')} for a in \
+                          diag.get('amplitudes')])
+        ret_lines.append(line)
+    
+    return ret_lines
+
 def get_JAMP_lines(matrix_element):
     """Return the JAMP = sum(fermionfactor * AMP(i)) lines"""
 
@@ -1389,12 +1438,12 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
 
     if total_coeff == 1:
         if is_imaginary:
-            return '+complex(0,1)*'
+            return '+imag1*'
         else:
             return '+'
     elif total_coeff == -1:
         if is_imaginary:
-            return '-complex(0,1)*'
+            return '-imag1*'
         else:
             return '-'
 
@@ -1405,7 +1454,7 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
         res_str = res_str + './%i.' % total_coeff.denominator
 
     if is_imaginary:
-        res_str = res_str + '*complex(0,1)'
+        res_str = res_str + '*imag1'
 
     return res_str + '*'
 
@@ -1592,6 +1641,7 @@ class UFO_model_to_mg4(object):
             one_mass = particle.get('mass')
             if one_mass.lower() != 'zero':
                 masses.add(one_mass)
+                
             # find width
             one_width = particle.get('width')
             if one_width.lower() != 'zero':

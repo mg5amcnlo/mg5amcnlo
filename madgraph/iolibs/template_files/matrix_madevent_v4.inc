@@ -162,6 +162,8 @@ C
     PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
     REAL*8     ZERO
     PARAMETER (ZERO=0D0)
+    COMPLEX*16 IMAG1
+    PARAMETER (IMAG1=(0D0,1D0))
 C  
 C ARGUMENTS 
 C  
@@ -198,9 +200,7 @@ C ----------
         ENDDO
         MATRIX =MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
     ENDDO
-    Do I = 1, NGRAPHS
-        amp2(i)=amp2(i)+amp(i)*dconjg(amp(i))
-    Enddo
+%(amp2_lines)s
     Do I = 1, NCOLOR
         Jamp2(i)=Jamp2(i)+Jamp(i)*dconjg(Jamp(i))
     Enddo

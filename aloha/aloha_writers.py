@@ -34,8 +34,23 @@ class WriteALOHA:
         #prepare the necessary object
         self.collect_variables() # Look for the different variables
         self.make_all_lists()    # Compute the expression for the call ordering
-                                 #the definition of objects,...
-
+                                 #the definition of objects,..
+                                 
+    def pass_to_HELAS(self, indices, start=0):
+        """find the Fortran HELAS position for the list of index""" 
+        
+        
+        if len(indices) == 1:
+            return indices[0] + start
+        
+        ind_name = self.obj.numerator.lorentz_ind 
+        if ind_name == ['I3', 'I2']:
+            return  4 * indices[1] + indices[0] + start 
+        elif len(indices) == 2: 
+            return  4 * indices[0] + indices[1] + start 
+        else:
+            raise Exception                                 
+                                 
     def collect_variables(self):
         """Collects Momenta,Mass,Width into lists"""
          
@@ -146,90 +161,28 @@ class WriteALOHA:
         if outgoing is None:
             outgoing = self.offshell
 
-        # particle type counter
-        nb_type = {'S':0, 'F':0, 'V':0, 'T':0}        
         call_arg = [] #incoming argument of the routine
         
-        # update the type counter + make call_arg for amplitude
-        for index,spin in enumerate(self.particles):
-            nb_type[spin] += 1
-            call_arg.append('%s%d' % (spin, index +1))
-            
-        # reorder call_arg if not amplitude
-        if outgoing:
-            part_pos = outgoing -1 
-            out_type = self.particles[part_pos]
-            
-            #order is FVST #look at the border of the cycling move
-            # start/stop are the index of the group of spin where to perform
-            #cycling ordering.
-            if out_type == 'F':
-                start = 0
-                stop = nb_type['F']
-            elif out_type == 'V':
-                start = nb_type['F']
-                stop = start + nb_type['V']
-            elif out_type == 'S':
-                start = nb_type['F'] + nb_type['V']
-                stop = start + nb_type['S']
-            elif out_type == 'T':
-                start = nb_type['F'] + nb_type['V']+ nb_type['S']
-                stop = start + nb_type['T']
-            else:
-                raise NotImplemented, 'Only type FVST are supported' 
-            
-            #reorganize the order and suppress the output from this part
-            call_arg = self.new_order(call_arg, part_pos, start, stop)
-        
+
+        call_arg = ['%s%d' % (spin, index +1) 
+                                 for index,spin in enumerate(self.particles)
+                                 if outgoing != index +1]
+                
         return call_arg
 
     def reorder_call_list(self, call_list, old, new):
-        """ restore the cycling ordering """
+        """ restore the correct order for symmetries """
         spins = self.particles
         assert(0 < old < new)
         old, new = old -1, new -1 # pass in real position in particles list
         assert(spins[old] == spins[new])
         spin =spins[old]
         
-        new_call = []
-        #before first same spin
-        for i in range(len(spins)):
-            if spins[i] == spins[old]:
-                start_spin = i
-                break
-            new_call.append(call_list[i])
-        #find end of same spin area
-        stop_spin = len(spins)
-        for i in range(new+1, len(spins)):
-            if spins[i] != spins[old]:
-                stop_spin = i
-                break
-        l_old = range(old + 1, stop_spin) + range(start_spin, old)
-        l_new = range(new + 1, stop_spin) + range(start_spin, new)
-        old_index = l_new.index(old)
-        l_new[old_index] = new
-        for i in range(len(l_old)):
-            part_nb = l_old[l_new.index(l_old[i])] +1
-            new_call.append('%s%d' % (spin, part_nb))
-
-        for i in range(stop_spin, len(spins)):
-            new_call.append(call_list[i-1])           
+        new_call = call_list[:]
+        val = new_call.pop(old)
+        new_call.insert(new - 1, val)
         return new_call
     
-    @ staticmethod
-    def new_order(call_list, remove, start, stop):
-        """ create the new order for the calling using cycling order"""
-        
-        assert(start <= remove <= stop <= len(call_list))
-        
-        new_list= call_list[:start]
-        for i in range(remove+1, stop):
-            new_list.append(call_list[i])
-        for i in range(start, remove):
-            new_list.append(call_list[i])
-        new_list += call_list[stop:]
-        
-        return new_list
         
     def make_momentum_conservation(self):
         """ compute the sign for the momentum conservation """
@@ -444,6 +397,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             out = '%.9f' % number
             out = self.zero_pattern.sub('', out)
         return out
+        
     
     def define_expression(self):
         OutString = ''
@@ -466,15 +420,13 @@ class ALOHAWriterForFortran(WriteALOHA):
             string = re.sub('\((?P<num>[+-]*[0-9])\+(?P<num2>[+-][0-9])[Jj]\)\.', '(\g<num>d0,\g<num2>d0)', string)
             string = re.sub('(?P<num>[0-9])[Jj]\.', '\g<num>*(0d0,1d0)', string)
             OutString = OutString + string + '\n'
-            counter = 1
             for ind in numerator.listindices():
-                string = '%s(%d)= C*denom*' % (OffShellParticle, counter)
+                string = '%s(%d)= C*denom*' % (OffShellParticle, self.pass_to_HELAS(ind, start=1))
                 string += self.write_obj(numerator.get_rep(ind))
                 string = string.replace('+-', '-')
                 string = re.sub('\((?P<num>[+-][0-9])\+(?P<num2>[+-][0-9])[Jj]\)\.', '(\g<num>d0,\g<num2>d0)', string)
                 string = re.sub('(?P<num>[0-9])[Jj]\.', '\g<num>*(0d0,1d0)', string)
                 OutString = OutString + string + '\n' 
-                counter += 1
         return OutString 
     
     def define_symmetry(self, new_nb):
@@ -674,13 +626,11 @@ class ALOHAWriterForCPP(WriteALOHA):
             string = 'denom =' + '1./(' + denom + ')'
             string = string.replace('+-', '-')
             OutString = OutString + string + ';\n'
-            counter = 0
             for ind in numerator.listindices():
-                string = '%s[%d]= C*denom*' % (OffShellParticle, counter)
+                string = '%s[%d]= C*denom*' % (OffShellParticle, self.pass_to_HELAS(ind))
                 string += self.write_obj(numerator.get_rep(ind))
                 string = string.replace('+-', '-')
                 OutString = OutString + string + ';\n' 
-                counter += 1
         OutString = re.sub('(?P<variable>[A-Za-z]+[0-9]\[*[0-9]*\]*)\*\*(?P<num>[0-9])','pow(\g<variable>,\g<num>)',OutString)
         return OutString 
 
@@ -824,13 +774,11 @@ class ALOHAWriterForPython(WriteALOHA):
             string = 'denom =' + '1.0/(' + denom + ')'
             string = string.replace('+-', '-')
             OutString += string + '\n'
-            counter = 0
             for ind in numerator.listindices():
-                string = '%s[%d]= C*denom*' % (self.outname, counter)
+                string = '%s[%d]= C*denom*' % (self.outname, self.pass_to_HELAS(ind))
                 string += self.write_obj(numerator.get_rep(ind))
                 string = string.replace('+-', '-')
                 OutString += string + '\n' 
-                counter += 1
         return OutString 
     
     def define_foot(self):
