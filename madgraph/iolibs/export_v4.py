@@ -772,22 +772,22 @@ def write_configs_file_from_diagrams(writer, configs, mapconfigs,
 
         lines.append("# Diagram %d" % (mapconfigs[iconfig]))
         # Correspondance between the config and the diagram = amp2
-        lines.append("data mapconfig(%d)/%d/" % (iconfig + 1,
+        lines.append("data mapconfig(%d)/%d/" % (nconfigs,
                                                  mapconfigs[iconfig]))
 
         for vert in allchannels:
             daughters = [leg.get('number') for leg in vert.get('legs')[:-1]]
             last_leg = vert.get('legs')[-1]
             lines.append("data (iforest(i,%d,%d),i=1,%d)/%s/" % \
-                         (last_leg.get('number'), iconfig + 1, len(daughters),
+                         (last_leg.get('number'), nconfigs, len(daughters),
                           ",".join([str(d) for d in daughters])))
             if vert in schannels:
                 lines.append("data sprop(%d,%d)/%d/" % \
-                             (last_leg.get('number'), iconfig + 1,
+                             (last_leg.get('number'), nconfigs,
                               last_leg.get('id')))
             elif vert in tchannels[:-1]:
                 lines.append("data tprid(%d,%d)/%d/" % \
-                             (last_leg.get('number'), iconfig + 1,
+                             (last_leg.get('number'), nconfigs,
                               abs(last_leg.get('id'))))
 
     # Write out number of configs
@@ -1326,6 +1326,18 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
     filename = 'ngraphs.inc'
     write_ngraphs_file(writers.FortranWriter(filename),
                        len(matrix_element.get_all_amplitudes()))
+
+    # Generate diagrams
+    filename = "matrix.ps"
+    plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+                                         get('diagrams'),
+                                      filename,
+                                      model=matrix_element.get('processes')[0].\
+                                         get('model'),
+                                      amplitude='')
+    logger.info("Generating Feynman diagrams for " + \
+                 matrix_element.get('processes')[0].nice_string())
+    plot.draw()
 
     # Generate diagrams
     filename = "matrix.ps"
@@ -2293,6 +2305,7 @@ class UFO_model_to_mg4(object):
             one_mass = particle.get('mass')
             if one_mass.lower() != 'zero':
                 masses.add(one_mass)
+                
             # find width
             one_width = particle.get('width')
             if one_width.lower() != 'zero':

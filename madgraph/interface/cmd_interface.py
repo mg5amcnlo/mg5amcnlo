@@ -176,6 +176,7 @@ class CmdExtended(cmd.Cmd):
         
         if not line:
             return line
+        line = line.lstrip()
 
         # Update the history of this suite of command,
         # except for useless commands (empty history and help calls)
@@ -199,7 +200,7 @@ class CmdExtended(cmd.Cmd):
             line = line.split('#')[0]
 
         # Deal with line splitting
-        if ';' in line:
+        if ';' in line and not (line.startswith('!') or line.startswith('shell')):
             for subline in line.split(';'):
                 stop = self.onecmd(subline)
                 stop = self.postcmd(stop, subline)
@@ -269,7 +270,7 @@ class CmdExtended(cmd.Cmd):
             
     def exec_cmd(self, line):
         """for third party call, call the line with pre and postfix treatment"""
-        
+
         logger.info(line)
         line = self.precmd(line)
         stop = cmd.Cmd.onecmd(self, line)
@@ -1362,7 +1363,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
     # Options and formats available
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams', 
-                     'multiparticles', 'couplings', 'lorentz', 'checks']
+                     'multiparticles', 'couplings', 'lorentz', 'checks',
+                     'parameters']
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _tutorial_opts = ['start', 'stop']
@@ -1580,7 +1582,26 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     print "Interactions %s has the following property:" % arg
                     print self._curr_model['interactions'][int(arg)-1]
 
-
+        elif args[0] == 'parameters' and len(args) == 1:
+            text = "Current model contains %i parameters\n" % \
+                    sum([len(part) for part in 
+                                       self._curr_model['parameters'].values()])
+            
+            for key, item in self._curr_model['parameters'].items():
+                text += '\nparameter type: %s\n' % str(key)
+                for value in item:
+                    if hasattr(value, 'expr'):
+                        if value.value is not None:
+                            text+= '        %s = %s = %s\n' % (value.name, value.expr ,value.value)
+                        else:
+                            text+= '        %s = %s\n' % (value.name, value.expr)
+                    else:
+                        if value.value is not None:
+                            text+= '        %s = %s\n' % (value.name, value.value)
+                        else:
+                            text+= '        %s \n' % (value.name)
+            pydoc.pager(text)
+            
         elif args[0] == 'processes':
             for amp in self._curr_amps:
                 print amp.nice_string_processes()

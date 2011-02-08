@@ -591,6 +591,7 @@ class MultVariable(list):
         self.prefactor *= obj.prefactor
         if obj in self:
             index = self.index(obj)
+            self[index] = self[index].copy()
             self[index].power += 1
         else:
             obj.prefactor = 1
@@ -1292,6 +1293,7 @@ class LorentzObjectRepresentation(dict):
     def __mul__(self, obj):
         """multiplication performing directly the einstein/spin sommation.
         """
+
         if not hasattr(obj, 'vartype') or not self.vartype:
             out = LorentzObjectRepresentation({}, self.lorentz_ind, self.spin_ind)
             for ind in out.listindices():
@@ -1388,10 +1390,11 @@ class LorentzObjectRepresentation(dict):
                 factor = self.get_rep(self_ind) 
                 factor *= obj.get_rep(obj_ind)
                 
+                
                 if factor:
                     #compute the prefactor due to the lorentz contraction
                     factor *= (-1) ** (len(l_value) - l_value.count(0))
-                    out += factor                         
+                    out += factor                        
         return out
 
     def combine_indices(self, l_dict, s_dict):

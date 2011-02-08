@@ -3756,20 +3756,23 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                 # of decay elements is different: Then use any decay
                 # chain which defines the decay for this particle.
 
+                chains = []
                 if len(fs_legs) == len(decay_elements) and \
                        all([fs in ids for (fs, ids) in \
                              zip(fs_ids, decay_is_ids)]):
                     # The decay of the different fs parts is given
                     # by the different decay chains, respectively.
                     # Chains is a list of matrix element lists
-                    chains = []
                     for index in fs_indices[fs_id]:
                         chains.append(filter(lambda me: \
                                              me.get('processes')[0].\
                                              get_initial_ids()[0] == fs_id,
                                              decay_elements[index]))
-                else:
-                    # All decays for this particle type are used
+
+                if len(fs_legs) != len(decay_elements) or not chains or not chains[0]:
+                    # In second case, or no chains are found
+                    # (e.g. because the order of decays is reversed),
+                    # all decays for this particle type are used
                     chain = sum([filter(lambda me: \
                                         me.get('processes')[0].\
                                         get_initial_ids()[0] == fs_id,

@@ -349,7 +349,6 @@ C     Amplitude(s) for diagram number 6
                                          fractions.Fraction(3, 5),
                                          True, -2), '-1./15.*imag1*')
 
-
     def test_export_matrix_element_v4_madevent_group(self):
         """Test the result of exporting a subprocess group matrix element"""
 
@@ -2502,6 +2501,29 @@ JAMP(6)=+2*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))""")
                           'AMP2(3)=AMP2(3)+AMP(5)*dconjg(AMP(5))',
                           'AMP2(4)=AMP2(4)+AMP(6)*dconjg(AMP(6))'])
         
+        # Test configs file
+        writer = writers.FortranWriter(self.give_pos('test'))
+        nconfig, s_and_t_channels = export_v4.write_configs_file(writer,
+                                     matrix_element)
+        writer.close()
+        self.assertFileContains('test',
+"""C     Diagram 2
+      DATA MAPCONFIG(1)/2/
+      DATA (IFOREST(I,-1,1),I=1,2)/4,3/
+      DATA SPROP(-1,1)/21/
+C     Diagram 3
+      DATA MAPCONFIG(2)/3/
+      DATA (IFOREST(I,-1,2),I=1,2)/1,3/
+      DATA TPRID(-1,2)/21/
+      DATA (IFOREST(I,-2,2),I=1,2)/-1,4/
+C     Diagram 4
+      DATA MAPCONFIG(3)/4/
+      DATA (IFOREST(I,-1,3),I=1,2)/1,4/
+      DATA TPRID(-1,3)/21/
+      DATA (IFOREST(I,-2,3),I=1,2)/-1,3/
+C     Number of configs
+      DATA MAPCONFIG(0)/3/
+""")
 
     def test_generate_helas_diagrams_uu_susu(self):
         """Testing the helas diagram generation u u > su su with t-channel n1
@@ -6290,6 +6312,75 @@ C     Number of configs
       PWIDTH(-5,8) = ABS(WSL2)
       POW(-5,8) = 2\n""")
 
+        # Test reversed order of decay specifications
+        # e- e+ > se+ se-, se- > e- n1, se+ > e+ n1
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1000011,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':-1000011,
+                                         'state':True}))
+
+        mycoreproc = base_objects.Process({'legs':myleglist,
+                                       'model':mymodel})
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1000011,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':True}))
+
+        mydecay1 = base_objects.Process({'legs':myleglist,
+                                         'model':mymodel})
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':-1000011,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':True}))
+
+        mydecay2 = base_objects.Process({'legs':myleglist,
+                                         'model':mymodel})
+
+        mycoreproc.set('decay_chains', base_objects.ProcessList([\
+            mydecay2, mydecay1]))
+
+        myamplitude = diagram_generation.DecayChainAmplitude(mycoreproc)
+
+        matrix_element = helas_objects.HelasDecayChainProcess(myamplitude)
+
+        matrix_elements = matrix_element.combine_decay_chain_processes()
+
+        me = matrix_elements[0]
+
+        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mymodel)
+
+        self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
+                         """CALL IXXXXX(P(0,1),zero,NHEL(1),+1*IC(1),W(1,1))
+CALL OXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
+CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
+CALL IXXXXX(P(0,4),Mneu1,NHEL(4),-1*IC(4),W(1,4))
+CALL HIOXXX(W(1,4),W(1,3),MGVX350,Msl2,Wsl2,W(1,5))
+CALL IXXXXX(P(0,5),zero,NHEL(5),-1*IC(5),W(1,6))
+CALL OXXXXX(P(0,6),Mneu1,NHEL(6),+1*IC(6),W(1,7))
+CALL HIOXXX(W(1,6),W(1,7),MGVX494,Msl2,Wsl2,W(1,8))
+CALL JIOXXX(W(1,1),W(1,2),MGVX12,zero,zero,W(1,9))
+# Amplitude(s) for diagram number 1
+CALL VSSXXX(W(1,9),W(1,8),W(1,5),MGVX56,AMP(1))
+CALL FSIXXX(W(1,1),W(1,5),MGVX494,Mneu1,Wneu1,W(1,10))
+# Amplitude(s) for diagram number 2
+CALL IOSXXX(W(1,10),W(1,2),W(1,8),MGVX350,AMP(2))""")
 
     def test_export_complicated_majorana_decay_chain(self):
         """Test complicated decay chain z e+ > n2 el+, n2 > e- e+ n1
