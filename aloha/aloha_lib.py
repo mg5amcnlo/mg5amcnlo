@@ -341,7 +341,7 @@ class AddVariable(list):
             
     def __eq__(self, obj):
         """Define The Equality"""
-        
+
         if self.__class__ != obj.__class__:
             return False
         
@@ -357,6 +357,10 @@ class AddVariable(list):
         
         #Pass all the test
         return True
+    
+    def __ne__(self, obj):
+        """Define the unequality"""
+        return not self.__eq__(obj)
         
     def __str__(self):
         text = ''
@@ -587,6 +591,7 @@ class MultVariable(list):
         self.prefactor *= obj.prefactor
         if obj in self:
             index = self.index(obj)
+            self[index] = self[index].copy()
             self[index].power += 1
         else:
             obj.prefactor = 1
@@ -594,6 +599,7 @@ class MultVariable(list):
         
     def __eq__(self, obj):
         """Define When two MultVariable are identical"""
+        
         try:    
             if obj.vartype !=2 or len(self) != len(obj):
                 return False
@@ -605,6 +611,10 @@ class MultVariable(list):
                 if not (var.variable, var.power) in l1:
                     return False
             return True
+    
+    def __ne__(self, obj):
+        """ Define when two Multvariable are not identical"""
+        return not self.__eq__(obj)
                     
     def __str__(self):
         """ String representation """
@@ -1283,6 +1293,7 @@ class LorentzObjectRepresentation(dict):
     def __mul__(self, obj):
         """multiplication performing directly the einstein/spin sommation.
         """
+
         if not hasattr(obj, 'vartype') or not self.vartype:
             out = LorentzObjectRepresentation({}, self.lorentz_ind, self.spin_ind)
             for ind in out.listindices():
@@ -1379,10 +1390,11 @@ class LorentzObjectRepresentation(dict):
                 factor = self.get_rep(self_ind) 
                 factor *= obj.get_rep(obj_ind)
                 
+                
                 if factor:
                     #compute the prefactor due to the lorentz contraction
                     factor *= (-1) ** (len(l_value) - l_value.count(0))
-                    out += factor                         
+                    out += factor                        
         return out
 
     def combine_indices(self, l_dict, s_dict):
@@ -1495,7 +1507,11 @@ class LorentzObjectRepresentation(dict):
         """Check that two representation are identical"""
         
         if self.__class__ != obj.__class__:
-            return False
+            if self.nb_spin == 0 == self.nb_lor and \
+                isinstance(obj, Number): 
+                return self.get_rep([0]) == obj
+            else:
+                return False
         if len(self.lorentz_ind) != len(obj.lorentz_ind):
             return False
         if len(self.spin_ind) != len(obj.spin_ind):

@@ -105,7 +105,9 @@ def copy_v4standalone(mgme_dir, dir_path, clean):
 
     try:
         subprocess.call([os.path.join('bin', 'standalone')],
-                        stdout = os.open(os.devnull, os.O_RDWR), cwd=dir_path)
+                        stdout = os.open(os.devnull, os.O_RDWR),
+                        stderr = os.open(os.devnull, os.O_RDWR),
+                        cwd=dir_path)
     except OSError:
         # Probably standalone already called
         pass
@@ -195,6 +197,11 @@ def finalize_madevent_v4_directory(dir_path, makejpg, history):
     """Finalize ME v4 directory by creating jpeg diagrams, html
     pages,proc_card_mg5.dat and madevent.tar.gz."""
 
+    if not misc.which('f77'):
+        logger.info('Change makefiles to use gfortran')
+        subprocess.call(['python','./bin/Passto_gfortran.py'], cwd=dir_path, \
+                        stdout = open(os.devnull, 'w')) 
+    
     old_pos = os.getcwd()
     os.chdir(os.path.join(dir_path, 'SubProcesses'))
     P_dir_list = [proc for proc in os.listdir('.') if os.path.isdir(proc) and \
@@ -406,6 +413,10 @@ def write_matrix_element_v4_madevent(writer, matrix_element, fortran_model):
                 matrix_element)
     replace_dict['helas_calls'] = "\n".join(helas_calls)
 
+    # Extract amp2 lines
+    amp2_lines = get_amp2_lines(matrix_element)
+    replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
+
     # Extract JAMP lines
     jamp_lines = get_JAMP_lines(matrix_element)
     replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
@@ -417,7 +428,7 @@ def write_matrix_element_v4_madevent(writer, matrix_element, fortran_model):
     # Write the file
     writer.writelines(file)
 
-    return len(filter(lambda call: call.find('#') != 0, helas_calls))
+    return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor
 
 #===============================================================================
 # write_auto_dsig_file
@@ -493,18 +504,22 @@ def write_configs_file(writer, matrix_element, fortran_model):
 
     s_and_t_channels = []
 
-    for idiag, diag in enumerate(matrix_element.get('base_amplitude').\
-                                                get('diagrams')):
-        if any([len(vert.get('legs')) > 3 for vert in diag.get('vertices')]):
+    base_diagrams = matrix_element.get('base_amplitude').get('diagrams')
+    minvert = min([max([len(vert.get('legs')) for vert in \
+                        diag.get('vertices')]) for diag in base_diagrams])
+
+    for idiag, diag in enumerate(base_diagrams):
+        if any([len(vert.get('legs')) > minvert for vert in
+                diag.get('vertices')]):
             # Only 3-vertices allowed in configs.inc
             continue
         iconfig = iconfig + 1
         helas_diag = matrix_element.get('diagrams')[idiag]
-        amp_number = helas_diag.get('amplitudes')[0].get('number')
-        lines.append("# Diagram %d, Amplitude %d" % \
-                     (helas_diag.get('number'), amp_number))
+        lines.append("# Diagram %d" % \
+                     (helas_diag.get('number')))
         # Correspondance between the config and the amplitudes
-        lines.append("data mapconfig(%d)/%d/" % (iconfig, amp_number))
+        lines.append("data mapconfig(%d)/%d/" % (iconfig,
+                                                 helas_diag.get('number')))
 
         # Need to reorganize the topology so that we start with all
         # final state external particles and work our way inwards
@@ -533,7 +548,7 @@ def write_configs_file(writer, matrix_element, fortran_model):
             elif vert in tchannels[:-1]:
                 lines.append("data tprid(%d,%d)/%d/" % \
                              (last_leg.get('number'), iconfig,
-                              last_leg.get('id')))
+                              abs(last_leg.get('id'))))
 
     # Write out number of configs
     lines.append("# Number of configs")
@@ -587,11 +602,10 @@ def write_dname_file(writer, matrix_element, fortran_model):
 #===============================================================================
 # write_iproc_file
 #===============================================================================
-def write_iproc_file(writer, matrix_element, fortran_model):
-    """Write the iproc.inc file for MG4"""
+def write_iproc_file(writer, me_number):
+    """Write the iproc.dat file for MG4"""
 
-    line = "%d" % \
-           matrix_element.get('processes')[0].get('id')
+    line = "%d" % (me_number + 1)
 
     # Write the file
     for line_to_write in writer.write_line(line):
@@ -634,7 +648,8 @@ def write_leshouche_file(writer, matrix_element, fortran_model):
                 repr_dict = {}
                 for l in legs:
                     repr_dict[l.get('number')] = \
-                        proc.get('model').get_particle(l.get('id')).get_color()
+                        proc.get('model').get_particle(l.get('id')).get_color()\
+                        * (-1)**(1+l.get('state'))
                 # Get the list of color flows
                 color_flow_list = \
                     matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
@@ -655,12 +670,12 @@ def write_leshouche_file(writer, matrix_element, fortran_model):
 #===============================================================================
 # write_maxamps_file
 #===============================================================================
-def write_maxamps_file(writer, matrix_element, fortran_model):
+def write_maxamps_file(writer, matrix_element, fortran_model, ncolor):
     """Write the maxamps.inc file for MG4."""
 
-    file = "       integer    maxamps\n"
-    file = file + "parameter (maxamps=%d)" % \
-           len(matrix_element.get_all_amplitudes())
+    file = "       integer    maxamps, maxflow\n"
+    file = file + "parameter (maxamps=%d, maxflow=%d)" % \
+           (len(matrix_element.get_all_amplitudes()), ncolor)
 
     # Write the file
     writer.writelines(file)
@@ -803,19 +818,25 @@ def write_props_file(writer, matrix_element, fortran_model, s_and_t_channels):
     for iconf, configs in enumerate(s_and_t_channels):
         for vertex in configs[0] + configs[1][:-1]:
             leg = vertex.get('legs')[-1]
-            particle = particle_dict[leg.get('id')]
-            # Get mass
-            if particle.get('mass').lower() == 'zero':
-                mass = particle.get('mass')
+            if leg.get('id') == 21 and 21 not in particle_dict:
+                # Fake propagator used in multiparticle vertices
+                mass = 'zero'
+                width = 'zero'
+                pow_part = 0
             else:
-                mass = "abs(%s)" % particle.get('mass')
-            # Get width
-            if particle.get('width') == 'zero':
-                width = particle.get('width')
-            else:
-                width = "abs(%s)" % particle.get('width')
+                particle = particle_dict[leg.get('id')]
+                # Get mass
+                if particle.get('mass').lower() == 'zero':
+                    mass = particle.get('mass')
+                else:
+                    mass = "abs(%s)" % particle.get('mass')
+                # Get width
+                if particle.get('width').lower() == 'zero':
+                    width = particle.get('width')
+                else:
+                    width = "abs(%s)" % particle.get('width')
 
-            pow_part = 1 + int(particle.is_boson())
+                pow_part = 1 + int(particle.is_boson())
 
             lines.append("pmass(%d,%d)  = %s" % \
                          (leg.get('number'), iconf + 1, mass))
@@ -859,7 +880,8 @@ def export_model_files(model_path, process_path):
 def make_model_symbolic_link(process_path):
     #make the copy/symbolic link
     model_path = process_path + '/Source/MODEL/'
-    ln(model_path + '/ident_card.dat', process_path + '/Cards', log=False)
+    if os.path.exists(os.path.join(model_path, 'ident_card.dat')):
+        ln(model_path + '/ident_card.dat', process_path + '/Cards', log=False)
     cp(model_path + '/param_card.dat', process_path + '/Cards')
     mv(model_path + '/param_card.dat', process_path + '/Cards/param_card_default.dat')
     ln(model_path + '/particles.dat', process_path + '/SubProcesses')
@@ -879,12 +901,11 @@ def export_helas(helas_path, process_path):
         filepos = os.path.join(helas_path, filename)
         if os.path.isfile(filepos):
             if filepos.endswith('Makefile.template'):
-                ln(filepos, os.path.join(process_path,'Source','DHELAS'),
-                   'Makefile')
+                cp(filepos, process_path + '/Source/DHELAS/Makefile')
             elif filepos.endswith('Makefile'):
                 pass
             else:
-                ln(filepos, process_path+'/Source/DHELAS')
+                cp(filepos, process_path + '/Source/DHELAS')
 # following lines do the same but whithout symbolic link
 # 
 #def export_helas(mgme_dir, dir_path):
@@ -950,6 +971,18 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
                        fortran_model,
                         len(matrix_element.get_all_amplitudes()))
 
+    # Generate diagrams
+    filename = "matrix.ps"
+    plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+                                         get('diagrams'),
+                                      filename,
+                                      model=matrix_element.get('processes')[0].\
+                                         get('model'),
+                                      amplitude='')
+    logger.info("Generating Feynman diagrams for " + \
+                 matrix_element.get('processes')[0].nice_string())
+    plot.draw()
+
     linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
 
     
@@ -967,14 +1000,22 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
 #===============================================================================
 def generate_subprocess_directory_v4_madevent(matrix_element,
                                               fortran_model,
+                                              me_number,
                                               path=os.getcwd()):
     """Generate the Pxxxxx directory for a subprocess in MG4 madevent,
     including the necessary matrix.f and various helper files"""
 
     cwd = os.getcwd()
-
-    os.chdir(path)
-
+    try:
+        os.chdir(path)
+    except OSError, error:
+        error_msg = "The directory %s should exist in order to be able " % path + \
+                    "to \"export\" in it. If you see this error message by " + \
+                    "typing the command \"export\" please consider to use " + \
+                    "instead the command \"output\". "
+        raise MadGraph5Error, error_msg 
+        
+         
     pathdir = os.getcwd()
 
     # Create the directory PN_xx_xxxxx in the specified path
@@ -994,9 +1035,10 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 
     # Create the matrix.f file, auto_dsig.f file and all inc files
     filename = 'matrix.f'
-    calls = write_matrix_element_v4_madevent(writers.FortranWriter(filename),
-                                             matrix_element,
-                                             fortran_model)
+    calls, ncolor = \
+           write_matrix_element_v4_madevent(writers.FortranWriter(filename),
+                                            matrix_element,
+                                            fortran_model)
 
     filename = 'auto_dsig.f'
     write_auto_dsig_file(writers.FortranWriter(filename),
@@ -1027,8 +1069,7 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
 
     filename = 'iproc.dat'
     write_iproc_file(writers.FortranWriter(filename),
-                     matrix_element,
-                     fortran_model)
+                     me_number)
 
     filename = 'leshouche.inc'
     write_leshouche_file(writers.FortranWriter(filename),
@@ -1038,7 +1079,8 @@ def generate_subprocess_directory_v4_madevent(matrix_element,
     filename = 'maxamps.inc'
     write_maxamps_file(writers.FortranWriter(filename),
                        matrix_element,
-                       fortran_model)
+                       fortran_model,
+                       ncolor)
 
     filename = 'mg.sym'
     write_mg_sym_file(writers.FortranWriter(filename),
@@ -1253,6 +1295,29 @@ def get_icolamp_lines(matrix_element):
 
     return ret_list
 
+def get_amp2_lines(matrix_element):
+    """Return the amp2(i) = sum(amp for diag(i))^2 lines"""
+
+    nexternal, ninitial = matrix_element.get_nexternal_ninitial()
+    # Get minimum legs in a vertex
+    minvert = min([max(diag.get_vertex_leg_numbers()) for diag in \
+                   matrix_element.get('diagrams')])
+
+    ret_lines = []
+    for idiag, diag in enumerate(matrix_element.get('diagrams')):
+        # Ignore any diagrams with 4-particle vertices.
+        if max(diag.get_vertex_leg_numbers()) > minvert:
+            continue
+        # Now write out the expression for AMP2, meaning the sum of
+        # squared amplitudes belonging to the same diagram
+        line = "AMP2(%(num)d)=AMP2(%(num)d)+" % {"num": (idiag + 1)}
+        line += "+".join(["AMP(%(num)d)*dconjg(AMP(%(num)d))" % \
+                          {"num": a.get('number')} for a in \
+                          diag.get('amplitudes')])
+        ret_lines.append(line)
+    
+    return ret_lines
+
 def get_JAMP_lines(matrix_element):
     """Return the JAMP = sum(fermionfactor * AMP(i)) lines"""
 
@@ -1373,12 +1438,12 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
 
     if total_coeff == 1:
         if is_imaginary:
-            return '+complex(0,1)*'
+            return '+imag1*'
         else:
             return '+'
     elif total_coeff == -1:
         if is_imaginary:
-            return '-complex(0,1)*'
+            return '-imag1*'
         else:
             return '-'
 
@@ -1389,7 +1454,7 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
         res_str = res_str + './%i.' % total_coeff.denominator
 
     if is_imaginary:
-        res_str = res_str + '*complex(0,1)'
+        res_str = res_str + '*imag1'
 
     return res_str + '*'
 
@@ -1398,13 +1463,14 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
 # Routines to output UFO models in MG4 format
 #===============================================================================
 
-def convert_model_to_mg4(model, output_dir, wanted_lorentz = []):
+def convert_model_to_mg4(model, output_dir, wanted_lorentz = [],
+                         wanted_couplings = []):
     """ Create a full valid MG4 model from a MG5 model (coming from UFO)"""
     
     # create the MODEL
     write_dir=os.path.join(output_dir, 'Source', 'MODEL')
     model_builder = UFO_model_to_mg4(model, write_dir)
-    model_builder.build()
+    model_builder.build(wanted_couplings)
     
     # Create and write ALOHA Routine
     aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
@@ -1413,8 +1479,7 @@ def convert_model_to_mg4(model, output_dir, wanted_lorentz = []):
     else:
         aloha_model.compute_all(save=False)
     write_dir=os.path.join(output_dir, 'Source', 'DHELAS')
-    for abstracthelas in dict(aloha_model).values():
-        abstracthelas.write(write_dir, language='Fortran')
+    aloha_model.write(write_dir, 'Fortran')
     
     #copy Helas Template
     cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
@@ -1452,7 +1517,7 @@ class UFO_model_to_mg4(object):
         self.params_ext = []   # external parameter
         self.p_to_f = parsers.UFOExpressionParserFortran()
         
-    def build(self):
+    def build(self, wanted_couplings = []):
         """modify the couplings to fit with MG4 convention and creates all the 
         different files"""
 
@@ -1471,9 +1536,13 @@ class UFO_model_to_mg4(object):
         keys.sort(key=len)
         for key, coup_list in self.model['couplings'].items():
             if 'aS' in key:
-                self.coups_dep += coup_list
+                self.coups_dep += [c for c in coup_list if
+                                   (not wanted_couplings or c.name in \
+                                    wanted_couplings)]
             else:
-                self.coups_indep += coup_list
+                self.coups_indep += [c for c in coup_list if
+                                     (not wanted_couplings or c.name in \
+                                      wanted_couplings)]
                 
         # MG4 use G and not aS as it basic object for alphas related computation
         #Pass G in the  independant list
@@ -1565,20 +1634,22 @@ class UFO_model_to_mg4(object):
         fsock.writelines(header)
         
         # Write the Mass definition/ common block
-        masses = [param.name for param in self.params_ext \
-                                                    if param.lhablock == 'MASS']
-        
-        is_mass = lambda name: name[0].lower() == 'm' and len(name)<4
-        masses += [param.name for param in self.params_dep + 
-                            self.params_indep if param.type == 'real'
-                            and is_mass(param.name)]      
+        masses = set()
+        widths = set()
+        for particle in self.model.get('particles'):
+            #find masses
+            one_mass = particle.get('mass')
+            if one_mass.lower() != 'zero':
+                masses.add(one_mass)
+                
+            # find width
+            one_width = particle.get('width')
+            if one_width.lower() != 'zero':
+                widths.add(one_width)
+            
         
         fsock.writelines('double precision '+','.join(masses)+'\n')
         fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
-        
-        # Write the Width definition/ common block
-        widths = [param.name for param in self.params_ext \
-                                                   if param.lhablock == 'DECAY']
         fsock.writelines('double precision '+','.join(widths)+'\n')
         fsock.writelines('common/widths/ '+','.join(widths)+'\n\n')
         
@@ -1607,8 +1678,14 @@ class UFO_model_to_mg4(object):
         """create input.inc containing the definition of the parameters"""
         
         fsock = self.open('input.inc', format='fortran')
+
+        #find mass/ width since they are already define
+        already_def = set()
+        for particle in self.model.get('particles'):
+            already_def.add(particle.get('mass').lower())
+            already_def.add(particle.get('width').lower())
         
-        is_valid = lambda name: name!='G' and not (name[0].lower() == 'm' and len(name)<4)
+        is_valid = lambda name: name!='G' and name.lower() not in already_def
         
         real_parameters = [param.name for param in self.params_dep + 
                             self.params_indep if param.type == 'real'

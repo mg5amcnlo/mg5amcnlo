@@ -1247,7 +1247,7 @@ class TestFeynmanDiagram(unittest.TestCase):
                 self.assertTrue(line.start.pos_y > line.end.pos_y)
                 
         # Two fermion in opposite direction
-        diagram = self.store_diagram['u u > Z u u g'][26]
+        diagram = self.store_diagram['u u > z u u g'][26]
         diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
         diagram.main()
         t_lines = [line for line in diagram.lineList if line.start.level == 1
@@ -1259,7 +1259,7 @@ class TestFeynmanDiagram(unittest.TestCase):
                 
         
         # Two fermion in opposite direction
-        diagram = self.store_diagram['u~ u~ > Z u~ u~ g'][26]
+        diagram = self.store_diagram['u~ u~ > z u~ u~ g'][26]
         diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
         diagram.main()
         t_lines = [line for line in diagram.lineList if line.start.level == 1
@@ -1274,7 +1274,7 @@ class TestFeynmanDiagram(unittest.TestCase):
         
         diagram_list = []
         for i in range(8):
-            diagram = self.store_diagram['t h > t g W+ W-'][i]
+            diagram = self.store_diagram['t h > t g w+ w-'][i]
             diagram = drawing.FeynmanDiagram(diagram, _model)
             diagram.main()
             diagram_list.append(diagram)
@@ -1366,12 +1366,12 @@ class TestFeynmanDiagram(unittest.TestCase):
         self.assertFalse(diagram._debug_has_intersection())
 
         for i in range(7):
-            diagram = self.store_diagram['t h > t g W+ W-'][i]
+            diagram = self.store_diagram['t h > t g w+ w-'][i]
             diagram = drawing.FeynmanDiagramHorizontal(diagram, _model)
             diagram.main()
             self.assertFalse(diagram._debug_has_intersection())
 
-            diagram = self.store_diagram['t h > t g W+ W-'][i]
+            diagram = self.store_diagram['t h > t g w+ w-'][i]
             diagram = drawing.FeynmanDiagram(diagram, _model)
             diagram.main()
             self.assertFalse(diagram._debug_has_intersection())

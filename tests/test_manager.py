@@ -27,24 +27,27 @@
    the NAME can contain regular expression (in python re standard format)
 """
 
+import sys
+
+if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
+    sys.exit('MadGraph 5 works only with python 2.6 or later (but not python 3.X).\n\
+               Please upgrate your version of python.')
+
 import inspect
 import logging
 import logging.config
 import optparse
 import os
 import re
-import sys
 import unittest
 
 
 #Add the ROOT dir to the current PYTHONPATH
 root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
-# Insert the path in the beginning to prevent the name conflict with
-# python default module
 sys.path.insert(0, root_path)
 # Only for profiling with -m cProfile!
-root_path = os.path.split(os.path.dirname(os.path.realpath(sys.argv[0])))[0]
-sys.path.insert(0, root_path)
+#root_path = os.path.split(os.path.dirname(os.path.realpath(sys.argv[0])))[0]
+#sys.path.append(root_path)
 
 from madgraph import MG4DIR
 
@@ -67,7 +70,8 @@ def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1):
                                    re_opt=re_opt):
         data = collect.loadTestsFromName(test_fct)
         testsuite.addTest(data)
-    unittest.TextTestRunner(verbosity=verbosity).run(testsuite)
+        
+    return unittest.TextTestRunner(verbosity=verbosity).run(testsuite)
 
 #===============================================================================
 # TestFinder

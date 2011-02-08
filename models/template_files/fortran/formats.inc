@@ -11,7 +11,7 @@ c Formats for printout output
 c Simple real
  1    format(1x,a15,f11.5)
 c Simple Complex
- 2    format(1x,a15,f11.5,1x,f11.5)
+ 2    format(1x,a15,e13.5,1x,e13.5)
 c Real with mass dimension
  3    format(1x,a15,f11.5,' GeV')
 c Chiral couplings

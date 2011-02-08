@@ -71,6 +71,8 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
     y_min = 450
     x_max = 450
     y_max = 750
+    
+    blob_size = 1.5
 
     def initialize(self):
         """Operation done before starting to create diagram specific EPS content
@@ -133,6 +135,21 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         #return the line in correct format
         return " %s %s %s %s %s \n" % (x1, y1, x2, y2, name)
 
+    def draw_vertex(self, vertex, bypass = ['QED','QCD']  ):
+        """Add blob in case on non QED-QCD information"""
+        
+        interaction = self.model.get_interaction(vertex.id)
+        if interaction:
+            order = interaction.get('orders')
+            order = [key for key in order.keys() if order[key] and \
+                                                     key not in bypass]
+
+            if order:
+                x1, y1 = self.rescale(vertex.pos_x, vertex.pos_y)
+                self.text += " %s %s %s 1.0 Fblob \n" % (x1, y1, self.blob_size)
+
+
+
     def draw_straight(self, line):
         """ADD the EPS code for this fermion line."""
 
@@ -178,8 +195,8 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
     def put_diagram_number(self, number=0):
         """ADD the comment 'diagram [number]' just below the diagram."""
 
-        # Postion of the text in [0,1] square
-        x = 0.33
+        # Position of the text in [0,1] square
+        x = 0.2
         y = -0.17
         # Compute the EPS coordinate
         x, y = self.rescale(x, y)
@@ -188,7 +205,15 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         self.text += '( diagram %s )   show\n' % (number + 1) # +1 python
                                                             #starts to count at
                                                             #zero.
-
+        mystr = " (%s)" % ", ".join(["%s=%d" % (key, self.diagram.diagram['orders'][key]) \
+                                        for key in self.diagram.diagram['orders'].keys()])
+        x = 0.6
+        y = -0.17
+        x, y = self.rescale(x, y)
+        #write the text
+        self.text += ' %s  %s moveto \n' % (x, y)
+        self.text += '%s   show\n' % (mystr)                                                             #zero.
+        
 
     def associate_number(self, line, number):
         """Write in the EPS figure the MadGraph number associate to the line.
@@ -289,10 +314,12 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
     nb_line = 3
     nb_col = 2
     
+    blob_size = 1.5
     
     lower_scale = 5
     second_scale ={'x_min': 40, 'x_size':150,'y_min':620,'y_size':100,
-                   'x_gap':42,'y_gap':30,'font':6,'nb_line':5,'nb_col':3}
+                   'x_gap':42,'y_gap':30,'font':6,'nb_line':5,'nb_col':3,
+                   'blob_size':0.9}
     
     def __init__(self, diagramlist=None, filename='diagram.eps', \
                   model=None, amplitude=None, legend=''):
