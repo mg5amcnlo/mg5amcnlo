@@ -746,11 +746,14 @@ def write_configs_file_from_diagrams(writer, configs, mapconfigs,
 
     minvert = min([max(diag.get_vertex_leg_numbers()) for diag in configs])
 
+    nconfigs = 0
+
     for iconfig, helas_diag in enumerate(configs):
         if any([vert > minvert for vert in
-                diag.get_vertex_leg_numbers()]):
+                helas_diag.get_vertex_leg_numbers()]):
             # Only 3-vertices allowed in configs.inc
             continue
+        nconfigs += 1
 
         # Need to reorganize the topology so that we start with all
         # final state external particles and work our way inwards
@@ -789,7 +792,7 @@ def write_configs_file_from_diagrams(writer, configs, mapconfigs,
 
     # Write out number of configs
     lines.append("# Number of configs")
-    lines.append("data mapconfig(0)/%d/" % len(configs))
+    lines.append("data mapconfig(0)/%d/" % nconfigs)
 
     # Write the file
     writer.writelines(lines)
