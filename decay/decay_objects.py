@@ -450,8 +450,11 @@ class DecayParticle(base_objects.Particle):
             err = sum([c.get('apx_decaywidth_nextlevel', model) \
                            for c in self.get_channels(final_level, False)])/ \
                            self['apx_decaywidth']
-        else:
+
+        elif self.get('is_stable'):
             err = 0.
+        else:
+            err = 1.
 
         self['apx_decaywidth_err'] = err
 
@@ -668,7 +671,8 @@ class DecayParticle(base_objects.Particle):
 
     def get_max_level(self):
         """ Get the max channel level that the particle have so far. """
-
+        # Turn off the logger in get_amplitude temporarily
+        
         # Initial value
         n = 2
         # Look at the amplitudes or channels to find the max_level
@@ -718,7 +722,7 @@ class DecayParticle(base_objects.Particle):
         try:
             return self.get('decay_amplitudes')[partnum]
         except KeyError:
-            logger.info('The amplitudes for final particle number % d do not exist' % partnum)
+            logger.info('The amplitudes of %d for final particle number % d do not exist' % (self['pdg_code'],partnum))
             return None
 
     def set_amplitudes(self, partnum, value):
@@ -2443,6 +2447,7 @@ class DecayModel(base_objects.Model):
             # Recalculating parameters and coupling constants 
             self.running_externals(abs(eval(part.get('mass'))))
             self.running_internals()
+            logger.info("Find 2-body channels of %s" %part.get('name'))
             part.find_channels_nextlevel(self)
 
  
@@ -2461,6 +2466,8 @@ class DecayModel(base_objects.Model):
                 # After recalculating the parameters, find the channels to the
                 # requested level.
                 for clevel in range(3, max_partnum+1):
+                    logger.info("Find %d-body channels of %s" %(clevel,
+                                                                part.get('name')))
                     part.find_channels_nextlevel(self)
 
 
@@ -2501,12 +2508,18 @@ class DecayModel(base_objects.Model):
             # Recalculating parameters and coupling constants 
             self.running_externals(abs(eval(part.get('mass'))))
             self.running_internals()
+
+            logger.info("Find 2-body channels of %s" %part.get('name'))
             part.find_channels_nextlevel(self)
 
 
         # Search for higher final particle states, if the precision
         # is not satisfied.
         for part in self.get('particles'):
+            # Skip search if this particle is stable
+            if part.get('is_stable'):
+                continue
+
             # Update the decaywidth_err
             part.update_decay_attributes(False,True,False, self)
 
@@ -2517,11 +2530,16 @@ class DecayModel(base_objects.Model):
                 self.running_externals(abs(eval(part.get('mass'))))
                 self.running_internals()
 
+            clevel = 3
             while part.get('apx_decaywidth_err') > precision:
+                logger.info("Find %d-body channels of %s" \
+                                %(clevel,
+                                  part.get('name')))
                 part.find_channels_nextlevel(self)
                 # Note that the width is updated automatically in the
                 # find_nextlevel
                 part.update_decay_attributes(False,True,False, self)
+                clevel += 1
 
             # Finally, update the branching ratios
             part.update_decay_attributes(False, False, True)         
@@ -2537,46 +2555,55 @@ class DecayModel(base_objects.Model):
             fdata = open(os.path.join(path, 
                                       (self['name']+'_decay_summary.dat')),
                          'w')
+            logger.info("\nWrite decay width summary to %s \n" \
+                            % str(os.path.join(path,
+                                               (self['name']+'_decay_summary.dat'))))
+
         elif isinstance(name, str):
             fdata = open(os.path.join(path, name),'w')
+            logger.info("\nWrite decay width summary to %s \n" \
+                            % str(os.path.join(path, name)))
+
         else:
             raise PhysicsObjectError,\
                 "The file name of the decay table must be str." % str(name)
 
-        fdata.write(str('DECAY WIDTH COMPARISON \n') +\
-                    str('model: %s \n' %self['name']) +\
-                    str('#'*50 + '\n')+\
-                    str('Particle ID    card value     apprx. value  ratio') +\
-                    str('   level    err \n')
-                    )
+        summary_chart = ''
+        summary_chart = (str('# DECAY WIDTH COMPARISON \n') +\
+                            str('# model: %s \n' %self['name']) +\
+                            str('#'*80 + '\n')+\
+                            str('#Particle ID    card value     apprx. value  ratio') +\
+                            str('   level    err \n')
+                        )
+
         for part in self.get('particles'):
             # For non-stable particles
             if not part.get('is_stable'):
                 # For width available in the param_card.
                 try:
-                    fdata.write(str('%11d    %.4e     %.4e    %4.2f  %3d        %.2e\n'\
-                                        %(part.get('pdg_code'), 
-                                          self['decaywidth_list']\
-                                              [(part.get('pdg_code'), True)],
-                                          part['apx_decaywidth'],
-                                          part['apx_decaywidth']/self['decaywidth_list'][(part.get('pdg_code'), True)],
-                                          part.get_max_level(),
-                                          part['apx_decaywidth_err']
-                                          )))
+                    summary_chart +=(str('#%11d    %.4e     %.4e    %4.2f  %3d        %.2e\n'\
+                                            %(part.get('pdg_code'), 
+                                              self['decaywidth_list']\
+                                                  [(part.get('pdg_code'), True)],
+                                              part['apx_decaywidth'],
+                                              part['apx_decaywidth']/self['decaywidth_list'][(part.get('pdg_code'), True)],
+                                              part.get_max_level(),
+                                              part['apx_decaywidth_err']
+                                              )))
                 # For width not available, do not calculate the ratio.
                 except KeyError:
-                    fdata.write(str('%11d    %.4e     %.4e    %s\n'\
-                                        %(part.get('pdg_code'), 
-                                          0.,
-                                          part['apx_decaywidth'],
-                                          'N/A')))
+                    summary_chart += (str('#%11d    %.4e     %.4e    %s\n'\
+                                             %(part.get('pdg_code'), 
+                                               0.,
+                                               part['apx_decaywidth'],
+                                               'N/A')))
                 # For width in param_card is zero.
                 except ZeroDivisionError:
-                    fdata.write(str('%11d    %.4e     %.4e    %s\n'\
-                                        %(part.get('pdg_code'), 
-                                          0.,
-                                          part['apx_decaywidth'],
-                                          'N/A')))
+                    summary_chart += (str('#%11d    %.4e     %.4e    %s\n'\
+                                             %(part.get('pdg_code'), 
+                                               0.,
+                                               part['apx_decaywidth'],
+                                               'N/A')))
             # For stable particles
             else:
                 try:
@@ -2584,23 +2611,25 @@ class DecayModel(base_objects.Model):
                         ratio = 1
                     else:
                         ratio = 0
-                    fdata.write(str('%11d    %.4e     %s    %4.2f\n'\
-                                        %(part.get('pdg_code'), 
-                                          self['decaywidth_list']\
-                                              [(part.get('pdg_code'), True)],
-                                          'stable    ',
-                                          ratio)))
+                    summary_chart += (str('#%11d    %.4e     %s    %4.2f\n'\
+                                             %(part.get('pdg_code'), 
+                                               self['decaywidth_list']\
+                                                   [(part.get('pdg_code'), True)],
+                                               'stable    ',
+                                               ratio)))
                 except KeyError:
-                    fdata.write(str('%11d    %.4e     %s    %s\n'\
-                                        %(part.get('pdg_code'), 
-                                          0.,
-                                          'stable    ',
-                                          '1'
-                                          )))
+                    summary_chart += (str('#%11d    %.4e     %s    %s\n'\
+                                             %(part.get('pdg_code'), 
+                                               0.,
+                                               'stable    ',
+                                               '1'
+                                               )))
+        # Write the summary_chart into file
+        fdata.write(summary_chart)
         fdata.close()
 
 
-    def write_decay_table(self, format='normal',name = ''):
+    def write_decay_table(self, mother_card_path, format='normal',name = ''):
         """ Functions that write the decay table of all the particles 
             in this model that including the channel information and 
             branch ratio (call the estimate_width_error automatically 
@@ -2627,36 +2656,120 @@ class DecayModel(base_objects.Model):
                 fdata = open(os.path.join(path,
                                           (self['name']+'_decaytable_full.dat')),
                              'w')
+                logger.info("\nWrite full decay table to %s\n"\
+                                %str(os.path.join(path,
+                                                  (self['name']+'_decaytable_full.dat'))))
             else:
                 fdata = open(os.path.join(path,
                                           (self['name']+'_decaytable.dat')),
                              'w')
+                logger.info("\nWrite %s decay table to %s\n"\
+                                %(format, 
+                                  str(os.path.join(path,
+                                          (self['name']+'_decaytable.dat')))))
 
         elif isinstance(name, str):
             fdata = open(os.path.join(path, name),'w')
+            logger.info("\nWrite %s decay table to %s\n"\
+                            %(format, 
+                              str(os.path.join(path,
+                                               name))))
+
         else:
             raise PhysicsObjectError,\
                 "The file name of the decay table must be str." % str(name)
 
+        # Write the param_card used first
+        fdata0 = open(mother_card_path, 'r')
+        fdata.write(fdata0.read())
+        fdata0.close()
+
         # Write header of the table
-        seperator = str('#'*80 + '\n')
-        fdata.write(str('DECAY TABLE \n') +\
-                    str('MODEL: %s \n' %self['name']) +\
-                    seperator + '\n'*3)
-        fdata.write('Stable Particles \n'+ seperator+ '%8s    Predicted \n' %'ID')
         spart = ''
         nonspart = ''
+        summary_chart = ''
+        seperator = str('#'*80 + '\n')
+        fdata.write('\n' + seperator + '#\n'*2 +\
+                        str('##    EST. DECAY TABLE    ## \n') +\
+                        '#\n'*2 + seperator)
+
+        # Header of summary data
+        summary_chart = (str('# DECAY WIDTH COMPARISON \n') +\
+                            str('# model: %s \n' %self['name']) +\
+                            str('#'*80 + '\n')+\
+                            str('#Particle ID    card value     apprx. value  ratio') +\
+                            str('   level    err \n')
+                        )
+        # Header of stable particle output
+        spart = ('\n' + seperator + \
+                     '# Stable Particles \n'+ \
+                     seperator+ \
+                     '#%8s    Predicted \n' %'ID')
+
+
+
         for p in self['particles']:
             # Write the table only for particles with finite width.
             if p.get('apx_decaywidth'):
-                nonspart += p.decaytable_string(format)                
-            else:
-                if p.get('is_stable'):
-                    spart += str('%8d    %9s \n' % (p.get('pdg_code'), 'Yes'))
-                else:
-                    spart += str('%8d    %9s \n' % (p.get('pdg_code'), 'No'))
+                nonspart += p.decaytable_string(format)
+                # Try to calculate the ratio in summary_chart
+                try:
+                    summary_chart +=(str('#%11d    %.4e     %.4e    %4.2f  %3d        %.2e\n'\
+                                             %(p.get('pdg_code'), 
+                                               self['decaywidth_list']\
+                                                  [(p.get('pdg_code'), True)],
+                                               p['apx_decaywidth'],
+                                               p['apx_decaywidth']/self['decaywidth_list'][(p.get('pdg_code'), True)],
+                                               p.get_max_level(),
+                                               p['apx_decaywidth_err']
+                                              )))
+                # For width not available, do not calculate the ratio.
+                except KeyError:
+                    summary_chart += (str('#%11d    %.4e     %.4e    %s\n'\
+                                              %(p.get('pdg_code'), 
+                                                0.,
+                                                p['apx_decaywidth'],
+                                                'N/A')))
+                # For width in param_card is zero.
+                except ZeroDivisionError:
+                    summary_chart += (str('#%11d    %.4e     %.4e    %s\n'\
+                                              %(p.get('pdg_code'), 
+                                                0.,
+                                                p['apx_decaywidth'],
+                                                'N/A')))
 
-        # Print stable particles first, then unstable particles
+            else:
+                # If width = 0.,
+                # see if the stable property is predicted.
+                if p.get('is_stable'):
+                    spart += str('#%8d    %9s \n' % (p.get('pdg_code'), 'Yes'))
+                else:
+                    spart += str('#%8d    %9s \n' % (p.get('pdg_code'), 'No'))
+
+                # Try to calculate the ratio if there is reference width
+                try:
+                    if abs(self['decaywidth_list'][(p.get('pdg_code'), True)]) == 0.:
+                        ratio = 1
+                    else:
+                        ratio = 0
+                    summary_chart += (str('#%11d    %.4e     %s    %4.2f\n'\
+                                              %(p.get('pdg_code'), 
+                                                self['decaywidth_list']\
+                                                    [(p.get('pdg_code'), True)],
+                                                'stable    ',
+                                                ratio)))
+
+                # If no width available, write the ratio as 1
+                except KeyError:
+                    summary_chart += (str('#%11d    %.4e     %s    %s\n'\
+                                             %(p.get('pdg_code'), 
+                                               0.,
+                                               'stable    ',
+                                               '1'
+                                               )))
+                    
+        # Print summary_chart, stable particles, and finally unstable particles
+        fdata.write(summary_chart)
         fdata.write(spart)
         fdata.write(nonspart)
         fdata.close()
@@ -2679,6 +2792,7 @@ class DecayModel(base_objects.Model):
                 "No such file %s" % param_card
     
         # Read in param_card
+        logger.info("\nRead MG4 param_card: %s \n" % str(param_card))
         param_lines = open(param_card, 'r').read().split('\n')
 
         # Define regular expressions

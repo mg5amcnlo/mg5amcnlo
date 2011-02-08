@@ -1856,53 +1856,89 @@ class Test_Channel(unittest.TestCase):
             1. unity of total branching ratio
             2. the apx_decaywidth_nextlevel comes from the right level."""
 
-        # Read mssm
-        model_base = import_ufo.import_model('mssm')
+        model_name = 'mssm'
+        test_param_card = False
+        test_param_card_suffix = 'test1'
+        smart_find = True
+        prec = 5E-3
+        channel_number = 2
+
+
+        # Read model_name
+        model_base = import_ufo.import_model(model_name)
         model = decay_objects.DecayModel(model_base)
 
         # Read MG5 param_card
-        param_path_1 = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
-        param_path_2 = os.path.join(_file_path,'../input_files/param_card_mssm_test1.dat')
-        model.read_param_card(param_path_1)
+        if test_param_card:
+            MG5_param_path = os.path.join(_file_path,
+                                        '../input_files/param_card_'\
+                                            +model_name \
+                                            +'_'\
+                                            +test_param_card_suffix
+                                            +'.dat')
+        else:
+            MG5_param_path = os.path.join(_file_path,
+                                        '../input_files/param_card_'\
+                                            +model_name \
+                                            +'.dat')
+        model.read_param_card(MG5_param_path)
         
         # Find channels before read MG4 param_card (use smart function)
-        prec = 5E-3
-        model.find_all_channels_smart(prec)
-       
+        if smart_find:
+            model.find_all_channels_smart(prec)
+        else:
+            model.find_all_channels(channel_number)
 
         # Read MG4 param_card
-        MG4_param_path_1 = os.path.join(_file_path,'../input_files/param_card_0.dat')
-        MG4_param_path_2 = os.path.join(_file_path,'../input_files/param_card_test1.dat')
+        if model_name == "mssm":
+            if test_param_card:
+                MG4_param_path = os.path.join(_file_path,
+                                              '../input_files/param_card_test1.dat')
+            else:
+                MG4_param_path = os.path.join(_file_path,
+                                              '../input_files/param_card_0.dat')
 
-        model.read_MG4_param_card_decay(MG4_param_path_1)
+            model.read_MG4_param_card_decay(MG4_param_path)
 
-        # Write decay summary and the table
-        # file name 1: default name
-        model.write_summary_decay_table()
-        model.write_decay_table('cmp')
-        # file name 2: for test mssm
-        #model.write_summary_decay_table('mssm_decay_summary_test1.dat')
-        #model.write_decay_table('cmp', 'mssm_decaytable_test1.dat')
+        # Write decay summary and the decay table
+        if test_param_card:
+            """model.write_summary_decay_table(model_name\
+                                                + '_decay_summary_'\
+                                                + test_param_card_suffix \
+                                                + '.dat')"""
+            model.write_decay_table(MG5_param_path, 'cmp', 
+                                    model_name\
+                                        + '_decaytable_'\
+                                        + test_param_card_suffix \
+                                        + '.dat')
+        else:
+            # file name 1: default name
+            #model.write_summary_decay_table()
+            model.write_decay_table(MG5_param_path, 'cmp')
 
 
         # Test the sum of branching ratios is unity
         part = model.get_particle(25)
-        total_br = sum([amp['apx_br'] for amp in part.get_amplitudes(2)])
-        total_br += sum([amp['apx_br'] for amp in part.get_amplitudes(3)])
+        total_br = sum([sum([amp['apx_br'] for amp in part.get_amplitudes(i)]) \
+                            for i in range(2, part.get_max_level()+1)])
         self.assertAlmostEqual(total_br, 1.)
 
         # Test if the err is from the off-shell 3-body channels
-        err = sum([c['apx_decaywidth_nextlevel'] \
-                       for c in part.get_channels(3, False)])
-        self.assertAlmostEqual(err/part.get('apx_decaywidth'), part['apx_decaywidth_err'])
+        if part.get_max_level() > 2:
+            err = sum([c['apx_decaywidth_nextlevel'] \
+                           for c in part.get_channels(part.get_max_level(), 
+                                                      False)])
+            self.assertAlmostEqual(err/part.get('apx_decaywidth'), part['apx_decaywidth_err'])
 
-        # Test if the channels are find wisely
+        """# Test if the channels are find wisely
         for part in model['particles']:
             self.assertTrue(prec > part.get('apx_decaywidth_err'))
+
         # Check if the max_level is expected.
         self.assertEqual(model.get_particle(1000016).get_max_level(), 2)
-        self.assertEqual(model.get_particle(25).get_max_level(), 3)
+        self.assertEqual(model.get_particle(25).get_max_level(), 3)"""
 
+        # Miscellaneous
         # Test if the calculated ratio is float or None
         """for part in model.get('particles'):
             print part.get_pdg_code(), part.get('2body_massdiff')
@@ -1910,13 +1946,18 @@ class Test_Channel(unittest.TestCase):
             for n in range(2,n_max+2):
                 for amp in part.get_amplitudes(n):
                     self.assertTrue(isinstance(amp['exa_decaywidth'], bool) or \
-                                        isinstance(amp['exa_decaywidth'], float))"""
+                                        isinstance(amp['exa_decaywidth'], float))
         """
-        particle = model.get_particle(1000021)
-        particleb = model.get_particle(2000015)
-        print particleb.get_pdg_code()
-        self.assertAlmostEqual(0.78950006*0.57480138,
-                               particle.get_amplitude([-5,5])['exa_decaywidth'])"""
+        particle = model.get_particle(1000035)
+        particleb = model.get_particle(2000001)
+        #channels = particleb.get_channels(3, False)
+        #channels.sort(decay_objects.channelcmp_width)
+        #print [c.nice_string() for c in channels[:100]]
+        a = particle.get_amplitudes(3)[2]
+        print a.nice_string()#, a['diagrams']
+        print model.get_interaction(166)
+        print decay_objects.GC_415, decay_objects.GC_681
+
         """
         #print particle.get_amplitude([-11, 2000011])['diagrams'].nice_string()
         print model.get_interaction(390)
