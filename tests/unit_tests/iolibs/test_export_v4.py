@@ -1281,6 +1281,30 @@ JAMP(6)=+2*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))""")
                           'AMP2(3)=AMP2(3)+AMP(5)*dconjg(AMP(5))',
                           'AMP2(4)=AMP2(4)+AMP(6)*dconjg(AMP(6))'])
         
+        # Test configs file
+        writer = writers.FortranWriter(self.give_pos('test'))
+        nconfig, s_and_t_channels = export_v4.write_configs_file(writer,
+                                     matrix_element,
+                                     fortran_model)
+        writer.close()
+        self.assertFileContains('test',
+"""C     Diagram 2
+      DATA MAPCONFIG(1)/2/
+      DATA (IFOREST(I,-1,1),I=1,2)/4,3/
+      DATA SPROP(-1,1)/21/
+C     Diagram 3
+      DATA MAPCONFIG(2)/3/
+      DATA (IFOREST(I,-1,2),I=1,2)/1,3/
+      DATA TPRID(-1,2)/21/
+      DATA (IFOREST(I,-2,2),I=1,2)/-1,4/
+C     Diagram 4
+      DATA MAPCONFIG(3)/4/
+      DATA (IFOREST(I,-1,3),I=1,2)/1,4/
+      DATA TPRID(-1,3)/21/
+      DATA (IFOREST(I,-2,3),I=1,2)/-1,3/
+C     Number of configs
+      DATA MAPCONFIG(0)/3/
+""")
 
     def test_generate_helas_diagrams_uu_susu(self):
         """Testing the helas diagram generation u u > su su with t-channel n1
