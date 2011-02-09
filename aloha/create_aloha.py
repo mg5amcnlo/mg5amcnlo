@@ -385,7 +385,7 @@ class AbstractALOHAModel(dict):
                 continue 
             
             if lorentz.structure == 'external':
-                self.external_routines.append(lorente.name)
+                self.external_routines.append(lorentz.name)
                 continue
             
             builder = AbstractRoutineBuilder(lorentz)

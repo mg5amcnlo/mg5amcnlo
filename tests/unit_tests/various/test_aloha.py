@@ -932,6 +932,15 @@ class testLorentzObject(unittest.TestCase):
         self.p3= aloha_obj.P(2,2)
         self.p4= aloha_obj.P(2,3)
         
+    def test_michael(self):
+
+        a = aloha_obj.Epsilon('mu','nu','rho','sigma')
+        b= aloha_obj.Epsilon('mu','nu2','rho2','sigma2')
+        prod = a * b
+        
+        
+        
+        
     def testbasicoperation(self):       
         """Test the sum/product run correctly on High level object.
         Those test will be basic since everything should derive from particle
@@ -2179,6 +2188,94 @@ class test_aloha_creation(unittest.TestCase):
         self.assertEqual(abstract.expr.numerator.nb_lor, 0)
         self.assertEqual(abstract.expr.numerator.nb_spin, 0)
         
+    def test_aloha_ZPZZ(self):
+        """ Check the validity of Funny Zp coupling to z z """
+        from models.sm.object_library import Lorentz
+        
+        ZPZZ = Lorentz(name = 'ZPZZ',
+                 spins = [ 3, 3, 3 ],
+                 structure = 'P(-1,1)*Epsilon(3,1,2,-2)*P(-1,1)*P(-2,2)-Epsilon(3,1,2,-2)*P(-1,2)*P(-1,2)*P(-2,1)-Epsilon(3,2,-1,-2)*P(1,1)*P(-1,2)*P(-2,1)+Epsilon(3,1,-1,-2)*P(2,2)*P(-1,2)*P(-2,1)')
+       
+        ZPZZ_p1 = Lorentz(name = 'ZPZZ_p1',
+                 spins = [ 3, 3, 3 ],
+                 structure = 'P(-1,1)*Epsilon(3,1,2,-2)*P(-1,1)*P(-2,2)')
+        ZPZZ_p2 = Lorentz(name = 'ZPZZ_p2',
+                 spins = [ 3, 3, 3 ],
+                 structure = 'Epsilon(3,1,2,-2)*P(-1,2)*P(-1,2)*P(-2,1)')
+        ZPZZ_p3 = Lorentz(name = 'ZPZZ_p3',
+                 spins = [ 3, 3, 3 ],
+                 structure = 'Epsilon(3,2,-1,-2)*P(1,1)*P(-1,2)*P(-2,1)')
+                   
+        ZPZZ_p4 = Lorentz(name = 'ZPZZ_p4',
+                 spins = [ 3, 3, 3 ],
+                 structure = 'Epsilon(3,1,-1,-2)*P(2,2)*P(-1,2)*P(-2,1)')
+       
+       
+        abstract_ZP = create_aloha.AbstractRoutineBuilder(ZPZZ).compute_routine(0)
+        abstract_ZP1 = create_aloha.AbstractRoutineBuilder(ZPZZ_p1).compute_routine(0)
+        abstract_ZP2 = create_aloha.AbstractRoutineBuilder(ZPZZ_p2).compute_routine(0)
+        abstract_ZP3 = create_aloha.AbstractRoutineBuilder(ZPZZ_p3).compute_routine(0)
+        abstract_ZP4 = create_aloha.AbstractRoutineBuilder(ZPZZ_p4).compute_routine(0)
+
+        V2_1, V2_2, V2_3, V2_4  = 1, 2, 3, 4
+        V1_1, V1_2, V1_3, V1_4  = 5, 6, 7, 8
+        V3_1, V3_2, V3_3, V3_4  = 9, 10, 11, 12
+        OM1,OM2,OM3 = 9,11,13
+        j = complex(0,1)
+        P1_0,P1_1,P1_2,P1_3 = 10, 11, 12, 13
+        P3_0,P3_1,P3_2,P3_3 = 1000, 1100, 1200, 1300
+        # abstract ZP3 == ZP4 and ZP1 == ZP2 if P1 == P2
+        P2_0, P2_1, P2_2,P2_3 = P1_0,P1_1,P1_2,P1_3 
+        
+        zero = abstract_ZP3.expr - abstract_ZP4.expr
+        for ind in zero.listindices():
+            self.assertEqual(eval(str(zero.get_rep(ind))),0)
+            
+        zero = abstract_ZP1.expr - abstract_ZP2.expr
+        for ind in zero.listindices():
+            self.assertEqual(eval(str(zero.get_rep(ind))),0)           
+       
+       
+        ZPZZ_p1p2 = Lorentz(name = 'ZPZZ_p1p2',
+                 spins = [ 3, 3, 3 ],
+                 structure = 'P(-1,1)*Epsilon(3,1,2,-2)*P(-1,1)*P(-2,2) -Epsilon(3,1,2,-2)*P(-1,2)*P(-1,2)*P(-2,1)')
+        
+        abstract_ZP12 = create_aloha.AbstractRoutineBuilder(ZPZZ_p1p2).compute_routine(0)
+        zero = abstract_ZP12.expr
+        for ind in zero.listindices():
+            self.assertEqual(eval(str(zero.get_rep(ind))),0)
+
+        ZPZZ_p3p4 = Lorentz(name = 'ZPZZ_p3p4',
+                 spins = [ 3, 3, 3 ],
+                 structure = 'Epsilon(3,2,-1,-2)*P(1,1)*P(-1,2)*P(-2,1)-Epsilon(3,1,-1,-2)*P(2,2)*P(-1,2)*P(-2,1)')
+                   
+        abstract_ZP34 = create_aloha.AbstractRoutineBuilder(ZPZZ_p3p4).compute_routine(0)
+
+        zero = abstract_ZP34.expr
+        for ind in zero.listindices():
+            self.assertEqual(eval(str(zero.get_rep(ind))),0)
+        
+        print                  abstract_ZP.expr  
+        zero = abstract_ZP.expr
+        for ind in zero.listindices():
+            self.assertEqual(eval(str(zero.get_rep(ind))),0)  
+                    
+        # Fully coherent
+        zero = abstract_ZP.expr - (abstract_ZP1.expr - abstract_ZP2.expr -abstract_ZP3.expr +abstract_ZP4.expr)
+    
+        V2_1, V2_2, V2_3, V2_4  = 1, 2, 3, 4
+        V1_1, V1_2, V1_3, V1_4  = 5, 6, 7, 8
+        V3_1, V3_2, V3_3, V3_4  = 9, 10, 11, 12
+        OM1,OM2,OM3 = 9,11,13
+        j = complex(0,1)
+        P1_0,P1_1,P1_2,P1_3 = 10, 11, 12, 13
+        P2_0,P2_1,P2_2,P2_3 = 100, 110, 120, 130
+        P3_0,P3_1,P3_2,P3_3 = 1000, 1100, 1200, 1300
+    
+        for ind in zero.listindices():
+            self.assertEqual(eval(str(zero.get_rep(ind))),0)
+    
+    
     def test_aloha_FFV(self):
         """ test the FFV creation of vertex """
         from models.sm.object_library import Lorentz
