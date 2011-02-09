@@ -504,9 +504,13 @@ def write_configs_file(writer, matrix_element, fortran_model):
 
     s_and_t_channels = []
 
-    for idiag, diag in enumerate(matrix_element.get('base_amplitude').\
-                                                get('diagrams')):
-        if any([len(vert.get('legs')) > 3 for vert in diag.get('vertices')]):
+    base_diagrams = matrix_element.get('base_amplitude').get('diagrams')
+    minvert = min([max([len(vert.get('legs')) for vert in \
+                        diag.get('vertices')]) for diag in base_diagrams])
+
+    for idiag, diag in enumerate(base_diagrams):
+        if any([len(vert.get('legs')) > minvert for vert in
+                diag.get('vertices')]):
             # Only 3-vertices allowed in configs.inc
             continue
         iconfig = iconfig + 1
@@ -814,19 +818,25 @@ def write_props_file(writer, matrix_element, fortran_model, s_and_t_channels):
     for iconf, configs in enumerate(s_and_t_channels):
         for vertex in configs[0] + configs[1][:-1]:
             leg = vertex.get('legs')[-1]
-            particle = particle_dict[leg.get('id')]
-            # Get mass
-            if particle.get('mass').lower() == 'zero':
-                mass = particle.get('mass')
+            if leg.get('id') == 21 and 21 not in particle_dict:
+                # Fake propagator used in multiparticle vertices
+                mass = 'zero'
+                width = 'zero'
+                pow_part = 0
             else:
-                mass = "abs(%s)" % particle.get('mass')
-            # Get width
-            if particle.get('width').lower() == 'zero':
-                width = particle.get('width')
-            else:
-                width = "abs(%s)" % particle.get('width')
+                particle = particle_dict[leg.get('id')]
+                # Get mass
+                if particle.get('mass').lower() == 'zero':
+                    mass = particle.get('mass')
+                else:
+                    mass = "abs(%s)" % particle.get('mass')
+                # Get width
+                if particle.get('width').lower() == 'zero':
+                    width = particle.get('width')
+                else:
+                    width = "abs(%s)" % particle.get('width')
 
-            pow_part = 1 + int(particle.is_boson())
+                pow_part = 1 + int(particle.is_boson())
 
             lines.append("pmass(%d,%d)  = %s" % \
                          (leg.get('number'), iconf + 1, mass))
@@ -960,6 +970,18 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
                        matrix_element,
                        fortran_model,
                         len(matrix_element.get_all_amplitudes()))
+
+    # Generate diagrams
+    filename = "matrix.ps"
+    plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+                                         get('diagrams'),
+                                      filename,
+                                      model=matrix_element.get('processes')[0].\
+                                         get('model'),
+                                      amplitude='')
+    logger.info("Generating Feynman diagrams for " + \
+                 matrix_element.get('processes')[0].nice_string())
+    plot.draw()
 
     linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
 
@@ -1277,11 +1299,14 @@ def get_amp2_lines(matrix_element):
     """Return the amp2(i) = sum(amp for diag(i))^2 lines"""
 
     nexternal, ninitial = matrix_element.get_nexternal_ninitial()
+    # Get minimum legs in a vertex
+    minvert = min([max(diag.get_vertex_leg_numbers()) for diag in \
+                   matrix_element.get('diagrams')])
 
     ret_lines = []
     for idiag, diag in enumerate(matrix_element.get('diagrams')):
         # Ignore any diagrams with 4-particle vertices.
-        if max(diag.get_vertex_leg_numbers()) > 3:
+        if max(diag.get_vertex_leg_numbers()) > minvert:
             continue
         # Now write out the expression for AMP2, meaning the sum of
         # squared amplitudes belonging to the same diagram
@@ -1659,6 +1684,7 @@ class UFO_model_to_mg4(object):
             one_mass = particle.get('mass')
             if one_mass.lower() != 'zero':
                 masses.add(one_mass)
+                
             # find width
             one_width = particle.get('width')
             if one_width.lower() != 'zero':

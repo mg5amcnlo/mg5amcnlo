@@ -1273,6 +1273,14 @@ JAMP(4)=+2*(+AMP(1)-AMP(2)-AMP(4)-AMP(5))
 JAMP(5)=+2*(-AMP(3)+AMP(2)+AMP(5)+AMP(6))
 JAMP(6)=+2*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))""")
 
+        # Test amp2 lines        
+        amp2_lines = \
+                 export_v4.get_amp2_lines(matrix_element)
+        self.assertEqual(amp2_lines,
+                         ['AMP2(2)=AMP2(2)+AMP(4)*dconjg(AMP(4))',
+                          'AMP2(3)=AMP2(3)+AMP(5)*dconjg(AMP(5))',
+                          'AMP2(4)=AMP2(4)+AMP(6)*dconjg(AMP(6))'])
+        
 
     def test_generate_helas_diagrams_uu_susu(self):
         """Testing the helas diagram generation u u > su su with t-channel n1
@@ -2575,7 +2583,7 @@ CALL VXXXXX(P(0,2),MW,NHEL(2),-1*IC(2),W(1,2))
 CALL VXXXXX(P(0,3),MZ,NHEL(3),+1*IC(3),W(1,3))
 CALL IXXXXX(P(0,4),Mx1p,NHEL(4),-1*IC(4),W(1,4))
 CALL OXXXXX(P(0,5),Mx1p,NHEL(5),+1*IC(5),W(1,5))
-CALL VVV1_2(W(1,3),W(1,1),GC_214,MW, WW, W(1,6))
+CALL VVV1_2(W(1,1),W(1,3),GC_214,MW, WW, W(1,6))
 CALL FFV2C1_2(W(1,4),W(1,2),GC_422,Mneu1, Wneu1, W(1,7))
 CALL FFV3C1_2(W(1,4),W(1,2),GC_628,Mneu1, Wneu1, W(1,8))
 # Amplitude(s) for diagram number 1
@@ -2592,7 +2600,7 @@ CALL FFV2C1_0(W(1,4),W(1,10),W(1,6),GC_422,AMP(7))
 CALL FFV3C1_0(W(1,4),W(1,10),W(1,6),GC_628,AMP(8))
 CALL FFV2C1_2(W(1,4),W(1,1),GC_422,Mneu1, Wneu1, W(1,11))
 CALL FFV3C1_2(W(1,4),W(1,1),GC_628,Mneu1, Wneu1, W(1,12))
-CALL VVV1_2(W(1,3),W(1,2),GC_214,MW, WW, W(1,13))
+CALL VVV1_2(W(1,2),W(1,3),GC_214,MW, WW, W(1,13))
 # Amplitude(s) for diagram number 3
 CALL FFV2_0(W(1,11),W(1,5),W(1,13),GC_422,AMP(9))
 CALL FFV3_0(W(1,11),W(1,5),W(1,13),GC_628,AMP(10))
@@ -2619,6 +2627,421 @@ CALL FFV5_0(W(1,8),W(1,15),W(1,3),GC_418,AMP(24))""".split('\n')
         for i in range(len(goal)):
             self.assertEqual(result[i], goal[i])
 
+        # Test amp2 lines        
+        amp2_lines = \
+                 export_v4.get_amp2_lines(matrix_element)
+        self.assertEqual(amp2_lines,
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))+AMP(2)*dconjg(AMP(2))+AMP(3)*dconjg(AMP(3))+AMP(4)*dconjg(AMP(4))',
+                          'AMP2(2)=AMP2(2)+AMP(5)*dconjg(AMP(5))+AMP(6)*dconjg(AMP(6))+AMP(7)*dconjg(AMP(7))+AMP(8)*dconjg(AMP(8))',
+                          'AMP2(3)=AMP2(3)+AMP(9)*dconjg(AMP(9))+AMP(10)*dconjg(AMP(10))+AMP(11)*dconjg(AMP(11))+AMP(12)*dconjg(AMP(12))',
+                          'AMP2(4)=AMP2(4)+AMP(13)*dconjg(AMP(13))+AMP(14)*dconjg(AMP(14))+AMP(15)*dconjg(AMP(15))+AMP(16)*dconjg(AMP(16))',
+                          'AMP2(5)=AMP2(5)+AMP(17)*dconjg(AMP(17))+AMP(18)*dconjg(AMP(18))+AMP(19)*dconjg(AMP(19))+AMP(20)*dconjg(AMP(20))',
+                          'AMP2(6)=AMP2(6)+AMP(21)*dconjg(AMP(21))+AMP(22)*dconjg(AMP(22))+AMP(23)*dconjg(AMP(23))+AMP(24)*dconjg(AMP(24))'])
+
+    def test_four_fermion_vertex_normal_fermion_flow(self):
+        """Testing process u u > t t g with fermion flow (u~t)(u~t)
+        """
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A u quark and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[len(mypartlist) - 1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        # A t quark and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'t',
+                      'antiname':'t~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'MT',
+                      'width':'WT',
+                      'texname':'t',
+                      'antitexname':'\bar t',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':6,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        t = mypartlist[len(mypartlist) - 1]
+        antit = copy.copy(t)
+        antit.set('is_part', False)
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        g = mypartlist[len(mypartlist) - 1]
+
+        # Gluon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2, 1, 0)])],
+                      'lorentz':['FFV1'],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [antit, \
+                                             t, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2, 1, 0)])],
+                      'lorentz':['FFV1'],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        # Four fermion vertex
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu,
+                                             t,
+                                             antiu,
+                                             t]),
+                      'color': [color.ColorString([color.T(1, 0),
+                                                   color.T(3, 2)])],
+                      'lorentz':['FFFF1'],
+                      'couplings':{(0, 0):'GEFF'},
+                      'orders':{'NP':2}}))
+
+        mybasemodel = base_objects.Model()
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mybasemodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        self.assertEqual(len(myamplitude.get('diagrams')), 4)
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude)
+
+        result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
+                                   get_matrix_element_calls(matrix_element)
+
+        goal = """CALL IXXXXX(P(0,1),zero,NHEL(1),+1*IC(1),W(1,1))
+CALL IXXXXX(P(0,2),zero,NHEL(2),+1*IC(2),W(1,2))
+CALL OXXXXX(P(0,3),MT,NHEL(3),+1*IC(3),W(1,3))
+CALL OXXXXX(P(0,4),MT,NHEL(4),+1*IC(4),W(1,4))
+CALL VXXXXX(P(0,5),zero,NHEL(5),+1*IC(5),W(1,5))
+CALL FFV1_2(W(1,1),W(1,5),GG,zero, zero, W(1,6))
+# Amplitude(s) for diagram number 1
+CALL FFFF1_0(W(1,2),W(1,3),W(1,6),W(1,4),GEFF,AMP(1))
+CALL FFFF1_2(W(1,1),W(1,2),W(1,3),GEFF,MT, WT, W(1,7))
+# Amplitude(s) for diagram number 2
+CALL FFV1_0(W(1,7),W(1,4),W(1,5),GG,AMP(2))
+CALL FFFF1_2(W(1,1),W(1,2),W(1,4),GEFF,MT, WT, W(1,8))
+# Amplitude(s) for diagram number 3
+CALL FFV1_0(W(1,8),W(1,3),W(1,5),GG,AMP(3))
+CALL FFFF1_1(W(1,3),W(1,1),W(1,4),GEFF,zero, zero, W(1,9))
+# Amplitude(s) for diagram number 4
+CALL FFV1_0(W(1,2),W(1,9),W(1,5),GG,AMP(4))""".split('\n')
+
+        for i in range(len(goal)):
+            self.assertEqual(result[i], goal[i])
+
+        # Test amp2 lines        
+        amp2_lines = \
+                 export_v4.get_amp2_lines(matrix_element)
+        self.assertEqual(amp2_lines,
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))',
+                          'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
+                          'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))',
+                          'AMP2(4)=AMP2(4)+AMP(4)*dconjg(AMP(4))'])
+        # Check fermion factors
+        self.assertEqual([d.get('amplitudes')[0].get('fermionfactor') \
+                          for d in matrix_element.get('diagrams')],
+                         [1, 1, -1, 1])
+        
+        writer = writers.FortranWriter(self.give_pos('test'))
+        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mybasemodel)
+
+        # Test configs file
+        nconfig, s_and_t_channels = export_v4.write_configs_file(writer,
+                                     matrix_element,
+                                     myfortranmodel)
+        writer.close()
+
+        #print open(self.give_pos('test')).read()
+        self.assertFileContains('test',
+"""C     Diagram 1
+      DATA MAPCONFIG(1)/1/
+      DATA (IFOREST(I,-1,1),I=1,2)/4,3/
+      DATA SPROP(-1,1)/21/
+      DATA (IFOREST(I,-2,1),I=1,2)/1,5/
+      DATA TPRID(-2,1)/2/
+      DATA (IFOREST(I,-3,1),I=1,2)/-2,-1/
+C     Diagram 2
+      DATA MAPCONFIG(2)/2/
+      DATA (IFOREST(I,-1,2),I=1,2)/5,4/
+      DATA SPROP(-1,2)/6/
+      DATA (IFOREST(I,-2,2),I=1,2)/-1,3/
+      DATA SPROP(-2,2)/21/
+C     Diagram 3
+      DATA MAPCONFIG(3)/3/
+      DATA (IFOREST(I,-1,3),I=1,2)/5,3/
+      DATA SPROP(-1,3)/6/
+      DATA (IFOREST(I,-2,3),I=1,2)/4,-1/
+      DATA SPROP(-2,3)/21/
+C     Diagram 4
+      DATA MAPCONFIG(4)/4/
+      DATA (IFOREST(I,-1,4),I=1,2)/4,3/
+      DATA SPROP(-1,4)/21/
+      DATA (IFOREST(I,-2,4),I=1,2)/1,-1/
+      DATA TPRID(-2,4)/2/
+      DATA (IFOREST(I,-3,4),I=1,2)/-2,5/
+C     Number of configs
+      DATA MAPCONFIG(0)/4/
+""")
+
+        writer = writers.FortranWriter(self.give_pos('test'))
+        export_v4.write_props_file(writer, matrix_element,
+                                   myfortranmodel, s_and_t_channels)
+        writer.close()
+        #print open(self.give_pos('test')).read()
+        self.assertFileContains('test',
+"""      PMASS(-1,1)  = ZERO
+      PWIDTH(-1,1) = ZERO
+      POW(-1,1) = 2
+      PMASS(-2,1)  = ZERO
+      PWIDTH(-2,1) = ZERO
+      POW(-2,1) = 1
+      PMASS(-1,2)  = ABS(MT)
+      PWIDTH(-1,2) = ABS(WT)
+      POW(-1,2) = 1
+      PMASS(-2,2)  = ZERO
+      PWIDTH(-2,2) = ZERO
+      POW(-2,2) = 2
+      PMASS(-1,3)  = ABS(MT)
+      PWIDTH(-1,3) = ABS(WT)
+      POW(-1,3) = 1
+      PMASS(-2,3)  = ZERO
+      PWIDTH(-2,3) = ZERO
+      POW(-2,3) = 2
+      PMASS(-1,4)  = ZERO
+      PWIDTH(-1,4) = ZERO
+      POW(-1,4) = 2
+      PMASS(-2,4)  = ZERO
+      PWIDTH(-2,4) = ZERO
+      POW(-2,4) = 1
+""")
+
+
+    def test_four_fermion_vertex_strange_fermion_flow(self):
+        """Testing process u u > t t g with fermion flow (u~u~)(tt)
+        """
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A u quark and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[len(mypartlist) - 1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        # A t quark and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'t',
+                      'antiname':'t~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'MT',
+                      'width':'WT',
+                      'texname':'t',
+                      'antitexname':'\bar t',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':6,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        t = mypartlist[len(mypartlist) - 1]
+        antit = copy.copy(t)
+        antit.set('is_part', False)
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        g = mypartlist[len(mypartlist) - 1]
+
+        # Gluon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2, 1, 0)])],
+                      'lorentz':['FFV1'],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [antit, \
+                                             t, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2, 1, 0)])],
+                      'lorentz':['FFV1'],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        # Four fermion vertex
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu,
+                                             antiu,
+                                             t,
+                                             t]),
+                      'color': [color.ColorString([color.K6(-1, 1, 0),
+                                                   color.K6Bar(-1,3, 2)])],
+                      'lorentz':['FFFF1'],
+                      'couplings':{(0, 0):'GEFF'},
+                      'orders':{'NP':2}}))
+
+        mybasemodel = base_objects.Model()
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mybasemodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        self.assertEqual(len(myamplitude.get('diagrams')), 4)
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude)
+
+        result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
+                                   get_matrix_element_calls(matrix_element)
+
+        goal = """CALL IXXXXX(P(0,1),zero,NHEL(1),+1*IC(1),W(1,1))
+CALL OXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
+CALL IXXXXX(P(0,3),MT,NHEL(3),-1*IC(3),W(1,3))
+CALL OXXXXX(P(0,4),MT,NHEL(4),+1*IC(4),W(1,4))
+CALL VXXXXX(P(0,5),zero,NHEL(5),+1*IC(5),W(1,5))
+CALL FFV1_2(W(1,1),W(1,5),GG,zero, zero, W(1,6))
+# Amplitude(s) for diagram number 1
+CALL FFFF1C1C2_0(W(1,6),W(1,2),W(1,3),W(1,4),GEFF,AMP(1))
+CALL FFFF1C1C2_4(W(1,1),W(1,2),W(1,3),GEFF,MT, WT, W(1,7))
+# Amplitude(s) for diagram number 2
+CALL FFV1_0(W(1,7),W(1,4),W(1,5),GG,AMP(2))
+CALL FFFF1C1C2_3(W(1,1),W(1,2),W(1,4),GEFF,MT, WT, W(1,8))
+# Amplitude(s) for diagram number 3
+CALL FFV1C1_0(W(1,3),W(1,8),W(1,5),GG,AMP(3))
+CALL FFFF1C1C2_2(W(1,1),W(1,3),W(1,4),GEFF,zero, zero, W(1,9))
+# Amplitude(s) for diagram number 4
+CALL FFV1C1_0(W(1,9),W(1,2),W(1,5),GG,AMP(4))""".split('\n')
+
+        for i in range(len(goal)):
+            self.assertEqual(result[i], goal[i])
+
+        # Test amp2 lines        
+        amp2_lines = \
+                 export_v4.get_amp2_lines(matrix_element)
+        self.assertEqual(amp2_lines,
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))',
+                          'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
+                          'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))',
+                          'AMP2(4)=AMP2(4)+AMP(4)*dconjg(AMP(4))'])
+        # Check fermion factors
+        self.assertEqual([d.get('amplitudes')[0].get('fermionfactor') \
+                          for d in matrix_element.get('diagrams')],
+                         [1, 1, 1, 1])
+        
     def test_multiple_lorentz_structures_with_decay_chain(self):
         """Testing process b~ t > wp+, wp+ > b~ t
         """
@@ -2899,10 +3322,10 @@ CALL FFS4C1_0(W(1,2),W(1,1),W(1,3),GC_111,AMP(2))""")
                                    get_matrix_element_calls(matrix_element.get('decay_chains')[0].get('core_processes')[0])
         self.assertEqual("\n".join(result),
                          """CALL SXXXXX(P(0,1),-1*IC(1),W(1,1))
-CALL IXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
-CALL OXXXXX(P(0,3),MT,NHEL(3),+1*IC(3),W(1,3))
-CALL FFS3C1_3(W(1,2),W(1,3),GC_108,Msix1, Wsix1, W(1,4))
-CALL FFS4C1_3(W(1,2),W(1,3),GC_111,Msix1, Wsix1, W(1,5))
+CALL OXXXXX(P(0,2),zero,NHEL(2),+1*IC(2),W(1,2))
+CALL IXXXXX(P(0,3),MT,NHEL(3),-1*IC(3),W(1,3))
+CALL FFS3C1_3(W(1,3),W(1,2),GC_108,Msix1, Wsix1, W(1,4))
+CALL FFS4C1_3(W(1,3),W(1,2),GC_111,Msix1, Wsix1, W(1,5))
 # Amplitude(s) for diagram number 1
 #
 #""")
@@ -2916,10 +3339,10 @@ CALL FFS4C1_3(W(1,2),W(1,3),GC_111,Msix1, Wsix1, W(1,5))
 
         goal = """CALL OXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
 CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
-CALL IXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,3))
-CALL OXXXXX(P(0,4),MT,NHEL(4),+1*IC(4),W(1,4))
-CALL FFS3C1_3(W(1,3),W(1,4),GC_108,Msix1, Wsix1, W(1,5))
-CALL FFS4C1_3(W(1,3),W(1,4),GC_111,Msix1, Wsix1, W(1,6))
+CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
+CALL IXXXXX(P(0,4),MT,NHEL(4),-1*IC(4),W(1,4))
+CALL FFS3C1_3(W(1,4),W(1,3),GC_108,Msix1, Wsix1, W(1,5))
+CALL FFS4C1_3(W(1,4),W(1,3),GC_111,Msix1, Wsix1, W(1,6))
 # Amplitude(s) for diagram number 1
 CALL FFS3C1_0(W(1,2),W(1,1),W(1,5),GC_108,AMP(1))
 CALL FFS3C1_0(W(1,2),W(1,1),W(1,6),GC_108,AMP(2))
@@ -2928,7 +3351,6 @@ CALL FFS4C1_0(W(1,2),W(1,1),W(1,6),GC_111,AMP(4))""".split('\n')
 
         for i in range(len(goal)):
             self.assertEqual(result[i], goal[i])
-
 
     def test_export_matrix_element_v4_standalone(self):
         """Test the result of exporting a matrix element to file"""
@@ -3945,14 +4367,14 @@ CALL VVVXXX(W(1,2),W(1,26),W(1,39),GG,AMP(216))""")
         self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
         """CALL VXXXXX(P(0,1),WMASS,NHEL(1),-1*IC(1),W(1,1))
 CALL VXXXXX(P(0,2),WMASS,NHEL(2),-1*IC(2),W(1,2))
-CALL OXXXXX(P(0,3),MN1,NHEL(3),+1*IC(3),W(1,3))
-CALL IXXXXX(P(0,4),MN1,NHEL(4),-1*IC(4),W(1,4))
-CALL FVOXXX(W(1,3),W(1,1),GWN1X1,MX1,WX1,W(1,5))
+CALL IXXXXX(P(0,3),MN1,NHEL(3),-1*IC(3),W(1,3))
+CALL OXXXXX(P(0,4),MN1,NHEL(4),+1*IC(4),W(1,4))
+CALL FVICXX(W(1,3),W(1,1),GWN1X1,MX1,WX1,W(1,5))
 # Amplitude(s) for diagram number 1
-CALL IOVXXX(W(1,4),W(1,5),W(1,2),GWX1N1,AMP(1))
-CALL FVICXX(W(1,4),W(1,1),GWN1X1,MX1,WX1,W(1,6))
+CALL IOVCXX(W(1,5),W(1,4),W(1,2),GWX1N1,AMP(1))
+CALL FVOXXX(W(1,4),W(1,1),GWN1X1,MX1,WX1,W(1,6))
 # Amplitude(s) for diagram number 2
-CALL IOVCXX(W(1,6),W(1,3),W(1,2),GWX1N1,AMP(2))""")
+CALL IOVXXX(W(1,3),W(1,6),W(1,2),GWX1N1,AMP(2))""")
 
 
     def test_export_majorana_decay_chain(self):
@@ -4642,6 +5064,75 @@ C     Number of configs
       PWIDTH(-5,8) = ABS(WSL2)
       POW(-5,8) = 2\n""")
 
+        # Test reversed order of decay specifications
+        # e- e+ > se+ se-, se- > e- n1, se+ > e+ n1
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1000011,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':-1000011,
+                                         'state':True}))
+
+        mycoreproc = base_objects.Process({'legs':myleglist,
+                                       'model':mymodel})
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1000011,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':True}))
+
+        mydecay1 = base_objects.Process({'legs':myleglist,
+                                         'model':mymodel})
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':-1000011,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':True}))
+
+        mydecay2 = base_objects.Process({'legs':myleglist,
+                                         'model':mymodel})
+
+        mycoreproc.set('decay_chains', base_objects.ProcessList([\
+            mydecay2, mydecay1]))
+
+        myamplitude = diagram_generation.DecayChainAmplitude(mycoreproc)
+
+        matrix_element = helas_objects.HelasDecayChainProcess(myamplitude)
+
+        matrix_elements = matrix_element.combine_decay_chain_processes()
+
+        me = matrix_elements[0]
+
+        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mymodel)
+
+        self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
+                         """CALL IXXXXX(P(0,1),zero,NHEL(1),+1*IC(1),W(1,1))
+CALL OXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
+CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
+CALL IXXXXX(P(0,4),Mneu1,NHEL(4),-1*IC(4),W(1,4))
+CALL HIOXXX(W(1,4),W(1,3),MGVX350,Msl2,Wsl2,W(1,5))
+CALL IXXXXX(P(0,5),zero,NHEL(5),-1*IC(5),W(1,6))
+CALL OXXXXX(P(0,6),Mneu1,NHEL(6),+1*IC(6),W(1,7))
+CALL HIOXXX(W(1,6),W(1,7),MGVX494,Msl2,Wsl2,W(1,8))
+CALL JIOXXX(W(1,1),W(1,2),MGVX12,zero,zero,W(1,9))
+# Amplitude(s) for diagram number 1
+CALL VSSXXX(W(1,9),W(1,8),W(1,5),MGVX56,AMP(1))
+CALL FSIXXX(W(1,1),W(1,5),MGVX494,Mneu1,Wneu1,W(1,10))
+# Amplitude(s) for diagram number 2
+CALL IOSXXX(W(1,10),W(1,2),W(1,8),MGVX350,AMP(2))""")
 
     def test_export_complicated_majorana_decay_chain(self):
         """Test complicated decay chain z e+ > n2 el+, n2 > e- e+ n1
@@ -5369,7 +5860,7 @@ CALL FFV1_0(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
                                      myfortranmodel)
         writer.close()
 
-        # 2 21 < 6 -6 23  2
+        # 2 21 > 6 -6 23  2
         # 1  2   3  4  5  6
         self.assertFileContains('test',
 """C     Diagram 1
