@@ -26,12 +26,14 @@ first diagram in the process stripped of gluons)
 lines.
 """
 
+import array
 import copy
 import itertools
 import logging
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.core.helas_objects as helas_objects
 from madgraph import MadGraph5Error
 
 logger = logging.getLogger('madgraph.color_ordered_amplitudes')
@@ -423,3 +425,293 @@ class ColorOrderedFlowList(diagram_generation.AmplitudeList):
 
         return isinstance(obj, ColorOrderedFlow)
 
+#===============================================================================
+# COHelasWavefunction
+#===============================================================================
+class COHelasWavefunction(helas_objects.HelasWavefunction):
+    """COHelasWavefunction object, a HelasWavefunction with added
+    fields for comparison
+    """
+
+    def default_setup(self):
+        """Default values for all properties"""
+
+        super(COHelasWavefunction, self).default_setup()
+        # Comparison array, with wf numbers, interaction id and
+        # lorentz-color index
+        self['compare_array'] = []
+        # external wavefunction numbers
+        self['external_numbers'] = array.array('I')
+
+    def filter(self, name, value):
+        """Filter for valid amplitude property values."""
+
+        if name == 'compare_array':
+            if not isinstance(value, list) and not \
+                   isinstance(value, array.array):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list object" % str(value)
+        elif name == 'external_numbers':
+            if not isinstance(value, array.array):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid array object" % str(value)
+        else:
+            super(COHelasWavefunction, self).filter(name, value)
+
+        return True
+
+    def get_sorted_keys(self):
+        """Return particle property names as a nicely sorted list."""
+
+        return super(COHelasWavefunction, self).get_sorted_keys() + \
+               ['compare_array', 'external_numbers']
+
+    def get(self, name):
+        """Enhanced get function to initialize compare_array and external_numbers."""
+
+        if name in ['compare_array', 'external_numbers'] and not self[name]:
+            self.create_arrays()
+            
+        return super(COHelasWavefunction, self).get(name)        
+
+    def create_arrays(self):
+        """Create the comparison arrays compare_array and external_numbers"""
+
+        if not self.get('mothers'):
+            # This is an external wavefunction
+            self.set('external_numbers',
+                     array.array('I',[self.get('number')]))
+            self.set('compare_array', array.array('I',
+                                                self['external_numbers']))
+        else:
+            self.set('external_numbers',
+                     array.array('I',
+                                 sorted(sum([list(m.get('external_numbers')) \
+                                        for m in self.get('mothers')], []))))
+            self.set('compare_array', [[m.get('external_numbers') for \
+                                        m in self.get('mothers')],
+                                       self.get('interaction_id'),
+                                       self.get('coupl_key')])
+
+#===============================================================================
+# COHelasWavefunction
+#===============================================================================
+class COHelasAmplitude(helas_objects.HelasAmplitude):
+    """COHelasAmplitude object, a HelasAmplitude with added
+    fields for comparison
+    """
+
+    def default_setup(self):
+        """Default values for all properties"""
+
+        super(COHelasAmplitude, self).default_setup()
+        # external wavefunction numbers
+        self['external_numbers'] = []
+
+    def filter(self, name, value):
+        """Filter for valid amplitude property values."""
+
+        if name == 'external_numbers':
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list object" % str(value)
+        else:
+            super(COHelasAmplitude, self).filter(name, value)
+
+        return True
+
+    def get_sorted_keys(self):
+        """Return particle property names as a nicely sorted list."""
+
+        return super(COHelasAmplitude, self).get_sorted_keys() + \
+               ['external_numbers']
+
+    def get(self, name):
+        """Enhanced get function to initialize compare_array and external_numbers."""
+
+        if name in ['external_numbers'] and not self[name]:
+            self.create_arrays()
+            
+        return super(COHelasAmplitude, self).get(name)        
+
+    def create_arrays(self):
+        """Create the comparison arrays compare_array and external_numbers"""
+
+        self.set('external_numbers', [sorted([list(m.get('external_numbers')) \
+                                              for m in self.get('mothers')]),
+                                      self.get('interaction_id'),
+                                      self.get('coupl_key')])
+
+#===============================================================================
+# BGHelasCurrent
+#===============================================================================
+class BGHelasCurrent(COHelasWavefunction):
+    """BGHelasCurrent object, which combines HelasWavefunctions into
+    Behrends-Giele currents
+    """
+
+    def create_arrays(self):
+        """Create the comparison arrays compare_array and external_numbers"""
+
+        # external_numbers is the set of external numbers of the mothers
+        self.set('external_numbers',
+                 array.array('I', sorted(list(set(\
+                                  sum([list(c.get('external_numbers')) for c \
+                                       in self.get('mothers')],
+                                      []))))))
+        self.set('compare_array', [self['external_numbers'],
+                                   self.get('pdg_code')])
+        
+    def get_call_key(self):
+        """Generate the ('sum', spins) tuple used as key for
+        the helas call dictionaries in HelasModel"""
+
+        res = [m.get('spin') for m in self.get('mothers')]
+
+        return ('sum', tuple(res))
+
+    
+#===============================================================================
+# BGHelasMatrixElement
+#===============================================================================
+class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
+    """BGHelasMatrixElement: Behrends-Giele version of a
+    HelasMatrixElement, starting from a ColorOrderedFlow.
+
+    After regular helas diagram generation, performs the following:
+
+    1. Go through all wavefunctions and amplitudes to select only
+    those with the correct color structure
+
+    2. Go through all wavefunctions to combine the wavefunctions with
+    the same external particle numbers using BGHelasCurrents
+
+    3. Go through all amplitudes, and use only one amplitude per set
+    of BGHelasCurrents
+    """
+
+    def generate_helas_diagrams(self, amplitude, optimization=1,
+                                decay_ids=[]):
+        """Generate Behrends-Giele diagrams for a color ordered amplitude
+        """
+        
+        assert  isinstance(amplitude, ColorOrderedFlow), \
+                    "Missing or erraneous arguments for generate_helas_diagrams"
+        
+        # First generate full set of wavefunctions and amplitudes
+        super(BGHelasMatrixElement, self).generate_helas_diagrams(amplitude,
+                                                                  optimization,
+                                                                  decay_ids)
+
+        # Go through and change wavefunctions into COHelasWavefunction
+        all_wavefunctions = self.get_all_wavefunctions()
+        co_wavefunctions = helas_objects.HelasWavefunctionList(\
+            [COHelasWavefunction(wf) for wf in all_wavefunctions])
+        # Replace all mothers with the co_wavefunctions
+        for wf in co_wavefunctions:
+            wf.get('mothers')[:] = \
+                                [co_wavefunctions[all_wavefunctions.index(w)] \
+                                 for w in wf.get('mothers')]
+        # Same thing for amplitudes
+        co_amplitudes = helas_objects.HelasAmplitudeList(\
+            [COHelasAmplitude(wf) for wf in self.get_all_amplitudes()])
+        for amp in co_amplitudes:
+            amp.get('mothers')[:] = \
+                                [co_wavefunctions[all_wavefunctions.index(w)] \
+                                 for w in amp.get('mothers')]
+
+        # Sort wavefunctions according to len(external_number)
+        co_wavefunctions.sort(lambda w1,w2: len(w1.get('external_numbers')) - \
+                              len(w2.get('external_numbers')))
+        
+        # TODO: Remove irrelevant wavefunctions and
+        # amplitudes (based on color)
+
+        # Go through wavefunctions and make all possible combinations
+        combined_wavefunctions = helas_objects.HelasWavefunctionList()
+        while co_wavefunctions:
+            # Pick out all wavefunctions with the same external numbers
+            combine_functions = [w for w in co_wavefunctions if \
+                                 w.get('external_numbers') == \
+                                 co_wavefunctions[0].get('external_numbers') \
+                                 and w.get('pdg_code') == \
+                                 co_wavefunctions[0].get('pdg_code')]
+            if len(combine_functions) == 1:
+                # Just add the wavefunction to combined_wavefunctions
+                wf = combine_functions.pop(0)
+                combined_wavefunctions.append(wf)
+                # Remove used wavefunctions from co_wavefunctions
+                co_wavefunctions.remove(wf)
+            else:
+                # Combine wavefunctions to a current
+                combine_wf = BGHelasCurrent(combine_functions[0])
+                combine_wf.set('mothers', helas_objects.HelasWavefunctionList())
+                while combine_functions:
+                    wf = combine_functions.pop(0)
+                    # Remove used wavefunctions from co_wavefunctions
+                    co_wavefunctions.remove(wf)
+                    # Check if a wavefunction which uses the same
+                    # combined wfs is already present in the current
+                    if wf.get('compare_array') in \
+                       [m.get('compare_array') for m in \
+                        combine_wf.get('mothers')]:
+                        continue
+                    # Replace the wavefunction mothers in this
+                    # wavefunction with corresponding currents
+                    for i, m in enumerate(wf.get('mothers')):
+                        try:
+                            ind = [c.get('compare_array') for c in \
+                                   combined_wavefunctions].index(\
+                                           [m.get('external_numbers'),
+                                            m.get('pdg_code')])
+                        except ValueError:
+                            continue
+                        wf.get('mothers')[i] = combined_wavefunctions[ind]
+                    # Add the resulting wavefunction to
+                    # combined_wavefunctions and to combine_wf
+                    combined_wavefunctions.append(wf)
+                    combine_wf.get('mothers').append(wf)
+                # Add combine_wf to combined_wavefunctions
+                combined_wavefunctions.append(combine_wf)
+
+        # Set wf number for all wavefunctions
+        for i, wf in enumerate(combined_wavefunctions):
+            wf.set('number', i+1)
+        
+        # Do the same thing for amplitudes
+        combined_amplitudes = helas_objects.HelasAmplitudeList()
+
+        while co_amplitudes:
+            # Pick out all amplitudes with the same external number mothers
+            amp = co_amplitudes.pop(0)
+            remove_amps = [a for a in co_amplitudes if \
+                                 a.get('external_numbers') == \
+                                 amp.get('external_numbers')]
+            for a in remove_amps:
+                co_amplitudes.remove(a)
+            
+            # Replace the amplitude mothers in this
+            # amplitude with corresponding currents
+            for i, m in enumerate(amp.get('mothers')):
+                try:
+                    ind = [c.get('compare_array') for c in \
+                           combined_wavefunctions].index(\
+                                   [m.get('external_numbers'),
+                                    m.get('pdg_code')])
+                except ValueError:
+                    continue
+                amp.get('mothers')[i] = combined_wavefunctions[ind]
+
+            combined_amplitudes.append(amp)
+
+        # Set amplitude number for all amplitudes
+        for i, amp in enumerate(combined_amplitudes):
+            amp.set('number', i+1)
+        
+        diagram = helas_objects.HelasDiagram()
+        diagram.set('wavefunctions', combined_wavefunctions)
+        diagram.set('amplitudes', combined_amplitudes)
+        diagram.set('number', 1)
+
+        self.set('diagrams', helas_objects.HelasDiagramList([diagram]))
+        
