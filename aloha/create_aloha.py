@@ -296,7 +296,6 @@ class AbstractALOHAModel(dict):
         python_pos = 'models.%s' % model_name 
         __import__(python_pos)
         self.model = sys.modules[python_pos]
-        
         # find the position on the disk
         self.model_pos = os.path.dirname(self.model.__file__)
 

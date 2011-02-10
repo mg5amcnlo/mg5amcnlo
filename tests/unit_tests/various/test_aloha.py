@@ -16,6 +16,7 @@
 the output of the Feynman Rules."""
 from __future__ import division
 
+import time
 import aloha.aloha_object as aloha_obj
 import aloha.aloha_lib as aloha_lib
 import aloha.create_aloha as create_aloha
@@ -437,7 +438,7 @@ class TestAddVariable(unittest.TestCase):
                 self.assertEqual(data.prefactor, 12)
         
 
-    def testfactorization(self):
+    def test_factorization(self):
         """test the factorization"""
         
         p1 = aloha_lib.ScalarVariable('p1')
@@ -491,18 +492,67 @@ class TestAddVariable(unittest.TestCase):
                                     else:
                                         self.assertEqual(term2, \
                                                     aloha_lib.ConstantObject(1))
- 
+                                        
+    def test_factorization2(self):
+        """test the factorization with power and constant"""
         
-        s3 = aloha_lib.ScalarVariable('s3')
-        s2 = aloha_lib.ScalarVariable('s2')
         p1 = aloha_lib.ScalarVariable('p1')
-        om1 = aloha_lib.ScalarVariable('om1')
-        sum = 2/3 * s3 * s2 - 4/3 * p1 * p1 * s3 * s2 * om1 + \
-              2/3 * p1 * p1 * p1 * p1 * om1 *om1
+        p2 = aloha_lib.ScalarVariable('p2')        
+        p3 = aloha_lib.ScalarVariable('p3')
+                
+        sum = ( -2 * p1 **2 + -2 * p2 + 2 * ( p3 * p2 ) )
         sum = sum.factorize()
+        #Should return p2*(2*p3-2)-2*p1**2
+         
+        self.assertEqual(sum.__class__,aloha_lib.AddVariable)
+        self.assertEqual(len(sum),2)
+        for term in sum:
+            if term == p1:
+                self.assertEqual(term.power, 2)
+                self.assertEqual(term.prefactor, -2)
+                continue
+            self.assertEqual(term.__class__,aloha_lib.MultVariable)
+            self.assertEqual(len(term), 2)
+            for fact in term:
+                if fact == p2:
+                    self.assertEqual(fact.power, 1)
+                    self.assertEqual(fact.prefactor, 1)
+                    continue
+                self.assertEqual(fact.__class__,aloha_lib.AddVariable)
+                self.assertEqual(len(fact), 2)
+                for term2 in fact:
+                    if term2 == p3:
+                        self.assertEqual(term2.power, 1)
+                        self.assertEqual(term2.prefactor, 2)
+                        continue
+                    self.assertEqual(term2.__class__, aloha_lib.ConstantObject)
+                    self.assertEqual(term2, aloha_lib.ConstantObject(-2) )
 
-            
-            
+    def test_factorization3(self):
+        """test factorization with prefactor"""
+        
+        p1 = aloha_lib.ScalarVariable('p1')
+        p2 = aloha_lib.ScalarVariable('p2')
+        
+        sum =2 * p2**2 + 2* p1 * p2
+        sum = sum.factorize()
+        #should be p2 (2 * p1 + 2 * p2)
+        self.assertEqual(sum.__class__,aloha_lib.MultVariable)
+        self.assertEqual(len(sum),2)
+        for fact in sum:
+            if p2 == fact:
+                self.assertEqual(fact.prefactor, 1)
+                self.assertEqual(fact.power, 1)
+            else:
+                self.assertEqual(sum.__class__,aloha_lib.MultVariable)
+                self.assertEqual(len(sum),2)
+                for term in fact:
+                    self.assertEqual(term.prefactor, 2)
+                    self.assertEqual(term.power, 1)
+        
+    
+    
+    
 class TestMultVariable(unittest.TestCase):
 
     def setUp(self):
@@ -969,16 +1019,7 @@ class testLorentzObject(unittest.TestCase):
         self.p2= aloha_obj.P(1,3)
         self.p3= aloha_obj.P(2,2)
         self.p4= aloha_obj.P(2,3)
-        
-    def test_michael(self):
-
-        a = aloha_obj.Epsilon('mu','nu','rho','sigma')
-        b= aloha_obj.Epsilon('mu','nu2','rho2','sigma2')
-        prod = a * b
-        
-        
-        
-        
+                
     def testbasicoperation(self):       
         """Test the sum/product run correctly on High level object.
         Those test will be basic since everything should derive from particle
@@ -2213,11 +2254,26 @@ class TestSimplify(unittest.TestCase):
 class test_aloha_creation(unittest.TestCase):
     """ test the creation of one aloha routine from the create_aloha routine """
     
+    
+    class Lorentz(object):
+
+        require_args=['name','spins','structure']
+    
+        def __init__(self, name, spins, structure='external', **opt):
+            args = (name, spins, structure)
+                
+            assert(len(self.require_args) == len (args))
+    
+            for i, name in enumerate(self.require_args):
+                setattr(self, name, args[i])
+    
+            for (option, value) in opt.items():
+                setattr(self, option, value)
+            
     def test_aloha_VVS(self):
         """ Test the VVS creation of vertex """
-        from models.sm.object_library import Lorentz
         
-        VVS_15 = Lorentz(name = 'VVS_15',
+        VVS_15 = self.Lorentz(name = 'VVS_15',
                  spins = [ 3, 3, 1 ],
                  structure = 'Metric(1,2)')
 
@@ -2228,103 +2284,39 @@ class test_aloha_creation(unittest.TestCase):
         
     def test_aloha_ZPZZ(self):
         """ Check the validity of Funny Zp coupling to z z """
-        from models.sm.object_library import Lorentz
-        
-        ZPZZ = Lorentz(name = 'ZPZZ',
+                
+        ZPZZ = self.Lorentz(name = 'ZPZZ',
                  spins = [ 3, 3, 3 ],
                  structure = 'P(-1,1)*Epsilon(3,1,2,-2)*P(-1,1)*P(-2,2)-Epsilon(3,1,2,-2)*P(-1,2)*P(-1,2)*P(-2,1)-Epsilon(3,2,-1,-2)*P(1,1)*P(-1,2)*P(-2,1)+Epsilon(3,1,-1,-2)*P(2,2)*P(-1,2)*P(-2,1)')
-       
-        ZPZZ_p1 = Lorentz(name = 'ZPZZ_p1',
-                 spins = [ 3, 3, 3 ],
-                 structure = 'P(-1,1)*Epsilon(3,1,2,-2)*P(-1,1)*P(-2,2)')
-        ZPZZ_p2 = Lorentz(name = 'ZPZZ_p2',
-                 spins = [ 3, 3, 3 ],
-                 structure = 'Epsilon(3,1,2,-2)*P(-1,2)*P(-1,2)*P(-2,1)')
-        ZPZZ_p3 = Lorentz(name = 'ZPZZ_p3',
-                 spins = [ 3, 3, 3 ],
-                 structure = 'Epsilon(3,2,-1,-2)*P(1,1)*P(-1,2)*P(-2,1)')
-                   
-        ZPZZ_p4 = Lorentz(name = 'ZPZZ_p4',
-                 spins = [ 3, 3, 3 ],
-                 structure = 'Epsilon(3,1,-1,-2)*P(2,2)*P(-1,2)*P(-2,1)')
-       
-       
+    
         abstract_ZP = create_aloha.AbstractRoutineBuilder(ZPZZ).compute_routine(0)
-        abstract_ZP1 = create_aloha.AbstractRoutineBuilder(ZPZZ_p1).compute_routine(0)
-        abstract_ZP2 = create_aloha.AbstractRoutineBuilder(ZPZZ_p2).compute_routine(0)
-        abstract_ZP3 = create_aloha.AbstractRoutineBuilder(ZPZZ_p3).compute_routine(0)
-        abstract_ZP4 = create_aloha.AbstractRoutineBuilder(ZPZZ_p4).compute_routine(0)
+        expr = abstract_ZP.expr
 
         V2_1, V2_2, V2_3, V2_4  = 1, 2, 3, 4
         V1_1, V1_2, V1_3, V1_4  = 5, 6, 7, 8
-        V3_1, V3_2, V3_3, V3_4  = 9, 10, 11, 12
+        V3_1, V3_2, V3_3, V3_4  = 9, 100, 11, 13
         OM1,OM2,OM3 = 9,11,13
         j = complex(0,1)
-        P1_0,P1_1,P1_2,P1_3 = 10, 11, 12, 13
-        P3_0,P3_1,P3_2,P3_3 = 1000, 1100, 1200, 1300
-        # abstract ZP3 == ZP4 and ZP1 == ZP2 if P1 == P2
-        P2_0, P2_1, P2_2,P2_3 = P1_0,P1_1,P1_2,P1_3 
-        
-        zero = abstract_ZP3.expr - abstract_ZP4.expr
-        for ind in zero.listindices():
-            self.assertEqual(eval(str(zero.get_rep(ind))),0)
-            
-        zero = abstract_ZP1.expr - abstract_ZP2.expr
-        for ind in zero.listindices():
-            self.assertEqual(eval(str(zero.get_rep(ind))),0)           
-       
-       
-        ZPZZ_p1p2 = Lorentz(name = 'ZPZZ_p1p2',
-                 spins = [ 3, 3, 3 ],
-                 structure = 'P(-1,1)*Epsilon(3,1,2,-2)*P(-1,1)*P(-2,2) -Epsilon(3,1,2,-2)*P(-1,2)*P(-1,2)*P(-2,1)')
-        
-        abstract_ZP12 = create_aloha.AbstractRoutineBuilder(ZPZZ_p1p2).compute_routine(0)
-        zero = abstract_ZP12.expr
-        for ind in zero.listindices():
-            self.assertEqual(eval(str(zero.get_rep(ind))),0)
+        P1_0,P1_1,P1_2,P1_3 = 10, 11, 12, 19
+        P2_0,P2_1,P2_2,P2_3 = 101, 111, 121, 134
+        P3_0,P3_1,P3_2,P3_3 = 1001, 1106, 1240, 1320
 
-        ZPZZ_p3p4 = Lorentz(name = 'ZPZZ_p3p4',
-                 spins = [ 3, 3, 3 ],
-                 structure = 'Epsilon(3,2,-1,-2)*P(1,1)*P(-1,2)*P(-2,1)-Epsilon(3,1,-1,-2)*P(2,2)*P(-1,2)*P(-2,1)')
-                   
-        abstract_ZP34 = create_aloha.AbstractRoutineBuilder(ZPZZ_p3p4).compute_routine(0)
-
-        zero = abstract_ZP34.expr
-        for ind in zero.listindices():
-            self.assertEqual(eval(str(zero.get_rep(ind))),0)
-        
-        zero = abstract_ZP.expr
-        for ind in zero.listindices():
-            self.assertEqual(eval(str(zero.get_rep(ind))),0)  
-                    
-        # Fully coherent
-        zero = abstract_ZP.expr - (abstract_ZP1.expr - abstract_ZP2.expr -abstract_ZP3.expr +abstract_ZP4.expr)
-    
-        V2_1, V2_2, V2_3, V2_4  = 1, 2, 3, 4
-        V1_1, V1_2, V1_3, V1_4  = 5, 6, 7, 8
-        V3_1, V3_2, V3_3, V3_4  = 9, 10, 11, 12
-        OM1,OM2,OM3 = 9,11,13
-        j = complex(0,1)
-        P1_0,P1_1,P1_2,P1_3 = 10, 11, 12, 13
-        P2_0,P2_1,P2_2,P2_3 = 100, 110, 120, 130
-        P3_0,P3_1,P3_2,P3_3 = 1000, 1100, 1200, 1300
-    
-        for ind in zero.listindices():
-            self.assertEqual(eval(str(zero.get_rep(ind))),0)
-    
-    
+        for ind in expr.listindices():
+            self.assertEqual(eval(str(expr.get_rep(ind))), -178727040j)
+#    
+#    
     def test_aloha_FFV(self):
         """ test the FFV creation of vertex """
-        from models.sm.object_library import Lorentz
-        FFV_M = Lorentz(name = 'FFV_4',
+        
+        FFV_M = self.Lorentz(name = 'FFV_4',
                  spins = [ 2, 2, 3 ],
                  structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2)')        
         
-        FFV_P = Lorentz(name = 'FFV_5',
+        FFV_P = self.Lorentz(name = 'FFV_5',
                  spins = [ 2, 2, 3 ],
                  structure = 'Gamma(3,1,\'s1\')*ProjP(\'s1\',2)')
         
-        FFV = Lorentz(name = 'FFV',
+        FFV = self.Lorentz(name = 'FFV',
                  spins = [ 2, 2, 3 ],
                  structure = 'Gamma(3,1,2)')
         
@@ -2355,7 +2347,7 @@ class test_aloha_creation(unittest.TestCase):
         self.assertEqual(s3, eval(str(abstract_M.expr.numerator.get_rep([2]))))    
         self.assertEqual(s4, eval(str(abstract_M.expr.numerator.get_rep([3]))))                                   
 
-        FFV_6 = Lorentz(name = 'FFV_6',
+        FFV_6 = self.Lorentz(name = 'FFV_6',
                 spins = [ 2, 2, 3 ],
                 structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2) + 2*Gamma(3,1,\'s1\')*ProjP(\'s1\',2)')
 
@@ -2405,10 +2397,14 @@ class test_aloha_creation(unittest.TestCase):
         """test that the full SM seems to work"""
         # Note that this test check also some of the routine define inside this
         #because of use of some global.
+        
         helas_suite = create_aloha.AbstractALOHAModel('sm')
-
         self.assertEqual(helas_suite.look_for_conjugate(), {})
+        start = time.time()
         helas_suite.compute_all()
+        timing = time.time()-start
+        if timing > 10:
+            print "WARNING ALOHA SLOW (taking %s s for the full sm)" % timing
         lorentz_index = {1:0, 2:0,3:1}
         spin_index = {1:0, 2:1, 3:0}
         error = 'wrong contraction for %s'
@@ -2462,7 +2458,7 @@ class test_aloha_creation(unittest.TestCase):
         
     def test_aloha_FFVC(self):
         """ test the FFV creation of vertex """
-        from models.sm.object_library import Lorentz
+        from models.mssm.object_library import Lorentz
 
         FFV = Lorentz(name = 'FFV',
                  spins = [ 2, 2, 3 ],
