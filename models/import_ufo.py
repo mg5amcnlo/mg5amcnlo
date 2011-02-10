@@ -34,7 +34,8 @@ import models as ufomodels
 
 logger = logging.getLogger('models.import_ufo')
 
-
+class UFOExportError(Exception):
+    pass
 
 def import_model(model_name):
     """ a practical and efficient way to import one of those models """
@@ -236,6 +237,9 @@ class UFOMG5Converter(object):
             pattern = self._pat_id.search(term)
             if pattern:
                 particle = interaction_info.particles[int(pattern.group('first'))-1]
+                particle2 = interaction_info.particles[int(pattern.group('second'))-1]
+                if particle.color == particle2.color:
+                    raise UFOExportError
                 if particle.color == -3 :
                     output.append(self._pat_id.sub('color.T(\g<second>,\g<first>)', term))
                 elif particle.color == 3:
