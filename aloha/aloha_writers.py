@@ -343,7 +343,6 @@ class ALOHAWriterForFortran(WriteALOHA):
         for mom in momenta:
             #Mom is in format PX with X the number of the particle
             index = int(mom[1:])
-            
             type = self.particles[index - 1]
             energy_pos = self.type_to_size[type] -1
             sign = ''

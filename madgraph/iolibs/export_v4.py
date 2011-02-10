@@ -1684,13 +1684,13 @@ class UFO_model_to_mg4(object):
         for particle in self.model.get('particles'):
             already_def.add(particle.get('mass').lower())
             already_def.add(particle.get('width').lower())
-        
+
         is_valid = lambda name: name!='G' and name.lower() not in already_def
         
         real_parameters = [param.name for param in self.params_dep + 
                             self.params_indep if param.type == 'real'
                             and is_valid(param.name)]
-        
+
         real_parameters += [param.name for param in self.params_ext 
                             if param.type == 'real'and 
                                param.lhablock not in ['MASS', 'DECAY']]

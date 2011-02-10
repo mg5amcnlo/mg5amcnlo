@@ -646,6 +646,8 @@ def create_library():
         obj = obj.simplify()
         return obj        
     
+    # avoid to add tag in global
+    old_tag = set(aloha_lib.USE_TAG)
     
     lib = {} # key: (name, part_nb, special) -> object
     for i in range(1, 10):
@@ -661,9 +663,11 @@ def create_library():
         #lib[('Spin2', i )] = create( Spin2(10*i+1, 10*i+2, i) )
         lib[('Spin2Prop',i)] = create( Spin2Propagator(_spin2_mult + i, \
                                             2 * _spin2_mult + i,'I2','I3', i) )
+
     logger.info('writing Spin2 lib')         
     fsock = open(os.path.join(aloha_path, 'ALOHALib.pkl'),'wb')
     cPickle.dump(lib, fsock, -1)
+    aloha_lib.USE_TAG = old_tag
     return lib
 
 if '__main__' == __name__:       
