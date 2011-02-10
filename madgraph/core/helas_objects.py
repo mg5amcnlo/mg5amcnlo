@@ -2045,7 +2045,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 self.generate_helas_diagrams(amplitude, optimization, decay_ids)
                 self.calculate_fermionfactors()
                 self.calculate_identical_particle_factors()
-                if gen_color:
+                if gen_color and not self.get('color_basis'):
                     self.get('color_basis').build(self.get('base_amplitude'))
                     self.set('color_matrix',
                              color_amp.ColorMatrix(self.get('color_basis')))

@@ -32,6 +32,8 @@ import itertools
 import logging
 
 import madgraph.core.base_objects as base_objects
+import madgraph.core.color_algebra as color_algebra
+import madgraph.core.color_amp as color_amp
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
 from madgraph import MadGraph5Error
@@ -480,7 +482,7 @@ class COHelasWavefunction(helas_objects.HelasWavefunction):
         if not self.get('mothers'):
             # This is an external wavefunction
             self.set('external_numbers',
-                     array.array('I',[self.get('number')]))
+                     array.array('I',[self.get('number_external')]))
             self.set('compare_array', array.array('I',
                                                 self['external_numbers']))
         else:
@@ -560,7 +562,8 @@ class BGHelasCurrent(COHelasWavefunction):
                                        in self.get('mothers')],
                                       []))))))
         self.set('compare_array', [self['external_numbers'],
-                                   self.get('pdg_code')])
+                                   self.get('pdg_code'),
+                                   self.get_with_flow('state')])
         
     def get_call_key(self):
         """Generate the ('sum', spins) tuple used as key for
@@ -590,7 +593,7 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
     of BGHelasCurrents
     """
 
-    def generate_helas_diagrams(self, amplitude, optimization=1,
+    def generate_helas_diagrams(self, amplitude, optimization=3,
                                 decay_ids=[]):
         """Generate Behrends-Giele diagrams for a color ordered amplitude
         """
@@ -602,6 +605,35 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
         super(BGHelasMatrixElement, self).generate_helas_diagrams(amplitude,
                                                                   optimization,
                                                                   decay_ids)
+        if optimization // 2 == 0:
+            # Remove the wavefunctions and amplitudes which don't
+            # correspond to this color flow
+            removed_wf = []
+            for diagram in self.get('diagrams'):
+                # Remove bad wfs
+                for wf in diagram.get('wavefunctions'):
+                    if any([m in removed_wf for m in wf.get('mothers')]) or \
+                           not self.check_color(wf):
+                        diagram.get('wavefunctions').remove(wf)
+                        removed_wf.append(wf)
+                # Remove bad amplitudes
+                for amp in diagram.get('amplitudes'):
+                    if any([m in removed_wf for m in amp.get('mothers')]) or \
+                           not self.check_color(amp):
+                        diagram.get('amplitudes').remove(amp)
+
+                # Calculate color
+                
+                self.update_color_basis(diagram,
+                                        diagram.get('number')-1)
+
+            # Renumber wfs and amps
+            for i, wf in enumerate(self.get_all_wavefunctions()):
+                wf.set('number', i+1)
+            for i, amp in enumerate(self.get_all_amplitudes()):
+                amp.set('number', i+1)
+
+            return
 
         # Go through and change wavefunctions into COHelasWavefunction
         all_wavefunctions = self.get_all_wavefunctions()
@@ -639,9 +671,12 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
             if len(combine_functions) == 1:
                 # Just add the wavefunction to combined_wavefunctions
                 wf = combine_functions.pop(0)
-                combined_wavefunctions.append(wf)
                 # Remove used wavefunctions from co_wavefunctions
                 co_wavefunctions.remove(wf)
+                # Check correct color and determine color coeff
+                if not self.check_color(wf):
+                    continue
+                combined_wavefunctions.append(wf)
             else:
                 # Combine wavefunctions to a current
                 combine_wf = BGHelasCurrent(combine_functions[0])
@@ -656,6 +691,8 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
                        [m.get('compare_array') for m in \
                         combine_wf.get('mothers')]:
                         continue
+                    if not self.check_color(wf):
+                        continue
                     # Replace the wavefunction mothers in this
                     # wavefunction with corresponding currents
                     for i, m in enumerate(wf.get('mothers')):
@@ -663,7 +700,8 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
                             ind = [c.get('compare_array') for c in \
                                    combined_wavefunctions].index(\
                                            [m.get('external_numbers'),
-                                            m.get('pdg_code')])
+                                            m.get('pdg_code'),
+                                            m.get_with_flow('state')])
                         except ValueError:
                             continue
                         wf.get('mothers')[i] = combined_wavefunctions[ind]
@@ -715,3 +753,47 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
 
         self.set('diagrams', helas_objects.HelasDiagramList([diagram]))
         
+
+    def check_color(self, wf):
+        """Check that the wavefunction color is consistent with the
+        color ordering, and set the simplified color of the
+        wavefunction."""
+
+        process = self.get('processes')[0]
+        model = process.get('model')
+        if isinstance(wf, helas_objects.HelasWavefunction):
+            base_vertices = wf.get_base_vertices()
+            base_diagram = base_objects.Diagram({"vertices": base_vertices})
+        else:
+            base_diagram = wf.get_base_diagram()
+        # Always create an empty color basis, and the
+        # list of raw colorize objects (before
+        # simplification) associated with amplitude
+        col_basis = color_amp.ColorBasis()
+        colorize_obj = col_basis.colorize(base_diagram, model)
+        #print colorize_obj
+
+        return True
+
+    def update_color_basis(self, diagram, index_diagram):
+        """Get the fully simplified color basis for this diagram,
+        taking out only the component which is consistent with this
+        color flow"""
+
+        process = self.get('processes')[0]
+        model = process.get('model')
+
+        color_basis = color_amp.ColorBasis()
+        print "Diagram ",index_diagram+1
+        for amp in diagram.get('amplitudes'):
+            base_diagram = amp.get_base_diagram()
+            print base_diagram.nice_string()
+            color_dict = color_basis.colorize(base_diagram,
+                                              model)
+            for col_chain, col_str in color_dict.items():
+                # Create and simplify a color factor for the considered chain
+                col_fact = color_algebra.ColorFactor([col_str])
+                print "col_fact before: ",col_fact
+                col_fact = col_fact.full_simplify()
+                print "col_fact after: ",col_fact
+
