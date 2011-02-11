@@ -47,17 +47,17 @@ if '__main__' == __name__:
         
     logging.basicConfig(level=logging.INFO)
 
-    my_proc_list = []
+    my_proc_list = ['u u~ > u u~']
     #my_proc_list = me_comparator.create_proc_list(['u', 'u~'], initial=2,
     #                                              final=2)
     #my_proc_list = me_comparator.create_proc_list_enhanced(
     #    ['u', 'u~', 'd', 'd~', 'g'],['six', 'six~'],['g'],
     #    initial=2, final_1=1, final_2 = 1)
 
-    my_proc_list += me_comparator.create_proc_list(['w+','w-','z','a','x1+','x1-','n1'], initial=2,
-                                                  final=3)
-    my_proc_list += me_comparator.create_proc_list(['g','u','u~','go','ul','ul~','ur','ur~'], initial=2,
-                                                  final=3)
+    #my_proc_list += me_comparator.create_proc_list(['w+','w-','z','a','x1+','x1-','n1'], initial=2,
+    #                                              final=3)
+    #my_proc_list += me_comparator.create_proc_list(['g','u','u~','go','ul','ul~','ur','ur~'], initial=2,
+    #                                              final=3)
 
     # Create a MERunner object for MG4
     my_mg4 = me_comparator.MG4Runner()
@@ -72,16 +72,16 @@ if '__main__' == __name__:
     my_mg5_ufo.setup(mg5_path, mg4_path)
 
     # Create a MERunner object for C++
-    my_mg5_cpp = me_comparator.MG5_CPP_Runner()
-    my_mg5_cpp.setup(mg5_path, mg4_path)
+    #my_mg5_cpp = me_comparator.MG5_CPP_Runner()
+    #my_mg5_cpp.setup(mg5_path, mg4_path)
 
     # Create and setup a comparator
     my_comp = me_comparator.MEComparator()
-    my_comp.set_me_runners(my_mg5, my_mg5_ufo, my_mg4, my_mg5_cpp)
+    my_comp.set_me_runners(my_mg5, my_mg5_ufo, my_mg4)
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                           model='mssm',
+                           model=['RS','RS_UFO','RS'],
                            orders={'QED':4, 'QCD':4}, energy=2000)
 
     # Do some cleanup
