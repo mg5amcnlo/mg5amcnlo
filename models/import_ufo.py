@@ -34,7 +34,7 @@ import models as ufomodels
 
 logger = logging.getLogger('models.import_ufo')
 
-class UFOExportError(Exception):
+class UFOFormatError(Exception):
     pass
 
 def import_model(model_name):
@@ -238,8 +238,12 @@ class UFOMG5Converter(object):
             if pattern:
                 particle = interaction_info.particles[int(pattern.group('first'))-1]
                 particle2 = interaction_info.particles[int(pattern.group('second'))-1]
-                if particle.color == particle2.color:
-                    raise UFOExportError
+                if particle.color == particle2.color and particle.color in [-6, -3, 3, 6]:
+                    error_msg = 'UFO model have inconsistency in the format:\n'
+                    error_msg += 'interactions for  particles %s has color information %s\n'
+                    error_msg += ' but both fermion are in the same representation %s'
+                    raise UFOFormatError, error_msg % (', '.join([p.name for p in interaction_info.particles]),data_string, particle.color)
+
                 if particle.color == -3 :
                     output.append(self._pat_id.sub('color.T(\g<second>,\g<first>)', term))
                 elif particle.color == 3:
