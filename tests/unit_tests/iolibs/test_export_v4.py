@@ -7588,6 +7588,76 @@ C
         for i in range(len(split_sol)):
             self.assertEqual(split_sol[i]+'\n', textfile.readline())
 
+
+class UFO_model_to_mg4_Test(unittest.TestCase):
+    """Check the conversion model from UFO to MG4"""
+    
+    def setUp(self):
+        import models.import_ufo
+        self.mymodel = models.import_ufo.import_model('sm')
+    
+    
+    def test_refactorize(self):
+        """ test the separation of variable """
+        
+        mg4_model = export_v4.UFO_model_to_mg4(self.mymodel,'/dev/null')
+        mg4_model.refactorize()
+        
+        # external parameters
+        expected = ['aEWM1', 'Gf', 'aS', 'ymb', 'ymt', 'ymtau', 'MTA', 'MT', 'MB', 'MZ', 'MH', 'WT', 'WZ', 'WW', 'WH']
+        expected.sort()
+        solution = [param.name for param in mg4_model.params_ext]
+        solution.sort()
+        self.assertEqual(expected, solution)
+        
+        #  internal params
+        self.assertEqual(len(mg4_model.params_dep), 1)
+        self.assertEqual(len(mg4_model.params_indep), 29)
+        
+        # couplings
+        self.assertEqual(len(mg4_model.coups_dep), 3)
+        self.assertEqual(len(mg4_model.coups_indep), 23)
+
+        
+        # MG4 use G and not aS as it basic object for alphas related computation
+        #Pass G in the  independant list
+        self.assertTrue('G' not in [p.name for p in mg4_model.params_dep])
+        self.assertTrue('G' in [p.name for p in mg4_model.params_indep])
+        self.assertTrue('sqrt__aS' not in [p.name for p in mg4_model.params_dep])
+        self.assertTrue('sqrt__aS' in [p.name for p in mg4_model.params_indep])
+        
+        
+    def test_case_sensitive(self):
+        """ test that the case clash are dealt correctly """  
+        
+        mg4_model = export_v4.UFO_model_to_mg4(self.mymodel,'/dev/null')
+        
+        #check that they are no crash for normal model
+        mg4_model.pass_parameter_to_case_insensitive()
+        
+        # edit model in order to add new parameter with name: CW / Cw / Mz / Mz2
+        CW = base_objects.ModelVariable( 'CW', 'Mz**2 * Mz2' , 'real')
+        Cw = base_objects.ModelVariable( 'Cw', 'Mz**2 * Mz2 * CW' , 'real')
+        Mz = base_objects.ParamCardVariable('Mz', 100, 'MASS', 41)
+        Mz2 = base_objects.ParamCardVariable('Mz2', 100, 'MASS', 43)
+        
+        mg4_model.model['parameters'][()].append(CW)
+        mg4_model.model['parameters'][()].append(Cw)
+        mg4_model.model['parameters'][('external',)].append(Mz)
+        mg4_model.model['parameters'][('external',)].append(Mz2)
+
+
+        mg4_model.pass_parameter_to_case_insensitive()
+
+        self.assertEqual(CW.name,'cw__2')
+        self.assertEqual(CW.expr,'mz__2**2 * Mz2')
+        self.assertEqual(Cw.name,'cw__3')
+        self.assertEqual(Cw.expr,'mz__2**2 * Mz2 * cw__2')
+        
+        self.assertEqual(Mz.name,'mz__2')
+        
+
+
 if __name__ == '__main__':
         """Write out pkl file with helas diagram for test_configs_8fs
         """
@@ -7632,3 +7702,14 @@ if __name__ == '__main__':
                        os.path.join(_input_file_path, 'test_8fs.pkl'),
                        [me.get('diagrams')[323], me.get('diagrams')[954],
                         me.get('diagrams')[1123], me.get('diagrams')[1139]])
+        
+        
+        
+
+
+    
+    
+    
+
+
+
