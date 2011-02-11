@@ -1504,7 +1504,7 @@ class UFO_model_to_mg4(object):
     
     def __init__(self, model, output_path):
         """ initialization of the objects """
-        
+       
         self.model = model
         self.model_name = model['name']
         
@@ -1516,11 +1516,48 @@ class UFO_model_to_mg4(object):
         self.params_indep = [] # (name, expression, type)
         self.params_ext = []   # external parameter
         self.p_to_f = parsers.UFOExpressionParserFortran()
+    
+    def pass_parameter_to_case_insensitive(self):
+        """modify the parameter if some of them are identical up to the case"""
         
-    def build(self, wanted_couplings = []):
-        """modify the couplings to fit with MG4 convention and creates all the 
-        different files"""
-
+        lower_dict={}
+        duplicate = set()
+        keys = self.model['parameters'].keys()
+        for key in keys:
+            for param in self.model['parameters'][key]:
+                lower_name = param.name.lower()
+                try:
+                    lower_dict[lower_name].append(param)
+                except KeyError:
+                    lower_dict[lower_name] = [param]
+                else:
+                    duplicate.add(lower_name)
+        
+        if not duplicate:
+            return
+        
+        re_expr = r'''\b(%s)\b'''
+        to_change = []
+        change={}
+        for value in duplicate:
+            for i, var in enumerate(lower_dict[value][1:]):
+                to_change.append(var.name)
+                change[var.name] = '%s__%s' %( var.name.lower(), i+2)
+                var.name = '%s__%s' %( var.name.lower(), i+2)
+        
+        replace = lambda match_pattern: change[match_pattern.groups()[0]]
+        
+        rep_pattern = re.compile(re_expr % '|'.join(to_change))
+        for key in keys:
+            if key == ('external',):
+                continue
+            for param in self.model['parameters'][key]: 
+                param.expr = rep_pattern.sub(replace, param.expr)
+            
+        
+    def refactorize(self, wanted_couplings = []):    
+        """modify the couplings to fit with MG4 convention """
+            
         # Keep only separation in alphaS        
         keys = self.model['parameters'].keys()
         keys.sort(key=len)
@@ -1550,7 +1587,13 @@ class UFO_model_to_mg4(object):
         self.params_indep.insert(0, self.params_dep.pop(index))
         index = self.params_dep.index('sqrt__aS')
         self.params_indep.insert(0, self.params_dep.pop(index))
-
+        
+    def build(self, wanted_couplings = []):
+        """modify the couplings to fit with MG4 convention and creates all the 
+        different files"""
+        
+        self.pass_parameter_to_case_insensitive()
+        self.refactorize(wanted_couplings)
         # write the files
         self.write_all()
 
@@ -1798,6 +1841,9 @@ class UFO_model_to_mg4(object):
         fsock.writelines("""subroutine coup%s()
         
           implicit none
+          double precision PI
+          parameter  (PI=3.141592653589793d0)
+      
       
           include 'input.inc'
           include 'coupl.inc'

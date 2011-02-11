@@ -46,19 +46,20 @@ if '__main__' == __name__:
     logging.getLogger('tutorial').setLevel(logging.ERROR)
         
     logging.basicConfig(level=logging.INFO)
-
-    my_proc_list = []
-    #my_proc_list = me_comparator.create_proc_list(['u', 'u~'], initial=2,
-    #                                              final=2)
-    #my_proc_list = me_comparator.create_proc_list_enhanced(
-    #    ['u', 'u~', 'd', 'd~', 'g'],['six', 'six~'],['g'],
-    #    initial=2, final_1=1, final_2 = 1)
-
-    my_proc_list += me_comparator.create_proc_list(['w+','w-','z','a','x1+','x1-','n1'], initial=2,
+#    my_proc_list = me_comparator.create_proc_list_enhanced(
+##        ['w+', 'w-', 'z'],
+##        initial=2, final_1=2)
+#    my_proc_list = ['e- x1+ > e- h1 x1+','e- x1+ > e- h2 x1+','e- x1+ > e- h3 x1+',
+#                    'e+ x1+ > e+ h1 x1+','e+ x1+ > e+ h2 x1+','e+ x1+ > e+ h3 x1+']
+    my_proc_list = ['el+ h2 > el+ w+ w-', 'w+ w- > ta1+ ta1-']
+    my_proc_list += ['u u~ > u u~ g']
+    my_proc_list += ['W+ W- > e+ e-','W+ W- > mu+ mu-','W+ e- > W+ e-','W+ mu- > W+ mu-','W+ sl1+ > W+ sl1+','W+ sl1+ > W+ sl4+']
+                   
+    my_proc_list += me_comparator.create_proc_list(['g', 'go'], initial=2,
                                                   final=3)
-    my_proc_list += me_comparator.create_proc_list(['g','u','u~','go','ul','ul~','ur','ur~'], initial=2,
-                                                  final=3)
-
+    #my_proc_list = me_comparator.create_proc_list(['g', 'h', 'h3'], initial=2,
+    #                                               final=4)
+    
     # Create a MERunner object for MG4
     my_mg4 = me_comparator.MG4Runner()
     my_mg4.setup(mg4_path)
