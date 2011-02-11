@@ -1175,7 +1175,7 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                                 color.ColorString([color.f(1, 2, -1),
                                                    color.f(0, 3, -1)])],
                       'lorentz':['gggg1', 'gggg2', 'gggg3'],
-                      'couplings':{(0, 0):'GG', (1, 1):'GG', (2, 2):'GG'},
+            'couplings':{(0, 0):'GG', (1, 1):'GG', (2, 2):'GG'},
                       'orders':{'QCD':2}}))
 
         # Gluon and photon couplings to quarks
@@ -1185,7 +1185,7 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                                             [self.mypartlist[1], \
                                              antiu, \
                                              self.mypartlist[0]]),
-                      'color': [color.ColorString([color.T(2,1,0)])],
+                      'color': [color.ColorString([color.T(2,0,1)])],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
@@ -1196,7 +1196,7 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                                             [self.mypartlist[1], \
                                              antiu, \
                                              gamma]),
-                      'color': [color.ColorString([color.T(1,0)])],
+                      'color': [color.ColorString([color.T(0,1)])],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -1207,7 +1207,7 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                                             [self.mypartlist[2], \
                                              antid, \
                                              self.mypartlist[0]]),
-                      'color': [color.ColorString([color.T(2,1,0)])],
+                      'color': [color.ColorString([color.T(2,0,1)])],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
@@ -1218,7 +1218,7 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                                             [self.mypartlist[2], \
                                              antid, \
                                              gamma]),
-                      'color': [color.ColorString([color.T(1,0)])],
+                      'color': [color.ColorString([color.T(0,1)])],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -1229,7 +1229,7 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                                             [s, 
                                              antis,
                                              self.mypartlist[0]]),
-                      'color': [color.ColorString([color.T(2,1,0)])],
+                      'color': [color.ColorString([color.T(2,0,1)])],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -1255,7 +1255,7 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                                             [antid, \
                                              self.mypartlist[1], \
                                              wminus]),
-                      'color': [],
+                      'color': [color.ColorString([color.T(1,0)])],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQED'},
                       'orders':{'QED':1}}))
@@ -1282,8 +1282,57 @@ class BGHelasMatrixElementTest(unittest.TestCase):
     def test_matrix_element_gluons(self):
         """Test the matrix element for all-gluon amplitudes"""
 
+        goal_amplitudes = [4, 12, 38, 78, 138, 245]
+        goal_wavefunctions = [6, 19, 36, 89, 211, 394]
+
         # Test 2, 3, 4 and 5 gluons in the final state
-        for ngluon in range(2,4):
+        for ngluon in range(2,5):
+
+            # Create the amplitude
+            myleglist = base_objects.LegList([base_objects.Leg({'id':21,
+                                              'state':False})] * 2)
+
+            myleglist.extend([base_objects.Leg({'id':21,
+                                              'state':True})] * ngluon)
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'orders':{'QCD':ngluon},
+                                           'model':self.mymodel})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.setup_process()
+
+            mycolorflow = self.myamplitude.get('color_flows')[0]
+
+            matrix_element = color_ordered_amplitudes.BGHelasMatrixElement(\
+                mycolorflow, gen_color=False, optimization=3)
+
+            print "\n".join(\
+                helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
+                get_matrix_element_calls(matrix_element))
+            print "For ",ngluon," FS gluons, there are ",\
+                  len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
+                  len(matrix_element.get_all_wavefunctions()),\
+                  ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
+                  ' diagrams'
+
+            self.assertEqual(len(matrix_element.get_all_wavefunctions()),
+                             goal_wavefunctions[ngluon-2])
+            self.assertEqual(len(matrix_element.get_all_amplitudes()),
+                             goal_amplitudes[ngluon-2])
+            
+            # Test JAMP (color amplitude) output
+            #print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
+
+    def test_matrix_element_gluons_non_optimized(self):
+        """Test the matrix element for all-gluon amplitudes"""
+
+        goal_amplitudes = [4, 15, 68]
+        goal_wavefunctions = [6, 16, 30]
+
+        # Test 2, 3, 4 and 5 gluons in the final state
+        for ngluon in range(2,5):
 
             # Create the amplitude
             myleglist = base_objects.LegList([base_objects.Leg({'id':21,
@@ -1314,11 +1363,19 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                   ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
                   ' diagrams'
 
+            self.assertEqual(len(matrix_element.get_all_wavefunctions()),
+                             goal_wavefunctions[ngluon-2])
+            self.assertEqual(len(matrix_element.get_all_amplitudes()),
+                             goal_amplitudes[ngluon-2])
+            
             # Test JAMP (color amplitude) output
             #print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
 
     def test_matrix_element_photons(self):
         """Test the matrix element for all-gluon amplitudes"""
+
+        goal_amplitudes = [2, 6, 12, 30, 60, 140]
+        goal_wavefunctions = [6, 11, 32, 76, 190, 429]
 
         # Test 2, 3, 4 and 5 photons in the final state
         for nphoton in range(2,6):
@@ -1344,7 +1401,56 @@ class BGHelasMatrixElementTest(unittest.TestCase):
             mycolorflow = self.myamplitude.get('color_flows')[0]
 
             matrix_element = color_ordered_amplitudes.BGHelasMatrixElement(\
-                mycolorflow, gen_color=False)
+                mycolorflow, gen_color=False, optimization = 3)
+
+            print "\n".join(\
+                helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
+                get_matrix_element_calls(matrix_element))
+            print "For ",nphoton," FS photons, there are ",\
+                  len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
+                  len(matrix_element.get_all_wavefunctions()),\
+                  ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
+                  ' diagrams'
+
+            self.assertEqual(len(matrix_element.get_all_wavefunctions()),
+                             goal_wavefunctions[nphoton-2])
+            self.assertEqual(len(matrix_element.get_all_amplitudes()),
+                             goal_amplitudes[nphoton-2])
+
+            # Test JAMP (color amplitude) output
+            #print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
+
+    def test_matrix_element_photons_non_optimized(self):
+        """Test the matrix element for all-gluon amplitudes"""
+
+        goal_amplitudes = [2, 6, 24, 120]
+        goal_wavefunctions = [6, 11, 26, 57]
+
+        # Test 2, 3, 4 and 5 photons in the final state
+        for nphoton in range(2,6):
+
+            # Create the amplitude
+            myleglist = base_objects.LegList()
+
+            myleglist.append(base_objects.Leg({'id':2,
+                                             'state':False}))
+            myleglist.append(base_objects.Leg({'id':-2,
+                                             'state':False}))
+
+            myleglist.extend([base_objects.Leg({'id':22,
+                                              'state':True})] * nphoton)
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.setup_process()
+
+            mycolorflow = self.myamplitude.get('color_flows')[0]
+
+            matrix_element = color_ordered_amplitudes.BGHelasMatrixElement(\
+                mycolorflow, gen_color=False, optimization = 1)
 
             #print "\n".join(\
             #    helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
@@ -1354,6 +1460,11 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                   len(matrix_element.get_all_wavefunctions()),\
                   ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
                   ' diagrams'
+
+            self.assertEqual(len(matrix_element.get_all_wavefunctions()),
+                             goal_wavefunctions[nphoton-2])
+            self.assertEqual(len(matrix_element.get_all_amplitudes()),
+                             goal_amplitudes[nphoton-2])
 
             # Test JAMP (color amplitude) output
             #print '\n'.join(export_v4.get_JAMP_lines(matrix_element))

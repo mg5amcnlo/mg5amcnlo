@@ -161,7 +161,7 @@ class ColorOrderedAmplitude(diagram_generation.Amplitude):
         if triplet_legs:
             first_leg = [triplet_legs.pop(0)]
         else:
-            first_leg = [octet_legs.pop(0)]
+            first_leg = [octet_legs.pop(-1)]
 
         for perm in itertools.permutations(sorted(triplet_legs + \
                                                   anti_triplet_legs + \
@@ -444,6 +444,9 @@ class COHelasWavefunction(helas_objects.HelasWavefunction):
         self['compare_array'] = []
         # external wavefunction numbers
         self['external_numbers'] = array.array('I')
+        # Color string
+        self['color_string'] = color_algebra.ColorString()
+        self['lastleg_number'] = 0
 
     def filter(self, name, value):
         """Filter for valid amplitude property values."""
@@ -457,6 +460,10 @@ class COHelasWavefunction(helas_objects.HelasWavefunction):
             if not isinstance(value, array.array):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid array object" % str(value)
+        elif name == 'color_string':
+            if not isinstance(value, color_algebra.ColorString):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid ColorString object" % str(value)
         else:
             super(COHelasWavefunction, self).filter(name, value)
 
@@ -466,7 +473,7 @@ class COHelasWavefunction(helas_objects.HelasWavefunction):
         """Return particle property names as a nicely sorted list."""
 
         return super(COHelasWavefunction, self).get_sorted_keys() + \
-               ['compare_array', 'external_numbers']
+               ['compare_array', 'external_numbers', 'color_string']
 
     def get(self, name):
         """Enhanced get function to initialize compare_array and external_numbers."""
@@ -500,7 +507,7 @@ class COHelasWavefunction(helas_objects.HelasWavefunction):
 #===============================================================================
 class COHelasAmplitude(helas_objects.HelasAmplitude):
     """COHelasAmplitude object, a HelasAmplitude with added
-    fields for comparison
+    fields for comparison and keeping track of color
     """
 
     def default_setup(self):
@@ -509,6 +516,8 @@ class COHelasAmplitude(helas_objects.HelasAmplitude):
         super(COHelasAmplitude, self).default_setup()
         # external wavefunction numbers
         self['external_numbers'] = []
+        # Color string
+        self['color_string'] = color_algebra.ColorString()
 
     def filter(self, name, value):
         """Filter for valid amplitude property values."""
@@ -517,6 +526,10 @@ class COHelasAmplitude(helas_objects.HelasAmplitude):
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list object" % str(value)
+        elif name == 'color_string':
+            if not isinstance(value, color_algebra.ColorString):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid ColorString object" % str(value)
         else:
             super(COHelasAmplitude, self).filter(name, value)
 
@@ -526,7 +539,7 @@ class COHelasAmplitude(helas_objects.HelasAmplitude):
         """Return particle property names as a nicely sorted list."""
 
         return super(COHelasAmplitude, self).get_sorted_keys() + \
-               ['external_numbers']
+               ['external_numbers', 'color_string']
 
     def get(self, name):
         """Enhanced get function to initialize compare_array and external_numbers."""
@@ -551,6 +564,23 @@ class BGHelasCurrent(COHelasWavefunction):
     """BGHelasCurrent object, which combines HelasWavefunctions into
     Behrends-Giele currents
     """
+
+    # Customized constructor
+    def __init__(self, *arguments):
+        """Correctly initialize a BGHelasCurrent with a COHelasWavefunction
+        """
+
+        if len(arguments) == 1:
+            if isinstance(arguments[0], COHelasWavefunction) and not \
+                   isinstance(arguments[0], BGHelasCurrent):
+                super(BGHelasCurrent, self).__init__(arguments[0])
+                self.set('mothers', helas_objects.HelasWavefunctionList())
+                self.set('compare_array', [])
+                self.set('external_numbers', array.array('I'))
+            else:
+                super(BGHelasCurrent, self).__init__(*arguments)
+        else:
+            super(BGHelasCurrent, self).__init__(*arguments)
 
     def create_arrays(self):
         """Create the comparison arrays compare_array and external_numbers"""
@@ -593,6 +623,9 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
     of BGHelasCurrents
     """
 
+    # Keep unique number for color substitution
+    lastleg_number = 0
+
     def generate_helas_diagrams(self, amplitude, optimization=3,
                                 decay_ids=[]):
         """Generate Behrends-Giele diagrams for a color ordered amplitude
@@ -605,11 +638,12 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
         super(BGHelasMatrixElement, self).generate_helas_diagrams(amplitude,
                                                                   optimization,
                                                                   decay_ids)
+        print self.get('base_amplitude').nice_string()
         if optimization // 2 == 0:
             # Remove the wavefunctions and amplitudes which don't
             # correspond to this color flow
             removed_wf = []
-            for diagram in self.get('diagrams'):
+            for idiag, diagram in enumerate(self.get('diagrams')):
                 # Remove bad wfs
                 for wf in diagram.get('wavefunctions'):
                     if any([m in removed_wf for m in wf.get('mothers')]) or \
@@ -623,10 +657,9 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
                         diagram.get('amplitudes').remove(amp)
 
                 # Calculate color
-                
-                self.update_color_basis(diagram,
-                                        diagram.get('number')-1)
+                self.update_color_basis(diagram, idiag)
 
+            print "color basis: ", self.get('color_basis')
             # Renumber wfs and amps
             for i, wf in enumerate(self.get_all_wavefunctions()):
                 wf.set('number', i+1)
@@ -645,10 +678,11 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
                                 [co_wavefunctions[all_wavefunctions.index(w)] \
                                  for w in wf.get('mothers')]
         # Same thing for amplitudes
-        co_amplitudes = helas_objects.HelasAmplitudeList(\
-            [COHelasAmplitude(wf) for wf in self.get_all_amplitudes()])
-        for amp in co_amplitudes:
-            amp.get('mothers')[:] = \
+        for diag in self.get('diagrams'):
+            diag.set('amplitudes', helas_objects.HelasAmplitudeList(\
+                [COHelasAmplitude(amp) for amp in diag.get('amplitudes')]))
+            for amp in diag.get('amplitudes'):
+                amp.get('mothers')[:] = \
                                 [co_wavefunctions[all_wavefunctions.index(w)] \
                                  for w in amp.get('mothers')]
 
@@ -656,11 +690,9 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
         co_wavefunctions.sort(lambda w1,w2: len(w1.get('external_numbers')) - \
                               len(w2.get('external_numbers')))
         
-        # TODO: Remove irrelevant wavefunctions and
-        # amplitudes (based on color)
-
         # Go through wavefunctions and make all possible combinations
         combined_wavefunctions = helas_objects.HelasWavefunctionList()
+        removed_wfs = []
         while co_wavefunctions:
             # Pick out all wavefunctions with the same external numbers
             combine_functions = [w for w in co_wavefunctions if \
@@ -674,13 +706,13 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
                 # Remove used wavefunctions from co_wavefunctions
                 co_wavefunctions.remove(wf)
                 # Check correct color and determine color coeff
-                if not self.check_color(wf):
-                    continue
+                if any([m in removed_wfs for m in wf.get('mothers')]) or \
+                       not self.check_color(wf):
+                    removed_wfs.append(wf)
                 combined_wavefunctions.append(wf)
             else:
                 # Combine wavefunctions to a current
                 combine_wf = BGHelasCurrent(combine_functions[0])
-                combine_wf.set('mothers', helas_objects.HelasWavefunctionList())
                 while combine_functions:
                     wf = combine_functions.pop(0)
                     # Remove used wavefunctions from co_wavefunctions
@@ -691,20 +723,12 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
                        [m.get('compare_array') for m in \
                         combine_wf.get('mothers')]:
                         continue
-                    if not self.check_color(wf):
-                        continue
+                    if any([m in removed_wfs for m in wf.get('mothers')]) or \
+                           not self.check_color(wf):
+                        removed_wfs.append(wf)
                     # Replace the wavefunction mothers in this
                     # wavefunction with corresponding currents
-                    for i, m in enumerate(wf.get('mothers')):
-                        try:
-                            ind = [c.get('compare_array') for c in \
-                                   combined_wavefunctions].index(\
-                                           [m.get('external_numbers'),
-                                            m.get('pdg_code'),
-                                            m.get_with_flow('state')])
-                        except ValueError:
-                            continue
-                        wf.get('mothers')[i] = combined_wavefunctions[ind]
+                    self.replace_mothers(wf, combined_wavefunctions)
                     # Add the resulting wavefunction to
                     # combined_wavefunctions and to combine_wf
                     combined_wavefunctions.append(wf)
@@ -716,66 +740,145 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
         for i, wf in enumerate(combined_wavefunctions):
             wf.set('number', i+1)
         
-        # Do the same thing for amplitudes
-        combined_amplitudes = helas_objects.HelasAmplitudeList()
-
-        while co_amplitudes:
-            # Pick out all amplitudes with the same external number mothers
-            amp = co_amplitudes.pop(0)
-            remove_amps = [a for a in co_amplitudes if \
-                                 a.get('external_numbers') == \
-                                 amp.get('external_numbers')]
-            for a in remove_amps:
-                co_amplitudes.remove(a)
+        left_diagrams = helas_objects.HelasDiagramList()
+        diagrams = self.get('diagrams')
+        while diagrams:
+            # Pick out all diagrams with amplitudes with the same
+            # external number mothers (i.e., same BG currents)
+            diagram = diagrams.pop(0)
+            left_diagrams.append(diagram)
+            amp = diagram.get('amplitudes')[0]
+            remove_amp_diagrams = [d for d in self.get('diagrams') if \
+                                   any([a.get('external_numbers') == \
+                                        amp.get('external_numbers') for \
+                                        a in d.get('amplitudes')])]
+            # Remove all other diagrams
+            for d in remove_amp_diagrams:
+                diagrams.remove(d)
+            # Make sure all amplitudes in this diagram are unique
+            left_amplitudes = helas_objects.HelasAmplitudeList()
+            while diagram.get('amplitudes'):
+                amp = diagram.get('amplitudes').pop(0)
+                remove_amps = [a for a in diagram.get('amplitudes') if \
+                               a.get('external_numbers') == \
+                               amp.get('external_numbers')]
+                for a in remove_amps:
+                    diagram.get('amplitudes').remove(a)
+                if not any([m in removed_wfs for m in amp.get('mothers')]) and \
+                       self.check_color(amp):
+                    left_amplitudes.append(amp)
             
-            # Replace the amplitude mothers in this
-            # amplitude with corresponding currents
-            for i, m in enumerate(amp.get('mothers')):
-                try:
-                    ind = [c.get('compare_array') for c in \
-                           combined_wavefunctions].index(\
-                                   [m.get('external_numbers'),
-                                    m.get('pdg_code')])
-                except ValueError:
-                    continue
-                amp.get('mothers')[i] = combined_wavefunctions[ind]
+                # Replace the amplitude mothers in these
+                # amplitudes with corresponding currents
+                self.replace_mothers(amp, combined_wavefunctions)
 
-            combined_amplitudes.append(amp)
+            diagram.set('amplitudes', left_amplitudes)
+            diagram.set('wavefunctions', helas_objects.HelasWavefunctionList())
+
+        # Set diagram numbers
+        for i,d in enumerate(left_diagrams):
+            d.set('number', i+1)
+        self.set('diagrams', left_diagrams)
 
         # Set amplitude number for all amplitudes
-        for i, amp in enumerate(combined_amplitudes):
+        for i, amp in enumerate(self.get_all_amplitudes()):
             amp.set('number', i+1)
         
-        diagram = helas_objects.HelasDiagram()
-        diagram.set('wavefunctions', combined_wavefunctions)
-        diagram.set('amplitudes', combined_amplitudes)
-        diagram.set('number', 1)
+        left_diagrams[0].set('wavefunctions', combined_wavefunctions)
 
-        self.set('diagrams', helas_objects.HelasDiagramList([diagram]))
-        
+    def replace_mothers(self, wf, combined_wavefunctions):
+        """Find BG currents in combined_wavefunctions corresponding to
+        the mothers of wf, replace mothers with BG currents"""
 
-    def check_color(self, wf):
-        """Check that the wavefunction color is consistent with the
+        for i, m in enumerate(wf.get('mothers')):
+            try:
+                ind = [c.get('compare_array') for c in \
+                       combined_wavefunctions].index(\
+                               [m.get('external_numbers'),
+                                m.get('pdg_code'),
+                                m.get_with_flow('state')])
+            except ValueError:
+                continue
+            wf.get('mothers')[i] = combined_wavefunctions[ind]
+
+    def check_color(self, arg):
+        """Check that the wavefunction/amplitude color is consistent with the
         color ordering, and set the simplified color of the
         wavefunction."""
 
+        assert isinstance(arg, COHelasWavefunction) or \
+               isinstance(arg, COHelasAmplitude)
+
+        if not arg.get('mothers'):
+            return True
+
         process = self.get('processes')[0]
         model = process.get('model')
-        if isinstance(wf, helas_objects.HelasWavefunction):
-            base_vertices = wf.get_base_vertices()
-            base_diagram = base_objects.Diagram({"vertices": base_vertices})
+        # Create a Vertex that we can use to extract the color for
+        # this wavefunction
+        base_vertex = arg.get_base_vertex({})
+        # Replace leg numbers in the base_vertex with the
+        # lastleg_numbers of the mother wavefunctions to get correct
+        # color strings
+        for i, mother in enumerate(arg.get('mothers')):
+            if mother.get('lastleg_number'):
+                base_vertex.get('legs')[i].set('number',
+                                               mother.get('lastleg_number'))
+        lastleg = None
+        if isinstance(arg, COHelasWavefunction):
+            # We need to take care of the last leg, by giving it a
+            # unique number
+            self.lastleg_number -= 1
+            lastleg = ColorOrderedLeg(base_vertex.get('legs').pop(-1))
+            lastleg.set('id', model.get_particle(lastleg.get('id')).\
+                        get_anti_pdg_code())
+            print "lastleg: ",lastleg.get('id'), lastleg.get('number')
+            lastleg.set('number', self.lastleg_number)
+            base_vertex.get('legs').insert(0, lastleg)
+            arg.set('lastleg_number', self.lastleg_number)
+            color_indices = list(arg.get('external_numbers'))
         else:
-            base_diagram = wf.get_base_diagram()
-        # Always create an empty color basis, and the
-        # list of raw colorize objects (before
-        # simplification) associated with amplitude
+            color_indices = range(1,len(process.get('legs'))+1)
+            
+        # Get the color string that we need to compare to
+        comp_color_string = self.get_color_string(color_indices,
+                                                  lastleg)
+        print "comp_color_string: ", comp_color_string
+        # Prepare for extracting the color dict for this vertex using
+        # ColorBasis.add_vertex
+        base_diagram = base_objects.Diagram({"vertices": \
+                                    base_objects.VertexList([base_vertex])})
         col_basis = color_amp.ColorBasis()
-        colorize_obj = col_basis.colorize(base_diagram, model)
-        #print colorize_obj
-
+        # Now extract the color dict for this vertex
+        min_index, color_dict = col_basis.add_vertex(base_vertex,
+                                                     base_diagram,
+                                                     model,
+                                                     {}, {}, -1)
+        # Pick out only the relevant color string
+        color_string = color_dict[(arg.get('coupl_key')[0],)]
+        # Add the color strings of all mothers
+        for mother in arg.get('mothers'):
+            if mother.get('color_string'):
+                color_string.product(mother.get('color_string'))
+        
+        print "color_string: ", color_string
+        
+        # Now simplify color string, and check if we have a
+        # contribution corresponding to comp_color_string
+        col_fact = color_algebra.ColorFactor([color_string])
+        col_fact = col_fact.full_simplify()
+        print "col_fact: ", col_fact
+        similar_strings = [cs for cs in col_fact if \
+                           cs.to_canonical() == comp_color_string.to_canonical()]
+        print "similar_strings: ", similar_strings
+        if not similar_strings:
+            return False
+        assert(len(similar_strings) == 1)
+        arg.set('color_string', similar_strings[0])
+                    
         return True
 
-    def update_color_basis(self, diagram, index_diagram):
+    def update_color_basis(self, diagram, idiagram):
         """Get the fully simplified color basis for this diagram,
         taking out only the component which is consistent with this
         color flow"""
@@ -784,16 +887,112 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
         model = process.get('model')
 
         color_basis = color_amp.ColorBasis()
-        print "Diagram ",index_diagram+1
-        for amp in diagram.get('amplitudes'):
-            base_diagram = amp.get_base_diagram()
-            print base_diagram.nice_string()
-            color_dict = color_basis.colorize(base_diagram,
-                                              model)
-            for col_chain, col_str in color_dict.items():
-                # Create and simplify a color factor for the considered chain
-                col_fact = color_algebra.ColorFactor([col_str])
-                print "col_fact before: ",col_fact
-                col_fact = col_fact.full_simplify()
-                print "col_fact after: ",col_fact
+        print "New diagram"
+        amp = diagram.get('amplitudes')[0]
+        base_diagram = amp.get_base_diagram({})
+        color_dict = color_basis.colorize(base_diagram,
+                                          model)
+        color_string = \
+                   self.get_color_string(range(1, len(process.get('legs')) + 1))
+        col_string_dict = {}
+        
+        for col_chain, col_str in color_dict.items():
+            # Create and simplify a color factor for the considered chain
+            col_fact = color_algebra.ColorFactor([col_str])
+            col_fact = col_fact.full_simplify()
+            print "col_fact: ",col_fact
+            similar_strings = [cs for cs in col_fact if \
+                               cs.to_canonical() == color_string.to_canonical()]
+            print "similar_strings: ",similar_strings
+            if not similar_strings:
+                continue
+            assert(len(similar_strings) == 1)
+            col_string_dict[col_chain] = similar_strings[0]
 
+        self.get('color_basis').update_color_basis(col_string_dict, idiagram)
+            
+    def get_color_string(self, external_numbers, lastleg = None):
+        """Get the color string corresponding to the external numbers,
+        and insert lastleg as appropriate"""
+
+        legs = self.get('processes')[0].get('legs')
+        model = self.get('processes')[0].get('model')
+        color_chains = {}
+        chain_types = {}
+        leg_number_dict = {}
+        for number in external_numbers:
+            leg = [l for l in legs if l.get('number') == number][0]
+            if not leg.get('color_ordering'):
+                continue
+            leg_color = model.get_particle(leg.get('id')).get('color')
+            co = leg.get('color_ordering').keys()[0]
+            co_val = leg.get('color_ordering').values()[0][0]
+            try:
+                color_chains[co].append(co_val)
+            except:
+                color_chains[co] = [co_val]
+                chain_types[co] = 0
+            leg_number_dict[(co, co_val)] = leg.get('number')
+            if abs(leg_color) == 3:
+                chain_types[co] += 1
+
+        color_string = color_algebra.ColorString()
+        # Put in last leg
+        if lastleg:
+            lastleg_color = model.get_particle(lastleg.get('id')).get_color()
+            if abs(lastleg_color) == 3:
+                # Add to chain missing a 3
+                chain_key = [k for k in chain_types.keys() if \
+                             chain_types[k] == 1][0]
+                chain_types[chain_key] += 1
+                if lastleg_color == 3:
+                    lastleg_order = max(color_chains[chain_key]) + 1
+                else:
+                    lastleg_order = min(color_chains[chain_key]) - 1
+                color_chains[chain_key].append(lastleg_order)
+                leg_number_dict[(chain_key, lastleg_order)] = \
+                                                  lastleg.get('number')
+            elif abs(lastleg_color) == 8:
+                # Add leg to all color chains that are not yet completed
+                for key in color_chains.keys():
+                    leg_orderings = [l.get('color_ordering')[key][0] for l in \
+                                     legs if key in l.get('color_ordering')]
+                    if len(color_chains[key]) != len(leg_orderings):
+                        color_chains[key].sort()
+                        # Find gap in color chain
+                        if max(color_chains[key]) < len(leg_orderings):
+                            lastleg_order = min(color_chains[key]) - 1
+                        else:
+                            lastleg_order = max([c for c in leg_orderings if \
+                                                 c not in color_chains[key]])
+                    color_chains[key].append(lastleg_order)
+                    leg_number_dict[(key, lastleg_order)] = \
+                                                  lastleg.get('number')
+
+        for key in color_chains:
+            # Order entries according to color chain order (3bar,8,...,3)
+            color_chains[key].sort()
+            # Replace with leg numbers
+            color_chains[key] = [leg_number_dict[(key, co_val)] for \
+                                                 co_val in color_chains[key]]
+            
+        # Create color string based on color_chains
+        for cckey in color_chains.keys():
+            if chain_types[cckey] == 2:
+                # Fix ordering to put 3bar last
+                print "color_chain: ",color_chains[cckey]
+                color_chains[cckey].append(color_chains[cckey].pop(0))
+                print "color_chain after: ",color_chains[cckey]
+                color_string.append(color_algebra.T(*color_chains[cckey]))
+            else:
+                # Fix ordering to have lastleg first (since ordered
+                # with minimum leg number first)
+                if lastleg:
+                    chain = color_chains[cckey]
+                    number = lastleg.get('number')
+                    color_chains[cckey] = chain[chain.index(number):] + \
+                                          chain[:chain.index(number)]
+                color_string.append(color_algebra.Tr(*color_chains[cckey]))
+                
+        return color_string
+    

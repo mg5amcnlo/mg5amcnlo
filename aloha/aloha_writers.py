@@ -34,8 +34,23 @@ class WriteALOHA:
         #prepare the necessary object
         self.collect_variables() # Look for the different variables
         self.make_all_lists()    # Compute the expression for the call ordering
-                                 #the definition of objects,...
-
+                                 #the definition of objects,..
+                                 
+    def pass_to_HELAS(self, indices, start=0):
+        """find the Fortran HELAS position for the list of index""" 
+        
+        
+        if len(indices) == 1:
+            return indices[0] + start
+        
+        ind_name = self.obj.numerator.lorentz_ind 
+        if ind_name == ['I3', 'I2']:
+            return  4 * indices[1] + indices[0] + start 
+        elif len(indices) == 2: 
+            return  4 * indices[0] + indices[1] + start 
+        else:
+            raise Exception                                 
+                                 
     def collect_variables(self):
         """Collects Momenta,Mass,Width into lists"""
          
@@ -382,6 +397,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             out = '%.9f' % number
             out = self.zero_pattern.sub('', out)
         return out
+        
     
     def define_expression(self):
         OutString = ''
@@ -404,15 +420,13 @@ class ALOHAWriterForFortran(WriteALOHA):
             string = re.sub('\((?P<num>[+-]*[0-9])\+(?P<num2>[+-][0-9])[Jj]\)\.', '(\g<num>d0,\g<num2>d0)', string)
             string = re.sub('(?P<num>[0-9])[Jj]\.', '\g<num>*(0d0,1d0)', string)
             OutString = OutString + string + '\n'
-            counter = 1
             for ind in numerator.listindices():
-                string = '%s(%d)= C*denom*' % (OffShellParticle, counter)
+                string = '%s(%d)= C*denom*' % (OffShellParticle, self.pass_to_HELAS(ind, start=1))
                 string += self.write_obj(numerator.get_rep(ind))
                 string = string.replace('+-', '-')
                 string = re.sub('\((?P<num>[+-][0-9])\+(?P<num2>[+-][0-9])[Jj]\)\.', '(\g<num>d0,\g<num2>d0)', string)
                 string = re.sub('(?P<num>[0-9])[Jj]\.', '\g<num>*(0d0,1d0)', string)
                 OutString = OutString + string + '\n' 
-                counter += 1
         return OutString 
     
     def define_symmetry(self, new_nb):
@@ -612,13 +626,11 @@ class ALOHAWriterForCPP(WriteALOHA):
             string = 'denom =' + '1./(' + denom + ')'
             string = string.replace('+-', '-')
             OutString = OutString + string + ';\n'
-            counter = 0
             for ind in numerator.listindices():
-                string = '%s[%d]= C*denom*' % (OffShellParticle, counter)
+                string = '%s[%d]= C*denom*' % (OffShellParticle, self.pass_to_HELAS(ind))
                 string += self.write_obj(numerator.get_rep(ind))
                 string = string.replace('+-', '-')
                 OutString = OutString + string + ';\n' 
-                counter += 1
         OutString = re.sub('(?P<variable>[A-Za-z]+[0-9]\[*[0-9]*\]*)\*\*(?P<num>[0-9])','pow(\g<variable>,\g<num>)',OutString)
         return OutString 
 
@@ -762,13 +774,11 @@ class ALOHAWriterForPython(WriteALOHA):
             string = 'denom =' + '1.0/(' + denom + ')'
             string = string.replace('+-', '-')
             OutString += string + '\n'
-            counter = 0
             for ind in numerator.listindices():
-                string = '%s[%d]= C*denom*' % (self.outname, counter)
+                string = '%s[%d]= C*denom*' % (self.outname, self.pass_to_HELAS(ind))
                 string += self.write_obj(numerator.get_rep(ind))
                 string = string.replace('+-', '-')
                 OutString += string + '\n' 
-                counter += 1
         return OutString 
     
     def define_foot(self):

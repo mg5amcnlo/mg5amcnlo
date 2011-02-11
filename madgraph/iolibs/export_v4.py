@@ -746,11 +746,14 @@ def write_configs_file_from_diagrams(writer, configs, mapconfigs,
 
     minvert = min([max(diag.get_vertex_leg_numbers()) for diag in configs])
 
+    nconfigs = 0
+
     for iconfig, helas_diag in enumerate(configs):
         if any([vert > minvert for vert in
-                diag.get_vertex_leg_numbers()]):
+                helas_diag.get_vertex_leg_numbers()]):
             # Only 3-vertices allowed in configs.inc
             continue
+        nconfigs += 1
 
         # Need to reorganize the topology so that we start with all
         # final state external particles and work our way inwards
@@ -769,27 +772,27 @@ def write_configs_file_from_diagrams(writer, configs, mapconfigs,
 
         lines.append("# Diagram %d" % (mapconfigs[iconfig]))
         # Correspondance between the config and the diagram = amp2
-        lines.append("data mapconfig(%d)/%d/" % (iconfig + 1,
+        lines.append("data mapconfig(%d)/%d/" % (nconfigs,
                                                  mapconfigs[iconfig]))
 
         for vert in allchannels:
             daughters = [leg.get('number') for leg in vert.get('legs')[:-1]]
             last_leg = vert.get('legs')[-1]
             lines.append("data (iforest(i,%d,%d),i=1,%d)/%s/" % \
-                         (last_leg.get('number'), iconfig + 1, len(daughters),
+                         (last_leg.get('number'), nconfigs, len(daughters),
                           ",".join([str(d) for d in daughters])))
             if vert in schannels:
                 lines.append("data sprop(%d,%d)/%d/" % \
-                             (last_leg.get('number'), iconfig + 1,
+                             (last_leg.get('number'), nconfigs,
                               last_leg.get('id')))
             elif vert in tchannels[:-1]:
                 lines.append("data tprid(%d,%d)/%d/" % \
-                             (last_leg.get('number'), iconfig + 1,
+                             (last_leg.get('number'), nconfigs,
                               abs(last_leg.get('id'))))
 
     # Write out number of configs
     lines.append("# Number of configs")
-    lines.append("data mapconfig(0)/%d/" % len(configs))
+    lines.append("data mapconfig(0)/%d/" % nconfigs)
 
     # Write the file
     writer.writelines(lines)
@@ -1323,6 +1326,18 @@ def generate_subprocess_directory_v4_standalone(matrix_element,
     filename = 'ngraphs.inc'
     write_ngraphs_file(writers.FortranWriter(filename),
                        len(matrix_element.get_all_amplitudes()))
+
+    # Generate diagrams
+    filename = "matrix.ps"
+    plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+                                         get('diagrams'),
+                                      filename,
+                                      model=matrix_element.get('processes')[0].\
+                                         get('model'),
+                                      amplitude='')
+    logger.info("Generating Feynman diagrams for " + \
+                 matrix_element.get('processes')[0].nice_string())
+    plot.draw()
 
     # Generate diagrams
     filename = "matrix.ps"
@@ -2088,12 +2103,12 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
 
     if total_coeff == 1:
         if is_imaginary:
-            return '+complex(0,1)*'
+            return '+imag1*'
         else:
             return '+'
     elif total_coeff == -1:
         if is_imaginary:
-            return '-complex(0,1)*'
+            return '-imag1*'
         else:
             return '-'
 
@@ -2104,7 +2119,7 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
         res_str = res_str + './%i.' % total_coeff.denominator
 
     if is_imaginary:
-        res_str = res_str + '*complex(0,1)'
+        res_str = res_str + '*imag1'
 
     return res_str + '*'
 
@@ -2290,6 +2305,7 @@ class UFO_model_to_mg4(object):
             one_mass = particle.get('mass')
             if one_mass.lower() != 'zero':
                 masses.add(one_mass)
+                
             # find width
             one_width = particle.get('width')
             if one_width.lower() != 'zero':

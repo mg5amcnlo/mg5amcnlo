@@ -59,7 +59,6 @@ if '__main__' == __name__:
     my_proc_list += me_comparator.create_proc_list(['g','u','u~','go','ul','ul~','ur','ur~'], initial=2,
                                                   final=3)
 
-
     # Create a MERunner object for MG4
     my_mg4 = me_comparator.MG4Runner()
     my_mg4.setup(mg4_path)
@@ -87,7 +86,7 @@ if '__main__' == __name__:
 
     # Do some cleanup
     #my_comp.cleanup()
-    filename='mssm_results.log'
+    filename='mssm_results2.log'
 
     filename='mssm_results.log'
 

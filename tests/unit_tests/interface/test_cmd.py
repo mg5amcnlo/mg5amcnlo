@@ -17,6 +17,7 @@
 import unittest
 import madgraph
 import madgraph.interface.cmd_interface as cmd
+import os
 
 
 class TestValidCmd(unittest.TestCase):
@@ -26,7 +27,32 @@ class TestValidCmd(unittest.TestCase):
     
     def wrong(self,*opt):
         self.assertRaises(madgraph.MadGraph5Error, *opt)
+    
+    def do(self, line):
+        """ exec a line in the cmd under test """        
+        self.cmd.exec_cmd(line)
+    
+    def test_shell_and_continuation_line(self):
+        """ check that the cmd line interpret shell and ; correctly """
         
+        #Those tests are important for this type of launch: 
+        # cd DIR; ./bin/generate_events 
+        try:
+            os.remove('/tmp/tmp_file')
+        except:
+            pass
+        
+        self.do('! cd /tmp; touch tmp_file')
+        self.assertTrue(os.path.exists('/tmp/tmp_file'))
+        
+        try:
+            os.remove('/tmp/tmp_file')
+        except:
+            pass
+        self.do(' ! cd /tmp; touch tmp_file')
+        self.assertTrue(os.path.exists('/tmp/tmp_file'))
+    
+    
     def test_check_generate(self):
         """check if generate format are correctly supported"""
     
