@@ -613,14 +613,18 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
 
     After regular helas diagram generation, performs the following:
 
-    1. Go through all wavefunctions and amplitudes to select only
-    those with the correct color structure
+    - If no BG optimization, go through all wavefunctions and
+    amplitudes to select only those with the correct color structure
 
-    2. Go through all wavefunctions to combine the wavefunctions with
-    the same external particle numbers using BGHelasCurrents
+    If BG optimization:
 
-    3. Go through all amplitudes, and use only one amplitude per set
-    of BGHelasCurrents
+    1. Go through all wavefunctions to combine the wavefunctions with
+    the same external particle numbers using BGHelasCurrents, keeping
+    only those wfs with the correct color structure
+
+    2. Go through all amplitudes, and use only one amplitude per set
+    of BGHelasCurrents (keeping only amplitudes with the correct color
+    structure)
     """
 
     # Keep unique number for color substitution
@@ -709,6 +713,7 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
                 if any([m in removed_wfs for m in wf.get('mothers')]) or \
                        not self.check_color(wf):
                     removed_wfs.append(wf)
+                    continue                    
                 combined_wavefunctions.append(wf)
             else:
                 # Combine wavefunctions to a current
@@ -726,6 +731,7 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
                     if any([m in removed_wfs for m in wf.get('mothers')]) or \
                            not self.check_color(wf):
                         removed_wfs.append(wf)
+                        continue
                     # Replace the wavefunction mothers in this
                     # wavefunction with corresponding currents
                     self.replace_mothers(wf, combined_wavefunctions)
@@ -742,7 +748,10 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
         
         left_diagrams = helas_objects.HelasDiagramList()
         diagrams = self.get('diagrams')
+        idiag = 0
         while diagrams:
+            idiag += 1
+            print "Diagram ", idiag
             # Pick out all diagrams with amplitudes with the same
             # external number mothers (i.e., same BG currents)
             diagram = diagrams.pop(0)
@@ -759,14 +768,18 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
             left_amplitudes = helas_objects.HelasAmplitudeList()
             while diagram.get('amplitudes'):
                 amp = diagram.get('amplitudes').pop(0)
+                # Check that this amp passes color check
+                if any([m in removed_wfs for m in amp.get('mothers')]) or \
+                       not self.check_color(amp):
+                    continue
+                left_amplitudes.append(amp)
+                # Check for other amps in this diagram with the same
+                # external_numbers (i.e., same BG current mothers)
                 remove_amps = [a for a in diagram.get('amplitudes') if \
                                a.get('external_numbers') == \
                                amp.get('external_numbers')]
                 for a in remove_amps:
                     diagram.get('amplitudes').remove(a)
-                if not any([m in removed_wfs for m in amp.get('mothers')]) and \
-                       self.check_color(amp):
-                    left_amplitudes.append(amp)
             
                 # Replace the amplitude mothers in these
                 # amplitudes with corresponding currents
@@ -853,7 +866,8 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
         min_index, color_dict = col_basis.add_vertex(base_vertex,
                                                      base_diagram,
                                                      model,
-                                                     {}, {}, -1)
+                                                     {}, {},
+                                                     self.lastleg_number - 1)
         # Pick out only the relevant color string
         color_string = color_dict[(arg.get('coupl_key')[0],)]
         # Add the color strings of all mothers
