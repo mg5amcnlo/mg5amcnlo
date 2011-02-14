@@ -41,10 +41,12 @@ def import_model(model_name):
     """ a practical and efficient way to import one of those models """
 
     # Check for a valid directory
-    if os.path.isdir(model_name):
+    if model_name.startswith('./') and os.path.isdir(model_name):
         model_path = model_name
     elif os.path.isdir(os.path.join(MG5DIR, 'models', model_name)):
         model_path = os.path.join(MG5DIR, 'models', model_name)
+    elif os.path.isdir(model_name):
+        model_path = model_name
     else:
         raise MadGraph5Error("Path %s is not a valid pathname" % model_name)
             
