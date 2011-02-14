@@ -984,16 +984,22 @@ class CompleteForCmd(CheckValidForCmd):
 
         if base_dir is None:
             base_dir = os.getcwd()
+            
+        prefix, text = os.path.split(text)
+        base_dir = os.path.join(base_dir, prefix)
+        if prefix:
+            prefix += os.path.sep
+        
 
         if only_dirs:
-            completion = [f
+            completion = [prefix + f
                           for f in os.listdir(base_dir)
                           if f.startswith(text) and \
                           os.path.isdir(os.path.join(base_dir, f)) and \
                           (not f.startswith('.') or text.startswith('.'))
                           ]
         else:
-            completion = [f
+            completion = [ prefix + f
                           for f in os.listdir(base_dir)
                           if f.startswith(text) and \
                           os.path.isfile(os.path.join(base_dir, f)) and \
@@ -1001,15 +1007,15 @@ class CompleteForCmd(CheckValidForCmd):
                           ]
 
             completion = completion + \
-                         [f + os.path.sep
+                         [prefix + f + os.path.sep
                           for f in os.listdir(base_dir)
                           if f.startswith(text) and \
                           os.path.isdir(os.path.join(base_dir, f)) and \
                           (not f.startswith('.') or text.startswith('.'))
                           ]
 
-        completion += [f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
-                       f.startswith(text)]
+        completion += [prefix + f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
+                       f.startswith(text) and not prefix.startswith('.')]
 
         return completion
 
