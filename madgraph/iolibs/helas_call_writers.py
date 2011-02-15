@@ -798,8 +798,12 @@ class UFOHelasCallWriter(HelasCallWriter):
         self.generate_helas_call(amplitude)
         return super(UFOHelasCallWriter, self).get_amplitude_call(amplitude)
 
-
-
+    # Helper function
+    def write_factor(self, factor):
+        """Create a suitable string for the factor of the form
+        (fraction, is_imaginary?)."""
+        imag_dict = {True: "IMAG1", False: "ONE"}
+        return str(factor[0]*factor[1]) + "*" + imag_dict[factor[2]]
 
 #===============================================================================
 # FortranUFOHelasCallWriter
@@ -830,10 +834,12 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             # Create call for wavefunction
             call += "sumwfs%s(" % "".join([str(m.get('spin')) for \
                                            m in argument.get('mothers')])
-            call += "W(1,%d)," * len(argument.get('mothers')) + \
+            call += "W(1,%d),%s," * len(argument.get('mothers')) + \
                     "W(1,%d))"
             call_function = lambda wf: call % \
-                (tuple([mother.get('number') for mother in wf.get('mothers')] + \
+                (tuple(sum([[mother.get('number'),
+                             self.write_factor(mother.get('factor'))] for \
+                            mother in wf.get('mothers')], []) + \
                 [wf.get('number')]))
             self.add_wavefunction(argument.get_call_key(), call_function)
             return
@@ -929,9 +935,6 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             self.add_wavefunction(argument.get_call_key(), call_function)
         else:
             self.add_amplitude(argument.get_call_key(), call_function)
-
-
-
 
 #===============================================================================
 # CPPUFOHelasCallWriter

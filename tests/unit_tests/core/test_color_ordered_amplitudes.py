@@ -1168,13 +1168,13 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                       'id': 2,
                       'particles': base_objects.ParticleList(\
                                             [self.mypartlist[0]] * 4),
-                      'color': [color.ColorString([color.f(0, 1, -1),
-                                                   color.f(2, 3, -1)]),
-                                color.ColorString([color.f(2, 0, -1),
-                                                   color.f(1, 3, -1)]),
-                                color.ColorString([color.f(1, 2, -1),
-                                                   color.f(0, 3, -1)])],
-                      'lorentz':['gggg1', 'gggg2', 'gggg3'],
+                      'color': [color.ColorString([color.f(1, 2, -1),
+                                                   color.f(-1, 0, 3)]),
+                                color.ColorString([color.f(1, 3, -1),
+                                                   color.f(-1, 0, 2)]),
+                                color.ColorString([color.f(2, 3, -1),
+                                                   color.f(-1, 0, 1)])],
+                      'lorentz':['VVVV4', 'VVVV3', 'VVVV1'],
             'couplings':{(0, 0):'GG', (1, 1):'GG', (2, 2):'GG'},
                       'orders':{'QCD':2}}))
 
@@ -1286,7 +1286,7 @@ class BGHelasMatrixElementTest(unittest.TestCase):
         goal_wavefunctions = [6, 19, 36, 89, 211, 394]
 
         # Test 2, 3, 4 and 5 gluons in the final state
-        for ngluon in range(2,5):
+        for ngluon in range(2,4):
 
             # Create the amplitude
             myleglist = base_objects.LegList([base_objects.Leg({'id':21,
@@ -1323,7 +1323,7 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                              goal_amplitudes[ngluon-2])
             
             # Test JAMP (color amplitude) output
-            #print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
+            print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
 
     def test_matrix_element_gluons_non_optimized(self):
         """Test the matrix element for all-gluon amplitudes"""
@@ -1332,7 +1332,7 @@ class BGHelasMatrixElementTest(unittest.TestCase):
         goal_wavefunctions = [6, 16, 30]
 
         # Test 2, 3, 4 and 5 gluons in the final state
-        for ngluon in range(2,5):
+        for ngluon in range(2,4):
 
             # Create the amplitude
             myleglist = base_objects.LegList([base_objects.Leg({'id':21,
@@ -1354,9 +1354,9 @@ class BGHelasMatrixElementTest(unittest.TestCase):
             matrix_element = color_ordered_amplitudes.BGHelasMatrixElement(\
                 mycolorflow, gen_color=False, optimization=1)
 
-            #print "\n".join(\
-            #    helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
-            #    get_matrix_element_calls(matrix_element))
+            print "\n".join(\
+                helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
+                get_matrix_element_calls(matrix_element))
             print "For ",ngluon," FS gluons, there are ",\
                   len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
                   len(matrix_element.get_all_wavefunctions()),\
@@ -1369,13 +1369,13 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                              goal_amplitudes[ngluon-2])
             
             # Test JAMP (color amplitude) output
-            #print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
+            print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
 
     def test_matrix_element_photons(self):
         """Test the matrix element for all-gluon amplitudes"""
 
         goal_amplitudes = [2, 6, 12, 30, 60, 140]
-        goal_wavefunctions = [6, 11, 32, 76, 190, 429]
+        goal_wavefunctions = [6, 11, 32, 77, 190, 429]
 
         # Test 2, 3, 4 and 5 photons in the final state
         for nphoton in range(2,6):
@@ -1452,9 +1452,9 @@ class BGHelasMatrixElementTest(unittest.TestCase):
             matrix_element = color_ordered_amplitudes.BGHelasMatrixElement(\
                 mycolorflow, gen_color=False, optimization = 1)
 
-            #print "\n".join(\
-            #    helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
-            #    get_matrix_element_calls(matrix_element))
+            print "\n".join(\
+                helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
+                get_matrix_element_calls(matrix_element))
             print "For ",nphoton," FS photons, there are ",\
                   len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
                   len(matrix_element.get_all_wavefunctions()),\
@@ -1467,4 +1467,153 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                              goal_amplitudes[nphoton-2])
 
             # Test JAMP (color amplitude) output
+            print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
+
+
+    def test_matrix_element_uux_nglue(self):
+        """Test the number of color flows and diagrams generated for uu~>gg
+        """
+
+        goal_amplitudes = [2, 7, 18, 45]
+        goal_wavefunctions = [6, 10, 27, 56]
+
+        # Test 2, 3, 4 and 5 gluons in the final state
+        for ngluon in range (2, 6):
+
+            # Create the amplitude
+            myleglist = base_objects.LegList([\
+                base_objects.Leg({'id':2, 'state':False}),
+                base_objects.Leg({'id':-2, 'state':False})])
+
+            myleglist.extend([base_objects.Leg({'id':21,
+                                              'state':True})] * ngluon)
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'orders':{'QCD':ngluon, 'QED': 0},
+                                           'model':self.mymodel})
+
+            self.myamplitude = color_ordered_amplitudes.ColorOrderedAmplitude(myproc)
+
+            mycolorflow = self.myamplitude.get('color_flows')[0]
+
+            matrix_element = color_ordered_amplitudes.BGHelasMatrixElement(\
+                mycolorflow, gen_color=False, optimization = 3)
+
+            print "\n".join(\
+                helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
+                get_matrix_element_calls(matrix_element))
+            print "For ",ngluon," FS gluons, there are ",\
+                  len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
+                  len(matrix_element.get_all_wavefunctions()),\
+                  ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
+                  ' diagrams'
+
+            self.assertEqual(len(matrix_element.get_all_amplitudes()),
+                             goal_amplitudes[ngluon-2])
+            self.assertEqual(len(matrix_element.get_all_wavefunctions()),
+                             goal_wavefunctions[ngluon-2])
+
+            # Test JAMP (color amplitude) output
             #print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
+
+    def test_matrix_element_uux_ddxng_no_singlet(self):
+        """Test the number of color flows and diagrams generated for uu~>gg
+        """
+
+        goal_amplitudes = [[1],[3,3],[8,8,9]]
+        goal_wavefunctions = [[5],[9,9],[18,18,16]]
+        goal_ndiags = [[1], [3, 3], [10, 11, 10],[35, 41, 41, 35]]
+        goal_nflows = [1, 2, 3, 4]
+
+        # Test 2, 3, 4 and 5 gluons in the final state
+        for ngluon in range (0, 5):
+
+            # Create the amplitude
+            myleglist = base_objects.LegList([\
+                base_objects.Leg({'id':2, 'state':False}),
+                base_objects.Leg({'id':-2, 'state':False}),
+                base_objects.Leg({'id':1}),
+                base_objects.Leg({'id':-1})])
+
+            myleglist.extend([base_objects.Leg({'id':21,
+                                              'state':True})] * ngluon)
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'orders':{'QED': 0},
+                                           'model':self.mymodel})
+
+            self.myamplitude = color_ordered_amplitudes.ColorOrderedAmplitude(myproc)
+
+            for iflow, mycolorflow in \
+                enumerate(self.myamplitude.get('color_flows')):
+
+                matrix_element = color_ordered_amplitudes.BGHelasMatrixElement(\
+                    mycolorflow, gen_color=False, optimization = 3)
+
+                print "\n".join(\
+                    helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
+                    get_matrix_element_calls(matrix_element))
+                print "For ",ngluon," FS gluons, there are ",\
+                      len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
+                      len(matrix_element.get_all_wavefunctions()),\
+                      ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
+                      ' diagrams'
+
+                self.assertEqual(len(matrix_element.get_all_amplitudes()),
+                                 goal_amplitudes[ngluon][iflow])
+                self.assertEqual(len(matrix_element.get_all_wavefunctions()),
+                                 goal_wavefunctions[ngluon][iflow])
+
+                # Test JAMP (color amplitude) output
+                print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
+
+    def test_matrix_element_uux_ddxng_no_singlet_non_optimized(self):
+        """Test the number of color flows and diagrams generated for uu~>gg
+        """
+
+        goal_amplitudes = [[1],[3,3],[11,12,11],[44, 50, 50, 44]]
+        goal_wavefunctions = [[5],[9,9],[16,16,15],[33, 33, 34, 30]]
+        goal_ndiags = [[1], [3, 3], [10, 11, 10],[35, 41, 41, 35]]
+        goal_nflows = [1, 2, 3, 4]
+
+        # Test 0, 1, 2 and 3 gluons in the final state
+        for ngluon in range (0, 4):
+
+            # Create the amplitude
+            myleglist = base_objects.LegList([\
+                base_objects.Leg({'id':2, 'state':False}),
+                base_objects.Leg({'id':-2, 'state':False}),
+                base_objects.Leg({'id':1}),
+                base_objects.Leg({'id':-1})])
+
+            myleglist.extend([base_objects.Leg({'id':21,
+                                              'state':True})] * ngluon)
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'orders':{'QED': 0},
+                                           'model':self.mymodel})
+
+            self.myamplitude = color_ordered_amplitudes.ColorOrderedAmplitude(myproc)
+
+            for iflow, mycolorflow in \
+                enumerate(self.myamplitude.get('color_flows')):
+
+                matrix_element = color_ordered_amplitudes.BGHelasMatrixElement(\
+                    mycolorflow, gen_color=False, optimization = 1)
+
+                print "\n".join(\
+                    helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
+                    get_matrix_element_calls(matrix_element))
+                print "For ",ngluon," FS gluons, there are ",\
+                      len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
+                      len(matrix_element.get_all_wavefunctions()),\
+                      ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
+                      ' diagrams'
+
+                self.assertEqual(len(matrix_element.get_all_amplitudes()),
+                                 goal_amplitudes[ngluon][iflow])
+                self.assertEqual(len(matrix_element.get_all_wavefunctions()),
+                                 goal_wavefunctions[ngluon][iflow])
+
+                # Test JAMP (color amplitude) output
+                print '\n'.join(export_v4.get_JAMP_lines(matrix_element))

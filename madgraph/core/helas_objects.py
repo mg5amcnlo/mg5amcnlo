@@ -1549,9 +1549,11 @@ class HelasAmplitude(base_objects.PhysicsObject):
             # Bosons return a list [n1,n2,...]
             fermion_number_list.extend(boson.get_fermion_order())
 
-        self['fermionfactor'] = self.sign_flips_to_order(fermion_number_list)
+        self['fermionfactor'] = \
+                         HelasAmplitude.sign_flips_to_order(fermion_number_list)
 
-    def sign_flips_to_order(self, fermions):
+    @staticmethod
+    def sign_flips_to_order(fermions):
         """Gives the sign corresponding to the number of flips needed
         to place the fermion numbers in order"""
 
