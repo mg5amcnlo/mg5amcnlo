@@ -27,6 +27,7 @@ root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
 from aloha.aloha_object import *
 import aloha.aloha_writers as aloha_writers
+import aloha.aloha_lib as aloha_lib
 try:
     import madgraph.iolibs.files as files
 except:
@@ -36,6 +37,7 @@ aloha_path = os.path.dirname(os.path.realpath(__file__))
 logger = logging.getLogger('ALOHA')
 
 _conjugate_gap = 50
+_spin2_mult = 1000
 
 class ALOHAERROR(Exception): pass
 
@@ -91,10 +93,10 @@ class AbstractRoutineBuilder(object):
         self.routine_kernel = None
         
     
-    def compute_routine(self, mode):
+    def compute_routine(self, mode, factorize=True):
         """compute the expression and return it"""
         self.outgoing = mode
-        self.expr = self.compute_aloha_high_kernel(mode)
+        self.expr = self.compute_aloha_high_kernel(mode, factorize)
         return self.define_simple_output()
     
     def define_all_conjugate_builder(self, pair_list):
@@ -115,9 +117,10 @@ class AbstractRoutineBuilder(object):
         one is conjugated"""
         
         new_builder = copy.copy(self)
+        new_builder.conjg = self.conjg[:]
         try:
             for index in pairs:
-               new_builder.apply_conjugation(index) 
+                new_builder.apply_conjugation(index) 
         except TypeError:
             new_builder.apply_conjugation(pairs) 
         return new_builder
@@ -125,7 +128,8 @@ class AbstractRoutineBuilder(object):
     def apply_conjugation(self, pair=1):
         """ apply conjugation on self object"""
         
-        old_id = pair
+        
+        old_id = 2 * pair - 1
         new_id = _conjugate_gap + old_id
         
         if self.routine_kernel is None:
@@ -138,7 +142,8 @@ class AbstractRoutineBuilder(object):
 
         if pair:
             self.name += str(pair)
-        self.conjg.append(pair) 
+        self.conjg.append(pair)
+
     
     
     def define_simple_output(self):
@@ -148,11 +153,10 @@ class AbstractRoutineBuilder(object):
         return AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
                                                                         infostr)
         
-    def compute_aloha_high_kernel(self, mode):
+    def compute_aloha_high_kernel(self, mode, factorize=True):
         """compute the abstract routine associate to this mode """
         # reset tag for particles
         aloha_lib.USE_TAG=set()
-
         #multiply by the wave functions
         nb_spinor = 0
         if not self.routine_kernel:
@@ -171,7 +175,6 @@ class AbstractRoutineBuilder(object):
             aloha_lib.USE_TAG = set(self.kernel_tag) 
         for (i, spin ) in enumerate(self.spins):
             id = i + 1
-            
             #Check if this is the outgoing particle
             if id == self.outgoing:
                 if spin == 1: 
@@ -182,9 +185,9 @@ class AbstractRoutineBuilder(object):
                         id += _conjugate_gap
                     nb_spinor += 1
                     if nb_spinor %2:
-                        lorentz *= SpinorPropagator(id, 'I2', i + 1)
+                        lorentz *= SpinorPropagator(id, 'I2', self.outgoing)
                     else:
-                        lorentz *= SpinorPropagator('I2', id, i + 1) 
+                        lorentz *= SpinorPropagator('I2', id, self.outgoing) 
                 elif spin == 3 :
                     lorentz *= VectorPropagator(id, 'I2', id)
                 elif spin == 5 :
@@ -199,13 +202,15 @@ class AbstractRoutineBuilder(object):
                 elif spin == 2:
                     # shift the tag if we multiply by C matrices
                     if (id+1) // 2 in self.conjg:
-                        id += _conjugate_gap
+                        spin_id = id + _conjugate_gap
+                    else:
+                        spin_id = id
                     nb_spinor += 1
-                    lorentz *= Spinor(id, i + 1)
+                    lorentz *= Spinor(spin_id, id)
                 elif spin == 3:        
                     lorentz *= Vector(id, id)
                 elif spin == 5:
-                    lorentz *= Spin2(10*id+1, 10*id+2, 'I2', 'I3', id)
+                    lorentz *= Spin2(1 * _spin2_mult + id, 2 * _spin2_mult + id, id)
                 else:
                     raise self.AbstractALOHAError(
                                 'The spin value %s is not supported yet' % spin)                    
@@ -221,15 +226,19 @@ class AbstractRoutineBuilder(object):
           
         #lorentz = lorentz.simplify()
         lorentz = lorentz.expand()
-
-        if self.spins[self.outgoing-1] == 5:
+        if self.outgoing and self.spins[self.outgoing-1] == 5:
             if not self.aloha_lib:
                 AbstractRoutineBuilder.load_library()
             lorentz *= self.aloha_lib[('Spin2Prop', id)]
+            aloha_lib.USE_TAG.add('OM%d' % id)
+            aloha_lib.USE_TAG.add('P%d' % id)
+            
+            
 
         
         lorentz = lorentz.simplify()
-        lorentz = lorentz.factorize()
+        if factorize:
+            lorentz = lorentz.factorize()
         
         lorentz.tag = set(aloha_lib.USE_TAG)
         #raise
@@ -269,8 +278,12 @@ class AbstractRoutineBuilder(object):
     @classmethod
     def load_library(cls):
     # load the library
-        fsock = open(os.path.join(aloha_path, 'ALOHALib.pkl'), 'r')
-        cls.aloha_lib = cPickle.load(fsock)
+        try:
+            fsock = open(os.path.join(aloha_path, 'ALOHALib.pkl'), 'r')
+        except IOError:
+            cls.aloha_lib = create_library()
+        else:
+            cls.aloha_lib = cPickle.load(fsock)
         
 
 class AbstractALOHAModel(dict):
@@ -283,7 +296,6 @@ class AbstractALOHAModel(dict):
         python_pos = 'models.%s' % model_name 
         __import__(python_pos)
         self.model = sys.modules[python_pos]
-        
         # find the position on the disk
         self.model_pos = os.path.dirname(self.model.__file__)
 
@@ -385,7 +397,7 @@ class AbstractALOHAModel(dict):
                 continue 
             
             if lorentz.structure == 'external':
-                self.external_routines.append(lorente.name)
+                self.external_routines.append(lorentz.name)
                 continue
             
             builder = AbstractRoutineBuilder(lorentz)
@@ -638,22 +650,22 @@ def create_library():
     lib = {} # key: (name, part_nb, special) -> object
     for i in range(1, 10):
         logger.info('step %s/9' % i)
-        lib[('Scalar', i)] = create( Scalar(i) )
-        lib[('ScalarProp', i)] = complex(0,1)
-        lib[('Denom', i )] = create( DenominatorPropagator(i) )
-        lib[('Spinor', i )] = create( Spinor(i, i) )
-        lib[('SpinorProp', i, 0)] = create( SpinorPropagator(i, 'I2', i) )
-        lib[('SpinorProp', i, 1)] = create( SpinorPropagator('I2', i, i) )
-        lib[('Vector', i)] = create( Vector(i+1, i+1) )
-        lib[('VectorProp', i)] = create( VectorPropagator(i,'I2', i) )
-        lib[('Spin2', i )] = create( Spin2(10*i+1, 10*i+2, i) )
-        lib[('Spin2Prop',i)] = create( Spin2Propagator(10*i+1, \
-                                            10*i+2,'I2','I3', i) )
-    logger.info('writing')         
-    fsock = open('./ALOHALib.pkl','wb')
+        #lib[('Scalar', i)] = create( Scalar(i) )
+        #lib[('ScalarProp', i)] = complex(0,1)
+        #lib[('Denom', i )] = create( DenominatorPropagator(i) )
+        #lib[('Spinor', i )] = create( Spinor(i, i) )
+        #lib[('SpinorProp', i, 0)] = create( SpinorPropagator(i, 'I2', i) )
+        #lib[('SpinorProp', i, 1)] = create( SpinorPropagator('I2', i, i) )
+        #lib[('Vector', i)] = create( Vector(i+1, i+1) )
+        #lib[('VectorProp', i)] = create( VectorPropagator(i,'I2', i) )
+        #lib[('Spin2', i )] = create( Spin2(10*i+1, 10*i+2, i) )
+        lib[('Spin2Prop',i)] = create( Spin2Propagator(_spin2_mult + i, \
+                                            2 * _spin2_mult + i,'I2','I3', i) )
+    logger.info('writing Spin2 lib')         
+    fsock = open(os.path.join(aloha_path, 'ALOHALib.pkl'),'wb')
     cPickle.dump(lib, fsock, -1)
-    logger.info('done')
-    
+    return lib
+
 if '__main__' == __name__:       
     logging.basicConfig(level=0)
     #create_library()

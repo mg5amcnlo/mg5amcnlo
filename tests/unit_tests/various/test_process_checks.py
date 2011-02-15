@@ -199,7 +199,7 @@ class TestMatrixElementChecker(unittest.TestCase):
         """Test the get_momenta function"""
 
         # Change 4g interaction so color and lorentz don't agree
-        gggg = self.base_model.get_interaction(3)
+        gggg = self.base_model.get_interaction(4)
         gggg.set('lorentz', ['VVVV1', 'VVVV4', 'VVVV3'])
 
         myleglist = base_objects.LegList()

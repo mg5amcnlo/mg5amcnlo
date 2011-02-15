@@ -395,7 +395,7 @@ class AddVariable(list):
         """ try to factorize as much as possible the expression """
 
         max, maxvar = self.count_term()
-
+        maxvar = maxvar.__class__(maxvar.variable)
         if max <= 1:
             #no factorization possible
             return self
@@ -427,7 +427,7 @@ class AddVariable(list):
                         constant.append(term)
                 else:
                     constant.append(term)
-            
+
             #factorize the result
             if len(newadd) > 1:
                 try:
@@ -444,17 +444,24 @@ class AddVariable(list):
                 maxvar = maxvar.copy()
                 maxvar.power = 1
             
+            
+            
             if newadd.vartype == 2: # isinstance(newadd, MultVariable):
                 newadd.append(maxvar)
             else:
                 newadd = MultVariable([maxvar, newadd])
+
+            #simplify structure:
+            if len(constant) == 1:
+                constant = constant[0]
+            if len(newadd) == 1:
+                newadd = newadd[0]
 
             if constant:
                 constant = constant.factorize()
                 return AddVariable([newadd, constant])
             else:
                 return newadd
-
         
 #===============================================================================
 # MultVariable
@@ -591,6 +598,7 @@ class MultVariable(list):
         self.prefactor *= obj.prefactor
         if obj in self:
             index = self.index(obj)
+            self[index] = self[index].copy()
             self[index].power += 1
         else:
             obj.prefactor = 1
@@ -711,7 +719,12 @@ class Variable(object):
         else:
             #apply obj * self
             return NotImplemented
-                
+    
+    def __pow__(self,power):
+        """define power"""
+        copy = self.copy()
+        copy.power = self.power * power
+        return copy
 
     def __add__(self, obj):
         """ How to make an addition
@@ -1103,7 +1116,18 @@ class LorentzObject(Variable):
             
         #call the initialization of the basic class
         Variable.__init__(self, prefactor, variable)
+    
+    def __pow__(self, power):
+        """ definition of an auto-contracted object """
+
+        assert power == 2, "Lorentz object cann't have power higher than two"
         
+        new = MultLorentz()
+        new.append(self)
+        new.append(self.copy())
+        return new
+    
+    
     def copy(self):
         """return a shadow copy of the object. This is performed in calling 
         again the __init__ instance"""
@@ -1162,6 +1186,8 @@ class LorentzObject(Variable):
         for i in spin_list:
             if i in self.spin_ind:
                 return True
+
+
 
 #===============================================================================
 # IndicesIterator
@@ -1292,6 +1318,7 @@ class LorentzObjectRepresentation(dict):
     def __mul__(self, obj):
         """multiplication performing directly the einstein/spin sommation.
         """
+
         if not hasattr(obj, 'vartype') or not self.vartype:
             out = LorentzObjectRepresentation({}, self.lorentz_ind, self.spin_ind)
             for ind in out.listindices():
@@ -1388,10 +1415,11 @@ class LorentzObjectRepresentation(dict):
                 factor = self.get_rep(self_ind) 
                 factor *= obj.get_rep(obj_ind)
                 
+                
                 if factor:
                     #compute the prefactor due to the lorentz contraction
                     factor *= (-1) ** (len(l_value) - l_value.count(0))
-                    out += factor                         
+                    out += factor                        
         return out
 
     def combine_indices(self, l_dict, s_dict):

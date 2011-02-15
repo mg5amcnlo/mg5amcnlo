@@ -19,6 +19,10 @@ import StringIO
 import copy
 import fractions
 import os 
+import sys
+
+root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
+sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
 
 import tests.unit_tests as unittest
 
@@ -26,6 +30,7 @@ import madgraph.iolibs.misc as misc
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.helas_call_writers as helas_call_writers
+import madgraph.iolibs.save_load_object as save_load_object        
 import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -36,6 +41,9 @@ import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 import tests.unit_tests.iolibs.test_helas_call_writers as \
                                             test_helas_call_writers
 
+_file_path = os.path.dirname(os.path.realpath(__file__))
+_input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
+                                'input_files')
 #===============================================================================
 # IOImportV4Test
 #===============================================================================
@@ -249,6 +257,8 @@ C
       PARAMETER (NWAVEFUNCS=11, NCOLOR=1)
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
+      COMPLEX*16 IMAG1
+      PARAMETER (IMAG1=(0D0,1D0))
 C     
 C     ARGUMENTS 
 C     
@@ -334,7 +344,7 @@ C     Amplitude(s) for diagram number 6
 
         self.assertEqual(export_v4.coeff(-1,
                                          fractions.Fraction(3, 5),
-                                         True, -2), '-1./15.*complex(0,1)*')
+                                         True, -2), '-1./15.*imag1*')
 
 
 #===============================================================================
@@ -693,6 +703,386 @@ JAMP(3)=+1./4.*(-AMP(4)+AMP(6)-AMP(7)-1./3.*AMP(9)-1./3.*AMP(10)-1./9.*AMP(11)-1
 JAMP(4)=+1./4.*(+AMP(1)+AMP(3)+1./3.*AMP(4)+1./3.*AMP(5)+AMP(10)+1./3.*AMP(11)+1./3.*AMP(12)+AMP(15)+AMP(16)+AMP(18)+1./9.*AMP(21)+1./9.*AMP(22)+1./3.*AMP(24)+1./3.*AMP(25)+1./3.*AMP(27)+1./3.*AMP(28)+1./9.*AMP(29)+1./9.*AMP(30)+1./9.*AMP(31)+1./9.*AMP(32)+1./3.*AMP(33)+1./3.*AMP(34)+AMP(38)+AMP(40)+1./3.*AMP(41)+1./3.*AMP(42))
 JAMP(5)=+1./4.*(+AMP(2)-AMP(3)+1./3.*AMP(7)+1./3.*AMP(8)+AMP(9)+1./3.*AMP(11)+1./3.*AMP(12)+1./9.*AMP(14)+1./9.*AMP(15)+1./9.*AMP(17)+1./9.*AMP(18)+1./3.*AMP(19)+1./3.*AMP(20)+AMP(21)+AMP(23)+1./3.*AMP(24)+1./3.*AMP(25)+AMP(30)+AMP(32)+1./3.*AMP(35)+1./3.*AMP(36)+1./9.*AMP(37)+1./9.*AMP(38)+AMP(39)+1./3.*AMP(41)+1./3.*AMP(42))
 JAMP(6)=+1./4.*(-1./3.*AMP(1)-1./3.*AMP(2)-AMP(5)-AMP(6)-AMP(8)-AMP(11)-AMP(13)-1./3.*AMP(14)-1./3.*AMP(15)-AMP(20)-1./3.*AMP(21)-1./3.*AMP(22)-1./9.*AMP(24)-1./9.*AMP(25)-1./9.*AMP(27)-1./9.*AMP(28)-1./3.*AMP(29)-1./3.*AMP(30)-AMP(34)-1./9.*AMP(35)-1./9.*AMP(36)-1./3.*AMP(37)-1./3.*AMP(38)-1./3.*AMP(39)-1./3.*AMP(40)-AMP(42))""")
+        # Test configs file
+        writer = writers.FortranWriter(self.give_pos('test'))
+        mapconfigs, s_and_t_channels = export_v4.write_configs_file(writer,
+                                                                    matrix_element,
+                                                                    fortran_model)
+        writer.close()
+
+        self.assertFileContains('test',
+"""C     Diagram 1
+      DATA MAPCONFIG(1)/1/
+      DATA (IFOREST(I,-1,1),I=1,2)/4,3/
+      DATA SPROP(-1,1)/21/
+      DATA (IFOREST(I,-2,1),I=1,2)/6,-1/
+      DATA SPROP(-2,1)/-2/
+      DATA (IFOREST(I,-3,1),I=1,2)/5,-2/
+      DATA SPROP(-3,1)/21/
+C     Diagram 2
+      DATA MAPCONFIG(2)/2/
+      DATA (IFOREST(I,-1,2),I=1,2)/4,3/
+      DATA SPROP(-1,2)/21/
+      DATA (IFOREST(I,-2,2),I=1,2)/5,-1/
+      DATA SPROP(-2,2)/2/
+      DATA (IFOREST(I,-3,2),I=1,2)/6,-2/
+      DATA SPROP(-3,2)/21/
+C     Diagram 3
+      DATA MAPCONFIG(3)/3/
+      DATA (IFOREST(I,-1,3),I=1,2)/4,3/
+      DATA SPROP(-1,3)/21/
+      DATA (IFOREST(I,-2,3),I=1,2)/6,5/
+      DATA SPROP(-2,3)/21/
+      DATA (IFOREST(I,-3,3),I=1,2)/-2,-1/
+      DATA SPROP(-3,3)/21/
+C     Diagram 4
+      DATA MAPCONFIG(4)/4/
+      DATA (IFOREST(I,-1,4),I=1,2)/6,3/
+      DATA SPROP(-1,4)/21/
+      DATA (IFOREST(I,-2,4),I=1,2)/5,-1/
+      DATA SPROP(-2,4)/2/
+      DATA (IFOREST(I,-3,4),I=1,2)/4,-2/
+      DATA SPROP(-3,4)/21/
+C     Diagram 5
+      DATA MAPCONFIG(5)/5/
+      DATA (IFOREST(I,-1,5),I=1,2)/6,3/
+      DATA SPROP(-1,5)/21/
+      DATA (IFOREST(I,-2,5),I=1,2)/4,-1/
+      DATA SPROP(-2,5)/-2/
+      DATA (IFOREST(I,-3,5),I=1,2)/5,-2/
+      DATA SPROP(-3,5)/21/
+C     Diagram 6
+      DATA MAPCONFIG(6)/6/
+      DATA (IFOREST(I,-1,6),I=1,2)/6,3/
+      DATA SPROP(-1,6)/21/
+      DATA (IFOREST(I,-2,6),I=1,2)/5,4/
+      DATA SPROP(-2,6)/21/
+      DATA (IFOREST(I,-3,6),I=1,2)/-2,-1/
+      DATA SPROP(-3,6)/21/
+C     Diagram 7
+      DATA MAPCONFIG(7)/7/
+      DATA (IFOREST(I,-1,7),I=1,2)/5,4/
+      DATA SPROP(-1,7)/21/
+      DATA (IFOREST(I,-2,7),I=1,2)/6,-1/
+      DATA SPROP(-2,7)/-2/
+      DATA (IFOREST(I,-3,7),I=1,2)/-2,3/
+      DATA SPROP(-3,7)/21/
+C     Diagram 8
+      DATA MAPCONFIG(8)/8/
+      DATA (IFOREST(I,-1,8),I=1,2)/5,4/
+      DATA SPROP(-1,8)/21/
+      DATA (IFOREST(I,-2,8),I=1,2)/-1,3/
+      DATA SPROP(-2,8)/2/
+      DATA (IFOREST(I,-3,8),I=1,2)/6,-2/
+      DATA SPROP(-3,8)/21/
+C     Diagram 9
+      DATA MAPCONFIG(9)/9/
+      DATA (IFOREST(I,-1,9),I=1,2)/6,5/
+      DATA SPROP(-1,9)/21/
+      DATA (IFOREST(I,-2,9),I=1,2)/-1,4/
+      DATA SPROP(-2,9)/-2/
+      DATA (IFOREST(I,-3,9),I=1,2)/-2,3/
+      DATA SPROP(-3,9)/21/
+C     Diagram 10
+      DATA MAPCONFIG(10)/10/
+      DATA (IFOREST(I,-1,10),I=1,2)/6,5/
+      DATA SPROP(-1,10)/21/
+      DATA (IFOREST(I,-2,10),I=1,2)/-1,3/
+      DATA SPROP(-2,10)/2/
+      DATA (IFOREST(I,-3,10),I=1,2)/4,-2/
+      DATA SPROP(-3,10)/21/
+C     Diagram 11
+      DATA MAPCONFIG(11)/11/
+      DATA (IFOREST(I,-1,11),I=1,2)/1,3/
+      DATA TPRID(-1,11)/21/
+      DATA (IFOREST(I,-2,11),I=1,2)/-1,5/
+      DATA TPRID(-2,11)/2/
+      DATA (IFOREST(I,-3,11),I=1,2)/-2,6/
+      DATA TPRID(-3,11)/21/
+      DATA (IFOREST(I,-4,11),I=1,2)/-3,4/
+C     Diagram 12
+      DATA MAPCONFIG(12)/12/
+      DATA (IFOREST(I,-1,12),I=1,2)/1,3/
+      DATA TPRID(-1,12)/21/
+      DATA (IFOREST(I,-2,12),I=1,2)/-1,6/
+      DATA TPRID(-2,12)/2/
+      DATA (IFOREST(I,-3,12),I=1,2)/-2,5/
+      DATA TPRID(-3,12)/21/
+      DATA (IFOREST(I,-4,12),I=1,2)/-3,4/
+C     Diagram 13
+      DATA MAPCONFIG(13)/13/
+      DATA (IFOREST(I,-1,13),I=1,2)/6,5/
+      DATA SPROP(-1,13)/21/
+      DATA (IFOREST(I,-2,13),I=1,2)/1,3/
+      DATA TPRID(-2,13)/21/
+      DATA (IFOREST(I,-3,13),I=1,2)/-2,-1/
+      DATA TPRID(-3,13)/21/
+      DATA (IFOREST(I,-4,13),I=1,2)/-3,4/
+C     Diagram 14
+      DATA MAPCONFIG(14)/14/
+      DATA (IFOREST(I,-1,14),I=1,2)/1,3/
+      DATA TPRID(-1,14)/21/
+      DATA (IFOREST(I,-2,14),I=1,2)/-1,4/
+      DATA TPRID(-2,14)/2/
+      DATA (IFOREST(I,-3,14),I=1,2)/-2,5/
+      DATA TPRID(-3,14)/21/
+      DATA (IFOREST(I,-4,14),I=1,2)/-3,6/
+C     Diagram 15
+      DATA MAPCONFIG(15)/15/
+      DATA (IFOREST(I,-1,15),I=1,2)/1,3/
+      DATA TPRID(-1,15)/21/
+      DATA (IFOREST(I,-2,15),I=1,2)/-1,5/
+      DATA TPRID(-2,15)/2/
+      DATA (IFOREST(I,-3,15),I=1,2)/-2,4/
+      DATA TPRID(-3,15)/21/
+      DATA (IFOREST(I,-4,15),I=1,2)/-3,6/
+C     Diagram 16
+      DATA MAPCONFIG(16)/16/
+      DATA (IFOREST(I,-1,16),I=1,2)/5,4/
+      DATA SPROP(-1,16)/21/
+      DATA (IFOREST(I,-2,16),I=1,2)/1,3/
+      DATA TPRID(-2,16)/21/
+      DATA (IFOREST(I,-3,16),I=1,2)/-2,-1/
+      DATA TPRID(-3,16)/21/
+      DATA (IFOREST(I,-4,16),I=1,2)/-3,6/
+C     Diagram 17
+      DATA MAPCONFIG(17)/17/
+      DATA (IFOREST(I,-1,17),I=1,2)/5,4/
+      DATA SPROP(-1,17)/21/
+      DATA (IFOREST(I,-2,17),I=1,2)/6,-1/
+      DATA SPROP(-2,17)/-2/
+      DATA (IFOREST(I,-3,17),I=1,2)/1,3/
+      DATA TPRID(-3,17)/21/
+      DATA (IFOREST(I,-4,17),I=1,2)/-3,-2/
+C     Diagram 18
+      DATA MAPCONFIG(18)/18/
+      DATA (IFOREST(I,-1,18),I=1,2)/5,4/
+      DATA SPROP(-1,18)/21/
+      DATA (IFOREST(I,-2,18),I=1,2)/1,3/
+      DATA TPRID(-2,18)/21/
+      DATA (IFOREST(I,-3,18),I=1,2)/-2,6/
+      DATA TPRID(-3,18)/2/
+      DATA (IFOREST(I,-4,18),I=1,2)/-3,-1/
+C     Diagram 19
+      DATA MAPCONFIG(19)/19/
+      DATA (IFOREST(I,-1,19),I=1,2)/6,5/
+      DATA SPROP(-1,19)/21/
+      DATA (IFOREST(I,-2,19),I=1,2)/-1,4/
+      DATA SPROP(-2,19)/-2/
+      DATA (IFOREST(I,-3,19),I=1,2)/1,3/
+      DATA TPRID(-3,19)/21/
+      DATA (IFOREST(I,-4,19),I=1,2)/-3,-2/
+C     Diagram 20
+      DATA MAPCONFIG(20)/20/
+      DATA (IFOREST(I,-1,20),I=1,2)/6,5/
+      DATA SPROP(-1,20)/21/
+      DATA (IFOREST(I,-2,20),I=1,2)/1,3/
+      DATA TPRID(-2,20)/21/
+      DATA (IFOREST(I,-3,20),I=1,2)/-2,4/
+      DATA TPRID(-3,20)/2/
+      DATA (IFOREST(I,-4,20),I=1,2)/-3,-1/
+C     Diagram 21
+      DATA MAPCONFIG(21)/21/
+      DATA (IFOREST(I,-1,21),I=1,2)/1,5/
+      DATA TPRID(-1,21)/21/
+      DATA (IFOREST(I,-2,21),I=1,2)/-1,3/
+      DATA TPRID(-2,21)/2/
+      DATA (IFOREST(I,-3,21),I=1,2)/-2,6/
+      DATA TPRID(-3,21)/21/
+      DATA (IFOREST(I,-4,21),I=1,2)/-3,4/
+C     Diagram 22
+      DATA MAPCONFIG(22)/22/
+      DATA (IFOREST(I,-1,22),I=1,2)/1,5/
+      DATA TPRID(-1,22)/21/
+      DATA (IFOREST(I,-2,22),I=1,2)/-1,6/
+      DATA TPRID(-2,22)/2/
+      DATA (IFOREST(I,-3,22),I=1,2)/-2,3/
+      DATA TPRID(-3,22)/21/
+      DATA (IFOREST(I,-4,22),I=1,2)/-3,4/
+C     Diagram 23
+      DATA MAPCONFIG(23)/23/
+      DATA (IFOREST(I,-1,23),I=1,2)/6,3/
+      DATA SPROP(-1,23)/21/
+      DATA (IFOREST(I,-2,23),I=1,2)/1,5/
+      DATA TPRID(-2,23)/21/
+      DATA (IFOREST(I,-3,23),I=1,2)/-2,-1/
+      DATA TPRID(-3,23)/21/
+      DATA (IFOREST(I,-4,23),I=1,2)/-3,4/
+C     Diagram 24
+      DATA MAPCONFIG(24)/24/
+      DATA (IFOREST(I,-1,24),I=1,2)/1,5/
+      DATA TPRID(-1,24)/21/
+      DATA (IFOREST(I,-2,24),I=1,2)/-1,3/
+      DATA TPRID(-2,24)/2/
+      DATA (IFOREST(I,-3,24),I=1,2)/-2,4/
+      DATA TPRID(-3,24)/21/
+      DATA (IFOREST(I,-4,24),I=1,2)/-3,6/
+C     Diagram 25
+      DATA MAPCONFIG(25)/25/
+      DATA (IFOREST(I,-1,25),I=1,2)/1,5/
+      DATA TPRID(-1,25)/21/
+      DATA (IFOREST(I,-2,25),I=1,2)/-1,4/
+      DATA TPRID(-2,25)/2/
+      DATA (IFOREST(I,-3,25),I=1,2)/-2,3/
+      DATA TPRID(-3,25)/21/
+      DATA (IFOREST(I,-4,25),I=1,2)/-3,6/
+C     Diagram 26
+      DATA MAPCONFIG(26)/26/
+      DATA (IFOREST(I,-1,26),I=1,2)/4,3/
+      DATA SPROP(-1,26)/21/
+      DATA (IFOREST(I,-2,26),I=1,2)/1,5/
+      DATA TPRID(-2,26)/21/
+      DATA (IFOREST(I,-3,26),I=1,2)/-2,-1/
+      DATA TPRID(-3,26)/21/
+      DATA (IFOREST(I,-4,26),I=1,2)/-3,6/
+C     Diagram 27
+      DATA MAPCONFIG(27)/27/
+      DATA (IFOREST(I,-1,27),I=1,2)/4,3/
+      DATA SPROP(-1,27)/21/
+      DATA (IFOREST(I,-2,27),I=1,2)/6,-1/
+      DATA SPROP(-2,27)/-2/
+      DATA (IFOREST(I,-3,27),I=1,2)/1,5/
+      DATA TPRID(-3,27)/21/
+      DATA (IFOREST(I,-4,27),I=1,2)/-3,-2/
+C     Diagram 28
+      DATA MAPCONFIG(28)/28/
+      DATA (IFOREST(I,-1,28),I=1,2)/4,3/
+      DATA SPROP(-1,28)/21/
+      DATA (IFOREST(I,-2,28),I=1,2)/1,5/
+      DATA TPRID(-2,28)/21/
+      DATA (IFOREST(I,-3,28),I=1,2)/-2,6/
+      DATA TPRID(-3,28)/2/
+      DATA (IFOREST(I,-4,28),I=1,2)/-3,-1/
+C     Diagram 29
+      DATA MAPCONFIG(29)/29/
+      DATA (IFOREST(I,-1,29),I=1,2)/6,3/
+      DATA SPROP(-1,29)/21/
+      DATA (IFOREST(I,-2,29),I=1,2)/4,-1/
+      DATA SPROP(-2,29)/-2/
+      DATA (IFOREST(I,-3,29),I=1,2)/1,5/
+      DATA TPRID(-3,29)/21/
+      DATA (IFOREST(I,-4,29),I=1,2)/-3,-2/
+C     Diagram 30
+      DATA MAPCONFIG(30)/30/
+      DATA (IFOREST(I,-1,30),I=1,2)/6,3/
+      DATA SPROP(-1,30)/21/
+      DATA (IFOREST(I,-2,30),I=1,2)/1,5/
+      DATA TPRID(-2,30)/21/
+      DATA (IFOREST(I,-3,30),I=1,2)/-2,4/
+      DATA TPRID(-3,30)/2/
+      DATA (IFOREST(I,-4,30),I=1,2)/-3,-1/
+C     Diagram 31
+      DATA MAPCONFIG(31)/31/
+      DATA (IFOREST(I,-1,31),I=1,2)/6,3/
+      DATA SPROP(-1,31)/21/
+      DATA (IFOREST(I,-2,31),I=1,2)/5,-1/
+      DATA SPROP(-2,31)/2/
+      DATA (IFOREST(I,-3,31),I=1,2)/1,-2/
+      DATA TPRID(-3,31)/21/
+      DATA (IFOREST(I,-4,31),I=1,2)/-3,4/
+C     Diagram 32
+      DATA MAPCONFIG(32)/32/
+      DATA (IFOREST(I,-1,32),I=1,2)/6,3/
+      DATA SPROP(-1,32)/21/
+      DATA (IFOREST(I,-2,32),I=1,2)/1,-1/
+      DATA TPRID(-2,32)/2/
+      DATA (IFOREST(I,-3,32),I=1,2)/-2,5/
+      DATA TPRID(-3,32)/21/
+      DATA (IFOREST(I,-4,32),I=1,2)/-3,4/
+C     Diagram 33
+      DATA MAPCONFIG(33)/33/
+      DATA (IFOREST(I,-1,33),I=1,2)/6,5/
+      DATA SPROP(-1,33)/21/
+      DATA (IFOREST(I,-2,33),I=1,2)/-1,3/
+      DATA SPROP(-2,33)/2/
+      DATA (IFOREST(I,-3,33),I=1,2)/1,-2/
+      DATA TPRID(-3,33)/21/
+      DATA (IFOREST(I,-4,33),I=1,2)/-3,4/
+C     Diagram 34
+      DATA MAPCONFIG(34)/34/
+      DATA (IFOREST(I,-1,34),I=1,2)/6,5/
+      DATA SPROP(-1,34)/21/
+      DATA (IFOREST(I,-2,34),I=1,2)/1,-1/
+      DATA TPRID(-2,34)/2/
+      DATA (IFOREST(I,-3,34),I=1,2)/-2,3/
+      DATA TPRID(-3,34)/21/
+      DATA (IFOREST(I,-4,34),I=1,2)/-3,4/
+C     Diagram 35
+      DATA MAPCONFIG(35)/35/
+      DATA (IFOREST(I,-1,35),I=1,2)/4,3/
+      DATA SPROP(-1,35)/21/
+      DATA (IFOREST(I,-2,35),I=1,2)/5,-1/
+      DATA SPROP(-2,35)/2/
+      DATA (IFOREST(I,-3,35),I=1,2)/1,-2/
+      DATA TPRID(-3,35)/21/
+      DATA (IFOREST(I,-4,35),I=1,2)/-3,6/
+C     Diagram 36
+      DATA MAPCONFIG(36)/36/
+      DATA (IFOREST(I,-1,36),I=1,2)/4,3/
+      DATA SPROP(-1,36)/21/
+      DATA (IFOREST(I,-2,36),I=1,2)/1,-1/
+      DATA TPRID(-2,36)/2/
+      DATA (IFOREST(I,-3,36),I=1,2)/-2,5/
+      DATA TPRID(-3,36)/21/
+      DATA (IFOREST(I,-4,36),I=1,2)/-3,6/
+C     Diagram 37
+      DATA MAPCONFIG(37)/37/
+      DATA (IFOREST(I,-1,37),I=1,2)/5,4/
+      DATA SPROP(-1,37)/21/
+      DATA (IFOREST(I,-2,37),I=1,2)/-1,3/
+      DATA SPROP(-2,37)/2/
+      DATA (IFOREST(I,-3,37),I=1,2)/1,-2/
+      DATA TPRID(-3,37)/21/
+      DATA (IFOREST(I,-4,37),I=1,2)/-3,6/
+C     Diagram 38
+      DATA MAPCONFIG(38)/38/
+      DATA (IFOREST(I,-1,38),I=1,2)/5,4/
+      DATA SPROP(-1,38)/21/
+      DATA (IFOREST(I,-2,38),I=1,2)/1,-1/
+      DATA TPRID(-2,38)/2/
+      DATA (IFOREST(I,-3,38),I=1,2)/-2,3/
+      DATA TPRID(-3,38)/21/
+      DATA (IFOREST(I,-4,38),I=1,2)/-3,6/
+C     Diagram 39
+      DATA MAPCONFIG(39)/39/
+      DATA (IFOREST(I,-1,39),I=1,2)/6,5/
+      DATA SPROP(-1,39)/21/
+      DATA (IFOREST(I,-2,39),I=1,2)/4,3/
+      DATA SPROP(-2,39)/21/
+      DATA (IFOREST(I,-3,39),I=1,2)/1,-2/
+      DATA TPRID(-3,39)/2/
+      DATA (IFOREST(I,-4,39),I=1,2)/-3,-1/
+C     Diagram 40
+      DATA MAPCONFIG(40)/40/
+      DATA (IFOREST(I,-1,40),I=1,2)/4,3/
+      DATA SPROP(-1,40)/21/
+      DATA (IFOREST(I,-2,40),I=1,2)/6,5/
+      DATA SPROP(-2,40)/21/
+      DATA (IFOREST(I,-3,40),I=1,2)/1,-2/
+      DATA TPRID(-3,40)/2/
+      DATA (IFOREST(I,-4,40),I=1,2)/-3,-1/
+C     Diagram 41
+      DATA MAPCONFIG(41)/41/
+      DATA (IFOREST(I,-1,41),I=1,2)/5,4/
+      DATA SPROP(-1,41)/21/
+      DATA (IFOREST(I,-2,41),I=1,2)/6,3/
+      DATA SPROP(-2,41)/21/
+      DATA (IFOREST(I,-3,41),I=1,2)/1,-2/
+      DATA TPRID(-3,41)/2/
+      DATA (IFOREST(I,-4,41),I=1,2)/-3,-1/
+C     Diagram 42
+      DATA MAPCONFIG(42)/42/
+      DATA (IFOREST(I,-1,42),I=1,2)/6,3/
+      DATA SPROP(-1,42)/21/
+      DATA (IFOREST(I,-2,42),I=1,2)/5,4/
+      DATA SPROP(-2,42)/21/
+      DATA (IFOREST(I,-3,42),I=1,2)/1,-2/
+      DATA TPRID(-3,42)/2/
+      DATA (IFOREST(I,-4,42),I=1,2)/-3,-1/
+C     Number of configs
+      DATA MAPCONFIG(0)/42/
+""")
+
         # Test coloramps.inc output
         self.assertEqual(export_v4.get_icolamp_lines(matrix_element),
                          ['logical icolamp(42,6)', 'DATA(icolamp(i,1),i=1,42)/.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.false.,.false.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.false./', 'DATA(icolamp(i,2),i=1,42)/.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.false.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.false.,.true.,.true.,.false.,.false.,.true.,.true./', 'DATA(icolamp(i,3),i=1,42)/.false.,.false.,.false.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.false.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.true.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.true.,.false./', 'DATA(icolamp(i,4),i=1,42)/.true.,.false.,.true.,.true.,.true.,.false.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.false.,.true.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.true.,.true.,.true.,.false.,.false.,.false.,.true.,.false.,.true.,.true.,.true./', 'DATA(icolamp(i,5),i=1,42)/.false.,.true.,.true.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.true.,.true.,.false.,.false.,.false.,.false.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.true.,.true.,.true.,.false.,.true.,.true./', 'DATA(icolamp(i,6),i=1,42)/.true.,.true.,.false.,.false.,.true.,.true.,.false.,.true.,.false.,.false.,.true.,.false.,.true.,.true.,.true.,.false.,.false.,.false.,.false.,.true.,.true.,.true.,.false.,.true.,.true.,.false.,.true.,.true.,.true.,.true.,.false.,.false.,.false.,.true.,.true.,.true.,.true.,.true.,.true.,.true.,.false.,.true./'])
@@ -883,6 +1273,38 @@ JAMP(4)=+2*(+AMP(1)-AMP(2)-AMP(4)-AMP(5))
 JAMP(5)=+2*(-AMP(3)+AMP(2)+AMP(5)+AMP(6))
 JAMP(6)=+2*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))""")
 
+        # Test amp2 lines        
+        amp2_lines = \
+                 export_v4.get_amp2_lines(matrix_element)
+        self.assertEqual(amp2_lines,
+                         ['AMP2(2)=AMP2(2)+AMP(4)*dconjg(AMP(4))',
+                          'AMP2(3)=AMP2(3)+AMP(5)*dconjg(AMP(5))',
+                          'AMP2(4)=AMP2(4)+AMP(6)*dconjg(AMP(6))'])
+        
+        # Test configs file
+        writer = writers.FortranWriter(self.give_pos('test'))
+        nconfig, s_and_t_channels = export_v4.write_configs_file(writer,
+                                     matrix_element,
+                                     fortran_model)
+        writer.close()
+        self.assertFileContains('test',
+"""C     Diagram 2
+      DATA MAPCONFIG(1)/2/
+      DATA (IFOREST(I,-1,1),I=1,2)/4,3/
+      DATA SPROP(-1,1)/21/
+C     Diagram 3
+      DATA MAPCONFIG(2)/3/
+      DATA (IFOREST(I,-1,2),I=1,2)/1,3/
+      DATA TPRID(-1,2)/21/
+      DATA (IFOREST(I,-2,2),I=1,2)/-1,4/
+C     Diagram 4
+      DATA MAPCONFIG(3)/4/
+      DATA (IFOREST(I,-1,3),I=1,2)/1,4/
+      DATA TPRID(-1,3)/21/
+      DATA (IFOREST(I,-2,3),I=1,2)/-1,3/
+C     Number of configs
+      DATA MAPCONFIG(0)/3/
+""")
 
     def test_generate_helas_diagrams_uu_susu(self):
         """Testing the helas diagram generation u u > su su with t-channel n1
@@ -1968,7 +2390,8 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, gen_color=False)
 
-        self.assertEqual("\n".join(helas_call_writers.FortranHelasCallWriter(mybasemodel).\
+        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mybasemodel)
+        self.assertEqual("\n".join(myfortranmodel.\
                                    get_matrix_element_calls(matrix_element)),
                          """CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
 CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
@@ -1995,6 +2418,40 @@ CALL VVVL1X(W(1,2),W(1,3),W(1,9),G1,AMP(9))
 CALL VVVL2X(W(1,2),W(1,3),W(1,9),G2,AMP(10))
 CALL VVVL1X(W(1,2),W(1,3),W(1,10),G1,AMP(11))
 CALL VVVL2X(W(1,2),W(1,3),W(1,10),G2,AMP(12))""")
+
+        # Test amp2 lines
+        amp2_lines = \
+                 export_v4.get_amp2_lines(matrix_element)
+        self.assertEqual(amp2_lines,
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))+AMP(2)*dconjg(AMP(2))+AMP(3)*dconjg(AMP(3))+AMP(4)*dconjg(AMP(4))',
+                          'AMP2(2)=AMP2(2)+AMP(5)*dconjg(AMP(5))+AMP(6)*dconjg(AMP(6))+AMP(7)*dconjg(AMP(7))+AMP(8)*dconjg(AMP(8))',
+                          'AMP2(3)=AMP2(3)+AMP(9)*dconjg(AMP(9))+AMP(10)*dconjg(AMP(10))+AMP(11)*dconjg(AMP(11))+AMP(12)*dconjg(AMP(12))'])
+
+        # Test configs file
+        writer = writers.FortranWriter(self.give_pos('test'))
+        nconfig, s_and_t_channels = export_v4.write_configs_file(writer,
+                                     matrix_element,
+                                     myfortranmodel)
+        writer.close()
+
+        self.assertFileContains('test',
+"""C     Diagram 1
+      DATA MAPCONFIG(1)/1/
+      DATA (IFOREST(I,-1,1),I=1,2)/4,3/
+      DATA SPROP(-1,1)/45/
+C     Diagram 2
+      DATA MAPCONFIG(2)/2/
+      DATA (IFOREST(I,-1,2),I=1,2)/1,3/
+      DATA TPRID(-1,2)/45/
+      DATA (IFOREST(I,-2,2),I=1,2)/-1,4/
+C     Diagram 3
+      DATA MAPCONFIG(3)/3/
+      DATA (IFOREST(I,-1,3),I=1,2)/1,4/
+      DATA TPRID(-1,3)/45/
+      DATA (IFOREST(I,-2,3),I=1,2)/-1,3/
+C     Number of configs
+      DATA MAPCONFIG(0)/3/
+""")
 
     def test_multiple_lorentz_structures_with_fermion_flow_clash(self):
         """Testing process w+ w+ > z x1+ x1+.
@@ -2101,6 +2558,14 @@ CALL VVVL2X(W(1,2),W(1,3),W(1,10),G2,AMP(12))""")
             }))
         myinterlist.append(base_objects.Interaction({
             'id': 3,
+            'particles': base_objects.ParticleList([n1,x1minus,wplus]),
+            'color': [],
+            'lorentz': ['FFV2', 'FFV3'],
+            'couplings': {(0, 1): 'GC_628', (0, 0): 'GC_422'},
+            'orders': {'QED': 1}
+            }))
+        myinterlist.append(base_objects.Interaction({
+            'id': 4,
             'particles': base_objects.ParticleList([n1,n1,z]),
             'color': [],
             'lorentz': ['FFV5'],
@@ -2142,7 +2607,7 @@ CALL VXXXXX(P(0,2),MW,NHEL(2),-1*IC(2),W(1,2))
 CALL VXXXXX(P(0,3),MZ,NHEL(3),+1*IC(3),W(1,3))
 CALL IXXXXX(P(0,4),Mx1p,NHEL(4),-1*IC(4),W(1,4))
 CALL OXXXXX(P(0,5),Mx1p,NHEL(5),+1*IC(5),W(1,5))
-CALL VVV1_2(W(1,3),W(1,1),GC_214,MW, WW, W(1,6))
+CALL VVV1_2(W(1,1),W(1,3),GC_214,MW, WW, W(1,6))
 CALL FFV2C1_2(W(1,4),W(1,2),GC_422,Mneu1, Wneu1, W(1,7))
 CALL FFV3C1_2(W(1,4),W(1,2),GC_628,Mneu1, Wneu1, W(1,8))
 # Amplitude(s) for diagram number 1
@@ -2159,7 +2624,7 @@ CALL FFV2C1_0(W(1,4),W(1,10),W(1,6),GC_422,AMP(7))
 CALL FFV3C1_0(W(1,4),W(1,10),W(1,6),GC_628,AMP(8))
 CALL FFV2C1_2(W(1,4),W(1,1),GC_422,Mneu1, Wneu1, W(1,11))
 CALL FFV3C1_2(W(1,4),W(1,1),GC_628,Mneu1, Wneu1, W(1,12))
-CALL VVV1_2(W(1,3),W(1,2),GC_214,MW, WW, W(1,13))
+CALL VVV1_2(W(1,2),W(1,3),GC_214,MW, WW, W(1,13))
 # Amplitude(s) for diagram number 3
 CALL FFV2_0(W(1,11),W(1,5),W(1,13),GC_422,AMP(9))
 CALL FFV3_0(W(1,11),W(1,5),W(1,13),GC_628,AMP(10))
@@ -2182,6 +2647,731 @@ CALL FFV5_0(W(1,7),W(1,14),W(1,3),GC_418,AMP(21))
 CALL FFV5_0(W(1,8),W(1,14),W(1,3),GC_418,AMP(22))
 CALL FFV5_0(W(1,7),W(1,15),W(1,3),GC_418,AMP(23))
 CALL FFV5_0(W(1,8),W(1,15),W(1,3),GC_418,AMP(24))""".split('\n')
+
+        for i in range(len(goal)):
+            self.assertEqual(result[i], goal[i])
+
+        # Test amp2 lines        
+        amp2_lines = \
+                 export_v4.get_amp2_lines(matrix_element)
+        self.assertEqual(amp2_lines,
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))+AMP(2)*dconjg(AMP(2))+AMP(3)*dconjg(AMP(3))+AMP(4)*dconjg(AMP(4))',
+                          'AMP2(2)=AMP2(2)+AMP(5)*dconjg(AMP(5))+AMP(6)*dconjg(AMP(6))+AMP(7)*dconjg(AMP(7))+AMP(8)*dconjg(AMP(8))',
+                          'AMP2(3)=AMP2(3)+AMP(9)*dconjg(AMP(9))+AMP(10)*dconjg(AMP(10))+AMP(11)*dconjg(AMP(11))+AMP(12)*dconjg(AMP(12))',
+                          'AMP2(4)=AMP2(4)+AMP(13)*dconjg(AMP(13))+AMP(14)*dconjg(AMP(14))+AMP(15)*dconjg(AMP(15))+AMP(16)*dconjg(AMP(16))',
+                          'AMP2(5)=AMP2(5)+AMP(17)*dconjg(AMP(17))+AMP(18)*dconjg(AMP(18))+AMP(19)*dconjg(AMP(19))+AMP(20)*dconjg(AMP(20))',
+                          'AMP2(6)=AMP2(6)+AMP(21)*dconjg(AMP(21))+AMP(22)*dconjg(AMP(22))+AMP(23)*dconjg(AMP(23))+AMP(24)*dconjg(AMP(24))'])
+
+    def test_four_fermion_vertex_normal_fermion_flow(self):
+        """Testing process u u > t t g with fermion flow (u~t)(u~t)
+        """
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A u quark and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[len(mypartlist) - 1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        # A t quark and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'t',
+                      'antiname':'t~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'MT',
+                      'width':'WT',
+                      'texname':'t',
+                      'antitexname':'\bar t',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':6,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        t = mypartlist[len(mypartlist) - 1]
+        antit = copy.copy(t)
+        antit.set('is_part', False)
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        g = mypartlist[len(mypartlist) - 1]
+
+        # Gluon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2, 1, 0)])],
+                      'lorentz':['FFV1'],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [antit, \
+                                             t, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2, 1, 0)])],
+                      'lorentz':['FFV1'],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        # Four fermion vertex
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu,
+                                             t,
+                                             antiu,
+                                             t]),
+                      'color': [color.ColorString([color.T(1, 0),
+                                                   color.T(3, 2)])],
+                      'lorentz':['FFFF1'],
+                      'couplings':{(0, 0):'GEFF'},
+                      'orders':{'NP':2}}))
+
+        mybasemodel = base_objects.Model()
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mybasemodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        self.assertEqual(len(myamplitude.get('diagrams')), 4)
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude)
+
+        result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
+                                   get_matrix_element_calls(matrix_element)
+
+        goal = """CALL IXXXXX(P(0,1),zero,NHEL(1),+1*IC(1),W(1,1))
+CALL IXXXXX(P(0,2),zero,NHEL(2),+1*IC(2),W(1,2))
+CALL OXXXXX(P(0,3),MT,NHEL(3),+1*IC(3),W(1,3))
+CALL OXXXXX(P(0,4),MT,NHEL(4),+1*IC(4),W(1,4))
+CALL VXXXXX(P(0,5),zero,NHEL(5),+1*IC(5),W(1,5))
+CALL FFV1_2(W(1,1),W(1,5),GG,zero, zero, W(1,6))
+# Amplitude(s) for diagram number 1
+CALL FFFF1_0(W(1,2),W(1,3),W(1,6),W(1,4),GEFF,AMP(1))
+CALL FFFF1_2(W(1,1),W(1,2),W(1,3),GEFF,MT, WT, W(1,7))
+# Amplitude(s) for diagram number 2
+CALL FFV1_0(W(1,7),W(1,4),W(1,5),GG,AMP(2))
+CALL FFFF1_2(W(1,1),W(1,2),W(1,4),GEFF,MT, WT, W(1,8))
+# Amplitude(s) for diagram number 3
+CALL FFV1_0(W(1,8),W(1,3),W(1,5),GG,AMP(3))
+CALL FFFF1_1(W(1,3),W(1,1),W(1,4),GEFF,zero, zero, W(1,9))
+# Amplitude(s) for diagram number 4
+CALL FFV1_0(W(1,2),W(1,9),W(1,5),GG,AMP(4))""".split('\n')
+
+        for i in range(len(goal)):
+            self.assertEqual(result[i], goal[i])
+
+        # Test amp2 lines        
+        amp2_lines = \
+                 export_v4.get_amp2_lines(matrix_element)
+        self.assertEqual(amp2_lines,
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))',
+                          'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
+                          'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))',
+                          'AMP2(4)=AMP2(4)+AMP(4)*dconjg(AMP(4))'])
+        # Check fermion factors
+        self.assertEqual([d.get('amplitudes')[0].get('fermionfactor') \
+                          for d in matrix_element.get('diagrams')],
+                         [1, 1, -1, 1])
+        
+        writer = writers.FortranWriter(self.give_pos('test'))
+        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mybasemodel)
+
+        # Test configs file
+        nconfig, s_and_t_channels = export_v4.write_configs_file(writer,
+                                     matrix_element,
+                                     myfortranmodel)
+        writer.close()
+
+        #print open(self.give_pos('test')).read()
+        self.assertFileContains('test',
+"""C     Diagram 1
+      DATA MAPCONFIG(1)/1/
+      DATA (IFOREST(I,-1,1),I=1,2)/4,3/
+      DATA SPROP(-1,1)/21/
+      DATA (IFOREST(I,-2,1),I=1,2)/1,5/
+      DATA TPRID(-2,1)/2/
+      DATA (IFOREST(I,-3,1),I=1,2)/-2,-1/
+C     Diagram 2
+      DATA MAPCONFIG(2)/2/
+      DATA (IFOREST(I,-1,2),I=1,2)/5,4/
+      DATA SPROP(-1,2)/6/
+      DATA (IFOREST(I,-2,2),I=1,2)/-1,3/
+      DATA SPROP(-2,2)/21/
+C     Diagram 3
+      DATA MAPCONFIG(3)/3/
+      DATA (IFOREST(I,-1,3),I=1,2)/5,3/
+      DATA SPROP(-1,3)/6/
+      DATA (IFOREST(I,-2,3),I=1,2)/4,-1/
+      DATA SPROP(-2,3)/21/
+C     Diagram 4
+      DATA MAPCONFIG(4)/4/
+      DATA (IFOREST(I,-1,4),I=1,2)/4,3/
+      DATA SPROP(-1,4)/21/
+      DATA (IFOREST(I,-2,4),I=1,2)/1,-1/
+      DATA TPRID(-2,4)/2/
+      DATA (IFOREST(I,-3,4),I=1,2)/-2,5/
+C     Number of configs
+      DATA MAPCONFIG(0)/4/
+""")
+
+        writer = writers.FortranWriter(self.give_pos('test'))
+        export_v4.write_props_file(writer, matrix_element,
+                                   myfortranmodel, s_and_t_channels)
+        writer.close()
+        #print open(self.give_pos('test')).read()
+        self.assertFileContains('test',
+"""      PMASS(-1,1)  = ZERO
+      PWIDTH(-1,1) = ZERO
+      POW(-1,1) = 2
+      PMASS(-2,1)  = ZERO
+      PWIDTH(-2,1) = ZERO
+      POW(-2,1) = 1
+      PMASS(-1,2)  = ABS(MT)
+      PWIDTH(-1,2) = ABS(WT)
+      POW(-1,2) = 1
+      PMASS(-2,2)  = ZERO
+      PWIDTH(-2,2) = ZERO
+      POW(-2,2) = 2
+      PMASS(-1,3)  = ABS(MT)
+      PWIDTH(-1,3) = ABS(WT)
+      POW(-1,3) = 1
+      PMASS(-2,3)  = ZERO
+      PWIDTH(-2,3) = ZERO
+      POW(-2,3) = 2
+      PMASS(-1,4)  = ZERO
+      PWIDTH(-1,4) = ZERO
+      POW(-1,4) = 2
+      PMASS(-2,4)  = ZERO
+      PWIDTH(-2,4) = ZERO
+      POW(-2,4) = 1
+""")
+
+
+    def test_four_fermion_vertex_strange_fermion_flow(self):
+        """Testing process u u > t t g with fermion flow (u~u~)(tt)
+        """
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A u quark and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[len(mypartlist) - 1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        # A t quark and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'t',
+                      'antiname':'t~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'MT',
+                      'width':'WT',
+                      'texname':'t',
+                      'antitexname':'\bar t',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':6,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        t = mypartlist[len(mypartlist) - 1]
+        antit = copy.copy(t)
+        antit.set('is_part', False)
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        g = mypartlist[len(mypartlist) - 1]
+
+        # Gluon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2, 1, 0)])],
+                      'lorentz':['FFV1'],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [antit, \
+                                             t, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2, 1, 0)])],
+                      'lorentz':['FFV1'],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        # Four fermion vertex
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu,
+                                             antiu,
+                                             t,
+                                             t]),
+                      'color': [color.ColorString([color.K6(-1, 1, 0),
+                                                   color.K6Bar(-1,3, 2)])],
+                      'lorentz':['FFFF1'],
+                      'couplings':{(0, 0):'GEFF'},
+                      'orders':{'NP':2}}))
+
+        mybasemodel = base_objects.Model()
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mybasemodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        self.assertEqual(len(myamplitude.get('diagrams')), 4)
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude)
+
+        result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
+                                   get_matrix_element_calls(matrix_element)
+
+        goal = """CALL IXXXXX(P(0,1),zero,NHEL(1),+1*IC(1),W(1,1))
+CALL OXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
+CALL IXXXXX(P(0,3),MT,NHEL(3),-1*IC(3),W(1,3))
+CALL OXXXXX(P(0,4),MT,NHEL(4),+1*IC(4),W(1,4))
+CALL VXXXXX(P(0,5),zero,NHEL(5),+1*IC(5),W(1,5))
+CALL FFV1_2(W(1,1),W(1,5),GG,zero, zero, W(1,6))
+# Amplitude(s) for diagram number 1
+CALL FFFF1C1C2_0(W(1,6),W(1,2),W(1,3),W(1,4),GEFF,AMP(1))
+CALL FFFF1C1C2_4(W(1,1),W(1,2),W(1,3),GEFF,MT, WT, W(1,7))
+# Amplitude(s) for diagram number 2
+CALL FFV1_0(W(1,7),W(1,4),W(1,5),GG,AMP(2))
+CALL FFFF1C1C2_3(W(1,1),W(1,2),W(1,4),GEFF,MT, WT, W(1,8))
+# Amplitude(s) for diagram number 3
+CALL FFV1C1_0(W(1,3),W(1,8),W(1,5),GG,AMP(3))
+CALL FFFF1C1C2_2(W(1,1),W(1,3),W(1,4),GEFF,zero, zero, W(1,9))
+# Amplitude(s) for diagram number 4
+CALL FFV1C1_0(W(1,9),W(1,2),W(1,5),GG,AMP(4))""".split('\n')
+
+        for i in range(len(goal)):
+            self.assertEqual(result[i], goal[i])
+
+        # Test amp2 lines        
+        amp2_lines = \
+                 export_v4.get_amp2_lines(matrix_element)
+        self.assertEqual(amp2_lines,
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))',
+                          'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
+                          'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))',
+                          'AMP2(4)=AMP2(4)+AMP(4)*dconjg(AMP(4))'])
+        # Check fermion factors
+        self.assertEqual([d.get('amplitudes')[0].get('fermionfactor') \
+                          for d in matrix_element.get('diagrams')],
+                         [1, 1, 1, 1])
+        
+    def test_multiple_lorentz_structures_with_decay_chain(self):
+        """Testing process b~ t > wp+, wp+ > b~ t
+        """
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # bt sextet particle
+        mypartlist.append(base_objects.Particle({'name':'wp+',
+                      'antiname':'wp-',
+                      'spin':3,
+                      'color':1,
+                      'mass':'Mwp',
+                      'width':'Wwp',
+                      'texname':'wp+',
+                      'antitexname':'wp-',
+                      'line':'wavy',
+                      'charge':1.,
+                      'pdg_code':9000006,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+
+        wp = mypartlist[len(mypartlist) - 1]
+        wpbar = copy.copy(wp)
+        wpbar.set('is_part', False)
+
+        # b and t quarks
+        mypartlist.append(base_objects.Particle({'name':'b',
+                      'antiname':'b~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'b',
+                      'antitexname':'\bar b',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':5,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        b = mypartlist[len(mypartlist) - 1]
+        antib = copy.copy(b)
+        antib.set('is_part', False)
+
+        mypartlist.append(base_objects.Particle({'name':'t',
+                      'antiname':'t~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'MT',
+                      'width':'WT',
+                      'texname':'y',
+                      'antitexname':'\bar t',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':6,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        t = mypartlist[len(mypartlist) - 1]
+        antit = copy.copy(t)
+        antit.set('is_part', False)
+
+        # Interactions
+
+        myinterlist.append(base_objects.Interaction({
+            'id': 1,
+            'particles': base_objects.ParticleList([t, antib, wpbar]),
+            'color': [color.ColorString([color.T(1,0)])],
+            'lorentz': ['FFS3', 'FFS4'],
+            'couplings': {(0, 0): 'GC_108', (0, 1): 'GC_111'},
+            'orders': {'QCD': 1}
+            }))
+        myinterlist.append(base_objects.Interaction({
+            'id': 2,
+            'particles': base_objects.ParticleList([b, antit, wp]),
+            'color': [color.ColorString([color.T(1,0)])],
+            'lorentz': ['FFS3', 'FFS4'],
+            'couplings': {(0, 0): 'GC_108', (0, 1): 'GC_111'},
+            'orders': {'QCD': 1}
+            }))
+
+        mybasemodel = base_objects.Model()
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':-5,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':9000006,
+                                         'state':True}))
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mybasemodel})
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':9000006,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':-5}))
+        myleglist.append(base_objects.Leg({'id':6}))
+        mydecay = base_objects.Process({'legs':myleglist,
+                                       'model':mybasemodel})
+        myproc.set('decay_chains', base_objects.ProcessList([\
+            mydecay]))
+
+        myamplitude = diagram_generation.DecayChainAmplitude(myproc)
+
+        matrix_element = helas_objects.HelasDecayChainProcess(myamplitude)
+
+        result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
+                                   get_matrix_element_calls(matrix_element.get('core_processes')[0])
+        self.assertEqual("\n".join(result),
+                         """CALL OXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
+CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
+CALL VXXXXX(P(0,3),Mwp,NHEL(3),+1*IC(3),W(1,3))
+# Amplitude(s) for diagram number 1
+CALL FFS3_0(W(1,2),W(1,1),W(1,3),GC_108,AMP(1))
+CALL FFS4_0(W(1,2),W(1,1),W(1,3),GC_111,AMP(2))""")
+        result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
+                                   get_matrix_element_calls(matrix_element.get('decay_chains')[0].get('core_processes')[0])
+        self.assertEqual("\n".join(result),
+                         """CALL VXXXXX(P(0,1),Mwp,NHEL(1),-1*IC(1),W(1,1))
+CALL IXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
+CALL OXXXXX(P(0,3),MT,NHEL(3),+1*IC(3),W(1,3))
+CALL FFS3_3(W(1,2),W(1,3),GC_108,Mwp, Wwp, W(1,4))
+CALL FFS4_3(W(1,2),W(1,3),GC_111,Mwp, Wwp, W(1,5))
+# Amplitude(s) for diagram number 1
+#
+#""")
+
+        matrix_elements = matrix_element.combine_decay_chain_processes()
+
+        matrix_element = matrix_elements[0]
+
+        result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
+                                   get_matrix_element_calls(matrix_element)
+
+        goal = """CALL OXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
+CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
+CALL IXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,3))
+CALL OXXXXX(P(0,4),MT,NHEL(4),+1*IC(4),W(1,4))
+CALL FFS3_3(W(1,3),W(1,4),GC_108,Mwp, Wwp, W(1,5))
+CALL FFS4_3(W(1,3),W(1,4),GC_111,Mwp, Wwp, W(1,6))
+# Amplitude(s) for diagram number 1
+CALL FFS3_0(W(1,2),W(1,1),W(1,5),GC_108,AMP(1))
+CALL FFS3_0(W(1,2),W(1,1),W(1,6),GC_108,AMP(2))
+CALL FFS4_0(W(1,2),W(1,1),W(1,5),GC_111,AMP(3))
+CALL FFS4_0(W(1,2),W(1,1),W(1,6),GC_111,AMP(4))""".split('\n')
+
+        for i in range(len(goal)):
+            self.assertEqual(result[i], goal[i])
+
+    def test_multiple_lorentz_structures_with_decay_chain_and_fermion_flow(self):
+        """Testing process b t > six1, six1 > b t
+        """
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # bt sextet particle
+        mypartlist.append(base_objects.Particle({'name':'six1',
+                      'antiname':'six1~',
+                      'spin':1,
+                      'color':6,
+                      'mass':'Msix1',
+                      'width':'Wsix1',
+                      'texname':'six1',
+                      'antitexname':'six1bar',
+                      'line':'dashed',
+                      'charge':1./3.,
+                      'pdg_code':9000006,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+
+        six1 = mypartlist[len(mypartlist) - 1]
+        six1bar = copy.copy(six1)
+        six1bar.set('is_part', False)
+
+        # b and t quarks
+        mypartlist.append(base_objects.Particle({'name':'b',
+                      'antiname':'b~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'b',
+                      'antitexname':'\bar b',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':5,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        b = mypartlist[len(mypartlist) - 1]
+        antib = copy.copy(b)
+        antib.set('is_part', False)
+
+        mypartlist.append(base_objects.Particle({'name':'t',
+                      'antiname':'t~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'MT',
+                      'width':'WT',
+                      'texname':'y',
+                      'antitexname':'\bar t',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':6,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        t = mypartlist[len(mypartlist) - 1]
+        antit = copy.copy(t)
+        antit.set('is_part', False)
+
+        # Interactions
+
+        myinterlist.append(base_objects.Interaction({
+            'id': 1,
+            'particles': base_objects.ParticleList([t, b, six1bar]),
+            'color': [color.ColorString([color.K6Bar(2,1,0)])],
+            'lorentz': ['FFS3', 'FFS4'],
+            'couplings': {(0, 0): 'GC_108', (0, 1): 'GC_111'},
+            'orders': {'QCD': 1}
+            }))
+        myinterlist.append(base_objects.Interaction({
+            'id': 2,
+            'particles': base_objects.ParticleList([antib, antit, six1]),
+            'color': [color.ColorString([color.K6(2,1,0)])],
+            'lorentz': ['FFS3', 'FFS4'],
+            'couplings': {(0, 0): 'GC_108', (0, 1): 'GC_111'},
+            'orders': {'QCD': 1}
+            }))
+
+        mybasemodel = base_objects.Model()
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':5,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':9000006,
+                                         'state':True}))
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mybasemodel})
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':9000006,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':5}))
+        myleglist.append(base_objects.Leg({'id':6}))
+        mydecay = base_objects.Process({'legs':myleglist,
+                                       'model':mybasemodel})
+        myproc.set('decay_chains', base_objects.ProcessList([\
+            mydecay]))
+
+        myamplitude = diagram_generation.DecayChainAmplitude(myproc)
+
+        matrix_element = helas_objects.HelasDecayChainProcess(myamplitude)
+
+        result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
+                                   get_matrix_element_calls(matrix_element.get('core_processes')[0])
+        self.assertEqual("\n".join(result),
+                         """CALL OXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
+CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
+CALL SXXXXX(P(0,3),+1*IC(3),W(1,3))
+# Amplitude(s) for diagram number 1
+CALL FFS3C1_0(W(1,2),W(1,1),W(1,3),GC_108,AMP(1))
+CALL FFS4C1_0(W(1,2),W(1,1),W(1,3),GC_111,AMP(2))""")
+        result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
+                                   get_matrix_element_calls(matrix_element.get('decay_chains')[0].get('core_processes')[0])
+        self.assertEqual("\n".join(result),
+                         """CALL SXXXXX(P(0,1),-1*IC(1),W(1,1))
+CALL OXXXXX(P(0,2),zero,NHEL(2),+1*IC(2),W(1,2))
+CALL IXXXXX(P(0,3),MT,NHEL(3),-1*IC(3),W(1,3))
+CALL FFS3C1_3(W(1,3),W(1,2),GC_108,Msix1, Wsix1, W(1,4))
+CALL FFS4C1_3(W(1,3),W(1,2),GC_111,Msix1, Wsix1, W(1,5))
+# Amplitude(s) for diagram number 1
+#
+#""")
+
+        matrix_elements = matrix_element.combine_decay_chain_processes()
+
+        matrix_element = matrix_elements[0]
+
+        result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
+                                   get_matrix_element_calls(matrix_element)
+
+        goal = """CALL OXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
+CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
+CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
+CALL IXXXXX(P(0,4),MT,NHEL(4),-1*IC(4),W(1,4))
+CALL FFS3C1_3(W(1,4),W(1,3),GC_108,Msix1, Wsix1, W(1,5))
+CALL FFS4C1_3(W(1,4),W(1,3),GC_111,Msix1, Wsix1, W(1,6))
+# Amplitude(s) for diagram number 1
+CALL FFS3C1_0(W(1,2),W(1,1),W(1,5),GC_108,AMP(1))
+CALL FFS3C1_0(W(1,2),W(1,1),W(1,6),GC_108,AMP(2))
+CALL FFS4C1_0(W(1,2),W(1,1),W(1,5),GC_111,AMP(3))
+CALL FFS4C1_0(W(1,2),W(1,1),W(1,6),GC_111,AMP(4))""".split('\n')
 
         for i in range(len(goal)):
             self.assertEqual(result[i], goal[i])
@@ -2306,6 +3496,8 @@ C
       PARAMETER (NWAVEFUNCS=11, NCOLOR=1)
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
+      COMPLEX*16 IMAG1
+      PARAMETER (IMAG1=(0D0,1D0))
 C     
 C     ARGUMENTS 
 C     
@@ -3199,14 +4391,14 @@ CALL VVVXXX(W(1,2),W(1,26),W(1,39),GG,AMP(216))""")
         self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
         """CALL VXXXXX(P(0,1),WMASS,NHEL(1),-1*IC(1),W(1,1))
 CALL VXXXXX(P(0,2),WMASS,NHEL(2),-1*IC(2),W(1,2))
-CALL OXXXXX(P(0,3),MN1,NHEL(3),+1*IC(3),W(1,3))
-CALL IXXXXX(P(0,4),MN1,NHEL(4),-1*IC(4),W(1,4))
-CALL FVOXXX(W(1,3),W(1,1),GWN1X1,MX1,WX1,W(1,5))
+CALL IXXXXX(P(0,3),MN1,NHEL(3),-1*IC(3),W(1,3))
+CALL OXXXXX(P(0,4),MN1,NHEL(4),+1*IC(4),W(1,4))
+CALL FVICXX(W(1,3),W(1,1),GWN1X1,MX1,WX1,W(1,5))
 # Amplitude(s) for diagram number 1
-CALL IOVXXX(W(1,4),W(1,5),W(1,2),GWX1N1,AMP(1))
-CALL FVICXX(W(1,4),W(1,1),GWN1X1,MX1,WX1,W(1,6))
+CALL IOVCXX(W(1,5),W(1,4),W(1,2),GWX1N1,AMP(1))
+CALL FVOXXX(W(1,4),W(1,1),GWN1X1,MX1,WX1,W(1,6))
 # Amplitude(s) for diagram number 2
-CALL IOVCXX(W(1,6),W(1,3),W(1,2),GWX1N1,AMP(2))""")
+CALL IOVXXX(W(1,3),W(1,6),W(1,2),GWX1N1,AMP(2))""")
 
 
     def test_export_majorana_decay_chain(self):
@@ -3534,6 +4726,20 @@ CALL IOSXXX(W(1,28),W(1,2),W(1,22),MGVX350,AMP(7))
 # Amplitude(s) for diagram number 8
 CALL IOSXXX(W(1,28),W(1,2),W(1,27),MGVX350,AMP(8))""")
 
+        # Test amp2 lines        
+        amp2_lines = \
+                 export_v4.get_amp2_lines(me)
+        self.assertEqual(amp2_lines,
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))',
+                          'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
+                          'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))',
+                          'AMP2(4)=AMP2(4)+AMP(4)*dconjg(AMP(4))',
+                          'AMP2(5)=AMP2(5)+AMP(5)*dconjg(AMP(5))',
+                          'AMP2(6)=AMP2(6)+AMP(6)*dconjg(AMP(6))',
+                          'AMP2(7)=AMP2(7)+AMP(7)*dconjg(AMP(7))',
+                          'AMP2(8)=AMP2(8)+AMP(8)*dconjg(AMP(8))'])
+        
+        # Test jamp lines        
         self.assertEqual(export_v4.get_JAMP_lines(me)[0],
                          "JAMP(1)=+AMP(1)+AMP(2)+AMP(3)+AMP(4)-AMP(5)-AMP(6)-AMP(7)-AMP(8)")
 
@@ -3546,7 +4752,7 @@ CALL IOSXXX(W(1,28),W(1,2),W(1,27),MGVX350,AMP(8))""")
         writer.close()
         
         self.assertFileContains('test',
-                         """C     Diagram 1, Amplitude 1
+                         """C     Diagram 1
       DATA MAPCONFIG(1)/1/
       DATA (IFOREST(I,-1,1),I=1,2)/8,6/
       DATA SPROP(-1,1)/11/
@@ -3559,7 +4765,7 @@ CALL IOSXXX(W(1,28),W(1,2),W(1,27),MGVX350,AMP(8))""")
       DATA (IFOREST(I,-5,1),I=1,2)/1,-4/
       DATA TPRID(-5,1)/1000011/
       DATA (IFOREST(I,-6,1),I=1,2)/-5,-2/
-C     Diagram 2, Amplitude 2
+C     Diagram 2
       DATA MAPCONFIG(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/8,7/
       DATA SPROP(-1,2)/-1000011/
@@ -3572,7 +4778,7 @@ C     Diagram 2, Amplitude 2
       DATA (IFOREST(I,-5,2),I=1,2)/1,-4/
       DATA TPRID(-5,2)/1000011/
       DATA (IFOREST(I,-6,2),I=1,2)/-5,-2/
-C     Diagram 3, Amplitude 3
+C     Diagram 3
       DATA MAPCONFIG(3)/3/
       DATA (IFOREST(I,-1,3),I=1,2)/8,6/
       DATA SPROP(-1,3)/11/
@@ -3585,7 +4791,7 @@ C     Diagram 3, Amplitude 3
       DATA (IFOREST(I,-5,3),I=1,2)/1,-4/
       DATA TPRID(-5,3)/1000011/
       DATA (IFOREST(I,-6,3),I=1,2)/-5,-2/
-C     Diagram 4, Amplitude 4
+C     Diagram 4
       DATA MAPCONFIG(4)/4/
       DATA (IFOREST(I,-1,4),I=1,2)/8,7/
       DATA SPROP(-1,4)/-1000011/
@@ -3598,7 +4804,7 @@ C     Diagram 4, Amplitude 4
       DATA (IFOREST(I,-5,4),I=1,2)/1,-4/
       DATA TPRID(-5,4)/1000011/
       DATA (IFOREST(I,-6,4),I=1,2)/-5,-2/
-C     Diagram 5, Amplitude 5
+C     Diagram 5
       DATA MAPCONFIG(5)/5/
       DATA (IFOREST(I,-1,5),I=1,2)/5,3/
       DATA SPROP(-1,5)/11/
@@ -3611,7 +4817,7 @@ C     Diagram 5, Amplitude 5
       DATA (IFOREST(I,-5,5),I=1,2)/1,-4/
       DATA TPRID(-5,5)/1000011/
       DATA (IFOREST(I,-6,5),I=1,2)/-5,-2/
-C     Diagram 6, Amplitude 6
+C     Diagram 6
       DATA MAPCONFIG(6)/6/
       DATA (IFOREST(I,-1,6),I=1,2)/5,3/
       DATA SPROP(-1,6)/11/
@@ -3624,7 +4830,7 @@ C     Diagram 6, Amplitude 6
       DATA (IFOREST(I,-5,6),I=1,2)/1,-4/
       DATA TPRID(-5,6)/1000011/
       DATA (IFOREST(I,-6,6),I=1,2)/-5,-2/
-C     Diagram 7, Amplitude 7
+C     Diagram 7
       DATA MAPCONFIG(7)/7/
       DATA (IFOREST(I,-1,7),I=1,2)/5,4/
       DATA SPROP(-1,7)/-1000011/
@@ -3637,7 +4843,7 @@ C     Diagram 7, Amplitude 7
       DATA (IFOREST(I,-5,7),I=1,2)/1,-4/
       DATA TPRID(-5,7)/1000011/
       DATA (IFOREST(I,-6,7),I=1,2)/-5,-2/
-C     Diagram 8, Amplitude 8
+C     Diagram 8
       DATA MAPCONFIG(8)/8/
       DATA (IFOREST(I,-1,8),I=1,2)/5,4/
       DATA SPROP(-1,8)/-1000011/
@@ -3882,6 +5088,75 @@ C     Number of configs
       PWIDTH(-5,8) = ABS(WSL2)
       POW(-5,8) = 2\n""")
 
+        # Test reversed order of decay specifications
+        # e- e+ > se+ se-, se- > e- n1, se+ > e+ n1
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1000011,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':-1000011,
+                                         'state':True}))
+
+        mycoreproc = base_objects.Process({'legs':myleglist,
+                                       'model':mymodel})
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1000011,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':True}))
+
+        mydecay1 = base_objects.Process({'legs':myleglist,
+                                         'model':mymodel})
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':-1000011,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':True}))
+
+        mydecay2 = base_objects.Process({'legs':myleglist,
+                                         'model':mymodel})
+
+        mycoreproc.set('decay_chains', base_objects.ProcessList([\
+            mydecay2, mydecay1]))
+
+        myamplitude = diagram_generation.DecayChainAmplitude(mycoreproc)
+
+        matrix_element = helas_objects.HelasDecayChainProcess(myamplitude)
+
+        matrix_elements = matrix_element.combine_decay_chain_processes()
+
+        me = matrix_elements[0]
+
+        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mymodel)
+
+        self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
+                         """CALL IXXXXX(P(0,1),zero,NHEL(1),+1*IC(1),W(1,1))
+CALL OXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
+CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
+CALL IXXXXX(P(0,4),Mneu1,NHEL(4),-1*IC(4),W(1,4))
+CALL HIOXXX(W(1,4),W(1,3),MGVX350,Msl2,Wsl2,W(1,5))
+CALL IXXXXX(P(0,5),zero,NHEL(5),-1*IC(5),W(1,6))
+CALL OXXXXX(P(0,6),Mneu1,NHEL(6),+1*IC(6),W(1,7))
+CALL HIOXXX(W(1,6),W(1,7),MGVX494,Msl2,Wsl2,W(1,8))
+CALL JIOXXX(W(1,1),W(1,2),MGVX12,zero,zero,W(1,9))
+# Amplitude(s) for diagram number 1
+CALL VSSXXX(W(1,9),W(1,8),W(1,5),MGVX56,AMP(1))
+CALL FSIXXX(W(1,1),W(1,5),MGVX494,Mneu1,Wneu1,W(1,10))
+# Amplitude(s) for diagram number 2
+CALL IOSXXX(W(1,10),W(1,2),W(1,8),MGVX350,AMP(2))""")
 
     def test_export_complicated_majorana_decay_chain(self):
         """Test complicated decay chain z e+ > n2 el+, n2 > e- e+ n1
@@ -4466,7 +5741,7 @@ CALL FFV1_0(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
             self.assertEqual(result[i], goal_string[i])
 
     def test_configs_ug_ttxz(self):
-        """Test config.inc which previously failed.
+        """Test configs.inc which previously failed.
         """
 
         mypartlist = base_objects.ParticleList()
@@ -4609,10 +5884,10 @@ CALL FFV1_0(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
                                      myfortranmodel)
         writer.close()
 
-        # 2 21 < 6 -6 23  2
+        # 2 21 > 6 -6 23  2
         # 1  2   3  4  5  6
         self.assertFileContains('test',
-"""C     Diagram 1, Amplitude 1
+"""C     Diagram 1
       DATA MAPCONFIG(1)/1/
       DATA (IFOREST(I,-1,1),I=1,2)/5,3/
       DATA SPROP(-1,1)/6/
@@ -4620,7 +5895,7 @@ CALL FFV1_0(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
       DATA SPROP(-2,1)/21/
       DATA (IFOREST(I,-3,1),I=1,2)/6,-2/
       DATA SPROP(-3,1)/2/
-C     Diagram 2, Amplitude 2
+C     Diagram 2
       DATA MAPCONFIG(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/5,4/
       DATA SPROP(-1,2)/-6/
@@ -4628,7 +5903,7 @@ C     Diagram 2, Amplitude 2
       DATA SPROP(-2,2)/21/
       DATA (IFOREST(I,-3,2),I=1,2)/6,-2/
       DATA SPROP(-3,2)/2/
-C     Diagram 3, Amplitude 3
+C     Diagram 3
       DATA MAPCONFIG(3)/3/
       DATA (IFOREST(I,-1,3),I=1,2)/1,6/
       DATA TPRID(-1,3)/21/
@@ -4637,7 +5912,7 @@ C     Diagram 3, Amplitude 3
       DATA (IFOREST(I,-3,3),I=1,2)/-2,5/
       DATA TPRID(-3,3)/6/
       DATA (IFOREST(I,-4,3),I=1,2)/-3,3/
-C     Diagram 4, Amplitude 4
+C     Diagram 4
       DATA MAPCONFIG(4)/4/
       DATA (IFOREST(I,-1,4),I=1,2)/5,4/
       DATA SPROP(-1,4)/-6/
@@ -4646,7 +5921,7 @@ C     Diagram 4, Amplitude 4
       DATA (IFOREST(I,-3,4),I=1,2)/-2,-1/
       DATA TPRID(-3,4)/6/
       DATA (IFOREST(I,-4,4),I=1,2)/-3,3/
-C     Diagram 5, Amplitude 5
+C     Diagram 5
       DATA MAPCONFIG(5)/5/
       DATA (IFOREST(I,-1,5),I=1,2)/1,6/
       DATA TPRID(-1,5)/21/
@@ -4655,7 +5930,7 @@ C     Diagram 5, Amplitude 5
       DATA (IFOREST(I,-3,5),I=1,2)/-2,5/
       DATA TPRID(-3,5)/6/
       DATA (IFOREST(I,-4,5),I=1,2)/-3,4/
-C     Diagram 6, Amplitude 6
+C     Diagram 6
       DATA MAPCONFIG(6)/6/
       DATA (IFOREST(I,-1,6),I=1,2)/5,3/
       DATA SPROP(-1,6)/6/
@@ -4664,7 +5939,7 @@ C     Diagram 6, Amplitude 6
       DATA (IFOREST(I,-3,6),I=1,2)/-2,-1/
       DATA TPRID(-3,6)/6/
       DATA (IFOREST(I,-4,6),I=1,2)/-3,4/
-C     Diagram 7, Amplitude 7
+C     Diagram 7
       DATA MAPCONFIG(7)/7/
       DATA (IFOREST(I,-1,7),I=1,2)/5,3/
       DATA SPROP(-1,7)/6/
@@ -4673,7 +5948,7 @@ C     Diagram 7, Amplitude 7
       DATA (IFOREST(I,-3,7),I=1,2)/-2,4/
       DATA TPRID(-3,7)/6/
       DATA (IFOREST(I,-4,7),I=1,2)/-3,-1/
-C     Diagram 8, Amplitude 8
+C     Diagram 8
       DATA MAPCONFIG(8)/8/
       DATA (IFOREST(I,-1,8),I=1,2)/5,4/
       DATA SPROP(-1,8)/-6/
@@ -4682,7 +5957,7 @@ C     Diagram 8, Amplitude 8
       DATA (IFOREST(I,-3,8),I=1,2)/-2,3/
       DATA TPRID(-3,8)/6/
       DATA (IFOREST(I,-4,8),I=1,2)/-3,-1/
-C     Diagram 9, Amplitude 9
+C     Diagram 9
       DATA MAPCONFIG(9)/9/
       DATA (IFOREST(I,-1,9),I=1,2)/5,3/
       DATA SPROP(-1,9)/6/
@@ -4691,7 +5966,7 @@ C     Diagram 9, Amplitude 9
       DATA (IFOREST(I,-3,9),I=1,2)/1,-2/
       DATA TPRID(-3,9)/2/
       DATA (IFOREST(I,-4,9),I=1,2)/-3,6/
-C     Diagram 10, Amplitude 10
+C     Diagram 10
       DATA MAPCONFIG(10)/10/
       DATA (IFOREST(I,-1,10),I=1,2)/5,4/
       DATA SPROP(-1,10)/-6/
@@ -4800,6 +6075,247 @@ C     Number of configs
       POW(-3,10) = 1
 """)
         
+    def test_configs_long_decay(self):
+        """Test configs.inc which previously failed.
+        """
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # b and t quarks
+        mypartlist.append(base_objects.Particle({'name':'b',
+                      'antiname':'b~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'b',
+                      'antitexname':'\bar b',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':5,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        b = mypartlist[len(mypartlist) - 1]
+        antib = copy.copy(b)
+        antib.set('is_part', False)
+
+        mypartlist.append(base_objects.Particle({'name':'t',
+                      'antiname':'t~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'MT',
+                      'width':'WT',
+                      'texname':'y',
+                      'antitexname':'\bar t',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':6,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        t = mypartlist[len(mypartlist) - 1]
+        antit = copy.copy(t)
+        antit.set('is_part', False)
+
+        # A w
+        mypartlist.append(base_objects.Particle({'name':'w+',
+                      'antiname':'w+',
+                      'spin':3,
+                      'mass':'wmass',
+                      'width':'wwidth',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':1.,
+                      'pdg_code':24,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        wplus = mypartlist[len(mypartlist) - 1]
+        wminus = copy.copy(wplus)
+        wplus.set('is_part', False)
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name': 'g',
+                                                 'antiname': 'g',
+                                                 'spin': 3,
+                                                 'color': 8,
+                                                 'charge': 0.00,
+                                                 'mass': 'ZERO',
+                                                 'width': 'ZERO',
+                                                 'pdg_code': 21,
+                                                 'texname': '_',
+                                                 'antitexname': '_',
+                                                 'line': 'curly',
+                                                 'propagating': True,
+                                                 'is_part': True,
+                                                 'self_antipart': True}))
+
+        g = mypartlist[len(mypartlist) - 1]
+
+        # t b w couplings
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [t, \
+                                             antib, \
+                                             wminus]),
+                      'color': [color.ColorString([color.T(0, 1)])],
+                      'lorentz':['L1'],
+                      'couplings':{(0,0):'GC_23'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [antit, \
+                                             b, \
+                                             wplus]),
+                      'color': [color.ColorString([color.T(0, 1)])],
+                      'lorentz':['L1'],
+                      'couplings':{(0,0):'GC_23'},
+                      'orders':{'QED':1}}))
+
+        # Gluon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [antib, \
+                                             b, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2, 1, 0)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [antit, \
+                                             t, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2, 1, 0)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21}))
+        myleglist.append(base_objects.Leg({'id':5}))
+        myleglist.append(base_objects.Leg({'id':24}))
+        myleglist.append(base_objects.Leg({'id':21}))
+        
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mymodel})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        me = helas_objects.HelasMatrixElement(myamplitude,
+                                              gen_color=False)
+
+        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mymodel)
+        writer = writers.FortranWriter(self.give_pos('test'))
+
+        # Test configs file
+        nconfig, s_and_t_channels = export_v4.write_configs_file(writer,
+                                     me,
+                                     myfortranmodel)
+        writer.close()
+
+        self.assertFileContains('test',
+"""C     Diagram 1
+      DATA MAPCONFIG(1)/1/
+      DATA (IFOREST(I,-1,1),I=1,2)/3,2/
+      DATA SPROP(-1,1)/5/
+      DATA (IFOREST(I,-2,1),I=1,2)/4,-1/
+      DATA SPROP(-2,1)/6/
+      DATA (IFOREST(I,-3,1),I=1,2)/5,-2/
+      DATA SPROP(-3,1)/6/
+C     Diagram 2
+      DATA MAPCONFIG(2)/2/
+      DATA (IFOREST(I,-1,2),I=1,2)/3,2/
+      DATA SPROP(-1,2)/5/
+      DATA (IFOREST(I,-2,2),I=1,2)/5,-1/
+      DATA SPROP(-2,2)/5/
+      DATA (IFOREST(I,-3,2),I=1,2)/4,-2/
+      DATA SPROP(-3,2)/6/
+C     Diagram 3
+      DATA MAPCONFIG(3)/3/
+      DATA (IFOREST(I,-1,3),I=1,2)/4,3/
+      DATA SPROP(-1,3)/6/
+      DATA (IFOREST(I,-2,3),I=1,2)/-1,2/
+      DATA SPROP(-2,3)/6/
+      DATA (IFOREST(I,-3,3),I=1,2)/5,-2/
+      DATA SPROP(-3,3)/6/
+C     Diagram 4
+      DATA MAPCONFIG(4)/4/
+      DATA (IFOREST(I,-1,4),I=1,2)/4,3/
+      DATA SPROP(-1,4)/6/
+      DATA (IFOREST(I,-2,4),I=1,2)/5,-1/
+      DATA SPROP(-2,4)/6/
+      DATA (IFOREST(I,-3,4),I=1,2)/-2,2/
+      DATA SPROP(-3,4)/6/
+C     Diagram 5
+      DATA MAPCONFIG(5)/5/
+      DATA (IFOREST(I,-1,5),I=1,2)/5,3/
+      DATA SPROP(-1,5)/5/
+      DATA (IFOREST(I,-2,5),I=1,2)/-1,2/
+      DATA SPROP(-2,5)/5/
+      DATA (IFOREST(I,-3,5),I=1,2)/4,-2/
+      DATA SPROP(-3,5)/6/
+C     Diagram 6
+      DATA MAPCONFIG(6)/6/
+      DATA (IFOREST(I,-1,6),I=1,2)/5,3/
+      DATA SPROP(-1,6)/5/
+      DATA (IFOREST(I,-2,6),I=1,2)/4,-1/
+      DATA SPROP(-2,6)/6/
+      DATA (IFOREST(I,-3,6),I=1,2)/-2,2/
+      DATA SPROP(-3,6)/6/
+C     Number of configs
+      DATA MAPCONFIG(0)/6/
+""")
+
+    def test_configs_8fs(self):
+        """Test configs.inc for 8fs process which previously failed.
+        """
+
+        diagrams = save_load_object.load_from_file(\
+                                              os.path.join(_input_file_path,
+                                                           'test_8fs.pkl'))
+
+        goal_schannels = [[[8, 6, -1], [7, -1, -2], [-2, 5, -3],
+                           [-3, 3, -4], [4, -4, -5]],
+                          [],
+                          [[6, 5, -1], [8, -1, -2], [7, -2, -3], [-3, 3, -4]],
+                          [[6, 5, -1]]]
+        goal_tchannels = [[[1, -5, -6]],
+                          [[1, 4, -1], [-1, 7, -2], [-2, 3, -3],
+                           [-3, 6, -4], [-4, 5, -5], [-5, 8, -6]],
+                          [[1, 4, -5], [-5, -4, -6]],
+                          [[1, 4, -2], [-2, 7, -3], [-3, 8, -4],
+                           [-4, 3, -5], [-5, -1, -6]]]
+                          
+
+        for (idiag, diagram) in enumerate(diagrams):
+
+            schannels, tchannels = diagram.get('amplitudes')[0].\
+                                         get_s_and_t_channels(2)
+
+            self.assertEqual([[l.get('number') for l in v.get('legs')] for v \
+                              in schannels],
+                             goal_schannels[idiag])
+            self.assertEqual([[l.get('number') for l in v.get('legs')] for v \
+                              in tchannels],
+                             goal_tchannels[idiag]) 
+
 class AlohaFortranWriterTest(unittest.TestCase):
     """ A basic test to see if the Aloha Fortran Writter is working """
     
@@ -4850,4 +6366,129 @@ C
         split_sol = solution.split('\n')
         for i in range(len(split_sol)):
             self.assertEqual(split_sol[i]+'\n', textfile.readline())
+
+
+class UFO_model_to_mg4_Test(unittest.TestCase):
+    """Check the conversion model from UFO to MG4"""
+    
+    def setUp(self):
+        import models.import_ufo
+        self.mymodel = models.import_ufo.import_model('sm')
+    
+    
+    def test_refactorize(self):
+        """ test the separation of variable """
+        
+        mg4_model = export_v4.UFO_model_to_mg4(self.mymodel,'/dev/null')
+        mg4_model.refactorize()
+        
+        # external parameters
+        expected = ['aEWM1', 'Gf', 'aS', 'ymb', 'ymt', 'ymtau', 'MTA', 'MT', 'MB', 'MZ', 'MH', 'WT', 'WZ', 'WW', 'WH']
+        expected.sort()
+        solution = [param.name for param in mg4_model.params_ext]
+        solution.sort()
+        self.assertEqual(expected, solution)
+        
+        #  internal params
+        self.assertEqual(len(mg4_model.params_dep), 1)
+        self.assertEqual(len(mg4_model.params_indep), 38)
+        
+        # couplings
+        self.assertEqual(len(mg4_model.coups_dep), 3)
+        self.assertEqual(len(mg4_model.coups_indep), 30)
+
+        
+        # MG4 use G and not aS as it basic object for alphas related computation
+        #Pass G in the  independant list
+        self.assertTrue('G' not in [p.name for p in mg4_model.params_dep])
+        self.assertTrue('G' in [p.name for p in mg4_model.params_indep])
+        self.assertTrue('sqrt__aS' not in [p.name for p in mg4_model.params_dep])
+        self.assertTrue('sqrt__aS' in [p.name for p in mg4_model.params_indep])
+        
+        
+    def test_case_sensitive(self):
+        """ test that the case clash are dealt correctly """  
+        
+        mg4_model = export_v4.UFO_model_to_mg4(self.mymodel,'/dev/null')
+        
+        #check that they are no crash for normal model
+        mg4_model.pass_parameter_to_case_insensitive()
+        
+        # edit model in order to add new parameter with name: CW / Cw / Mz / Mz2
+        CW = base_objects.ModelVariable( 'CW', 'Mz**2 * Mz2' , 'real')
+        Cw = base_objects.ModelVariable( 'Cw', 'Mz**2 * Mz2 * CW' , 'real')
+        Mz = base_objects.ParamCardVariable('Mz', 100, 'MASS', 41)
+        Mz2 = base_objects.ParamCardVariable('Mz2', 100, 'MASS', 43)
+        
+        mg4_model.model['parameters'][()].append(CW)
+        mg4_model.model['parameters'][()].append(Cw)
+        mg4_model.model['parameters'][('external',)].append(Mz)
+        mg4_model.model['parameters'][('external',)].append(Mz2)
+
+
+        mg4_model.pass_parameter_to_case_insensitive()
+
+        self.assertEqual(CW.name,'cw__2')
+        self.assertEqual(CW.expr,'mz__2**2 * Mz2')
+        self.assertEqual(Cw.name,'cw__3')
+        self.assertEqual(Cw.expr,'mz__2**2 * Mz2 * cw__2')
+        
+        self.assertEqual(Mz.name,'mz__2')
+        
+
+
+if __name__ == '__main__':
+        """Write out pkl file with helas diagram for test_configs_8fs
+        """
+
+        import models.import_ufo
+        mymodel = models.import_ufo.import_model('sm')
+        
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1}))
+        myleglist.append(base_objects.Leg({'id':24}))
+        myleglist.append(base_objects.Leg({'id':5}))
+        myleglist.append(base_objects.Leg({'id':-5}))
+        myleglist.append(base_objects.Leg({'id':21}))
+        myleglist.append(base_objects.Leg({'id':21}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mymodel})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        me = helas_objects.HelasMatrixElement(myamplitude,
+                                              gen_color=False)
+
+        import madgraph.iolibs.drawing_eps as draw
+        filename = os.path.join('diagrams_' + \
+                                myamplitude.get('process').shell_string() + ".eps")
+        plot = draw.MultiEpsDiagramDrawer(myamplitude.get('diagrams'),
+                                          filename,
+                                          model=mymodel,
+                                                amplitude='',
+                                          legend=myamplitude.get('process').input_string())
+
+        plot.draw()  
+
+
+
+        me = save_load_object.save_to_file(\
+                       os.path.join(_input_file_path, 'test_8fs.pkl'),
+                       [me.get('diagrams')[323], me.get('diagrams')[954],
+                        me.get('diagrams')[1123], me.get('diagrams')[1139]])
+        
+        
+        
+
+
+    
+    
+    
+
+
 

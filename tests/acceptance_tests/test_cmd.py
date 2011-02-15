@@ -114,8 +114,7 @@ class TestCmdShell2(unittest.TestCase):
         
     def tearDown(self):
         """ basic destruction after have run """
-        if os.path.exists(self.out_dir):
-            shutil.rmtree(self.out_dir)
+        pass
     
     join_path = TestCmdShell1.join_path
 
@@ -137,6 +136,9 @@ class TestCmdShell2(unittest.TestCase):
                                                'SubProcesses', 'P0_epem_epem')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                  'Cards', 'proc_card_mg5.dat')))
+        self.assertFalse(os.path.exists(os.path.join(self.out_dir,
+                                                    'Cards',
+                                                    'ident_card.dat')))
         self.assertFalse(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_epem_epem',
@@ -401,7 +403,9 @@ class TestCmdShell2(unittest.TestCase):
                                                         'Source', 'DHELAS',
                                                         f)), 
                             '%s file is not in aloha directory' % f)
-
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'Cards',
+                                                    'ident_card.dat')))
         devnull = open(os.devnull,'w')
         # Check that the Source directory compiles
         status = subprocess.call(['make'],
@@ -502,6 +506,45 @@ class TestCmdShell2(unittest.TestCase):
                                                     'P0_ut_tripx_utg',
                                                     'madevent')))
         
+    def test_leshouche_sextet_diquarks(self):
+        """Test MadEvent output of triplet diquarks"""
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmdir(self.out_dir)
+
+        devnull = open(os.devnull,'w')
+
+        # Test sextet production
+        self.do('import model sextet_diquarks')
+        self.do('generate u u > six g')
+        self.do('output %s ' % self.out_dir)
+        
+        # Check that leshouche.inc exists
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P0_uu_sixg',
+                                                    'leshouche.inc')))        
+        # Test sextet decay
+        self.do('generate six > u u g')
+        self.do('output %s -f' % self.out_dir)
+
+        # Check that leshouche.inc exists
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P0_six_uug',
+                                                    'leshouche.inc')))        
+
+        # Test sextet production
+        self.do('import model sextet_diquarks')
+        self.do('generate u g > six u~')
+        self.do('output %s -f' % self.out_dir)
+        
+        # Check that leshouche.inc exists
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P0_ug_sixux',
+                                                    'leshouche.inc')))        
+
     def test_ufo_standard_sm(self):
         """ check that we can use standard MG4 name """
         self.do('import model sm')

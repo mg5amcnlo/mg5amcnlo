@@ -314,7 +314,7 @@ class ColorAmpTest(unittest.TestCase):
 
         # Test the color flow decomposition
         self.assertEqual(new_col_basis.color_flow_decomposition(
-                                        {1:3, 2:-3, 3:1, 4:8, 5:8, 6:8}, 2),
+                                        {1:3, 2:-3, 3:1, 4:8, 5:8, 6:-8}, 2),
         [{1: [0, 501], 2: [504, 0], 3: [0, 0], 4: [502, 501], 5: [503, 502], 6: [504, 503]},
          {1: [0, 501], 2: [503, 0], 3: [0, 0], 4: [502, 501], 5: [503, 504], 6: [504, 502]},
          {1: [0, 501], 2: [504, 0], 3: [0, 0], 4: [502, 503], 5: [503, 501], 6: [504, 502]},
@@ -380,12 +380,12 @@ class ColorAmpTest(unittest.TestCase):
         # g q > six q~
         my_cs = color.ColorString([color.K6(3,-1000,4),
                                    color.T(1,-1000,2)])
-        goal_cs = color.ColorString([color.EpsilonBar(4,2001,3003),
-                                     color.T(1001,2)])
+        goal_cs = color.ColorString([color.T(1001,2), color.T(1003,4),
+                                     color.T(3003,2001)])
         goal_cs.coeff = fractions.Fraction(1, 4)
         self.assertEqual(color_amp.ColorBasis.get_color_flow_string(my_cs,
                                                     [(8, 1, 1001, 2001),
-                                                     (6, 3, 1003, 2003, 3003)]),
+                                                     (6, 3, 1003, 3003)]),
                          goal_cs)
 
         # g q~ > trip > q~ q q~

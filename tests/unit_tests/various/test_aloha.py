@@ -16,6 +16,7 @@
 the output of the Feynman Rules."""
 from __future__ import division
 
+import time
 import aloha.aloha_object as aloha_obj
 import aloha.aloha_lib as aloha_lib
 import aloha.create_aloha as create_aloha
@@ -437,7 +438,7 @@ class TestAddVariable(unittest.TestCase):
                 self.assertEqual(data.prefactor, 12)
         
 
-    def testfactorization(self):
+    def test_factorization(self):
         """test the factorization"""
         
         p1 = aloha_lib.ScalarVariable('p1')
@@ -491,18 +492,67 @@ class TestAddVariable(unittest.TestCase):
                                     else:
                                         self.assertEqual(term2, \
                                                     aloha_lib.ConstantObject(1))
- 
+                                        
+    def test_factorization2(self):
+        """test the factorization with power and constant"""
         
-        s3 = aloha_lib.ScalarVariable('s3')
-        s2 = aloha_lib.ScalarVariable('s2')
         p1 = aloha_lib.ScalarVariable('p1')
-        om1 = aloha_lib.ScalarVariable('om1')
-        sum = 2/3 * s3 * s2 - 4/3 * p1 * p1 * s3 * s2 * om1 + \
-              2/3 * p1 * p1 * p1 * p1 * om1 *om1
+        p2 = aloha_lib.ScalarVariable('p2')        
+        p3 = aloha_lib.ScalarVariable('p3')
+                
+        sum = ( -2 * p1 **2 + -2 * p2 + 2 * ( p3 * p2 ) )
         sum = sum.factorize()
+        #Should return p2*(2*p3-2)-2*p1**2
+         
+        self.assertEqual(sum.__class__,aloha_lib.AddVariable)
+        self.assertEqual(len(sum),2)
+        for term in sum:
+            if term == p1:
+                self.assertEqual(term.power, 2)
+                self.assertEqual(term.prefactor, -2)
+                continue
+            self.assertEqual(term.__class__,aloha_lib.MultVariable)
+            self.assertEqual(len(term), 2)
+            for fact in term:
+                if fact == p2:
+                    self.assertEqual(fact.power, 1)
+                    self.assertEqual(fact.prefactor, 1)
+                    continue
+                self.assertEqual(fact.__class__,aloha_lib.AddVariable)
+                self.assertEqual(len(fact), 2)
+                for term2 in fact:
+                    if term2 == p3:
+                        self.assertEqual(term2.power, 1)
+                        self.assertEqual(term2.prefactor, 2)
+                        continue
+                    self.assertEqual(term2.__class__, aloha_lib.ConstantObject)
+                    self.assertEqual(term2, aloha_lib.ConstantObject(-2) )
 
-            
-            
+    def test_factorization3(self):
+        """test factorization with prefactor"""
+        
+        p1 = aloha_lib.ScalarVariable('p1')
+        p2 = aloha_lib.ScalarVariable('p2')
+        
+        sum =2 * p2**2 + 2* p1 * p2
+        sum = sum.factorize()
+        #should be p2 (2 * p1 + 2 * p2)
+        self.assertEqual(sum.__class__,aloha_lib.MultVariable)
+        self.assertEqual(len(sum),2)
+        for fact in sum:
+            if p2 == fact:
+                self.assertEqual(fact.prefactor, 1)
+                self.assertEqual(fact.power, 1)
+            else:
+                self.assertEqual(sum.__class__,aloha_lib.MultVariable)
+                self.assertEqual(len(sum),2)
+                for term in fact:
+                    self.assertEqual(term.prefactor, 2)
+                    self.assertEqual(term.power, 1)
+        
+    
+    
+    
 class TestMultVariable(unittest.TestCase):
 
     def setUp(self):
@@ -620,8 +670,46 @@ class TestMultVariable(unittest.TestCase):
                 else:
                     self.assertFalse(obj1 is term[1])                
         
+    def testdealingwithpower3(self):
+        """Check that the power is correctly set in a product in the full chain"""
+        
+        F1_1, F1_2, F1_3, F1_4 = 1,2,3,4
+        
+        P1_0, P1_1, P1_2, P1_3 = 12, 0, 0, 12
+        P2_0, P2_1, P2_2, P2_3 = 12, 0, 12, 0
+        P3_0, P3_1, P3_2, P3_3 = 20, 0, 12, 12
+        M1, M2, M3 = 0, 0, 100 
+        
+        F2_1, F2_2, F2_3, F2_4 = 5,5,6,7
+        T3_1, T3_2, T3_3, T3_4 = 8,9,10,11
+        T3_5, T3_6, T3_7, T3_8 = 8,9,10,11
+        T3_9, T3_10, T3_11, T3_12 = 8,9,10,11
+        T3_13, T3_14, T3_15, T3_16 = 8,9,10,11
         
         
+        
+        p1 = aloha_obj.P('mu',2)
+        gamma1 = aloha_obj.Gamma('mu','a','b')
+        metric = aloha_obj.Spin2('nu','rho',3)
+        p2 = aloha_obj.P('rho',2)
+        gamma2 = aloha_obj.Gamma('nu','b','c')
+        F1 = aloha_obj.Spinor('c',1) 
+        
+         
+        lor1 = p1 * gamma1 * gamma2 * F1
+        lor2 = metric * p2
+        lor1.simplify()
+        new_lor = lor1.expand()
+        
+        lor2.simplify()
+        new_lor2 = lor2.expand()
+        
+        expr = new_lor * new_lor2
+        
+        self.assertEqual((-864+288j), eval(str(expr.get_rep([0]))))
+        self.assertEqual((288+864j), eval(str(expr.get_rep([1]))))
+        self.assertEqual((2016+288j), eval(str(expr.get_rep([2]))))
+        self.assertEqual((-288+2016j), eval(str(expr.get_rep([3]))))
         
     
     def test_obj_are_not_modified(self):
@@ -931,7 +1019,7 @@ class testLorentzObject(unittest.TestCase):
         self.p2= aloha_obj.P(1,3)
         self.p3= aloha_obj.P(2,2)
         self.p4= aloha_obj.P(2,3)
-        
+                
     def testbasicoperation(self):       
         """Test the sum/product run correctly on High level object.
         Those test will be basic since everything should derive from particle
@@ -950,6 +1038,22 @@ class testLorentzObject(unittest.TestCase):
         self.assertEqual(new2.__class__, aloha_lib.AddVariable) 
         self.assertEqual(len(new2), 2)
         self.assertNotEqual(new, new2)
+    
+    def test_power(self):
+        """ Test that we can take a square of an object --fully auto contracted"""
+        
+        product = self.p2 * self.p2
+        power = self.p2**2
+
+        self.assertEqual(power.__class__, aloha_lib.MultLorentz)        
+        self.assertEqual(product, power)
+        power = power.expand()
+
+        keys= power.keys()
+        keys.sort()
+        self.assertEqual(keys, [(0,)])
+        solution = '( ( P3_0**2 ) + -1 * ( P3_1**2 ) + -1 * ( P3_2**2 ) + -1 * ( P3_3**2 ) )'
+        self.assertEqual(str(power[(0,)]), solution)
         
     def test_equality(self):
         """test the equality of Lorentz Object"""
@@ -2150,11 +2254,26 @@ class TestSimplify(unittest.TestCase):
 class test_aloha_creation(unittest.TestCase):
     """ test the creation of one aloha routine from the create_aloha routine """
     
+    
+    class Lorentz(object):
+
+        require_args=['name','spins','structure']
+    
+        def __init__(self, name, spins, structure='external', **opt):
+            args = (name, spins, structure)
+                
+            assert(len(self.require_args) == len (args))
+    
+            for i, name in enumerate(self.require_args):
+                setattr(self, name, args[i])
+    
+            for (option, value) in opt.items():
+                setattr(self, option, value)
+            
     def test_aloha_VVS(self):
         """ Test the VVS creation of vertex """
-        from models.sm.object_library import Lorentz
         
-        VVS_15 = Lorentz(name = 'VVS_15',
+        VVS_15 = self.Lorentz(name = 'VVS_15',
                  spins = [ 3, 3, 1 ],
                  structure = 'Metric(1,2)')
 
@@ -2163,18 +2282,41 @@ class test_aloha_creation(unittest.TestCase):
         self.assertEqual(abstract.expr.numerator.nb_lor, 0)
         self.assertEqual(abstract.expr.numerator.nb_spin, 0)
         
+    def test_aloha_ZPZZ(self):
+        """ Check the validity of Funny Zp coupling to z z """
+                
+        ZPZZ = self.Lorentz(name = 'ZPZZ',
+                 spins = [ 3, 3, 3 ],
+                 structure = 'P(-1,1)*Epsilon(3,1,2,-2)*P(-1,1)*P(-2,2)-Epsilon(3,1,2,-2)*P(-1,2)*P(-1,2)*P(-2,1)-Epsilon(3,2,-1,-2)*P(1,1)*P(-1,2)*P(-2,1)+Epsilon(3,1,-1,-2)*P(2,2)*P(-1,2)*P(-2,1)')
+    
+        abstract_ZP = create_aloha.AbstractRoutineBuilder(ZPZZ).compute_routine(0)
+        expr = abstract_ZP.expr
+
+        V2_1, V2_2, V2_3, V2_4  = 1, 2, 3, 4
+        V1_1, V1_2, V1_3, V1_4  = 5, 6, 7, 8
+        V3_1, V3_2, V3_3, V3_4  = 9, 100, 11, 13
+        OM1,OM2,OM3 = 9,11,13
+        j = complex(0,1)
+        P1_0,P1_1,P1_2,P1_3 = 10, 11, 12, 19
+        P2_0,P2_1,P2_2,P2_3 = 101, 111, 121, 134
+        P3_0,P3_1,P3_2,P3_3 = 1001, 1106, 1240, 1320
+
+        for ind in expr.listindices():
+            self.assertEqual(eval(str(expr.get_rep(ind))), -178727040j)
+#    
+#    
     def test_aloha_FFV(self):
         """ test the FFV creation of vertex """
-        from models.sm.object_library import Lorentz
-        FFV_M = Lorentz(name = 'FFV_4',
+        
+        FFV_M = self.Lorentz(name = 'FFV_4',
                  spins = [ 2, 2, 3 ],
                  structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2)')        
         
-        FFV_P = Lorentz(name = 'FFV_5',
+        FFV_P = self.Lorentz(name = 'FFV_5',
                  spins = [ 2, 2, 3 ],
                  structure = 'Gamma(3,1,\'s1\')*ProjP(\'s1\',2)')
         
-        FFV = Lorentz(name = 'FFV',
+        FFV = self.Lorentz(name = 'FFV',
                  spins = [ 2, 2, 3 ],
                  structure = 'Gamma(3,1,2)')
         
@@ -2205,7 +2347,7 @@ class test_aloha_creation(unittest.TestCase):
         self.assertEqual(s3, eval(str(abstract_M.expr.numerator.get_rep([2]))))    
         self.assertEqual(s4, eval(str(abstract_M.expr.numerator.get_rep([3]))))                                   
 
-        FFV_6 = Lorentz(name = 'FFV_6',
+        FFV_6 = self.Lorentz(name = 'FFV_6',
                 spins = [ 2, 2, 3 ],
                 structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2) + 2*Gamma(3,1,\'s1\')*ProjP(\'s1\',2)')
 
@@ -2255,10 +2397,14 @@ class test_aloha_creation(unittest.TestCase):
         """test that the full SM seems to work"""
         # Note that this test check also some of the routine define inside this
         #because of use of some global.
+        
         helas_suite = create_aloha.AbstractALOHAModel('sm')
-
         self.assertEqual(helas_suite.look_for_conjugate(), {})
+        start = time.time()
         helas_suite.compute_all()
+        timing = time.time()-start
+        if timing > 10:
+            print "WARNING ALOHA SLOW (taking %s s for the full sm)" % timing
         lorentz_index = {1:0, 2:0,3:1}
         spin_index = {1:0, 2:1, 3:0}
         error = 'wrong contraction for %s'
@@ -2312,7 +2458,7 @@ class test_aloha_creation(unittest.TestCase):
         
     def test_aloha_FFVC(self):
         """ test the FFV creation of vertex """
-        from models.sm.object_library import Lorentz
+        from models.mssm.object_library import Lorentz
 
         FFV = Lorentz(name = 'FFV',
                  spins = [ 2, 2, 3 ],
@@ -2372,8 +2518,36 @@ class test_aloha_creation(unittest.TestCase):
                
         self.assertEqual(complex(0,-1)*ufo_value, v4_value)
         
+    def test_aloha_expr_FFFF(self):
+        """Test analytical expression for fermion clash routine"""
         
+        from models.mssm.object_library import Lorentz
+        FFFF = Lorentz(name = 'FFFF1',
+                spins = [ 2, 2, 2, 2 ],
+                structure = 'Identity(1,2)*Identity(4,3)')
         
+        builder = create_aloha.AbstractRoutineBuilder(FFFF)
+        conjg_builder= builder.define_conjugate_builder()
+        conjg_builder= conjg_builder.define_conjugate_builder(pairs=2)
+        amp = conjg_builder.compute_routine(0)
+
+        self.assertEqual(builder.conjg,[])
+
+        self.assertEqual(amp.expr.nb_spin, 0)
+        self.assertEqual(amp.expr.nb_lor, 0)
+
+        conjg_builder= builder.define_conjugate_builder(pairs=1)
+        amp = conjg_builder.compute_routine(0)
+
+        self.assertEqual(amp.expr.nb_spin, 0)
+        self.assertEqual(amp.expr.nb_lor, 0)   
+        
+        conjg_builder= builder.define_conjugate_builder(pairs=2)
+        amp = conjg_builder.compute_routine(0)
+
+        self.assertEqual(amp.expr.nb_spin, 0)
+        self.assertEqual(amp.expr.nb_lor, 0)        
+
         
 
 class UFOLorentz(object):
@@ -2420,11 +2594,12 @@ class TestAlohaWriter(unittest.TestCase):
         abstract = AbstractRoutineBuilder(FVVV).compute_routine(2)
         writer = aloha_writers.ALOHAWriterForFortran(abstract, '/tmp')
         call_list= writer.calllist['CallList']
+        self.assertEqual(['F1', 'V3', 'V4'], call_list)
         #vertex UAAW
-        #vertex_3 receives UWA with label 134
-        #vertex_2 expects UAW => need label 143 
+        #vertex_3 receives UAW with label 134
+        #vertex_2 expects UAW => need label 134 
         new_call = writer.reorder_call_list(call_list, 2, 3)
-        self.assertEqual(['F1', 'V4', 'V3'], new_call)
+        self.assertEqual(['F1', 'V3', 'V4'], new_call)
         
         #vertex UAWA
         #vertex_4 receives UAW with label 134 
@@ -2441,17 +2616,17 @@ class TestAlohaWriter(unittest.TestCase):
         writer = aloha_writers.ALOHAWriterForFortran(abstract, '/tmp')
         call_list= writer.calllist['CallList']
         # Vertex AAW+W-
-        # vertex_2 receives W+W-A with label 234
-        # vertex_1 ask for AW+W- so should be label 423
+        # vertex_2 receives AW+W- with label 234
+        # vertex_1 ask for AW+W- so should be label 234
         
         new_call = writer.reorder_call_list(call_list, 1, 2)
-        self.assertEqual(['V4', 'V2', 'V3'], new_call)
+        self.assertEqual(['V2', 'V3', 'V4'], new_call)
         
         # Vertex Aw+AW-
-        #vertex_3 receives w-Aw+  with label 234
-        #vertex_1 ask for w+Aw- so should be call with 432
+        #vertex_3 receives AW+W-  with label 234
+        #vertex_1 ask for w+Aw- so should be call with 324
         new_call = writer.reorder_call_list(call_list, 1, 3)
-        self.assertEqual(['V4', 'V3', 'V2'], new_call) 
+        self.assertEqual(['V3', 'V2', 'V4'], new_call) 
         # Vertex Aw+w-A
         #vertex_4 receives Aw+w-  with label 234
         #vertex_1 ask for w+w-A so should be call with 342        
@@ -2461,26 +2636,27 @@ class TestAlohaWriter(unittest.TestCase):
         abstract = create_aloha.AbstractRoutineBuilder(VVVV).compute_routine(2)
         writer = aloha_writers.ALOHAWriterForFortran(abstract, '/tmp')
         call_list= writer.calllist['CallList']
+        self.assertEqual(['V1', 'V3', 'V4'], call_list)
         # Vertex W+AAW-
-        # vertex3 receives W-W+A with label 341
-        # vertex2 ask for AW-W+ so we should use label 134
+        # vertex3 receives W+AW- with label 134
+        # vertex2 ask for W+AW- so we should use label 134
         new_call = writer.reorder_call_list(call_list, 2, 3)
         self.assertEqual(['V1', 'V3', 'V4'], new_call)
         # Vertex W+AW-A
-        # vertex4 receives W+AW-with label 341
-        # vertex2 ask for W-AW+ so we should use label 143        
+        # vertex4 receives W+AW- with label 134
+        # vertex2 ask for W+W-A so we should use label 143        
         new_call = writer.reorder_call_list(call_list, 2, 4)
         self.assertEqual(['V1', 'V4', 'V3'], new_call)
 
         abstract = create_aloha.AbstractRoutineBuilder(VVVV).compute_routine(3)
         writer = aloha_writers.ALOHAWriterForFortran(abstract, '/tmp')
         call_list= writer.calllist['CallList']
-
+        self.assertEqual(['V1', 'V2', 'V4'], call_list)
         # Vertex W+W-AA
-        # vertex4 receives W+W-A with label 412
-        # vertex3 ask for AW+W- so we should use label 241
+        # vertex4 receives W+W-A with label 124
+        # vertex3 ask for W+W-A so we should use label 124
         new_call = writer.reorder_call_list(call_list, 3, 4)
-        self.assertEqual(['V2', 'V4', 'V1'], new_call)
+        self.assertEqual(['V1', 'V2', 'V4'], new_call)
 
     def test_reorder_call_listUVVS(self):
         UVVS = UFOLorentz(name = 'UVVS',
@@ -2546,7 +2722,7 @@ def SSS1_1(S2, S3, C, M1, W1):
     S1[0]= C*denom*1j*(S3[0]*S2[0])
     return S1
 def SSS1_2(S2, S3, C, M1, W1):
-    return SSS1_1(S3,S2,C,M1,W1)
+    return SSS1_1(S2,S3,C,M1,W1)
 def SSS1_3(S2, S3, C, M1, W1):
     return SSS1_1(S3,S2,C,M1,W1)"""
         
