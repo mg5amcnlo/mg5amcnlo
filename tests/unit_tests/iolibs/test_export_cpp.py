@@ -954,7 +954,8 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
         if os.path.isfile(model_pkl):
             self.model = save_load_object.load_from_file(model_pkl)
         else:
-            self.model = import_ufo.import_model('sm')
+            sm_path = import_ufo.find_ufo_path('sm')
+            self.model = import_ufo.import_model(sm_path)
         self.model_builder = export_cpp.UFOModelConverterPythia8(\
                                                             self.model, "/tmp")
         
@@ -1039,7 +1040,8 @@ class ExportUFOModelCPPTest(unittest.TestCase,
         if os.path.isfile(model_pkl):
             self.model = save_load_object.load_from_file(model_pkl)
         else:
-            self.model = import_ufo.import_model('sm')
+            sm_path = import_ufo.find_ufo_path('sm')
+            self.model = import_ufo.import_model(sm_path)
         self.model_builder = export_cpp.UFOModelConverterCPP(\
                                                             self.model, "/tmp")
         

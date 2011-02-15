@@ -2284,46 +2284,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self.import_mg4_proc_card(proc_card)
     
     def import_ufo_model(self, model_name):
-        """ import the UFO name """
+        """ import the UFO model """
         
-        def import_main_model(model_path):
-            """ import a UFO model whithout any restriction file """
-            
-            self._curr_model = import_ufo.import_model(model_path)
-            self._curr_fortran_model = \
+        self._curr_model = import_ufo.import_model(model_name)
+        self._curr_fortran_model = \
                 helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
-            self._curr_cpp_model = \
+        self._curr_cpp_model = \
                 helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
-        
-        try:
-            model_path = import_ufo.find_ufo_path(model_name)
-        except import_ufo.UFOImportError:
-            if '-' not in model_name:
-                raise
-            split = model_name.split('-')
-            model_name = '-'.join([text for text in split[:-1]])
-            model_path = import_ufo.find_ufo_path(model_name)
-            
-            restrict_file = os.path.join(model_path, 'restrict_%s.dat'% split[-1])
-            if split[-1] == 'full':
-                restrict_file = None
-        else:
-            if os.path.exists(os.path.join(model_path, 'restrict_default.dat')):
-                restrict_file = os.path.join(model_path, 'restrict_default.dat')
-            else:
-                restrict_file = None
-        #import the model
-        import_main_model(model_path)
-        #restrict it        
-        if restrict_file:
-            old_level = import_ufo.logger_mod.level
-            if old_level < 30:
-                import_ufo.logger_mod.setLevel(30) # WARNING
-            self.do_restrict('model %s' %restrict_file)
-            import_ufo.logger_mod.setLevel(old_level)
-        
-        
-        
+                
     def process_model(self):
         """Set variables _particle_names and _couplings for tab
         completion, defined multiparticles"""

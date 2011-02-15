@@ -37,7 +37,10 @@ class TestMatrixElementChecker(unittest.TestCase):
 
 
     def setUp(self):
+        
         self.base_model = import_ufo.import_model('sm')
+        #sm_path = import_ufo.find_ufo_path('sm')
+        #self.base_model = import_ufo.import_model(sm_path)
     
     def test_get_momenta(self):
         """Test the get_momenta function"""
@@ -237,7 +240,8 @@ class TestLorentzInvariance(unittest.TestCase):
     """Test class for the Lorentz Invariance and boost_momenta"""
     
     def setUp(self):
-        self.base_model = import_ufo.import_model('mssm')
+        sm_path = import_ufo.find_ufo_path('mssm')
+        self.base_model = import_ufo.import_model(sm_path)
         
     def test_boost_momenta(self):
         """check if the momenta are boosted correctly by checking invariant mass

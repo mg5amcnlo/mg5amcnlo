@@ -186,7 +186,8 @@ class TestImportUFO(unittest.TestCase):
         except:
             pass
         
-        model = import_ufo.import_model('sm')
+        sm_path = import_ufo.find_ufo_path('sm')
+        model = import_ufo.import_model(sm_path)
     
         self.assertNotEqual(model.get('particles'),None)
         self.assertNotEqual(model.get('particles'),[], "empty particles list")
@@ -196,7 +197,8 @@ class TestImportUFO(unittest.TestCase):
         
         
         # try with the pickle:
-        model = import_ufo.import_model('sm')
+        sm_path = import_ufo.find_ufo_path('sm')
+        model = import_ufo.import_model(sm_path)
     
         self.assertNotEqual(model.get('particles'),None)
         self.assertNotEqual(model.get('particles'),[], "empty particles list")

@@ -37,7 +37,6 @@ logger = logging.getLogger('models.import_ufo')
 logger_mod = logging.getLogger('madgraph.model')
 
 root_path = os.path.dirname(os.path.realpath( __file__ ))
-print root_path, __file__
 sys.path.append(root_path)
 
 class UFOImportError(MadGraph5Error):
@@ -55,8 +54,61 @@ def find_ufo_path(model_name):
 
     return model_path
 
-def import_model(model_path):
-    """ a practical and efficient way to import one of those models """
+def import_model(model_name):
+    """ a practical and efficient way to import a model"""
+
+#    def import_main_model(model_path):
+#            """ import a UFO model whithout any restriction file """
+#            
+#            self._curr_model = import_ufo.import_model(model_path)
+#            self._curr_fortran_model = \
+#                helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
+#            self._curr_cpp_model = \
+#                helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
+        
+    # check if this is a valid path or if this include restriction file       
+    try:
+        model_path = find_ufo_path(model_name)
+    except UFOImportError:
+        if '-' not in model_name:
+            raise
+        split = model_name.split('-')
+        model_name = '-'.join([text for text in split[:-1]])
+        model_path = find_ufo_path(model_name)
+            
+        restrict_file = os.path.join(model_path, 'restrict_%s.dat'% split[-1])
+        #if restriction is full, then we by pass restriction (avoid default)
+        if split[-1] == 'full':
+            restrict_file = None
+    else:
+        # Check if by default we need some restrictions
+        if os.path.exists(os.path.join(model_path,'restrict_default.dat')):
+            restrict_file = os.path.join(model_path,'restrict_default.dat')
+        else:
+            restrict_file = None
+            
+    #import the FULL model
+    model = import_full_model(model_path) 
+
+    #restrict it if needed       
+    if restrict_file:
+        # but doing this in silence
+        old_level = logger_mod.level
+        if old_level < 30:
+            logger_mod.setLevel(30) # WARNING
+        
+        # Modify the mother class of the object in order to allow restriction
+        model = RestrictModel(model)
+        model.restrict_model(restrict_file)
+        
+        # put logger in normal mode
+        logger_mod.setLevel(old_level) 
+    
+    return model
+
+def import_full_model(model_path):
+    """ a practical and efficient way to import one of those models 
+        (no restriction file use)"""
 
     assert model_path == find_ufo_path(model_path)
             
@@ -97,6 +149,10 @@ def import_model(model_path):
     # save in a pickle files to fasten future usage
     save_load_object.save_to_file(os.path.join(model_path, 'model.pkl'), model) 
  
+    #if default and os.path.exists(os.path.join(model_path, 'restrict_default.dat')):
+    #    restrict_file = os.path.join(model_path, 'restrict_default.dat') 
+    #    model = import_ufo.RestrictModel(model)
+    #    model.restrict_model(restrict_file)
     return model
     
 

@@ -34,7 +34,8 @@ _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 class TestRestrictModel(unittest.TestCase):
     """Test class for the RestrictModel object"""
 
-    base_model = import_ufo.import_model('sm')
+    sm_path = import_ufo.find_ufo_path('sm')
+    base_model = import_ufo.import_full_model(sm_path)
 
     def setUp(self):
         """Set up decay model"""
@@ -49,9 +50,9 @@ class TestRestrictModel(unittest.TestCase):
     def test_detect_zero_parameters(self):
         """ check that detect zero parameters works"""        
         
-        expected = set(['MB', 'ymb', 'yb', 'WT'])
+        expected = set(['cabi', 'conjg__CKM13', 'conjg__CKM12', 'CKM21', 'conjg__CKM31', 'CKM23', 'WT', 'conjg__CKM32', 'ymc', 'ymb', 'Me', 'CKM32', 'CKM31', 'ym', 'CKM13', 'CKM12', 'yc', 'yb', 'ye', 'conjg__CKM21', 'conjg__CKM23', 'ys', 'MD', 'MC', 'MB', 'MM', 'yup', 'ydo', 'MU', 'MS', 'sin__cabi'])
         result = set(self.model.detect_zero_parameters())
-        
+
         self.assertEqual(expected, result)
         
     def test_detect_identical_parameters(self):
@@ -89,7 +90,8 @@ class TestRestrictModel(unittest.TestCase):
     def test_detect_zero_couplings(self):
         """ check that detect zero couplings works"""
         
-        expected = set(['GC_24'])
+
+        expected = set(['GC_16', 'GC_15', 'GC_14', 'GC_46', 'GC_20', 'GC_19', 'GC_18', 'GC_39', 'GC_38', 'GC_50', 'GC_48', 'GC_42', 'GC_44', 'GC_45', 'GC_49', 'GC_35', 'GC_34', 'GC_37', 'GC_36'])
         result = set(self.model.detect_zero_couplings())
         
         self.assertEqual(expected, result)        
@@ -100,41 +102,41 @@ class TestRestrictModel(unittest.TestCase):
         
         # first test case where they are all deleted
         # check that we have the valid model
-        input = self.model['interactions'][2]
-        input2 = self.model['interactions'][25]
+        input = self.model['interactions'][3]  # four gluon
+        input2 = self.model['interactions'][28] # b b~ h
         self.assertTrue('GC_6' in input['couplings'].values())
-        self.assertTrue('GC_24' in input2['couplings'].values())
+        self.assertTrue('GC_34' in input2['couplings'].values())
         found_6 = 0
-        found_24 = 0
+        found_34 = 0
         for dep,data in self.model['couplings'].items():
             for param in data:
                 if param.name == 'GC_6': found_6 +=1
-                elif param.name == 'GC_24': found_24 +=1
+                elif param.name == 'GC_34': found_34 +=1
         self.assertTrue(found_6>0)
-        self.assertTrue(found_24>0)
+        self.assertTrue(found_34>0)
         
         # make the real test
-        result = self.model.remove_couplings(['GC_24','GC_6'])
+        result = self.model.remove_couplings(['GC_34','GC_6'])
         self.assertFalse(input in self.model['interactions'])
         self.assertFalse(input2 in self.model['interactions'])
         
         for dep,data in self.model['couplings'].items():
             for param in data:
-                self.assertFalse(param.name in  ['GC_6', 'GC_24'])
+                self.assertFalse(param.name in  ['GC_6', 'GC_34'])
         
         # Now test case where some of them are deleted and some not
-        input = self.model['interactions'][25]
-        input2 = self.model['interactions'][38]
-        self.assertTrue('GC_14' in input['couplings'].values())
-        self.assertTrue('GC_12' in input['couplings'].values())
-        self.assertTrue('GC_12' in input2['couplings'].values())
-        self.assertTrue('GC_15' in input2['couplings'].values())
-        result = self.model.remove_couplings(['GC_12','GC_15'])
-        input = self.model['interactions'][25]
-        self.assertTrue('GC_14' in input['couplings'].values())
-        self.assertFalse('GC_12' in input['couplings'].values())
-        self.assertFalse('GC_15' in input2['couplings'].values())
-        self.assertFalse('GC_12' in input2['couplings'].values())
+        input = self.model['interactions'][29]  # d d~ Z
+        input2 = self.model['interactions'][59] # e+ e- Z
+        self.assertTrue('GC_24' in input['couplings'].values())
+        self.assertTrue('GC_22' in input['couplings'].values())
+        self.assertTrue('GC_22' in input2['couplings'].values())
+        self.assertTrue('GC_25' in input2['couplings'].values())
+        result = self.model.remove_couplings(['GC_22','GC_25'])
+        input = self.model['interactions'][29]
+        self.assertTrue('GC_24' in input['couplings'].values())
+        self.assertFalse('GC_22' in input['couplings'].values())
+        self.assertFalse('GC_25' in input2['couplings'].values())
+        self.assertFalse('GC_22' in input2['couplings'].values())
 
     def test_put_parameters_to_zero(self):
         """check that we remove parameters correctly"""
@@ -173,9 +175,13 @@ class TestRestrictModel(unittest.TestCase):
                     param.expr == 'ZERO'
                         
     def test_restrict_from_a_param_card(self):
-        """ check the full restriction chain in once """
+        """ check the full restriction chain in one case b b~ h """
         
-        interaction = self.model['interactions'][25]
+        interaction = self.model['interactions'][28]
+        #check sanity of the checks
+        assert [p['pdg_code'] for p in interaction['particles']] == [5, 5, 25], \
+             'Initial model not valid for this test => update the test'
+        assert interaction['couplings'] == {(0,0): 'GC_34'}
         
         self.model.restrict_model(self.restrict_file)
         
@@ -190,7 +196,7 @@ class TestRestrictModel(unittest.TestCase):
         # check remove couplings
         for dep,data in self.model['couplings'].items():
             for param in data:
-                self.assertFalse(param.name in  ['GC_24'])
+                self.assertFalse(param.name in  ['GC_34'])
 
         # check masses
         part_b = self.model.get_particle(5)

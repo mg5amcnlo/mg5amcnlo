@@ -75,7 +75,8 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         """Test the UFO and MG4 SM model correspond to the same model """
         
         # import UFO model
-        ufo_model = import_ufo.import_model('sm')
+        sm_path = import_ufo.find_ufo_path('sm')
+        ufo_model = import_ufo.import_model(sm_path)
         ufo_model.pass_particles_name_in_mg_default()
         
         # import MG4 model
@@ -127,7 +128,8 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         """Test the UFO and MG4 MSSM model correspond to the same model """
         
         # import UFO model
-        ufo_model = import_ufo.import_model('mssm')
+        sm_path = import_ufo.find_ufo_path('mssm')
+        ufo_model = import_ufo.import_model(sm_path)
         #converter = import_ufo.UFOMG5Converter(model)
         #ufo_model = converter.load_model()
         ufo_model.pass_particles_name_in_mg_default()
@@ -270,7 +272,8 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
         
         picklefile = os.path.join(MG5DIR,'models','sm','model.pkl') 
         if not files.is_uptodate(picklefile):
-            model = import_ufo.import_model('sm')
+        sm_path = import_ufo.find_ufo_path('sm')
+        model = import_ufo.import_model(sm_path)
         else:
             model = save_load_object.load_from_file(picklefile)
             
