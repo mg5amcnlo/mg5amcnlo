@@ -17,16 +17,6 @@ c
       parameter (maxexternal=17)
       integer maxpara
       parameter (maxpara=1000)
-c
-c     Les Houches init block (for the <init> info)
-c
-      integer maxpup
-      parameter(maxpup=100)
-      integer idbmup,pdfgup,pdfsup,idwtup,nprup,lprup
-      double precision ebmup,xsecup,xerrup,xmaxup
-      common /heprup/ idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
-     &     idwtup,nprup,xsecup(maxpup),xerrup(maxpup),
-     &     xmaxup(maxpup),lprup(maxpup)
 c     
 c     Local
 c
@@ -99,6 +89,7 @@ c     Get list of subprocesses
 c
       call get_subprocess(subname,ns)
 
+      print *,'Got subprocesses: ',ns
 c
 c     Create scratch file to hold events
 c
@@ -463,12 +454,13 @@ c     Local
 c
       integer i,j, k, ip
       double precision xi
-      character*50 dirname,dname,channame
+      character*150 dirname,dname,channame
 c-----
 c  Begin Code
 c-----
        i = index(dir," ")
       dname = dir(1:i-1)// "/" // symfile
+      print *, 'dname: ',dname
       open(unit=35, file=dname ,status='old',err=59)
       do while (.true.)
          read(35,*,err=99,end=99) xi,j
@@ -550,7 +542,7 @@ c
       integer ievent,iseed
       logical done,found
       character*140 buff
-      character*60 fullname
+      character*150 fullname
 c
 c     Les Houches init block (for the <init> info)
 c
