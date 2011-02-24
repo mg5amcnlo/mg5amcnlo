@@ -400,11 +400,11 @@ class ColorOrderedAmplitudeTest(unittest.TestCase):
                              
 
             
-    def test_color_ordered_uux_uuxng_no_singlet(self):
+    def test_color_ordered_uux_uuxng(self):
         """Test the number of color flows and diagram generated for uu~>uu~+ng with n up to 3
         """
-        goal_ndiags = [[1], [3, 3], [10, 11, 10],[35, 41, 41, 35]]
-        goal_nflows = [1, 2, 3, 4]
+        goal_ndiags = [[1, 1], [3, 2, 3, 2], [10, 5, 11, 4, 10, 5],[35, 16, 41, 10, 41, 10, 35, 16]]
+        goal_nflows = [2, 4, 6, 8]
 
         for ngluons in range(0, 4):
 
@@ -424,45 +424,6 @@ class ColorOrderedAmplitudeTest(unittest.TestCase):
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
                                            'orders':{'QCD':ngluons+2, 'QED': 0}})
-
-            self.myamplitude.set('process', myproc)
-
-            self.myamplitude.setup_process()
-            #for c in self.myamplitude.get('color_flows'):
-            #    print "color flow process: ",[(l.get('number'), l.get('color_ordering')) for \
-            #                                   l in c.get('process').get('legs')]
-            #    print c.nice_string()
-
-            self.assertEqual(len(self.myamplitude.get('color_flows')),
-                             goal_nflows[ngluons])
-            for iflow, flow in enumerate(self.myamplitude.get('color_flows')):
-                self.assertEqual(len(self.myamplitude.get('color_flows')[iflow].get('diagrams')),
-                             goal_ndiags[ngluons][iflow])
-
-    def test_color_ordered_uux_uuxng_plus_singlet(self):
-        """Test the number of color flows and diagram generated for uu~>uu~+ng with n up to 3
-        """
-        goal_ndiags = [[2], [5, 5], [15, 15, 15],[51, 51, 51, 51]]
-        goal_nflows = [1, 2, 3, 4]
-
-        for ngluons in range(0, 4):
-
-            myleglist = base_objects.LegList()
-
-            myleglist.append(base_objects.Leg({'id':2,
-                                             'state':False}))
-            myleglist.append(base_objects.Leg({'id':-2,
-                                             'state':False}))
-            myleglist.append(base_objects.Leg({'id':2,
-                                             'state':True}))
-            myleglist.append(base_objects.Leg({'id':-2,
-                                             'state':True}))
-            myleglist.extend([base_objects.Leg({'id':21,
-                                                 'state':True})] * ngluons)
-
-            myproc = base_objects.Process({'legs':myleglist,
-                                           'model':self.mymodel,
-                                           'orders':{'QCD':ngluons+2, 'QED': 2}})
 
             self.myamplitude.set('process', myproc)
 
@@ -518,12 +479,21 @@ class ColorOrderedAmplitudeTest(unittest.TestCase):
                 self.assertEqual(len(self.myamplitude.get('color_flows')[iflow].get('diagrams')),
                              goal_ndiags[ngluons][iflow])
 
-    def test_color_ordered_uux_ddxssxng_no_singlet(self):
-        """Test number of color flows and diagram for uu~>dd~ss~+ng with n up to 3
+    def test_color_ordered_uux_ddxssxngd(self):
+        """Test number of color flows and diagram for uu~>dd~ss~+ng with n up to 2
+        Note only checked up to 1 gluon.
         """
-        goal_ndiags = [[4, 4], [16] * 6, [10, 11, 10],[35, 41, 41, 35]]
-        goal_nflows = [2, 6, 3, 4]
-
+        goal_ndiags = [[4, 4, 4, 4, 6, 4],
+                       [16, 16, 14, 8, 14, 8, 16, 16, 16, 14, 14, 16,
+                        14, 14, 8, 14, 14, 14],
+                       [63, 69, 63, 50, 28, 20, 50, 28, 20, 63, 69,
+                        63, 69, 69, 56, 28, 56, 28, 69, 69, 63, 50, 50,
+                        63, 38, 32, 38, 20, 28, 50, 32, 32, 28, 56, 38,
+                        50]]
+        
+        goal_nflows = [6, 18, 36]
+        #goal_nflows = []
+        #goal_ndiags = []
         for ngluons in range(0, 3):
 
             myleglist = base_objects.LegList()
@@ -551,25 +521,41 @@ class ColorOrderedAmplitudeTest(unittest.TestCase):
 
             self.myamplitude.setup_process()
             for c in self.myamplitude.get('color_flows'):
-                print "color flow process: ",[(l.get('number'), l.get('color_ordering')) for \
+                print "color flow process: ",[(l.get('number'), l.get('id'),
+                                               l.get('color_ordering')) for \
                                                l in c.get('process').get('legs')]
                 print c.nice_string()
 
+            #goal_nflows.append(len(self.myamplitude.get('color_flows')))
             self.assertEqual(len(self.myamplitude.get('color_flows')),
                              goal_nflows[ngluons])
+            #diags = []
             for iflow, flow in enumerate(self.myamplitude.get('color_flows')):
-                plot = draw.MultiEpsDiagramDrawer(flow.get('diagrams'),
-                                                  "test.eps",
-                                                  model=self.mymodel)
-                plot.draw()
+                #plot = draw.MultiEpsDiagramDrawer(flow.get('diagrams'),
+                #                                  "test.eps",
+                #                                  model=self.mymodel)
+                #plot.draw()
+                #diags.append(len(self.myamplitude.get('color_flows')[iflow].get('diagrams')))
                 self.assertEqual(len(self.myamplitude.get('color_flows')[iflow].get('diagrams')),
                              goal_ndiags[ngluons][iflow])
+            #goal_ndiags.append(diags)
+            #print goal_nflows
+            #print goal_ndiags
 
-    def test_color_ordered_uux_uuxddxng_no_singlet(self):
+    def test_color_ordered_uux_uuxddxng(self):
         """Test number of color flows and diagram for uu~>uu~dd~+ng with n up to 3
         """
-        goal_ndiags = [[4, 4], [17, 3], [10, 11, 10],[35, 41, 41, 35]]
-        goal_nflows = [2, 6, 3, 4]
+        goal_ndiags = [[4, 4, 4, 6, 4, 4],
+                       [16, 14, 16, 14, 14, 14, 8, 14, 16, 8, 16, 8,
+                        16, 14, 14, 14, 16, 14],
+                       [63, 50, 69, 56, 63, 50, 50, 38, 28, 32, 20,
+                        38, 69, 28, 63, 20, 63, 20, 69, 28, 63, 50, 69,
+                        28, 56, 32, 28, 32, 69, 28, 69, 56, 50, 38, 63,
+                        50]]
+        
+        goal_nflows = [6, 18, 36]
+        #goal_nflows = []
+        #goal_ndiags = []
 
         for ngluons in range(0, 3):
 
@@ -602,11 +588,17 @@ class ColorOrderedAmplitudeTest(unittest.TestCase):
             #                                   l in c.get('process').get('legs')]
             #    print c.nice_string()
 
+            #goal_nflows.append(len(self.myamplitude.get('color_flows')))
             self.assertEqual(len(self.myamplitude.get('color_flows')),
                              goal_nflows[ngluons])
+            #diags = []
             for iflow, flow in enumerate(self.myamplitude.get('color_flows')):
+                #diags.append(len(self.myamplitude.get('color_flows')[iflow].get('diagrams')))
                 self.assertEqual(len(self.myamplitude.get('color_flows')[iflow].get('diagrams')),
                              goal_ndiags[ngluons][iflow])
+            #goal_ndiags.append(diags)
+            #print goal_nflows
+            #print goal_ndiags
 
     def test_color_ordered_uux_epem_nglue(self):
         """Test the number of color flows and diagrams generated for uu~>e+e-ng
@@ -646,11 +638,11 @@ class ColorOrderedAmplitudeTest(unittest.TestCase):
                              
 
             
-    def test_color_ordered_uux_uuxepemng_no_singlet(self):
+    def test_color_ordered_uux_uuxepemng(self):
         """Test color flows and diagrams for uu~>uu~e+e-+ng with n up to 2
         """
-        goal_ndiags = [[4], [14, 14], [50, 56, 50]]
-        goal_nflows = [1, 2, 3]
+        goal_ndiags = [[4, 4], [14, 10, 14, 10], [50, 28, 56, 24, 50, 28]]
+        goal_nflows = [2, 4, 6]
 
         for ngluons in range(0, 3):
 
@@ -688,7 +680,7 @@ class ColorOrderedAmplitudeTest(unittest.TestCase):
             for iflow, flow in enumerate(self.myamplitude.get('color_flows')):
                 self.assertEqual(len(self.myamplitude.get('color_flows')[iflow].get('diagrams')),
                              goal_ndiags[ngluons][iflow])
-
+                
     def test_color_ordered_gg_h_nglue(self):
         """Test the number of color ordered diagrams gg>h+ng with n up to 3"""
 
@@ -1293,7 +1285,7 @@ class BGHelasMatrixElementTest(unittest.TestCase):
         goal_wavefunctions = [6, 19, 36, 89, 211, 394]
 
         # Test 2, 3, 4 and 5 gluons in the final state
-        for ngluon in range(2,4):
+        for ngluon in range(2,5):
 
             # Create the amplitude
             myleglist = base_objects.LegList([base_objects.Leg({'id':21,
@@ -1662,15 +1654,19 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                 self.assertEqual(len(matrix_element.get_all_wavefunctions()),
                                  goal_wavefunctions[ngluon][iflow])
 
-    def test_matrix_element_uux_ddxng_no_singlet_non_optimized(self):
+    def test_matrix_element_uux_ddxng_non_optimized(self):
         """Test color flow matrix element for uu~>dd~ng witout optimization
         """
 
-        goal_amplitudes = [[1],[3,3],[11,12,11],[44, 50, 50, 44]]
-        goal_wavefunctions = [[5],[9,9],[16,16,15],[33, 33, 34, 30]]
-        goal_ndiags = [[1], [3, 3], [10, 11, 10],[35, 41, 41, 35]]
-        goal_nflows = [1, 2, 3, 4]
+        goal_amplitudes = [[1, 1], [3, 3, 2, 2], [11, 12, 11, 5, 4, 5], [44, 50, 50, 44, 18, 10, 10, 18]]
+        goal_wavefunctions = [[5, 5], [9, 9, 8, 8], [16, 16, 15, 13, 12, 12], [33, 33, 34, 30, 26, 19, 18, 24]]
+        goal_ndiags = [[1, 1], [3, 3, 2, 2], [10, 11, 10, 5, 4, 5], [35, 41, 41, 35, 16, 10, 10, 16]]
+        goal_nflows = [2, 4, 6, 8]
 
+        #goal_wavefunctions = []
+        #goal_amplitudes = []
+        #goal_ndiags = []
+        #goal_nflows = []
         # Test 0, 1, 2 and 3 gluons in the final state
         for ngluon in range (0, 4):
 
@@ -1689,6 +1685,11 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                                            'model':self.mymodel})
 
             self.myamplitude = color_ordered_amplitudes.ColorOrderedAmplitude(myproc)
+
+            #goal_nflows.append(len(self.myamplitude.get('color_flows')))
+            #diags=[]
+            #amps=[]
+            #wfs=[]
 
             for iflow, mycolorflow in \
                 enumerate(self.myamplitude.get('color_flows')):
@@ -1709,6 +1710,9 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                       ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
                       ' diagrams'
 
+                #diags.append(len(mycolorflow.get('diagrams')))
+                #wfs.append(len(matrix_element.get_all_wavefunctions()))
+                #amps.append(len(matrix_element.get_all_amplitudes()))
                 self.assertEqual(len(matrix_element.get_all_amplitudes()),
                                  goal_amplitudes[ngluon][iflow])
                 self.assertEqual(len(matrix_element.get_all_wavefunctions()),
@@ -1716,6 +1720,15 @@ class BGHelasMatrixElementTest(unittest.TestCase):
 
                 # Test JAMP (color amplitude) output
                 print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
+
+            #goal_wavefunctions.append(wfs)
+            #goal_amplitudes.append(amps)
+            #goal_ndiags.append(diags)
+
+            #print goal_nflows
+            #print goal_wavefunctions
+            #print goal_amplitudes
+            #print goal_ndiags
 
 
     def test_matrix_element_uux_ddxssxng(self):
@@ -1725,26 +1738,21 @@ class BGHelasMatrixElementTest(unittest.TestCase):
         goal_wavefunctions = [[12, 13, 13, 12, 15, 13],
                               [25, 24, 27, 18, 27, 18, 25, 24, 24, 25,
         25, 24, 24, 24, 18, 26, 24, 26],
-                              [51, 57, 55, 52, 36, 29, 52, 36, 29, 51,
-        57, 55, 52, 58, 60, 37, 60, 37, 52, 58, 51, 53, 53, 51, 39,
-        39, 41, 27, 35, 52, 39, 39, 35, 61, 41, 52]]
-
+                              [51, 57, 55, 52, 36, 29, 52, 36, 29, 51, 57, 55, 52, 58, 60, 37, 60, 37, 52, 58, 51, 53, 53, 51, 39, 39, 41, 27, 35, 52, 39, 39, 35, 61, 41, 52]]
         goal_amplitudes = [[4, 4, 4, 4, 6, 4],
                            [12, 13, 10, 4, 10, 4,
         12, 13, 12, 10, 10, 12, 10, 10, 4, 10, 10, 10],
-                           [26, 28, 28, 19, 7, 6, 19, 7, 6, 26, 28,
-        28, 25, 29, 22, 7, 22, 7, 25, 29, 26, 20, 20, 26, 16, 13, 18,
-        4, 10, 20, 13, 10, 10, 24, 18, 20]]
-
+                           [26, 28, 28, 19, 7, 6, 19, 7, 6, 26, 28, 28, 25, 29, 22, 7, 22, 7, 25, 29, 26, 20, 20, 26, 16, 13, 18, 4, 10, 20, 13, 10, 10, 24, 18, 20]]
         goal_ndiags = [[4, 4, 4, 4, 6, 4],
                        [16, 16, 14, 8, 14, 8, 16,
         16, 16, 14, 14, 16, 14, 14, 8, 14, 14, 14],
-                       [63, 69, 63, 50, 28, 20, 50, 28, 20, 63, 69,
-        63, 69, 69, 56, 28, 56, 28, 69, 69, 63, 50, 50, 63, 38, 32,
-        38, 20, 28, 50, 32, 32, 28, 56, 38, 50]]
-
+                       [63, 69, 63, 50, 28, 20, 50, 28, 20, 63, 69, 63, 69, 69, 56, 28, 56, 28, 69, 69, 63, 50, 50, 63, 38, 32, 38, 20, 28, 50, 32, 32, 28, 56, 38, 50]]
         goal_nflows = [6, 18, 36]
 
+        #goal_wavefunctions = []
+        #goal_amplitudes = []
+        #goal_ndiags = []
+        
         # Test 2, 3, 4 and 5 gluons in the final state
         for ngluon in range (0, 3):
 
@@ -1821,3 +1829,8 @@ class BGHelasMatrixElementTest(unittest.TestCase):
             #goal_wavefunctions.append(wfs)
             #goal_amplitudes.append(amps)
             #goal_ndiags.append(diags)
+
+            #print goal_wavefunctions
+            #print goal_amplitudes
+            #print goal_ndiags
+                              

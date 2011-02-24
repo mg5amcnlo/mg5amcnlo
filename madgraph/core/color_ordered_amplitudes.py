@@ -13,17 +13,22 @@
 #
 ################################################################################
  
-"""Classes for generation of color-ordered
-diagrams. ColorOrderedAmplitude performs the diagram generation,
-ColorOrderedLeg has extra needed flags.
+"""Classes for generation of color-ordered diagrams, and for
+generating matrix elements using Behrends-Giele
+currents.
 
-Additions to the regular diagram generation algorithm:
+ColorOrderedAmplitude keeps track of all color flows, and
+ColorOrderedFlow performs the diagram generation. ColorOrderedLeg has
+extra needed flags. See documentation for the functions
+get_combined_legs and get_combined_vertices for the algorithm used to generate only color-ordered diagrams.
 
-1) Only one set of color triplet lines are allowed (taken from the
-first diagram in the process stripped of gluons)
-
-2) Gluon lines are allowed to be merged only with neighboring gluon
-lines.
+BGHelasMatrixElement generates the matrix element for a given color
+flow, by ensuring that all wavefunctions and amplitudes correspond to
+the color flow defined by the process color ordering. If optimization
+is turned on, wavefunctions combining the same external particles are
+combined into BGHelasCurrents, to reduce the number of wavefunction
+and amplitude calculations needed to the Behrends-Giele n^3 (or n^4 if
+4-gluon vertices are present), or 3^n for color singlet processes.
 """
 
 import array
@@ -46,11 +51,11 @@ logger = logging.getLogger('madgraph.color_ordered_amplitudes')
 # ColorOrderedLeg
 #===============================================================================
 class ColorOrderedLeg(base_objects.Leg):
-
     """Leg with two additional flags: fermion line number, and color
     ordering number. These will disallow all non-correct orderings of
-    colored fermions and gluons. So far, only color triplets
-    and gluons are treated (i.e., SM)"""
+    colored fermions and gluons. So far, only color triplets and color
+    octets are treated (i.e., no higher color representations or
+    epsilon^{ijk})"""
 
     def default_setup(self):
         """Default values for all properties"""
@@ -113,11 +118,13 @@ class ColorOrderedAmplitude(diagram_generation.Amplitude):
         self['color_flows'] = ColorOrderedFlowList()
 
     def setup_process(self):
-        """Add negative singlet gluon to model. Setup
+        """Add singlets for each color octet in model. Setup
         ColorOrderedFlows corresponding to all color flows of this
         process. Each ordering of unique particles with color triplets
         pairwise combined as (3bar 3)...(3bar 3)... etc. corresponds
-        to a unique color flow."""
+        to a unique color flow. If multiple triplet lines are present,
+        one flow is generated for each number of singlet exchanges
+        (specified by the coupling order singlet_QCD)"""
 
         process = self.get('process')
         model = process.get('model')
@@ -179,11 +186,13 @@ class ColorOrderedAmplitude(diagram_generation.Amplitude):
                [[p[1] for p in leg_perm] for leg_perm in leg_perms]:
                 continue
 
-            # Also remove permutations where a triplet and
-            # anti-triplet are not next to each other and ordered as 
-            # (3bar 3)...(3bar 3)...
+            # trip is a list of [position, (number, id, color)] for
+            # triplet and antitriplet legs
             trip = [(i,p) for (i,p) in enumerate(first_leg + list(perm)) \
                     if abs(p[2])==3]
+            # Remove permutations where a triplet and
+            # anti-triplet are not next to each other and ordered as 
+            # (3bar 3)...(3bar 3)...
             failed = False
             for i in range(0,len(trip),2):
                 if trip[i][0] != trip[i+1][0]-1 or \
@@ -201,14 +210,12 @@ class ColorOrderedAmplitude(diagram_generation.Amplitude):
         colegs = base_objects.LegList([ColorOrderedLeg(l) for l in legs])
 
         # Set color flow flags (color_ordering) so that every
-        # chain (3bar 8 8 .. 8 3) has a unique color ordering
+        # chain (3 8 8 .. 8 3bar) has a unique color ordering
         # group, and each entry in the chain has a unique color flow
         # flag {chain:(n,n)}
 
         # For > 2 triplet pairs, we need to remove double counting due
-        # to different ordering of color chains. Idea: make list of
-        # [(pdg,group,color flow) for all combinations of groups
-        # except the last (which is fixed to the first triplet)
+        # to different ordering of color chains.
 
         used_flows = []
 
@@ -227,7 +234,9 @@ class ColorOrderedAmplitude(diagram_generation.Amplitude):
                 leg.set('color_ordering', {ichain: (ileg, ileg)})
             if ichain > 2:
                 # Make sure we don't have double counting between
-                # different orders of chains
+                # different orders of identical chains, by comparing
+                # the arrays of [(pdg, chain number, color_ordering)]
+                # for all permutations of the chain numbers.
                 failed = False
                 for perm in itertools.permutations(range(1, ichain+1), ichain): 
                     this_flow = sorted(sum([[(leg.get('id'), perm[i],
@@ -247,8 +256,8 @@ class ColorOrderedAmplitude(diagram_generation.Amplitude):
                     leg.set('id', model.get_particle(leg.get('id')).\
                             get_anti_pdg_code())
 
-            # Create the color ordered flow(s), one for all-octet
-            # gluons and one for each possible singlet gluon
+            # Create the color ordered flows for all combinations
+            # numbers of octet and singlet gluon
             assert 'QCD' in process.get('orders')
             assert process.get('orders')['QCD'] <= len(process.get('legs')) - 2
             for iflow in range(max(1, ichain)):
@@ -269,8 +278,8 @@ class ColorOrderedAmplitude(diagram_generation.Amplitude):
     @staticmethod
     def add_color_singlet(model):
         """Go through model and add color singlets for all color
-        octets, with negative couplings to triplets and no other
-        couplings."""
+        octets, with couplings only to triplet pairs. These couplings
+        are multiplied by SFACT = sqrt(-1/6) = i/sqrt(6)."""
 
         particles = copy.copy(model.get('particles'))
         interactions = copy.copy(model.get('interactions'))
@@ -344,10 +353,9 @@ class ColorOrderedAmplitude(diagram_generation.Amplitude):
 # ColorOrderedFlow
 #===============================================================================
 class ColorOrderedFlow(diagram_generation.Amplitude):
-    """Amplitude: color flow process + list of diagrams (ordered)
-    Initialize with a set of processes which together specify a color
-    ordered process, then call generate_diagrams() to generate the
-    diagrams for the color flow.
+    """Initialize with a color ordered process (created by
+    ColorOrderedAmplitude), then call generate_diagrams() to generate
+    the set of color ordered diagrams for the color flow.
     """
 
     def __init__(self, argument=None):
@@ -381,7 +389,7 @@ class ColorOrderedFlow(diagram_generation.Amplitude):
         """Determine if the combination of legs is valid with color
         ordering. Algorithm: A combination is valid if
 
-        1) all particles with the same color ordering group have
+        1) All particles with the same color ordering group have
         adjacent color flow numbers
 
         2) No color octet is dead-ending (if there are other color groups)
@@ -540,16 +548,18 @@ class COHelasWavefunction(helas_objects.HelasWavefunction):
         """Default values for all properties"""
 
         super(COHelasWavefunction, self).default_setup()
-        # Comparison array, with wf numbers, interaction id and
-        # lorentz-color index
+        # Comparison array, with mother external numbers, interaction
+        # id and lorentz-color index
         self['compare_array'] = []
+        # Comparison array to find wavefunctions that can be combined
+        # into the same current, with external numbers, pdg code and
+        # fermion flow state
+        self['current_array'] = []
         # external wavefunction numbers
         self['external_numbers'] = array.array('I')
         # Information for color calculation
         self['color_string'] = color_algebra.ColorString()
         self['lastleg_number'] = 0
-        # Coupling chain, to allow wf combination into BGHelasCurrent.
-        self['coupling_chain'] = []
         # Factor for wavefunction in wf summation in form
         # (fraction, is_imaginary?)
         self['factor'] = (1, fractions.Fraction(1,1), False)
@@ -557,7 +567,7 @@ class COHelasWavefunction(helas_objects.HelasWavefunction):
     def filter(self, name, value):
         """Filter for valid amplitude property values."""
 
-        if name == 'compare_array':
+        if name in ['compare_array', 'current_array']:
             if not isinstance(value, list) and not \
                    isinstance(value, array.array):
                 raise self.PhysicsObjectError, \
@@ -570,10 +580,6 @@ class COHelasWavefunction(helas_objects.HelasWavefunction):
             if not isinstance(value, color_algebra.ColorString):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid ColorString object" % str(value)
-        elif name == 'coupling_chain':
-            if not isinstance(value, list):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid tuple" % str(value)
         elif name == 'factor':
             if not isinstance(value, tuple):
                 raise self.PhysicsObjectError, \
@@ -587,74 +593,53 @@ class COHelasWavefunction(helas_objects.HelasWavefunction):
         """Return particle property names as a nicely sorted list."""
 
         return super(COHelasWavefunction, self).get_sorted_keys() + \
-               ['compare_array', 'external_numbers', 'color_string',
-                'lastleg_number', 'factor']
+               ['compare_array', 'current_array', 'external_numbers',
+                'color_string', 'lastleg_number', 'factor']
 
     def get(self, name):
         """Enhanced get function to initialize compare_array,
         external_numbers and factor."""
 
-        if name in ['compare_array', 'external_numbers'] and not self[name]:
+        if name in ['compare_array', 'current_array', 'external_numbers'] and \
+               not self[name]:
             self.create_arrays()
-        if name == 'coupling_chain' and not self[name]:
-            self.set_coupling_chain()
             
         return super(COHelasWavefunction, self).get(name)        
 
     def create_arrays(self):
-        """Create the comparison arrays compare_array and external_numbers"""
+        """Create the comparison arrays compare_array, current_array and
+        external_numbers for a COHelasWavefunction.
+
+        external_numbers is the sorted set of external particle
+        numbers that are included in this wavefunction.
+
+        current_array is used to determine if two wavefunctions belong
+        in the same current, i.e. if they have the same external
+        numbers, pdg code and fermion flow state.
+        
+        compare_array is the tuple of [mothers current_arrays,
+        interaction id, coupling key], used to find duplicate
+        wavefunctions (after replacing mothers with currents).
+        """
 
         if not self.get('mothers'):
             # This is an external wavefunction
             self.set('external_numbers',
                      array.array('I',[self.get('number_external')]))
-            self.set('compare_array', array.array('I',
-                                                self['external_numbers']))
+            self.set('compare_array', self['external_numbers'])
+            self.set('current_array', self['external_numbers'])
         else:
             self.set('external_numbers',
                      array.array('I',
                                  sorted(sum([list(m.get('external_numbers')) \
                                         for m in self.get('mothers')], []))))
-            self.set('compare_array', [[m.get('external_numbers') for \
+            self.set('current_array', [self['external_numbers'],
+                                       self.get('pdg_code'),
+                                       self.get_with_flow('state')])
+            self.set('compare_array', [[m.get('current_array') for \
                                         m in self.get('mothers')],
                                        self.get('interaction_id'),
-                                       self.get('coupl_key'),
-                                       self.get('coupling_chain')])
-
-    def set_coupling_chain(self):
-        """Set the chain of couplings for this wavefunction. Each
-        coupling is in the form (name, order), and the chain should
-        combine all QCD couplings together."""
-
-        # Get all mother chains, the ones with QCD coupling and those
-        # without separately
-        mother_chains_QCD = [m.get('coupling_chain') for m in \
-                             self.get('mothers') if \
-                             len(m.get('coupling_chain')) == 1 and \
-                             m.get('coupling_chain')[0][0] == 'QCD']
-        mother_chains_non_QCD = [m.get('coupling_chain') for m in \
-                                 self.get('mothers') if m.get('coupling_chain')\
-                                 and (len(m.get('coupling_chain')) != 1 or \
-                                      m.get('coupling_chain')[0][0] != 'QCD')]
-
-        # Sum up the contribution from all chains with QCD
-        print "mother_chains_QCD:", mother_chains_QCD
-        QCD_sum = sum([c[0][1] for c in mother_chains_QCD], 0)
-        if 'QCD' in self.get('orders'):
-            QCD_sum += self.get('orders')['QCD']
-
-        # ... and add to the non_QCD chain
-        if QCD_sum:
-            mother_chains_non_QCD.append(('QCD',QCD_sum))
-
-        # Add non-QCD keys for this interaction
-        for key in self.get('orders').keys():
-            if key != 'QCD':
-                mother_chains_non_QCD.append((key, self.get('orders')[key]))
-
-        print "coupling_chain: ", mother_chains_non_QCD
-
-        self.set('coupling_chain', mother_chains_non_QCD)
+                                       self.get('coupl_key')])
 
     def set_color_and_fermion_factor(self):
         """Set the color and fermion factor for this wavefunction. The
@@ -667,8 +652,9 @@ class COHelasWavefunction(helas_objects.HelasWavefunction):
                               self.get('color_string').is_imaginary)        
 
     def calculate_fermionfactor(self):
-        """Calculate the fermion factor (if this wavefunction has a
-        pair of fermion mothers, otherwise return 1)"""
+        """Calculate the fermion factor (needed sign flips for mother
+        fermions, if this wavefunction has a pair of fermion mothers,
+        times the product of fermion factors of the mothers)."""
 
         # Pick out fermion mothers
         fermion_numbers = [wf.get('number_external') for wf in \
@@ -693,7 +679,7 @@ class COHelasAmplitude(helas_objects.HelasAmplitude):
 
         super(COHelasAmplitude, self).default_setup()
         # external wavefunction numbers
-        self['external_numbers'] = []
+        self['compare_array'] = []
         # Color string
         self['color_string'] = color_algebra.ColorString()
         # Factor for amplitude in JAMP summation in form
@@ -703,7 +689,7 @@ class COHelasAmplitude(helas_objects.HelasAmplitude):
     def filter(self, name, value):
         """Filter for valid amplitude property values."""
 
-        if name == 'external_numbers':
+        if name == 'compare_array':
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list object" % str(value)
@@ -724,21 +710,22 @@ class COHelasAmplitude(helas_objects.HelasAmplitude):
         """Return particle property names as a nicely sorted list."""
 
         return super(COHelasAmplitude, self).get_sorted_keys() + \
-               ['external_numbers', 'color_string']
+               ['compare_array', 'color_string']
 
     def get(self, name):
-        """Enhanced get function to initialize compare_array and external_numbers."""
+        """Enhanced get function to initialize compare_array."""
 
-        if name in ['external_numbers'] and not self[name]:
+        if name in ['compare_array'] and not self[name]:
             self.create_arrays()
             
         return super(COHelasAmplitude, self).get(name)        
 
     def create_arrays(self):
-        """Create the comparison arrays compare_array and external_numbers"""
+        """Create the comparison array compare_array, to find
+        identical amplitudes after replacing mothers with currents:
+        [mother current arrays, interaction id, coupling key]."""
 
-        self.set('external_numbers', [sorted([list(m.get('external_numbers')) \
-                                              + m.get('coupling_chain') \
+        self.set('compare_array', [sorted([list(m.get('current_array')) \
                                               for m in self.get('mothers')]),
                                       self.get('interaction_id'),
                                       self.get('coupl_key')])
@@ -752,8 +739,9 @@ class COHelasAmplitude(helas_objects.HelasAmplitude):
                               self.get('color_string').is_imaginary)
 
     def calculate_fermionfactor(self):
-        """Calculate the fermion factor (if this wavefunction has a
-        pair of fermion mothers, otherwise return 1)"""
+        """Calculate the fermion factor (needed sign flips for mother
+        fermions, if this amplitude has multiple fermion mothers,
+        times the product of fermion factors of the mothers)."""
 
         # Pick out fermion mothers
         fermion_numbers = [wf.get('number_external') for wf in \
@@ -769,7 +757,10 @@ class COHelasAmplitude(helas_objects.HelasAmplitude):
 #===============================================================================
 class BGHelasCurrent(COHelasWavefunction):
     """BGHelasCurrent object, which combines HelasWavefunctions into
-    Behrends-Giele currents
+    Behrends-Giele currents. The color and fermion factor for each
+    wavefunction is taken into account at the time of wavefunction
+    combination, so the corresponding factors are reset for the
+    current.
     """
 
     # Customized constructor
@@ -788,27 +779,6 @@ class BGHelasCurrent(COHelasWavefunction):
                 super(BGHelasCurrent, self).__init__(*arguments)
         else:
             super(BGHelasCurrent, self).__init__(*arguments)
-
-    def create_arrays(self):
-        """Create the comparison arrays compare_array and external_numbers"""
-
-        # external_numbers is the set of external numbers of the mothers
-        self.set('external_numbers',
-                 array.array('I', sorted(list(set(\
-                                  sum([list(c.get('external_numbers')) for c \
-                                       in self.get('mothers')],
-                                      []))))))
-        # compare_array is the tuple [external_numbers, pdg_code,
-        # flow_state, coupling_chain]
-        self.set('compare_array', [self['external_numbers'],
-                                   self.get('pdg_code'),
-                                   self.get_with_flow('state'),
-                                   self.get('coupling_chain')])
-
-    def set_coupling_chain(self):
-        """Copy the coupling chain from the first mother."""
-
-        self.set('coupling_chain', self.get('mothers')[0].get('coupling_chain'))
 
     def set_color_string(self):
         """Set color string based on the first mother"""
@@ -849,7 +819,7 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
 
     2. Go through all amplitudes, and use only one amplitude per set
     of BGHelasCurrents (keeping only amplitudes with the correct color
-    structure)
+    structure).
     """
 
     # Keep unique number for color substitution
@@ -898,10 +868,8 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
         while co_wavefunctions:
             # Pick out all wavefunctions with the same external numbers
             combine_functions = [w for w in co_wavefunctions if \
-                                 w.get('external_numbers') == \
-                                 co_wavefunctions[0].get('external_numbers') \
-                                 and w.get('pdg_code') == \
-                                 co_wavefunctions[0].get('pdg_code')]
+                                 w.get('current_array') == \
+                                 co_wavefunctions[0].get('current_array')]
             if len(combine_functions) == 1 or optimization // 2 == 0:
                 # Just add the wavefunction to combined_wavefunctions
                 wf = combine_functions.pop(0)
@@ -920,12 +888,14 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
                     wf = combine_functions.pop(0)
                     # Remove used wavefunctions from co_wavefunctions
                     co_wavefunctions.remove(wf)
-                    # Check if a wavefunction which uses the same
-                    # combined wfs is already present in the current
+                    # Check if an identical wavefunction (after
+                    # replacing mothers with currents) is already
+                    # present in the current
                     if wf.get('compare_array') in \
                        [m.get('compare_array') for m in \
                         combine_wf.get('mothers')]:
                         continue
+                    # Check if color is correct
                     if any([m in removed_wfs for m in wf.get('mothers')]) or \
                            not self.check_color(wf):
                         removed_wfs.append(wf)
@@ -942,8 +912,6 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
                 combined_wavefunctions.append(combine_wf)
                 for wf in combine_wf.get('mothers'):
                     wf_current_dict[wf.get('number')] = combine_wf
-                    print "Added ",wf.get('number')," to combine_wf number ",\
-                          combine_wf.get('number')
 
         left_diagrams = helas_objects.HelasDiagramList()
         diagrams = self.get('diagrams')
@@ -952,19 +920,25 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
             idiag += 1
             print "Diagram ", idiag
             # Pick out all diagrams with amplitudes with the same
-            # external number mothers (i.e., same BG currents)
+            # external number mothers (i.e., same BG currents) the
+            # same interaction id and the same coupling key.
+            # If there is one such amplitude in a diagram, the other
+            # amplitudes should be represented already by other
+            # amplitudes in this diagram, since the only difference
+            # between amplitudes in a diagram is coupling keys.
             diagram = diagrams.pop(0)
             left_diagrams.append(diagram)
             amp = diagram.get('amplitudes')[0]
             if optimization // 2 == 1:
                 remove_amp_diagrams = [d for d in self.get('diagrams') if \
-                                       any([a.get('external_numbers') == \
-                                            amp.get('external_numbers') for \
+                                       any([a.get('compare_array') == \
+                                            amp.get('compare_array') for \
                                             a in d.get('amplitudes')])]
-                # Remove all other diagrams
+                # Remove all those diagrams
                 for d in remove_amp_diagrams:
                     diagrams.remove(d)
-            # Make sure all amplitudes in this diagram are unique
+            # Determine which amplitudes in this diagram that should
+            # contribute (when BG currents are taken into account)
             left_amplitudes = helas_objects.HelasAmplitudeList()
             while diagram.get('amplitudes'):
                 amp = diagram.get('amplitudes').pop(0)
@@ -975,16 +949,15 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
                 left_amplitudes.append(amp)
                 if optimization // 2 == 1:
                     # Check for other amps in this diagram with the same
-                    # external_numbers (i.e., same BG current mothers)
+                    # compare_array (i.e., same BG current mothers)
                     remove_amps = [a for a in diagram.get('amplitudes') if \
-                                   a.get('external_numbers') == \
-                                   amp.get('external_numbers')]
+                                   a.get('compare_array') == \
+                                   amp.get('compare_array')]
                     for a in remove_amps:
                         diagram.get('amplitudes').remove(a)
             
                 # Replace the amplitude mothers in these
                 # amplitudes with corresponding currents
-                print "Replace mothers for amp ",amp.get('number')
                 self.replace_mothers(amp, wf_current_dict)
 
             diagram.set('amplitudes', left_amplitudes)
@@ -996,15 +969,11 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
         self.set('diagrams', left_diagrams)
 
         # Set wf number for all wavefunctions
-        print "Renumber wavefunctions:"
         for i, wf in enumerate(combined_wavefunctions):
-            print wf.get('number'), " -> ", i+1
             wf.set('number', i+1)
         
         # Set amplitude number for all amplitudes
-        print "Renumber amplitudes"
         for i, amp in enumerate(self.get_all_amplitudes()):
-            print amp.get('number'), " -> ",i+1
             amp.set('number', i+1)
         
         left_diagrams[0].set('wavefunctions', combined_wavefunctions)
@@ -1030,8 +999,6 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
         for i, m in enumerate(arg.get('mothers')):
             try:
                 arg.get('mothers')[i] = wf_current_dict[m.get('number')]
-                print "Replaced mother ",m.get('number')," with current ",\
-                      wf_current_dict[m.get('number')].get('number')
             except:
                 pass
 
@@ -1066,7 +1033,6 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
             lastleg = ColorOrderedLeg(base_vertex.get('legs').pop(-1))
             lastleg.set('id', model.get_particle(lastleg.get('id')).\
                         get_anti_pdg_code())
-            print "lastleg: ",lastleg.get('id'), lastleg.get('number')
             lastleg.set('number', self.lastleg_number)
             base_vertex.get('legs').insert(0, lastleg)
             arg.set('lastleg_number', self.lastleg_number)
@@ -1139,6 +1105,7 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
                 color_chains[co] = [co_val]
                 chain_types[co] = 0
             leg_number_dict[(co, co_val)] = leg.get('number')
+            # Set color (for final state particles) or anticolor (for IS)
             if leg.get('state'):
                 leg_color = model.get_particle(leg.get('id')).get_color()
             else:
@@ -1159,20 +1126,28 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
         if lastleg:
             lastleg_color = model.get_particle(lastleg.get('id')).get_color()
             if abs(lastleg_color) == 3:
-                # Add to chain missing a 3
-                chain_key = [k for k in chain_types.keys() if \
+                # Add to chain missing a 3 or 3bar
+                key = [k for k in chain_types.keys() if \
                              abs(chain_types[k]) == 1][0]
-                chain_types[chain_key] = 2
+                # Pick out all legs in the process contributing to
+                # this chain
+                leg_orderings = [l.get('color_ordering')[key][0] for l in \
+                                 legs if key in l.get('color_ordering')]
+                chain_types[key] = 2
                 if lastleg_color == 3:
-                    lastleg_order = min(color_chains[chain_key]) - 1
+                    # A 3 should be put first in the chain
+                    lastleg_order = min(leg_orderings)
                 else:
-                    lastleg_order = max(color_chains[chain_key]) + 1
-                color_chains[chain_key].append(lastleg_order)
-                leg_number_dict[(chain_key, lastleg_order)] = \
+                    # A 3bar should be put last in the chain
+                    lastleg_order = max(leg_orderings)
+                color_chains[key].append(lastleg_order)
+                leg_number_dict[(key, lastleg_order)] = \
                                                   lastleg.get('number')
             elif abs(lastleg_color) == 8:
                 # Add leg to all color chains that are not yet completed
                 for key in color_chains.keys():
+                    # Pick out all legs in the process contributing to
+                    # this chain
                     leg_orderings = [l.get('color_ordering')[key][0] for l in \
                                      legs if key in l.get('color_ordering')]
                     if len(color_chains[key]) != len(leg_orderings):
@@ -1181,6 +1156,7 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
                         # (antitriplet) chain, place gluon at place of
                         # antitriplet (triplet)
                         if chain_types[key] == 1:
+                            
                             lastleg_order = max(leg_orderings)
                         elif chain_types[key] == -1:
                             lastleg_order = min(leg_orderings)
@@ -1203,7 +1179,8 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
             color_chains[key] = [leg_number_dict[(key, co_val)] for \
                                                  co_val in color_chains[key]]
             
-        # If we have triplet-antitriplet chains, combine them
+        # If we have triplet-antitriplet chains, combine them into a
+        # common T chain
         triplet_chain_keys = [key for key in color_chains.keys() if \
                               abs(chain_types[key]) == 1]
         if triplet_chain_keys:
@@ -1221,19 +1198,22 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
         # Create color string based on color_chains
         for cckey in color_chains.keys():
             if chain_types[cckey] == 2:
-                # Fix ordering to put 3bar last
+                # Move triplet from first to next-to-last position
                 print "color_chain: ",color_chains[cckey]
                 color_chains[cckey].insert(-1,color_chains[cckey].pop(0))
                 print "color_chain after: ",color_chains[cckey]
+                # A 88...33bar chain is a T
                 color_string.append(color_algebra.T(*color_chains[cckey]))
             else:
                 # Fix ordering to have lastleg first (since ordered
-                # with minimum leg number first)
+                # with minimum leg number first, and lastleg has
+                # negative number)
                 if lastleg:
                     chain = color_chains[cckey]
                     number = lastleg.get('number')
                     color_chains[cckey] = chain[chain.index(number):] + \
                                           chain[:chain.index(number)]
+                # A 88..8 chain is a Tr
                 color_string.append(color_algebra.Tr(*color_chains[cckey]))
                 
         return color_string
