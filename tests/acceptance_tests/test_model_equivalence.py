@@ -272,8 +272,8 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
         
         picklefile = os.path.join(MG5DIR,'models','sm','model.pkl') 
         if not files.is_uptodate(picklefile):
-        sm_path = import_ufo.find_ufo_path('sm')
-        model = import_ufo.import_model(sm_path)
+            sm_path = import_ufo.find_ufo_path('sm')
+            model = import_ufo.import_model(sm_path)
         else:
             model = save_load_object.load_from_file(picklefile)
             

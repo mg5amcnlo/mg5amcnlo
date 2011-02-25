@@ -59,15 +59,6 @@ def find_ufo_path(model_name):
 
 def import_model(model_name):
     """ a practical and efficient way to import a model"""
-
-#    def import_main_model(model_path):
-#            """ import a UFO model whithout any restriction file """
-#            
-#            self._curr_model = import_ufo.import_model(model_path)
-#            self._curr_fortran_model = \
-#                helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
-#            self._curr_cpp_model = \
-#                helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
         
     # check if this is a valid path or if this include restriction file       
     try:
@@ -141,6 +132,8 @@ def import_full_model(model_path):
     ufo_model = ufomodels.load_model(model_path)
     ufo2mg5_converter = UFOMG5Converter(ufo_model)
     model = ufo2mg5_converter.load_model()
+    
+    if model_path[-1] == '/': model_path = model_path[:-1] #avoid empty name
     model.set('name', os.path.split(model_path)[-1])
  
     # Load the Parameter/Coupling in a convinient format.
@@ -211,6 +204,7 @@ class UFOMG5Converter(object):
         # MG5 doesn't use ghost (use unitary gauges)
         if particle_info.spin < 0:
             return 
+        
         # MG5 doesn't use goldstone boson 
         if hasattr(particle_info, 'GoldstoneBoson'):
             if particle_info.GoldstoneBoson:
@@ -232,6 +226,8 @@ class UFOMG5Converter(object):
                         particle.set(key, value)
                 elif key == 'charge':
                     particle.set(key, float(value))
+                elif key in ['mass','width']:
+                    particle.set(key, str(value))
                 else:
                     particle.set(key, value)
             

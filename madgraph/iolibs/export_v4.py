@@ -1615,14 +1615,15 @@ class UFO_model_to_mg4(object):
         index = self.params_dep.index('sqrt__aS')
         self.params_indep.insert(0, self.params_dep.pop(index))
         
-    def build(self, wanted_couplings = []):
+    def build(self, wanted_couplings = [], full=True):
         """modify the couplings to fit with MG4 convention and creates all the 
         different files"""
         
         self.pass_parameter_to_case_insensitive()
         self.refactorize(wanted_couplings)
         # write the files
-        self.write_all()
+        if full:
+            self.write_all()
 
     def open(self, name, comment='c', format='default'):
         """ Open the file name in the correct directory and with a valid
@@ -1787,6 +1788,8 @@ class UFO_model_to_mg4(object):
         fsock.writelines("if(readlha) then\n")
         
         for param in self.params_indep:
+            if param.name == 'ZERO':
+                continue
             fsock.writelines("%s = %s\n" % (param.name,
                                             self.p_to_f.parse(param.expr)))
         
@@ -1912,7 +1915,8 @@ class UFO_model_to_mg4(object):
         fsock.writelines("""write(*,*)  ' Internal Params'
                             write(*,*)  ' ---------------------------------'
                             write(*,*)  ' '""")        
-        lines = [format(data.name) for data in self.params_indep]
+        lines = [format(data.name) for data in self.params_indep 
+                                                         if data.name != 'ZERO']
         fsock.writelines('\n'.join(lines))
         fsock.writelines("""write(*,*)  ' Internal Params evaluated point by point'
                             write(*,*)  ' ----------------------------------------'

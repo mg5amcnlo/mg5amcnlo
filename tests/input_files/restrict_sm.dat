@@ -46,5 +46,5 @@ Block YUKAWA
 ###################################
 DECAY   6 0.000000e+00 # WT 
 DECAY  23 2.441404e+00 # WZ 
-DECAY  24 2.047600e+00 # WW 
+DECAY  24 3.00e+00 # WW 
 DECAY  25 5.753088e-03 # WH 

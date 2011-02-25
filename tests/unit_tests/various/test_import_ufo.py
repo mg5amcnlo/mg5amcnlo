@@ -24,6 +24,7 @@ import tests.unit_tests as unittest
 import madgraph.core.base_objects as base_objects
 import models.import_ufo as import_ufo
 import models.model_reader as model_reader
+import madgraph.iolibs.export_v4 as export_v4
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
@@ -222,5 +223,36 @@ class TestRestrictModel(unittest.TestCase):
             if param.name == rejected:
                 found +=1
         self.assertEqual(found, 1)
+       
+class TestBenchmarkModel(unittest.TestCase):
+    """Test class for the RestrictModel object"""
+
+    sm_path = import_ufo.find_ufo_path('sm')
+    base_model = import_ufo.import_full_model(sm_path)
+
+    def setUp(self):
+        """Set up decay model"""
+        #Read the full SM
+        model = copy.deepcopy(self.base_model)
+        self.model = import_ufo.RestrictModel(model)
+        self.restrict_file = os.path.join(_file_path, os.path.pardir,
+                                     'input_files', 'restrict_sm.dat')
+        
+        
+    def test_use_as_benchmark(self):
+        """check that the value inside the restrict card overwritte the default
+        parameter such that this option can be use for benchmark point"""
+        
+        params_ext = self.model['parameters'][('external',)]
+        value = {}
+        [value.__setitem__(data.name, data.value) for data in params_ext] 
+        self.model.restrict_model(self.restrict_file)
+        #use the UFO -> MG4 converter class
+        
+        params_ext = self.model['parameters'][('external',)]
+        value2 = {}
+        [value2.__setitem__(data.name, data.value) for data in params_ext] 
+        
+        self.assertNotEqual(value['WW'], value2['WW'])
                 
         
