@@ -81,7 +81,7 @@ class AbstractRoutineBuilder(object):
         lorentz: the lorentz information analyzed (UFO format)
         language: define in which language we write the output
         modes: 0 for  all incoming particles 
-               >0 defines the outgoing part (start to count at 1)
+              >0 defines the outgoing part (start to count at 1)
         """
 
         self.spins = lorentz.spins
@@ -232,9 +232,7 @@ class AbstractRoutineBuilder(object):
             aloha_lib.USE_TAG.add('OM%d' % id)
             aloha_lib.USE_TAG.add('P%d' % id)
             
-            
-
-        
+                    
         lorentz = lorentz.simplify()
         if factorize:
             lorentz = lorentz.factorize()

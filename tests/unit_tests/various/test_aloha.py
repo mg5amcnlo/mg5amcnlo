@@ -2303,8 +2303,105 @@ class test_aloha_creation(unittest.TestCase):
 
         for ind in expr.listindices():
             self.assertEqual(eval(str(expr.get_rep(ind))), -178727040j)
+#            
+#
+    def test_aloha_FFT(self):
+        """ test the FFT creation of vertex"""
+        
+        FFT = self.Lorentz(name = 'FFT',
+                 spins = [2, 2, 5],
+        structure="P(2003,1)*Gamma(1003,2,1) - P(2003,2)*Gamma(1003,2,1) + P(1003,1)*Gamma(2003,2,1) - P(1003,2)*Gamma(2003,2,1) - 2*P(-1,1)*Gamma(-1,2,1)*Metric(1003,2003) + 2*P(-1,2)*Gamma(-1,2,1)*Metric(1003,2003)"
+        )
+        abstract_FFT = create_aloha.AbstractRoutineBuilder(FFT).compute_routine(3)
+        expr = abstract_FFT.expr
+        
+        # point taken by MG4
+        
+        class PZ(aloha_obj.P):
+            """impulsion with only E/PZ different of zero"""
+            def create_representation(self):
+                self.sub0 = aloha_lib.ScalarVariable('P%s_0' % self.particle)
+                self.sub3 = aloha_lib.ScalarVariable('P%s_3' % self.particle)
+
+                self.representation= aloha_lib.LorentzObjectRepresentation(
+                                    {(0,): self.sub0, (1,): 0, \
+                                     (2,): 0, (3,): self.sub3},                              
+                                    self.lorentz_ind, [])
+        globals()["PZ"] = PZ
+        
+        class PRest(aloha_obj.P):
+            """ momenta of object at rest"""
+            def create_representation(self):
+                self.sub0 = aloha_lib.ScalarVariable('P%s_0' % self.particle)
+                self.representation= aloha_lib.LorentzObjectRepresentation(
+                                    {(0,): self.sub0, (1,): 0, \
+                                     (2,): 0, (3,): 0},                              
+                                    self.lorentz_ind, [])
+        globals()["PRest"] = PRest
+        
+        class Spinor1(aloha_obj.Spinor):
+            def create_representation(self):
+                self.sub0 = aloha_lib.ScalarVariable('F%s_1' % self.particle)
+                self.representation= aloha_lib.LorentzObjectRepresentation(
+                                    {(0,): self.sub0, (1,): 0, \
+                                     (2,): 0, (3,): 0},         
+                                    [],self.spin_ind)
+        globals()["Spinor1"] = Spinor1
+        
+        class Spinor4(aloha_obj.Spinor):
+            def create_representation(self):
+                self.sub0 = aloha_lib.ScalarVariable('F%s_4' % self.particle)
+                self.representation= aloha_lib.LorentzObjectRepresentation(
+                                    {(0,): 0, (1,): 0, \
+                                     (2,): 0, (3,): self.sub0},         
+                                    [],self.spin_ind)                
+        globals()["Spinor4"] = Spinor4
+                
+        #FFT2 = self.Lorentz(name = 'FFT2',
+        #         spins = [2, 2, 5],
+        #structure="PRest(2003,1)*Gamma(1003,2,1) - PRest(2003,2)*Gamma(1003,2,1) + PZ(1003,1)*Gamma(2003,2,1) - PZ(1003,2)*Gamma(2003,2,1) - 2*PZ(-1,1)*Gamma(-1,2,1)*Metric(1003,2003) + 2*PZ(-1,2)*Gamma(-1,2,1)*Metric(1003,2003)"
+        #)
+        #abstract_FFT2 = create_aloha.AbstractRoutineBuilder(FFT2).compute_routine(3)
+        #expr = abstract_FFT2.expr
+        #print expr
+
+        
+        P1_0,P1_1,P1_2,P1_3 = 1000, 0, 0, 1000
+        P2_0,P2_1,P2_2,P2_3 = 1000, 0, 0, -1000
+        P3_0,P3_1,P3_2,P3_3 = 2000, 0, 0, 0
+        
+        F1_1, F1_2, F1_3, F1_4  = -44.7213595499958, 0, 0, 0
+        F2_1, F2_2, F2_3, F2_4  = 0, 0, 0, -44.7213595499958 
+        OM1,OM2,OM3 = 0 , 0, 1.0 / 500**2
+        M3 = 500
+        W3=1
+        C=1  
+        j = complex(0,1)        
+
+        #solution from MG4
+        a= 6.66666666666666e-5/6.250000000000000E-005
+        #a= -3.444444547096889E-004
+        #b= 1.111111144224803E-005
+        solution = 7*[0]+[-a]+3*[0]+[1j*a,0,-a,1j*a,0]
+        #solution = [0, 1j * a, a, 0, 1j * b, 0, 0, 0, b, 0, 0, 0, 0, 0, 0, 0]
+
+        denom = eval(str(expr.denominator.get_rep((0,))))
+        indices = [i for i in expr.numerator.listindices()]
+        for i in range(1,17):
+            ind = indices[i-1] 
+            if i == 8:
+                print  expr.numerator.get_rep(ind)
+                print 'F2_4 * F1_1' in  str(expr.numerator.get_rep(ind))
+            value = eval(str(expr.numerator.get_rep(ind))) / denom
+            #print str(expr.numerator.get_rep(ind))
+            print 'i',i,value
+            #self.assertAlmostEqual(value, solution[i-1])
+        
 #    
 #    
+
+
+
     def test_aloha_FFV(self):
         """ test the FFV creation of vertex """
         

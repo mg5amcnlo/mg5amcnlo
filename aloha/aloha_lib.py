@@ -734,19 +734,28 @@ class Variable(object):
         if not obj:
             return self
         
-        elif not obj.vartype: # obj is a Variable
+        try: 
+            type = obj.vartype
+        except: #float
+            new = self.add_class()
+            new.append(self.copy())
+            new.append(ConstantObject(obj))
+            return new
+            
+        
+        if not type: # obj is a Variable
             new = self.add_class()
             new.append(self.copy())
             new.append(obj.copy())
             return new
         
-        elif obj.vartype == 2: # obj is a MultVariable
+        elif type == 2: # obj is a MultVariable
             new = self.add_class()
             new.append(self.copy())
             new.append(self.mult_class(obj, obj.prefactor))
             return new           
         
-        elif obj.vartype == 1: # obj is an AddVariable
+        elif type == 1: # obj is an AddVariable
             new = self.add_class(obj, obj.prefactor)
             new.append(self.copy())
             return new
@@ -1319,7 +1328,7 @@ class LorentzObjectRepresentation(dict):
         """multiplication performing directly the einstein/spin sommation.
         """
 
-        if not hasattr(obj, 'vartype') or not self.vartype:
+        if not hasattr(obj, 'vartype') or not self.vartype or obj.vartype==5:
             out = LorentzObjectRepresentation({}, self.lorentz_ind, self.spin_ind)
             for ind in out.listindices():
                 out.set_rep(ind, obj * self.get_rep(ind))
@@ -1329,7 +1338,8 @@ class LorentzObjectRepresentation(dict):
             out /= obj.denominator
             return out
 
-        assert(obj.__class__ == LorentzObjectRepresentation)
+
+        assert(obj.__class__ == LorentzObjectRepresentation), '%s is not valid class for this operation' %type(obj)
         
         # compute information on the status of the index (which are contracted/
         #not contracted
