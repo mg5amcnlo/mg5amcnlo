@@ -228,13 +228,14 @@ class AbstractRoutineBuilder(object):
         if self.outgoing and self.spins[self.outgoing-1] == 5:
             if not self.aloha_lib:
                 AbstractRoutineBuilder.load_library()
-            lorentz *= self.aloha_lib[('Spin2Prop', id)]
+            if self.spin2_massless:
+                lorentz *= self.aloha_lib[('Spin2PropMassless', id)]
+            else:
+                lorentz *= self.aloha_lib[('Spin2Prop', id)]
             aloha_lib.USE_TAG.add('OM%d' % id)
             aloha_lib.USE_TAG.add('P%d' % id)
             
-            
-
-        
+                    
         lorentz = lorentz.simplify()
         if factorize:
             lorentz = lorentz.factorize()
@@ -302,9 +303,12 @@ class AbstractALOHAModel(dict):
         # list the external routine
         self.external_routines = [] 
 
-        #init the dictionary
+        # init the dictionary
         dict.__init__(self)
         self.symmetries = {}
+        
+        # check the mass of spin2 (if any)
+        self.massless_spin2 = self.has_massless_spin2()
         
         if write_dir:
             self.main(write_dir)
@@ -401,6 +405,9 @@ class AbstractALOHAModel(dict):
                 continue
             
             builder = AbstractRoutineBuilder(lorentz)
+            # add information for spin2mass
+            if 5 in lorentz.spins and self.massless_spin2 is not None:
+                builder.spin2_massless = self.massless_spin2 
             self.compute_aloha(builder)
             if lorentz.name in conjugate_list:
                 conjg_builder_list= builder.define_all_conjugate_builder(\
@@ -444,6 +451,9 @@ class AbstractALOHAModel(dict):
                     self.external_routines.append(lorentz.name)
                 continue
             builder = AbstractRoutineBuilder(lorentz)
+            # add information for spin2mass
+            if 5 in lorentz.spins and self.massless_spin2 is not None:
+                builder.spin2_massless = self.massless_spin2 
             
             for conjg in request[l_name]:
                 #ensure that routines are in rising order (for symetries)
@@ -556,6 +566,17 @@ class AbstractALOHAModel(dict):
                                 self.symmetries[lorentz.name] = {i+1:j+1}
                         break
                     
+    def has_massless_spin2(self):
+        """Search if the spin2 particles are massless or not"""
+        
+        massless = None
+        for particle in self.model.all_particles:
+            if particle.spin == 5:
+                if massless is None and particle.mass == 'Zero':
+                    massless == True
+                elif massless != (particle.mass == 'Zero'):
+                    raise ALOHAERROR, 'All spin 2 should be massive or massless'
+        return massless     
                     
     def has_symmetries(self, l_name, outgoing, out=None, valid_output=None):
         """ This returns out if no symmetries are available, otherwise it finds 
@@ -661,6 +682,9 @@ def create_library():
         #lib[('Spin2', i )] = create( Spin2(10*i+1, 10*i+2, i) )
         lib[('Spin2Prop',i)] = create( Spin2Propagator(_spin2_mult + i, \
                                             2 * _spin2_mult + i,'I2','I3', i) )
+        lib[('Spin2PropMassless',i)] = create( Spin2masslessPropagator(
+                            _spin2_mult + i, 2 * _spin2_mult + i,'I2','I3', i) )
+        
     logger.info('writing Spin2 lib')         
     fsock = open(os.path.join(aloha_path, 'ALOHALib.pkl'),'wb')
     cPickle.dump(lib, fsock, -1)
