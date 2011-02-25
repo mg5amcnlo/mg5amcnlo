@@ -1637,7 +1637,7 @@ class Process(PhysicsObject):
         # Remove last space
         return mystr[:-1]
 
-    def shell_string(self):
+    def shell_string(self, schannel=True, forbid=True):
         """Returns process as string with '~' -> 'x', '>' -> '_',
         '+' -> 'p' and '-' -> 'm', including process number,
         intermediate s-channels and forbidden particles"""
@@ -1655,7 +1655,7 @@ class Process(PhysicsObject):
                 mystr = mystr + '_'
                 # Add required s-channels
                 if self['required_s_channels'] and \
-                       self['required_s_channels'][0]:
+                       self['required_s_channels'][0] and schannel:
                     mystr += "_or_".join(["".join([self['model'].\
                                        get('particle_dict')[req_id].get_name() \
                                                 for req_id in id_list]) \
@@ -1668,7 +1668,7 @@ class Process(PhysicsObject):
             prevleg = leg
 
         # Check for forbidden particles
-        if self['forbidden_particles']:
+        if self['forbidden_particles'] and forbid:
             mystr = mystr + '_no_'
             for forb_id in self['forbidden_particles']:
                 forbpart = self['model'].get('particle_dict')[forb_id]
@@ -1684,7 +1684,19 @@ class Process(PhysicsObject):
         mystr = mystr.replace(' ', '')
 
         for decay in self.get('decay_chains'):
-            mystr = mystr + "_" + decay.shell_string()
+            mystr = mystr + "_" + decay.shell_string(schannel,forbid)
+
+        # Too long name are problematic so restrict them to a maximal of 80 char
+        if len(mystr) > 80:
+            if schannel and forbid:
+                return self.shell_string(True, False)
+            elif schannel:
+                return self.shell_string(False, False)
+            else:
+                return mystr[:76]+'-%s' % len(mystr)
+            
+            
+            
 
         return mystr
 
