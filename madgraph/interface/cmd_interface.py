@@ -2603,6 +2603,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             
         if self._export_format == 'madevent':
 
+            # Sort amplitudes according to number of diagrams,
+            # to get most efficient multichannel output
+            self._curr_amps.sort(lambda a1, a2: len(a2.get('diagrams')) - \
+                                 len(a1.get('diagrams')))
+
             if group_subprocesses:
                 ndiags = 0
                 cpu_time1 = time.time()
