@@ -942,12 +942,13 @@ c
             ngd = ng-ngu
             do i=1,ngu-1
 c-------------------
-c     tjs 6/30/2009
+c     tjs 6/30/2009; tjs & ja 2/25/2011
 c     New form for setgrid
 c-------------------
 c               grid(2,i+ngd,j)=((1d0-a)/(xo-a))**(1d0-dble(i)/dble(ngu))
 c               grid(2,i+ngd,j)=1d0/grid(2,i+ngd,j)+a
-               grid(2,i+ngd,j) = xo + ((dble(i)+xo-a)/(dble(ngu)+xo-a))**2
+c               grid(2,i+ngd,j) = xo + ((dble(i)+xo-a)/(dble(ngu)+xo-a))**2
+               grid(2,i+ngd,j) = xo**(1-dble(i)/dble(ngu))
 
             enddo
 c
@@ -966,10 +967,10 @@ c               grid(2,i,j) = ((1d0-a)/(xo-a))**(1d0-dble(i)/dble(ngd))
                endif
             enddo
 c
-c     tjs  5/11/2009
-c     Make sure sample all the way down to zero
+c     tjs, ja 2/25/11
+c     Make sure sample all the way down to zero only if minimum positive
 c     
-            if (xo .gt. 0) grid(2,1,j) = 0d0
+            if (grid(2,1,j) .gt. 0) grid(2,1,j) = 0d0
 c            write(*,*) "Adjusted bin 1 to zero"
 
          elseif (itype .eq. 2) then
