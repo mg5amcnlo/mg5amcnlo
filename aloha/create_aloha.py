@@ -682,8 +682,9 @@ def create_library():
         #lib[('VectorProp', i)] = create( VectorPropagator(i,'I2', i) )
         #lib[('Spin2', i )] = create( Spin2(10*i+1, 10*i+2, i) )
         lib[('Spin2Prop',i)] = create( Spin2Propagator(_spin2_mult + i, \
+                                             2 * _spin2_mult + i,'I2','I3', i) )
         lib[('Spin2PropMassless',i)] = create( Spin2masslessPropagator(
-                            _spin2_mult + i, 2 * _spin2_mult + i,'I2','I3', i) )
+                             _spin2_mult + i, 2 * _spin2_mult + i,'I2','I3', i))
     logger.info('writing Spin2 lib')         
     fsock = open(os.path.join(aloha_path, 'ALOHALib.pkl'),'wb')
     cPickle.dump(lib, fsock, -1)
